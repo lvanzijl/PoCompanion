@@ -164,9 +164,10 @@ public class WorkItemService
     /// <summary>
     /// Gets the revision history for a specific work item.
     /// </summary>
-    public async Task<IEnumerable<WorkItemRevisionDto>> GetRevisionsAsync(int workItemId)
+    public Task<IEnumerable<WorkItemRevisionDto>> GetRevisionsAsync(int workItemId)
     {
-        return await _client.GetWorkItemRevisionsAsync(workItemId);
+        // REPLACE_WITH_ACTIVITY_SOURCE: load item activity timeline from new source.
+        return Task.FromResult<IEnumerable<WorkItemRevisionDto>>(Array.Empty<WorkItemRevisionDto>());
     }
 
     /// <summary>
@@ -280,4 +281,3 @@ public class WorkItemService
         return severityOptions ?? Enumerable.Empty<string>();
     }
 }
-

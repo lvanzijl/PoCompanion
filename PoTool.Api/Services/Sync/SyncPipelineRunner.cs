@@ -22,8 +22,8 @@ public class SyncPipelineRunner : ISyncPipeline
     private readonly ConcurrentDictionary<int, SemaphoreSlim> _syncLocks = new();
     private readonly ConcurrentDictionary<int, CancellationTokenSource> _activeSyncs = new();
 
-    // Total stages in the full pipeline as per TFS_CACHE_IMPLEMENTATION_PLAN.md
-    private const int TotalStages = 11;
+    // Total stages in the current pipeline (revision ingestion removed).
+    private const int TotalStages = 10;
 
     public SyncPipelineRunner(
         IServiceScopeFactory scopeFactory,
@@ -154,16 +154,14 @@ public class SyncPipelineRunner : ISyncPipeline
             }
 
             // ============================================
-            // Stage 3: Sync Revisions
+            // Stage 3: Snapshot Work Item Relationships
             // ============================================
-            var revisionStage = scope.ServiceProvider.GetRequiredService<RevisionSyncStage>();
-            var (stage3Update, stage3Result) = await ExecuteStageAsync(revisionStage, syncContext, cacheStateRepo, cts.Token);
+            var relationshipStage = scope.ServiceProvider.GetRequiredService<WorkItemRelationshipSnapshotStage>();
+            var (stage3Update, stage3Result) = await ExecuteStageAsync(relationshipStage, syncContext, cacheStateRepo, cts.Token);
             yield return stage3Update;
 
             if (stage3Update.HasFailed)
             {
-                // Revision sync failed, but preserve work item watermark to avoid re-syncing work items.
-                // Revision sync failures are non-critical - revisions can be re-synced in next run.
                 await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
                     workItemResult?.NewWatermark, null, null, cts.Token);
                 yield break;
@@ -175,10 +173,10 @@ public class SyncPipelineRunner : ISyncPipeline
             }
 
             // ============================================
-            // Stage 4: Snapshot Work Item Relationships
+            // Stage 4: Resolve Work Items
             // ============================================
-            var relationshipStage = scope.ServiceProvider.GetRequiredService<WorkItemRelationshipSnapshotStage>();
-            var (stage4Update, stage4Result) = await ExecuteStageAsync(relationshipStage, syncContext, cacheStateRepo, cts.Token);
+            var resolutionStage = scope.ServiceProvider.GetRequiredService<WorkItemResolutionSyncStage>();
+            var (stage4Update, stage4Result) = await ExecuteStageAsync(resolutionStage, syncContext, cacheStateRepo, cts.Token);
             yield return stage4Update;
 
             if (stage4Update.HasFailed)
@@ -194,10 +192,10 @@ public class SyncPipelineRunner : ISyncPipeline
             }
 
             // ============================================
-            // Stage 5: Resolve Work Items
+            // Stage 5: Compute Sprint Trend Projections
             // ============================================
-            var resolutionStage = scope.ServiceProvider.GetRequiredService<WorkItemResolutionSyncStage>();
-            var (stage5Update, stage5Result) = await ExecuteStageAsync(resolutionStage, syncContext, cacheStateRepo, cts.Token);
+            var sprintTrendStage = scope.ServiceProvider.GetRequiredService<SprintTrendProjectionSyncStage>();
+            var (stage5Update, stage5Result) = await ExecuteStageAsync(sprintTrendStage, syncContext, cacheStateRepo, cts.Token);
             yield return stage5Update;
 
             if (stage5Update.HasFailed)
@@ -213,10 +211,10 @@ public class SyncPipelineRunner : ISyncPipeline
             }
 
             // ============================================
-            // Stage 6: Compute Sprint Trend Projections
+            // Stage 6: Sync Pull Requests
             // ============================================
-            var sprintTrendStage = scope.ServiceProvider.GetRequiredService<SprintTrendProjectionSyncStage>();
-            var (stage6Update, stage6Result) = await ExecuteStageAsync(sprintTrendStage, syncContext, cacheStateRepo, cts.Token);
+            var pullRequestStage = scope.ServiceProvider.GetRequiredService<PullRequestSyncStage>();
+            var (stage6Update, stage6Result) = await ExecuteStageAsync(pullRequestStage, syncContext, cacheStateRepo, cts.Token);
             yield return stage6Update;
 
             if (stage6Update.HasFailed)
@@ -225,26 +223,7 @@ public class SyncPipelineRunner : ISyncPipeline
                     workItemResult?.NewWatermark, null, null, cts.Token);
                 yield break;
             }
-            if (stage6Result.HasWarnings)
-            {
-                hasWarnings = true;
-                warningMessage ??= stage6Result.WarningMessage ?? stage6Result.ErrorMessage;
-            }
-
-            // ============================================
-            // Stage 7: Sync Pull Requests
-            // ============================================
-            var pullRequestStage = scope.ServiceProvider.GetRequiredService<PullRequestSyncStage>();
-            var (stage7Update, stage7Result) = await ExecuteStageAsync(pullRequestStage, syncContext, cacheStateRepo, cts.Token);
-            yield return stage7Update;
-
-            if (stage7Update.HasFailed)
-            {
-                await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
-                    workItemResult?.NewWatermark, null, null, cts.Token);
-                yield break;
-            }
-            pullRequestResult = stage7Result;
+            pullRequestResult = stage6Result;
             if (pullRequestResult.HasWarnings)
             {
                 hasWarnings = true;
@@ -252,19 +231,19 @@ public class SyncPipelineRunner : ISyncPipeline
             }
 
             // ============================================
-            // Stage 8: Sync Pipelines
+            // Stage 7: Sync Pipelines
             // ============================================
             var pipelineStage = scope.ServiceProvider.GetRequiredService<PipelineSyncStage>();
-            var (stage8Update, stage8Result) = await ExecuteStageAsync(pipelineStage, syncContext, cacheStateRepo, cts.Token);
-            yield return stage8Update;
+            var (stage7Update, stage7Result) = await ExecuteStageAsync(pipelineStage, syncContext, cacheStateRepo, cts.Token);
+            yield return stage7Update;
 
-            if (stage8Update.HasFailed)
+            if (stage7Update.HasFailed)
             {
                 await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
                     workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, null, cts.Token);
                 yield break;
             }
-            pipelineResult = stage8Result;
+            pipelineResult = stage7Result;
             if (pipelineResult.HasWarnings)
             {
                 hasWarnings = true;
@@ -272,10 +251,29 @@ public class SyncPipelineRunner : ISyncPipeline
             }
 
             // ============================================
-            // Stage 9: Compute Validations
+            // Stage 8: Compute Validations
             // ============================================
             var validationStage = scope.ServiceProvider.GetRequiredService<ValidationComputeStage>();
-            var (stage9Update, stage9Result) = await ExecuteStageAsync(validationStage, syncContext, cacheStateRepo, cts.Token);
+            var (stage8Update, stage8Result) = await ExecuteStageAsync(validationStage, syncContext, cacheStateRepo, cts.Token);
+            yield return stage8Update;
+
+            if (stage8Update.HasFailed)
+            {
+                await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
+                    workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, pipelineResult?.NewWatermark, cts.Token);
+                yield break;
+            }
+            if (stage8Result.HasWarnings)
+            {
+                hasWarnings = true;
+                warningMessage ??= stage8Result.WarningMessage ?? stage8Result.ErrorMessage;
+            }
+
+            // ============================================
+            // Stage 9: Compute Metrics
+            // ============================================
+            var metricsStage = scope.ServiceProvider.GetRequiredService<MetricsComputeStage>();
+            var (stage9Update, stage9Result) = await ExecuteStageAsync(metricsStage, syncContext, cacheStateRepo, cts.Token);
             yield return stage9Update;
 
             if (stage9Update.HasFailed)
@@ -290,32 +288,13 @@ public class SyncPipelineRunner : ISyncPipeline
                 warningMessage ??= stage9Result.WarningMessage ?? stage9Result.ErrorMessage;
             }
 
-            // ============================================
-            // Stage 10: Compute Metrics
-            // ============================================
-            var metricsStage = scope.ServiceProvider.GetRequiredService<MetricsComputeStage>();
-            var (stage10Update, stage10Result) = await ExecuteStageAsync(metricsStage, syncContext, cacheStateRepo, cts.Token);
-            yield return stage10Update;
-
-            if (stage10Update.HasFailed)
-            {
-                await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
-                    workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, pipelineResult?.NewWatermark, cts.Token);
-                yield break;
-            }
-            if (stage10Result.HasWarnings)
-            {
-                hasWarnings = true;
-                warningMessage ??= stage10Result.WarningMessage ?? stage10Result.ErrorMessage;
-            }
-
             if (hasWarnings && string.IsNullOrWhiteSpace(warningMessage))
             {
                 warningMessage = "Sync completed with warnings.";
             }
 
             // ============================================
-            // Stage 11: Finalize Cache
+            // Stage 10: Finalize Cache
             // ============================================
             var finalizeStage = scope.ServiceProvider.GetRequiredService<FinalizeCacheStage>();
 
@@ -335,10 +314,10 @@ public class SyncPipelineRunner : ISyncPipeline
             finalizeStage.HasWarnings = hasWarnings;
             finalizeStage.WarningMessage = warningMessage;
 
-            var (stage11Update, _) = await ExecuteStageAsync(finalizeStage, syncContext, cacheStateRepo, cts.Token);
-            yield return stage11Update;
+            var (stage10Update, _) = await ExecuteStageAsync(finalizeStage, syncContext, cacheStateRepo, cts.Token);
+            yield return stage10Update;
 
-            if (stage11Update.HasFailed)
+            if (stage10Update.HasFailed)
             {
                 yield break;
             }

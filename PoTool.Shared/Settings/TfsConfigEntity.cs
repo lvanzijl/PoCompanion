@@ -31,17 +31,11 @@ public class TfsConfigEntity
     [MaxLength(16)]
     public string ApiVersion { get; set; } = "7.0";
 
-    /// <summary>
-    /// Analytics OData base URL for revision ingestion.
-    /// </summary>
     [MaxLength(1024)]
     public string AnalyticsODataBaseUrl { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Analytics OData entity-set path (for example: WorkItemRevisions).
-    /// </summary>
     [MaxLength(256)]
-    public string AnalyticsODataEntitySetPath { get; set; } = AnalyticsODataDefaults.EntitySetPath;
+    public string AnalyticsODataEntitySetPath { get; set; } = string.Empty;
 
     /// <summary>
     /// Default Area Path for work item queries.

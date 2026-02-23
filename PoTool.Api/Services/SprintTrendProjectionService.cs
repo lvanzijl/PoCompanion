@@ -47,127 +47,30 @@ public class SprintTrendProjectionService
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
-
         var sprintIdList = sprintIds.Distinct().ToList();
-
-        _logger.LogInformation(
-            "Computing sprint trend projections for ProductOwner {ProductOwnerId} across {SprintCount} sprints.",
-            productOwnerId, sprintIdList.Count);
-
-        // Get products for this ProductOwner
-        var products = await context.Products
+        var productIds = await context.Products
             .Where(p => p.ProductOwnerId == productOwnerId)
+            .Select(p => p.Id)
             .ToListAsync(cancellationToken);
 
-        _logger.LogInformation(
-            "Found {ProductCount} products for ProductOwner {ProductOwnerId}.",
-            products.Count, productOwnerId);
+        // REPLACE_WITH_ACTIVITY_SOURCE: compute sprint trend metrics from activity events.
+        var projections = await context.SprintMetricsProjections
+            .Where(p => sprintIdList.Contains(p.SprintId) && productIds.Contains(p.ProductId))
+            .ToListAsync(cancellationToken);
 
-        if (products.Count == 0)
+        foreach (var projection in projections)
         {
-            _logger.LogWarning("No products found for ProductOwner {ProductOwnerId}", productOwnerId);
-            return Array.Empty<SprintMetricsProjectionEntity>();
-        }
-
-        var productIds = products.Select(p => p.Id).ToList();
-
-        // Get sprints
-        var sprints = await context.Sprints
-            .Where(s => sprintIdList.Contains(s.Id))
-            .ToListAsync(cancellationToken);
-
-        _logger.LogInformation(
-            "Found {SprintCount} matching sprint records for ProductOwner {ProductOwnerId}.",
-            sprints.Count, productOwnerId);
-
-        // Get state classifications for activity detection
-        var classifications = await GetStateClassificationsAsync(context, cancellationToken);
-        _logger.LogDebug("Loaded {ClassificationCount} state classifications for sprint trend computation.", classifications.Count);
-
-        // Get resolved work items that belong to these products
-        var resolvedItems = await context.ResolvedWorkItems
-            .Where(r => r.ResolvedProductId != null && productIds.Contains(r.ResolvedProductId.Value))
-            .Where(r => r.ResolutionStatus == ResolutionStatus.Resolved)
-            .ToListAsync(cancellationToken);
-
-        _logger.LogInformation(
-            "Found {ResolvedItemCount} resolved work items mapped to ProductOwner {ProductOwnerId}.",
-            resolvedItems.Count, productOwnerId);
-
-        var resolvedWorkItemIds = resolvedItems.Select(r => r.WorkItemId).ToHashSet();
-
-        // Get latest revisions for resolved items
-        var latestRevisions = await context.RevisionHeaders
-            .Where(h => resolvedWorkItemIds.Contains(h.WorkItemId))
-            .GroupBy(h => h.WorkItemId)
-            .Select(g => g.OrderByDescending(h => h.RevisionNumber).First())
-            .ToListAsync(cancellationToken);
-
-        _logger.LogInformation(
-            "Found {RevisionCount} latest revisions for resolved work items of ProductOwner {ProductOwnerId}.",
-            latestRevisions.Count, productOwnerId);
-
-        var revisionsByWorkItem = latestRevisions.ToDictionary(r => r.WorkItemId, r => r);
-
-        // Build product mapping
-        var productByWorkItem = resolvedItems.ToDictionary(r => r.WorkItemId, r => r.ResolvedProductId!.Value);
-
-        var projections = new List<SprintMetricsProjectionEntity>();
-
-        foreach (var sprint in sprints)
-        {
-            foreach (var product in products)
-            {
-                var projection = await ComputeSprintProductMetricsAsync(
-                    context,
-                    sprint,
-                    product,
-                    resolvedWorkItemIds,
-                    revisionsByWorkItem,
-                    productByWorkItem,
-                    classifications,
-                    cancellationToken);
-
-                projections.Add(projection);
-
-                _logger.LogDebug(
-                    "Sprint trend projection computed for SprintId {SprintId}, ProductId {ProductId}: PlannedCount={PlannedCount}, WorkedCount={WorkedCount}, BugsPlanned={BugsPlannedCount}, BugsWorked={BugsWorkedCount}, IncludedUpToRevisionId={RevisionId}.",
-                    sprint.Id,
-                    product.Id,
-                    projection.PlannedCount,
-                    projection.WorkedCount,
-                    projection.BugsPlannedCount,
-                    projection.BugsWorkedCount,
-                    projection.IncludedUpToRevisionId);
-
-                // Upsert projection
-                var existing = await context.SprintMetricsProjections
-                    .FirstOrDefaultAsync(p => p.SprintId == sprint.Id && p.ProductId == product.Id, cancellationToken);
-
-                if (existing != null)
-                {
-                    existing.PlannedCount = projection.PlannedCount;
-                    existing.PlannedEffort = projection.PlannedEffort;
-                    existing.WorkedCount = projection.WorkedCount;
-                    existing.WorkedEffort = projection.WorkedEffort;
-                    existing.BugsPlannedCount = projection.BugsPlannedCount;
-                    existing.BugsWorkedCount = projection.BugsWorkedCount;
-                    existing.LastComputedAt = DateTimeOffset.UtcNow;
-                    existing.IncludedUpToRevisionId = projection.IncludedUpToRevisionId;
-                }
-                else
-                {
-                    context.SprintMetricsProjections.Add(projection);
-                }
-            }
+            projection.PlannedCount = 0;
+            projection.PlannedEffort = 0;
+            projection.WorkedCount = 0;
+            projection.WorkedEffort = 0;
+            projection.BugsPlannedCount = 0;
+            projection.BugsWorkedCount = 0;
+            projection.IncludedUpToRevisionId = 0;
+            projection.LastComputedAt = DateTimeOffset.UtcNow;
         }
 
         await context.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation(
-            "Computed {Count} sprint-product projections for ProductOwner {ProductOwnerId}",
-            projections.Count, productOwnerId);
-
         return projections;
     }
 

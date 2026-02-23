@@ -37,7 +37,6 @@ public class CacheManagementService
         var counts = new List<CacheEntityCountDto>
         {
             new() { EntityType = CacheEntityTypes.WorkItems, TotalCount = await _context.WorkItems.CountAsync(cancellationToken) },
-            new() { EntityType = CacheEntityTypes.Revisions, TotalCount = await _context.RevisionHeaders.CountAsync(cancellationToken) },
             new()
             {
                 EntityType = CacheEntityTypes.PullRequests,
@@ -161,7 +160,6 @@ public class CacheManagementService
         return entityType switch
         {
             CacheEntityTypes.WorkItems => await DeleteWorkItemsAsync(cancellationToken),
-            CacheEntityTypes.Revisions => await DeleteRevisionsAsync(productOwnerId, cancellationToken),
             CacheEntityTypes.PullRequests => await DeletePullRequestsAsync(productIds, cancellationToken),
             CacheEntityTypes.Pipelines => await DeletePipelinesAsync(productOwnerId, cancellationToken),
             CacheEntityTypes.Metrics => await DeleteMetricsAsync(productOwnerId, cancellationToken),
@@ -177,18 +175,6 @@ public class CacheManagementService
         var count = await _context.WorkItems.CountAsync(ct);
         await _context.WorkItems.ExecuteDeleteAsync(ct);
         await _context.Sprints.ExecuteDeleteAsync(ct);
-        return count;
-    }
-
-    private async Task<int> DeleteRevisionsAsync(int productOwnerId, CancellationToken ct)
-    {
-        var count = await _context.RevisionHeaders.CountAsync(ct);
-        await _context.RevisionFieldDeltas.ExecuteDeleteAsync(ct);
-        await _context.RevisionRelationDeltas.ExecuteDeleteAsync(ct);
-        await _context.RevisionHeaders.ExecuteDeleteAsync(ct);
-        await _context.RevisionIngestionWatermarks
-            .Where(w => w.ProductOwnerId == productOwnerId)
-            .ExecuteDeleteAsync(ct);
         return count;
     }
 

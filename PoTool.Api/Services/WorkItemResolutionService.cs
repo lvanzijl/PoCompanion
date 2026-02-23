@@ -41,143 +41,23 @@ public class WorkItemResolutionService
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
         var cacheState = await context.ProductOwnerCacheStates
-            .FirstOrDefaultAsync(state => state.ProductOwnerId == productOwnerId, cancellationToken);
-
-        _logger.LogInformation("Starting work item resolution for ProductOwner {ProductOwnerId}", productOwnerId);
-
-        // Get all products for this ProductOwner
-        var products = await context.Products
-            .Where(p => p.ProductOwnerId == productOwnerId)
-            .ToListAsync(cancellationToken);
-
-        if (products.Count == 0)
-        {
-            _logger.LogWarning("No products found for ProductOwner {ProductOwnerId}", productOwnerId);
-            return new ResolutionResult { Success = true, Message = "No products to resolve" };
-        }
-
-        // Get all sprints for teams linked to these products
-        var productIds = products.Select(p => p.Id).ToList();
-        var sprints = await context.Sprints
-            .Include(s => s.Team)
-            .ThenInclude(t => t.ProductTeamLinks)
-            .Where(s => s.Team.ProductTeamLinks.Any(ptl => productIds.Contains(ptl.ProductId)))
-            .ToListAsync(cancellationToken);
-
-        // Build lookup structures
-        var rootWorkItemIds = products.Select(p => p.BacklogRootWorkItemId).ToHashSet();
-        var productByRootId = products.ToDictionary(p => p.BacklogRootWorkItemId, p => p.Id);
-        var sprintByPath = sprints.ToDictionary(s => s.Path, s => s.Id, StringComparer.OrdinalIgnoreCase);
-
-        // Get the latest revision for each work item
-        var latestRevisions = await GetLatestRevisionsAsync(context, cancellationToken);
-
-        if (cacheState?.RelationshipsSnapshotAsOfUtc == null)
-        {
-            _logger.LogWarning(
-                "Relationship snapshot missing for ProductOwner {ProductOwnerId}. Resolution cannot proceed.",
-                productOwnerId);
-            return new ResolutionResult
-            {
-                Success = false,
-                Message = "Relationships snapshot missing or empty"
-            };
-        }
-
-        // Build parent chain lookup from relationship snapshot
-        var parentChain = await BuildParentChainAsync(context, productOwnerId, latestRevisions.Keys.ToList(), cancellationToken);
-
-        var resolvedCount = 0;
-        var orphanCount = 0;
-        var errorCount = 0;
-
-        foreach (var (workItemId, latestRevision) in latestRevisions)
-        {
-            try
-            {
-                var resolution = ResolveWorkItem(
-                    workItemId,
-                    latestRevision,
-                    parentChain,
-                    rootWorkItemIds,
-                    productByRootId,
-                    sprintByPath,
-                    latestRevisions);
-
-                // Upsert resolution
-                var existing = await context.ResolvedWorkItems
-                    .FirstOrDefaultAsync(r => r.WorkItemId == workItemId, cancellationToken);
-
-                if (existing != null)
-                {
-                    // Update existing
-                    existing.WorkItemType = latestRevision.WorkItemType;
-                    existing.ResolvedProductId = resolution.ProductId;
-                    existing.ResolvedEpicId = resolution.EpicId;
-                    existing.ResolvedFeatureId = resolution.FeatureId;
-                    existing.ResolvedSprintId = resolution.SprintId;
-                    existing.ResolutionStatus = resolution.Status;
-                    existing.LastResolvedAt = DateTimeOffset.UtcNow;
-                    existing.ResolvedAtRevision = latestRevision.RevisionNumber;
-                }
-                else
-                {
-                    // Create new
-                    context.ResolvedWorkItems.Add(new ResolvedWorkItemEntity
-                    {
-                        WorkItemId = workItemId,
-                        WorkItemType = latestRevision.WorkItemType,
-                        ResolvedProductId = resolution.ProductId,
-                        ResolvedEpicId = resolution.EpicId,
-                        ResolvedFeatureId = resolution.FeatureId,
-                        ResolvedSprintId = resolution.SprintId,
-                        ResolutionStatus = resolution.Status,
-                        LastResolvedAt = DateTimeOffset.UtcNow,
-                        ResolvedAtRevision = latestRevision.RevisionNumber
-                    });
-                }
-
-                if (resolution.Status == ResolutionStatus.Resolved)
-                {
-                    resolvedCount++;
-                }
-                else if (resolution.Status == ResolutionStatus.Orphan)
-                {
-                    orphanCount++;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to resolve work item {WorkItemId}", workItemId);
-                errorCount++;
-            }
-        }
-
-        cacheState ??= new ProductOwnerCacheStateEntity
+            .FirstOrDefaultAsync(state => state.ProductOwnerId == productOwnerId, cancellationToken)
+            ?? new ProductOwnerCacheStateEntity
         {
             ProductOwnerId = productOwnerId,
             SyncStatus = CacheSyncStatus.Idle
         };
-        if (cacheState.Id == 0)
-        {
-            context.ProductOwnerCacheStates.Add(cacheState);
-        }
-
+        // REPLACE_WITH_ACTIVITY_SOURCE: resolve product/epic/feature/sprint lineage from activity events.
+        if (cacheState.Id == 0) context.ProductOwnerCacheStates.Add(cacheState);
         cacheState.ResolutionAsOfUtc = DateTimeOffset.UtcNow;
-
         await context.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation(
-            "Resolution complete for ProductOwner {ProductOwnerId}: {Resolved} resolved, {Orphan} orphans, {Error} errors",
-            productOwnerId, resolvedCount, orphanCount, errorCount);
-
         return new ResolutionResult
         {
             Success = true,
-            ResolvedCount = resolvedCount,
-            OrphanCount = orphanCount,
-            ErrorCount = errorCount,
-            Message = $"Resolved {resolvedCount} items, {orphanCount} orphans, {errorCount} errors"
+            ResolvedCount = 0,
+            OrphanCount = 0,
+            ErrorCount = 0,
+            Message = "Resolution skipped: no activity source configured."
         };
     }
 

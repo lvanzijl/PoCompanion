@@ -258,12 +258,11 @@ else if (SelectedWorkItem != null)
                 }
             </MudTabPanel>
             
-            <MudTabPanel Text="History" Icon="@Icons.Material.Filled.History" OnClick="@LoadHistoryAsync">
-                <WorkItemHistoryTimeline 
-                    Revisions="@_revisions" 
-                    IsLoading="@_isLoadingHistory"
-                    HasError="@_hasHistoryError"
-                    ErrorMessage="@_historyErrorMessage" />
+            <MudTabPanel Text="Activity" Icon="@Icons.Material.Filled.History" OnClick="@LoadHistoryAsync">
+                @* REPLACE_WITH_ACTIVITY_SOURCE: render activity timeline once source is available. *@
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    No activity data available.
+                </MudAlert>
             </MudTabPanel>
         </MudTabs>
     </div>
@@ -289,11 +288,6 @@ else if (SelectedWorkItem != null)
         .Select(issue => issue.Substring(issue.IndexOf(':') + 1).Trim())
         .ToList() ?? new List<string>();
 
-    // History timeline state
-    private IEnumerable<WorkItemRevisionDto>? _revisions;
-    private bool _isLoadingHistory;
-    private bool _hasHistoryError;
-    private string? _historyErrorMessage;
     private int? _lastLoadedWorkItemId;
 
     private string? GetCommonType()
@@ -342,26 +336,8 @@ else if (SelectedWorkItem != null)
         if (SelectedWorkItem == null || _lastLoadedWorkItemId == SelectedWorkItem.TfsId)
             return;
 
-        _isLoadingHistory = true;
-        _hasHistoryError = false;
-        _historyErrorMessage = null;
-        _revisions = null;
-        
-        try
-        {
-            _revisions = await WorkItemService.GetRevisionsAsync(SelectedWorkItem.TfsId);
-            _lastLoadedWorkItemId = SelectedWorkItem.TfsId;
-        }
-        catch (Exception ex)
-        {
-            _hasHistoryError = true;
-            _historyErrorMessage = ex.Message;
-            Snackbar.Add($"Failed to load revision history: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _isLoadingHistory = false;
-        }
+        _lastLoadedWorkItemId = SelectedWorkItem.TfsId;
+        await Task.CompletedTask;
     }
 
     // Quick action handlers

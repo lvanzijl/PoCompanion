@@ -223,9 +223,7 @@ public static class ApiApplicationBuilderExtensions
                 req.DefaultAreaPath ?? string.Empty, // Ignored - derived from Project
                 req.UseDefaultCredentials,
                 req.TimeoutSeconds,
-                req.ApiVersion ?? "7.0",
-                req.AnalyticsODataBaseUrl,
-                req.AnalyticsODataEntitySetPath);
+                req.ApiVersion ?? "7.0");
             return Results.Ok();
         });
 
@@ -335,9 +333,7 @@ public static class ApiApplicationBuilderExtensions
                     req.UseDefaultCredentials,
                     req.TimeoutSeconds,
                     req.ApiVersion ?? "7.0",
-                    req.AnalyticsODataBaseUrl,
-                    req.AnalyticsODataEntitySetPath,
-                    ct);
+                    cancellationToken: ct);
                 await BroadcastAndWriteAsync("Saving Configuration", ProgressState.Succeeded, "Configuration saved successfully", 20, null);
 
                 // Phase 2: Test connection
@@ -461,9 +457,7 @@ public record TfsConfigRequest(
     string? DefaultAreaPath,
     bool UseDefaultCredentials = true,
     int TimeoutSeconds = 30,
-    string? ApiVersion = "7.0",
-    string? AnalyticsODataBaseUrl = null,
-    string? AnalyticsODataEntitySetPath = null);
+    string? ApiVersion = "7.0");
 
 /// <summary>
 /// Request model for TFS API verification endpoint.

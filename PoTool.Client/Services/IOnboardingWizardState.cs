@@ -24,7 +24,7 @@ public interface IOnboardingWizardState
     void MarkTfsVerified(
         string url,
         string project,
-        string? analyticsODataBaseUrl);
+        string? ignored = null);
 
     /// <summary>
     /// Marks TFS configuration as not verified (failed verification or field changed).
@@ -41,7 +41,7 @@ public interface IOnboardingWizardState
     bool CheckTfsFieldsUnchanged(
         string url,
         string project,
-        string? analyticsODataBaseUrl);
+        string? ignored = null);
 
     /// <summary>
     /// Resets all wizard state.
