@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
-using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Services;
 
@@ -59,38 +58,4 @@ public class SprintTrendProjectionService
         return projections;
     }
 
-    internal bool IsQualifyingActivity(
-        string workItemType,
-        StateClassification? oldClass,
-        StateClassification? newClass)
-    {
-        if (oldClass == null || newClass == null || oldClass == newClass)
-        {
-            return false;
-        }
-
-        if (workItemType.Equals("Task", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        if (workItemType.Equals("Product Backlog Item", StringComparison.OrdinalIgnoreCase) ||
-            workItemType.Equals("PBI", StringComparison.OrdinalIgnoreCase))
-        {
-            if (oldClass == StateClassification.New && newClass == StateClassification.InProgress)
-            {
-                return false;
-            }
-
-            return oldClass == StateClassification.InProgress && newClass == StateClassification.Done;
-        }
-
-        if (workItemType.Equals("Bug", StringComparison.OrdinalIgnoreCase))
-        {
-            return (oldClass == StateClassification.InProgress && newClass == StateClassification.Done) ||
-                   (oldClass == StateClassification.Done && newClass == StateClassification.InProgress);
-        }
-
-        return false;
-    }
 }

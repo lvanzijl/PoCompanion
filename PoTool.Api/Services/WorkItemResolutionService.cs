@@ -28,10 +28,10 @@ public class WorkItemResolutionService
         var cacheState = await context.ProductOwnerCacheStates
             .FirstOrDefaultAsync(state => state.ProductOwnerId == productOwnerId, cancellationToken)
             ?? new ProductOwnerCacheStateEntity
-            {
-                ProductOwnerId = productOwnerId,
-                SyncStatus = CacheSyncStatus.Idle
-            };
+               {
+                   ProductOwnerId = productOwnerId,
+                   SyncStatus = CacheSyncStatus.Idle
+               };
 
         // REPLACE_WITH_ACTIVITY_SOURCE: resolve product/epic/feature/sprint lineage from activity events.
         if (cacheState.Id == 0)
