@@ -38,7 +38,6 @@ public class CacheResetResponse
 public static class CacheEntityTypes
 {
     public const string WorkItems = "WorkItems";
-    public const string Revisions = "Revisions";
     public const string PullRequests = "PullRequests";
     public const string Pipelines = "Pipelines";
     public const string Metrics = "Metrics";
@@ -52,7 +51,6 @@ public static class CacheEntityTypes
     public static readonly IReadOnlyList<string> All = new[]
     {
         WorkItems,
-        Revisions,
         PullRequests,
         Pipelines,
         Metrics,

@@ -14,8 +14,6 @@ public sealed class TfsConfig
     public bool UseDefaultCredentials { get; set; } = true;
     public int TimeoutSeconds { get; set; } = 30;
     public string ApiVersion { get; set; } = "7.0";
-    public string AnalyticsODataBaseUrl { get; set; } = string.Empty;
-    public string AnalyticsODataEntitySetPath { get; set; } = AnalyticsODataDefaults.EntitySetPath;
     public DateTimeOffset? LastValidated { get; set; }
 }
 
@@ -60,8 +58,6 @@ public class TfsConfigurationService : ITfsConfigurationService
                 UseDefaultCredentials = entity.UseDefaultCredentials,
                 TimeoutSeconds = entity.TimeoutSeconds,
                 ApiVersion = entity.ApiVersion,
-                AnalyticsODataBaseUrl = entity.AnalyticsODataBaseUrl,
-                AnalyticsODataEntitySetPath = entity.AnalyticsODataEntitySetPath,
                 LastValidated = entity.LastValidated
             };
         }, cancellationToken);
@@ -91,8 +87,6 @@ public class TfsConfigurationService : ITfsConfigurationService
 
             // Derive DefaultAreaPath from Project name (canonical root area path)
             var derivedDefaultAreaPath = project ?? string.Empty;
-            var resolvedAnalyticsODataBaseUrl = ResolveAnalyticsODataBaseUrl(url, project, analyticsODataBaseUrl);
-            var resolvedAnalyticsODataEntitySetPath = ResolveAnalyticsODataEntitySetPath(analyticsODataEntitySetPath);
 
             if (existing == null)
             {
@@ -104,8 +98,6 @@ public class TfsConfigurationService : ITfsConfigurationService
                     UseDefaultCredentials = useDefaultCredentials,
                     TimeoutSeconds = timeoutSeconds,
                     ApiVersion = apiVersion ?? "7.0",
-                    AnalyticsODataBaseUrl = resolvedAnalyticsODataBaseUrl,
-                    AnalyticsODataEntitySetPath = resolvedAnalyticsODataEntitySetPath,
                     CreatedAt = DateTimeOffset.UtcNow,
                     UpdatedAt = DateTimeOffset.UtcNow
                 };
@@ -120,8 +112,6 @@ public class TfsConfigurationService : ITfsConfigurationService
                 existing.UseDefaultCredentials = useDefaultCredentials;
                 existing.TimeoutSeconds = timeoutSeconds;
                 existing.ApiVersion = apiVersion ?? "7.0";
-                existing.AnalyticsODataBaseUrl = resolvedAnalyticsODataBaseUrl;
-                existing.AnalyticsODataEntitySetPath = resolvedAnalyticsODataEntitySetPath;
 
                 existing.UpdatedAt = DateTimeOffset.UtcNow;
                 _db.TfsConfigs.Update(existing);
@@ -132,21 +122,6 @@ public class TfsConfigurationService : ITfsConfigurationService
                 url, project, derivedDefaultAreaPath);
         }, cancellationToken);
     }
-
-    private static string ResolveAnalyticsODataBaseUrl(string? url, string? project, string? analyticsODataBaseUrl)
-    {
-        if (!string.IsNullOrWhiteSpace(analyticsODataBaseUrl))
-        {
-            return analyticsODataBaseUrl.Trim();
-        }
-
-        return AnalyticsODataDefaults.BuildBaseUrl(url, project);
-    }
-
-    private static string ResolveAnalyticsODataEntitySetPath(string? analyticsODataEntitySetPath)
-        => string.IsNullOrWhiteSpace(analyticsODataEntitySetPath)
-            ? AnalyticsODataDefaults.EntitySetPath
-            : analyticsODataEntitySetPath.Trim();
 
     public async Task<TfsConfigEntity?> GetConfigEntityAsync(CancellationToken cancellationToken = default)
     {

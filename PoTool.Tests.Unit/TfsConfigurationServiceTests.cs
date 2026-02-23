@@ -157,7 +157,7 @@ public class TfsConfigurationServiceTests
     }
 
     [TestMethod]
-    public async Task SaveConfigAsync_WithoutAnalyticsSettings_DerivesAnalyticsDefaults()
+    public async Task SaveConfigAsync_WithoutAnalyticsSettings_StoresEmptyAnalyticsFields()
     {
         // Act
         await _service.SaveConfigAsync("https://dev.azure.com/myorg", "My Project", "TestProject\\Team");
@@ -165,12 +165,12 @@ public class TfsConfigurationServiceTests
         // Assert
         var entity = await _service.GetConfigEntityAsync();
         Assert.IsNotNull(entity);
-        Assert.AreEqual("https://dev.azure.com/myorg/My%20Project/_odata/v3.0-preview", entity.AnalyticsODataBaseUrl);
-        Assert.AreEqual("WorkItemRevisions", entity.AnalyticsODataEntitySetPath);
+        Assert.AreEqual(string.Empty, entity.AnalyticsODataBaseUrl);
+        Assert.AreEqual(string.Empty, entity.AnalyticsODataEntitySetPath);
     }
 
     [TestMethod]
-    public async Task SaveConfigAsync_WithExplicitAnalyticsBaseUrl_PreservesOverride()
+    public async Task SaveConfigAsync_WithExplicitAnalyticsBaseUrl_IgnoresAnalyticsParameters()
     {
         // Act
         await _service.SaveConfigAsync(
@@ -183,8 +183,8 @@ public class TfsConfigurationServiceTests
         // Assert
         var entity = await _service.GetConfigEntityAsync();
         Assert.IsNotNull(entity);
-        Assert.AreEqual("https://custom/odata", entity.AnalyticsODataBaseUrl);
-        Assert.AreEqual("CustomEntitySet", entity.AnalyticsODataEntitySetPath);
+        Assert.AreEqual(string.Empty, entity.AnalyticsODataBaseUrl);
+        Assert.AreEqual(string.Empty, entity.AnalyticsODataEntitySetPath);
     }
 
     [TestMethod]

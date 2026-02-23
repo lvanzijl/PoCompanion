@@ -71,9 +71,7 @@ public class TfsConfigService
             defaultAreaPath = project, // Always pass project as default area path (will be derived on backend)
             useDefaultCredentials,
             timeoutSeconds,
-            apiVersion,
-            analyticsODataBaseUrl,
-            analyticsODataEntitySetPath
+            apiVersion
         };
         var response = await _httpClient.PostAsJsonAsync("/api/tfsconfig", request, cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -195,7 +193,5 @@ public class TfsConfigDto
     public bool UseDefaultCredentials { get; set; } = true;
     public int TimeoutSeconds { get; set; } = 30;
     public string ApiVersion { get; set; } = "7.0";
-    public string AnalyticsODataBaseUrl { get; set; } = string.Empty;
-    public string AnalyticsODataEntitySetPath { get; set; } = AnalyticsODataDefaults.EntitySetPath;
     public DateTimeOffset? LastValidated { get; set; }
 }

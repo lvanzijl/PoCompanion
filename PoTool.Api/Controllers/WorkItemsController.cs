@@ -222,26 +222,6 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets the revision history for a specific work item.
-    /// </summary>
-    [HttpGet("{workItemId:int}/revisions")]
-    public async Task<ActionResult<IEnumerable<WorkItemRevisionDto>>> GetWorkItemRevisions(
-        int workItemId,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var revisions = await _mediator.Send(new GetWorkItemRevisionsQuery(workItemId), cancellationToken);
-            return Ok(revisions);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving revisions for work item {WorkItemId}", workItemId);
-            return StatusCode(500, "Error retrieving work item revisions");
-        }
-    }
-
-    /// <summary>
     /// Gets all goals (work items of type Goal).
     /// </summary>
     [HttpGet("goals/all")]

@@ -14,7 +14,6 @@ using PoTool.Core.WorkItems.Validators.Rules;
 using PoTool.Core.WorkItems.Filtering;
 using PoTool.Core.Health;
 using PoTool.Client.Services;
-using PoTool.Integrations.Tfs.Diagnostics;
 
 namespace PoTool.Api.Configuration;
 
@@ -54,34 +53,6 @@ public static class ApiServiceCollectionExtensions
         {
             options.ServiceLifetime = ServiceLifetime.Scoped;
         });
-
-        // Configure revision ingestion diagnostics options (runtime reloadable)
-        services.AddOptions<RevisionIngestionDiagnosticsOptions>()
-            .Bind(configuration.GetSection("RevisionIngestionDiagnostics"));
-        services.AddOptions<RevisionIngestionPaginationOptions>()
-            .Bind(configuration.GetSection("RevisionIngestionPagination"))
-            .Validate(
-                options => options.MaxEmptyPages >= 1 &&
-                           options.MaxNoProgressPages >= 1 &&
-                           options.MaxProgressWithoutDataPages >= 1 &&
-                           options.MaxTotalPages >= 1 &&
-                           options.MaxPageRetries >= 0 &&
-                           options.RetryBackoffSeconds >= 0 &&
-                           options.RetryBackoffJitterSeconds >= 0 &&
-                           options.FallbackBatchSize >= 1 &&
-                           options.ODataTop >= 1 &&
-                           options.ODataSeekPageSize >= 1 &&
-                           options.RetryMaxIterations >= 1 &&
-                           options.RetryOverlapMinutes >= 0 &&
-                           options.ProgressEpsilonSeconds >= 0,
-                "Revision ingestion pagination configuration has invalid bounds.")
-            .ValidateOnStart();
-        services.AddOptions<RevisionIngestionPersistenceOptimizationOptions>()
-            .Bind(configuration.GetSection("RevisionIngestionPersistenceOptimization"))
-            .Validate(
-                options => isDevelopment || !string.Equals(options.SqliteSynchronous, "OFF", StringComparison.OrdinalIgnoreCase),
-                "SqliteSynchronous=OFF is only allowed in Development.")
-            .ValidateOnStart();
 
         services.AddSingleton<SqlitePragmaConnectionInterceptor>();
 
@@ -178,10 +149,9 @@ public static class ApiServiceCollectionExtensions
         // Register Work Item State Classification service
         services.AddScoped<IWorkItemStateClassificationService, WorkItemStateClassificationService>();
 
-        // Register Sync Pipeline services (Stages 1-11)
+        // Register Sync Pipeline services (Stages 1-10)
         services.AddScoped<WorkItemSyncStage>();
         services.AddScoped<TeamSprintSyncStage>();
-        services.AddScoped<RevisionSyncStage>();
         services.AddScoped<WorkItemRelationshipSnapshotStage>();
         services.AddScoped<WorkItemResolutionSyncStage>();
         services.AddScoped<SprintTrendProjectionSyncStage>();
@@ -290,8 +260,6 @@ public static class ApiServiceCollectionExtensions
         // Register TFS throttling and request services (used by RealTfsClient)
         services.AddSingleton<TfsRequestThrottler>();
         services.AddScoped<TfsRequestSender>();
-        services.AddSingleton<RevisionIngestionDiagnostics>();
-
         // Always register HttpClientFactory for handlers that need it
         services.AddHttpClient();
 
@@ -321,23 +289,10 @@ public static class ApiServiceCollectionExtensions
             // and has multiple constructor dependencies, so it doesn't follow the typed HttpClient pattern
             services.AddScoped<ITfsClient, RealTfsClient>();
 
-            services.AddScoped<IWorkItemRevisionSource, RealODataRevisionTfsClient>();
         }
+        services.AddScoped<IActivityEventSource, NoOpActivityEventSource>();
 
-        // Register Revision Ingestion V2 options
-        services.AddOptions<RevisionIngestionV2Options>()
-            .Bind(configuration.GetSection("RevisionIngestionV2"));
-
-        // Register V2 dependencies
-        services.AddSingleton<IBackfillStartProvider, WorkItemBackfillStartProvider>();
-        services.AddSingleton<TimeProvider>(TimeProvider.System);
-
-        // Register Revision Ingestion Service (for Sprint Trend feature)
-        services.AddSingleton<RevisionIngestionService>();
-        services.AddSingleton<RevisionIngestionServiceV2>();
-        services.AddSingleton<IRevisionIngestionService, RevisionIngestionDispatcher>();
-
-        // Register Relations Revision Hydrator (for ingesting relation changes)
+        // Register relation hydrator placeholder
         services.AddScoped<IRelationRevisionHydrator, RelationRevisionHydrator>();
 
         // Register Work Item Resolution Service (for Sprint Trend hierarchical resolution)

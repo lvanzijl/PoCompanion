@@ -191,12 +191,6 @@ public class CacheStateRepository : ICacheStateRepository
 
         if (isInMemory)
         {
-            var revisionFieldDeltas = await _context.RevisionFieldDeltas.ToListAsync(cancellationToken);
-            var revisionRelationDeltas = await _context.RevisionRelationDeltas.ToListAsync(cancellationToken);
-            var revisionHeaders = await _context.RevisionHeaders.ToListAsync(cancellationToken);
-            var revisionWatermarks = await _context.RevisionIngestionWatermarks
-                .Where(w => w.ProductOwnerId == productOwnerId)
-                .ToListAsync(cancellationToken);
             var resolvedWorkItems = await _context.ResolvedWorkItems
                 .Where(item => item.ResolvedProductId.HasValue && productIds.Contains(item.ResolvedProductId.Value))
                 .ToListAsync(cancellationToken);
@@ -230,10 +224,6 @@ public class CacheStateRepository : ICacheStateRepository
             var workItems = await _context.WorkItems.ToListAsync(cancellationToken);
             var sprints = await _context.Sprints.ToListAsync(cancellationToken);
 
-            _context.RevisionFieldDeltas.RemoveRange(revisionFieldDeltas);
-            _context.RevisionRelationDeltas.RemoveRange(revisionRelationDeltas);
-            _context.RevisionHeaders.RemoveRange(revisionHeaders);
-            _context.RevisionIngestionWatermarks.RemoveRange(revisionWatermarks);
             _context.ResolvedWorkItems.RemoveRange(resolvedWorkItems);
             _context.SprintMetricsProjections.RemoveRange(sprintMetrics);
             _context.CachedValidationResults.RemoveRange(cachedValidationResults);
@@ -251,12 +241,6 @@ public class CacheStateRepository : ICacheStateRepository
             return;
         }
 
-        await _context.RevisionFieldDeltas.ExecuteDeleteAsync(cancellationToken);
-        await _context.RevisionRelationDeltas.ExecuteDeleteAsync(cancellationToken);
-        await _context.RevisionHeaders.ExecuteDeleteAsync(cancellationToken);
-        await _context.RevisionIngestionWatermarks
-            .Where(w => w.ProductOwnerId == productOwnerId)
-            .ExecuteDeleteAsync(cancellationToken);
         await _context.ResolvedWorkItems
             .Where(item => item.ResolvedProductId.HasValue && productIds.Contains(item.ResolvedProductId.Value))
             .ExecuteDeleteAsync(cancellationToken);

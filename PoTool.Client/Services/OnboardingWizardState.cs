@@ -22,12 +22,11 @@ public class OnboardingWizardState : IOnboardingWizardState
     /// <inheritdoc/>
     public void MarkTfsVerified(
         string url,
-        string project,
-        string? analyticsODataBaseUrl)
+        string project)
     {
         _tfsVerified = true;
         TfsDirty = false;
-        _verifiedFingerprint = ComputeFingerprint(url, project, analyticsODataBaseUrl);
+        _verifiedFingerprint = ComputeFingerprint(url, project);
     }
 
     /// <inheritdoc/>
@@ -41,15 +40,14 @@ public class OnboardingWizardState : IOnboardingWizardState
     /// <inheritdoc/>
     public bool CheckTfsFieldsUnchanged(
         string url,
-        string project,
-        string? analyticsODataBaseUrl)
+        string project)
     {
         if (!_tfsVerified || _verifiedFingerprint == null)
         {
             return false;
         }
 
-        var currentFingerprint = ComputeFingerprint(url, project, analyticsODataBaseUrl);
+        var currentFingerprint = ComputeFingerprint(url, project);
         var unchanged = currentFingerprint == _verifiedFingerprint;
 
         if (!unchanged)
@@ -70,11 +68,9 @@ public class OnboardingWizardState : IOnboardingWizardState
 
     private static string ComputeFingerprint(
         string url,
-        string project,
-        string? analyticsODataBaseUrl)
+        string project)
     {
-        var combined =
-            $"{url?.Trim() ?? ""}{FingerprintSeparator}{project?.Trim() ?? ""}{FingerprintSeparator}{analyticsODataBaseUrl?.Trim() ?? ""}";
+        var combined = $"{url?.Trim() ?? ""}{FingerprintSeparator}{project?.Trim() ?? ""}";
         var bytes = Encoding.UTF8.GetBytes(combined);
         var hash = SHA256.HashData(bytes);
         return Convert.ToBase64String(hash);

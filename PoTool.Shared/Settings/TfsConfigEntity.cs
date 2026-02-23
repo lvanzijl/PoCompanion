@@ -31,17 +31,13 @@ public class TfsConfigEntity
     [MaxLength(16)]
     public string ApiVersion { get; set; } = "7.0";
 
-    /// <summary>
-    /// Analytics OData base URL for revision ingestion.
-    /// </summary>
     [MaxLength(1024)]
+    // REPLACE_WITH_ACTIVITY_SOURCE: TODO remove this legacy OData column in follow-up schema cleanup migration.
     public string AnalyticsODataBaseUrl { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Analytics OData entity-set path (for example: WorkItemRevisions).
-    /// </summary>
     [MaxLength(256)]
-    public string AnalyticsODataEntitySetPath { get; set; } = AnalyticsODataDefaults.EntitySetPath;
+    // REPLACE_WITH_ACTIVITY_SOURCE: TODO remove this legacy OData column in follow-up schema cleanup migration.
+    public string AnalyticsODataEntitySetPath { get; set; } = string.Empty;
 
     /// <summary>
     /// Default Area Path for work item queries.

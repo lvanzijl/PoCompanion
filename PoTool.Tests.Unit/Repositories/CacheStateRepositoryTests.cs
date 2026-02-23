@@ -205,61 +205,6 @@ public class CacheStateRepositoryTests
         }
     }
 
-    [TestMethod]
-    public async Task ResetCacheStateAsync_ClearsRevisionCacheAndWatermark()
-    {
-        // Arrange
-        var profile = await _profileRepository.CreateProfileAsync("Test Owner", new List<int>());
-        var header = new RevisionHeaderEntity
-        {
-            WorkItemId = 100,
-            RevisionNumber = 1,
-            WorkItemType = "Feature",
-            Title = "Sample",
-            State = "New",
-            IterationPath = "Iteration 1",
-            AreaPath = "Area 1",
-            ChangedDate = DateTimeOffset.UtcNow,
-            IngestedAt = DateTimeOffset.UtcNow
-        };
-
-        _context.RevisionHeaders.Add(header);
-        await _context.SaveChangesAsync();
-
-        _context.RevisionFieldDeltas.Add(new RevisionFieldDeltaEntity
-        {
-            RevisionHeaderId = header.Id,
-            FieldName = "System.Title",
-            OldValue = "Old",
-            NewValue = "New"
-        });
-
-        _context.RevisionRelationDeltas.Add(new RevisionRelationDeltaEntity
-        {
-            RevisionHeaderId = header.Id,
-            ChangeType = RelationChangeType.Added,
-            RelationType = "System.LinkTypes.Hierarchy-Forward",
-            TargetWorkItemId = 200
-        });
-
-        _context.RevisionIngestionWatermarks.Add(new RevisionIngestionWatermarkEntity
-        {
-            ProductOwnerId = profile.Id,
-            IsInitialBackfillComplete = false
-        });
-
-        await _context.SaveChangesAsync();
-
-        // Act
-        await _repository.ResetCacheStateAsync(profile.Id);
-
-        // Assert
-        Assert.AreEqual(0, await _context.RevisionHeaders.CountAsync());
-        Assert.AreEqual(0, await _context.RevisionFieldDeltas.CountAsync());
-        Assert.AreEqual(0, await _context.RevisionRelationDeltas.CountAsync());
-        Assert.AreEqual(0, await _context.RevisionIngestionWatermarks.CountAsync());
-    }
-
     /// <summary>
     /// Verifies that GetWatermarksAsync returns null values
     /// when ProductOwner does not have cache state.

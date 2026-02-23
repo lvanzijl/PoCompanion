@@ -106,9 +106,7 @@
 
                             <MudPaper Elevation="0" Class="pa-2">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary"><strong>Effective configuration summary</strong></MudText>
-                                <MudText Typo="Typo.body2">Revision source: Analytics OData revisions</MudText>
-                                <MudText Typo="Typo.body2">Analytics OData base URL: @GetConfigSummaryValue(GetDerivedAnalyticsODataBaseUrl())</MudText>
-                                <MudText Typo="Typo.body2">Analytics entity set: @AnalyticsODataDefaults.EntitySetPath</MudText>
+                                <MudText Typo="Typo.body2">Activity source: not configured</MudText>
                             </MudPaper>
 
                             <MudStack Row="true" Spacing="2" Class="mt-2">
@@ -745,7 +743,7 @@
         // For step 0 (TFS Configuration), require verification and no changes
         if (_currentStep == 0)
         {
-            return !WizardState.TfsVerified || !WizardState.CheckTfsFieldsUnchanged(_url, _project, GetDerivedAnalyticsODataBaseUrl());
+            return !WizardState.TfsVerified || !WizardState.CheckTfsFieldsUnchanged(_url, _project);
         }
         return false;
     }
@@ -901,9 +899,7 @@
                 defaultAreaPath = _project, // Derived from project name (backward compatibility)
                 useDefaultCredentials = true,
                 timeoutSeconds = 30,
-                apiVersion = "7.0",
-                analyticsODataBaseUrl = GetDerivedAnalyticsODataBaseUrl(),
-                analyticsODataEntitySetPath = AnalyticsODataDefaults.EntitySetPath
+                apiVersion = "7.0"
             };
 
             var request = new HttpRequestMessage(HttpMethod.Post, "/api/tfsconfig/save-and-verify")
@@ -945,7 +941,7 @@
             
             if (_configCompleted == true)
             {
-                WizardState.MarkTfsVerified(_url, _project, GetDerivedAnalyticsODataBaseUrl());
+                WizardState.MarkTfsVerified(_url, _project);
                 Snackbar.Add("Configuration saved and verified successfully", Severity.Success);
             }
             else
@@ -981,11 +977,6 @@
     private static string GetConfigSummaryValue(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? "(not set)" : value;
-    }
-
-    private string GetDerivedAnalyticsODataBaseUrl()
-    {
-        return AnalyticsODataDefaults.BuildBaseUrl(_url, _project);
     }
 
     private List<TfsConfigProgressUpdate> GetFilteredProgressUpdates()

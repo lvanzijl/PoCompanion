@@ -162,31 +162,6 @@ public class CacheSyncService
         }
     }
 
-    /// <summary>
-    /// Validates revision cache integrity.
-    /// </summary>
-    public async Task<RevisionValidationReport?> ValidateRevisionsAsync(
-        int productOwnerId,
-        RevisionValidationRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var response = await _httpClient.PostAsJsonAsync(
-                $"api/CacheSync/{productOwnerId}/validate",
-                request,
-                cancellationToken);
-            if (response.IsSuccessStatusCode)
-            {
-                return await response.Content.ReadFromJsonAsync<RevisionValidationReport>(cancellationToken: cancellationToken);
-            }
-            return null;
-        }
-        catch (HttpRequestException)
-        {
-            return null;
-        }
-    }
 }
 
 /// <summary>
