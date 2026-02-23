@@ -36,7 +36,7 @@ public sealed class RevisionIngestionV2Options
     /// <summary>
     /// Maximum number of consecutive empty pages before the window is considered stalled.
     /// </summary>
-    public int V2MaxConsecutiveEmptyPages { get; set; } = 3;
+    public int V2MaxConsecutiveEmptyPages { get; set; } = 10;
 
     /// <summary>
     /// Number of consecutive empty pages with continuation token before emitting a stall dump warning.

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
@@ -299,10 +300,13 @@ public sealed class RevisionIngestionServiceV2
         int pagesWithoutScopedRevisions = 0;
         int emptyRawPagesWithToken = 0;
         int consecutiveEmptyPages = 0;
+        int consecutiveNoProgressPages = 0;
         var seenTokenHashes = new HashSet<string>();
         var segmentsProcessed = new HashSet<int>();
         var segmentsWithZeroScoped = new HashSet<int>();
         int emptyWithTokenLogCount = 0;
+        string? lastEmptyProgressMarker = null;
+        ReportingRequestDiagnostics? lastRequestDiagnostics = null;
         string? terminationReason = null;
         string? terminationMessage = null;
 
@@ -334,9 +338,9 @@ public sealed class RevisionIngestionServiceV2
                         StallReason: "RepeatedTokenCycle",
                         LastTokenHash: continuationTokenHash,
                         LastTokenLength: Len(continuationToken),
-                        LastUrlSource: ResolveUrlSource(continuationToken),
-                        LastHost: TryResolveHostPath(continuationToken).Host,
-                        LastPath: TryResolveHostPath(continuationToken).Path,
+                        LastUrlSource: lastRequestDiagnostics?.UrlSource,
+                        LastHost: lastRequestDiagnostics?.EffectiveHost,
+                        LastPath: lastRequestDiagnostics?.EffectivePath,
                         ConsecutiveEmptyPages: consecutiveEmptyPages,
                         TotalRawRevisions: totalRawRevisions,
                         PagesWithoutScopedRevisions: pagesWithoutScopedRevisions,
@@ -362,6 +366,8 @@ public sealed class RevisionIngestionServiceV2
                     window.End,
                     cancellationToken);
             }
+            var currentRequestDiagnostics = page.RequestDiagnostics;
+            lastRequestDiagnostics = currentRequestDiagnostics ?? lastRequestDiagnostics;
 
             var rawCount = page.Revisions.Count;
             var nextToken = page.ContinuationToken;
@@ -423,12 +429,30 @@ public sealed class RevisionIngestionServiceV2
                     segmentsWithZeroScoped.Add(activeSegmentIndex.Value);
                 }
 
+                var progressMarker = BuildProgressMarker(currentRequestDiagnostics);
+                var segmentAdvanced = continuationSegmentIndex.HasValue &&
+                                      nextSegmentIndex.HasValue &&
+                                      continuationSegmentIndex.Value != nextSegmentIndex.Value;
+                var markerAdvanced = !string.IsNullOrEmpty(progressMarker) &&
+                                     !string.Equals(progressMarker, lastEmptyProgressMarker, StringComparison.Ordinal);
+                var searchSpaceAdvanced = segmentAdvanced || markerAdvanced;
+                if (searchSpaceAdvanced)
+                {
+                    consecutiveNoProgressPages = 0;
+                }
+                else
+                {
+                    consecutiveNoProgressPages++;
+                }
+                lastEmptyProgressMarker = progressMarker;
+
                 // Rate-limited logging: first 3, then every 50
                 emptyWithTokenLogCount++;
                 if (emptyWithTokenLogCount <= 3 || emptyWithTokenLogCount % 50 == 0)
                 {
                     _logger.LogWarning(
                         "REV_INGEST_V2_EMPTY_WITH_TOKEN page={PageIndex} consecutiveEmpty={ConsecutiveEmpty} " +
+                        "consecutiveNoProgress={ConsecutiveNoProgress} segmentAdvanced={SegmentAdvanced} searchSpaceAdvanced={SearchSpaceAdvanced} " +
                         "segmentIndex={SegmentIndex} " +
                         "tokenHash={TokenHash} tokenLen={TokenLen} tokenPrefix={TokenPrefix} " +
                         "nextTokenHash={NextTokenHash} nextTokenLen={NextTokenLen} nextTokenPrefix={NextTokenPrefix} " +
@@ -436,6 +460,7 @@ public sealed class RevisionIngestionServiceV2
                         "allowedWorkItemIds={AllowedCount} pageSize={PageSize} " +
                         "hasContinuationToken={HasToken} rawCount={RawCount} scopedCount=0 inWindowCount=0",
                         pageIndex, consecutiveEmptyPages,
+                        consecutiveNoProgressPages, segmentAdvanced, searchSpaceAdvanced,
                         activeSegmentIndex,
                         continuationTokenHash, Len(continuationToken), Prefix(continuationToken),
                         nextTokenHash, Len(nextToken), Prefix(nextToken),
@@ -470,15 +495,14 @@ public sealed class RevisionIngestionServiceV2
                         allowedWorkItemIds.Count);
                 }
 
-                if (consecutiveEmptyPages >= maxConsecutiveEmptyWithTokenPages)
+                if (consecutiveNoProgressPages >= maxConsecutiveEmptyWithTokenPages)
                 {
-                    var lastUrlSource = ResolveUrlSource(nextToken);
-                    var lastHostPath = TryResolveHostPath(nextToken);
                     _logger.LogWarning(
-                        "REV_INGEST_V2_WINDOW_FAIL reason=EmptyWithTokenStall pageIndex={PageIndex} segmentIndex={SegmentIndex} consecutiveEmpty={ConsecutiveEmpty} maxConsecutiveEmpty={MaxConsecutiveEmpty} tokenHash={TokenHash} tokenLen={TokenLen} tokenPrefix={TokenPrefix} nextTokenHash={NextTokenHash} nextTokenLen={NextTokenLen} nextTokenPrefix={NextTokenPrefix} lastUrlSource={LastUrlSource} lastHost={LastHost} lastPath={LastPath} windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc}",
+                        "REV_INGEST_V2_WINDOW_FAIL reason=EmptyWithTokenStall pageIndex={PageIndex} segmentIndex={SegmentIndex} consecutiveEmpty={ConsecutiveEmpty} consecutiveNoProgress={ConsecutiveNoProgress} maxConsecutiveNoProgress={MaxConsecutiveNoProgress} tokenHash={TokenHash} tokenLen={TokenLen} tokenPrefix={TokenPrefix} nextTokenHash={NextTokenHash} nextTokenLen={NextTokenLen} nextTokenPrefix={NextTokenPrefix} lastUrlSource={LastUrlSource} lastHost={LastHost} lastPath={LastPath} windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc}",
                         pageIndex,
                         activeSegmentIndex,
                         consecutiveEmptyPages,
+                        consecutiveNoProgressPages,
                         maxConsecutiveEmptyWithTokenPages,
                         continuationTokenHash,
                         Len(continuationToken),
@@ -486,9 +510,9 @@ public sealed class RevisionIngestionServiceV2
                         nextTokenHash,
                         Len(nextToken),
                         Prefix(nextToken),
-                        lastUrlSource,
-                        lastHostPath.Host,
-                        lastHostPath.Path,
+                        currentRequestDiagnostics?.UrlSource,
+                        currentRequestDiagnostics?.EffectiveHost,
+                        currentRequestDiagnostics?.EffectivePath,
                         window.Start,
                         window.End);
 
@@ -499,9 +523,9 @@ public sealed class RevisionIngestionServiceV2
                         StallReason: "EmptyWithTokenStall",
                         LastTokenHash: nextTokenHash ?? continuationTokenHash,
                         LastTokenLength: Len(nextToken),
-                        LastUrlSource: lastUrlSource,
-                        LastHost: lastHostPath.Host,
-                        LastPath: lastHostPath.Path,
+                        LastUrlSource: currentRequestDiagnostics?.UrlSource,
+                        LastHost: currentRequestDiagnostics?.EffectiveHost,
+                        LastPath: currentRequestDiagnostics?.EffectivePath,
                         ConsecutiveEmptyPages: consecutiveEmptyPages,
                         TotalRawRevisions: totalRawRevisions,
                         PagesWithoutScopedRevisions: pagesWithoutScopedRevisions,
@@ -528,6 +552,8 @@ public sealed class RevisionIngestionServiceV2
             }
 
             consecutiveEmptyPages = 0;
+            consecutiveNoProgressPages = 0;
+            lastEmptyProgressMarker = null;
 
             // Filter and persist
             var scoped = page.Revisions
@@ -1010,93 +1036,16 @@ public sealed class RevisionIngestionServiceV2
         return value?.Length ?? 0;
     }
 
-    private static string ResolveUrlSource(string? continuationToken)
+    private static string? BuildProgressMarker(ReportingRequestDiagnostics? requestDiagnostics)
     {
-        var resolvedToken = ResolveInnerContinuationToken(continuationToken);
-        if (resolvedToken is null)
-        {
-            return "InitialCanonical";
-        }
-
-        if (resolvedToken.StartsWith("next:", StringComparison.Ordinal) ||
-            Uri.IsWellFormedUriString(resolvedToken, UriKind.Absolute))
-        {
-            return "NextLinkVerbatim";
-        }
-
-        if (resolvedToken.StartsWith("seek:", StringComparison.Ordinal))
-        {
-            return "SeekVerbatim";
-        }
-
-        return "InitialCanonical";
-    }
-
-    private static (string? Host, string? Path) TryResolveHostPath(string? continuationToken)
-    {
-        var resolvedToken = ResolveInnerContinuationToken(continuationToken);
-        if (resolvedToken is null)
-        {
-            return (null, null);
-        }
-
-        if (resolvedToken.StartsWith("next:", StringComparison.Ordinal) ||
-            resolvedToken.StartsWith("seek:", StringComparison.Ordinal))
-        {
-            var payload = resolvedToken[5..];
-            var separator = payload.IndexOf('|');
-            var encodedUrl = separator >= 0 ? payload[..separator] : payload;
-            try
-            {
-                var decodedUrl = Encoding.UTF8.GetString(Convert.FromBase64String(encodedUrl));
-                if (Uri.TryCreate(decodedUrl, UriKind.Absolute, out var decodedUri))
-                {
-                    return (decodedUri.Host, decodedUri.AbsolutePath);
-                }
-            }
-            catch
-            {
-                return (null, null);
-            }
-        }
-
-        if (Uri.TryCreate(resolvedToken, UriKind.Absolute, out var absoluteUri))
-        {
-            return (absoluteUri.Host, absoluteUri.AbsolutePath);
-        }
-
-        return (null, null);
-    }
-
-    private static string? ResolveInnerContinuationToken(string? continuationToken)
-    {
-        if (string.IsNullOrWhiteSpace(continuationToken))
+        if (requestDiagnostics is null)
         {
             return null;
         }
 
-        if (!continuationToken.StartsWith("seg:", StringComparison.Ordinal))
-        {
-            return continuationToken;
-        }
-
-        var payload = continuationToken["seg:".Length..];
-        var separator = payload.IndexOf('|');
-        if (separator < 0 || separator == payload.Length - 1)
-        {
-            return continuationToken;
-        }
-
-        var encodedInner = payload[(separator + 1)..];
-        try
-        {
-            var decodedInner = Encoding.UTF8.GetString(Convert.FromBase64String(encodedInner));
-            return string.IsNullOrWhiteSpace(decodedInner) ? null : decodedInner;
-        }
-        catch
-        {
-            return continuationToken;
-        }
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{requestDiagnostics.UrlSource}|{requestDiagnostics.EffectiveHost ?? string.Empty}|{requestDiagnostics.EffectivePath ?? string.Empty}|{(requestDiagnostics.SegmentStart.HasValue ? requestDiagnostics.SegmentStart.Value.ToString(CultureInfo.InvariantCulture) : string.Empty)}|{(requestDiagnostics.SegmentEnd.HasValue ? requestDiagnostics.SegmentEnd.Value.ToString(CultureInfo.InvariantCulture) : string.Empty)}");
     }
 
     private static long GetElapsedMs(long startTimestamp)

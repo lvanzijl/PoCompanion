@@ -85,7 +85,15 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         if (useSegmentedScope && segments.Count == 0)
         {
             _logger.LogInformation("OData segmented scope produced no valid WorkItemId ranges. Returning empty revision page.");
-            return new ReportingRevisionsResult([], continuationToken: null);
+            return new ReportingRevisionsResult(
+                [],
+                continuationToken: null,
+                requestDiagnostics: new ReportingRequestDiagnostics(
+                    UrlSource: "InitialCanonical",
+                    EffectiveHost: null,
+                    EffectivePath: null,
+                    SegmentStart: null,
+                    SegmentEnd: null));
         }
 
         SegmentContinuationState segmentState;
@@ -404,9 +412,19 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
                 segmentAdvanceDecision.Value.NextBoundaryStart);
         }
 
+        var requestUri = Uri.TryCreate(url, UriKind.Absolute, out var effectiveUri)
+            ? effectiveUri
+            : null;
+
         return new ReportingRevisionsResult(
             revisions,
-            continuationTokenToReturn);
+            continuationTokenToReturn,
+            requestDiagnostics: new ReportingRequestDiagnostics(
+                UrlSource: urlSource.ToString(),
+                EffectiveHost: requestUri?.Host,
+                EffectivePath: requestUri?.AbsolutePath,
+                SegmentStart: segmentState.SegmentStart,
+                SegmentEnd: segmentState.SegmentEnd));
         }
     }
 

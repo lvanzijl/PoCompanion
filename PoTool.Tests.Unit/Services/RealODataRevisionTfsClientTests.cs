@@ -49,6 +49,10 @@ public class RealODataRevisionTfsClientTests
 
         Assert.HasCount(2, page.Revisions);
         Assert.IsNotNull(page.ContinuationToken);
+        Assert.IsNotNull(page.RequestDiagnostics);
+        Assert.AreEqual("InitialCanonical", page.RequestDiagnostics.UrlSource);
+        Assert.AreEqual("analytics", page.RequestDiagnostics.EffectiveHost);
+        Assert.AreEqual("/WorkItemRevisions", page.RequestDiagnostics.EffectivePath);
         StringAssert.StartsWith(page.ContinuationToken, "next:");
         var firstRequest = Uri.UnescapeDataString(handler.RequestUris[0]);
         StringAssert.Contains(firstRequest, "$orderby=ChangedDate asc,WorkItemId asc,Revision asc");

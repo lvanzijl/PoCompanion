@@ -798,9 +798,77 @@ public sealed class RevisionIngestionServiceV2Tests
         StringAssert.Contains(result.ErrorMessage, "EmptyWithTokenStall");
         StringAssert.Contains(result.ErrorMessage, "consecutiveEmptyPages=2");
         StringAssert.Contains(result.ErrorMessage, "lastTokenLength=2");
-        StringAssert.Contains(result.ErrorMessage, "lastUrlSource=InitialCanonical");
+        StringAssert.Contains(result.ErrorMessage, "lastUrlSource=");
         // Threshold is now inclusive (>=), so run stops on the second empty page.
         Assert.AreEqual(2, stubClient.ReportingCalls);
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_EmptyPagesWithSegmentAdvance_DoNotTriggerNoProgressStall()
+    {
+        var results = new[]
+        {
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "seg:0|AAA"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "seg:1|AAA"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), "seg:2|AAA"),
+            new ReportingRevisionsResult(Array.Empty<WorkItemRevision>(), null)
+        };
+
+        var options = new RevisionIngestionV2Options
+        {
+            RevisionIngestionMode = "V2",
+            V2EnableWindowing = false,
+            V2MaxConsecutiveEmptyPages = 2
+        };
+
+        var stubClient = new StubRevisionSource(results);
+        using var provider = BuildServiceProvider(stubClient, v2Options: options);
+        var service = provider.GetRequiredService<RevisionIngestionServiceV2>();
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsTrue(result.Success, $"Expected success but got: {result.Message}");
+        Assert.AreEqual(4, stubClient.ReportingCalls);
+    }
+
+    [TestMethod]
+    public async Task IngestRevisionsAsync_StallUsesClientRequestDiagnosticsForHostPath()
+    {
+        var results = new[]
+        {
+            new ReportingRevisionsResult(
+                Array.Empty<WorkItemRevision>(),
+                "seg:69695:69696|QQ==",
+                requestDiagnostics: new ReportingRequestDiagnostics("NextLinkVerbatim", "analytics.example.test", "/_odata/WorkItemRevisions", 69695, 69696)),
+            new ReportingRevisionsResult(
+                Array.Empty<WorkItemRevision>(),
+                "seg:69695:69696|Qg==",
+                requestDiagnostics: new ReportingRequestDiagnostics("NextLinkVerbatim", "analytics.example.test", "/_odata/WorkItemRevisions", 69695, 69696)),
+            new ReportingRevisionsResult(
+                Array.Empty<WorkItemRevision>(),
+                "seg:69695:69696|Qw==",
+                requestDiagnostics: new ReportingRequestDiagnostics("NextLinkVerbatim", "analytics.example.test", "/_odata/WorkItemRevisions", 69695, 69696))
+        };
+
+        var options = new RevisionIngestionV2Options
+        {
+            RevisionIngestionMode = "V2",
+            V2EnableWindowing = false,
+            V2MaxConsecutiveEmptyPages = 2
+        };
+
+        var stubClient = new StubRevisionSource(results);
+        using var provider = BuildServiceProvider(stubClient, v2Options: options);
+        var service = provider.GetRequiredService<RevisionIngestionServiceV2>();
+
+        var result = await service.IngestRevisionsAsync(1, cancellationToken: CancellationToken.None);
+
+        Assert.IsFalse(result.Success);
+        StringAssert.Contains(result.ErrorMessage, "lastUrlSource=NextLinkVerbatim");
+        StringAssert.Contains(result.ErrorMessage, "lastHost=analytics.example.test");
+        StringAssert.Contains(result.ErrorMessage, "lastPath=/_odata/WorkItemRevisions");
+        // Ensure host/path came from request diagnostics, not from encoded continuation token text.
+        Assert.IsFalse(result.ErrorMessage.Contains("%7C", StringComparison.OrdinalIgnoreCase));
     }
 
     [TestMethod]

@@ -36,7 +36,8 @@ public sealed record ReportingRevisionsResult
         int? httpStatusCode = null,
         long? httpDurationMs = null,
         long? parseDurationMs = null,
-        long? transformDurationMs = null)
+        long? transformDurationMs = null,
+        ReportingRequestDiagnostics? requestDiagnostics = null)
     {
         Revisions = revisions ?? throw new ArgumentNullException(nameof(revisions));
         ContinuationToken = string.IsNullOrWhiteSpace(continuationToken) ? null : continuationToken;
@@ -45,6 +46,7 @@ public sealed record ReportingRevisionsResult
         HttpDurationMs = httpDurationMs;
         ParseDurationMs = parseDurationMs;
         TransformDurationMs = transformDurationMs;
+        RequestDiagnostics = requestDiagnostics;
 
         if (Termination != null && ContinuationToken != null)
         {
@@ -60,9 +62,17 @@ public sealed record ReportingRevisionsResult
     public long? HttpDurationMs { get; }
     public long? ParseDurationMs { get; }
     public long? TransformDurationMs { get; }
+    public ReportingRequestDiagnostics? RequestDiagnostics { get; }
     public bool IsComplete => ContinuationToken is null;
     public bool WasTerminatedEarly => Termination is not null;
 }
+
+public sealed record ReportingRequestDiagnostics(
+    string UrlSource,
+    string? EffectiveHost,
+    string? EffectivePath,
+    int? SegmentStart,
+    int? SegmentEnd);
 
 public record WorkItemRevision
 {
