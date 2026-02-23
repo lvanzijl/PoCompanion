@@ -22,8 +22,7 @@ public class OnboardingWizardState : IOnboardingWizardState
     /// <inheritdoc/>
     public void MarkTfsVerified(
         string url,
-        string project,
-        string? ignored = null)
+        string project)
     {
         _tfsVerified = true;
         TfsDirty = false;
@@ -41,8 +40,7 @@ public class OnboardingWizardState : IOnboardingWizardState
     /// <inheritdoc/>
     public bool CheckTfsFieldsUnchanged(
         string url,
-        string project,
-        string? ignored = null)
+        string project)
     {
         if (!_tfsVerified || _verifiedFingerprint == null)
         {

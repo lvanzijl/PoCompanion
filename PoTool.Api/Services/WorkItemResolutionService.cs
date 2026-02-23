@@ -48,7 +48,10 @@ public class WorkItemResolutionService
             SyncStatus = CacheSyncStatus.Idle
         };
         // REPLACE_WITH_ACTIVITY_SOURCE: resolve product/epic/feature/sprint lineage from activity events.
-        if (cacheState.Id == 0) context.ProductOwnerCacheStates.Add(cacheState);
+        if (cacheState.Id == 0)
+        {
+            context.ProductOwnerCacheStates.Add(cacheState);
+        }
         cacheState.ResolutionAsOfUtc = DateTimeOffset.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
         return new ResolutionResult

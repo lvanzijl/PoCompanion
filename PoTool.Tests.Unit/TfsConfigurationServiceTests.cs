@@ -170,7 +170,7 @@ public class TfsConfigurationServiceTests
     }
 
     [TestMethod]
-    public async Task SaveConfigAsync_WithExplicitAnalyticsBaseUrl_IgnoresAnalyticsOverride()
+    public async Task SaveConfigAsync_WithExplicitAnalyticsBaseUrl_IgnoresAnalyticsParameters()
     {
         // Act
         await _service.SaveConfigAsync(

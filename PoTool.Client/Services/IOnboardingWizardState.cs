@@ -23,8 +23,7 @@ public interface IOnboardingWizardState
     /// <param name="project">Project name</param>
     void MarkTfsVerified(
         string url,
-        string project,
-        string? ignored = null);
+        string project);
 
     /// <summary>
     /// Marks TFS configuration as not verified (failed verification or field changed).
@@ -40,8 +39,7 @@ public interface IOnboardingWizardState
     /// <returns>True if values match verified state, false if dirty</returns>
     bool CheckTfsFieldsUnchanged(
         string url,
-        string project,
-        string? ignored = null);
+        string project);
 
     /// <summary>
     /// Resets all wizard state.

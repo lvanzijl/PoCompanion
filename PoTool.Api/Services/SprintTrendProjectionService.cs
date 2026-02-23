@@ -45,33 +45,11 @@ public class SprintTrendProjectionService
         IEnumerable<int> sprintIds,
         CancellationToken cancellationToken = default)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
-        var sprintIdList = sprintIds.Distinct().ToList();
-        var productIds = await context.Products
-            .Where(p => p.ProductOwnerId == productOwnerId)
-            .Select(p => p.Id)
-            .ToListAsync(cancellationToken);
-
+        _ = productOwnerId;
+        _ = sprintIds;
+        _ = cancellationToken;
         // REPLACE_WITH_ACTIVITY_SOURCE: compute sprint trend metrics from activity events.
-        var projections = await context.SprintMetricsProjections
-            .Where(p => sprintIdList.Contains(p.SprintId) && productIds.Contains(p.ProductId))
-            .ToListAsync(cancellationToken);
-
-        foreach (var projection in projections)
-        {
-            projection.PlannedCount = 0;
-            projection.PlannedEffort = 0;
-            projection.WorkedCount = 0;
-            projection.WorkedEffort = 0;
-            projection.BugsPlannedCount = 0;
-            projection.BugsWorkedCount = 0;
-            projection.IncludedUpToRevisionId = 0;
-            projection.LastComputedAt = DateTimeOffset.UtcNow;
-        }
-
-        await context.SaveChangesAsync(cancellationToken);
-        return projections;
+        return Array.Empty<SprintMetricsProjectionEntity>();
     }
 
     /// <summary>

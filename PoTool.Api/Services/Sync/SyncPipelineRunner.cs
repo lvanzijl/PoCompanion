@@ -22,7 +22,7 @@ public class SyncPipelineRunner : ISyncPipeline
     private readonly ConcurrentDictionary<int, SemaphoreSlim> _syncLocks = new();
     private readonly ConcurrentDictionary<int, CancellationTokenSource> _activeSyncs = new();
 
-    // Total stages in the current pipeline (revision ingestion removed).
+    // Total stages in the current pipeline (Stage 3 RevisionSyncStage removed).
     private const int TotalStages = 10;
 
     public SyncPipelineRunner(
