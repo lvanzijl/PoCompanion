@@ -153,6 +153,17 @@ public sealed class RevisionIngestionPaginationOptions
     /// Hard cap on segments per window. If exceeded, segmentation is condensed to a single segment.
     /// </summary>
     public int ODataSegmentMaxSegmentsPerWindow { get; init; } = 200;
+
+    /// <summary>
+    /// Segment cap fallback mode: "SingleRange" or "MergeAdjacent".
+    /// </summary>
+    public string ODataSegmentCapFallbackMode { get; init; } = "SingleRange";
+
+    public static bool IsValidSegmentCapFallbackMode(string? mode)
+    {
+        return string.Equals(mode, "SingleRange", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(mode, "MergeAdjacent", StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 public enum ODataRevisionScopeMode

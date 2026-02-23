@@ -232,9 +232,12 @@ public sealed class RevisionIngestionServiceV2Tests
     [TestMethod]
     public void ResolveSegmentIndexFromContinuationToken_LegacyIndexToken_ReturnsIndex()
     {
+        var ids = Enumerable.Range(1, 25)
+            .Concat(Enumerable.Range(6000, 25))
+            .ToArray();
         var index = RevisionIngestionServiceV2.ResolveSegmentIndexFromContinuationToken(
             "seg:1|AAA",
-            [1, 2, 6000, 6001],
+            ids,
             out var tokenFormat,
             out var exactMatchFound,
             out var orderedFallbackIndex);
@@ -248,9 +251,12 @@ public sealed class RevisionIngestionServiceV2Tests
     [TestMethod]
     public void ResolveSegmentIndexFromContinuationToken_BoundaryExactMatch_ReturnsCorrectIndex()
     {
+        var ids = Enumerable.Range(1, 25)
+            .Concat(Enumerable.Range(6000, 25))
+            .ToArray();
         var index = RevisionIngestionServiceV2.ResolveSegmentIndexFromContinuationToken(
-            "seg:6000:6001|AAA",
-            [1, 2, 6000, 6001],
+            "seg:6000:6024|AAA",
+            ids,
             out var tokenFormat,
             out var exactMatchFound,
             out var orderedFallbackIndex);
@@ -264,9 +270,12 @@ public sealed class RevisionIngestionServiceV2Tests
     [TestMethod]
     public void ResolveSegmentIndexFromContinuationToken_BoundaryFallback_ReturnsOrderedFallbackIndex()
     {
+        var ids = Enumerable.Range(1, 25)
+            .Concat(Enumerable.Range(6000, 25))
+            .ToArray();
         var index = RevisionIngestionServiceV2.ResolveSegmentIndexFromContinuationToken(
             "seg:3000:3001|AAA",
-            [1, 2, 6000, 6001],
+            ids,
             out var tokenFormat,
             out var exactMatchFound,
             out var orderedFallbackIndex);
@@ -280,9 +289,12 @@ public sealed class RevisionIngestionServiceV2Tests
     [TestMethod]
     public void ResolveSegmentIndexFromContinuationToken_LegacyIndexOutOfRange_ReturnsIndexWithoutThrowing()
     {
+        var ids = Enumerable.Range(1, 25)
+            .Concat(Enumerable.Range(6000, 25))
+            .ToArray();
         var index = RevisionIngestionServiceV2.ResolveSegmentIndexFromContinuationToken(
             "seg:99|AAA",
-            [1, 2, 6000, 6001],
+            ids,
             out var tokenFormat,
             out var exactMatchFound,
             out var orderedFallbackIndex);

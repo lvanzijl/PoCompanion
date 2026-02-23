@@ -75,18 +75,19 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         _ = expandMode;
         var config = await GetValidatedConfigAsync(cancellationToken);
         var options = _paginationOptions.CurrentValue;
+        var segmentationOptions = new WorkItemIdSegmentationOptions(
+            options.ODataSegmentMaxGap,
+            options.ODataSegmentMaxSpan,
+            options.ODataSegmentMinIds,
+            options.ODataSegmentMaxSegmentsPerWindow,
+            options.ODataSegmentCapFallbackMode);
         var top = Math.Max(1, options.ODataTop);
         var seekTop = Math.Max(1, options.ODataSeekPageSize);
         var quoteDateStrings = options.ODataQuoteDateStrings;
         var useSegmentedScope = ShouldUseSegmentedScope(scopedWorkItemIds, options);
         var segmentBuildResult = useSegmentedScope
-            ? WorkItemIdRangeSegmentBuilder.BuildWithMetadata(
-                scopedWorkItemIds,
-                options.ODataSegmentMaxGap,
-                options.ODataSegmentMaxSpan,
-                options.ODataSegmentMinIds,
-                options.ODataSegmentMaxSegmentsPerWindow)
-            : new SegmentBuildResult([], false);
+            ? WorkItemIdRangeSegmentBuilder.BuildWithMetadata(scopedWorkItemIds, segmentationOptions)
+            : new SegmentBuildResult([], false, null);
         var segments = segmentBuildResult.Segments;
         if (useSegmentedScope && segments.Count == 0)
         {
@@ -119,21 +120,36 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
                 ? segments.Min(segment => orderedScopedIds.Count(id => id >= segment.Start && id <= segment.End))
                 : 0;
             _logger.LogInformation(
-                "REV_INGEST_ODATA_SEGMENT_STATS scopedIdCount={ScopedIdCount} segmentCount={SegmentCount} minId={MinId} maxId={MaxId} avgSpan={AvgSpan} maxSpan={MaxSpan} avgIdsPerSegment={AvgIdsPerSegment} minIdsPerSegmentObserved={MinIdsPerSegmentObserved}",
+                "REV_INGEST_ODATA_SEGMENT_STATS segmentationEnabled={SegmentationEnabled} scopedIdCount={ScopedIdCount} segmentCount={SegmentCount} minId={MinId} maxId={MaxId} maxGap={MaxGap} maxSpan={MaxSpan} minIds={MinIds} maxSegmentsPerWindow={MaxSegmentsPerWindow} capFallbackMode={CapFallbackMode} avgSpan={AvgSpan} maxSpanObserved={MaxSpanObserved} avgIdsPerSegment={AvgIdsPerSegment} minIdsPerSegmentObserved={MinIdsPerSegmentObserved} segmentationFallbackApplied={SegmentationFallbackApplied} fallbackModeUsed={FallbackModeUsed}",
+                useSegmentedScope,
                 scopedIdCount,
                 segments.Count,
                 scopedWorkItemIds?.Count > 0 ? scopedWorkItemIds.Min() : (int?)null,
                 scopedWorkItemIds?.Count > 0 ? scopedWorkItemIds.Max() : (int?)null,
+                segmentationOptions.MaxGap,
+                segmentationOptions.MaxSpan,
+                segmentationOptions.MinIds,
+                segmentationOptions.MaxSegmentsPerWindow,
+                segmentationOptions.CapFallbackMode,
                 avgSpan,
                 maxSpanObserved,
                 avgIdsPerSegment,
-                minIdsPerSegmentObserved);
-            if (segmentBuildResult.WasCondensedToSingleSegment)
+                minIdsPerSegmentObserved,
+                segmentBuildResult.FallbackApplied,
+                segmentBuildResult.FallbackMode);
+            if (segments.Count > 200 || segmentBuildResult.FallbackApplied)
             {
                 _logger.LogWarning(
-                    "REV_INGEST_ODATA_SEGMENT_CONDENSED reason=MaxSegmentsExceeded maxSegmentsPerWindow={MaxSegmentsPerWindow} scopedIdCount={ScopedIdCount}",
+                    "REV_INGEST_ODATA_SEGMENT_WARNING scopedIdCount={ScopedIdCount} segmentCount={SegmentCount} maxGap={MaxGap} maxSpan={MaxSpan} minIds={MinIds} maxSegmentsPerWindow={MaxSegmentsPerWindow} capFallbackMode={CapFallbackMode} fallbackApplied={FallbackApplied} fallbackModeUsed={FallbackModeUsed}",
+                    scopedIdCount,
+                    segments.Count,
+                    segmentationOptions.MaxGap,
+                    segmentationOptions.MaxSpan,
+                    segmentationOptions.MinIds,
                     options.ODataSegmentMaxSegmentsPerWindow,
-                    scopedIdCount);
+                    segmentationOptions.CapFallbackMode,
+                    segmentBuildResult.FallbackApplied,
+                    segmentBuildResult.FallbackMode);
             }
         }
 
@@ -607,12 +623,14 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         return new RequestContext(normalizedToken, RequestMode.NextLink, RequestUrlSource.NextLinkVerbatim, ExtractTopOrFallback(normalizedToken, top), null, null, 0);
     }
 
-    private static bool ShouldUseSegmentedScope(
+    internal static bool ShouldUseSegmentedScope(
         IReadOnlyCollection<int>? scopedWorkItemIds,
         RevisionIngestionPaginationOptions options)
     {
         return options.ODataScopeMode == ODataRevisionScopeMode.Range &&
-               scopedWorkItemIds is { Count: > 0 };
+               scopedWorkItemIds is { Count: > 0 } &&
+               scopedWorkItemIds.Count >= Math.Max(1, options.ODataSegmentMinIds) &&
+               options.ODataSegmentMaxSegmentsPerWindow > 1;
     }
 
     private static SegmentContinuationState ResolveSegmentState(

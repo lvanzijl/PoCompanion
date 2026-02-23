@@ -1,3 +1,5 @@
+using PoTool.Core.Configuration;
+
 namespace PoTool.Integrations.Tfs.Clients;
 
 public readonly record struct WorkItemIdRangeSegment(int Start, int End)
@@ -11,6 +13,7 @@ public static class WorkItemIdRangeSegmentBuilder
     private const int DefaultMaxSpan = 5000;
     private const int DefaultMinIdsPerSegment = 25;
     private const int DefaultMaxSegmentsPerWindow = 200;
+    private const string DefaultCapFallbackMode = "SingleRange";
 
     public static IReadOnlyList<WorkItemIdRangeSegment> Build(
         IReadOnlyCollection<int>? scopedWorkItemIds,
@@ -19,7 +22,19 @@ public static class WorkItemIdRangeSegmentBuilder
         int minIdsPerSegment = DefaultMinIdsPerSegment,
         int maxSegmentsPerWindow = DefaultMaxSegmentsPerWindow)
     {
-        return BuildWithMetadata(scopedWorkItemIds, maxGap, maxSpan, minIdsPerSegment, maxSegmentsPerWindow).Segments;
+        return Build(scopedWorkItemIds, new WorkItemIdSegmentationOptions(
+            maxGap,
+            maxSpan,
+            minIdsPerSegment,
+            maxSegmentsPerWindow,
+            DefaultCapFallbackMode));
+    }
+
+    public static IReadOnlyList<WorkItemIdRangeSegment> Build(
+        IReadOnlyCollection<int>? scopedWorkItemIds,
+        WorkItemIdSegmentationOptions options)
+    {
+        return BuildWithMetadata(scopedWorkItemIds, options).Segments;
     }
 
     public static SegmentBuildResult BuildWithMetadata(
@@ -29,9 +44,21 @@ public static class WorkItemIdRangeSegmentBuilder
         int minIdsPerSegment = DefaultMinIdsPerSegment,
         int maxSegmentsPerWindow = DefaultMaxSegmentsPerWindow)
     {
+        return BuildWithMetadata(scopedWorkItemIds, new WorkItemIdSegmentationOptions(
+            maxGap,
+            maxSpan,
+            minIdsPerSegment,
+            maxSegmentsPerWindow,
+            DefaultCapFallbackMode));
+    }
+
+    public static SegmentBuildResult BuildWithMetadata(
+        IReadOnlyCollection<int>? scopedWorkItemIds,
+        WorkItemIdSegmentationOptions options)
+    {
         if (scopedWorkItemIds == null || scopedWorkItemIds.Count == 0)
         {
-            return new SegmentBuildResult([], false);
+            return new SegmentBuildResult([], false, null);
         }
 
         var orderedIds = scopedWorkItemIds
@@ -41,13 +68,26 @@ public static class WorkItemIdRangeSegmentBuilder
             .ToArray();
         if (orderedIds.Length == 0)
         {
-            return new SegmentBuildResult([], false);
+            return new SegmentBuildResult([], false, null);
         }
 
-        var effectiveMaxGap = Math.Max(0, maxGap);
-        var effectiveMaxSpan = Math.Max(1, maxSpan);
-        var effectiveMinIdsPerSegment = Math.Max(1, minIdsPerSegment);
-        var effectiveMaxSegmentsPerWindow = Math.Max(1, maxSegmentsPerWindow);
+        var effectiveMaxGap = Math.Max(0, options.MaxGap);
+        var effectiveMaxSpan = Math.Max(1, options.MaxSpan);
+        var effectiveMinIdsPerSegment = Math.Max(1, options.MinIds);
+        var effectiveMaxSegmentsPerWindow = Math.Max(1, options.MaxSegmentsPerWindow);
+        var fallbackMode = RevisionIngestionPaginationOptions.IsValidSegmentCapFallbackMode(options.CapFallbackMode) &&
+                           string.Equals(options.CapFallbackMode, "MergeAdjacent", StringComparison.OrdinalIgnoreCase)
+            ? "MergeAdjacent"
+            : "SingleRange";
+
+        if (orderedIds.Length < effectiveMinIdsPerSegment)
+        {
+            return new SegmentBuildResult(
+                [new WorkItemIdRangeSegment(orderedIds[0], orderedIds[^1])],
+                FallbackApplied: false,
+                FallbackMode: null);
+        }
+
         var segments = new List<WorkItemIdRangeSegment>();
         var rangeStart = orderedIds[0];
         var rangeEnd = orderedIds[0];
@@ -68,12 +108,6 @@ public static class WorkItemIdRangeSegmentBuilder
             }
 
             segments.Add(new WorkItemIdRangeSegment(rangeStart, rangeEnd));
-            if (segments.Count > effectiveMaxSegmentsPerWindow)
-            {
-                return new SegmentBuildResult(
-                    [new WorkItemIdRangeSegment(orderedIds[0], orderedIds[^1])],
-                    WasCondensedToSingleSegment: true);
-            }
             rangeStart = candidate;
             rangeEnd = candidate;
             idsInCurrentSegment = 1;
@@ -82,15 +116,51 @@ public static class WorkItemIdRangeSegmentBuilder
         segments.Add(new WorkItemIdRangeSegment(rangeStart, rangeEnd));
         if (segments.Count > effectiveMaxSegmentsPerWindow)
         {
+            if (string.Equals(fallbackMode, "MergeAdjacent", StringComparison.Ordinal))
+            {
+                var mergedSegments = new List<WorkItemIdRangeSegment>(segments);
+                while (mergedSegments.Count > effectiveMaxSegmentsPerWindow)
+                {
+                    var mergeIndex = 0;
+                    var smallestGap = int.MaxValue;
+                    for (var i = 0; i < mergedSegments.Count - 1; i++)
+                    {
+                        var gapBetween = mergedSegments[i + 1].Start - mergedSegments[i].End - 1;
+                        if (gapBetween < smallestGap)
+                        {
+                            smallestGap = gapBetween;
+                            mergeIndex = i;
+                        }
+                    }
+
+                    var merged = new WorkItemIdRangeSegment(
+                        mergedSegments[mergeIndex].Start,
+                        mergedSegments[mergeIndex + 1].End);
+                    mergedSegments[mergeIndex] = merged;
+                    mergedSegments.RemoveAt(mergeIndex + 1);
+                }
+
+                return new SegmentBuildResult(mergedSegments, FallbackApplied: true, FallbackMode: "MergeAdjacent");
+            }
+
             return new SegmentBuildResult(
                 [new WorkItemIdRangeSegment(orderedIds[0], orderedIds[^1])],
-                WasCondensedToSingleSegment: true);
+                FallbackApplied: true,
+                FallbackMode: "SingleRange");
         }
 
-        return new SegmentBuildResult(segments, WasCondensedToSingleSegment: false);
+        return new SegmentBuildResult(segments, FallbackApplied: false, FallbackMode: null);
     }
 }
 
+public readonly record struct WorkItemIdSegmentationOptions(
+    int MaxGap,
+    int MaxSpan,
+    int MinIds,
+    int MaxSegmentsPerWindow,
+    string CapFallbackMode);
+
 public readonly record struct SegmentBuildResult(
     IReadOnlyList<WorkItemIdRangeSegment> Segments,
-    bool WasCondensedToSingleSegment);
+    bool FallbackApplied,
+    string? FallbackMode);

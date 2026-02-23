@@ -14,6 +14,51 @@ namespace PoTool.Tests.Unit.Services;
 public class RealODataRevisionTfsClientTests
 {
     [TestMethod]
+    public void ShouldUseSegmentedScope_WhenBelowMinIds_ReturnsFalse()
+    {
+        var options = new RevisionIngestionPaginationOptions
+        {
+            ODataScopeMode = ODataRevisionScopeMode.Range,
+            ODataSegmentMinIds = 5,
+            ODataSegmentMaxSegmentsPerWindow = 200
+        };
+
+        var useSegmented = RealODataRevisionTfsClient.ShouldUseSegmentedScope([1, 2, 3], options);
+
+        Assert.IsFalse(useSegmented);
+    }
+
+    [TestMethod]
+    public void ShouldUseSegmentedScope_WhenAtMinIdsAndCapAboveOne_ReturnsTrue()
+    {
+        var options = new RevisionIngestionPaginationOptions
+        {
+            ODataScopeMode = ODataRevisionScopeMode.Range,
+            ODataSegmentMinIds = 3,
+            ODataSegmentMaxSegmentsPerWindow = 200
+        };
+
+        var useSegmented = RealODataRevisionTfsClient.ShouldUseSegmentedScope([1, 2, 3], options);
+
+        Assert.IsTrue(useSegmented);
+    }
+
+    [TestMethod]
+    public void ShouldUseSegmentedScope_WhenMaxSegmentsCapIsOne_ReturnsFalse()
+    {
+        var options = new RevisionIngestionPaginationOptions
+        {
+            ODataScopeMode = ODataRevisionScopeMode.Range,
+            ODataSegmentMinIds = 1,
+            ODataSegmentMaxSegmentsPerWindow = 1
+        };
+
+        var useSegmented = RealODataRevisionTfsClient.ShouldUseSegmentedScope([1, 2, 3], options);
+
+        Assert.IsFalse(useSegmented);
+    }
+
+    [TestMethod]
     public void RevisionIngestionPaginationOptions_Defaults_UseLowerRiskQueryShape()
     {
         var options = new RevisionIngestionPaginationOptions();
@@ -21,6 +66,7 @@ public class RealODataRevisionTfsClientTests
         Assert.AreEqual(ODataRevisionSelectMode.Full, options.ODataSelectMode);
         Assert.IsTrue(options.ODataOrderByEnabled);
         Assert.AreEqual(ODataRevisionScopeMode.Range, options.ODataScopeMode);
+        Assert.AreEqual("SingleRange", options.ODataSegmentCapFallbackMode);
     }
 
     [TestMethod]

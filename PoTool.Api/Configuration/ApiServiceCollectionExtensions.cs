@@ -71,11 +71,22 @@ public static class ApiServiceCollectionExtensions
                            options.FallbackBatchSize >= 1 &&
                            options.ODataTop >= 1 &&
                            options.ODataSeekPageSize >= 1 &&
+                           options.ODataSegmentMaxGap >= 0 &&
+                           options.ODataSegmentMaxSpan >= 1 &&
+                           options.ODataSegmentMinIds >= 1 &&
+                           options.ODataSegmentMaxSegmentsPerWindow >= 1 &&
+                           RevisionIngestionPaginationOptions.IsValidSegmentCapFallbackMode(options.ODataSegmentCapFallbackMode) &&
                            options.RetryMaxIterations >= 1 &&
                            options.RetryOverlapMinutes >= 0 &&
                            options.ProgressEpsilonSeconds >= 0,
                 "Revision ingestion pagination configuration has invalid bounds.")
             .ValidateOnStart();
+        var configuredMaxSegmentsPerWindow = configuration.GetValue<int?>("RevisionIngestionPagination:ODataSegmentMaxSegmentsPerWindow");
+        if (configuredMaxSegmentsPerWindow.HasValue && configuredMaxSegmentsPerWindow.Value > 500)
+        {
+            System.Diagnostics.Trace.TraceWarning(
+                $"RevisionIngestionPagination:ODataSegmentMaxSegmentsPerWindow={configuredMaxSegmentsPerWindow.Value} may cause many OData requests.");
+        }
         services.AddOptions<RevisionIngestionPersistenceOptimizationOptions>()
             .Bind(configuration.GetSection("RevisionIngestionPersistenceOptimization"))
             .Validate(
