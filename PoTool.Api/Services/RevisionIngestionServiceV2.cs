@@ -28,6 +28,7 @@ public sealed class RevisionIngestionServiceV2
     private readonly TimeProvider _timeProvider;
 
     private const int DefaultFallbackDays = 180;
+    private const int TokenPrefixLength = 24;
 
     public RevisionIngestionServiceV2(
         IServiceScopeFactory scopeFactory,
@@ -796,9 +797,8 @@ public sealed class RevisionIngestionServiceV2
         var descendantWorkItems = WorkItemHierarchyHelper.FilterDescendants(rootWorkItemIds, workItems);
         var earliestChangedWorkItemId = descendantWorkItems
             .Where(workItem => workItem.ChangedDate != null)
-            .OrderBy(workItem => workItem.ChangedDate)
-            .Select(workItem => workItem.TfsId)
-            .FirstOrDefault();
+            .MinBy(workItem => workItem.ChangedDate)
+            ?.TfsId ?? 0;
         _logger.LogInformation(
             "REV_INGEST_V2_SCOPE_EARLIEST_WORKITEM earliestChangedWorkItemId={EarliestChangedWorkItemId}",
             earliestChangedWorkItemId);
@@ -906,7 +906,7 @@ public sealed class RevisionIngestionServiceV2
             return null;
         }
 
-        return value[..Math.Min(24, value.Length)];
+        return value[..Math.Min(TokenPrefixLength, value.Length)];
     }
 
     private static int Len(string? value)

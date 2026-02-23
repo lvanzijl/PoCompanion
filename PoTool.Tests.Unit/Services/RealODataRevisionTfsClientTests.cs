@@ -836,12 +836,18 @@ public class RealODataRevisionTfsClientTests
 
     private sealed class CapturingLogger<T> : ILogger<T>
     {
+        private sealed class NoopDisposable : IDisposable
+        {
+            public static NoopDisposable Instance { get; } = new();
+            public void Dispose() { }
+        }
+
         public List<string> Messages { get; } = [];
 
         public IDisposable? BeginScope<TState>(TState state)
             where TState : notnull
         {
-            return null;
+            return NoopDisposable.Instance;
         }
 
         public bool IsEnabled(LogLevel logLevel) => true;
