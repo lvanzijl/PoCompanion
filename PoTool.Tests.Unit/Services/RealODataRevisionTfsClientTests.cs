@@ -834,6 +834,40 @@ public class RealODataRevisionTfsClientTests
     }
 
     [TestMethod]
+    public async Task GetRevisionsAsync_WhenLegacySegmentTokenIndexProvided_ResolvesSegmentByIndex()
+    {
+        var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataScopeMode = ODataRevisionScopeMode.Range
+        });
+        var legacyToken = $"seg:1|{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Empty))}";
+
+        _ = await client.GetRevisionsAsync(continuationToken: legacyToken, scopedWorkItemIds: [1, 2, 10, 11]);
+
+        var request = Uri.UnescapeDataString(handler.RequestUris[0]);
+        StringAssert.Contains(request, "WorkItemId ge 10 and WorkItemId le 11");
+        Assert.IsFalse(request.Contains("WorkItemId ge 1 and WorkItemId le 2", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenLegacySegmentTokenIndexOutOfRange_RestartsAtFirstSegmentWithoutInnerToken()
+    {
+        var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataScopeMode = ODataRevisionScopeMode.Range
+        });
+        var invalidLegacyToken = $"seg:99|{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("next:invalid"))}";
+
+        _ = await client.GetRevisionsAsync(continuationToken: invalidLegacyToken, scopedWorkItemIds: [1, 2, 10, 11]);
+
+        var request = Uri.UnescapeDataString(handler.RequestUris[0]);
+        StringAssert.Contains(request, "WorkItemId ge 1 and WorkItemId le 2");
+        Assert.IsFalse(request.Contains("invalid", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
     public async Task GetWorkItemRevisionsAsync_UsesServerSideEqFilter()
     {
         var handler = new QueueMessageHandler(

@@ -534,12 +534,25 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         if (TryDecodeSegmentState(normalizedToken, out var state) &&
             state is not null)
         {
-            var matchedSegmentIndex = segments
-                .Select((segment, index) => new { segment, index })
-                .Where(candidate => candidate.segment.Start == state.SegmentStart &&
-                                    candidate.segment.End == state.SegmentEnd)
-                .Select(candidate => (int?)candidate.index)
-                .FirstOrDefault();
+            int? matchedSegmentIndex = null;
+            if (state.LegacySegmentIndex.HasValue)
+            {
+                var legacySegmentIndex = state.LegacySegmentIndex.Value;
+                if (legacySegmentIndex >= 0 && legacySegmentIndex < segments.Count)
+                {
+                    matchedSegmentIndex = legacySegmentIndex;
+                }
+            }
+            else
+            {
+                matchedSegmentIndex = segments
+                    .Select((segment, index) => new { segment, index })
+                    .Where(candidate => candidate.segment.Start == state.SegmentStart &&
+                                        candidate.segment.End == state.SegmentEnd)
+                    .Select(candidate => (int?)candidate.index)
+                    .FirstOrDefault();
+            }
+
             if (matchedSegmentIndex.HasValue)
             {
                 return new SegmentContinuationState(state.InnerContinuationToken, segments[matchedSegmentIndex.Value], matchedSegmentIndex.Value, HasSegmentToken: true, SegmentTokenMatched: true);
@@ -860,16 +873,32 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
                 return false;
             }
 
+            int segmentStart;
+            int segmentEnd;
+            int? legacySegmentIndex = null;
+
             var segmentIdentity = parts[0].Split(':');
-            if (segmentIdentity.Length != 2 ||
-                !int.TryParse(segmentIdentity[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var segmentStart) ||
-                !int.TryParse(segmentIdentity[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var segmentEnd))
+            if (segmentIdentity.Length == 2 &&
+                int.TryParse(segmentIdentity[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out segmentStart) &&
+                int.TryParse(segmentIdentity[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out segmentEnd))
+            {
+                // Current format: seg:{segmentStart}:{segmentEnd}|{base64InnerToken}
+            }
+            else if (segmentIdentity.Length == 1 &&
+                     int.TryParse(segmentIdentity[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedLegacySegmentIndex))
+            {
+                // Legacy format: seg:{segmentIndex}|{base64InnerToken}
+                segmentStart = -1;
+                segmentEnd = -1;
+                legacySegmentIndex = parsedLegacySegmentIndex;
+            }
+            else
             {
                 return false;
             }
 
             var decodedInnerToken = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(parts[1]));
-            state = new SegmentContinuationStateToken(segmentStart, segmentEnd, NormalizeToken(decodedInnerToken));
+            state = new SegmentContinuationStateToken(segmentStart, segmentEnd, NormalizeToken(decodedInnerToken), legacySegmentIndex);
             return true;
         }
         catch
@@ -1327,7 +1356,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         RevisionCursorTuple? LastCursor,
         int NoProgressPages);
     private sealed record SegmentContinuationState(string? InnerContinuationToken, WorkItemIdRangeSegment? Segment, int SegmentIndex, bool HasSegmentToken, bool SegmentTokenMatched);
-    private sealed record SegmentContinuationStateToken(int SegmentStart, int SegmentEnd, string? InnerContinuationToken);
+    private sealed record SegmentContinuationStateToken(int SegmentStart, int SegmentEnd, string? InnerContinuationToken, int? LegacySegmentIndex = null);
     private sealed record NextLinkContinuationState(string Url, int PageIndex, RevisionCursorTuple? LastCursor, int NoProgressPages);
 
     private readonly record struct RevisionCursorTuple(DateTimeOffset ChangedDate, int WorkItemId, int Revision)
