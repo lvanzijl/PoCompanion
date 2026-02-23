@@ -900,6 +900,53 @@ public class RealODataRevisionTfsClientTests
     }
 
     [TestMethod]
+    public async Task GetRevisionsAsync_WhenBoundaryTokenExactMatch_AdvancesToNextSegment()
+    {
+        var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataScopeMode = ODataRevisionScopeMode.Range
+        });
+        var boundaryToken = $"seg:1:2|{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Empty))}";
+
+        var page = await client.GetRevisionsAsync(continuationToken: boundaryToken, scopedWorkItemIds: [1, 2, 10, 11]);
+
+        Assert.IsNotNull(page.ContinuationToken);
+        StringAssert.StartsWith(page.ContinuationToken, "seg:10:11|");
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenBoundaryTokenNoExactMatch_UsesOrderedFallbackAdvance()
+    {
+        var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataScopeMode = ODataRevisionScopeMode.Range
+        });
+        var boundaryToken = $"seg:5:6|{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Empty))}";
+
+        var page = await client.GetRevisionsAsync(continuationToken: boundaryToken, scopedWorkItemIds: [1, 2, 10, 11]);
+
+        Assert.IsNotNull(page.ContinuationToken);
+        StringAssert.StartsWith(page.ContinuationToken, "seg:10:11|");
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenBoundaryTokenAtLastSegment_ReturnsNoFurtherSegmentToken()
+    {
+        var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataScopeMode = ODataRevisionScopeMode.Range
+        });
+        var boundaryToken = $"seg:10:11|{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Empty))}";
+
+        var page = await client.GetRevisionsAsync(continuationToken: boundaryToken, scopedWorkItemIds: [1, 2, 10, 11]);
+
+        Assert.IsNull(page.ContinuationToken);
+    }
+
+    [TestMethod]
     public async Task GetWorkItemRevisionsAsync_UsesServerSideEqFilter()
     {
         var handler = new QueueMessageHandler(

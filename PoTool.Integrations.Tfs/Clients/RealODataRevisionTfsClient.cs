@@ -392,9 +392,21 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             quoteDateStrings,
             fallbackTriggered);
 
+        var (continuationTokenToReturn, segmentAdvanceDecision) =
+            BuildSegmentContinuationToken(segments, segmentState, continuation);
+        if (segmentAdvanceDecision is not null)
+        {
+            _logger.LogInformation(
+                "REV_INGEST_ODATA_SEGMENT_ADVANCE segmentAdvanceStrategy={SegmentAdvanceStrategy} currentBoundaryStart={CurrentBoundaryStart} currentBoundaryEnd={CurrentBoundaryEnd} nextBoundaryStart={NextBoundaryStart}",
+                segmentAdvanceDecision.Value.Strategy,
+                segmentAdvanceDecision.Value.CurrentBoundaryStart,
+                segmentAdvanceDecision.Value.CurrentBoundaryEnd,
+                segmentAdvanceDecision.Value.NextBoundaryStart);
+        }
+
         return new ReportingRevisionsResult(
             revisions,
-            BuildSegmentContinuationToken(segments, segmentState, continuation));
+            continuationTokenToReturn);
         }
     }
 
@@ -615,14 +627,14 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             SegmentEnd: segments[0].End);
     }
 
-    private static string? BuildSegmentContinuationToken(
+    private static (string? ContinuationToken, SegmentAdvanceDecision? AdvanceDecision) BuildSegmentContinuationToken(
         IReadOnlyList<WorkItemIdRangeSegment> segments,
         SegmentContinuationState segmentState,
         string? pageContinuationToken)
     {
         if (segments.Count <= 1)
         {
-            return NormalizeToken(pageContinuationToken);
+            return (NormalizeToken(pageContinuationToken), null);
         }
 
         var normalizedPageToken = NormalizeToken(pageContinuationToken);
@@ -630,23 +642,36 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         {
             if (segmentState.Segment is WorkItemIdRangeSegment activeSegment)
             {
-                return EncodeSegmentState(new SegmentContinuationStateToken(activeSegment.Start, activeSegment.End, normalizedPageToken));
+                return (EncodeSegmentState(new SegmentContinuationStateToken(activeSegment.Start, activeSegment.End, normalizedPageToken)), null);
             }
 
-            return normalizedPageToken;
+            return (normalizedPageToken, null);
         }
 
-        if (segmentState.SegmentIndex >= 0)
+        if (segmentState.Segment is not WorkItemIdRangeSegment currentSegment)
         {
-            var nextSegmentIndex = segmentState.SegmentIndex + 1;
-            if (nextSegmentIndex < segments.Count)
-            {
-                var nextSegment = segments[nextSegmentIndex];
-                return EncodeSegmentState(new SegmentContinuationStateToken(nextSegment.Start, nextSegment.End, null));
-            }
+            return (null, null);
         }
 
-        return null;
+        var orderedSegments = segments
+            .OrderBy(segment => segment.Start)
+            .ToArray();
+        var exactMatchIndex = Array.FindIndex(
+            orderedSegments,
+            segment => segment.Start == currentSegment.Start && segment.End == currentSegment.End);
+        var strategy = exactMatchIndex >= 0 ? "ExactMatch" : "OrderedFallback";
+        var nextSegmentIndex = exactMatchIndex >= 0
+            ? exactMatchIndex + 1
+            : Array.FindIndex(orderedSegments, segment => segment.Start > currentSegment.End);
+        if (nextSegmentIndex < 0 || nextSegmentIndex >= orderedSegments.Length)
+        {
+            return (null, new SegmentAdvanceDecision(strategy, currentSegment.Start, currentSegment.End, null));
+        }
+
+        var nextSegment = orderedSegments[nextSegmentIndex];
+        return (
+            EncodeSegmentState(new SegmentContinuationStateToken(nextSegment.Start, nextSegment.End, null)),
+            new SegmentAdvanceDecision(strategy, currentSegment.Start, currentSegment.End, nextSegment.Start));
     }
 
     private static bool ShouldRetryWithAlternateDateFormat(string responseBody)
@@ -1428,6 +1453,11 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         string SegmentTokenFormat,
         int? SegmentStart,
         int? SegmentEnd);
+    private readonly record struct SegmentAdvanceDecision(
+        string Strategy,
+        int CurrentBoundaryStart,
+        int CurrentBoundaryEnd,
+        int? NextBoundaryStart);
     private readonly record struct DecodedSegmentToken(
         bool HasBoundaries,
         int? Index,

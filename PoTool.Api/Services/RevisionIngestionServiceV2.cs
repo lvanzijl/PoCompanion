@@ -366,9 +366,37 @@ public sealed class RevisionIngestionServiceV2
             var nextToken = page.ContinuationToken;
             var nextTokenHash = HashToken(nextToken);
             totalRawRevisions += rawCount;
-            var activeSegmentIndex =
-                ResolveSegmentIndexFromContinuationToken(continuationToken) ??
-                ResolveSegmentIndexFromContinuationToken(nextToken);
+            var continuationSegmentIndex = ResolveSegmentIndexFromContinuationToken(
+                continuationToken,
+                allowedWorkItemIds,
+                out var continuationTokenFormat,
+                out var continuationExactMatch,
+                out var continuationFallbackIndex);
+            if (string.Equals(continuationTokenFormat, "Boundaries", StringComparison.Ordinal))
+            {
+                _logger.LogInformation(
+                    "REV_INGEST_V2_SEGMENT_TOKEN_BOUNDARY tokenKind={TokenKind} exactMatch={ExactMatch} fallbackIndex={FallbackIndex}",
+                    "Continuation",
+                    continuationExactMatch,
+                    continuationFallbackIndex);
+            }
+
+            var nextSegmentIndex = ResolveSegmentIndexFromContinuationToken(
+                nextToken,
+                allowedWorkItemIds,
+                out var nextTokenFormat,
+                out var nextExactMatch,
+                out var nextFallbackIndex);
+            if (string.Equals(nextTokenFormat, "Boundaries", StringComparison.Ordinal))
+            {
+                _logger.LogInformation(
+                    "REV_INGEST_V2_SEGMENT_TOKEN_BOUNDARY tokenKind={TokenKind} exactMatch={ExactMatch} fallbackIndex={FallbackIndex}",
+                    "Next",
+                    nextExactMatch,
+                    nextFallbackIndex);
+            }
+
+            var activeSegmentIndex = continuationSegmentIndex ?? nextSegmentIndex;
             if (activeSegmentIndex.HasValue)
             {
                 segmentsProcessed.Add(activeSegmentIndex.Value);
@@ -1066,8 +1094,17 @@ public sealed class RevisionIngestionServiceV2
         return (long)Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
     }
 
-    private static int? ResolveSegmentIndexFromContinuationToken(string? continuationToken)
+    internal static int? ResolveSegmentIndexFromContinuationToken(
+        string? continuationToken,
+        IReadOnlyCollection<int>? allowedWorkItemIds,
+        out string tokenFormat,
+        out bool exactMatchFound,
+        out int? orderedFallbackIndex)
     {
+        tokenFormat = "None";
+        exactMatchFound = false;
+        orderedFallbackIndex = null;
+
         if (string.IsNullOrWhiteSpace(continuationToken) ||
             !continuationToken.StartsWith("seg:", StringComparison.Ordinal))
         {
@@ -1081,13 +1118,101 @@ public sealed class RevisionIngestionServiceV2
             return null;
         }
 
-        var indexSlice = payload[..separator];
-        return int.TryParse(indexSlice, out var segmentIndex) && segmentIndex >= 0
-            ? segmentIndex
-            : null;
+        var segmentSlice = payload[..separator];
+        if (int.TryParse(segmentSlice, out var legacySegmentIndex) && legacySegmentIndex >= 0)
+        {
+            tokenFormat = "Index";
+            exactMatchFound = true;
+            return legacySegmentIndex;
+        }
+
+        var segmentParts = segmentSlice.Split(':');
+        if (segmentParts.Length != 2 ||
+            !int.TryParse(segmentParts[0], out var segmentStart) ||
+            !int.TryParse(segmentParts[1], out var segmentEnd))
+        {
+            return null;
+        }
+
+        tokenFormat = "Boundaries";
+        var diagnosticSegments = BuildDiagnosticSegments(allowedWorkItemIds);
+        if (diagnosticSegments.Count == 0)
+        {
+            orderedFallbackIndex = 0;
+            return 0;
+        }
+
+        for (var i = 0; i < diagnosticSegments.Count; i++)
+        {
+            var diagnosticSegment = diagnosticSegments[i];
+            if (diagnosticSegment.Start == segmentStart &&
+                diagnosticSegment.End == segmentEnd)
+            {
+                exactMatchFound = true;
+                return i;
+            }
+        }
+
+        orderedFallbackIndex = diagnosticSegments
+            .TakeWhile(diagnosticSegment => diagnosticSegment.End < segmentStart)
+            .Count();
+        return orderedFallbackIndex;
+    }
+
+    private static IReadOnlyList<DiagnosticSegment> BuildDiagnosticSegments(IReadOnlyCollection<int>? allowedWorkItemIds)
+    {
+        if (allowedWorkItemIds == null || allowedWorkItemIds.Count == 0)
+        {
+            return [];
+        }
+
+        var orderedIds = allowedWorkItemIds
+            .Where(id => id > 0)
+            .Distinct()
+            .OrderBy(id => id)
+            .ToArray();
+        if (orderedIds.Length == 0)
+        {
+            return [];
+        }
+
+        const int maxSpan = 500;
+        var segments = new List<DiagnosticSegment>();
+        var rangeStart = orderedIds[0];
+        var rangeEnd = orderedIds[0];
+
+        for (var i = 1; i < orderedIds.Length; i++)
+        {
+            var candidate = orderedIds[i];
+            var gap = candidate - rangeEnd - 1;
+            if (gap == 0)
+            {
+                rangeEnd = candidate;
+                continue;
+            }
+
+            AddSplitDiagnosticSegments(segments, rangeStart, rangeEnd, maxSpan);
+            rangeStart = candidate;
+            rangeEnd = candidate;
+        }
+
+        AddSplitDiagnosticSegments(segments, rangeStart, rangeEnd, maxSpan);
+        return segments;
+    }
+
+    private static void AddSplitDiagnosticSegments(List<DiagnosticSegment> segments, int start, int end, int maxSpan)
+    {
+        var current = start;
+        while (current <= end)
+        {
+            var segmentEnd = Math.Min(end, current + maxSpan - 1);
+            segments.Add(new DiagnosticSegment(current, segmentEnd));
+            current = segmentEnd + 1;
+        }
     }
 
     private sealed record IngestionWindow(DateTimeOffset Start, DateTimeOffset End);
+    private readonly record struct DiagnosticSegment(int Start, int End);
 
     private sealed record WindowResult(
         bool Success,

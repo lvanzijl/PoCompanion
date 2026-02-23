@@ -230,6 +230,54 @@ public sealed class RevisionIngestionServiceV2Tests
     }
 
     [TestMethod]
+    public void ResolveSegmentIndexFromContinuationToken_LegacyIndexToken_ReturnsIndex()
+    {
+        var index = RevisionIngestionServiceV2.ResolveSegmentIndexFromContinuationToken(
+            "seg:2|AAA",
+            [1, 2, 10, 11],
+            out var tokenFormat,
+            out var exactMatchFound,
+            out var orderedFallbackIndex);
+
+        Assert.AreEqual(2, index);
+        Assert.AreEqual("Index", tokenFormat);
+        Assert.IsTrue(exactMatchFound);
+        Assert.IsNull(orderedFallbackIndex);
+    }
+
+    [TestMethod]
+    public void ResolveSegmentIndexFromContinuationToken_BoundaryExactMatch_ReturnsCorrectIndex()
+    {
+        var index = RevisionIngestionServiceV2.ResolveSegmentIndexFromContinuationToken(
+            "seg:10:11|AAA",
+            [1, 2, 10, 11],
+            out var tokenFormat,
+            out var exactMatchFound,
+            out var orderedFallbackIndex);
+
+        Assert.AreEqual(1, index);
+        Assert.AreEqual("Boundaries", tokenFormat);
+        Assert.IsTrue(exactMatchFound);
+        Assert.IsNull(orderedFallbackIndex);
+    }
+
+    [TestMethod]
+    public void ResolveSegmentIndexFromContinuationToken_BoundaryFallback_ReturnsOrderedFallbackIndex()
+    {
+        var index = RevisionIngestionServiceV2.ResolveSegmentIndexFromContinuationToken(
+            "seg:5:6|AAA",
+            [1, 2, 10, 11],
+            out var tokenFormat,
+            out var exactMatchFound,
+            out var orderedFallbackIndex);
+
+        Assert.AreEqual(1, index);
+        Assert.AreEqual("Boundaries", tokenFormat);
+        Assert.IsFalse(exactMatchFound);
+        Assert.AreEqual(1, orderedFallbackIndex);
+    }
+
+    [TestMethod]
     public void RevisionIngestionV2Options_EmptyWithTokenDumpDefaults_AreDeterministic()
     {
         var options = new RevisionIngestionV2Options();
