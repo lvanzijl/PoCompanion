@@ -150,6 +150,16 @@ public interface ITfsClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves update history for a specific work item.
+    /// </summary>
+    /// <param name="workItemId">The work item ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of work item updates ordered by update ID.</returns>
+    Task<IReadOnlyList<WorkItemUpdate>> GetWorkItemUpdatesAsync(
+        int workItemId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Updates the state of a work item in TFS.
     /// </summary>
     /// <param name="workItemId">The work item ID.</param>

@@ -175,6 +175,11 @@ public class PoToolDbContext : DbContext
     public DbSet<WorkItemRelationshipEdgeEntity> WorkItemRelationshipEdges => Set<WorkItemRelationshipEdgeEntity>();
 
     /// <summary>
+    /// Append-only activity event ledger based on work item updates.
+    /// </summary>
+    public DbSet<ActivityEventLedgerEntryEntity> ActivityEventLedgerEntries => Set<ActivityEventLedgerEntryEntity>();
+
+    /// <summary>
     /// Pre-computed sprint metrics projections.
     /// </summary>
     public DbSet<SprintMetricsProjectionEntity> SprintMetricsProjections => Set<SprintMetricsProjectionEntity>();
@@ -546,6 +551,16 @@ public class PoToolDbContext : DbContext
             entity.HasIndex(e => new { e.ProductOwnerId, e.SourceWorkItemId });
             entity.HasIndex(e => new { e.ProductOwnerId, e.TargetWorkItemId });
             entity.Property(e => e.RelationType).HasMaxLength(256).IsRequired();
+        });
+
+        modelBuilder.Entity<ActivityEventLedgerEntryEntity>(entity =>
+        {
+            entity.HasIndex(e => new { e.ProductOwnerId, e.EventTimestamp });
+            entity.HasIndex(e => new { e.WorkItemId, e.UpdateId });
+            entity.HasIndex(e => new { e.WorkItemId, e.UpdateId, e.FieldRefName })
+                .IsUnique();
+            entity.Property(e => e.FieldRefName).HasMaxLength(256).IsRequired();
+            entity.Property(e => e.IterationPath).HasMaxLength(500);
         });
 
         // Sprint metrics projections

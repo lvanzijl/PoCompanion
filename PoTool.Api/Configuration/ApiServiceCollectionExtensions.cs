@@ -151,6 +151,7 @@ public static class ApiServiceCollectionExtensions
 
         // Register Sync Pipeline services (Stages 1-10)
         services.AddScoped<WorkItemSyncStage>();
+        services.AddScoped<ActivityIngestionSyncStage>();
         services.AddScoped<TeamSprintSyncStage>();
         services.AddScoped<WorkItemRelationshipSnapshotStage>();
         services.AddScoped<WorkItemResolutionSyncStage>();
@@ -161,6 +162,8 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<MetricsComputeStage>();
         services.AddScoped<FinalizeCacheStage>();
         services.AddSingleton<ISyncPipeline, SyncPipelineRunner>();
+
+        services.Configure<ActivityIngestionOptions>(configuration.GetSection("ActivityIngestion"));
 
         // Register SignalR broadcaster for sync progress
         services.AddSingleton<ISyncProgressBroadcaster, SyncProgressBroadcaster>();
@@ -290,7 +293,8 @@ public static class ApiServiceCollectionExtensions
             services.AddScoped<ITfsClient, RealTfsClient>();
 
         }
-        services.AddScoped<IActivityEventSource, NoOpActivityEventSource>();
+        services.AddScoped<ActivityEventIngestionService>();
+        services.AddScoped<IActivityEventSource, LedgerActivityEventSource>();
 
         // Register relation hydrator placeholder
         services.AddScoped<IRelationRevisionHydrator, RelationRevisionHydrator>();

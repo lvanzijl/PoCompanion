@@ -653,6 +653,40 @@ public class BattleshipMockDataFacade : ITfsClient
         return Task.FromResult<IEnumerable<WorkItemRevisionDto>>(mockRevisions);
     }
 
+    public Task<IReadOnlyList<WorkItemUpdate>> GetWorkItemUpdatesAsync(
+        int workItemId,
+        CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        var now = DateTimeOffset.UtcNow;
+        IReadOnlyList<WorkItemUpdate> updates =
+        [
+            new WorkItemUpdate
+            {
+                WorkItemId = workItemId,
+                UpdateId = 1,
+                RevisedDate = now.AddDays(-10),
+                FieldChanges = new Dictionary<string, WorkItemUpdateFieldChange>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["System.Title"] = new("System.Title", null, "Initial Title"),
+                    ["System.State"] = new("System.State", null, "New")
+                }
+            },
+            new WorkItemUpdate
+            {
+                WorkItemId = workItemId,
+                UpdateId = 2,
+                RevisedDate = now.AddDays(-5),
+                FieldChanges = new Dictionary<string, WorkItemUpdateFieldChange>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["System.State"] = new("System.State", "New", "Active")
+                }
+            }
+        ];
+
+        return Task.FromResult(updates);
+    }
+
     public Task<bool> UpdateWorkItemStateAsync(int workItemId, string newState, CancellationToken cancellationToken = default)
     {
         // N+1 WARNING: This method is called once per work item in the old pattern.
