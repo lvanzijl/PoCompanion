@@ -20,7 +20,7 @@ public class ActivityIngestionSyncStage : ISyncStage
     }
 
     public string StageName => "IngestActivityEvents";
-    public int StageNumber => 3;
+    public int StageNumber => 2;
 
     public async Task<SyncStageResult> ExecuteAsync(
         SyncContext context,

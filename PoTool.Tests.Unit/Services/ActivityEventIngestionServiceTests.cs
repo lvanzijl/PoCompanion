@@ -68,6 +68,7 @@ public class ActivityEventIngestionServiceTests
         var events = await dbContext.ActivityEventLedgerEntries.ToListAsync();
         Assert.HasCount(1, events);
         Assert.AreEqual("System.State", events[0].FieldRefName);
+        Assert.IsFalse(events.Any(e => string.Equals(e.FieldRefName, "System.AssignedTo", StringComparison.OrdinalIgnoreCase)));
 
         var cacheState = await dbContext.ProductOwnerCacheStates.SingleAsync(x => x.ProductOwnerId == 1);
         Assert.IsTrue(cacheState.ActivityEventWatermark.HasValue);

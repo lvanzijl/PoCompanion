@@ -133,7 +133,7 @@ public class SyncPipelineRunner : ISyncPipeline
             }
 
             // ============================================
-            // Stage 2: Ingest Activity Events
+            // Activity ingestion stage
             // ============================================
             var activityStage = scope.ServiceProvider.GetRequiredService<ActivityIngestionSyncStage>();
             var (activityUpdate, activityResult) = await ExecuteStageAsync(activityStage, syncContext, cacheStateRepo, cts.Token);
@@ -152,7 +152,7 @@ public class SyncPipelineRunner : ISyncPipeline
             }
 
             // ============================================
-            // Stage 3: Sync Team Sprints
+            // Team sprint sync stage
             // ============================================
             var teamSprintStage = scope.ServiceProvider.GetRequiredService<TeamSprintSyncStage>();
             var (stage2Update, stage2Result) = await ExecuteStageAsync(teamSprintStage, syncContext, cacheStateRepo, cts.Token);

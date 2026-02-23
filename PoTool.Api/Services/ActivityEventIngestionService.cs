@@ -205,13 +205,13 @@ public sealed class ActivityEventIngestionService
         var featureId = typeById.TryGetValue(workItemId, out var selfType) && string.Equals(selfType, "Feature", StringComparison.OrdinalIgnoreCase)
             ? workItemId
             : (int?)null;
-        var epicId = typeById.TryGetValue(workItemId, out selfType) && string.Equals(selfType, "Epic", StringComparison.OrdinalIgnoreCase)
+        var epicId = typeById.TryGetValue(workItemId, out var selfTypeForEpic) && string.Equals(selfTypeForEpic, "Epic", StringComparison.OrdinalIgnoreCase)
             ? workItemId
             : (int?)null;
 
         var current = parentId;
-        var hop = 0;
-        while (current.HasValue && hop < 50)
+        var ancestorDepth = 0;
+        while (current.HasValue && ancestorDepth < 50)
         {
             if (typeById.TryGetValue(current.Value, out var ancestorType))
             {
@@ -232,7 +232,7 @@ public sealed class ActivityEventIngestionService
             }
 
             current = parentById.TryGetValue(current.Value, out var nextParent) ? nextParent : null;
-            hop++;
+            ancestorDepth++;
         }
 
         return (parentId, featureId, epicId);
