@@ -230,6 +230,15 @@ public sealed class RevisionIngestionServiceV2Tests
     }
 
     [TestMethod]
+    public void RevisionIngestionV2Options_EmptyWithTokenDumpDefaults_AreDeterministic()
+    {
+        var options = new RevisionIngestionV2Options();
+
+        Assert.AreEqual(200, options.V2EmptyWithTokenDumpThreshold);
+        Assert.AreEqual(200, options.V2EmptyWithTokenDumpRepeatInterval);
+    }
+
+    [TestMethod]
     public async Task IngestRevisionsAsync_ResumesFromCheckpointToken()
     {
         // Simulate a previous run that saved checkpoint with token "A" at window start

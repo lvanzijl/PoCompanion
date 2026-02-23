@@ -381,15 +381,44 @@ public sealed class RevisionIngestionServiceV2
                 {
                     _logger.LogWarning(
                         "REV_INGEST_V2_EMPTY_WITH_TOKEN page={PageIndex} consecutiveEmpty={ConsecutiveEmpty} " +
-                        "tokenHash={TokenHash} nextTokenHash={NextTokenHash} " +
+                        "segmentIndex={SegmentIndex} " +
+                        "tokenHash={TokenHash} tokenLen={TokenLen} tokenPrefix={TokenPrefix} " +
+                        "nextTokenHash={NextTokenHash} nextTokenLen={NextTokenLen} nextTokenPrefix={NextTokenPrefix} " +
                         "windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc} " +
                         "allowedWorkItemIds={AllowedCount} pageSize={PageSize} " +
                         "hasContinuationToken={HasToken} rawCount={RawCount} scopedCount=0 inWindowCount=0",
                         pageIndex, consecutiveEmptyPages,
-                        continuationTokenHash, nextTokenHash,
+                        activeSegmentIndex,
+                        continuationTokenHash, Len(continuationToken), Prefix(continuationToken),
+                        nextTokenHash, Len(nextToken), Prefix(nextToken),
                         window.Start, window.End,
                         allowedWorkItemIds.Count, config.V2PageSize,
                         true, rawCount);
+                }
+
+                var emptyWithTokenDumpThreshold = Math.Max(1, config.V2EmptyWithTokenDumpThreshold);
+                var emptyWithTokenDumpRepeatInterval = Math.Max(1, config.V2EmptyWithTokenDumpRepeatInterval);
+                if (consecutiveEmptyPages >= emptyWithTokenDumpThreshold &&
+                    (consecutiveEmptyPages == emptyWithTokenDumpThreshold ||
+                     (consecutiveEmptyPages - emptyWithTokenDumpThreshold) % emptyWithTokenDumpRepeatInterval == 0))
+                {
+                    _logger.LogWarning(
+                        "REV_INGEST_V2_STALL_DUMP windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc} " +
+                        "pageIndex={PageIndex} segmentIndex={SegmentIndex} " +
+                        "tokenHash={TokenHash} tokenLen={TokenLen} tokenPrefix={TokenPrefix} " +
+                        "nextTokenHash={NextTokenHash} nextTokenLen={NextTokenLen} nextTokenPrefix={NextTokenPrefix} " +
+                        "allowedWorkItemIdsCount={AllowedWorkItemIdsCount}",
+                        window.Start,
+                        window.End,
+                        pageIndex,
+                        activeSegmentIndex,
+                        continuationTokenHash,
+                        Len(continuationToken),
+                        Prefix(continuationToken),
+                        nextTokenHash,
+                        Len(nextToken),
+                        Prefix(nextToken),
+                        allowedWorkItemIds.Count);
                 }
 
                 await SaveCheckpointIfTokenAdvancedAsync(
@@ -765,6 +794,14 @@ public sealed class RevisionIngestionServiceV2
             rootWorkItemIds, null, null, cancellationToken);
 
         var descendantWorkItems = WorkItemHierarchyHelper.FilterDescendants(rootWorkItemIds, workItems);
+        var earliestChangedWorkItemId = descendantWorkItems
+            .Where(workItem => workItem.ChangedDate != null)
+            .OrderBy(workItem => workItem.ChangedDate)
+            .Select(workItem => workItem.TfsId)
+            .FirstOrDefault();
+        _logger.LogInformation(
+            "REV_INGEST_V2_SCOPE_EARLIEST_WORKITEM earliestChangedWorkItemId={EarliestChangedWorkItemId}",
+            earliestChangedWorkItemId);
         var allowedIds = descendantWorkItems
             .Select(w => w.TfsId)
             .ToHashSet();
@@ -814,8 +851,8 @@ public sealed class RevisionIngestionServiceV2
         }
 
         _logger.LogInformation(
-            "REV_INGEST_V2_BACKFILL_START derivedStart={DerivedStart} fallbackUsed={FallbackUsed} reason={Reason}",
-            backfillStart, fallbackUsed, reason);
+            "REV_INGEST_V2_BACKFILL_START derivedStartCandidate={DerivedStartCandidate} chosenBackfillStart={ChosenBackfillStart} fallbackUsed={FallbackUsed} reason={Reason}",
+            derivedStart, backfillStart, fallbackUsed, reason);
 
         return backfillStart;
     }
@@ -860,6 +897,21 @@ public sealed class RevisionIngestionServiceV2
 
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
         return Convert.ToHexStringLower(bytes)[..12];
+    }
+
+    private static string? Prefix(string? value)
+    {
+        if (value == null)
+        {
+            return null;
+        }
+
+        return value[..Math.Min(24, value.Length)];
+    }
+
+    private static int Len(string? value)
+    {
+        return value?.Length ?? 0;
     }
 
     private static long GetElapsedMs(long startTimestamp)

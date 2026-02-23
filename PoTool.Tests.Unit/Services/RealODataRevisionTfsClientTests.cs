@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -68,6 +69,24 @@ public class RealODataRevisionTfsClientTests
         var request = Uri.UnescapeDataString(handler.RequestUris[0]);
         StringAssert.Contains(request, "ChangedDate ge 2026-01-01T00:00:00.0000000Z");
         StringAssert.Contains(request, "ChangedDate lt 2026-02-01T00:00:00.0000000Z");
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_LogsEffectiveRequestFilterAndOrderBy()
+    {
+        var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
+        var logger = new CapturingLogger<RealODataRevisionTfsClient>();
+        var client = CreateClient(handler, logger: logger);
+
+        _ = await client.GetRevisionsAsync(
+            startDateTime: DateTimeOffset.Parse("2026-01-01T00:00:00Z"),
+            scopedWorkItemIds: [10, 11]);
+
+        var requestLog = logger.Messages
+            .FirstOrDefault(message => message.Contains("REV_INGEST_ODATA_REQUEST", StringComparison.Ordinal));
+        Assert.IsNotNull(requestLog);
+        StringAssert.Contains(requestLog, "effectiveFilter=ChangedDate ge 2026-01-01T00:00:00.0000000Z and WorkItemId ge 10 and WorkItemId le 11");
+        StringAssert.Contains(requestLog, "effectiveOrderBy=ChangedDate asc,WorkItemId asc,Revision asc");
     }
 
     [TestMethod]
@@ -781,7 +800,8 @@ public class RealODataRevisionTfsClientTests
 
     private static RealODataRevisionTfsClient CreateClient(
         HttpMessageHandler handler,
-        RevisionIngestionPaginationOptions? options = null)
+        RevisionIngestionPaginationOptions? options = null,
+        ILogger<RealODataRevisionTfsClient>? logger = null)
     {
         var httpClient = new HttpClient(handler);
         var httpClientFactory = new Mock<IHttpClientFactory>();
@@ -811,7 +831,30 @@ public class RealODataRevisionTfsClientTests
             configService.Object,
             new TfsRequestSender(NullLogger<TfsRequestSender>.Instance),
             paginationOptions.Object,
-            NullLogger<RealODataRevisionTfsClient>.Instance);
+            logger ?? NullLogger<RealODataRevisionTfsClient>.Instance);
+    }
+
+    private sealed class CapturingLogger<T> : ILogger<T>
+    {
+        public List<string> Messages { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull
+        {
+            return null;
+        }
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            Messages.Add(formatter(state, exception));
+        }
     }
 
     private sealed class QueueMessageHandler : HttpMessageHandler

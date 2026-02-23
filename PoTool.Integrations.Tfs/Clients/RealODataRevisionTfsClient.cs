@@ -101,6 +101,9 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var mode = requestContext.Mode;
         var url = requestContext.Url;
         var fallbackTriggered = false;
+        var segmentRange = segmentState.Segment is null
+            ? "<none>"
+            : $"{segmentState.Segment.Value.Start}-{segmentState.Segment.Value.End}";
         var scopeCount = scopedWorkItemIds?.Count ?? 0;
         var scopeMin = scopedWorkItemIds is { Count: > 0 } ? scopedWorkItemIds.Min() : (int?)null;
         var scopeMax = scopedWorkItemIds is { Count: > 0 } ? scopedWorkItemIds.Max() : (int?)null;
@@ -120,14 +123,28 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             scopeMax,
             segmentCount,
             segmentState.SegmentIndex,
-            segmentState.Segment is null ? "<none>" : $"{segmentState.Segment.Value.Start}-{segmentState.Segment.Value.End}",
+            segmentRange,
             totalSegmentSpan,
             maxSegmentSpan,
             TryGetFilterFromUrl(url) ?? "<none>",
             TryGetOrderByFromUrl(url) ?? "<none>",
             TryGetTopFromUrl(url)?.ToString(CultureInfo.InvariantCulture) ?? "<none>");
+
+        void LogRequestDiagnostics(string requestUrl)
+        {
+            _logger.LogInformation(
+                "REV_INGEST_ODATA_REQUEST mode={Mode} pageIndex={PageIndex} segmentIndex={SegmentIndex} segmentRange={SegmentRange} effectiveFilter={EffectiveFilter} effectiveOrderBy={EffectiveOrderBy}",
+                mode,
+                pageIndex,
+                segmentState.SegmentIndex,
+                segmentRange,
+                TryGetFilterFromUrl(requestUrl) ?? "<none>",
+                TryGetOrderByFromUrl(requestUrl) ?? "<none>");
+        }
+
         var httpClient = _httpClientFactory.CreateClient("TfsClient.NTLM");
 
+        LogRequestDiagnostics(url);
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         var response = await _requestSender.SendAsync(httpClient, request, config.TimeoutSeconds, cancellationToken);
         if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
@@ -152,6 +169,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
                     "Retrying OData request with alternate date literal format");
 
                 response.Dispose();
+                LogRequestDiagnostics(url);
                 using var retryRequest = new HttpRequestMessage(HttpMethod.Get, url);
                 response = await _requestSender.SendAsync(httpClient, retryRequest, config.TimeoutSeconds, cancellationToken);
             }

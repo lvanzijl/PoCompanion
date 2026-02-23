@@ -39,6 +39,16 @@ public sealed class RevisionIngestionV2Options
     public int V2MaxConsecutiveEmptyPages { get; set; } = 3;
 
     /// <summary>
+    /// Number of consecutive empty pages with continuation token before emitting a stall dump warning.
+    /// </summary>
+    public int V2EmptyWithTokenDumpThreshold { get; set; } = 200;
+
+    /// <summary>
+    /// Repeat interval for additional stall dump warnings while empty-with-token paging continues.
+    /// </summary>
+    public int V2EmptyWithTokenDumpRepeatInterval { get; set; } = 200;
+
+    /// <summary>
     /// Whether V2 mode is active.
     /// </summary>
     public bool IsV2 => string.Equals(RevisionIngestionMode, "V2", StringComparison.OrdinalIgnoreCase);
