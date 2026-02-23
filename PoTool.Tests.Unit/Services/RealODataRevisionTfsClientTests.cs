@@ -99,6 +99,7 @@ public class RealODataRevisionTfsClientTests
             .FirstOrDefault(message => message.Contains("REV_INGEST_ODATA_REQUEST", StringComparison.Ordinal));
         Assert.IsNotNull(requestLog);
         StringAssert.Contains(requestLog, "urlSource=InitialCanonical");
+        StringAssert.Contains(requestLog, "segmentTokenFormat=None");
         StringAssert.Contains(requestLog, "hasFilter=True");
         StringAssert.Contains(requestLog, "hasOrderBy=True");
         StringAssert.Contains(requestLog, "effectiveFilter=ChangedDate ge 2026-01-01T00:00:00.0000000Z and WorkItemId ge 10 and WorkItemId le 11");
@@ -816,21 +817,20 @@ public class RealODataRevisionTfsClientTests
     }
 
     [TestMethod]
-    public async Task GetRevisionsAsync_WhenSegmentTokenBoundsMismatch_RestartsAtFirstSegmentWithoutInnerToken()
+    public async Task GetRevisionsAsync_WhenBoundarySegmentTokenProvided_UsesBoundaryRangeAuthoritatively()
     {
         var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
         var client = CreateClient(handler, new RevisionIngestionPaginationOptions
         {
             ODataScopeMode = ODataRevisionScopeMode.Range
         });
-        var encodedInner = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("next:invalid"));
-        var mismatchedToken = $"seg:999:1000|{encodedInner}";
+        var boundaryToken = $"seg:999:1000|{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(string.Empty))}";
 
-        _ = await client.GetRevisionsAsync(continuationToken: mismatchedToken, scopedWorkItemIds: [1, 2, 10, 11]);
+        _ = await client.GetRevisionsAsync(continuationToken: boundaryToken, scopedWorkItemIds: [1, 2, 10, 11]);
 
         var request = Uri.UnescapeDataString(handler.RequestUris[0]);
-        StringAssert.Contains(request, "WorkItemId ge 1 and WorkItemId le 2");
-        Assert.IsFalse(request.Contains("invalid", StringComparison.Ordinal));
+        StringAssert.Contains(request, "WorkItemId ge 999 and WorkItemId le 1000");
+        Assert.IsFalse(request.Contains("WorkItemId ge 1 and WorkItemId le 2", StringComparison.Ordinal));
     }
 
     [TestMethod]
@@ -851,7 +851,7 @@ public class RealODataRevisionTfsClientTests
     }
 
     [TestMethod]
-    public async Task GetRevisionsAsync_WhenLegacySegmentTokenIndexOutOfRange_RestartsAtFirstSegmentWithoutInnerToken()
+    public async Task GetRevisionsAsync_WhenLegacySegmentTokenIndexOutOfRange_FailsFastWithInvalidSegmentIndexToken()
     {
         var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
         var client = CreateClient(handler, new RevisionIngestionPaginationOptions
@@ -860,11 +860,43 @@ public class RealODataRevisionTfsClientTests
         });
         var invalidLegacyToken = $"seg:99|{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("next:invalid"))}";
 
-        _ = await client.GetRevisionsAsync(continuationToken: invalidLegacyToken, scopedWorkItemIds: [1, 2, 10, 11]);
+        var exception = await AssertThrowsAsync<InvalidOperationException>(() =>
+            client.GetRevisionsAsync(continuationToken: invalidLegacyToken, scopedWorkItemIds: [1, 2, 10, 11]));
+        StringAssert.Contains(exception.Message, "InvalidSegmentIndexToken");
+        Assert.IsEmpty(handler.RequestUris, "No request should be sent for invalid segment index token.");
+    }
 
-        var request = Uri.UnescapeDataString(handler.RequestUris[0]);
-        StringAssert.Contains(request, "WorkItemId ge 1 and WorkItemId le 2");
-        Assert.IsFalse(request.Contains("invalid", StringComparison.Ordinal));
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenSegmentTokenMalformed_FailsFastWithInvalidSegmentToken()
+    {
+        var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataScopeMode = ODataRevisionScopeMode.Range
+        });
+
+        var exception = await AssertThrowsAsync<InvalidOperationException>(() =>
+            client.GetRevisionsAsync(continuationToken: "seg:not-a-valid-token", scopedWorkItemIds: [1, 2, 10, 11]));
+
+        StringAssert.Contains(exception.Message, "InvalidSegmentToken");
+        Assert.IsEmpty(handler.RequestUris, "No request should be sent for malformed segment token.");
+    }
+
+    [TestMethod]
+    public async Task GetRevisionsAsync_WhenBoundaryTokenContainsInnerNextLink_PreservesInnerContinuation()
+    {
+        var handler = new QueueMessageHandler(["""{ "value": [] }"""]);
+        var client = CreateClient(handler, new RevisionIngestionPaginationOptions
+        {
+            ODataScopeMode = ODataRevisionScopeMode.Range
+        });
+        var nextUrl = "https://analytics/WorkItemRevisions?$skiptoken=innerBoundaryToken";
+        var nextToken = $"next:{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(nextUrl))}|2|0|0|0|0|0";
+        var boundaryToken = $"seg:999:1000|{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(nextToken))}";
+
+        _ = await client.GetRevisionsAsync(continuationToken: boundaryToken, scopedWorkItemIds: [1, 2, 10, 11]);
+
+        Assert.AreEqual(nextUrl, handler.RequestUris[0], "Boundary token inner continuation must be preserved.");
     }
 
     [TestMethod]

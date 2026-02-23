@@ -166,9 +166,14 @@ public sealed class RevisionIngestionServiceV2
                 {
                     _logger.LogWarning(
                         "REV_INGEST_V2_WINDOW_FAIL reason={Reason} tokenHash={TokenHash} " +
+                        "tokenLen={TokenLen} lastUrlSource={LastUrlSource} lastHost={LastHost} lastPath={LastPath} " +
                         "consecutiveEmptyPages={ConsecutiveEmpty} " +
                         "windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc}",
                         windowResult.StallReason, windowResult.LastTokenHash,
+                        windowResult.LastTokenLength,
+                        windowResult.LastUrlSource,
+                        windowResult.LastHost,
+                        windowResult.LastPath,
                         windowResult.ConsecutiveEmptyPages,
                         window.Start, window.End);
 
@@ -178,7 +183,7 @@ public sealed class RevisionIngestionServiceV2
                         RunOutcome = RevisionIngestionRunOutcome.Failed,
                         RevisionsIngested = totalPersisted,
                         PagesProcessed = totalPages,
-                        ErrorMessage = $"Window failed: {windowResult.StallReason}",
+                        ErrorMessage = $"Window failed: reasonCode={windowResult.StallReason} consecutiveEmptyPages={windowResult.ConsecutiveEmptyPages} lastTokenHash={windowResult.LastTokenHash} lastTokenLength={windowResult.LastTokenLength} lastUrlSource={windowResult.LastUrlSource} lastHost={windowResult.LastHost} lastPath={windowResult.LastPath}",
                         Message = $"V2 ingestion failed at window [{window.Start} - {window.End}): {windowResult.StallReason}"
                     };
                 }
@@ -327,6 +332,10 @@ public sealed class RevisionIngestionServiceV2
                         Pages: pageIndex,
                         StallReason: "RepeatedTokenCycle",
                         LastTokenHash: continuationTokenHash,
+                        LastTokenLength: Len(continuationToken),
+                        LastUrlSource: ResolveUrlSource(continuationToken),
+                        LastHost: TryResolveHostPath(continuationToken).Host,
+                        LastPath: TryResolveHostPath(continuationToken).Path,
                         ConsecutiveEmptyPages: consecutiveEmptyPages,
                         TotalRawRevisions: totalRawRevisions,
                         PagesWithoutScopedRevisions: pagesWithoutScopedRevisions,
@@ -423,10 +432,12 @@ public sealed class RevisionIngestionServiceV2
                         allowedWorkItemIds.Count);
                 }
 
-                if (consecutiveEmptyPages > maxConsecutiveEmptyWithTokenPages)
+                if (consecutiveEmptyPages >= maxConsecutiveEmptyWithTokenPages)
                 {
+                    var lastUrlSource = ResolveUrlSource(nextToken);
+                    var lastHostPath = TryResolveHostPath(nextToken);
                     _logger.LogWarning(
-                        "REV_INGEST_V2_WINDOW_FAIL reason=EmptyWithTokenStall pageIndex={PageIndex} segmentIndex={SegmentIndex} consecutiveEmpty={ConsecutiveEmpty} maxConsecutiveEmpty={MaxConsecutiveEmpty} tokenHash={TokenHash} tokenLen={TokenLen} tokenPrefix={TokenPrefix} nextTokenHash={NextTokenHash} nextTokenLen={NextTokenLen} nextTokenPrefix={NextTokenPrefix} windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc}",
+                        "REV_INGEST_V2_WINDOW_FAIL reason=EmptyWithTokenStall pageIndex={PageIndex} segmentIndex={SegmentIndex} consecutiveEmpty={ConsecutiveEmpty} maxConsecutiveEmpty={MaxConsecutiveEmpty} tokenHash={TokenHash} tokenLen={TokenLen} tokenPrefix={TokenPrefix} nextTokenHash={NextTokenHash} nextTokenLen={NextTokenLen} nextTokenPrefix={NextTokenPrefix} lastUrlSource={LastUrlSource} lastHost={LastHost} lastPath={LastPath} windowStartUtc={WindowStartUtc} windowEndUtc={WindowEndUtc}",
                         pageIndex,
                         activeSegmentIndex,
                         consecutiveEmptyPages,
@@ -437,6 +448,9 @@ public sealed class RevisionIngestionServiceV2
                         nextTokenHash,
                         Len(nextToken),
                         Prefix(nextToken),
+                        lastUrlSource,
+                        lastHostPath.Host,
+                        lastHostPath.Path,
                         window.Start,
                         window.End);
 
@@ -445,7 +459,11 @@ public sealed class RevisionIngestionServiceV2
                         Persisted: totalPersisted,
                         Pages: pageIndex,
                         StallReason: "EmptyWithTokenStall",
-                        LastTokenHash: continuationTokenHash,
+                        LastTokenHash: nextTokenHash ?? continuationTokenHash,
+                        LastTokenLength: Len(nextToken),
+                        LastUrlSource: lastUrlSource,
+                        LastHost: lastHostPath.Host,
+                        LastPath: lastHostPath.Path,
                         ConsecutiveEmptyPages: consecutiveEmptyPages,
                         TotalRawRevisions: totalRawRevisions,
                         PagesWithoutScopedRevisions: pagesWithoutScopedRevisions,
@@ -559,6 +577,10 @@ public sealed class RevisionIngestionServiceV2
             Pages: pageIndex,
             StallReason: null,
             LastTokenHash: null,
+            LastTokenLength: 0,
+            LastUrlSource: null,
+            LastHost: null,
+            LastPath: null,
             ConsecutiveEmptyPages: consecutiveEmptyPages,
             TotalRawRevisions: totalRawRevisions,
             PagesWithoutScopedRevisions: pagesWithoutScopedRevisions,
@@ -950,6 +972,95 @@ public sealed class RevisionIngestionServiceV2
         return value?.Length ?? 0;
     }
 
+    private static string ResolveUrlSource(string? continuationToken)
+    {
+        var resolvedToken = ResolveInnerContinuationToken(continuationToken);
+        if (resolvedToken is null)
+        {
+            return "InitialCanonical";
+        }
+
+        if (resolvedToken.StartsWith("next:", StringComparison.Ordinal) ||
+            Uri.IsWellFormedUriString(resolvedToken, UriKind.Absolute))
+        {
+            return "NextLinkVerbatim";
+        }
+
+        if (resolvedToken.StartsWith("seek:", StringComparison.Ordinal))
+        {
+            return "SeekVerbatim";
+        }
+
+        return "InitialCanonical";
+    }
+
+    private static (string? Host, string? Path) TryResolveHostPath(string? continuationToken)
+    {
+        var resolvedToken = ResolveInnerContinuationToken(continuationToken);
+        if (resolvedToken is null)
+        {
+            return (null, null);
+        }
+
+        if (resolvedToken.StartsWith("next:", StringComparison.Ordinal) ||
+            resolvedToken.StartsWith("seek:", StringComparison.Ordinal))
+        {
+            var payload = resolvedToken[5..];
+            var separator = payload.IndexOf('|');
+            var encodedUrl = separator >= 0 ? payload[..separator] : payload;
+            try
+            {
+                var decodedUrl = Encoding.UTF8.GetString(Convert.FromBase64String(encodedUrl));
+                if (Uri.TryCreate(decodedUrl, UriKind.Absolute, out var decodedUri))
+                {
+                    return (decodedUri.Host, decodedUri.AbsolutePath);
+                }
+            }
+            catch
+            {
+                return (null, null);
+            }
+        }
+
+        if (Uri.TryCreate(resolvedToken, UriKind.Absolute, out var absoluteUri))
+        {
+            return (absoluteUri.Host, absoluteUri.AbsolutePath);
+        }
+
+        return (null, null);
+    }
+
+    private static string? ResolveInnerContinuationToken(string? continuationToken)
+    {
+        if (string.IsNullOrWhiteSpace(continuationToken))
+        {
+            return null;
+        }
+
+        if (!continuationToken.StartsWith("seg:", StringComparison.Ordinal))
+        {
+            return continuationToken;
+        }
+
+        var payload = continuationToken["seg:".Length..];
+        var separator = payload.IndexOf('|');
+        if (separator < 0 || separator == payload.Length - 1)
+        {
+            return continuationToken;
+        }
+
+        var encodedInner = payload[(separator + 1)..];
+        try
+        {
+            var decodedInner = Encoding.UTF8.GetString(Convert.FromBase64String(encodedInner));
+            return string.IsNullOrWhiteSpace(decodedInner) ? null : decodedInner;
+        }
+        catch
+        {
+            return continuationToken;
+        }
+    }
+
     private static long GetElapsedMs(long startTimestamp)
     {
         return (long)Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
@@ -984,6 +1095,10 @@ public sealed class RevisionIngestionServiceV2
         int Pages,
         string? StallReason,
         string? LastTokenHash,
+        int LastTokenLength,
+        string? LastUrlSource,
+        string? LastHost,
+        string? LastPath,
         int ConsecutiveEmptyPages,
         int TotalRawRevisions,
         int PagesWithoutScopedRevisions,

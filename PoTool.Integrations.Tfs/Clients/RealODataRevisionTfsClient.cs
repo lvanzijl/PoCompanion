@@ -88,14 +88,34 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             return new ReportingRevisionsResult([], continuationToken: null);
         }
 
-        var segmentState = ResolveSegmentState(continuationToken, segments);
-        if (segmentState.HasSegmentToken && !segmentState.SegmentTokenMatched)
+        SegmentContinuationState segmentState;
+        try
+        {
+            segmentState = ResolveSegmentState(continuationToken, segments);
+        }
+        catch (InvalidOperationException ex) when (
+            ex.Message.StartsWith("InvalidSegmentToken", StringComparison.Ordinal) ||
+            ex.Message.StartsWith("InvalidSegmentIndexToken", StringComparison.Ordinal))
         {
             _logger.LogWarning(
-                "REV_INGEST_ODATA_SEGMENT_TOKEN_MISMATCH segmentCount={SegmentCount} tokenHash={TokenHash} action={Action}",
+                "REV_INGEST_ODATA_SEGMENT_TOKEN_INVALID reasonCode={ReasonCode} segmentCount={SegmentCount} tokenHash={TokenHash} tokenLen={TokenLen}",
+                ex.Message,
                 segments.Count,
                 HashToken(continuationToken),
-                "RestartAtFirstSegment");
+                continuationToken?.Length ?? 0);
+            throw;
+        }
+
+        if (segmentState.HasSegmentToken &&
+            string.Equals(segmentState.SegmentTokenFormat, "Boundaries", StringComparison.Ordinal) &&
+            segmentState.SegmentIndex < 0)
+        {
+            _logger.LogWarning(
+                "REV_INGEST_ODATA_SEGMENT_TOKEN_BOUNDARY_SCOPE_MISMATCH segmentStart={SegmentStart} segmentEnd={SegmentEnd} tokenHash={TokenHash} action={Action}",
+                segmentState.SegmentStart,
+                segmentState.SegmentEnd,
+                HashToken(continuationToken),
+                "UseTokenBoundaries");
         }
         var requestContext = ResolveRequestContext(
             config,
@@ -145,11 +165,14 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         {
             var effectiveUri = Uri.TryCreate(requestUrl, UriKind.Absolute, out var parsedUri) ? parsedUri : null;
             _logger.LogInformation(
-                "REV_INGEST_ODATA_REQUEST mode={Mode} urlSource={UrlSource} pageIndex={PageIndex} segmentIndex={SegmentIndex} segmentRange={SegmentRange} effectiveHost={EffectiveHost} effectivePath={EffectivePath} hasFilter={HasFilter} hasOrderBy={HasOrderBy} hasSelect={HasSelect} hasExpand={HasExpand} effectiveFilter={EffectiveFilter} effectiveOrderBy={EffectiveOrderBy}",
+                "REV_INGEST_ODATA_REQUEST mode={Mode} urlSource={UrlSource} pageIndex={PageIndex} segmentIndex={SegmentIndex} segmentTokenFormat={SegmentTokenFormat} segmentStart={SegmentStart} segmentEnd={SegmentEnd} segmentRange={SegmentRange} effectiveHost={EffectiveHost} effectivePath={EffectivePath} hasFilter={HasFilter} hasOrderBy={HasOrderBy} hasSelect={HasSelect} hasExpand={HasExpand} effectiveFilter={EffectiveFilter} effectiveOrderBy={EffectiveOrderBy}",
                 mode,
                 urlSource,
                 pageIndex,
                 segmentState.SegmentIndex,
+                segmentState.SegmentTokenFormat,
+                segmentState.SegmentStart,
+                segmentState.SegmentEnd,
                 segmentRange,
                 effectiveUri?.Host ?? "<invalid>",
                 effectiveUri?.AbsolutePath ?? "<invalid>",
@@ -371,7 +394,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
 
         return new ReportingRevisionsResult(
             revisions,
-            BuildSegmentContinuationToken(segments, segmentState.SegmentIndex, continuation));
+            BuildSegmentContinuationToken(segments, segmentState, continuation));
         }
     }
 
@@ -528,48 +551,76 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var normalizedToken = NormalizeToken(continuationToken);
         if (segments.Count == 0)
         {
-            return new SegmentContinuationState(normalizedToken, null, -1, HasSegmentToken: false, SegmentTokenMatched: false);
+            return new SegmentContinuationState(normalizedToken, null, -1, HasSegmentToken: false, SegmentTokenFormat: "None", SegmentStart: null, SegmentEnd: null);
         }
 
-        if (TryDecodeSegmentState(normalizedToken, out var state) &&
-            state is not null)
+        if (normalizedToken is not null &&
+            normalizedToken.StartsWith("seg:", StringComparison.Ordinal))
         {
-            int? matchedSegmentIndex = null;
-            if (state.LegacySegmentIndex.HasValue)
+            if (!TryDecodeSegmentState(normalizedToken, out var state) ||
+                state is null)
             {
-                var legacySegmentIndex = state.LegacySegmentIndex.Value;
-                if (legacySegmentIndex >= 0 && legacySegmentIndex < segments.Count)
-                {
-                    matchedSegmentIndex = legacySegmentIndex;
-                }
+                throw new InvalidOperationException(
+                    string.Create(CultureInfo.InvariantCulture, $"InvalidSegmentToken tokenHash={HashToken(normalizedToken)}"));
             }
-            else
+            var decoded = state.Value;
+
+            if (string.Equals(decoded.Format, "Boundaries", StringComparison.Ordinal))
             {
-                matchedSegmentIndex = segments
+                var matchedSegmentIndex = segments
                     .Select((segment, index) => new { segment, index })
-                    .Where(candidate => candidate.segment.Start == state.SegmentStart &&
-                                        candidate.segment.End == state.SegmentEnd)
+                    .Where(candidate => candidate.segment.Start == decoded.Start &&
+                                        candidate.segment.End == decoded.End)
                     .Select(candidate => (int?)candidate.index)
-                    .FirstOrDefault();
+                    .FirstOrDefault() ?? -1;
+
+                return new SegmentContinuationState(
+                    decoded.InnerToken,
+                    new WorkItemIdRangeSegment(decoded.Start, decoded.End),
+                    matchedSegmentIndex,
+                    HasSegmentToken: true,
+                    SegmentTokenFormat: decoded.Format,
+                    SegmentStart: decoded.Start,
+                    SegmentEnd: decoded.End);
             }
 
-            if (matchedSegmentIndex.HasValue)
+            if (decoded.Index is null ||
+                decoded.Index.Value < 0 ||
+                decoded.Index.Value >= segments.Count)
             {
-                return new SegmentContinuationState(state.InnerContinuationToken, segments[matchedSegmentIndex.Value], matchedSegmentIndex.Value, HasSegmentToken: true, SegmentTokenMatched: true);
+                throw new InvalidOperationException(
+                    string.Create(
+                        CultureInfo.InvariantCulture,
+                        $"InvalidSegmentIndexToken index={(decoded.Index.HasValue ? decoded.Index.Value.ToString(CultureInfo.InvariantCulture) : "<null>")} segmentCount={segments.Count} tokenHash={HashToken(normalizedToken)}"));
             }
 
-            return new SegmentContinuationState(null, segments[0], 0, HasSegmentToken: true, SegmentTokenMatched: false);
+            var indexedSegment = segments[decoded.Index.Value];
+            return new SegmentContinuationState(
+                decoded.InnerToken,
+                indexedSegment,
+                decoded.Index.Value,
+                HasSegmentToken: true,
+                SegmentTokenFormat: decoded.Format,
+                SegmentStart: indexedSegment.Start,
+                SegmentEnd: indexedSegment.End);
         }
 
-        return new SegmentContinuationState(normalizedToken, segments[0], 0, HasSegmentToken: false, SegmentTokenMatched: false);
+        return new SegmentContinuationState(
+            normalizedToken,
+            segments[0],
+            0,
+            HasSegmentToken: false,
+            SegmentTokenFormat: "None",
+            SegmentStart: segments[0].Start,
+            SegmentEnd: segments[0].End);
     }
 
     private static string? BuildSegmentContinuationToken(
         IReadOnlyList<WorkItemIdRangeSegment> segments,
-        int segmentIndex,
+        SegmentContinuationState segmentState,
         string? pageContinuationToken)
     {
-        if (segments.Count <= 1 || segmentIndex < 0)
+        if (segments.Count <= 1)
         {
             return NormalizeToken(pageContinuationToken);
         }
@@ -577,15 +628,22 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         var normalizedPageToken = NormalizeToken(pageContinuationToken);
         if (normalizedPageToken is not null)
         {
-            var segment = segments[segmentIndex];
-            return EncodeSegmentState(new SegmentContinuationStateToken(segment.Start, segment.End, normalizedPageToken));
+            if (segmentState.Segment is WorkItemIdRangeSegment activeSegment)
+            {
+                return EncodeSegmentState(new SegmentContinuationStateToken(activeSegment.Start, activeSegment.End, normalizedPageToken));
+            }
+
+            return normalizedPageToken;
         }
 
-        var nextSegmentIndex = segmentIndex + 1;
-        if (nextSegmentIndex < segments.Count)
+        if (segmentState.SegmentIndex >= 0)
         {
-            var nextSegment = segments[nextSegmentIndex];
-            return EncodeSegmentState(new SegmentContinuationStateToken(nextSegment.Start, nextSegment.End, null));
+            var nextSegmentIndex = segmentState.SegmentIndex + 1;
+            if (nextSegmentIndex < segments.Count)
+            {
+                var nextSegment = segments[nextSegmentIndex];
+                return EncodeSegmentState(new SegmentContinuationStateToken(nextSegment.Start, nextSegment.End, null));
+            }
         }
 
         return null;
@@ -856,7 +914,7 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         }
     }
 
-    private static bool TryDecodeSegmentState(string? token, out SegmentContinuationStateToken? state)
+    private static bool TryDecodeSegmentState(string? token, out DecodedSegmentToken? state)
     {
         state = null;
         if (string.IsNullOrWhiteSpace(token) || !token.StartsWith("seg:", StringComparison.Ordinal))
@@ -875,22 +933,23 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
 
             int segmentStart;
             int segmentEnd;
-            int? legacySegmentIndex = null;
+            int? segmentIndex = null;
+            string format;
 
             var segmentIdentity = parts[0].Split(':');
             if (segmentIdentity.Length == 2 &&
                 int.TryParse(segmentIdentity[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out segmentStart) &&
                 int.TryParse(segmentIdentity[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out segmentEnd))
             {
-                // Current format: seg:{segmentStart}:{segmentEnd}|{base64InnerToken}
+                format = "Boundaries";
             }
             else if (segmentIdentity.Length == 1 &&
                      int.TryParse(segmentIdentity[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedLegacySegmentIndex))
             {
-                // Legacy format: seg:{segmentIndex}|{base64InnerToken}
+                format = "Index";
                 segmentStart = -1;
                 segmentEnd = -1;
-                legacySegmentIndex = parsedLegacySegmentIndex;
+                segmentIndex = parsedLegacySegmentIndex;
             }
             else
             {
@@ -898,7 +957,13 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
             }
 
             var decodedInnerToken = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(parts[1]));
-            state = new SegmentContinuationStateToken(segmentStart, segmentEnd, NormalizeToken(decodedInnerToken), legacySegmentIndex);
+            state = new DecodedSegmentToken(
+                HasBoundaries: string.Equals(format, "Boundaries", StringComparison.Ordinal),
+                Index: segmentIndex,
+                Start: segmentStart,
+                End: segmentEnd,
+                InnerToken: NormalizeToken(decodedInnerToken),
+                Format: format);
             return true;
         }
         catch
@@ -1355,8 +1420,22 @@ public sealed class RealODataRevisionTfsClient : IWorkItemRevisionSource
         SeekContinuationState? SeekState,
         RevisionCursorTuple? LastCursor,
         int NoProgressPages);
-    private sealed record SegmentContinuationState(string? InnerContinuationToken, WorkItemIdRangeSegment? Segment, int SegmentIndex, bool HasSegmentToken, bool SegmentTokenMatched);
-    private sealed record SegmentContinuationStateToken(int SegmentStart, int SegmentEnd, string? InnerContinuationToken, int? LegacySegmentIndex = null);
+    private sealed record SegmentContinuationState(
+        string? InnerContinuationToken,
+        WorkItemIdRangeSegment? Segment,
+        int SegmentIndex,
+        bool HasSegmentToken,
+        string SegmentTokenFormat,
+        int? SegmentStart,
+        int? SegmentEnd);
+    private readonly record struct DecodedSegmentToken(
+        bool HasBoundaries,
+        int? Index,
+        int Start,
+        int End,
+        string? InnerToken,
+        string Format);
+    private sealed record SegmentContinuationStateToken(int SegmentStart, int SegmentEnd, string? InnerContinuationToken);
     private sealed record NextLinkContinuationState(string Url, int PageIndex, RevisionCursorTuple? LastCursor, int NoProgressPages);
 
     private readonly record struct RevisionCursorTuple(DateTimeOffset ChangedDate, int WorkItemId, int Revision)

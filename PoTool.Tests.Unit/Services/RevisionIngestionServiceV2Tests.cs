@@ -732,7 +732,11 @@ public sealed class RevisionIngestionServiceV2Tests
 
         Assert.IsFalse(result.Success, "Expected deterministic failure due to EmptyWithTokenStall");
         StringAssert.Contains(result.ErrorMessage, "EmptyWithTokenStall");
-        Assert.AreEqual(3, stubClient.ReportingCalls);
+        StringAssert.Contains(result.ErrorMessage, "consecutiveEmptyPages=2");
+        StringAssert.Contains(result.ErrorMessage, "lastTokenLength=2");
+        StringAssert.Contains(result.ErrorMessage, "lastUrlSource=InitialCanonical");
+        // Threshold is now inclusive (>=), so run stops on the second empty page.
+        Assert.AreEqual(2, stubClient.ReportingCalls);
     }
 
     [TestMethod]
