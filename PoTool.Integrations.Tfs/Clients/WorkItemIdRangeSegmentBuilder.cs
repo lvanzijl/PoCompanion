@@ -1,11 +1,11 @@
 namespace PoTool.Integrations.Tfs.Clients;
 
-internal readonly record struct WorkItemIdRangeSegment(int Start, int End)
+public readonly record struct WorkItemIdRangeSegment(int Start, int End)
 {
     public int Span => End - Start + 1;
 }
 
-internal static class WorkItemIdRangeSegmentBuilder
+public static class WorkItemIdRangeSegmentBuilder
 {
     private const int DefaultMaxRangeSize = 500;
 

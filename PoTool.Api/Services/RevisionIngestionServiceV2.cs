@@ -11,6 +11,7 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
+using PoTool.Integrations.Tfs.Clients;
 
 namespace PoTool.Api.Services;
 
@@ -372,13 +373,18 @@ public sealed class RevisionIngestionServiceV2
                 out var continuationTokenFormat,
                 out var continuationExactMatch,
                 out var continuationFallbackIndex);
-            if (string.Equals(continuationTokenFormat, "Boundaries", StringComparison.Ordinal))
+            var diagnosticsSegmentsCount = WorkItemIdRangeSegmentBuilder.Build(allowedWorkItemIds).Count;
+            if (!string.Equals(continuationTokenFormat, "None", StringComparison.Ordinal))
             {
                 _logger.LogInformation(
-                    "REV_INGEST_V2_SEGMENT_TOKEN_BOUNDARY tokenKind={TokenKind} exactMatch={ExactMatch} fallbackIndex={FallbackIndex}",
+                    "REV_INGEST_V2_SEGMENT_TOKEN_PROGRESS tokenKind={TokenKind} diagnosticsSegmentSource={DiagnosticsSegmentSource} diagnosticsTokenFormat={DiagnosticsTokenFormat} diagnosticsExactMatch={DiagnosticsExactMatch} diagnosticsFallbackIndexUsed={DiagnosticsFallbackIndexUsed} diagnosticsFallbackIndex={DiagnosticsFallbackIndex} diagnosticsSegmentsCount={DiagnosticsSegmentsCount}",
                     "Continuation",
+                    "SharedBuilder",
+                    continuationTokenFormat,
                     continuationExactMatch,
-                    continuationFallbackIndex);
+                    continuationFallbackIndex.HasValue,
+                    continuationFallbackIndex,
+                    diagnosticsSegmentsCount);
             }
 
             var nextSegmentIndex = ResolveSegmentIndexFromContinuationToken(
@@ -387,13 +393,17 @@ public sealed class RevisionIngestionServiceV2
                 out var nextTokenFormat,
                 out var nextExactMatch,
                 out var nextFallbackIndex);
-            if (string.Equals(nextTokenFormat, "Boundaries", StringComparison.Ordinal))
+            if (!string.Equals(nextTokenFormat, "None", StringComparison.Ordinal))
             {
                 _logger.LogInformation(
-                    "REV_INGEST_V2_SEGMENT_TOKEN_BOUNDARY tokenKind={TokenKind} exactMatch={ExactMatch} fallbackIndex={FallbackIndex}",
+                    "REV_INGEST_V2_SEGMENT_TOKEN_PROGRESS tokenKind={TokenKind} diagnosticsSegmentSource={DiagnosticsSegmentSource} diagnosticsTokenFormat={DiagnosticsTokenFormat} diagnosticsExactMatch={DiagnosticsExactMatch} diagnosticsFallbackIndexUsed={DiagnosticsFallbackIndexUsed} diagnosticsFallbackIndex={DiagnosticsFallbackIndex} diagnosticsSegmentsCount={DiagnosticsSegmentsCount}",
                     "Next",
+                    "SharedBuilder",
+                    nextTokenFormat,
                     nextExactMatch,
-                    nextFallbackIndex);
+                    nextFallbackIndex.HasValue,
+                    nextFallbackIndex,
+                    diagnosticsSegmentsCount);
             }
 
             var activeSegmentIndex = continuationSegmentIndex ?? nextSegmentIndex;
@@ -1119,10 +1129,11 @@ public sealed class RevisionIngestionServiceV2
         }
 
         var segmentSlice = payload[..separator];
+        var segmentsForDiagnostics = WorkItemIdRangeSegmentBuilder.Build(allowedWorkItemIds);
         if (int.TryParse(segmentSlice, out var legacySegmentIndex) && legacySegmentIndex >= 0)
         {
             tokenFormat = "Index";
-            exactMatchFound = true;
+            exactMatchFound = legacySegmentIndex >= 0 && legacySegmentIndex < segmentsForDiagnostics.Count;
             return legacySegmentIndex;
         }
 
@@ -1135,16 +1146,15 @@ public sealed class RevisionIngestionServiceV2
         }
 
         tokenFormat = "Boundaries";
-        var diagnosticSegments = BuildDiagnosticSegments(allowedWorkItemIds);
-        if (diagnosticSegments.Count == 0)
+        if (segmentsForDiagnostics.Count == 0)
         {
             orderedFallbackIndex = 0;
             return 0;
         }
 
-        for (var i = 0; i < diagnosticSegments.Count; i++)
+        for (var i = 0; i < segmentsForDiagnostics.Count; i++)
         {
-            var diagnosticSegment = diagnosticSegments[i];
+            var diagnosticSegment = segmentsForDiagnostics[i];
             if (diagnosticSegment.Start == segmentStart &&
                 diagnosticSegment.End == segmentEnd)
             {
@@ -1153,66 +1163,13 @@ public sealed class RevisionIngestionServiceV2
             }
         }
 
-        orderedFallbackIndex = diagnosticSegments
+        orderedFallbackIndex = segmentsForDiagnostics
             .TakeWhile(diagnosticSegment => diagnosticSegment.End < segmentStart)
             .Count();
         return orderedFallbackIndex;
     }
 
-    private static IReadOnlyList<DiagnosticSegment> BuildDiagnosticSegments(IReadOnlyCollection<int>? allowedWorkItemIds)
-    {
-        if (allowedWorkItemIds == null || allowedWorkItemIds.Count == 0)
-        {
-            return [];
-        }
-
-        var orderedIds = allowedWorkItemIds
-            .Where(id => id > 0)
-            .Distinct()
-            .OrderBy(id => id)
-            .ToArray();
-        if (orderedIds.Length == 0)
-        {
-            return [];
-        }
-
-        const int maxSpan = 500;
-        var segments = new List<DiagnosticSegment>();
-        var rangeStart = orderedIds[0];
-        var rangeEnd = orderedIds[0];
-
-        for (var i = 1; i < orderedIds.Length; i++)
-        {
-            var candidate = orderedIds[i];
-            var gap = candidate - rangeEnd - 1;
-            if (gap == 0)
-            {
-                rangeEnd = candidate;
-                continue;
-            }
-
-            AddSplitDiagnosticSegments(segments, rangeStart, rangeEnd, maxSpan);
-            rangeStart = candidate;
-            rangeEnd = candidate;
-        }
-
-        AddSplitDiagnosticSegments(segments, rangeStart, rangeEnd, maxSpan);
-        return segments;
-    }
-
-    private static void AddSplitDiagnosticSegments(List<DiagnosticSegment> segments, int start, int end, int maxSpan)
-    {
-        var current = start;
-        while (current <= end)
-        {
-            var segmentEnd = Math.Min(end, current + maxSpan - 1);
-            segments.Add(new DiagnosticSegment(current, segmentEnd));
-            current = segmentEnd + 1;
-        }
-    }
-
     private sealed record IngestionWindow(DateTimeOffset Start, DateTimeOffset End);
-    private readonly record struct DiagnosticSegment(int Start, int End);
 
     private sealed record WindowResult(
         bool Success,

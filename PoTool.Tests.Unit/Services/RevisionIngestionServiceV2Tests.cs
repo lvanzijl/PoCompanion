@@ -233,13 +233,13 @@ public sealed class RevisionIngestionServiceV2Tests
     public void ResolveSegmentIndexFromContinuationToken_LegacyIndexToken_ReturnsIndex()
     {
         var index = RevisionIngestionServiceV2.ResolveSegmentIndexFromContinuationToken(
-            "seg:2|AAA",
+            "seg:1|AAA",
             [1, 2, 10, 11],
             out var tokenFormat,
             out var exactMatchFound,
             out var orderedFallbackIndex);
 
-        Assert.AreEqual(2, index);
+        Assert.AreEqual(1, index);
         Assert.AreEqual("Index", tokenFormat);
         Assert.IsTrue(exactMatchFound);
         Assert.IsNull(orderedFallbackIndex);
@@ -275,6 +275,22 @@ public sealed class RevisionIngestionServiceV2Tests
         Assert.AreEqual("Boundaries", tokenFormat);
         Assert.IsFalse(exactMatchFound);
         Assert.AreEqual(1, orderedFallbackIndex);
+    }
+
+    [TestMethod]
+    public void ResolveSegmentIndexFromContinuationToken_LegacyIndexOutOfRange_ReturnsIndexWithoutThrowing()
+    {
+        var index = RevisionIngestionServiceV2.ResolveSegmentIndexFromContinuationToken(
+            "seg:99|AAA",
+            [1, 2, 10, 11],
+            out var tokenFormat,
+            out var exactMatchFound,
+            out var orderedFallbackIndex);
+
+        Assert.AreEqual(99, index);
+        Assert.AreEqual("Index", tokenFormat);
+        Assert.IsFalse(exactMatchFound);
+        Assert.IsNull(orderedFallbackIndex);
     }
 
     [TestMethod]
