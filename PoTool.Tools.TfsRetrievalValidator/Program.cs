@@ -79,7 +79,6 @@ try
         });
 
     services.AddScoped<ITfsClient, RealTfsClient>();
-    services.AddScoped<IWorkItemRevisionSource, RealODataRevisionTfsClient>();
 
     await using var provider = services.BuildServiceProvider().CreateAsyncScope();
     var scopedProvider = provider.ServiceProvider;
@@ -91,7 +90,6 @@ try
     }
 
     var tfsClient = scopedProvider.GetRequiredService<ITfsClient>();
-    var revisionSource = scopedProvider.GetRequiredService<IWorkItemRevisionSource>();
     logger.LogInformation("Starting retrieval for RootWorkItemId={RootWorkItemId}", options.RootWorkItemId);
 
     var workItems = (await tfsClient.GetWorkItemsByRootIdsAsync(
@@ -100,113 +98,21 @@ try
                 logger.LogInformation("Work item retrieval progress {Step}/{Total}: {Message}", step, total, message)))
         .ToList();
 
-    var allowedWorkItemIds = workItems.Select(item => item.TfsId).ToHashSet();
-    var scopeSegments = WorkItemIdRangeSegmentBuilder.Build(allowedWorkItemIds);
-    var segmentCount = scopeSegments.Count;
-    var totalSegmentSpan = scopeSegments.Sum(segment => segment.Span);
-    var maxSegmentSpan = scopeSegments.Count == 0 ? 0 : scopeSegments.Max(segment => segment.Span);
-    var segmentsWithZeroScopedRevisions = new HashSet<int>();
-    var pagesWithoutScopedBySegment = new Dictionary<int, int>();
-    var revisionStartDateTime = workItems
-        .Select(item => item.CreatedDate ?? item.ChangedDate)
-        .Min();
-    var inferredStartDateTime = revisionStartDateTime?.AddDays(-1);
-    logger.LogInformation(
-        "Revision retrieval startDateTime inferred as {StartDateTime}",
-        inferredStartDateTime?.ToString("O", CultureInfo.InvariantCulture) ?? "<none>");
-    if (inferredStartDateTime is null)
-    {
-        logger.LogWarning("Unable to infer revision startDateTime from work item CreatedDate/ChangedDate; retrieval will start without a date bound.");
-    }
-
-    var revisions = new List<WorkItemRevision>();
-    string? continuationToken = null;
-    var pageNumber = 0;
-    var totalRawRevisions = 0;
-    var pagesWithoutScopedRevisions = 0;
+    var hierarchyRelations = ReconstructHierarchy(workItems);
+    IReadOnlyList<WorkItemRevisionDto> revisions = [];
+    const int disabledRevisionPageNumber = 0;
+    const int disabledTotalRawRevisions = 0;
+    const int disabledPagesWithoutScopedRevisions = 0;
     string? reportingTerminationReason = null;
     string? reportingTerminationMessage = null;
-
-    do
-    {
-        var activeSegmentIndex = ResolveSegmentIndexFromContinuationToken(continuationToken, scopeSegments.Count);
-        var page = await revisionSource.GetRevisionsAsync(
-            startDateTime: inferredStartDateTime,
-            continuationToken: continuationToken,
-            scopedWorkItemIds: allowedWorkItemIds,
-            expandMode: ReportingExpandMode.None);
-
-        pageNumber++;
-        var scopedRevisions = page.Revisions
-            .Where(revision => allowedWorkItemIds.Contains(revision.WorkItemId))
-            .ToList();
-
-        totalRawRevisions += page.Revisions.Count;
-        if (scopedRevisions.Count == 0)
-        {
-            pagesWithoutScopedRevisions++;
-            if (activeSegmentIndex >= 0)
-            {
-                segmentsWithZeroScopedRevisions.Add(activeSegmentIndex);
-                pagesWithoutScopedBySegment.TryGetValue(activeSegmentIndex, out var currentSegmentEmptyPages);
-                pagesWithoutScopedBySegment[activeSegmentIndex] = currentSegmentEmptyPages + 1;
-            }
-        }
-
-        revisions.AddRange(scopedRevisions);
-        continuationToken = page.ContinuationToken;
-
-        logger.LogInformation(
-            "Revision page {PageNumber}: raw={RawCount}, scoped={ScopedCount}, hasMore={HasMore}",
-            pageNumber,
-            page.Revisions.Count,
-            scopedRevisions.Count,
-            continuationToken is not null);
-
-        if (page.WasTerminatedEarly)
-        {
-            reportingTerminationReason = page.Termination?.Reason.ToString();
-            reportingTerminationMessage = page.Termination?.Message;
-            logger.LogWarning(
-                "Revision retrieval terminated early. Reason={Reason}, Message={Message}",
-                page.Termination?.Reason,
-                page.Termination?.Message);
-            break;
-        }
-    }
-    while (continuationToken is not null);
-
-    var hierarchyRelations = ReconstructHierarchy(workItems);
+    const string noRevisionIngestionOutcome = "Retrieved work items and hierarchy without revision ingestion.";
 
     logger.LogInformation(
         "Retrieved {WorkItemCount} work items, {RevisionCount} scoped revisions, {HierarchyCount} hierarchy relations",
         workItems.Count,
         revisions.Count,
         hierarchyRelations.Count);
-    logger.LogInformation(
-        "Revision pagination summary: segmentCount={SegmentCount}, totalSpan={TotalSegmentSpan}, maxSegmentSpan={MaxSegmentSpan}, segmentsWithZeroScopedRevisions={SegmentsWithZeroScopedRevisions}, pages={PageCount}, rawRevisions={RawRevisions}, scopedRevisions={ScopedRevisions}, pagesWithoutScopedRevisions={PagesWithoutScopedRevisions}",
-        segmentCount,
-        totalSegmentSpan,
-        maxSegmentSpan,
-        segmentsWithZeroScopedRevisions.Count,
-        pageNumber,
-        totalRawRevisions,
-        revisions.Count,
-        pagesWithoutScopedRevisions);
-
-    if (pagesWithoutScopedRevisions > 0)
-    {
-        logger.LogWarning(
-            "Detected {PagesWithoutScopedRevisions} pages without scoped revisions. This can indicate poor root filtering coverage or sparse historical data.",
-            pagesWithoutScopedRevisions);
-        foreach (var kvp in pagesWithoutScopedBySegment.OrderBy(entry => entry.Key))
-        {
-            logger.LogDebug(
-                "Segment {SegmentIndex} pagesWithoutScopedRevisions={PagesWithoutScopedRevisions}",
-                kvp.Key,
-                kvp.Value);
-        }
-    }
+    logger.LogInformation("Revision retrieval is disabled in this validator run.");
 
     snapshot = new RawModelSnapshot(
         RetrievedAt: DateTimeOffset.Now,
@@ -214,15 +120,13 @@ try
         WorkItems: workItems,
         Revisions: revisions,
         HierarchyRelations: hierarchyRelations,
-        RevisionPagesFetched: pageNumber,
-        TotalRawRevisions: totalRawRevisions,
-        PagesWithoutScopedRevisions: pagesWithoutScopedRevisions,
+        RevisionPagesFetched: disabledRevisionPageNumber,
+        TotalRawRevisions: disabledTotalRawRevisions,
+        PagesWithoutScopedRevisions: disabledPagesWithoutScopedRevisions,
         ReportingTerminationReason: reportingTerminationReason,
         ReportingTerminationMessage: reportingTerminationMessage,
-        SessionSucceeded: string.IsNullOrWhiteSpace(reportingTerminationReason),
-        SessionOutcomeReason: string.IsNullOrWhiteSpace(reportingTerminationReason)
-            ? "Retrieved revisions from Analytics OData without early termination."
-            : $"Revision retrieval terminated early ({reportingTerminationReason}): {reportingTerminationMessage ?? "No additional details."}");
+        SessionSucceeded: true,
+        SessionOutcomeReason: noRevisionIngestionOutcome);
 
     sessionSucceeded = snapshot.SessionSucceeded;
     sessionOutcomeReason = snapshot.SessionOutcomeReason;
@@ -297,39 +201,6 @@ static List<HierarchyRelationSnapshot> ReconstructHierarchy(IEnumerable<WorkItem
         .ToList();
 }
 
-static int ResolveSegmentIndexFromContinuationToken(string? continuationToken, int segmentCount)
-{
-    if (segmentCount <= 0)
-    {
-        return -1;
-    }
-
-    if (string.IsNullOrWhiteSpace(continuationToken) || !continuationToken.StartsWith("seg:", StringComparison.Ordinal))
-    {
-        return 0;
-    }
-
-    var payload = continuationToken["seg:".Length..];
-    var separator = payload.IndexOf('|');
-    if (separator <= 0)
-    {
-        return 0;
-    }
-
-    var indexSlice = payload[..separator];
-    if (!int.TryParse(indexSlice, NumberStyles.Integer, CultureInfo.InvariantCulture, out var segmentIndex))
-    {
-        return 0;
-    }
-
-    if (segmentIndex < 0 || segmentIndex >= segmentCount)
-    {
-        return 0;
-    }
-
-    return segmentIndex;
-}
-
 internal sealed record ValidatorOptions
 {
     public int RootWorkItemId { get; init; }
@@ -341,7 +212,7 @@ internal sealed record RawModelSnapshot(
     DateTimeOffset RetrievedAt,
     int RootWorkItemId,
     IReadOnlyList<WorkItemDto> WorkItems,
-    IReadOnlyList<WorkItemRevision> Revisions,
+    IReadOnlyList<WorkItemRevisionDto> Revisions,
     IReadOnlyList<HierarchyRelationSnapshot> HierarchyRelations,
     int RevisionPagesFetched,
     int TotalRawRevisions,
