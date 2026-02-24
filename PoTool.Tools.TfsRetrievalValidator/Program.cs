@@ -100,11 +100,12 @@ try
 
     var hierarchyRelations = ReconstructHierarchy(workItems);
     IReadOnlyList<WorkItemRevisionDto> revisions = [];
-    const int pageNumber = 0;
-    const int totalRawRevisions = 0;
-    const int pagesWithoutScopedRevisions = 0;
+    const int disabledRevisionPageNumber = 0;
+    const int disabledTotalRawRevisions = 0;
+    const int disabledPagesWithoutScopedRevisions = 0;
     string? reportingTerminationReason = null;
     string? reportingTerminationMessage = null;
+    const string noRevisionIngestionOutcome = "Retrieved work items and hierarchy without revision ingestion.";
 
     logger.LogInformation(
         "Retrieved {WorkItemCount} work items, {RevisionCount} scoped revisions, {HierarchyCount} hierarchy relations",
@@ -119,15 +120,13 @@ try
         WorkItems: workItems,
         Revisions: revisions,
         HierarchyRelations: hierarchyRelations,
-        RevisionPagesFetched: pageNumber,
-        TotalRawRevisions: totalRawRevisions,
-        PagesWithoutScopedRevisions: pagesWithoutScopedRevisions,
+        RevisionPagesFetched: disabledRevisionPageNumber,
+        TotalRawRevisions: disabledTotalRawRevisions,
+        PagesWithoutScopedRevisions: disabledPagesWithoutScopedRevisions,
         ReportingTerminationReason: reportingTerminationReason,
         ReportingTerminationMessage: reportingTerminationMessage,
-        SessionSucceeded: string.IsNullOrWhiteSpace(reportingTerminationReason),
-        SessionOutcomeReason: string.IsNullOrWhiteSpace(reportingTerminationReason)
-            ? "Retrieved work items and hierarchy without revision ingestion."
-            : $"Revision retrieval terminated early ({reportingTerminationReason}): {reportingTerminationMessage ?? "No additional details."}");
+        SessionSucceeded: true,
+        SessionOutcomeReason: noRevisionIngestionOutcome);
 
     sessionSucceeded = snapshot.SessionSucceeded;
     sessionOutcomeReason = snapshot.SessionOutcomeReason;
