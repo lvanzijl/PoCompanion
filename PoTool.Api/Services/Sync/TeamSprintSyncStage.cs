@@ -17,7 +17,7 @@ public class TeamSprintSyncStage : ISyncStage
     private readonly ILogger<TeamSprintSyncStage> _logger;
 
     public string StageName => "SyncTeamSprints";
-    public int StageNumber => 2;
+    public int StageNumber => 3;
 
     public TeamSprintSyncStage(
         ITfsClient tfsClient,

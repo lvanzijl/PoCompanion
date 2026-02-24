@@ -86,6 +86,11 @@ public class ProductOwnerCacheStateEntity
     public DateTimeOffset? SprintTrendProjectionAsOfUtc { get; set; }
 
     /// <summary>
+    /// Watermark for activity ingestion based on work item updates.
+    /// </summary>
+    public DateTimeOffset? ActivityEventWatermark { get; set; }
+
+    /// <summary>
     /// Error message from last failed sync attempt.
     /// </summary>
     [MaxLength(2000)]

@@ -22,8 +22,8 @@ public class SyncPipelineRunner : ISyncPipeline
     private readonly ConcurrentDictionary<int, SemaphoreSlim> _syncLocks = new();
     private readonly ConcurrentDictionary<int, CancellationTokenSource> _activeSyncs = new();
 
-    // Total stages in the current pipeline (Stage 3 RevisionSyncStage removed).
-    private const int TotalStages = 10;
+    // Total stages in the current pipeline.
+    private const int TotalStages = 11;
 
     public SyncPipelineRunner(
         IServiceScopeFactory scopeFactory,
@@ -133,7 +133,26 @@ public class SyncPipelineRunner : ISyncPipeline
             }
 
             // ============================================
-            // Stage 2: Sync Team Sprints
+            // Activity ingestion stage
+            // ============================================
+            var activityStage = scope.ServiceProvider.GetRequiredService<ActivityIngestionSyncStage>();
+            var (activityUpdate, activityResult) = await ExecuteStageAsync(activityStage, syncContext, cacheStateRepo, cts.Token);
+            yield return activityUpdate;
+
+            if (activityUpdate.HasFailed)
+            {
+                await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
+                    workItemResult?.NewWatermark, null, null, cts.Token);
+                yield break;
+            }
+            if (activityResult.HasWarnings)
+            {
+                hasWarnings = true;
+                warningMessage ??= activityResult.WarningMessage ?? activityResult.ErrorMessage;
+            }
+
+            // ============================================
+            // Team sprint sync stage
             // ============================================
             var teamSprintStage = scope.ServiceProvider.GetRequiredService<TeamSprintSyncStage>();
             var (stage2Update, stage2Result) = await ExecuteStageAsync(teamSprintStage, syncContext, cacheStateRepo, cts.Token);

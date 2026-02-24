@@ -170,6 +170,7 @@ public class CacheStateRepository : ICacheStateRepository
         entity.RelationshipsSnapshotWorkItemWatermark = null;
         entity.ResolutionAsOfUtc = null;
         entity.SprintTrendProjectionAsOfUtc = null;
+        entity.ActivityEventWatermark = null;
         entity.LastErrorMessage = null;
         entity.CurrentSyncStage = null;
         entity.StageProgressPercent = 0;
@@ -208,6 +209,9 @@ public class CacheStateRepository : ICacheStateRepository
             var relationshipEdges = await _context.WorkItemRelationshipEdges
                 .Where(e => e.ProductOwnerId == productOwnerId)
                 .ToListAsync(cancellationToken);
+            var activityEvents = await _context.ActivityEventLedgerEntries
+                .Where(e => e.ProductOwnerId == productOwnerId)
+                .ToListAsync(cancellationToken);
             var pullRequestFileChanges = await _context.PullRequestFileChanges
                 .Where(change => pullRequestIds.Contains(change.PullRequestId))
                 .ToListAsync(cancellationToken);
@@ -230,6 +234,7 @@ public class CacheStateRepository : ICacheStateRepository
             _context.CachedMetrics.RemoveRange(cachedMetrics);
             _context.CachedPipelineRuns.RemoveRange(cachedPipelineRuns);
             _context.WorkItemRelationshipEdges.RemoveRange(relationshipEdges);
+            _context.ActivityEventLedgerEntries.RemoveRange(activityEvents);
             _context.PullRequestFileChanges.RemoveRange(pullRequestFileChanges);
             _context.PullRequestComments.RemoveRange(pullRequestComments);
             _context.PullRequestIterations.RemoveRange(pullRequestIterations);
@@ -256,6 +261,9 @@ public class CacheStateRepository : ICacheStateRepository
                 .Where(r => r.ProductOwnerId == productOwnerId)
                 .ExecuteDeleteAsync(cancellationToken);
             await _context.WorkItemRelationshipEdges
+                .Where(e => e.ProductOwnerId == productOwnerId)
+                .ExecuteDeleteAsync(cancellationToken);
+            await _context.ActivityEventLedgerEntries
                 .Where(e => e.ProductOwnerId == productOwnerId)
                 .ExecuteDeleteAsync(cancellationToken);
             await _context.PullRequestFileChanges
