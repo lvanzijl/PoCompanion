@@ -205,6 +205,38 @@
             </MudAlert>
         }
 
+        @* Staleness warning *@
+        @if (_isStale)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Update" />
+                    <MudText>
+                        <strong>Data may be outdated:</strong> New activity events have been ingested since projections were last computed
+                        @if (_projectionsAsOfUtc.HasValue)
+                        {
+                            <text> (@_projectionsAsOfUtc.Value.LocalDateTime.ToString("g"))</text>
+                        }.
+                    </MudText>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               OnClick="RecomputeMetricsAsync"
+                               Disabled="_isRecomputing">
+                        @if (_isRecomputing)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                            <text>Recomputing…</text>
+                        }
+                        else
+                        {
+                            <text>Recompute</text>
+                        }
+                    </MudButton>
+                </MudStack>
+            </MudAlert>
+        }
+
         @* Metrics Summary Cards *@
         <MudGrid Spacing="3" Class="mb-4">
             <MudItem xs="12" sm="6" md="3">
@@ -593,6 +625,11 @@
     private List<FeatureProgressDto> _featureProgress = new();
     private List<EpicProgressDto> _epicProgress = new();
     
+    // Staleness detection
+    private bool _isStale;
+    private bool _isRecomputing;
+    private DateTimeOffset? _projectionsAsOfUtc;
+    
     // Trend data (Phase 2)
     private List<SprintTrendMetricsDto> _trendMetrics = new();
     private List<ChartSeries> _progressionChartSeries = new();
@@ -744,6 +781,10 @@
                 return;
             }
 
+            // Capture staleness info
+            _isStale = response.IsStale;
+            _projectionsAsOfUtc = response.ProjectionsAsOfUtc;
+
             // Filter by product if selected
             var metrics = response.Metrics;
             
@@ -812,6 +853,8 @@
         _bugsClosedCount = 0;
         _missingEffortCount = 0;
         _isApproximate = false;
+        _isStale = false;
+        _projectionsAsOfUtc = null;
         _approximateProducts.Clear();
         _productMetrics.Clear();
         _featureProgress.Clear();
@@ -1051,6 +1094,103 @@
         _advancedMode = toggled;
         await LoadMetricsAsync();
         StateHasChanged();
+    }
+
+    private async Task RecomputeMetricsAsync()
+    {
+        if (!_profileId.HasValue || _currentSprint == null || _isRecomputing)
+            return;
+
+        _isRecomputing = true;
+        StateHasChanged();
+
+        try
+        {
+            List<int> sprintIds;
+            if (_advancedMode)
+            {
+                var startIndex = Math.Max(0, _currentSprintIndex - _trendSprintCount + 1);
+                sprintIds = _filteredSprints
+                    .Skip(startIndex)
+                    .Take(_currentSprintIndex - startIndex + 1)
+                    .Select(s => s.Id)
+                    .ToList();
+            }
+            else
+            {
+                sprintIds = new List<int> { _currentSprint.Id };
+            }
+
+            var response = await SprintTrendService.GetSprintTrendMetricsAsync(
+                _profileId.Value,
+                sprintIds,
+                recompute: true);
+
+            if (response != null && response.Success && response.Metrics != null)
+            {
+                ResetMetrics();
+
+                _isStale = false;
+                _projectionsAsOfUtc = response.ProjectionsAsOfUtc;
+
+                _trendMetrics = response.Metrics
+                    .OrderBy(m => m.StartUtc ?? DateTimeOffset.MaxValue)
+                    .ToList();
+
+                var currentMetrics = _advancedMode
+                    ? _trendMetrics.LastOrDefault()
+                    : _trendMetrics.FirstOrDefault();
+
+                if (currentMetrics != null)
+                {
+                    var filteredProductMetrics = _selectedProductId.HasValue
+                        ? currentMetrics.ProductMetrics.Where(m => m.ProductId == _selectedProductId.Value).ToList()
+                        : currentMetrics.ProductMetrics.ToList();
+
+                    _completedPbiCount = filteredProductMetrics.Sum(m => m.CompletedPbiCount);
+                    _completedPbiEffort = filteredProductMetrics.Sum(m => m.CompletedPbiEffort);
+                    _progressionDelta = filteredProductMetrics.Sum(m => m.ProgressionDelta);
+                    _bugsCreatedCount = filteredProductMetrics.Sum(m => m.BugsCreatedCount);
+                    _bugsWorkedCount = filteredProductMetrics.Sum(m => m.BugsWorkedCount);
+                    _bugsClosedCount = filteredProductMetrics.Sum(m => m.BugsClosedCount);
+                    _missingEffortCount = filteredProductMetrics.Sum(m => m.MissingEffortCount);
+                    _isApproximate = filteredProductMetrics.Any(m => m.IsApproximate);
+
+                    _approximateProducts = filteredProductMetrics
+                        .Where(m => m.IsApproximate)
+                        .Select(m => m.ProductName)
+                        .ToList();
+
+                    foreach (var productMetric in filteredProductMetrics)
+                    {
+                        _productMetrics[productMetric.ProductId] = new ProductMetrics(
+                            productMetric.CompletedPbiCount,
+                            productMetric.CompletedPbiEffort,
+                            productMetric.ProgressionDelta,
+                            productMetric.MissingEffortCount,
+                            productMetric.IsApproximate);
+                    }
+                }
+
+                BuildFeatureProgress(response);
+                if (_advancedMode) BuildTrendCharts();
+
+                Snackbar.Add("Metrics recomputed successfully.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Recomputation failed.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Recomputation error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isRecomputing = false;
+            StateHasChanged();
+        }
     }
 
     private string GetTrendRangeLabel()

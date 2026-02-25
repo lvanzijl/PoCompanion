@@ -228,6 +228,17 @@ public record GetSprintTrendMetricsResponse
     /// Epic-level progress derived from child Feature progress.
     /// </summary>
     public IReadOnlyList<EpicProgressDto>? EpicProgress { get; init; }
+
+    /// <summary>
+    /// Whether the cached projections may be stale.
+    /// True when activity events have been ingested after the last projection computation.
+    /// </summary>
+    public bool IsStale { get; init; }
+
+    /// <summary>
+    /// When projections were last computed (null if never).
+    /// </summary>
+    public DateTimeOffset? ProjectionsAsOfUtc { get; init; }
 }
 
 /// <summary>

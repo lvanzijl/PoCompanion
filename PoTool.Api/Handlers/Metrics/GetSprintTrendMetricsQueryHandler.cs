@@ -162,12 +162,26 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                 featureProgress,
                 cancellationToken);
 
+            // Detect staleness: activity events ingested after last projection computation
+            var cacheState = await _context.ProductOwnerCacheStates
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.ProductOwnerId == query.ProductOwnerId, cancellationToken);
+
+            var projectionsAsOf = cacheState?.SprintTrendProjectionAsOfUtc;
+            var activityWatermark = cacheState?.ActivityEventWatermark;
+            var isStale = !query.Recompute
+                && projectionsAsOf.HasValue
+                && activityWatermark.HasValue
+                && activityWatermark.Value > projectionsAsOf.Value;
+
             return new GetSprintTrendMetricsResponse
             {
                 Success = true,
                 Metrics = metricsBySprint,
                 FeatureProgress = featureProgress,
-                EpicProgress = epicProgress
+                EpicProgress = epicProgress,
+                IsStale = isStale,
+                ProjectionsAsOfUtc = projectionsAsOf
             };
         }
         catch (Exception ex)

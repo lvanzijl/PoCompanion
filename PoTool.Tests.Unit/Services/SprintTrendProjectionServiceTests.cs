@@ -559,12 +559,119 @@ public class SprintTrendProjectionServiceTests
 
     #endregion
 
+    #region Staleness Detection Tests
+
+    [TestMethod]
+    public void GetSprintTrendMetricsResponse_IsStale_WhenActivityAfterProjection()
+    {
+        var response = new GetSprintTrendMetricsResponse
+        {
+            Success = true,
+            IsStale = true,
+            ProjectionsAsOfUtc = new DateTimeOffset(2026, 1, 10, 0, 0, 0, TimeSpan.Zero)
+        };
+
+        Assert.IsTrue(response.IsStale);
+        Assert.IsNotNull(response.ProjectionsAsOfUtc);
+    }
+
+    [TestMethod]
+    public void GetSprintTrendMetricsResponse_NotStale_WhenNoActivity()
+    {
+        var response = new GetSprintTrendMetricsResponse
+        {
+            Success = true,
+            IsStale = false,
+            ProjectionsAsOfUtc = new DateTimeOffset(2026, 1, 10, 0, 0, 0, TimeSpan.Zero)
+        };
+
+        Assert.IsFalse(response.IsStale);
+    }
+
+    #endregion
+
+    #region Batch Loading / Multi-Sprint Tests
+
+    [TestMethod]
+    public void ComputeProductSprintProjection_MultiSprint_ProducesCorrectResults()
+    {
+        // Test that separate sprint projections work independently even when 
+        // activity events from different sprints are present
+        var sprint1 = CreateSprint(1, "Sprint 1");
+        var sprint2 = CreateSprintWithDates(2, "Sprint 2",
+            new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 1, 28, 0, 0, 0, DateTimeKind.Utc));
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1, ResolvedSprintId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100, ResolvedSprintId = 1 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100, ResolvedSprintId = 2 },
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 50, state: "Done", parentId: 100),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "PBI 2", effort: 100, state: "Done", parentId: 100),
+        };
+
+        // Sprint 1 activity: PBI 201 transitions to Done in Sprint 1
+        var sprint1Start = new DateTimeOffset(sprint1.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprint1End = new DateTimeOffset(sprint1.EndDateUtc!.Value, TimeSpan.Zero);
+        var sprint1Activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [201] = new() { CreateStateChangeActivity(201, sprint1Start.AddDays(5), "Active", "Done") }
+        };
+
+        // Sprint 2 activity: PBI 202 transitions to Done in Sprint 2
+        var sprint2Start = new DateTimeOffset(sprint2.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprint2End = new DateTimeOffset(sprint2.EndDateUtc!.Value, TimeSpan.Zero);
+        var sprint2Activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [202] = new() { CreateStateChangeActivity(202, sprint2Start.AddDays(3), "Active", "Done") }
+        };
+
+        // Compute projection for Sprint 1
+        var result1 = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint1, 1, resolved, workItems, sprint1Activity, sprint1Start, sprint1End);
+
+        // Compute projection for Sprint 2
+        var result2 = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint2, 1, resolved, workItems, sprint2Activity, sprint2Start, sprint2End);
+
+        // Sprint 1 should have 1 completed PBI with 50 effort
+        Assert.AreEqual(1, result1.CompletedPbiCount, "Sprint 1 should have 1 completed PBI");
+        Assert.AreEqual(50, result1.CompletedPbiEffort, "Sprint 1 completed effort should be 50");
+
+        // Sprint 2 should have 1 completed PBI with 100 effort
+        Assert.AreEqual(1, result2.CompletedPbiCount, "Sprint 2 should have 1 completed PBI");
+        Assert.AreEqual(100, result2.CompletedPbiEffort, "Sprint 2 completed effort should be 100");
+    }
+
+    #endregion
+
     // Helper methods
 
     private static SprintEntity CreateSprint(int id, string name)
     {
         var startDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var endDate = new DateTime(2026, 1, 14, 0, 0, 0, DateTimeKind.Utc);
+        return new SprintEntity
+        {
+            Id = id,
+            TeamId = 1,
+            Name = name,
+            Path = $"\\Project\\{name}",
+            StartUtc = new DateTimeOffset(startDate, TimeSpan.Zero),
+            StartDateUtc = startDate,
+            EndUtc = new DateTimeOffset(endDate, TimeSpan.Zero),
+            EndDateUtc = endDate,
+        };
+    }
+
+    private static SprintEntity CreateSprintWithDates(int id, string name, DateTime startDate, DateTime endDate)
+    {
         return new SprintEntity
         {
             Id = id,

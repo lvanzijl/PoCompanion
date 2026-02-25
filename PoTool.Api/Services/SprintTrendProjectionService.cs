@@ -55,12 +55,6 @@ public class SprintTrendProjectionService
             return Array.Empty<SprintMetricsProjectionEntity>();
         }
 
-        var teamIds = sprints.Select(s => s.TeamId).Distinct().ToList();
-        var allTeamSprints = await context.Sprints
-            .Where(s => teamIds.Contains(s.TeamId) && s.StartDateUtc != null && s.EndDateUtc != null)
-            .OrderBy(s => s.StartDateUtc)
-            .ToListAsync(cancellationToken);
-
         var resolvedItems = await context.ResolvedWorkItems
             .Where(r => r.ResolvedProductId != null && productIds.Contains(r.ResolvedProductId.Value))
             .ToListAsync(cancellationToken);
@@ -73,27 +67,54 @@ public class SprintTrendProjectionService
 
         var workItemsByTfsId = workItems.ToDictionary(w => w.TfsId, w => w);
 
+        // Filter to sprints with valid dates
+        var validSprints = sprints
+            .Where(s => s.StartDateUtc != null && s.EndDateUtc != null)
+            .ToList();
+
+        foreach (var s in sprints.Except(validSprints))
+        {
+            _logger.LogWarning("Sprint {SprintId} ({SprintName}) has no start/end dates, skipping", s.Id, s.Name);
+        }
+
+        if (validSprints.Count == 0)
+        {
+            return Array.Empty<SprintMetricsProjectionEntity>();
+        }
+
+        // Batch-load all activity events for the full date range across all sprints
+        var rangeStart = validSprints.Min(s => new DateTimeOffset(s.StartDateUtc!.Value, TimeSpan.Zero));
+        var rangeEnd = validSprints.Max(s => new DateTimeOffset(s.EndDateUtc!.Value, TimeSpan.Zero));
+
+        var allActivityEvents = await context.ActivityEventLedgerEntries
+            .AsNoTracking()
+            .Where(e => e.ProductOwnerId == productOwnerId
+                && e.EventTimestamp >= rangeStart
+                && e.EventTimestamp <= rangeEnd)
+            .ToListAsync(cancellationToken);
+
+        // Batch-load existing projections for all sprint+product combinations
+        var validSprintIds = validSprints.Select(s => s.Id).ToList();
+        var existingProjections = await context.SprintMetricsProjections
+            .Where(p => validSprintIds.Contains(p.SprintId) && productIds.Contains(p.ProductId))
+            .ToListAsync(cancellationToken);
+
+        var existingByKey = existingProjections
+            .ToDictionary(p => (p.SprintId, p.ProductId), p => p);
+
         var results = new List<SprintMetricsProjectionEntity>();
 
-        foreach (var sprint in sprints)
+        foreach (var sprint in validSprints)
         {
-            if (sprint.StartDateUtc == null || sprint.EndDateUtc == null)
-            {
-                _logger.LogWarning("Sprint {SprintId} ({SprintName}) has no start/end dates, skipping", sprint.Id, sprint.Name);
-                continue;
-            }
+            var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+            var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
 
-            var sprintStart = new DateTimeOffset(sprint.StartDateUtc.Value, TimeSpan.Zero);
-            var sprintEnd = new DateTimeOffset(sprint.EndDateUtc.Value, TimeSpan.Zero);
+            // Filter the pre-loaded activity events to this sprint's date range
+            var sprintActivity = allActivityEvents
+                .Where(e => e.EventTimestamp >= sprintStart && e.EventTimestamp <= sprintEnd)
+                .ToList();
 
-            var activityEvents = await context.ActivityEventLedgerEntries
-                .AsNoTracking()
-                .Where(e => e.ProductOwnerId == productOwnerId
-                    && e.EventTimestamp >= sprintStart
-                    && e.EventTimestamp <= sprintEnd)
-                .ToListAsync(cancellationToken);
-
-            var activityByWorkItem = activityEvents
+            var activityByWorkItem = sprintActivity
                 .GroupBy(e => e.WorkItemId)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
@@ -104,10 +125,7 @@ public class SprintTrendProjectionService
                     resolvedItems, workItemsByTfsId,
                     activityByWorkItem, sprintStart, sprintEnd);
 
-                var existing = await context.SprintMetricsProjections
-                    .FirstOrDefaultAsync(p => p.SprintId == sprint.Id && p.ProductId == productId, cancellationToken);
-
-                if (existing != null)
+                if (existingByKey.TryGetValue((sprint.Id, productId), out var existing))
                 {
                     existing.PlannedCount = projection.PlannedCount;
                     existing.PlannedEffort = projection.PlannedEffort;
