@@ -157,37 +157,6 @@ public class TfsConfigurationServiceTests
     }
 
     [TestMethod]
-    public async Task SaveConfigAsync_WithoutAnalyticsSettings_StoresEmptyAnalyticsFields()
-    {
-        // Act
-        await _service.SaveConfigAsync("https://dev.azure.com/myorg", "My Project", "TestProject\\Team");
-
-        // Assert
-        var entity = await _service.GetConfigEntityAsync();
-        Assert.IsNotNull(entity);
-        Assert.AreEqual(string.Empty, entity.AnalyticsODataBaseUrl);
-        Assert.AreEqual(string.Empty, entity.AnalyticsODataEntitySetPath);
-    }
-
-    [TestMethod]
-    public async Task SaveConfigAsync_WithExplicitAnalyticsBaseUrl_IgnoresAnalyticsParameters()
-    {
-        // Act
-        await _service.SaveConfigAsync(
-            "https://dev.azure.com/myorg",
-            "MyProject",
-            "TestProject\\Team",
-            analyticsODataBaseUrl: "https://custom/odata",
-            analyticsODataEntitySetPath: "CustomEntitySet");
-
-        // Assert
-        var entity = await _service.GetConfigEntityAsync();
-        Assert.IsNotNull(entity);
-        Assert.AreEqual(string.Empty, entity.AnalyticsODataBaseUrl);
-        Assert.AreEqual(string.Empty, entity.AnalyticsODataEntitySetPath);
-    }
-
-    [TestMethod]
     public async Task GetConfigEntityAsync_ReturnsLatestConfig_WhenMultipleExist()
     {
         // Arrange

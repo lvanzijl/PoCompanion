@@ -74,8 +74,6 @@ public class TfsConfigurationService : ITfsConfigurationService
         bool useDefaultCredentials = true,
         int timeoutSeconds = 30,
         string apiVersion = "7.0",
-        string? analyticsODataBaseUrl = null,
-        string? analyticsODataEntitySetPath = null,
         CancellationToken cancellationToken = default)
     {
         await _efGate.ExecuteAsync(async () =>

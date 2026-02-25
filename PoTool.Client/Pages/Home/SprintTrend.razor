@@ -64,16 +64,102 @@
     }
     else
     {
-        @* Sprint Selection *@
+        @* Sprint Navigation with Back/Forward Arrows *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Spacing="3">
-                <MudText Typo="Typo.h6">
-                    <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Class="mr-2" />
-                    Sprint Selection
-                </MudText>
-                
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Class="mr-2" />
+                        Sprint Navigation
+                    </MudText>
+                    
+                    <MudToggleIconButton Toggled="@_advancedMode"
+                                         ToggledChanged="OnAdvancedModeToggled"
+                                         Icon="@Icons.Material.Filled.BarChart"
+                                         ToggledIcon="@Icons.Material.Filled.BarChart"
+                                         Color="Color.Default"
+                                         ToggledColor="Color.Primary"
+                                         Variant="Variant.Outlined"
+                                         ToggledSize="Size.Medium"
+                                         Size="Size.Medium" />
+                </MudStack>
+
+                @if (!_advancedMode)
+                {
+                    @* Single sprint navigation *@
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="3">
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                                       Color="Color.Primary"
+                                       Variant="Variant.Outlined"
+                                       Disabled="@(!CanNavigatePrevious())"
+                                       OnClick="NavigateToPreviousSprint"
+                                       aria-label="Previous Sprint" />
+                        
+                        <MudText Typo="Typo.h5" Align="Align.Center">
+                            @(_currentSprint?.Name ?? "No sprint selected")
+                        </MudText>
+                        
+                        @if (_currentSprint?.StartUtc != null && _currentSprint?.EndUtc != null)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                @_currentSprint.StartUtc.Value.ToString("MMM d") — @_currentSprint.EndUtc.Value.ToString("MMM d, yyyy")
+                            </MudText>
+                        }
+                        
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowForward"
+                                       Color="Color.Primary"
+                                       Variant="Variant.Outlined"
+                                       Disabled="@(!CanNavigateNext())"
+                                       OnClick="NavigateToNextSprint"
+                                       aria-label="Next Sprint" />
+                    </MudStack>
+                }
+                else
+                {
+                    @* Advanced mode: multi-sprint trend view *@
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                        Showing trend data for the previous @_trendSprintCount sprints (up to and including the currently selected sprint).
+                    </MudAlert>
+                    
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="3">
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                                       Color="Color.Primary"
+                                       Variant="Variant.Outlined"
+                                       Disabled="@(!CanNavigatePrevious())"
+                                       OnClick="NavigateToPreviousSprint"
+                                       aria-label="Previous Sprint" />
+                        
+                        <MudText Typo="Typo.h6" Align="Align.Center">
+                            @GetTrendRangeLabel()
+                        </MudText>
+                        
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowForward"
+                                       Color="Color.Primary"
+                                       Variant="Variant.Outlined"
+                                       Disabled="@(!CanNavigateNext())"
+                                       OnClick="NavigateToNextSprint"
+                                       aria-label="Next Sprint" />
+                    </MudStack>
+                }
+
+                @* Filters *@
                 <MudGrid Spacing="2">
-                    <MudItem xs="12" sm="4">
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="int?"
+                                   Value="_selectedProductId"
+                                   Label="Product"
+                                   Variant="Variant.Outlined"
+                                   Dense="true"
+                                   Clearable="true"
+                                   ValueChanged="OnProductFilterChanged">
+                            <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
+                            @foreach (var product in _filteredProducts)
+                            {
+                                <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
                         <MudSelect T="int?"
                                    Value="_selectedTeamId"
                                    Label="Team"
@@ -88,75 +174,77 @@
                             }
                         </MudSelect>
                     </MudItem>
-                    
-                    @if (_selectedTeamId.HasValue && _sprints.Any())
-                    {
-                        <MudItem xs="12" sm="4">
-                            <MudSelect T="int?"
-                                       Value="_selectedFromSprintId"
-                                       Label="From Sprint"
-                                       Variant="Variant.Outlined"
-                                       Dense="true"
-                                       Clearable="true"
-                                       ValueChanged="OnFromSprintChanged">
-                                @foreach (var sprint in _sprints)
-                                {
-                                    <MudSelectItem T="int?" Value="@sprint.Id">
-                                        @sprint.Name (@(sprint.StartUtc?.ToString("MMM d") ?? "Unknown"))
-                                    </MudSelectItem>
-                                }
-                            </MudSelect>
-                        </MudItem>
-                        
-                        <MudItem xs="12" sm="4">
-                            <MudSelect T="int?"
-                                       Value="_selectedToSprintId"
-                                       Label="To Sprint"
-                                       Variant="Variant.Outlined"
-                                       Dense="true"
-                                       Clearable="true"
-                                       ValueChanged="OnToSprintChanged">
-                                @foreach (var sprint in _sprints)
-                                {
-                                    <MudSelectItem T="int?" Value="@sprint.Id">
-                                        @sprint.Name (@(sprint.EndUtc?.ToString("MMM d") ?? "Unknown"))
-                                    </MudSelectItem>
-                                }
-                            </MudSelect>
-                        </MudItem>
-                    }
-                    else if (_selectedTeamId.HasValue)
-                    {
-                        <MudItem xs="12" sm="8">
-                            <MudAlert Severity="Severity.Info" Dense="true">
-                                No sprints synced for this team. Sync the team to see sprint data.
-                            </MudAlert>
-                        </MudItem>
-                    }
                 </MudGrid>
             </MudStack>
         </MudPaper>
 
-        @* Information Notice about Revision-based Reporting *@
+        @* Information Notice *@
         <MudAlert Severity="Severity.Info" Class="mb-4">
             <MudText Typo="Typo.body2">
-                <strong>Sprint Trend</strong> shows planned vs worked metrics derived from work item revision history.
+                <strong>Sprint Trend</strong> shows progression metrics derived from activity events.
                 <br/>
-                <strong>Planned:</strong> Work items assigned to the sprint (iteration path).
-                <strong>Worked:</strong> Work items with qualifying activity in the sprint.
+                <strong>Completed PBIs:</strong> PBIs that transitioned to Done during the sprint.
+                <strong>Progression:</strong> Effort-weighted feature completion delta.
                 <br/>
-                <em>Note: "Commit" (New → InProgress) does not count as activity for PBIs.</em>
+                <em>Bug "Worked On" = any child task had a state change during the sprint.</em>
             </MudText>
         </MudAlert>
+
+        @* Warnings for missing effort / approximate data *@
+        @if (_isApproximate)
+        {
+            <MudAlert Severity="Severity.Warning" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" />
+                <strong>Approximate data:</strong> @_missingEffortCount PBI(s) have missing effort.
+                Sibling-average approximation was used. State and progression values are marked as approximate.
+                @if (_approximateProducts.Count > 0)
+                {
+                    <br/>
+                    <em>Affected products: @string.Join(", ", _approximateProducts)</em>
+                }
+            </MudAlert>
+        }
+
+        @* Staleness warning *@
+        @if (_isStale)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Update" />
+                    <MudText>
+                        <strong>Data may be outdated:</strong> New activity events have been ingested since projections were last computed
+                        @if (_projectionsAsOfUtc.HasValue)
+                        {
+                            <text> (@_projectionsAsOfUtc.Value.LocalDateTime.ToString("g"))</text>
+                        }.
+                    </MudText>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               OnClick="RecomputeMetricsAsync"
+                               Disabled="_isRecomputing">
+                        @if (_isRecomputing)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                            <text>Recomputing…</text>
+                        }
+                        else
+                        {
+                            <text>Recompute</text>
+                        }
+                    </MudButton>
+                </MudStack>
+            </MudAlert>
+        }
 
         @* Metrics Summary Cards *@
         <MudGrid Spacing="3" Class="mb-4">
             <MudItem xs="12" sm="6" md="3">
                 <MudPaper Elevation="1" Class="pa-4">
                     <MudStack Spacing="1">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Planned Items</MudText>
-                        <MudText Typo="Typo.h4" Color="Color.Primary">@_plannedCount</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@_plannedEffort pts effort</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Completed PBIs</MudText>
+                        <MudText Typo="Typo.h4" Color="Color.Success">@_completedPbiCount</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@_completedPbiEffort pts effort</MudText>
                     </MudStack>
                 </MudPaper>
             </MudItem>
@@ -164,9 +252,15 @@
             <MudItem xs="12" sm="6" md="3">
                 <MudPaper Elevation="1" Class="pa-4">
                     <MudStack Spacing="1">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Worked Items</MudText>
-                        <MudText Typo="Typo.h4" Color="Color.Success">@_workedCount</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@_workedEffort pts effort</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Progression Delta
+                            @if (_isApproximate)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="ml-1" />
+                            }
+                        </MudText>
+                        <MudText Typo="Typo.h4" Color="Color.Primary">@(_progressionDelta.ToString("F1"))%</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">feature/epic forward movement</MudText>
                     </MudStack>
                 </MudPaper>
             </MudItem>
@@ -174,8 +268,9 @@
             <MudItem xs="12" sm="6" md="3">
                 <MudPaper Elevation="1" Class="pa-4">
                     <MudStack Spacing="1">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs Planned</MudText>
-                        <MudText Typo="Typo.h4" Color="Color.Error">@_bugsPlannedCount</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs Created</MudText>
+                        <MudText Typo="Typo.h4" Color="Color.Error">@_bugsCreatedCount</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">new bugs in sprint</MudText>
                     </MudStack>
                 </MudPaper>
             </MudItem>
@@ -183,48 +278,140 @@
             <MudItem xs="12" sm="6" md="3">
                 <MudPaper Elevation="1" Class="pa-4">
                     <MudStack Spacing="1">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs Worked</MudText>
-                        <MudText Typo="Typo.h4" Color="Color.Warning">@_bugsWorkedCount</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs Closed</MudText>
+                        <MudText Typo="Typo.h4" Color="Color.Success">@_bugsClosedCount</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">resolved in sprint</MudText>
                     </MudStack>
                 </MudPaper>
             </MudItem>
         </MudGrid>
 
-        @* Planned vs Worked Pie Charts by Product *@
-        @if (_products.Any())
+        @* Phase 2: Multi-sprint trend graphs *@
+        @if (_advancedMode && _trendMetrics.Count > 1)
+        {
+            @* Progression Trend Chart *@
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="mr-2" />
+                    Progression per Sprint
+                </MudText>
+                <MudChart ChartType="ChartType.Bar"
+                          ChartSeries="@_progressionChartSeries"
+                          XAxisLabels="@_trendXAxisLabels"
+                          Width="100%"
+                          Height="300px"
+                          ChartOptions="@_chartOptions" />
+            </MudPaper>
+
+            @* Completed PBIs Count Trend Chart *@
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Class="mr-2" />
+                    Completed PBIs (Count) per Sprint
+                </MudText>
+                <MudChart ChartType="ChartType.Line"
+                          ChartSeries="@_completedPbiCountChartSeries"
+                          XAxisLabels="@_trendXAxisLabels"
+                          Width="100%"
+                          Height="300px"
+                          ChartOptions="@_chartOptions" />
+            </MudPaper>
+
+            @* Completed PBI Effort Trend Chart *@
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.FitnessCenter" Class="mr-2" />
+                    Completed PBI Effort per Sprint
+                </MudText>
+                <MudChart ChartType="ChartType.Line"
+                          ChartSeries="@_completedPbiEffortChartSeries"
+                          XAxisLabels="@_trendXAxisLabels"
+                          Width="100%"
+                          Height="300px"
+                          ChartOptions="@_chartOptions" />
+            </MudPaper>
+
+            @* Bug Trend Chart *@
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-2" />
+                    Bug Activity Trend
+                </MudText>
+                <MudChart ChartType="ChartType.Line"
+                          ChartSeries="@_bugTrendChartSeries"
+                          XAxisLabels="@_trendXAxisLabels"
+                          Width="100%"
+                          Height="300px"
+                          ChartOptions="@_chartOptions" />
+            </MudPaper>
+        }
+
+        @* Product Metrics (single sprint or advanced mode) *@
+        @if (_filteredProducts.Count > 0)
         {
             <MudPaper Elevation="2" Class="pa-4 mb-4">
                 <MudText Typo="Typo.h6" Class="mb-3">
                     <MudIcon Icon="@Icons.Material.Filled.PieChart" Class="mr-2" />
-                    Planned vs Worked by Product
+                    Progression by Product
                 </MudText>
+
+                @if (!_advancedMode && _filteredProducts.Count > 1 && _productMetrics.Values.Any(m => m.CompletedPbis > 0))
+                {
+                    @* Single sprint, multiple products → pie chart *@
+                    <MudChart ChartType="ChartType.Pie"
+                              InputData="@GetPieChartData()"
+                              InputLabels="@GetPieChartLabels()"
+                              Width="300px"
+                              Height="300px" />
+                }
                 
-                <MudGrid Spacing="3">
-                    @foreach (var product in _products)
+                <MudGrid Spacing="3" Class="mt-3">
+                    @foreach (var product in _filteredProducts)
                     {
                         <MudItem xs="12" sm="6" md="4">
                             <MudCard Elevation="1">
                                 <MudCardHeader>
                                     <CardHeaderContent>
-                                        <MudText Typo="Typo.subtitle1">@product.Name</MudText>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                            <MudText Typo="Typo.subtitle1">@product.Name</MudText>
+                                            @if (IsProductApproximate(product.Id))
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                                            }
+                                        </MudStack>
                                     </CardHeaderContent>
                                 </MudCardHeader>
                                 <MudCardContent>
                                     <MudStack Spacing="2">
                                         <MudStack Row="true" Justify="Justify.SpaceBetween">
-                                            <MudText Typo="Typo.body2">Planned:</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Primary">
-                                                @GetProductPlanned(product.Id) items
+                                            <MudText Typo="Typo.body2">Completed PBIs:</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Success">
+                                                @GetProductCompletedPbis(product.Id) items
                                             </MudText>
                                         </MudStack>
                                         <MudStack Row="true" Justify="Justify.SpaceBetween">
-                                            <MudText Typo="Typo.body2">Worked:</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Success">
-                                                @GetProductWorked(product.Id) items
+                                            <MudText Typo="Typo.body2">Effort:</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Info">
+                                                @GetProductCompletedEffort(product.Id) pts
                                             </MudText>
                                         </MudStack>
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                            <MudText Typo="Typo.body2">Progression:</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Primary">
+                                                @(GetProductProgression(product.Id).ToString("F1"))%
+                                            </MudText>
+                                        </MudStack>
+                                        @if (GetProductMissingEffort(product.Id) > 0)
+                                        {
+                                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                                <MudText Typo="Typo.body2" Color="Color.Warning">Missing effort:</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Warning">
+                                                    @GetProductMissingEffort(product.Id) PBI(s)
+                                                </MudText>
+                                            </MudStack>
+                                        }
                                         <MudProgressLinear Color="Color.Success" 
-                                                          Value="@GetProductProgress(product.Id)" 
+                                                          Value="@GetProductProgression(product.Id)" 
                                                           Max="100" 
                                                           Class="mt-2" />
                                     </MudStack>
@@ -236,17 +423,18 @@
             </MudPaper>
         }
 
-        @* Feature Progress Section *@
+        @* Epic Progress Table *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudText Typo="Typo.h6" Class="mb-3">
-                <MudIcon Icon="@Icons.Material.Filled.Assessment" Class="mr-2" />
-                Feature Progress
+                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="mr-2" />
+                Epic Progress
             </MudText>
             
-            @if (!_featureProgress.Any())
+            @if (_epicProgress.Count == 0)
             {
                 <MudAlert Severity="Severity.Info" Dense="true">
-                    Select a sprint range to view feature progress.
+                    No epic progress data available.
+                    Epics are aggregated from child Feature progress.
                 </MudAlert>
             }
             else
@@ -254,24 +442,47 @@
                 <MudSimpleTable Dense="true" Striped="true" Hover="true">
                     <thead>
                         <tr>
+                            <th>Product</th>
                             <th>Epic</th>
-                            <th>Feature</th>
-                            <th style="width: 150px;">Progress</th>
-                            <th style="width: 80px; text-align: right;">%</th>
+                            <th style="width: 200px;">Progress</th>
+                            <th style="width: 120px; text-align: right;">Done / Total</th>
+                            <th style="width: 120px; text-align: right;">Features</th>
+                            <th style="width: 60px; text-align: center;">Status</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var feature in _featureProgress)
+                        @foreach (var epic in _epicProgress)
                         {
                             <tr>
-                                <td>@feature.EpicTitle</td>
-                                <td>@feature.FeatureTitle</td>
                                 <td>
-                                    <MudProgressLinear Color="@GetProgressColor(feature.ProgressPercent)" 
-                                                      Value="@feature.ProgressPercent" 
+                                    <MudText Typo="Typo.body2">
+                                        @GetProductName(epic.ProductId)
+                                    </MudText>
+                                </td>
+                                <td>
+                                    <MudText Typo="Typo.body2"><strong>@epic.EpicTitle</strong></MudText>
+                                </td>
+                                <td>
+                                    <MudProgressLinear Color="@GetProgressColor(epic.ProgressPercent)"
+                                                      Value="@epic.ProgressPercent"
                                                       Max="100" />
                                 </td>
-                                <td style="text-align: right;">@feature.ProgressPercent%</td>
+                                <td style="text-align: right;">
+                                    <MudText Typo="Typo.body2">@epic.DoneEffort / @epic.TotalEffort</MudText>
+                                </td>
+                                <td style="text-align: right;">
+                                    <MudText Typo="Typo.body2">@epic.DoneFeatureCount / @epic.FeatureCount done</MudText>
+                                </td>
+                                <td style="text-align: center;">
+                                    @if (epic.IsDone)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.body2">@epic.ProgressPercent%</MudText>
+                                    }
+                                </td>
                             </tr>
                         }
                     </tbody>
@@ -279,7 +490,76 @@
             }
         </MudPaper>
 
-        @* Bug Section *@
+        @* Phase 3: Feature/Epic Progress Table *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Assessment" Class="mr-2" />
+                Feature Progress
+            </MudText>
+            
+            @if (_featureProgress.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    No feature progress data available for the selected sprint.
+                    Ensure work items are synced and products are configured.
+                </MudAlert>
+            }
+            else
+            {
+                <MudSimpleTable Dense="true" Striped="true" Hover="true">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Feature</th>
+                            <th style="width: 200px;">Progress</th>
+                            <th style="width: 100px; text-align: right;">Done / Total</th>
+                            <th style="width: 60px; text-align: center;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var feature in _featureProgress)
+                        {
+                            <tr>
+                                <td>
+                                    <MudText Typo="Typo.body2">
+                                        @GetProductName(feature.ProductId)
+                                    </MudText>
+                                </td>
+                                <td>
+                                    <MudStack Spacing="0">
+                                        <MudText Typo="Typo.body2"><strong>@feature.FeatureTitle</strong></MudText>
+                                        @if (!string.IsNullOrEmpty(feature.EpicTitle))
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Epic: @feature.EpicTitle</MudText>
+                                        }
+                                    </MudStack>
+                                </td>
+                                <td>
+                                    <MudProgressLinear Color="@GetProgressColor(feature.ProgressPercent)"
+                                                      Value="@feature.ProgressPercent"
+                                                      Max="100" />
+                                </td>
+                                <td style="text-align: right;">
+                                    <MudText Typo="Typo.body2">@feature.DoneEffort / @feature.TotalEffort</MudText>
+                                </td>
+                                <td style="text-align: center;">
+                                    @if (feature.IsDone)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.body2">@feature.ProgressPercent%</MudText>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+        </MudPaper>
+
+        @* Bug Activity Section *@
         <MudPaper Elevation="2" Class="pa-4">
             <MudText Typo="Typo.h6" Class="mb-3">
                 <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-2" />
@@ -287,18 +567,21 @@
             </MudText>
             
             <MudAlert Severity="Severity.Normal" Dense="true">
-                Bug activity tracking uses the InProgress → Done transition rule.
-                Reopened bugs (Done → InProgress) are also counted as activity.
+                Bug "Worked On" is defined as: any child Task had a state change during the sprint.
             </MudAlert>
             
             <MudStack Row="true" Spacing="4" Class="mt-3">
                 <MudStack>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Planned</MudText>
-                    <MudText Typo="Typo.h5" Color="Color.Error">@_bugsPlannedCount</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Created</MudText>
+                    <MudText Typo="Typo.h5" Color="Color.Error">@_bugsCreatedCount</MudText>
                 </MudStack>
                 <MudStack>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Worked</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Worked On</MudText>
                     <MudText Typo="Typo.h5" Color="Color.Warning">@_bugsWorkedCount</MudText>
+                </MudStack>
+                <MudStack>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Closed</MudText>
+                    <MudText Typo="Typo.h5" Color="Color.Success">@_bugsClosedCount</MudText>
                 </MudStack>
             </MudStack>
         </MudPaper>
@@ -306,6 +589,8 @@
 </MudContainer>
 
 @code {
+    private const int TrendSprintCount = 10;
+    
     private bool _isLoading = true;
     private string? _errorMessage;
     private int? _profileId;
@@ -313,21 +598,52 @@
     
     // Selection state
     private int? _selectedTeamId;
-    private int? _selectedFromSprintId;
-    private int? _selectedToSprintId;
+    private int? _selectedProductId;
+    private bool _advancedMode;
+    private int _trendSprintCount = TrendSprintCount;
     private List<TeamDto> _teams = new();
-    private List<SprintDto> _sprints = new();
+    private List<SprintDto> _allSprints = new();
+    private List<SprintDto> _filteredSprints = new();
     private List<ProductDto> _products = new();
+    private List<ProductDto> _filteredProducts = new();
+    private SprintDto? _currentSprint;
+    private int _currentSprintIndex = -1;
     
-    // Metrics
-    private int _plannedCount;
-    private int _plannedEffort;
-    private int _workedCount;
-    private int _workedEffort;
-    private int _bugsPlannedCount;
+    // Current sprint metrics
+    private int _completedPbiCount;
+    private int _completedPbiEffort;
+    private double _progressionDelta;
+    private int _bugsCreatedCount;
     private int _bugsWorkedCount;
-    private Dictionary<int, (int Planned, int Worked)> _productMetrics = new();
-    private List<FeatureProgressItem> _featureProgress = new();
+    private int _bugsClosedCount;
+    private int _missingEffortCount;
+    private bool _isApproximate;
+    private List<string> _approximateProducts = new();
+    private Dictionary<int, ProductMetrics> _productMetrics = new();
+    
+    // Feature progress (Phase 3)
+    private List<FeatureProgressDto> _featureProgress = new();
+    private List<EpicProgressDto> _epicProgress = new();
+    
+    // Staleness detection
+    private bool _isStale;
+    private bool _isRecomputing;
+    private DateTimeOffset? _projectionsAsOfUtc;
+    
+    // Trend data (Phase 2)
+    private List<SprintTrendMetricsDto> _trendMetrics = new();
+    private List<ChartSeries> _progressionChartSeries = new();
+    private List<ChartSeries> _completedPbiCountChartSeries = new();
+    private List<ChartSeries> _completedPbiEffortChartSeries = new();
+    private List<ChartSeries> _bugTrendChartSeries = new();
+    private string[] _trendXAxisLabels = Array.Empty<string>();
+    private ChartOptions _chartOptions = new()
+    {
+        YAxisTicks = 5,
+        MaxNumYAxisTicks = 10,
+        YAxisLines = true,
+        XAxisLines = true
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -350,24 +666,26 @@
                 return;
             }
             
-            // Load teams
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
-            
-            // Load products for current profile
             _products = (await ProductService.GetProductsByOwnerAsync(_profileId.Value)).ToList();
+            _filteredProducts = _products.ToList();
             
-            // Parse URL parameters
-            ParseQueryParameters();
-            
-            // Load sprints if team is selected
-            if (_selectedTeamId.HasValue)
+            // Load all sprints for all teams under this PO
+            _allSprints.Clear();
+            foreach (var team in _teams)
             {
-                await LoadSprintsForTeamAsync(_selectedTeamId.Value);
+                try
+                {
+                    var teamSprints = (await SprintService.GetSprintsForTeamAsync(team.Id)).ToList();
+                    _allSprints.AddRange(teamSprints);
+                }
+                catch { /* skip teams without sprints */ }
             }
+
+            ApplySprintFilters();
+            FindCurrentSprint();
             
-            // Load metrics based on selection
             await LoadMetricsAsync();
-            
             UpdateBreadcrumbs();
         }
         catch (Exception ex)
@@ -380,73 +698,79 @@
         }
     }
 
-    private void ParseQueryParameters()
+    private void ApplySprintFilters()
     {
-        var uri = new Uri(NavigationManager.Uri);
-        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+        // Filter sprints by team if selected
+        var sprints = _allSprints.AsEnumerable();
         
-        if (int.TryParse(queryParams["teamId"], out var teamId))
+        if (_selectedTeamId.HasValue)
         {
-            _selectedTeamId = teamId;
+            sprints = sprints.Where(s => s.TeamId == _selectedTeamId.Value);
         }
         
-        if (int.TryParse(queryParams["fromSprintId"], out var fromSprintId))
-        {
-            _selectedFromSprintId = fromSprintId;
-        }
+        _filteredSprints = sprints
+            .Where(s => s.StartUtc.HasValue && s.EndUtc.HasValue)
+            .OrderBy(s => s.StartUtc)
+            .ToList();
         
-        if (int.TryParse(queryParams["toSprintId"], out var toSprintId))
-        {
-            _selectedToSprintId = toSprintId;
-        }
+        // Filter products by selected product
+        _filteredProducts = _selectedProductId.HasValue
+            ? _products.Where(p => p.Id == _selectedProductId.Value).ToList()
+            : _products.ToList();
     }
 
-    private async Task LoadSprintsForTeamAsync(int teamId)
+    private void FindCurrentSprint()
     {
-        try
+        // Default to current sprint or the latest past sprint
+        var now = DateTimeOffset.UtcNow;
+        _currentSprintIndex = _filteredSprints.FindIndex(s =>
+            s.StartUtc <= now && s.EndUtc >= now);
+
+        if (_currentSprintIndex < 0 && _filteredSprints.Count > 0)
         {
-            _sprints = (await SprintService.GetSprintsForTeamAsync(teamId)).ToList();
+            _currentSprintIndex = _filteredSprints.FindLastIndex(s => s.EndUtc <= now);
+            if (_currentSprintIndex < 0)
+            {
+                _currentSprintIndex = _filteredSprints.Count - 1;
+            }
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading sprints: {ex.Message}", Severity.Warning);
-            _sprints = new List<SprintDto>();
-        }
+
+        _currentSprint = _currentSprintIndex >= 0 ? _filteredSprints[_currentSprintIndex] : null;
     }
 
     private async Task LoadMetricsAsync()
     {
-        // Reset metrics
-        _plannedCount = 0;
-        _plannedEffort = 0;
-        _workedCount = 0;
-        _workedEffort = 0;
-        _bugsPlannedCount = 0;
-        _bugsWorkedCount = 0;
-        _productMetrics.Clear();
-        _featureProgress.Clear();
+        ResetMetrics();
         
-        if (!_profileId.HasValue || !_selectedFromSprintId.HasValue || !_selectedToSprintId.HasValue)
+        if (!_profileId.HasValue || _currentSprint == null)
         {
             return;
         }
 
         try
         {
-            // Determine sprint range
-            var fromId = Math.Min(_selectedFromSprintId.Value, _selectedToSprintId.Value);
-            var toId = Math.Max(_selectedFromSprintId.Value, _selectedToSprintId.Value);
-            var sprintIds = _sprints
-                .Where(s => s.Id >= fromId && s.Id <= toId)
-                .Select(s => s.Id)
-                .ToList();
+            List<int> sprintIds;
+            
+            if (_advancedMode)
+            {
+                // Load previous N sprints up to and including current
+                var startIndex = Math.Max(0, _currentSprintIndex - _trendSprintCount + 1);
+                sprintIds = _filteredSprints
+                    .Skip(startIndex)
+                    .Take(_currentSprintIndex - startIndex + 1)
+                    .Select(s => s.Id)
+                    .ToList();
+            }
+            else
+            {
+                sprintIds = new List<int> { _currentSprint.Id };
+            }
 
             if (sprintIds.Count == 0)
             {
                 return;
             }
 
-            // Call API to get sprint trend metrics
             var response = await SprintTrendService.GetSprintTrendMetricsAsync(
                 _profileId.Value,
                 sprintIds,
@@ -454,68 +778,261 @@
 
             if (response == null || !response.Success || response.Metrics == null)
             {
-                // Fall back to placeholder data if API call fails or returns no data
-                await LoadPlaceholderMetricsAsync();
                 return;
             }
 
-            // Aggregate metrics across all sprints in the range
-            foreach (var sprintMetrics in response.Metrics)
-            {
-                _plannedCount += sprintMetrics.TotalPlannedCount;
-                _plannedEffort += sprintMetrics.TotalPlannedEffort;
-                _workedCount += sprintMetrics.TotalWorkedCount;
-                _workedEffort += sprintMetrics.TotalWorkedEffort;
-                _bugsPlannedCount += sprintMetrics.TotalBugsPlannedCount;
-                _bugsWorkedCount += sprintMetrics.TotalBugsWorkedCount;
+            // Capture staleness info
+            _isStale = response.IsStale;
+            _projectionsAsOfUtc = response.ProjectionsAsOfUtc;
 
-                // Aggregate product metrics
-                foreach (var productMetric in sprintMetrics.ProductMetrics)
+            // Filter by product if selected
+            var metrics = response.Metrics;
+            
+            _trendMetrics = metrics
+                .OrderBy(m => m.StartUtc ?? DateTimeOffset.MaxValue)
+                .ToList();
+            
+            // Aggregate current sprint metrics (last one in trend or single)
+            var currentMetrics = _advancedMode
+                ? _trendMetrics.LastOrDefault()
+                : _trendMetrics.FirstOrDefault();
+            
+            if (currentMetrics != null)
+            {
+                var filteredProductMetrics = _selectedProductId.HasValue
+                    ? currentMetrics.ProductMetrics.Where(m => m.ProductId == _selectedProductId.Value).ToList()
+                    : currentMetrics.ProductMetrics.ToList();
+
+                _completedPbiCount = filteredProductMetrics.Sum(m => m.CompletedPbiCount);
+                _completedPbiEffort = filteredProductMetrics.Sum(m => m.CompletedPbiEffort);
+                _progressionDelta = filteredProductMetrics.Sum(m => m.ProgressionDelta);
+                _bugsCreatedCount = filteredProductMetrics.Sum(m => m.BugsCreatedCount);
+                _bugsWorkedCount = filteredProductMetrics.Sum(m => m.BugsWorkedCount);
+                _bugsClosedCount = filteredProductMetrics.Sum(m => m.BugsClosedCount);
+                _missingEffortCount = filteredProductMetrics.Sum(m => m.MissingEffortCount);
+                _isApproximate = filteredProductMetrics.Any(m => m.IsApproximate);
+                
+                _approximateProducts = filteredProductMetrics
+                    .Where(m => m.IsApproximate)
+                    .Select(m => m.ProductName)
+                    .ToList();
+
+                foreach (var productMetric in filteredProductMetrics)
                 {
-                    if (_productMetrics.TryGetValue(productMetric.ProductId, out var existing))
-                    {
-                        _productMetrics[productMetric.ProductId] = (
-                            existing.Planned + productMetric.PlannedCount,
-                            existing.Worked + productMetric.WorkedCount);
-                    }
-                    else
-                    {
-                        _productMetrics[productMetric.ProductId] = (
-                            productMetric.PlannedCount,
-                            productMetric.WorkedCount);
-                    }
+                    _productMetrics[productMetric.ProductId] = new ProductMetrics(
+                        productMetric.CompletedPbiCount,
+                        productMetric.CompletedPbiEffort,
+                        productMetric.ProgressionDelta,
+                        productMetric.MissingEffortCount,
+                        productMetric.IsApproximate);
                 }
             }
-
-            // Feature progress would come from a separate API endpoint - for now show placeholder
-            _featureProgress = new List<FeatureProgressItem>
+            
+            // Build feature progress from real resolved hierarchy data
+            BuildFeatureProgress(response);
+            
+            // Build trend charts if in advanced mode
+            if (_advancedMode)
             {
-                new() { EpicTitle = "No data", FeatureTitle = "Feature progress requires revision data", ProgressPercent = 0 },
-            };
+                BuildTrendCharts();
+            }
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error loading sprint trend metrics: {ex.Message}", Severity.Warning);
-            await LoadPlaceholderMetricsAsync();
         }
     }
 
-    private Task LoadPlaceholderMetricsAsync()
+    private void ResetMetrics()
     {
-        // Placeholder data when no real metrics available
-        _plannedCount = 0;
-        _plannedEffort = 0;
-        _workedCount = 0;
-        _workedEffort = 0;
-        _bugsPlannedCount = 0;
+        _completedPbiCount = 0;
+        _completedPbiEffort = 0;
+        _progressionDelta = 0;
+        _bugsCreatedCount = 0;
         _bugsWorkedCount = 0;
+        _bugsClosedCount = 0;
+        _missingEffortCount = 0;
+        _isApproximate = false;
+        _isStale = false;
+        _projectionsAsOfUtc = null;
+        _approximateProducts.Clear();
+        _productMetrics.Clear();
+        _featureProgress.Clear();
+        _epicProgress.Clear();
+        _trendMetrics.Clear();
+        _progressionChartSeries.Clear();
+        _completedPbiCountChartSeries.Clear();
+        _completedPbiEffortChartSeries.Clear();
+        _bugTrendChartSeries.Clear();
+        _trendXAxisLabels = Array.Empty<string>();
+    }
+
+    private void BuildFeatureProgress(GetSprintTrendMetricsResponse? response)
+    {
+        _featureProgress.Clear();
+        _epicProgress.Clear();
         
-        _featureProgress = new List<FeatureProgressItem>
+        if (response?.FeatureProgress == null || response.FeatureProgress.Count == 0)
+            return;
+        
+        // Apply product filter if selected
+        var features = _selectedProductId.HasValue
+            ? response.FeatureProgress.Where(f => f.ProductId == _selectedProductId.Value).ToList()
+            : response.FeatureProgress.ToList();
+        
+        _featureProgress = features;
+
+        // Build epic progress
+        if (response.EpicProgress != null && response.EpicProgress.Count > 0)
         {
-            new() { EpicTitle = "No data", FeatureTitle = "Select sprint range to view metrics", ProgressPercent = 0 },
-        };
+            _epicProgress = _selectedProductId.HasValue
+                ? response.EpicProgress.Where(e => e.ProductId == _selectedProductId.Value).ToList()
+                : response.EpicProgress.ToList();
+        }
+    }
+
+    private void BuildTrendCharts()
+    {
+        if (_trendMetrics.Count == 0) return;
         
-        return Task.CompletedTask;
+        _trendXAxisLabels = _trendMetrics
+            .Select(m => m.SprintName)
+            .ToArray();
+        
+        var filteredProducts = _filteredProducts;
+        var hasMultipleProducts = filteredProducts.Count > 1;
+        
+        if (hasMultipleProducts)
+        {
+            // Per-product series
+            _progressionChartSeries = filteredProducts.Select(p => new ChartSeries
+            {
+                Name = p.Name,
+                Data = _trendMetrics.Select(m =>
+                {
+                    var pm = m.ProductMetrics.FirstOrDefault(pm => pm.ProductId == p.Id);
+                    return pm?.ProgressionDelta ?? 0;
+                }).ToArray()
+            }).ToList();
+            
+            _completedPbiCountChartSeries = filteredProducts.Select(p => new ChartSeries
+            {
+                Name = p.Name,
+                Data = _trendMetrics.Select(m =>
+                {
+                    var pm = m.ProductMetrics.FirstOrDefault(pm => pm.ProductId == p.Id);
+                    return (double)(pm?.CompletedPbiCount ?? 0);
+                }).ToArray()
+            }).ToList();
+            
+            _completedPbiEffortChartSeries = filteredProducts.Select(p => new ChartSeries
+            {
+                Name = p.Name,
+                Data = _trendMetrics.Select(m =>
+                {
+                    var pm = m.ProductMetrics.FirstOrDefault(pm => pm.ProductId == p.Id);
+                    return (double)(pm?.CompletedPbiEffort ?? 0);
+                }).ToArray()
+            }).ToList();
+        }
+        else
+        {
+            // Single total series
+            _progressionChartSeries = new List<ChartSeries>
+            {
+                new()
+                {
+                    Name = "Progression %",
+                    Data = _trendMetrics.Select(m =>
+                    {
+                        if (_selectedProductId.HasValue)
+                        {
+                            var pm = m.ProductMetrics.FirstOrDefault(pm => pm.ProductId == _selectedProductId.Value);
+                            return pm?.ProgressionDelta ?? 0;
+                        }
+                        return m.TotalProgressionDelta;
+                    }).ToArray()
+                }
+            };
+            
+            _completedPbiCountChartSeries = new List<ChartSeries>
+            {
+                new()
+                {
+                    Name = "Completed PBIs",
+                    Data = _trendMetrics.Select(m =>
+                    {
+                        if (_selectedProductId.HasValue)
+                        {
+                            var pm = m.ProductMetrics.FirstOrDefault(pm => pm.ProductId == _selectedProductId.Value);
+                            return (double)(pm?.CompletedPbiCount ?? 0);
+                        }
+                        return (double)m.TotalCompletedPbiCount;
+                    }).ToArray()
+                }
+            };
+            
+            _completedPbiEffortChartSeries = new List<ChartSeries>
+            {
+                new()
+                {
+                    Name = "Completed Effort",
+                    Data = _trendMetrics.Select(m =>
+                    {
+                        if (_selectedProductId.HasValue)
+                        {
+                            var pm = m.ProductMetrics.FirstOrDefault(pm => pm.ProductId == _selectedProductId.Value);
+                            return (double)(pm?.CompletedPbiEffort ?? 0);
+                        }
+                        return (double)m.TotalCompletedPbiEffort;
+                    }).ToArray()
+                }
+            };
+        }
+        
+        // Bug trend chart — always uses total series (Created / Worked / Closed)
+        _bugTrendChartSeries = new List<ChartSeries>
+        {
+            new()
+            {
+                Name = "Created",
+                Data = _trendMetrics.Select(m =>
+                {
+                    if (_selectedProductId.HasValue)
+                    {
+                        var pm = m.ProductMetrics.FirstOrDefault(pm => pm.ProductId == _selectedProductId.Value);
+                        return (double)(pm?.BugsCreatedCount ?? 0);
+                    }
+                    return (double)m.TotalBugsCreatedCount;
+                }).ToArray()
+            },
+            new()
+            {
+                Name = "Worked On",
+                Data = _trendMetrics.Select(m =>
+                {
+                    if (_selectedProductId.HasValue)
+                    {
+                        var pm = m.ProductMetrics.FirstOrDefault(pm => pm.ProductId == _selectedProductId.Value);
+                        return (double)(pm?.BugsWorkedCount ?? 0);
+                    }
+                    return (double)m.TotalBugsWorkedCount;
+                }).ToArray()
+            },
+            new()
+            {
+                Name = "Closed",
+                Data = _trendMetrics.Select(m =>
+                {
+                    if (_selectedProductId.HasValue)
+                    {
+                        var pm = m.ProductMetrics.FirstOrDefault(pm => pm.ProductId == _selectedProductId.Value);
+                        return (double)(pm?.BugsClosedCount ?? 0);
+                    }
+                    return (double)m.TotalBugsClosedCount;
+                }).ToArray()
+            }
+        };
     }
 
     private void UpdateBreadcrumbs()
@@ -528,81 +1045,202 @@
         };
     }
 
+    private bool CanNavigatePrevious() => _currentSprintIndex > 0;
+    private bool CanNavigateNext() => _currentSprintIndex >= 0 && _currentSprintIndex < _filteredSprints.Count - 1;
+
+    private async Task NavigateToPreviousSprint()
+    {
+        if (CanNavigatePrevious())
+        {
+            _currentSprintIndex--;
+            _currentSprint = _filteredSprints[_currentSprintIndex];
+            await LoadMetricsAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task NavigateToNextSprint()
+    {
+        if (CanNavigateNext())
+        {
+            _currentSprintIndex++;
+            _currentSprint = _filteredSprints[_currentSprintIndex];
+            await LoadMetricsAsync();
+            StateHasChanged();
+        }
+    }
+
     private async Task OnTeamChanged(int? teamId)
     {
         _selectedTeamId = teamId;
-        _selectedFromSprintId = null;
-        _selectedToSprintId = null;
-        _sprints.Clear();
-        
-        if (teamId.HasValue)
-        {
-            await LoadSprintsForTeamAsync(teamId.Value);
-        }
-        
+        ApplySprintFilters();
+        FindCurrentSprint();
         await LoadMetricsAsync();
-        UpdateUrlParameters();
         StateHasChanged();
     }
 
-    private async Task OnFromSprintChanged(int? sprintId)
+    private async Task OnProductFilterChanged(int? productId)
     {
-        _selectedFromSprintId = sprintId;
+        _selectedProductId = productId;
+        _filteredProducts = productId.HasValue
+            ? _products.Where(p => p.Id == productId.Value).ToList()
+            : _products.ToList();
         await LoadMetricsAsync();
-        UpdateUrlParameters();
         StateHasChanged();
     }
 
-    private async Task OnToSprintChanged(int? sprintId)
+    private async Task OnAdvancedModeToggled(bool toggled)
     {
-        _selectedToSprintId = sprintId;
+        _advancedMode = toggled;
         await LoadMetricsAsync();
-        UpdateUrlParameters();
         StateHasChanged();
     }
 
-    private void UpdateUrlParameters()
+    private async Task RecomputeMetricsAsync()
     {
-        var queryParams = new List<string>();
-        
-        if (_selectedTeamId.HasValue)
+        if (!_profileId.HasValue || _currentSprint == null || _isRecomputing)
+            return;
+
+        _isRecomputing = true;
+        StateHasChanged();
+
+        try
         {
-            queryParams.Add($"teamId={_selectedTeamId.Value}");
+            List<int> sprintIds;
+            if (_advancedMode)
+            {
+                var startIndex = Math.Max(0, _currentSprintIndex - _trendSprintCount + 1);
+                sprintIds = _filteredSprints
+                    .Skip(startIndex)
+                    .Take(_currentSprintIndex - startIndex + 1)
+                    .Select(s => s.Id)
+                    .ToList();
+            }
+            else
+            {
+                sprintIds = new List<int> { _currentSprint.Id };
+            }
+
+            var response = await SprintTrendService.GetSprintTrendMetricsAsync(
+                _profileId.Value,
+                sprintIds,
+                recompute: true);
+
+            if (response != null && response.Success && response.Metrics != null)
+            {
+                ResetMetrics();
+
+                _isStale = false;
+                _projectionsAsOfUtc = response.ProjectionsAsOfUtc;
+
+                _trendMetrics = response.Metrics
+                    .OrderBy(m => m.StartUtc ?? DateTimeOffset.MaxValue)
+                    .ToList();
+
+                var currentMetrics = _advancedMode
+                    ? _trendMetrics.LastOrDefault()
+                    : _trendMetrics.FirstOrDefault();
+
+                if (currentMetrics != null)
+                {
+                    var filteredProductMetrics = _selectedProductId.HasValue
+                        ? currentMetrics.ProductMetrics.Where(m => m.ProductId == _selectedProductId.Value).ToList()
+                        : currentMetrics.ProductMetrics.ToList();
+
+                    _completedPbiCount = filteredProductMetrics.Sum(m => m.CompletedPbiCount);
+                    _completedPbiEffort = filteredProductMetrics.Sum(m => m.CompletedPbiEffort);
+                    _progressionDelta = filteredProductMetrics.Sum(m => m.ProgressionDelta);
+                    _bugsCreatedCount = filteredProductMetrics.Sum(m => m.BugsCreatedCount);
+                    _bugsWorkedCount = filteredProductMetrics.Sum(m => m.BugsWorkedCount);
+                    _bugsClosedCount = filteredProductMetrics.Sum(m => m.BugsClosedCount);
+                    _missingEffortCount = filteredProductMetrics.Sum(m => m.MissingEffortCount);
+                    _isApproximate = filteredProductMetrics.Any(m => m.IsApproximate);
+
+                    _approximateProducts = filteredProductMetrics
+                        .Where(m => m.IsApproximate)
+                        .Select(m => m.ProductName)
+                        .ToList();
+
+                    foreach (var productMetric in filteredProductMetrics)
+                    {
+                        _productMetrics[productMetric.ProductId] = new ProductMetrics(
+                            productMetric.CompletedPbiCount,
+                            productMetric.CompletedPbiEffort,
+                            productMetric.ProgressionDelta,
+                            productMetric.MissingEffortCount,
+                            productMetric.IsApproximate);
+                    }
+                }
+
+                BuildFeatureProgress(response);
+                if (_advancedMode) BuildTrendCharts();
+
+                Snackbar.Add("Metrics recomputed successfully.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Recomputation failed.", Severity.Error);
+            }
         }
-        
-        if (_selectedFromSprintId.HasValue)
+        catch (Exception ex)
         {
-            queryParams.Add($"fromSprintId={_selectedFromSprintId.Value}");
+            Snackbar.Add($"Recomputation error: {ex.Message}", Severity.Error);
         }
-        
-        if (_selectedToSprintId.HasValue)
+        finally
         {
-            queryParams.Add($"toSprintId={_selectedToSprintId.Value}");
+            _isRecomputing = false;
+            StateHasChanged();
         }
-        
-        var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
-        var newUrl = $"{WorkspaceRoutes.SprintTrend}{queryString}";
-        
-        NavigationManager.NavigateTo(newUrl, forceLoad: false);
     }
 
-    private int GetProductPlanned(int productId)
+    private string GetTrendRangeLabel()
     {
-        return _productMetrics.TryGetValue(productId, out var metrics) ? metrics.Planned : 0;
+        if (_trendMetrics.Count == 0) return "No data";
+        var first = _trendMetrics.First();
+        var last = _trendMetrics.Last();
+        return $"{first.SprintName} → {last.SprintName} ({_trendMetrics.Count} sprints)";
     }
 
-    private int GetProductWorked(int productId)
+    private int GetProductCompletedPbis(int productId)
     {
-        return _productMetrics.TryGetValue(productId, out var metrics) ? metrics.Worked : 0;
+        return _productMetrics.TryGetValue(productId, out var metrics) ? metrics.CompletedPbis : 0;
     }
 
-    private double GetProductProgress(int productId)
+    private int GetProductCompletedEffort(int productId)
     {
-        if (!_productMetrics.TryGetValue(productId, out var metrics) || metrics.Planned == 0)
-        {
-            return 0;
-        }
-        return Math.Round((double)metrics.Worked / metrics.Planned * 100, 1);
+        return _productMetrics.TryGetValue(productId, out var metrics) ? metrics.CompletedEffort : 0;
+    }
+
+    private double GetProductProgression(int productId)
+    {
+        return _productMetrics.TryGetValue(productId, out var metrics) ? metrics.Progression : 0;
+    }
+
+    private int GetProductMissingEffort(int productId)
+    {
+        return _productMetrics.TryGetValue(productId, out var metrics) ? metrics.MissingEffort : 0;
+    }
+
+    private bool IsProductApproximate(int productId)
+    {
+        return _productMetrics.TryGetValue(productId, out var metrics) && metrics.IsApproximate;
+    }
+
+    private string GetProductName(int productId)
+    {
+        return _products.FirstOrDefault(p => p.Id == productId)?.Name ?? "Unknown";
+    }
+
+    private double[] GetPieChartData()
+    {
+        return _filteredProducts
+            .Select(p => (double)GetProductCompletedPbis(p.Id))
+            .ToArray();
+    }
+
+    private string[] GetPieChartLabels()
+    {
+        return _filteredProducts.Select(p => p.Name).ToArray();
     }
 
     private Color GetProgressColor(int progress)
@@ -625,10 +1263,5 @@
         NavigationManager.NavigateTo(WorkspaceRoutes.Home);
     }
 
-    private class FeatureProgressItem
-    {
-        public required string EpicTitle { get; init; }
-        public required string FeatureTitle { get; init; }
-        public int ProgressPercent { get; init; }
-    }
+    private record ProductMetrics(int CompletedPbis, int CompletedEffort, double Progression, int MissingEffort, bool IsApproximate);
 }

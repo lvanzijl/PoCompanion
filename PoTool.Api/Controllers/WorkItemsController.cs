@@ -350,6 +350,30 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets revision history for a specific work item.
+    /// Retrieves revisions directly from TFS.
+    /// </summary>
+    /// <param name="workItemId">Work item TFS ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Revision history for the work item</returns>
+    [HttpGet("{workItemId:int}/revisions")]
+    public async Task<ActionResult<IEnumerable<WorkItemRevisionDto>>> GetWorkItemRevisions(
+        int workItemId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var revisions = await _mediator.Send(new GetWorkItemRevisionsQuery(workItemId), cancellationToken);
+            return Ok(revisions);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving revisions for work item ID: {WorkItemId}", workItemId);
+            return StatusCode(500, "Error retrieving work item revisions");
+        }
+    }
+
+    /// <summary>
     /// Gets work items using advanced multi-dimensional filtering.
     /// </summary>
     /// <param name="typeFilter">Filter by work item type</param>

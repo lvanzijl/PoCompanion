@@ -112,7 +112,14 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                         WorkedCount = p.WorkedCount,
                         WorkedEffort = p.WorkedEffort,
                         BugsPlannedCount = p.BugsPlannedCount,
-                        BugsWorkedCount = p.BugsWorkedCount
+                        BugsWorkedCount = p.BugsWorkedCount,
+                        CompletedPbiCount = p.CompletedPbiCount,
+                        CompletedPbiEffort = p.CompletedPbiEffort,
+                        ProgressionDelta = p.ProgressionDelta,
+                        BugsCreatedCount = p.BugsCreatedCount,
+                        BugsClosedCount = p.BugsClosedCount,
+                        MissingEffortCount = p.MissingEffortCount,
+                        IsApproximate = p.IsApproximate
                     }).ToList();
 
                     return new SprintTrendMetricsDto
@@ -127,7 +134,14 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                         TotalWorkedCount = g.Sum(p => p.WorkedCount),
                         TotalWorkedEffort = g.Sum(p => p.WorkedEffort),
                         TotalBugsPlannedCount = g.Sum(p => p.BugsPlannedCount),
-                        TotalBugsWorkedCount = g.Sum(p => p.BugsWorkedCount)
+                        TotalBugsWorkedCount = g.Sum(p => p.BugsWorkedCount),
+                        TotalCompletedPbiCount = g.Sum(p => p.CompletedPbiCount),
+                        TotalCompletedPbiEffort = g.Sum(p => p.CompletedPbiEffort),
+                        TotalProgressionDelta = g.Sum(p => p.ProgressionDelta),
+                        TotalBugsCreatedCount = g.Sum(p => p.BugsCreatedCount),
+                        TotalBugsClosedCount = g.Sum(p => p.BugsClosedCount),
+                        TotalMissingEffortCount = g.Sum(p => p.MissingEffortCount),
+                        IsApproximate = g.Any(p => p.IsApproximate)
                     };
                 })
                 .OrderBy(m => m.StartUtc ?? DateTimeOffset.MaxValue)
@@ -137,10 +151,37 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                 "Returning sprint trend metrics for ProductOwner {ProductOwnerId}: {SprintMetricCount} sprint rows from {ProjectionCount} projections.",
                 query.ProductOwnerId, metricsBySprint.Count, projections.Count);
 
+            // Compute real feature progress from resolved hierarchy
+            var featureProgress = await _projectionService.ComputeFeatureProgressAsync(
+                query.ProductOwnerId,
+                cancellationToken);
+
+            // Compute epic progress from feature progress
+            var epicProgress = await _projectionService.ComputeEpicProgressAsync(
+                query.ProductOwnerId,
+                featureProgress,
+                cancellationToken);
+
+            // Detect staleness: activity events ingested after last projection computation
+            var cacheState = await _context.ProductOwnerCacheStates
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.ProductOwnerId == query.ProductOwnerId, cancellationToken);
+
+            var projectionsAsOf = cacheState?.SprintTrendProjectionAsOfUtc;
+            var activityWatermark = cacheState?.ActivityEventWatermark;
+            var isStale = !query.Recompute
+                && projectionsAsOf.HasValue
+                && activityWatermark.HasValue
+                && activityWatermark.Value > projectionsAsOf.Value;
+
             return new GetSprintTrendMetricsResponse
             {
                 Success = true,
-                Metrics = metricsBySprint
+                Metrics = metricsBySprint,
+                FeatureProgress = featureProgress,
+                EpicProgress = epicProgress,
+                IsStale = isStale,
+                ProjectionsAsOfUtc = projectionsAsOf
             };
         }
         catch (Exception ex)

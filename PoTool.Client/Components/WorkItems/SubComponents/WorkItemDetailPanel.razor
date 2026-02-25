@@ -259,10 +259,59 @@ else if (SelectedWorkItem != null)
             </MudTabPanel>
             
             <MudTabPanel Text="Activity" Icon="@Icons.Material.Filled.History" OnClick="@LoadHistoryAsync">
-                @* REPLACE_WITH_ACTIVITY_SOURCE: render activity timeline once source is available. *@
-                <MudAlert Severity="Severity.Info" Dense="true">
-                    No activity data available.
-                </MudAlert>
+                @if (_isLoadingHistory)
+                {
+                    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-2" />
+                }
+                else if (_historyError != null)
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true">@_historyError</MudAlert>
+                }
+                else if (_revisions != null && _revisions.Count > 0)
+                {
+                    <MudTimeline TimelinePosition="TimelinePosition.Start" Class="mt-2">
+                        @foreach (var rev in _revisions.OrderByDescending(r => r.ChangedDate))
+                        {
+                            <MudTimelineItem Color="@GetRevisionColor(rev)" Size="Size.Small">
+                                <ItemContent>
+                                    <MudText Typo="Typo.body2" Class="mb-1">
+                                        <strong>Rev @rev.RevisionNumber</strong> — @rev.ChangedDate.LocalDateTime.ToString("g")
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary mb-1">
+                                        @rev.ChangedBy
+                                    </MudText>
+                                    @if (rev.FieldChanges != null && rev.FieldChanges.Count > 0)
+                                    {
+                                        @foreach (var field in rev.FieldChanges)
+                                        {
+                                            <MudText Typo="Typo.caption">
+                                                <strong>@FormatFieldName(field.Key)</strong>:
+                                                @if (!string.IsNullOrEmpty(field.Value.OldValue))
+                                                {
+                                                    <span class="mud-text-secondary">@field.Value.OldValue</span>
+                                                    <span> → </span>
+                                                }
+                                                <span>@(field.Value.NewValue ?? "(cleared)")</span>
+                                            </MudText>
+                                        }
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(rev.Comment))
+                                    {
+                                        <MudText Typo="Typo.caption" Class="mt-1" Style="font-style: italic;">
+                                            @rev.Comment
+                                        </MudText>
+                                    }
+                                </ItemContent>
+                            </MudTimelineItem>
+                        }
+                    </MudTimeline>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">
+                        No activity data available.
+                    </MudAlert>
+                }
             </MudTabPanel>
         </MudTabs>
     </div>
@@ -289,6 +338,9 @@ else if (SelectedWorkItem != null)
         .ToList() ?? new List<string>();
 
     private int? _lastLoadedWorkItemId;
+    private bool _isLoadingHistory;
+    private string? _historyError;
+    private ICollection<WorkItemRevisionDto>? _revisions;
 
     private string? GetCommonType()
     {
@@ -332,12 +384,49 @@ else if (SelectedWorkItem != null)
 
     private async Task LoadHistoryAsync()
     {
-        // Only load if we haven't already loaded for this work item
         if (SelectedWorkItem == null || _lastLoadedWorkItemId == SelectedWorkItem.TfsId)
             return;
 
         _lastLoadedWorkItemId = SelectedWorkItem.TfsId;
-        await Task.CompletedTask;
+        _isLoadingHistory = true;
+        _historyError = null;
+        _revisions = null;
+        StateHasChanged();
+
+        try
+        {
+            var revisions = await WorkItemService.GetRevisionsAsync(SelectedWorkItem.TfsId);
+            _revisions = revisions.ToList();
+        }
+        catch (Exception ex)
+        {
+            _historyError = $"Failed to load activity history: {ex.Message}";
+        }
+        finally
+        {
+            _isLoadingHistory = false;
+            StateHasChanged();
+        }
+    }
+
+    private static Color GetRevisionColor(WorkItemRevisionDto rev)
+    {
+        if (rev.FieldChanges != null && rev.FieldChanges.ContainsKey("System.State"))
+            return Color.Primary;
+        return Color.Default;
+    }
+
+    private static string FormatFieldName(string fieldRef)
+    {
+        // Strip the "System." or "Microsoft.VSTS." prefix for cleaner display
+        var name = fieldRef;
+        if (name.StartsWith("System.", StringComparison.Ordinal))
+            name = name["System.".Length..];
+        else if (name.StartsWith("Microsoft.VSTS.Common.", StringComparison.Ordinal))
+            name = name["Microsoft.VSTS.Common.".Length..];
+        else if (name.StartsWith("Microsoft.VSTS.Scheduling.", StringComparison.Ordinal))
+            name = name["Microsoft.VSTS.Scheduling.".Length..];
+        return name;
     }
 
     // Quick action handlers

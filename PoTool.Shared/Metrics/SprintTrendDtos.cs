@@ -59,6 +59,41 @@ public record SprintTrendMetricsDto
     /// Total bugs worked.
     /// </summary>
     public int TotalBugsWorkedCount { get; init; }
+
+    /// <summary>
+    /// Total PBIs completed (transitioned to Done) in this sprint.
+    /// </summary>
+    public int TotalCompletedPbiCount { get; init; }
+
+    /// <summary>
+    /// Total effort of completed PBIs in this sprint.
+    /// </summary>
+    public int TotalCompletedPbiEffort { get; init; }
+
+    /// <summary>
+    /// Aggregate progression delta across products.
+    /// </summary>
+    public double TotalProgressionDelta { get; init; }
+
+    /// <summary>
+    /// Total new bugs created during this sprint.
+    /// </summary>
+    public int TotalBugsCreatedCount { get; init; }
+
+    /// <summary>
+    /// Total bugs closed during this sprint.
+    /// </summary>
+    public int TotalBugsClosedCount { get; init; }
+
+    /// <summary>
+    /// Total PBIs with missing effort.
+    /// </summary>
+    public int TotalMissingEffortCount { get; init; }
+
+    /// <summary>
+    /// Whether any metric in this sprint used approximation.
+    /// </summary>
+    public bool IsApproximate { get; init; }
 }
 
 /// <summary>
@@ -105,6 +140,41 @@ public record ProductSprintMetricsDto
     /// Number of bugs with activity.
     /// </summary>
     public int BugsWorkedCount { get; init; }
+
+    /// <summary>
+    /// PBIs completed (transitioned to Done) in this sprint for this product.
+    /// </summary>
+    public int CompletedPbiCount { get; init; }
+
+    /// <summary>
+    /// Effort of completed PBIs in this sprint for this product.
+    /// </summary>
+    public int CompletedPbiEffort { get; init; }
+
+    /// <summary>
+    /// Progression delta for this product in this sprint.
+    /// </summary>
+    public double ProgressionDelta { get; init; }
+
+    /// <summary>
+    /// New bugs created during this sprint for this product.
+    /// </summary>
+    public int BugsCreatedCount { get; init; }
+
+    /// <summary>
+    /// Bugs closed during this sprint for this product.
+    /// </summary>
+    public int BugsClosedCount { get; init; }
+
+    /// <summary>
+    /// PBIs with missing effort for this product.
+    /// </summary>
+    public int MissingEffortCount { get; init; }
+
+    /// <summary>
+    /// Whether approximation was used for this product.
+    /// </summary>
+    public bool IsApproximate { get; init; }
 }
 
 /// <summary>
@@ -147,6 +217,28 @@ public record GetSprintTrendMetricsResponse
     /// Sprint metrics by sprint.
     /// </summary>
     public IReadOnlyList<SprintTrendMetricsDto>? Metrics { get; init; }
+
+    /// <summary>
+    /// Feature-level progress derived from the resolved work item hierarchy.
+    /// Populated for the current (or most recent) sprint in the request.
+    /// </summary>
+    public IReadOnlyList<FeatureProgressDto>? FeatureProgress { get; init; }
+
+    /// <summary>
+    /// Epic-level progress derived from child Feature progress.
+    /// </summary>
+    public IReadOnlyList<EpicProgressDto>? EpicProgress { get; init; }
+
+    /// <summary>
+    /// Whether the cached projections may be stale.
+    /// True when activity events have been ingested after the last projection computation.
+    /// </summary>
+    public bool IsStale { get; init; }
+
+    /// <summary>
+    /// When projections were last computed (null if never).
+    /// </summary>
+    public DateTimeOffset? ProjectionsAsOfUtc { get; init; }
 }
 
 /// <summary>
@@ -197,6 +289,60 @@ public record FeatureProgressDto
 
     /// <summary>
     /// Whether the feature is in Done state.
+    /// </summary>
+    public bool IsDone { get; init; }
+}
+
+/// <summary>
+/// DTO for epic-level progress information.
+/// Epic progress is derived from effort-weighted child Feature completion.
+/// </summary>
+public record EpicProgressDto
+{
+    /// <summary>
+    /// Epic TFS ID.
+    /// </summary>
+    public required int EpicId { get; init; }
+
+    /// <summary>
+    /// Epic title.
+    /// </summary>
+    public required string EpicTitle { get; init; }
+
+    /// <summary>
+    /// Product ID.
+    /// </summary>
+    public required int ProductId { get; init; }
+
+    /// <summary>
+    /// Progress percentage (0-100).
+    /// Derived from effort-weighted child Feature completion.
+    /// Epic.State == Done => 100%, otherwise min(raw, 90%).
+    /// </summary>
+    public int ProgressPercent { get; init; }
+
+    /// <summary>
+    /// Total effort of all PBIs under this epic's features.
+    /// </summary>
+    public int TotalEffort { get; init; }
+
+    /// <summary>
+    /// Effort of done PBIs under this epic's features.
+    /// </summary>
+    public int DoneEffort { get; init; }
+
+    /// <summary>
+    /// Number of child features under this epic.
+    /// </summary>
+    public int FeatureCount { get; init; }
+
+    /// <summary>
+    /// Number of child features that are done.
+    /// </summary>
+    public int DoneFeatureCount { get; init; }
+
+    /// <summary>
+    /// Whether the epic is in Done state.
     /// </summary>
     public bool IsDone { get; init; }
 }

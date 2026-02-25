@@ -296,9 +296,6 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<ActivityEventIngestionService>();
         services.AddScoped<IActivityEventSource, LedgerActivityEventSource>();
 
-        // Register relation hydrator placeholder
-        services.AddScoped<IRelationRevisionHydrator, RelationRevisionHydrator>();
-
         // Register Work Item Resolution Service (for Sprint Trend hierarchical resolution)
         services.AddSingleton<WorkItemResolutionService>();
 

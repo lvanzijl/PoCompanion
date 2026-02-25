@@ -207,11 +207,6 @@ public partial class RealTfsClient
 
     private static string ResolveAnalyticsODataBaseUrl(TfsConfigEntity config)
     {
-        if (!string.IsNullOrWhiteSpace(config.AnalyticsODataBaseUrl))
-        {
-            return config.AnalyticsODataBaseUrl.Trim();
-        }
-
         return AnalyticsODataDefaults.BuildBaseUrl(config.Url, config.Project);
     }
 

@@ -63,6 +63,42 @@ public class SprintMetricsProjectionEntity
     public int BugsWorkedCount { get; set; }
 
     /// <summary>
+    /// Number of PBIs that transitioned to Done during the sprint.
+    /// </summary>
+    public int CompletedPbiCount { get; set; }
+
+    /// <summary>
+    /// Sum of effort of PBIs that transitioned to Done during the sprint.
+    /// </summary>
+    public int CompletedPbiEffort { get; set; }
+
+    /// <summary>
+    /// Feature/Epic progression delta percentage (0-100 scale) within the sprint.
+    /// Represents measurable forward movement.
+    /// </summary>
+    public double ProgressionDelta { get; set; }
+
+    /// <summary>
+    /// Number of new bugs created during the sprint timeframe.
+    /// </summary>
+    public int BugsCreatedCount { get; set; }
+
+    /// <summary>
+    /// Number of bugs closed during the sprint timeframe.
+    /// </summary>
+    public int BugsClosedCount { get; set; }
+
+    /// <summary>
+    /// Number of PBIs with missing effort that affected computation.
+    /// </summary>
+    public int MissingEffortCount { get; set; }
+
+    /// <summary>
+    /// Whether sibling-average approximation was used for missing effort.
+    /// </summary>
+    public bool IsApproximate { get; set; }
+
+    /// <summary>
     /// When this projection was last computed.
     /// </summary>
     [Required]

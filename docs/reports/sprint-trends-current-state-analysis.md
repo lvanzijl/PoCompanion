@@ -1,64 +1,72 @@
 # Sprint Trends — Current State Analysis
 
-**Generated:** 2026-02-25  
-**Scope:** Code-as-is inspection of the Trends → Sprint Trends feature, post-revision-removal.
+**Updated:** 2026-02-25  
+**Scope:** Code-as-is inspection of the Trends → Sprint Trends feature, post activity-event implementation.
 
 ---
 
 ## 1. Functional Description
 
-### What the Sprint Trends feature is supposed to do
+### What the Sprint Trends feature does
 
 Sprint Trends is a historical analytics page (route: `/home/sprint-trend`) that lets a Product Owner look back over a configurable range of past sprints and compare what was **planned** for those sprints against what was actually **worked**.
 
 The page is reached from the **Trends (Past)** workspace (`/home/trends`).
 
-### Questions it tries to answer for an end user
+### Questions it answers for an end user
 
-- How many work items were planned vs worked across a selected sprint range?
-- How many story-point-equivalent effort points were planned vs worked?
-- How many bugs were planned vs worked separately from regular PBIs/tasks?
-- How did each individual **Product** perform across the sprint range (planned vs worked progress bar)?
-- What is the overall completion trend across the selected sprints?
-- Which Features and Epics are progressing, and by how much? (Feature Progress table — partially wired)
+- How many PBIs were completed and how much effort was delivered in a sprint?
+- What is the feature/epic progression delta for a sprint?
+- How many bugs were created, worked on, and closed?
+- How did each individual **Product** perform across the sprint range?
+- What is the overall completion trend across up to 10 past sprints? (advanced mode)
+- Which Features and Epics are progressing, and by how much? (Feature/Epic Progress tables)
+- Is the displayed data potentially stale? (staleness detection)
 
 ### Metrics shown
 
 | Metric | Description |
 |--------|-------------|
-| Planned Items | Count of work items whose iteration path matched the sprint during the sprint |
-| Planned Effort | Sum of effort (story points) for planned items |
-| Worked Items | Count of work items with a qualifying state-category change during the sprint date range |
-| Worked Effort | Sum of effort for worked items |
-| Bugs Planned | Count of Bug-type work items planned in the sprint |
-| Bugs Worked | Count of Bug-type work items with qualifying activity in the sprint |
-| Per-Product progress | Planned vs Worked count + progress bar per Product |
-| Feature Progress | Epic / Feature / progress % table (hardcoded placeholder in current code) |
+| Completed PBIs | Count of PBIs that transitioned to Done during the sprint |
+| Completed Effort | Sum of effort (story points) for completed PBIs |
+| Progression Delta | Effort-weighted feature completion percentage change |
+| Bugs Created | Count of Bug-type work items created during the sprint |
+| Bugs Worked | Count of Bug-type work items with child task state changes during the sprint |
+| Bugs Closed | Count of Bug-type work items that transitioned to Done/Closed |
+| Missing Effort | Count of PBIs with null effort (triggers approximate data warning) |
+| Per-Product breakdown | All metrics above broken down by Product |
+| Feature Progress | Feature title, epic parent, progress % (effort-weighted PBI completion, capped at 90% unless Done) |
+| Epic Progress | Epic title, progress % (effort-weighted child Feature completion), feature count |
+| Trend Charts | 10-sprint graphs for progression, PBI count, PBI effort, bug trend (advanced mode) |
 
 ### Time range
 
-The user selects a **Team**, a **From Sprint**, and a **To Sprint**. All sprints in the ID range between the two boundaries are included. Metrics are aggregated across the entire range and also broken down per sprint for display. This is a multi-sprint, historical comparison view.
+Single sprint mode: user navigates forward/backward through sprints with arrow buttons.
+Advanced mode: shows up to 10 consecutive sprints ending at the selected sprint, with trend charts.
 
 ### Hierarchy level
 
-The projection is computed at the **work item** level (primarily PBIs, Tasks, and Bugs), grouped by **Product** and **Sprint**. Bugs are tracked in a separate counter. Feature/Epic level progress is shown as a separate section but is currently hardcoded as placeholder data.
+The projection is computed at the **work item** level (primarily PBIs, Tasks, and Bugs), grouped by **Product** and **Sprint**. Bugs are tracked in separate counters. Feature and Epic progress are computed from the resolved work item hierarchy.
 
 ### Assumptions about underlying data
 
 - Work items are synced and available in the local cache (`WorkItems` table).
 - Sprints are synced with known `StartUtc`, `EndUtc`, and `Path` for each team.
-- Activity events (field-level state changes on work items) are available and attributed to the correct sprint by iteration path and timestamp.
-- Work items are resolved into a Product hierarchy so that each work item can be attributed to its owning Product.
+- Activity events (field-level state changes on work items) are ingested into `ActivityEventLedgerEntries`.
+- Work items are resolved into a Product hierarchy via `ResolvedWorkItems` table (populated by `WorkItemResolutionService`).
 
-### Trend logic implied
+### Activity-based metrics logic
 
-- **Planned** = work item had its iteration path set to the sprint's path at some point during or before the sprint.
-- **Worked** = work item had a qualifying state-category transition during the sprint's date range:
-  - *Task*: any state-category change
-  - *PBI*: InProgress → Done only (New → InProgress does NOT count)
-  - *Bug*: InProgress → Done, or Done → InProgress (reopened)
-- Bugs are excluded from the main Planned/Worked counts and tracked separately in `BugsPlannedCount` / `BugsWorkedCount`.
-- Effort is taken from the work item's latest known effort value (nullable integer, in story points).
+- **Planned** = work item resolved to the sprint via its iteration path (matched through `ResolvedWorkItems.ResolvedSprintId`).
+- **Completed PBI** = PBI with a `System.State` activity event transitioning to `Done` during the sprint date range.
+- **Worked** = work item with any activity event during the sprint, or parent item with child activity (activity bubbles up).
+- **Bug Created** = bug with `CreatedDate` within the sprint date range.
+- **Bug Worked** = bug with a child task that had a `System.State` change during the sprint.
+- **Bug Closed** = bug with a `System.State` transition to `Done` or `Closed` during the sprint.
+- **Progression Delta** = average effort-weighted feature completion % across features with PBI activity in the sprint.
+- **Feature Progress** = effort-weighted PBI completion; capped at 90% unless Feature.State == Done (then 100%).
+- **Epic Progress** = effort-weighted child Feature completion; same 90% cap rule.
+- **Missing Effort Approximation** = when PBIs have null effort, sibling-average is used and `IsApproximate` flag is set.
 
 ---
 
@@ -73,15 +81,29 @@ The projection is computed at the **work item** level (primarily PBIs, Tasks, an
             └─ MetricsController.GetSprintTrendMetrics()
                 └─ Mediator.Send(GetSprintTrendMetricsQuery)
                     └─ GetSprintTrendMetricsQueryHandler.Handle()
-                        ├─ SprintTrendProjectionService.GetProjectionsAsync()
-                        │   └─ READ SprintMetricsProjections WHERE sprintIds + productIds
-                        │       (currently always returns empty list)
-                        ├─ If empty → SprintTrendProjectionService.ComputeProjectionsAsync()
-                        │   └─ STUB: returns Array.Empty<>() immediately
-                        │       (REPLACE_WITH_ACTIVITY_SOURCE marker)
-                        ├─ READ Sprints for display names
-                        ├─ READ Products for display names
-                        └─ GROUP + MAP → SprintTrendMetricsDto[] (empty list)
+                        ├─ IF recompute:
+                        │   └─ SprintTrendProjectionService.ComputeProjectionsAsync()
+                        │       ├─ READ Products WHERE ProductOwnerId = X
+                        │       ├─ READ Sprints WHERE Id IN sprintIds
+                        │       ├─ READ ResolvedWorkItems WHERE matching products
+                        │       ├─ READ WorkItems (by resolved IDs)
+                        │       ├─ BATCH-LOAD ActivityEventLedgerEntries for full date range
+                        │       ├─ BATCH-LOAD existing SprintMetricsProjections
+                        │       └─ FOR EACH (sprint, product):
+                        │           ├─ Filter activity events to sprint date range
+                        │           ├─ Compute planned/completed/worked/bug metrics
+                        │           └─ UPSERT SprintMetricsProjections
+                        │
+                        ├─ ELSE: SprintTrendProjectionService.GetProjectionsAsync()
+                        │   └─ READ SprintMetricsProjections WHERE matching sprint+product
+                        │   └─ If empty → fallback to ComputeProjectionsAsync()
+                        │
+                        ├─ ComputeFeatureProgressAsync() → FeatureProgressDto[]
+                        ├─ ComputeEpicProgressAsync() → EpicProgressDto[]
+                        ├─ Detect staleness (ActivityEventWatermark > SprintTrendProjectionAsOfUtc)
+                        ├─ READ Sprints (for display names)
+                        ├─ READ Products (for display names)
+                        └─ GROUP + MAP → GetSprintTrendMetricsResponse
 ```
 
 ### Classes and methods involved
@@ -89,42 +111,43 @@ The projection is computed at the **work item** level (primarily PBIs, Tasks, an
 | Class / File | Method | Role |
 |---|---|---|
 | `SprintTrend.razor` | `LoadMetricsAsync()` | UI — calls service, aggregates metrics into display state |
-| `SprintTrendService` (`PoTool.Client/Services/SprintTrendService.cs`) | `GetSprintTrendMetricsAsync()` | HTTP client wrapper — calls `api/Metrics/sprint-trend` |
-| `MetricsController` (`PoTool.Api/Controllers/MetricsController.cs`) | `GetSprintTrendMetrics()` | API endpoint — dispatches `GetSprintTrendMetricsQuery` |
-| `GetSprintTrendMetricsQuery` (`PoTool.Core/Metrics/Queries/`) | — | Mediator query record |
-| `GetSprintTrendMetricsQueryHandler` (`PoTool.Api/Handlers/Metrics/`) | `Handle()` | Orchestrates projection reads; falls back to recompute if cache empty |
-| `SprintTrendProjectionService` (`PoTool.Api/Services/`) | `GetProjectionsAsync()` | Reads `SprintMetricsProjections` table |
-| `SprintTrendProjectionService` | `ComputeProjectionsAsync()` | **Stubbed** — should compute projections from activity source |
-| `SprintTrendProjectionSyncStage` (`PoTool.Api/Services/Sync/`) | `ExecuteAsync()` | Sync pipeline Stage 6 — calls `ComputeProjectionsAsync()` during sync |
+| `SprintTrend.razor` | `RecomputeMetricsAsync()` | UI — recomputes projections on user request |
+| `SprintTrendService` (`PoTool.Client/Services/`) | `GetSprintTrendMetricsAsync()` | HTTP client wrapper — calls `api/Metrics/sprint-trend` |
+| `MetricsController` (`PoTool.Api/Controllers/`) | `GetSprintTrendMetrics()` | API endpoint — dispatches `GetSprintTrendMetricsQuery` |
+| `GetSprintTrendMetricsQueryHandler` (`PoTool.Api/Handlers/Metrics/`) | `Handle()` | Orchestrates projection reads, feature/epic progress, staleness detection |
+| `SprintTrendProjectionService` (`PoTool.Api/Services/`) | `GetProjectionsAsync()` | Reads cached `SprintMetricsProjections` table |
+| `SprintTrendProjectionService` | `ComputeProjectionsAsync()` | ✅ Computes projections from `ActivityEventLedgerEntries` + `ResolvedWorkItems` |
+| `SprintTrendProjectionService` | `ComputeFeatureProgressAsync()` | Computes feature-level progress from resolved hierarchy |
+| `SprintTrendProjectionService` | `ComputeEpicProgressAsync()` | Computes epic-level progress from feature progress |
+| `SprintTrendProjectionSyncStage` (`PoTool.Api/Services/Sync/`) | `ExecuteAsync()` | Sync pipeline Stage 5 — calls `ComputeProjectionsAsync()` during sync |
+| `WorkItemResolutionService` (`PoTool.Api/Services/`) | `ResolveAllAsync()` | Resolves work items into product hierarchy via `ParentTfsId` walk |
+| `WorkItemResolutionSyncStage` (`PoTool.Api/Services/Sync/`) | `ExecuteAsync()` | Sync pipeline Stage 4 — calls `ResolveAllAsync()` during sync |
 | `ActivityEventIngestionService` (`PoTool.Api/Services/`) | `IngestAsync()` | Ingests activity events from TFS into `ActivityEventLedgerEntries` |
 | `ActivityIngestionSyncStage` (`PoTool.Api/Services/Sync/`) | `ExecuteAsync()` | Sync pipeline Stage 2 — calls `ActivityEventIngestionService.IngestAsync()` |
-| `NoOpActivityEventSource` (`PoTool.Api/Services/`) | `GetActivityEventsAsync()` | Registered as `IActivityEventSource` — always returns empty |
+| `LedgerActivityEventSource` (`PoTool.Api/Services/`) | `GetActivityEventsAsync()` | Reads from `ActivityEventLedgerEntries` — registered as `IActivityEventSource` |
 
 ### Data sources used
 
 | Table / Source | Status | Notes |
 |---|---|---|
-| `SprintMetricsProjections` | ✅ **Table exists** | Populated by `ComputeProjectionsAsync()` — but currently never populated (stub) |
-| `ActivityEventLedgerEntries` | ✅ **Table exists, data being ingested** | Populated by `ActivityEventIngestionService` during sync Stage 2 |
-| `WorkItems` | ✅ Populated | Used by `ActivityEventIngestionService` for type/parent/iteration lookups |
-| `Sprints` | ✅ Populated | Used for sprint names and date ranges |
-| `Products` | ✅ Populated | Used for product attribution |
-| `ResolvedWorkItems` | ✅ **Table exists, populated by sync Stage 5** | Used to map work items to Products — now wired in pipeline |
-| `RevisionHeaders` | ❌ **Table dropped** (migration `20260223221758_RemoveRevisionPersistenceSchema`) | Was the previous primary data source |
-| `RevisionFieldDeltas` | ❌ **Table dropped** (same migration) | Was the previous source for state-change detection |
-| `RevisionRelationDeltas` | ❌ **Table dropped** (same migration) | Was the previous source for parent-chain resolution |
-| `RevisionIngestionWatermarks` | ❌ **Table dropped** (same migration) | Was the ingestion progress tracker |
+| `ActivityEventLedgerEntries` | ✅ Populated | Primary data source — field-level state changes ingested during sync Stage 2 |
+| `ResolvedWorkItems` | ✅ Populated | Product-hierarchy resolution output — populated during sync Stage 4 |
+| `SprintMetricsProjections` | ✅ Populated | Pre-computed metrics — populated during sync Stage 5 and on-demand recompute |
+| `WorkItems` | ✅ Populated | Work item snapshots — effort, state, type, parent chain |
+| `Sprints` | ✅ Populated | Sprint metadata — names, date ranges, iteration paths |
+| `Products` | ✅ Populated | Product metadata — names, backlog root work item IDs |
+| `ProductOwnerCacheStates` | ✅ Populated | Cache watermarks for staleness detection |
 
 ### Sync pipeline (current — 11 stages)
 
 | # | Stage Class | What It Does | Relevant to Sprint Trends? |
 |---|---|---|---|
 | 1 | `WorkItemSyncStage` | Syncs work items from TFS | Indirectly — populates `WorkItems` table |
-| 2 | `ActivityIngestionSyncStage` | Ingests activity events into `ActivityEventLedgerEntries` | **Yes** — this is the intended data source |
+| 2 | `ActivityIngestionSyncStage` | Ingests activity events into `ActivityEventLedgerEntries` | **Yes** — primary data source |
 | 3 | `TeamSprintSyncStage` | Syncs sprint definitions | Yes — sprint metadata needed |
 | 4 | `WorkItemRelationshipSnapshotStage` | Snapshots work item relationships | Yes — feeds resolution stage |
 | 5 | `WorkItemResolutionSyncStage` | Resolves work items into product hierarchy (`ResolvedWorkItems`) | **Yes** — required by projection |
-| 6 | `SprintTrendProjectionSyncStage` | Calls `ComputeProjectionsAsync()` to fill `SprintMetricsProjections` | **Yes** — this is the direct sprint trends stage |
+| 6 | `SprintTrendProjectionSyncStage` | Calls `ComputeProjectionsAsync()` to fill `SprintMetricsProjections` | **Yes** — produces the sprint trend data |
 | 7 | `PullRequestSyncStage` | Syncs pull requests | No |
 | 8 | `PipelineSyncStage` | Syncs pipeline runs | No |
 | 9 | `ValidationComputeStage` | Computes validation metrics | No |
@@ -133,56 +156,43 @@ The projection is computed at the **work item** level (primarily PBIs, Tasks, an
 
 ### Dependencies
 
-- **No OData revision ingestion dependency.** Revision tables (`RevisionHeaders`, `RevisionFieldDeltas`, `RevisionRelationDeltas`) and `IWorkItemRevisionSource` / `RealODataRevisionTfsClient` have all been removed.
-- **No `WorkItemRevisions` table.** Dropped in migration `20260223221758_RemoveRevisionPersistenceSchema`.
-- **No cached revision projections from revision data.** `SprintMetricsProjections` cannot be populated because `ComputeProjectionsAsync()` is stubbed.
-- **`IActivityEventSource` is registered as `NoOpActivityEventSource`** — all callers of this interface receive an empty list.
-- `SprintMetricsProjections` table is present in the schema and the EF model (`PoToolDbContext.SprintMetricsProjections`).
-- `ActivityEventLedgerEntries` table is present and data is actually being written to it by `ActivityEventIngestionService` during sync.
+- **No OData revision ingestion dependency.** Revision tables and `IWorkItemRevisionSource` / `RealODataRevisionTfsClient` have all been removed.
+- **`IActivityEventSource` is registered as `LedgerActivityEventSource`** — reads from `ActivityEventLedgerEntries`.
+- `SprintMetricsProjections` are populated during sync (Stage 6) and can be recomputed on-demand via the UI recompute button.
+- `ResolvedWorkItems` are populated during sync (Stage 4) by `WorkItemResolutionService` using `ParentTfsId` hierarchy walk.
+- Staleness is detected by comparing `ProductOwnerCacheStates.ActivityEventWatermark` with `SprintTrendProjectionAsOfUtc`.
 
-### Assumptions that must be true for non-empty results
+### Requirements for non-empty results
 
-1. `SprintTrendProjectionService.ComputeProjectionsAsync()` must produce actual projections (currently it does not).
+1. At least one sync must have completed (activity events ingested, work items resolved, projections computed).
 2. `SprintMetricsProjections` must contain rows matching the requested `sprintIds` and the products owned by the requesting profile.
-3. At minimum one sprint must be selected by the user (from and to sprint IDs must both be set).
+3. At minimum one sprint must be selected by the user.
 4. The user must have an active profile with at least one product configured.
 
 ---
 
-## 3. Why It Returns Empty Now
+## 3. Implementation Status
 
-### Root cause: `ComputeProjectionsAsync()` is a no-op stub
+### ✅ Fully Implemented
 
-`SprintTrendProjectionService.ComputeProjectionsAsync()` (file: `PoTool.Api/Services/SprintTrendProjectionService.cs`, lines 22–32) was gutted when the OData revision pipeline was removed and replaced with this body:
+| Component | Status |
+|---|---|
+| `ComputeProjectionsAsync()` | ✅ Implemented — reads `ActivityEventLedgerEntries`, `ResolvedWorkItems`, `WorkItems`; computes all metrics; upserts `SprintMetricsProjections` |
+| `LedgerActivityEventSource` | ✅ Registered as `IActivityEventSource` — reads from `ActivityEventLedgerEntries` |
+| `NoOpActivityEventSource` | ✅ Deleted |
+| `WorkItemResolutionService` | ✅ Implemented — walks `ParentTfsId` hierarchy from product backlog roots |
+| `WorkItemResolutionSyncStage` | ✅ Wired in sync pipeline (Stage 4) |
+| `SprintTrendProjectionSyncStage` | ✅ Wired in sync pipeline (Stage 5) |
+| Feature Progress | ✅ Computed from resolved hierarchy — `ComputeFeatureProgressAsync()` |
+| Epic Progress | ✅ Computed from feature progress — `ComputeEpicProgressAsync()` |
+| Staleness detection | ✅ Compares `ActivityEventWatermark` > `SprintTrendProjectionAsOfUtc` |
+| Recompute button | ✅ UI button calls `recompute=true` to re-derive projections |
+| Batch activity loading | ✅ Single query for full date range, filtered in-memory per sprint |
+| Single sprint view | ✅ Nav arrows, metrics cards, per-product breakdown |
+| Advanced mode | ✅ 10-sprint trend graphs (progression, PBI count, PBI effort, bug trend) |
+| Approximate data warnings | ✅ Missing effort detection with sibling-average flag |
 
-```csharp
-// REPLACE_WITH_ACTIVITY_SOURCE: compute sprint trend metrics from activity events.
-return Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(Array.Empty<SprintMetricsProjectionEntity>());
-```
-
-All three parameters (`productOwnerId`, `sprintIds`, `cancellationToken`) are explicitly discarded. The method does nothing and returns an empty list unconditionally.
-
-### Broken dependency chain — step by step
-
-1. **Sync runs** → Stage 6 (`SprintTrendProjectionSyncStage`) calls `ComputeProjectionsAsync()`.
-2. **`ComputeProjectionsAsync()` returns `Array.Empty<>()`** → `SprintMetricsProjections` table is never written to.
-3. **User loads Sprint Trends page** → `GetSprintTrendMetricsQueryHandler` calls `GetProjectionsAsync()`.
-4. **`GetProjectionsAsync()` queries `SprintMetricsProjections`** → table is empty → returns empty list.
-5. **Handler detects empty list** → triggers `ComputeProjectionsAsync()` again as fallback → same stub returns empty.
-6. **Handler returns `GetSprintTrendMetricsResponse { Success = true, Metrics = [] }`** → empty list, no error surfaced.
-7. **UI receives empty metrics list** → `_plannedCount`, `_workedCount`, etc. remain 0 → page shows zeroes.
-
-### What the previous implementation relied on
-
-The old `ComputeProjectionsAsync()` (described in `docs/reports/sprint-trends-vs-revisions-report.md`, generated 2026-02-10) queried these tables directly:
-- `RevisionHeaders` — one row per work-item revision snapshot (iteration path, state, effort, dates)
-- `RevisionFieldDeltas` — field-level change records for state-change detection
-- `RevisionRelationDeltas` — hierarchy links built by `RelationRevisionHydrator`
-- `ResolvedWorkItems` — product-hierarchy resolution output
-
-All four revision tables were **dropped** by migration `20260223221758_RemoveRevisionPersistenceSchema` (applied 2026-02-23).
-
-### What was removed
+### What was removed (historical)
 
 | Artifact | Removal event |
 |---|---|
@@ -196,18 +206,15 @@ All four revision tables were **dropped** by migration `20260223221758_RemoveRev
 | `RevisionModels` (OData DTOs) | Deleted |
 | `RealODataRevisionTfsClient` | Deleted |
 | `ODataRevisionQueryBuilder` | Deleted |
-| Logic body of `ComputeProjectionsAsync()` | Replaced with no-op stub |
+| `NoOpActivityEventSource` | Deleted |
 
-### What exists but is not yet connected
+### Test coverage
 
-| Artifact | Status |
-|---|---|
-| `ActivityEventLedgerEntries` table | ✅ Schema exists; data **is** being populated by `ActivityEventIngestionService` during sync Stage 2 |
-| `IActivityEventSource` interface | ✅ Defined in `PoTool.Core/Contracts/IActivityEventSource.cs` |
-| `NoOpActivityEventSource` | ✅ Registered as the `IActivityEventSource` implementation — returns `Array.Empty<ActivityEvent>()` unconditionally |
-| `SprintMetricsProjections` table | ✅ Schema exists; **always empty** because `ComputeProjectionsAsync()` is stubbed |
-| `SprintTrendProjectionSyncStage` | ✅ Wired in pipeline (Stage 6); calls `ComputeProjectionsAsync()` — but receives empty result from stub |
+| Test Class | Test Count | Scope |
+|---|---|---|
+| `SprintTrendProjectionServiceTests` | 29 | `ComputeProductSprintProjection`, `ComputeProgressionDelta`, `ComputeFeatureProgress`, `ComputeEpicProgress` |
+| `WorkItemResolutionServiceTests` | 6 | `ResolveAncestry` (all hierarchy patterns + circular reference safety) |
 
 ### Summary
 
-Sprint Trends returns empty because the **computation step** (`ComputeProjectionsAsync()`) is an explicit placeholder stub with marker comment `REPLACE_WITH_ACTIVITY_SOURCE`. The activity event data needed for the computation is being collected (`ActivityEventLedgerEntries` is populated by sync), but no implementation has yet been written to read from that table and produce sprint metrics projections. Until `ComputeProjectionsAsync()` is implemented using `ActivityEventLedgerEntries` as its source, `SprintMetricsProjections` will remain empty and the page will show all-zero metrics.
+Sprint Trends is fully functional. The feature reads activity events from `ActivityEventLedgerEntries` (populated by the sync pipeline), resolves work items into a product hierarchy via `ResolvedWorkItems`, and computes per-sprint per-product metrics stored in `SprintMetricsProjections`. The UI supports single-sprint and 10-sprint advanced mode with trend charts, feature/epic progress tables, approximate data warnings, and staleness detection with a recompute button.
