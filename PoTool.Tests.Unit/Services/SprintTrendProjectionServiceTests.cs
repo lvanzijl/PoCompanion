@@ -651,6 +651,110 @@ public class SprintTrendProjectionServiceTests
 
     #endregion
 
+    #region Activity Bubbling and Planned Tests
+
+    [TestMethod]
+    public void ComputeProductSprintProjection_ActivityBubblesUpToParentFeature()
+    {
+        // When a Task under a PBI under a Feature has activity, the Feature should count as "worked"
+        var sprint = CreateSprint(1, "Sprint 1");
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1, ResolvedSprintId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100, ResolvedSprintId = 1 },
+            new() { WorkItemId = 301, WorkItemType = WorkItemType.Task, ResolvedProductId = 1, ResolvedFeatureId = 100, ResolvedSprintId = 1 },
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 50, state: "Active", parentId: 100),
+            [301] = CreateWorkItem(301, WorkItemType.Task, "Task 1", state: "Active", parentId: 201),
+        };
+
+        // Only the task has activity — should bubble up to PBI and Feature
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [301] = new() { CreateStateChangeActivity(301, sprintStart.AddDays(3), "New", "Active") }
+        };
+
+        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
+
+        // Feature and PBI should both count as "worked" due to child activity
+        Assert.IsGreaterThanOrEqualTo(result.WorkedCount, 2, "WorkedCount should include Feature and PBI due to task child activity");
+    }
+
+    [TestMethod]
+    public void ComputeProductSprintProjection_PlannedCount_MatchesResolvedSprint()
+    {
+        var sprint = CreateSprint(1, "Sprint 1");
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            // 2 PBIs resolved to sprint 1, 1 PBI resolved to sprint 2, 1 bug resolved to sprint 1
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedSprintId = 1 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedSprintId = 1 },
+            new() { WorkItemId = 203, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedSprintId = 2 },
+            new() { WorkItemId = 204, WorkItemType = WorkItemType.Bug, ResolvedProductId = 1, ResolvedSprintId = 1 },
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 30, state: "Active"),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "PBI 2", effort: 20, state: "Active"),
+            [203] = CreateWorkItem(203, WorkItemType.Pbi, "PBI 3", effort: 10, state: "Active"),
+            [204] = CreateWorkItem(204, WorkItemType.Bug, "Bug 1", state: "Active"),
+        };
+
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>();
+
+        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
+
+        Assert.AreEqual(2, result.PlannedCount, "PlannedCount should be 2 (only PBIs resolved to sprint 1)");
+        Assert.AreEqual(50, result.PlannedEffort, "PlannedEffort should be 30+20=50");
+        Assert.AreEqual(1, result.BugsPlannedCount, "BugsPlannedCount should be 1 (bug resolved to sprint 1)");
+    }
+
+    [TestMethod]
+    public void ComputeProductSprintProjection_NoActivity_ReturnsZeroWorked()
+    {
+        var sprint = CreateSprint(1, "Sprint 1");
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1, ResolvedSprintId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100, ResolvedSprintId = 1 },
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 50, state: "Active", parentId: 100),
+        };
+
+        // No activity events at all
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>();
+
+        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
+
+        Assert.AreEqual(0, result.WorkedCount, "WorkedCount should be 0 with no activity");
+        Assert.AreEqual(0, result.CompletedPbiCount, "CompletedPbiCount should be 0");
+        Assert.AreEqual(0, result.BugsCreatedCount, "BugsCreatedCount should be 0");
+        Assert.AreEqual(0, result.BugsClosedCount, "BugsClosedCount should be 0");
+    }
+
+    #endregion
+
     // Helper methods
 
     private static SprintEntity CreateSprint(int id, string name)
