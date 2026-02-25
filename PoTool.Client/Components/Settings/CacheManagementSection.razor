@@ -120,6 +120,167 @@
         }
     </MudPaper>
 
+    @* ── Activity Ledger Validation ── *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.FactCheck" Color="Color.Info" />
+            <MudText Typo="Typo.h6">Activity Ledger Validation</MudText>
+        </MudStack>
+
+        <MudText Typo="Typo.body2" Class="mb-3" Style="color: var(--mud-palette-text-secondary);">
+            Cache inspection only. Reads persisted activity events and cached work items. No TFS calls.
+        </MudText>
+
+        <MudGrid Spacing="2" Class="mb-3">
+            <MudItem xs="12" sm="4">
+                <MudNumericField T="int?" Label="Work Item ID"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Required="true"
+                                 Min="1"
+                                 @bind-Value="_validationWorkItemId" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudDatePicker Label="From Changed Date"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Clearable="true"
+                               @bind-Date="_validationFromDate" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudDatePicker Label="To Changed Date"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Clearable="true"
+                               @bind-Date="_validationToDate" />
+            </MudItem>
+        </MudGrid>
+
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Search"
+                   Disabled="@(_validationLoading || !_validationWorkItemId.HasValue || _validationWorkItemId.Value <= 0)"
+                   OnClick="LoadActivityLedgerValidationAsync">
+            Load Activity Ledger
+        </MudButton>
+
+        @if (_validationLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-3" />
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_validationError))
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-3">
+                @_validationError
+            </MudAlert>
+        }
+
+        @if (_validationResult != null)
+        {
+            <MudDivider Class="my-3" />
+
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Current Cached Snapshot</MudText>
+            @if (_validationResult.Snapshot == null)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+                    Work item not found in cache.
+                </MudAlert>
+            }
+            else
+            {
+                <MudSimpleTable Dense="true" Bordered="true" Striped="true" Class="mb-3">
+                    <tbody>
+                        <tr><td>Title</td><td>@_validationResult.Snapshot.Title</td></tr>
+                        <tr><td>Type</td><td>@_validationResult.Snapshot.Type</td></tr>
+                        <tr><td>State</td><td>@_validationResult.Snapshot.State</td></tr>
+                        <tr><td>Assigned To</td><td>@(_validationResult.Snapshot.AssignedTo ?? "Unknown")</td></tr>
+                        <tr><td>Current Iteration</td><td>@(_validationResult.Snapshot.CurrentIterationPath ?? "Unknown")</td></tr>
+                        <tr><td>Parent / Feature / Epic</td><td>@FormatHierarchyChain(_validationResult.Snapshot)</td></tr>
+                        <tr><td>Last ChangedDate</td><td>@(_validationResult.Snapshot.LastChangedDate?.LocalDateTime.ToString("g") ?? "Unknown")</td></tr>
+                    </tbody>
+                </MudSimpleTable>
+            }
+
+            var totalEvents = _validationResult.SprintGroups.Sum(g => g.TotalEventCount) + _validationResult.UnknownSprintEvents.Count;
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Sprint Grouped Activity</MudText>
+            @if (totalEvents == 0)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    No activity recorded in cache.
+                </MudAlert>
+            }
+            else
+            {
+                @foreach (var sprintGroup in _validationResult.SprintGroups)
+                {
+                    <MudPaper Outlined="true" Class="pa-3 mb-3">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.subtitle2">@sprintGroup.SprintName</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@($"{sprintGroup.TotalEventCount} events")</MudChip>
+                        </MudStack>
+                        <MudText Typo="Typo.caption" Class="d-block mb-2" Style="color: var(--mud-palette-text-secondary);">
+                            @($"{sprintGroup.SprintStart?.LocalDateTime.ToString("d") ?? "Unknown"} - {sprintGroup.SprintEnd?.LocalDateTime.ToString("d") ?? "Unknown"}")
+                        </MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mb-2" Style="color: var(--mud-palette-text-secondary);">
+                            @($"Distinct fields touched: {sprintGroup.DistinctFieldsTouchedCount} | Distinct users: {sprintGroup.DistinctUsersCount}")
+                        </MudText>
+                        <MudTable Items="@sprintGroup.Events" Dense="true" Hover="true" Striped="true" Virtualize="true" Height="300px">
+                            <HeaderContent>
+                                <MudTh>Timestamp</MudTh>
+                                <MudTh>Changed By</MudTh>
+                                <MudTh>Field</MudTh>
+                                <MudTh>Old → New</MudTh>
+                                <MudTh>Iteration Path At Time</MudTh>
+                                <MudTh>Parent / Feature / Epic</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Timestamp">@context.Timestamp.LocalDateTime.ToString("g")</MudTd>
+                                <MudTd DataLabel="Changed By">@(context.ChangedBy ?? "Unknown")</MudTd>
+                                <MudTd DataLabel="Field">@context.FieldRefName</MudTd>
+                                <MudTd DataLabel="Old/New">@FormatValueTransition(context.OldValue, context.NewValue)</MudTd>
+                                <MudTd DataLabel="Iteration">@context.IterationPathAtTime</MudTd>
+                                <MudTd DataLabel="Hierarchy">@FormatHierarchyAtTime(context)</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </MudPaper>
+                }
+
+                @if (_validationResult.UnknownSprintEvents.Count > 0)
+                {
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
+                            <MudText Typo="Typo.subtitle2">Unknown / Not Configured Sprint</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">@($"{_validationResult.UnknownSprintEvents.Count} events")</MudChip>
+                        </MudStack>
+                        <MudTable Items="@_validationResult.UnknownSprintEvents" Dense="true" Hover="true" Striped="true" Virtualize="true" Height="300px">
+                            <HeaderContent>
+                                <MudTh>Timestamp</MudTh>
+                                <MudTh>Changed By</MudTh>
+                                <MudTh>Field</MudTh>
+                                <MudTh>Old → New</MudTh>
+                                <MudTh>Iteration Path At Time</MudTh>
+                                <MudTh>Parent / Feature / Epic</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Timestamp">@context.Timestamp.LocalDateTime.ToString("g")</MudTd>
+                                <MudTd DataLabel="Changed By">@(context.ChangedBy ?? "Unknown")</MudTd>
+                                <MudTd DataLabel="Field">@context.FieldRefName</MudTd>
+                                <MudTd DataLabel="Old/New">@FormatValueTransition(context.OldValue, context.NewValue)</MudTd>
+                                <MudTd DataLabel="Iteration">
+                                    <MudText Typo="Typo.body2" Color="Color.Warning">@context.IterationPathAtTime</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Hierarchy">@FormatHierarchyAtTime(context)</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </MudPaper>
+                }
+            }
+        }
+    </MudPaper>
+
 </div>
 
 @code {
@@ -134,6 +295,14 @@
     private readonly HashSet<string> _selectedTypes = new();
     private bool _resetting;
     private CacheResetResponse? _resetResult;
+
+    // Activity ledger validation
+    private int? _validationWorkItemId;
+    private DateTime? _validationFromDate;
+    private DateTime? _validationToDate;
+    private bool _validationLoading;
+    private string? _validationError;
+    private ActivityLedgerValidationDto? _validationResult;
 
 
     protected override async Task OnInitializedAsync()
@@ -227,6 +396,68 @@
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small };
         var result = await DialogService.ShowMessageBox(title, message, yesText: "Reset", cancelText: "Cancel");
         return result == true;
+    }
+
+    private async Task LoadActivityLedgerValidationAsync()
+    {
+        if (!_validationWorkItemId.HasValue || _validationWorkItemId.Value <= 0)
+        {
+            return;
+        }
+
+        _validationLoading = true;
+        _validationError = null;
+        _validationResult = null;
+
+        var fromChangedDate = _validationFromDate.HasValue
+            ? new DateTimeOffset(DateTime.SpecifyKind(_validationFromDate.Value.Date, DateTimeKind.Utc))
+            : (DateTimeOffset?)null;
+        var toChangedDate = _validationToDate.HasValue
+            ? new DateTimeOffset(DateTime.SpecifyKind(_validationToDate.Value.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc))
+            : (DateTimeOffset?)null;
+
+        try
+        {
+            _validationResult = await CacheSyncService.GetActivityLedgerValidationAsync(
+                ProductOwnerId,
+                _validationWorkItemId.Value,
+                fromChangedDate,
+                toChangedDate);
+
+            if (_validationResult == null)
+            {
+                _validationError = "Unable to load activity ledger validation data.";
+            }
+        }
+        finally
+        {
+            _validationLoading = false;
+        }
+    }
+
+    private static string FormatHierarchyChain(CachedWorkItemSnapshotDto snapshot)
+    {
+        return $"Parent: {FormatNode(snapshot.ParentId, snapshot.ParentTitle)} | Feature: {FormatNode(snapshot.FeatureId, snapshot.FeatureTitle)} | Epic: {FormatNode(snapshot.EpicId, snapshot.EpicTitle)}";
+    }
+
+    private static string FormatHierarchyAtTime(ActivityLedgerEventDto evt)
+    {
+        return $"Parent: {evt.ParentIdAtTime?.ToString() ?? "-"} | Feature: {evt.FeatureIdAtTime?.ToString() ?? "-"} | Epic: {evt.EpicIdAtTime?.ToString() ?? "-"}";
+    }
+
+    private static string FormatValueTransition(string? oldValue, string? newValue)
+    {
+        return $"{(string.IsNullOrWhiteSpace(oldValue) ? "∅" : oldValue)} → {(string.IsNullOrWhiteSpace(newValue) ? "∅" : newValue)}";
+    }
+
+    private static string FormatNode(int? id, string? title)
+    {
+        if (!id.HasValue)
+        {
+            return "-";
+        }
+
+        return string.IsNullOrWhiteSpace(title) ? id.Value.ToString() : $"{id.Value} ({title})";
     }
 
     private static Color GetStatusColor(CacheSyncStatusDto status)
