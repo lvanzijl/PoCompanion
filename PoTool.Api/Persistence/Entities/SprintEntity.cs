@@ -49,10 +49,20 @@ public class SprintEntity
     public DateTimeOffset? StartUtc { get; set; }
 
     /// <summary>
+    /// Sprint start date as UTC DateTime used for SQLite-translatable predicates/sorting.
+    /// </summary>
+    public DateTime? StartDateUtc { get; set; }
+
+    /// <summary>
     /// Sprint end date (UTC).
     /// Nullable because TFS may not provide attributes for all iterations.
     /// </summary>
     public DateTimeOffset? EndUtc { get; set; }
+
+    /// <summary>
+    /// Sprint end date as UTC DateTime used for SQLite-translatable predicates/sorting.
+    /// </summary>
+    public DateTime? EndDateUtc { get; set; }
 
     /// <summary>
     /// Time frame indicator from TFS: "past", "current", or "future".
@@ -66,6 +76,12 @@ public class SprintEntity
     /// </summary>
     [Required]
     public DateTimeOffset LastSyncedUtc { get; set; } = DateTimeOffset.UtcNow;
+
+    /// <summary>
+    /// Last synced timestamp as UTC DateTime used for SQLite-translatable predicates/sorting.
+    /// </summary>
+    [Required]
+    public DateTime LastSyncedDateUtc { get; set; } = DateTime.UtcNow;
 
     /// <summary>
     /// Navigation property to the Team.

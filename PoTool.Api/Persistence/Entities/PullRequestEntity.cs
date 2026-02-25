@@ -52,6 +52,12 @@ public class PullRequestEntity
     public DateTimeOffset CreatedDate { get; set; }
 
     /// <summary>
+    /// UTC created date used in SQLite-translatable predicates/sorting.
+    /// </summary>
+    [Required]
+    public DateTime CreatedDateUtc { get; set; }
+
+    /// <summary>
     /// Date when PR was completed (nullable if still active).
     /// </summary>
     public DateTimeOffset? CompletedDate { get; set; }

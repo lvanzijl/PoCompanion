@@ -176,7 +176,9 @@ public class WorkItemSyncStage : ISyncStage
         entity.Tags = dto.Tags;
         entity.IsBlocked = dto.IsBlocked;
         entity.Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null;
-        entity.TfsChangedDate = dto.ChangedDate ?? dto.RetrievedAt;
+        var changedDate = dto.ChangedDate ?? dto.RetrievedAt;
+        entity.TfsChangedDate = changedDate;
+        entity.TfsChangedDateUtc = changedDate.UtcDateTime;
     }
 
     private static WorkItemEntity MapToEntity(WorkItemDto dto)
@@ -200,7 +202,8 @@ public class WorkItemSyncStage : ISyncStage
             Tags = dto.Tags,
             IsBlocked = dto.IsBlocked,
             Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null,
-            TfsChangedDate = dto.ChangedDate ?? dto.RetrievedAt
+            TfsChangedDate = dto.ChangedDate ?? dto.RetrievedAt,
+            TfsChangedDateUtc = (dto.ChangedDate ?? dto.RetrievedAt).UtcDateTime
         };
     }
 }

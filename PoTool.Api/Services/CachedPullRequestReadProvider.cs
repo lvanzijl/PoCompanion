@@ -35,7 +35,8 @@ public sealed class CachedPullRequestReadProvider : IPullRequestReadProvider
 
         if (fromDate.HasValue)
         {
-            query = query.Where(pr => pr.CreatedDate >= fromDate.Value);
+            var fromDateUtc = fromDate.Value.UtcDateTime;
+            query = query.Where(pr => pr.CreatedDateUtc >= fromDateUtc);
         }
 
         var entities = await query.ToListAsync(cancellationToken);
@@ -57,14 +58,14 @@ public sealed class CachedPullRequestReadProvider : IPullRequestReadProvider
             query = query.Where(pr => pr.ProductId.HasValue && productIds.Contains(pr.ProductId.Value));
         }
 
-      var entities = await query.ToListAsync(cancellationToken);
-
-      if (fromDate.HasValue)
+        if (fromDate.HasValue)
         {
-         entities = entities.Where(pr => pr.CreatedDate >= fromDate.Value).ToList();
+            var fromDateUtc = fromDate.Value.UtcDateTime;
+            query = query.Where(pr => pr.CreatedDateUtc >= fromDateUtc);
         }
 
-        
+        var entities = await query.ToListAsync(cancellationToken);
+
         return entities.Select(MapToDto);
     }
 

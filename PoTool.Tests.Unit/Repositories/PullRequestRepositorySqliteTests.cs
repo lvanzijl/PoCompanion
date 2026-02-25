@@ -48,8 +48,8 @@ public class PullRequestRepositorySqliteTests
     /// Prior to fix, this would fail with:
     /// "The LINQ expression ... OrderBy(p => p.CreatedDate.Ticks) could not be translated..."
     /// 
-    /// Fix: Changed from OrderBy(c => c.CreatedDate.Ticks) to 
-    ///      OrderBy(c => c.CreatedDate).ThenBy(c => c.InternalId)
+    /// Fix: Changed from DateTimeOffset-based ordering to
+    ///      OrderBy(c => c.CreatedDateUtc).ThenBy(c => c.InternalId)
     /// </summary>
     [TestMethod]
     public async Task GetCommentsAsync_WithSqlite_TranslatesQuerySuccessfully()
@@ -62,6 +62,7 @@ public class PullRequestRepositorySqliteTests
             Title = "Test PR",
             CreatedBy = "TestUser",
             CreatedDate = DateTimeOffset.UtcNow,
+            CreatedDateUtc = DateTime.UtcNow,
             Status = "Active",
             IterationPath = "TestProject\\Sprint1",
             SourceBranch = "feature/test",
@@ -81,6 +82,7 @@ public class PullRequestRepositorySqliteTests
             Author = "User1",
             Content = "First comment",
             CreatedDate = baseTime,
+            CreatedDateUtc = baseTime.UtcDateTime,
             IsResolved = false
         };
         var comment2 = new PullRequestCommentEntity
@@ -91,6 +93,7 @@ public class PullRequestRepositorySqliteTests
             Author = "User2",
             Content = "Second comment",
             CreatedDate = baseTime.AddSeconds(10),
+            CreatedDateUtc = baseTime.AddSeconds(10).UtcDateTime,
             IsResolved = false
         };
         var comment3 = new PullRequestCommentEntity
@@ -101,6 +104,7 @@ public class PullRequestRepositorySqliteTests
             Author = "User3",
             Content = "Third comment",
             CreatedDate = baseTime.AddSeconds(5),
+            CreatedDateUtc = baseTime.AddSeconds(5).UtcDateTime,
             IsResolved = false
         };
 
@@ -134,6 +138,7 @@ public class PullRequestRepositorySqliteTests
             Title = "Test PR 2",
             CreatedBy = "TestUser",
             CreatedDate = DateTimeOffset.UtcNow,
+            CreatedDateUtc = DateTime.UtcNow,
             Status = "Active",
             IterationPath = "TestProject\\Sprint1",
             SourceBranch = "feature/test",
@@ -155,6 +160,7 @@ public class PullRequestRepositorySqliteTests
                 Author = "User1",
                 Content = "Comment A",
                 CreatedDate = sameTime,
+                CreatedDateUtc = sameTime.UtcDateTime,
                 IsResolved = false
             },
             new PullRequestCommentEntity
@@ -165,6 +171,7 @@ public class PullRequestRepositorySqliteTests
                 Author = "User2",
                 Content = "Comment B",
                 CreatedDate = sameTime,
+                CreatedDateUtc = sameTime.UtcDateTime,
                 IsResolved = false
             },
             new PullRequestCommentEntity
@@ -175,6 +182,7 @@ public class PullRequestRepositorySqliteTests
                 Author = "User3",
                 Content = "Comment C",
                 CreatedDate = sameTime,
+                CreatedDateUtc = sameTime.UtcDateTime,
                 IsResolved = false
             }
         };

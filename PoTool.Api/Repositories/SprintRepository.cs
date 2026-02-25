@@ -21,36 +21,30 @@ public class SprintRepository : ISprintRepository
     /// <inheritdoc />
     public async Task<IEnumerable<SprintDto>> GetAllSprintsAsync(CancellationToken cancellationToken = default)
     {
-        // Load all sprints into memory first (SQLite doesn't support DateTimeOffset in ORDER BY)
         var entities = await _context.Sprints
-            .ToListAsync(cancellationToken);
-
-        // Sort in memory: sprints with dates first (by StartUtc), then sprints without dates (by Name)
-        return entities
-            .OrderBy(s => s.StartUtc ?? DateTimeOffset.MaxValue)
+            .OrderBy(s => s.StartDateUtc == null)
+            .ThenBy(s => s.StartDateUtc)
             .ThenBy(s => s.Name)
-            .Select(MapToDto);
+            .ToListAsync(cancellationToken);
+        return entities.Select(MapToDto);
     }
 
     /// <inheritdoc />
     public async Task<IEnumerable<SprintDto>> GetSprintsForTeamAsync(int teamId, CancellationToken cancellationToken = default)
     {
-        // Load sprints for team into memory first (SQLite doesn't support DateTimeOffset in ORDER BY)
         var entities = await _context.Sprints
             .Where(s => s.TeamId == teamId)
-            .ToListAsync(cancellationToken);
-
-        // Sort in memory: sprints with dates first (by StartUtc), then sprints without dates (by Name)
-        return entities
-            .OrderBy(s => s.StartUtc ?? DateTimeOffset.MaxValue)
+            .OrderBy(s => s.StartDateUtc == null)
+            .ThenBy(s => s.StartDateUtc)
             .ThenBy(s => s.Name)
-            .Select(MapToDto);
+            .ToListAsync(cancellationToken);
+        return entities.Select(MapToDto);
     }
 
     /// <inheritdoc />
     public async Task<SprintDto?> GetCurrentSprintForTeamAsync(int teamId, CancellationToken cancellationToken = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var nowUtc = DateTime.UtcNow;
 
         // Prefer timeFrame="current"
         var currentByTimeFrame = await _context.Sprints
@@ -64,11 +58,11 @@ public class SprintRepository : ISprintRepository
 
         // Fallback: find sprint by date range (start <= now < end)
         var currentByDate = await _context.Sprints
-            .Where(s => s.TeamId == teamId
-                && s.StartUtc.HasValue
-                && s.EndUtc.HasValue
-                && s.StartUtc <= now
-                && s.EndUtc > now)
+                .Where(s => s.TeamId == teamId
+                && s.StartDateUtc.HasValue
+                && s.EndDateUtc.HasValue
+                && s.StartDateUtc <= nowUtc
+                && s.EndDateUtc > nowUtc)
             .FirstOrDefaultAsync(cancellationToken);
 
         return currentByDate == null ? null : MapToDto(currentByDate);
@@ -77,12 +71,12 @@ public class SprintRepository : ISprintRepository
     /// <inheritdoc />
     public async Task<SprintDto?> GetNextSprintForTeamAsync(int teamId, CancellationToken cancellationToken = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var nowUtc = DateTime.UtcNow;
 
         // Prefer earliest timeFrame="future" by start date
         var futureByTimeFrame = await _context.Sprints
-            .Where(s => s.TeamId == teamId && s.TimeFrame == "future" && s.StartUtc.HasValue)
-            .OrderBy(s => s.StartUtc)
+            .Where(s => s.TeamId == teamId && s.TimeFrame == "future" && s.StartDateUtc.HasValue)
+            .OrderBy(s => s.StartDateUtc)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (futureByTimeFrame != null)
@@ -92,8 +86,8 @@ public class SprintRepository : ISprintRepository
 
         // Fallback: find earliest sprint with start date in the future
         var futureByDate = await _context.Sprints
-            .Where(s => s.TeamId == teamId && s.StartUtc.HasValue && s.StartUtc > now)
-            .OrderBy(s => s.StartUtc)
+            .Where(s => s.TeamId == teamId && s.StartDateUtc.HasValue && s.StartDateUtc > nowUtc)
+            .OrderBy(s => s.StartDateUtc)
             .FirstOrDefaultAsync(cancellationToken);
 
         return futureByDate == null ? null : MapToDto(futureByDate);
@@ -112,6 +106,7 @@ public class SprintRepository : ISprintRepository
         }
 
         var syncTime = DateTimeOffset.UtcNow;
+        var syncTimeUtc = syncTime.UtcDateTime;
 
         // Get all existing sprints for this team
         var existingSprints = await _context.Sprints
@@ -130,8 +125,11 @@ public class SprintRepository : ISprintRepository
                 existing.Name = iteration.Name;
                 existing.StartUtc = iteration.StartDate;
                 existing.EndUtc = iteration.FinishDate;
+                existing.StartDateUtc = iteration.StartDate?.UtcDateTime;
+                existing.EndDateUtc = iteration.FinishDate?.UtcDateTime;
                 existing.TimeFrame = iteration.TimeFrame;
                 existing.LastSyncedUtc = syncTime;
+                existing.LastSyncedDateUtc = syncTimeUtc;
             }
             else
             {
@@ -144,8 +142,11 @@ public class SprintRepository : ISprintRepository
                     Name = iteration.Name,
                     StartUtc = iteration.StartDate,
                     EndUtc = iteration.FinishDate,
+                    StartDateUtc = iteration.StartDate?.UtcDateTime,
+                    EndDateUtc = iteration.FinishDate?.UtcDateTime,
                     TimeFrame = iteration.TimeFrame,
-                    LastSyncedUtc = syncTime
+                    LastSyncedUtc = syncTime,
+                    LastSyncedDateUtc = syncTimeUtc
                 };
                 _context.Sprints.Add(newSprint);
             }
@@ -170,7 +171,7 @@ public class SprintRepository : ISprintRepository
         CancellationToken cancellationToken = default)
     {
         var staleSprints = await _context.Sprints
-            .Where(s => s.TeamId == teamId && s.LastSyncedUtc < olderThan)
+            .Where(s => s.TeamId == teamId && s.LastSyncedDateUtc < olderThan.UtcDateTime)
             .ToListAsync(cancellationToken);
 
         if (staleSprints.Any())

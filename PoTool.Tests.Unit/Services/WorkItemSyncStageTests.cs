@@ -75,5 +75,6 @@ public class WorkItemSyncStageTests
 
         var entity = await dbContext.WorkItems.FirstAsync(w => w.TfsId == 1);
         Assert.AreEqual(workItems[0].ChangedDate, entity.TfsChangedDate);
+        Assert.AreEqual(workItems[0].ChangedDate?.UtcDateTime, entity.TfsChangedDateUtc);
     }
 }

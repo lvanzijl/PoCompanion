@@ -51,6 +51,12 @@ public class PullRequestCommentEntity
     public DateTimeOffset CreatedDate { get; set; }
 
     /// <summary>
+    /// UTC created date used in SQLite-translatable predicates/sorting.
+    /// </summary>
+    [Required]
+    public DateTime CreatedDateUtc { get; set; }
+
+    /// <summary>
     /// Date when comment was last updated (nullable).
     /// </summary>
     public DateTimeOffset? UpdatedDate { get; set; }
