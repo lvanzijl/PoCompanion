@@ -391,6 +391,73 @@
             </MudPaper>
         }
 
+        @* Epic Progress Table *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="mr-2" />
+                Epic Progress
+            </MudText>
+            
+            @if (_epicProgress.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    No epic progress data available.
+                    Epics are aggregated from child Feature progress.
+                </MudAlert>
+            }
+            else
+            {
+                <MudSimpleTable Dense="true" Striped="true" Hover="true">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Epic</th>
+                            <th style="width: 200px;">Progress</th>
+                            <th style="width: 120px; text-align: right;">Done / Total</th>
+                            <th style="width: 120px; text-align: right;">Features</th>
+                            <th style="width: 60px; text-align: center;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var epic in _epicProgress)
+                        {
+                            <tr>
+                                <td>
+                                    <MudText Typo="Typo.body2">
+                                        @GetProductName(epic.ProductId)
+                                    </MudText>
+                                </td>
+                                <td>
+                                    <MudText Typo="Typo.body2"><strong>@epic.EpicTitle</strong></MudText>
+                                </td>
+                                <td>
+                                    <MudProgressLinear Color="@GetProgressColor(epic.ProgressPercent)"
+                                                      Value="@epic.ProgressPercent"
+                                                      Max="100" />
+                                </td>
+                                <td style="text-align: right;">
+                                    <MudText Typo="Typo.body2">@epic.DoneEffort / @epic.TotalEffort</MudText>
+                                </td>
+                                <td style="text-align: right;">
+                                    <MudText Typo="Typo.body2">@epic.DoneFeatureCount / @epic.FeatureCount done</MudText>
+                                </td>
+                                <td style="text-align: center;">
+                                    @if (epic.IsDone)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.body2">@epic.ProgressPercent%</MudText>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+        </MudPaper>
+
         @* Phase 3: Feature/Epic Progress Table *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudText Typo="Typo.h6" Class="mb-3">
@@ -524,6 +591,7 @@
     
     // Feature progress (Phase 3)
     private List<FeatureProgressDto> _featureProgress = new();
+    private List<EpicProgressDto> _epicProgress = new();
     
     // Trend data (Phase 2)
     private List<SprintTrendMetricsDto> _trendMetrics = new();
@@ -747,6 +815,7 @@
         _approximateProducts.Clear();
         _productMetrics.Clear();
         _featureProgress.Clear();
+        _epicProgress.Clear();
         _trendMetrics.Clear();
         _progressionChartSeries.Clear();
         _completedPbiCountChartSeries.Clear();
@@ -758,6 +827,7 @@
     private void BuildFeatureProgress(GetSprintTrendMetricsResponse? response)
     {
         _featureProgress.Clear();
+        _epicProgress.Clear();
         
         if (response?.FeatureProgress == null || response.FeatureProgress.Count == 0)
             return;
@@ -768,6 +838,14 @@
             : response.FeatureProgress.ToList();
         
         _featureProgress = features;
+
+        // Build epic progress
+        if (response.EpicProgress != null && response.EpicProgress.Count > 0)
+        {
+            _epicProgress = _selectedProductId.HasValue
+                ? response.EpicProgress.Where(e => e.ProductId == _selectedProductId.Value).ToList()
+                : response.EpicProgress.ToList();
+        }
     }
 
     private void BuildTrendCharts()

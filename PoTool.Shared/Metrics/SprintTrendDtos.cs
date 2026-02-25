@@ -223,6 +223,11 @@ public record GetSprintTrendMetricsResponse
     /// Populated for the current (or most recent) sprint in the request.
     /// </summary>
     public IReadOnlyList<FeatureProgressDto>? FeatureProgress { get; init; }
+
+    /// <summary>
+    /// Epic-level progress derived from child Feature progress.
+    /// </summary>
+    public IReadOnlyList<EpicProgressDto>? EpicProgress { get; init; }
 }
 
 /// <summary>
@@ -273,6 +278,60 @@ public record FeatureProgressDto
 
     /// <summary>
     /// Whether the feature is in Done state.
+    /// </summary>
+    public bool IsDone { get; init; }
+}
+
+/// <summary>
+/// DTO for epic-level progress information.
+/// Epic progress is derived from effort-weighted child Feature completion.
+/// </summary>
+public record EpicProgressDto
+{
+    /// <summary>
+    /// Epic TFS ID.
+    /// </summary>
+    public required int EpicId { get; init; }
+
+    /// <summary>
+    /// Epic title.
+    /// </summary>
+    public required string EpicTitle { get; init; }
+
+    /// <summary>
+    /// Product ID.
+    /// </summary>
+    public required int ProductId { get; init; }
+
+    /// <summary>
+    /// Progress percentage (0-100).
+    /// Derived from effort-weighted child Feature completion.
+    /// Epic.State == Done => 100%, otherwise min(raw, 90%).
+    /// </summary>
+    public int ProgressPercent { get; init; }
+
+    /// <summary>
+    /// Total effort of all PBIs under this epic's features.
+    /// </summary>
+    public int TotalEffort { get; init; }
+
+    /// <summary>
+    /// Effort of done PBIs under this epic's features.
+    /// </summary>
+    public int DoneEffort { get; init; }
+
+    /// <summary>
+    /// Number of child features under this epic.
+    /// </summary>
+    public int FeatureCount { get; init; }
+
+    /// <summary>
+    /// Number of child features that are done.
+    /// </summary>
+    public int DoneFeatureCount { get; init; }
+
+    /// <summary>
+    /// Whether the epic is in Done state.
     /// </summary>
     public bool IsDone { get; init; }
 }

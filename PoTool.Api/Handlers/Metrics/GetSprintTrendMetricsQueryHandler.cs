@@ -156,11 +156,18 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                 query.ProductOwnerId,
                 cancellationToken);
 
+            // Compute epic progress from feature progress
+            var epicProgress = await _projectionService.ComputeEpicProgressAsync(
+                query.ProductOwnerId,
+                featureProgress,
+                cancellationToken);
+
             return new GetSprintTrendMetricsResponse
             {
                 Success = true,
                 Metrics = metricsBySprint,
-                FeatureProgress = featureProgress
+                FeatureProgress = featureProgress,
+                EpicProgress = epicProgress
             };
         }
         catch (Exception ex)

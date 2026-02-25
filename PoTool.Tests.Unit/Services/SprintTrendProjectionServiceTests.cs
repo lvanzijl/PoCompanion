@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.WorkItems;
+using PoTool.Shared.Metrics;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -408,6 +409,152 @@ public class SprintTrendProjectionServiceTests
         Assert.AreEqual(20, result[0].TotalEffort, "Total should use sibling average for missing effort");
         Assert.AreEqual(10, result[0].DoneEffort);
         Assert.AreEqual(50, result[0].ProgressPercent);
+    }
+
+    #endregion
+
+    #region ComputeEpicProgress Tests
+
+    [TestMethod]
+    public void ComputeEpicProgress_AggregatesFromChildFeatures()
+    {
+        var featureProgress = new List<FeatureProgressDto>
+        {
+            new()
+            {
+                FeatureId = 200,
+                FeatureTitle = "Feature A",
+                EpicId = 100,
+                EpicTitle = "Epic X",
+                ProductId = 1,
+                ProgressPercent = 50,
+                TotalEffort = 20,
+                DoneEffort = 10,
+                IsDone = false
+            },
+            new()
+            {
+                FeatureId = 201,
+                FeatureTitle = "Feature B",
+                EpicId = 100,
+                EpicTitle = "Epic X",
+                ProductId = 1,
+                ProgressPercent = 80,
+                TotalEffort = 10,
+                DoneEffort = 8,
+                IsDone = false
+            }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Epic, "Epic X", state: "Active"),
+        };
+        var resolvedItems = new List<ResolvedWorkItemEntity>();
+
+        var result = SprintTrendProjectionService.ComputeEpicProgress(featureProgress, resolvedItems, workItems);
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(100, result[0].EpicId);
+        Assert.AreEqual("Epic X", result[0].EpicTitle);
+        Assert.AreEqual(30, result[0].TotalEffort, "Total effort should be 20+10=30");
+        Assert.AreEqual(18, result[0].DoneEffort, "Done effort should be 10+8=18");
+        Assert.AreEqual(60, result[0].ProgressPercent, "Progress should be ~60% (18/30)");
+        Assert.AreEqual(2, result[0].FeatureCount);
+        Assert.AreEqual(0, result[0].DoneFeatureCount);
+        Assert.IsFalse(result[0].IsDone);
+    }
+
+    [TestMethod]
+    public void ComputeEpicProgress_DoneEpic_Shows100Percent()
+    {
+        var featureProgress = new List<FeatureProgressDto>
+        {
+            new()
+            {
+                FeatureId = 200,
+                FeatureTitle = "Feature A",
+                EpicId = 100,
+                EpicTitle = "Done Epic",
+                ProductId = 1,
+                ProgressPercent = 50,
+                TotalEffort = 10,
+                DoneEffort = 5,
+                IsDone = false
+            }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Epic, "Done Epic", state: "Done"),
+        };
+        var resolvedItems = new List<ResolvedWorkItemEntity>();
+
+        var result = SprintTrendProjectionService.ComputeEpicProgress(featureProgress, resolvedItems, workItems);
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(100, result[0].ProgressPercent, "Done epic should show 100%");
+        Assert.IsTrue(result[0].IsDone);
+    }
+
+    [TestMethod]
+    public void ComputeEpicProgress_NonDoneEpic_CappedAt90Percent()
+    {
+        var featureProgress = new List<FeatureProgressDto>
+        {
+            new()
+            {
+                FeatureId = 200,
+                FeatureTitle = "Feature A",
+                EpicId = 100,
+                EpicTitle = "Active Epic",
+                ProductId = 1,
+                ProgressPercent = 90,
+                TotalEffort = 10,
+                DoneEffort = 10,
+                IsDone = true
+            }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Epic, "Active Epic", state: "Active"),
+        };
+        var resolvedItems = new List<ResolvedWorkItemEntity>();
+
+        var result = SprintTrendProjectionService.ComputeEpicProgress(featureProgress, resolvedItems, workItems);
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(90, result[0].ProgressPercent, "Non-done epic should be capped at 90%");
+        Assert.IsFalse(result[0].IsDone);
+        Assert.AreEqual(1, result[0].DoneFeatureCount);
+    }
+
+    [TestMethod]
+    public void ComputeEpicProgress_SkipsFeaturesWithoutEpic()
+    {
+        var featureProgress = new List<FeatureProgressDto>
+        {
+            new()
+            {
+                FeatureId = 200,
+                FeatureTitle = "Standalone Feature",
+                EpicId = null,
+                EpicTitle = null,
+                ProductId = 1,
+                ProgressPercent = 50,
+                TotalEffort = 10,
+                DoneEffort = 5,
+                IsDone = false
+            }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>();
+        var resolvedItems = new List<ResolvedWorkItemEntity>();
+
+        var result = SprintTrendProjectionService.ComputeEpicProgress(featureProgress, resolvedItems, workItems);
+
+        Assert.IsEmpty(result, "Features without epics should not produce epic progress");
     }
 
     #endregion

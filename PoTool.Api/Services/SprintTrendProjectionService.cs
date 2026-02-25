@@ -525,4 +525,94 @@ public class SprintTrendProjectionService
             .ThenBy(f => f.FeatureTitle)
             .ToList();
     }
+
+    /// <summary>
+    /// Computes Epic-level progress from Feature progress data.
+    /// Each Epic's progress is the effort-weighted completion of its child Features.
+    /// </summary>
+    internal static IReadOnlyList<EpicProgressDto> ComputeEpicProgress(
+        IReadOnlyList<FeatureProgressDto> featureProgress,
+        IReadOnlyList<ResolvedWorkItemEntity> resolvedItems,
+        IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId)
+    {
+        // Group features by their parent epic
+        var featuresByEpic = featureProgress
+            .Where(f => f.EpicId.HasValue)
+            .GroupBy(f => f.EpicId!.Value)
+            .ToList();
+
+        var results = new List<EpicProgressDto>();
+
+        foreach (var group in featuresByEpic)
+        {
+            var epicTfsId = group.Key;
+            if (!workItemsByTfsId.TryGetValue(epicTfsId, out var epicWi))
+                continue;
+
+            var features = group.ToList();
+            var totalEffort = features.Sum(f => f.TotalEffort);
+            var doneEffort = features.Sum(f => f.DoneEffort);
+            var doneFeatureCount = features.Count(f => f.IsDone);
+            var epicIsDone = string.Equals(epicWi.State, "Done", StringComparison.OrdinalIgnoreCase);
+            var rawPercent = totalEffort > 0 ? (int)Math.Round((double)doneEffort / totalEffort * 100) : 0;
+            var progressPercent = epicIsDone ? 100 : Math.Min(rawPercent, 90);
+
+            // Get the product ID from the first feature (all should share the same product)
+            var productId = features.First().ProductId;
+
+            results.Add(new EpicProgressDto
+            {
+                EpicId = epicTfsId,
+                EpicTitle = epicWi.Title,
+                ProductId = productId,
+                ProgressPercent = progressPercent,
+                TotalEffort = totalEffort,
+                DoneEffort = doneEffort,
+                FeatureCount = features.Count,
+                DoneFeatureCount = doneFeatureCount,
+                IsDone = epicIsDone
+            });
+        }
+
+        return results
+            .OrderByDescending(e => e.ProgressPercent)
+            .ThenBy(e => e.EpicTitle)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Computes Epic-level progress from the resolved work item hierarchy.
+    /// </summary>
+    public virtual async Task<IReadOnlyList<EpicProgressDto>> ComputeEpicProgressAsync(
+        int productOwnerId,
+        IReadOnlyList<FeatureProgressDto> featureProgress,
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+
+        var productIds = await context.Products
+            .Where(p => p.ProductOwnerId == productOwnerId)
+            .Select(p => p.Id)
+            .ToListAsync(cancellationToken);
+
+        if (productIds.Count == 0)
+        {
+            return Array.Empty<EpicProgressDto>();
+        }
+
+        var resolvedItems = await context.ResolvedWorkItems
+            .Where(r => r.ResolvedProductId != null && productIds.Contains(r.ResolvedProductId.Value))
+            .ToListAsync(cancellationToken);
+
+        var resolvedWorkItemIds = resolvedItems.Select(r => r.WorkItemId).ToHashSet();
+        var workItems = await context.WorkItems
+            .AsNoTracking()
+            .Where(w => resolvedWorkItemIds.Contains(w.TfsId))
+            .ToListAsync(cancellationToken);
+
+        var workItemsByTfsId = workItems.ToDictionary(w => w.TfsId, w => w);
+
+        return ComputeEpicProgress(featureProgress, resolvedItems, workItemsByTfsId);
+    }
 }
