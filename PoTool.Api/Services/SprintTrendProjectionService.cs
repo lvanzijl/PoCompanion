@@ -25,14 +25,14 @@ public class SprintTrendProjectionService
         IEnumerable<int> sprintIds,
         CancellationToken cancellationToken = default)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
-
         var sprintIdList = sprintIds.Distinct().ToList();
         if (sprintIdList.Count == 0)
         {
             return Array.Empty<SprintMetricsProjectionEntity>();
         }
+
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
 
         var productIds = await context.Products
             .Where(p => p.ProductOwnerId == productOwnerId)
