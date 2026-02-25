@@ -112,7 +112,14 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                         WorkedCount = p.WorkedCount,
                         WorkedEffort = p.WorkedEffort,
                         BugsPlannedCount = p.BugsPlannedCount,
-                        BugsWorkedCount = p.BugsWorkedCount
+                        BugsWorkedCount = p.BugsWorkedCount,
+                        CompletedPbiCount = p.CompletedPbiCount,
+                        CompletedPbiEffort = p.CompletedPbiEffort,
+                        ProgressionDelta = p.ProgressionDelta,
+                        BugsCreatedCount = p.BugsCreatedCount,
+                        BugsClosedCount = p.BugsClosedCount,
+                        MissingEffortCount = p.MissingEffortCount,
+                        IsApproximate = p.IsApproximate
                     }).ToList();
 
                     return new SprintTrendMetricsDto
@@ -127,7 +134,14 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                         TotalWorkedCount = g.Sum(p => p.WorkedCount),
                         TotalWorkedEffort = g.Sum(p => p.WorkedEffort),
                         TotalBugsPlannedCount = g.Sum(p => p.BugsPlannedCount),
-                        TotalBugsWorkedCount = g.Sum(p => p.BugsWorkedCount)
+                        TotalBugsWorkedCount = g.Sum(p => p.BugsWorkedCount),
+                        TotalCompletedPbiCount = g.Sum(p => p.CompletedPbiCount),
+                        TotalCompletedPbiEffort = g.Sum(p => p.CompletedPbiEffort),
+                        TotalProgressionDelta = g.Sum(p => p.ProgressionDelta),
+                        TotalBugsCreatedCount = g.Sum(p => p.BugsCreatedCount),
+                        TotalBugsClosedCount = g.Sum(p => p.BugsClosedCount),
+                        TotalMissingEffortCount = g.Sum(p => p.MissingEffortCount),
+                        IsApproximate = g.Any(p => p.IsApproximate)
                     };
                 })
                 .OrderBy(m => m.StartUtc ?? DateTimeOffset.MaxValue)

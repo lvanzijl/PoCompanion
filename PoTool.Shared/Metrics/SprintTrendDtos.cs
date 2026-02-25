@@ -59,6 +59,41 @@ public record SprintTrendMetricsDto
     /// Total bugs worked.
     /// </summary>
     public int TotalBugsWorkedCount { get; init; }
+
+    /// <summary>
+    /// Total PBIs completed (transitioned to Done) in this sprint.
+    /// </summary>
+    public int TotalCompletedPbiCount { get; init; }
+
+    /// <summary>
+    /// Total effort of completed PBIs in this sprint.
+    /// </summary>
+    public int TotalCompletedPbiEffort { get; init; }
+
+    /// <summary>
+    /// Aggregate progression delta across products.
+    /// </summary>
+    public double TotalProgressionDelta { get; init; }
+
+    /// <summary>
+    /// Total new bugs created during this sprint.
+    /// </summary>
+    public int TotalBugsCreatedCount { get; init; }
+
+    /// <summary>
+    /// Total bugs closed during this sprint.
+    /// </summary>
+    public int TotalBugsClosedCount { get; init; }
+
+    /// <summary>
+    /// Total PBIs with missing effort.
+    /// </summary>
+    public int TotalMissingEffortCount { get; init; }
+
+    /// <summary>
+    /// Whether any metric in this sprint used approximation.
+    /// </summary>
+    public bool IsApproximate { get; init; }
 }
 
 /// <summary>
@@ -105,6 +140,41 @@ public record ProductSprintMetricsDto
     /// Number of bugs with activity.
     /// </summary>
     public int BugsWorkedCount { get; init; }
+
+    /// <summary>
+    /// PBIs completed (transitioned to Done) in this sprint for this product.
+    /// </summary>
+    public int CompletedPbiCount { get; init; }
+
+    /// <summary>
+    /// Effort of completed PBIs in this sprint for this product.
+    /// </summary>
+    public int CompletedPbiEffort { get; init; }
+
+    /// <summary>
+    /// Progression delta for this product in this sprint.
+    /// </summary>
+    public double ProgressionDelta { get; init; }
+
+    /// <summary>
+    /// New bugs created during this sprint for this product.
+    /// </summary>
+    public int BugsCreatedCount { get; init; }
+
+    /// <summary>
+    /// Bugs closed during this sprint for this product.
+    /// </summary>
+    public int BugsClosedCount { get; init; }
+
+    /// <summary>
+    /// PBIs with missing effort for this product.
+    /// </summary>
+    public int MissingEffortCount { get; init; }
+
+    /// <summary>
+    /// Whether approximation was used for this product.
+    /// </summary>
+    public bool IsApproximate { get; init; }
 }
 
 /// <summary>
