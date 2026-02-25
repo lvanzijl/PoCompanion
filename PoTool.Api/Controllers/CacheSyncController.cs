@@ -193,6 +193,24 @@ public class CacheSyncController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("{productOwnerId}/activity-ledger-validation")]
+    [ProducesResponseType(typeof(ActivityLedgerValidationDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ActivityLedgerValidationDto>> GetActivityLedgerValidation(
+        int productOwnerId,
+        [FromQuery] int workItemId,
+        [FromQuery] DateTimeOffset? fromChangedDate,
+        [FromQuery] DateTimeOffset? toChangedDate,
+        CancellationToken cancellationToken)
+    {
+        var result = await _cacheManagement.GetActivityLedgerValidationAsync(
+            productOwnerId,
+            workItemId,
+            fromChangedDate,
+            toChangedDate,
+            cancellationToken);
+        return Ok(result);
+    }
+
 }
 public record SyncTriggerResponse
 {

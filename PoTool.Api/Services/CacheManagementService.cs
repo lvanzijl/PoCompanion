@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Services;
@@ -12,11 +13,16 @@ namespace PoTool.Api.Services;
 public class CacheManagementService
 {
     private readonly PoToolDbContext _context;
+    private readonly ISprintRepository _sprintRepository;
     private readonly ILogger<CacheManagementService> _logger;
 
-    public CacheManagementService(PoToolDbContext context, ILogger<CacheManagementService> logger)
+    public CacheManagementService(
+        PoToolDbContext context,
+        ISprintRepository sprintRepository,
+        ILogger<CacheManagementService> logger)
     {
         _context = context;
+        _sprintRepository = sprintRepository;
         _logger = logger;
     }
 
@@ -140,6 +146,159 @@ public class CacheManagementService
             Success = true,
             Message = $"Reset {typesToReset.Count} entity type(s) for ProductOwner {productOwnerId}",
             DeletedCounts = deletedCounts
+        };
+    }
+
+    public async Task<ActivityLedgerValidationDto> GetActivityLedgerValidationAsync(
+        int productOwnerId,
+        int workItemId,
+        DateTimeOffset? fromChangedDate,
+        DateTimeOffset? toChangedDate,
+        CancellationToken cancellationToken)
+    {
+        var baseQuery = _context.ActivityEventLedgerEntries
+            .AsNoTracking()
+            .Where(e => e.ProductOwnerId == productOwnerId && e.WorkItemId == workItemId);
+
+        if (fromChangedDate.HasValue)
+        {
+            baseQuery = baseQuery.Where(e => e.EventTimestamp >= fromChangedDate.Value);
+        }
+
+        if (toChangedDate.HasValue)
+        {
+            baseQuery = baseQuery.Where(e => e.EventTimestamp <= toChangedDate.Value);
+        }
+
+        var events = await baseQuery
+            .OrderBy(e => e.EventTimestamp)
+            .ThenBy(e => e.UpdateId)
+            .ThenBy(e => e.Id)
+            .ToListAsync(cancellationToken);
+
+        var changedByByUpdateId = events
+            .Where(e => string.Equals(e.FieldRefName, "System.ChangedBy", StringComparison.OrdinalIgnoreCase)
+                        && !string.IsNullOrWhiteSpace(e.NewValue))
+            .GroupBy(e => e.UpdateId)
+            .ToDictionary(g => g.Key, g => g.Last().NewValue, comparer: EqualityComparer<int>.Default);
+
+        var workItem = await _context.WorkItems
+            .AsNoTracking()
+            .FirstOrDefaultAsync(w => w.TfsId == workItemId, cancellationToken);
+
+        var resolvedWorkItem = await _context.ResolvedWorkItems
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.WorkItemId == workItemId, cancellationToken);
+
+        var currentParentId = workItem?.ParentTfsId;
+        var currentFeatureId = resolvedWorkItem?.ResolvedFeatureId;
+        var currentEpicId = resolvedWorkItem?.ResolvedEpicId;
+
+        var titleLookupIds = new[] { currentParentId, currentFeatureId, currentEpicId }
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToList();
+
+        var titleLookup = titleLookupIds.Count == 0
+            ? new Dictionary<int, string>()
+            : await _context.WorkItems
+                .AsNoTracking()
+                .Where(w => titleLookupIds.Contains(w.TfsId))
+                .ToDictionaryAsync(w => w.TfsId, w => w.Title, cancellationToken);
+
+        var assignedTo = events
+            .Where(e => string.Equals(e.FieldRefName, "System.AssignedTo", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(e => e.EventTimestamp)
+            .ThenByDescending(e => e.UpdateId)
+            .Select(e => e.NewValue)
+            .FirstOrDefault();
+
+        var snapshot = workItem == null
+            ? null
+            : new CachedWorkItemSnapshotDto
+            {
+                WorkItemId = workItem.TfsId,
+                Title = workItem.Title,
+                Type = workItem.Type,
+                State = workItem.State,
+                AssignedTo = assignedTo,
+                CurrentIterationPath = workItem.IterationPath,
+                ParentId = currentParentId,
+                ParentTitle = currentParentId.HasValue && titleLookup.TryGetValue(currentParentId.Value, out var parentTitle) ? parentTitle : null,
+                FeatureId = currentFeatureId,
+                FeatureTitle = currentFeatureId.HasValue && titleLookup.TryGetValue(currentFeatureId.Value, out var featureTitle) ? featureTitle : null,
+                EpicId = currentEpicId,
+                EpicTitle = currentEpicId.HasValue && titleLookup.TryGetValue(currentEpicId.Value, out var epicTitle) ? epicTitle : null,
+                LastChangedDate = workItem.TfsChangedDate
+            };
+
+        var sprintsByPath = (await _sprintRepository.GetAllSprintsAsync(cancellationToken))
+            .GroupBy(s => s.Path, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        var grouped = events
+            .Select(e => new
+            {
+                Event = new ActivityLedgerEventDto
+                {
+                    Timestamp = e.EventTimestamp,
+                    UpdateId = e.UpdateId,
+                    ChangedBy = changedByByUpdateId.TryGetValue(e.UpdateId, out var changedBy) ? changedBy : null,
+                    FieldRefName = e.FieldRefName,
+                    OldValue = e.OldValue,
+                    NewValue = e.NewValue,
+                    IterationPathAtTime = e.IterationPath,
+                    ParentIdAtTime = e.ParentId,
+                    FeatureIdAtTime = e.FeatureId,
+                    EpicIdAtTime = e.EpicId
+                },
+                Sprint = !string.IsNullOrWhiteSpace(e.IterationPath) && sprintsByPath.TryGetValue(e.IterationPath, out var sprint) ? sprint : null
+            })
+            .ToList();
+
+        var sprintGroups = grouped
+            .Where(x => x.Sprint != null)
+            .GroupBy(x => x.Sprint!.Id)
+            .Select(g =>
+            {
+                var sprint = g.First().Sprint!;
+                var eventsInSprint = g.Select(x => x.Event).ToList();
+                return new ActivityLedgerSprintGroupDto
+                {
+                    SprintId = sprint.Id,
+                    SprintName = sprint.Name,
+                    IterationPath = sprint.Path,
+                    SprintStart = sprint.StartUtc,
+                    SprintEnd = sprint.EndUtc,
+                    TotalEventCount = eventsInSprint.Count,
+                    DistinctFieldsTouchedCount = eventsInSprint
+                        .Select(e => e.FieldRefName)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .Count(),
+                    DistinctUsersCount = eventsInSprint
+                        .Select(e => e.ChangedBy)
+                        .Where(v => !string.IsNullOrWhiteSpace(v))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .Count(),
+                    Events = eventsInSprint
+                };
+            })
+            .OrderBy(g => g.SprintStart ?? DateTimeOffset.MaxValue)
+            .ThenBy(g => g.SprintName)
+            .ToList();
+
+        var unknownEvents = grouped
+            .Where(x => x.Sprint == null)
+            .Select(x => x.Event)
+            .ToList();
+
+        return new ActivityLedgerValidationDto
+        {
+            WorkItemId = workItemId,
+            Snapshot = snapshot,
+            SprintGroups = sprintGroups,
+            UnknownSprintEvents = unknownEvents
         };
     }
 

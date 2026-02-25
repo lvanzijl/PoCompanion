@@ -162,6 +162,35 @@ public class CacheSyncService
         }
     }
 
+    public async Task<ActivityLedgerValidationDto?> GetActivityLedgerValidationAsync(
+        int productOwnerId,
+        int workItemId,
+        DateTimeOffset? fromChangedDate,
+        DateTimeOffset? toChangedDate,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var queryParts = new List<string> { $"workItemId={workItemId}" };
+            if (fromChangedDate.HasValue)
+            {
+                queryParts.Add($"fromChangedDate={Uri.EscapeDataString(fromChangedDate.Value.ToString("O"))}");
+            }
+
+            if (toChangedDate.HasValue)
+            {
+                queryParts.Add($"toChangedDate={Uri.EscapeDataString(toChangedDate.Value.ToString("O"))}");
+            }
+
+            var requestUri = $"api/CacheSync/{productOwnerId}/activity-ledger-validation?{string.Join("&", queryParts)}";
+            return await _httpClient.GetFromJsonAsync<ActivityLedgerValidationDto>(requestUri, cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
+
 }
 
 /// <summary>
