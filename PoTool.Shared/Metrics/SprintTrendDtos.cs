@@ -217,6 +217,12 @@ public record GetSprintTrendMetricsResponse
     /// Sprint metrics by sprint.
     /// </summary>
     public IReadOnlyList<SprintTrendMetricsDto>? Metrics { get; init; }
+
+    /// <summary>
+    /// Feature-level progress derived from the resolved work item hierarchy.
+    /// Populated for the current (or most recent) sprint in the request.
+    /// </summary>
+    public IReadOnlyList<FeatureProgressDto>? FeatureProgress { get; init; }
 }
 
 /// <summary>

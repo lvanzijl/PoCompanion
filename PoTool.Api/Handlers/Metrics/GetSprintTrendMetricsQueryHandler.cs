@@ -151,10 +151,16 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                 "Returning sprint trend metrics for ProductOwner {ProductOwnerId}: {SprintMetricCount} sprint rows from {ProjectionCount} projections.",
                 query.ProductOwnerId, metricsBySprint.Count, projections.Count);
 
+            // Compute real feature progress from resolved hierarchy
+            var featureProgress = await _projectionService.ComputeFeatureProgressAsync(
+                query.ProductOwnerId,
+                cancellationToken);
+
             return new GetSprintTrendMetricsResponse
             {
                 Success = true,
-                Metrics = metricsBySprint
+                Metrics = metricsBySprint,
+                FeatureProgress = featureProgress
             };
         }
         catch (Exception ex)

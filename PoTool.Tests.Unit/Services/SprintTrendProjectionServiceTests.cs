@@ -249,6 +249,169 @@ public class SprintTrendProjectionServiceTests
         Assert.AreEqual(33.33, delta, 0.01, "Progression should be 33.33% (50/150 * 100)");
     }
 
+    #region ComputeFeatureProgress Tests
+
+    [TestMethod]
+    public void ComputeFeatureProgress_ReturnsEmpty_WhenNoFeatures()
+    {
+        var resolved = new List<ResolvedWorkItemEntity>();
+        var workItems = new Dictionary<int, WorkItemEntity>();
+        var productIds = new List<int> { 1 };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, productIds);
+
+        Assert.IsEmpty(result, "Should return empty when no features");
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_CalculatesEffortWeightedProgress()
+    {
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 5, state: "Done", parentId: 100),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "PBI 2", effort: 10, state: "Active", parentId: 100),
+            [203] = CreateWorkItem(203, WorkItemType.Pbi, "PBI 3", effort: 5, state: "Done", parentId: 100),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 203, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+        };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+
+        Assert.HasCount(1, result);
+        var feature = result[0];
+        Assert.AreEqual(100, feature.FeatureId);
+        Assert.AreEqual("Feature A", feature.FeatureTitle);
+        Assert.AreEqual(20, feature.TotalEffort, "Total effort should be 5+10+5=20");
+        Assert.AreEqual(10, feature.DoneEffort, "Done effort should be 5+5=10");
+        Assert.AreEqual(50, feature.ProgressPercent, "Progress should be 50% (10/20)");
+        Assert.IsFalse(feature.IsDone);
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_DoneFeature_Shows100Percent()
+    {
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Done Feature", state: "Done"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 5, state: "Done", parentId: 100),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "PBI 2", effort: 5, state: "Active", parentId: 100),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+        };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(100, result[0].ProgressPercent, "Done feature should show 100%");
+        Assert.IsTrue(result[0].IsDone);
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_NonDoneFeature_CappedAt90Percent()
+    {
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Active Feature", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 5, state: "Done", parentId: 100),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "PBI 2", effort: 5, state: "Done", parentId: 100),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+        };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(90, result[0].ProgressPercent, "Non-done feature with all PBIs done should be capped at 90%");
+        Assert.IsFalse(result[0].IsDone);
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_IncludesEpicInfo()
+    {
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [50] = CreateWorkItem(50, WorkItemType.Epic, "Epic X"),
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 10, state: "Done", parentId: 100),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 50, WorkItemType = WorkItemType.Epic, ResolvedProductId = 1 },
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1, ResolvedEpicId = 50 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+        };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(50, result[0].EpicId);
+        Assert.AreEqual("Epic X", result[0].EpicTitle);
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_SkipsFeaturesWithoutPbis()
+    {
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Empty Feature"),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+        };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+
+        Assert.IsEmpty(result, "Features with no child PBIs should be skipped");
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_MissingEffort_UsesSiblingAverage()
+    {
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 10, state: "Done", parentId: 100),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "PBI 2", effort: null, state: "Active", parentId: 100),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+        };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+
+        Assert.HasCount(1, result);
+        // PBI2 missing effort → sibling avg = 10, so total = 10 + 10 = 20, done = 10
+        Assert.AreEqual(20, result[0].TotalEffort, "Total should use sibling average for missing effort");
+        Assert.AreEqual(10, result[0].DoneEffort);
+        Assert.AreEqual(50, result[0].ProgressPercent);
+    }
+
+    #endregion
+
     // Helper methods
 
     private static SprintEntity CreateSprint(int id, string name)

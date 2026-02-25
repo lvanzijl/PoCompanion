@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.WorkItems;
+using PoTool.Shared.Metrics;
 
 namespace PoTool.Api.Services;
 
@@ -400,5 +401,128 @@ public class SprintTrendProjectionService
             projections.Count, productOwnerId, sprintIdList.Count);
 
         return projections;
+    }
+
+    /// <summary>
+    /// Computes feature-level progress from the resolved work item hierarchy.
+    /// Returns one FeatureProgressDto per Feature that has child PBIs resolved to the PO's products.
+    /// </summary>
+    public virtual async Task<IReadOnlyList<FeatureProgressDto>> ComputeFeatureProgressAsync(
+        int productOwnerId,
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+
+        var productIds = await context.Products
+            .Where(p => p.ProductOwnerId == productOwnerId)
+            .Select(p => p.Id)
+            .ToListAsync(cancellationToken);
+
+        if (productIds.Count == 0)
+        {
+            return Array.Empty<FeatureProgressDto>();
+        }
+
+        var resolvedItems = await context.ResolvedWorkItems
+            .Where(r => r.ResolvedProductId != null && productIds.Contains(r.ResolvedProductId.Value))
+            .ToListAsync(cancellationToken);
+
+        var resolvedWorkItemIds = resolvedItems.Select(r => r.WorkItemId).ToHashSet();
+        var workItems = await context.WorkItems
+            .AsNoTracking()
+            .Where(w => resolvedWorkItemIds.Contains(w.TfsId))
+            .ToListAsync(cancellationToken);
+
+        var workItemsByTfsId = workItems.ToDictionary(w => w.TfsId, w => w);
+
+        return ComputeFeatureProgress(resolvedItems, workItemsByTfsId, productIds);
+    }
+
+    internal static IReadOnlyList<FeatureProgressDto> ComputeFeatureProgress(
+        IReadOnlyList<ResolvedWorkItemEntity> resolvedItems,
+        IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
+        IReadOnlyList<int> productIds)
+    {
+        var results = new List<FeatureProgressDto>();
+
+        foreach (var productId in productIds)
+        {
+            var productResolved = resolvedItems
+                .Where(r => r.ResolvedProductId == productId)
+                .ToList();
+
+            var features = productResolved
+                .Where(r => r.WorkItemType == WorkItemType.Feature)
+                .ToList();
+
+            foreach (var feature in features)
+            {
+                if (!workItemsByTfsId.TryGetValue(feature.WorkItemId, out var featureWi))
+                    continue;
+
+                var childPbis = productResolved
+                    .Where(r => r.WorkItemType == WorkItemType.Pbi && r.ResolvedFeatureId == feature.WorkItemId)
+                    .Select(r => workItemsByTfsId.GetValueOrDefault(r.WorkItemId))
+                    .Where(w => w != null)
+                    .ToList();
+
+                if (childPbis.Count == 0)
+                    continue;
+
+                var totalEffort = 0;
+                var doneEffort = 0;
+
+                foreach (var pbi in childPbis)
+                {
+                    var effort = pbi!.Effort ?? 0;
+                    if (pbi.Effort == null)
+                    {
+                        var siblingAvg = childPbis
+                            .Where(p => p!.Effort != null)
+                            .Select(p => p!.Effort!.Value)
+                            .DefaultIfEmpty(0)
+                            .Average();
+                        effort = (int)Math.Round(siblingAvg);
+                    }
+
+                    totalEffort += effort;
+                    if (string.Equals(pbi!.State, "Done", StringComparison.OrdinalIgnoreCase))
+                    {
+                        doneEffort += effort;
+                    }
+                }
+
+                var featureIsDone = string.Equals(featureWi.State, "Done", StringComparison.OrdinalIgnoreCase);
+                var rawPercent = totalEffort > 0 ? (int)Math.Round((double)doneEffort / totalEffort * 100) : 0;
+                var progressPercent = featureIsDone ? 100 : Math.Min(rawPercent, 90);
+
+                // Resolve epic info
+                int? epicId = feature.ResolvedEpicId;
+                string? epicTitle = null;
+                if (epicId.HasValue && workItemsByTfsId.TryGetValue(epicId.Value, out var epicWi))
+                {
+                    epicTitle = epicWi.Title;
+                }
+
+                results.Add(new FeatureProgressDto
+                {
+                    FeatureId = feature.WorkItemId,
+                    FeatureTitle = featureWi.Title,
+                    EpicId = epicId,
+                    EpicTitle = epicTitle,
+                    ProductId = productId,
+                    ProgressPercent = progressPercent,
+                    TotalEffort = totalEffort,
+                    DoneEffort = doneEffort,
+                    IsDone = featureIsDone
+                });
+            }
+        }
+
+        return results
+            .OrderByDescending(f => f.ProgressPercent)
+            .ThenBy(f => f.FeatureTitle)
+            .ToList();
     }
 }

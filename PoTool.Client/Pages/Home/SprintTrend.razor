@@ -298,6 +298,20 @@
                           Height="300px"
                           ChartOptions="@_chartOptions" />
             </MudPaper>
+
+            @* Bug Trend Chart *@
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-2" />
+                    Bug Activity Trend
+                </MudText>
+                <MudChart ChartType="ChartType.Line"
+                          ChartSeries="@_bugTrendChartSeries"
+                          XAxisLabels="@_trendXAxisLabels"
+                          Width="100%"
+                          Height="300px"
+                          ChartOptions="@_chartOptions" />
+            </MudPaper>
         }
 
         @* Product Metrics (single sprint or advanced mode) *@
@@ -516,6 +530,7 @@
     private List<ChartSeries> _progressionChartSeries = new();
     private List<ChartSeries> _completedPbiCountChartSeries = new();
     private List<ChartSeries> _completedPbiEffortChartSeries = new();
+    private List<ChartSeries> _bugTrendChartSeries = new();
     private string[] _trendXAxisLabels = Array.Empty<string>();
     private ChartOptions _chartOptions = new()
     {
@@ -704,8 +719,8 @@
                 }
             }
             
-            // Build feature progress from current sprint data
-            BuildFeatureProgress(currentMetrics);
+            // Build feature progress from real resolved hierarchy data
+            BuildFeatureProgress(response);
             
             // Build trend charts if in advanced mode
             if (_advancedMode)
@@ -736,45 +751,23 @@
         _progressionChartSeries.Clear();
         _completedPbiCountChartSeries.Clear();
         _completedPbiEffortChartSeries.Clear();
+        _bugTrendChartSeries.Clear();
         _trendXAxisLabels = Array.Empty<string>();
     }
 
-    private void BuildFeatureProgress(SprintTrendMetricsDto? currentMetrics)
+    private void BuildFeatureProgress(GetSprintTrendMetricsResponse? response)
     {
         _featureProgress.Clear();
         
-        if (currentMetrics == null) return;
+        if (response?.FeatureProgress == null || response.FeatureProgress.Count == 0)
+            return;
         
-        // Build feature-level progress from product metrics
-        // Each product with progression > 0 indicates features were worked on
-        var productMetrics = _selectedProductId.HasValue
-            ? currentMetrics.ProductMetrics.Where(m => m.ProductId == _selectedProductId.Value).ToList()
-            : currentMetrics.ProductMetrics.ToList();
-            
-        foreach (var pm in productMetrics)
-        {
-            if (pm.CompletedPbiCount > 0 || pm.ProgressionDelta > 0)
-            {
-                // Create a summary feature progress entry per product
-                var totalEffort = pm.PlannedEffort > 0 ? pm.PlannedEffort : pm.WorkedEffort;
-                var doneEffort = pm.CompletedPbiEffort;
-                var progressPercent = totalEffort > 0
-                    ? Math.Min((int)Math.Round((double)doneEffort / totalEffort * 100), 100)
-                    : (int)Math.Round(pm.ProgressionDelta);
-                    
-                _featureProgress.Add(new FeatureProgressDto
-                {
-                    FeatureId = 0,
-                    FeatureTitle = $"{pm.ProductName} — Sprint Progress",
-                    EpicTitle = null,
-                    ProductId = pm.ProductId,
-                    ProgressPercent = progressPercent,
-                    TotalEffort = totalEffort,
-                    DoneEffort = doneEffort,
-                    IsDone = progressPercent >= 100
-                });
-            }
-        }
+        // Apply product filter if selected
+        var features = _selectedProductId.HasValue
+            ? response.FeatureProgress.Where(f => f.ProductId == _selectedProductId.Value).ToList()
+            : response.FeatureProgress.ToList();
+        
+        _featureProgress = features;
     }
 
     private void BuildTrendCharts()
@@ -875,6 +868,50 @@
                 }
             };
         }
+        
+        // Bug trend chart — always uses total series (Created / Worked / Closed)
+        _bugTrendChartSeries = new List<ChartSeries>
+        {
+            new()
+            {
+                Name = "Created",
+                Data = _trendMetrics.Select(m =>
+                {
+                    if (_selectedProductId.HasValue)
+                    {
+                        var pm = m.ProductMetrics.FirstOrDefault(pm => pm.ProductId == _selectedProductId.Value);
+                        return (double)(pm?.BugsCreatedCount ?? 0);
+                    }
+                    return (double)m.TotalBugsCreatedCount;
+                }).ToArray()
+            },
+            new()
+            {
+                Name = "Worked On",
+                Data = _trendMetrics.Select(m =>
+                {
+                    if (_selectedProductId.HasValue)
+                    {
+                        var pm = m.ProductMetrics.FirstOrDefault(pm => pm.ProductId == _selectedProductId.Value);
+                        return (double)(pm?.BugsWorkedCount ?? 0);
+                    }
+                    return (double)m.TotalBugsWorkedCount;
+                }).ToArray()
+            },
+            new()
+            {
+                Name = "Closed",
+                Data = _trendMetrics.Select(m =>
+                {
+                    if (_selectedProductId.HasValue)
+                    {
+                        var pm = m.ProductMetrics.FirstOrDefault(pm => pm.ProductId == _selectedProductId.Value);
+                        return (double)(pm?.BugsClosedCount ?? 0);
+                    }
+                    return (double)m.TotalBugsClosedCount;
+                }).ToArray()
+            }
+        };
     }
 
     private void UpdateBreadcrumbs()
