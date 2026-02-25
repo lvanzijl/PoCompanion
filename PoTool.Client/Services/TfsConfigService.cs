@@ -58,7 +58,6 @@ public class TfsConfigService
     /// </summary>
     public virtual async Task SaveConfigAsync(string url, string project, string defaultAreaPath,
         bool useDefaultCredentials = true, int timeoutSeconds = 30, string apiVersion = "7.0",
-        string? analyticsODataBaseUrl = null, string? analyticsODataEntitySetPath = null,
         CancellationToken cancellationToken = default)
     {
         // Send config to API

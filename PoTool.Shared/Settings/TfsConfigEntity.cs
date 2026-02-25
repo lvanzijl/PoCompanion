@@ -31,14 +31,6 @@ public class TfsConfigEntity
     [MaxLength(16)]
     public string ApiVersion { get; set; } = "7.0";
 
-    [MaxLength(1024)]
-    // REPLACE_WITH_ACTIVITY_SOURCE: TODO remove this legacy OData column in follow-up schema cleanup migration.
-    public string AnalyticsODataBaseUrl { get; set; } = string.Empty;
-
-    [MaxLength(256)]
-    // REPLACE_WITH_ACTIVITY_SOURCE: TODO remove this legacy OData column in follow-up schema cleanup migration.
-    public string AnalyticsODataEntitySetPath { get; set; } = string.Empty;
-
     /// <summary>
     /// Default Area Path for work item queries.
     /// This is the AreaPath used in WIQL queries (e.g., "ProjectName\Team A").
