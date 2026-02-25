@@ -242,15 +242,11 @@ public class PullRequestRepository : IPullRequestRepository, IDisposable
             var entities = await _context.PullRequestComments
                 .AsNoTracking()
                 .Where(c => c.PullRequestId == pullRequestId)
-                .ToListAsync(cancellationToken);
-            
-            // Sort in memory (SQLite doesn't support DateTimeOffset in ORDER BY)
-            var orderedEntities = entities
-                .OrderBy(c => c.CreatedDate)
+                .OrderBy(c => c.CreatedDateUtc)
                 .ThenBy(c => c.InternalId)
-                .ToList();
+                .ToListAsync(cancellationToken);
 
-            return orderedEntities.Select(MapToCommentDto);
+            return entities.Select(MapToCommentDto);
         }
         finally
         {
@@ -520,6 +516,7 @@ public class PullRequestRepository : IPullRequestRepository, IDisposable
             Title = dto.Title,
             CreatedBy = dto.CreatedBy,
             CreatedDate = dto.CreatedDate,
+            CreatedDateUtc = dto.CreatedDate.UtcDateTime,
             CompletedDate = dto.CompletedDate,
             Status = dto.Status,
             IterationPath = dto.IterationPath,
@@ -536,6 +533,7 @@ public class PullRequestRepository : IPullRequestRepository, IDisposable
         entity.Title = dto.Title;
         entity.CreatedBy = dto.CreatedBy;
         entity.CreatedDate = dto.CreatedDate;
+        entity.CreatedDateUtc = dto.CreatedDate.UtcDateTime;
         entity.CompletedDate = dto.CompletedDate;
         entity.Status = dto.Status;
         entity.IterationPath = dto.IterationPath;
@@ -603,6 +601,7 @@ public class PullRequestRepository : IPullRequestRepository, IDisposable
             Author = dto.Author,
             Content = dto.Content,
             CreatedDate = dto.CreatedDate,
+            CreatedDateUtc = dto.CreatedDate.UtcDateTime,
             UpdatedDate = dto.UpdatedDate,
             IsResolved = dto.IsResolved,
             ResolvedDate = dto.ResolvedDate,

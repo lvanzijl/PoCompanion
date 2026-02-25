@@ -44,10 +44,9 @@ public class TfsConfigurationService : ITfsConfigurationService
     {
         return await _efGate.ExecuteAsync(async () =>
         {
-            // Use ToListAsync then LINQ to Objects for DateTimeOffset ordering (SQLite compatibility)
-            // Note: TfsConfig typically contains only one record (updated in place), so loading all is acceptable
-            var entities = await _db.TfsConfigs.ToListAsync(cancellationToken);
-            var entity = entities.OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
+            var entity = await _db.TfsConfigs
+                .OrderByDescending(c => c.UpdatedAtUtc)
+                .FirstOrDefaultAsync(cancellationToken);
             if (entity == null) return null;
 
             return new TfsConfig
@@ -81,9 +80,9 @@ public class TfsConfigurationService : ITfsConfigurationService
     {
         await _efGate.ExecuteAsync(async () =>
         {
-            // Use ToListAsync then LINQ to Objects for DateTimeOffset ordering (SQLite compatibility)
-            var entities = await _db.TfsConfigs.ToListAsync(cancellationToken);
-            var existing = entities.OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
+            var existing = await _db.TfsConfigs
+                .OrderByDescending(c => c.UpdatedAtUtc)
+                .FirstOrDefaultAsync(cancellationToken);
 
             // Derive DefaultAreaPath from Project name (canonical root area path)
             var derivedDefaultAreaPath = project ?? string.Empty;
@@ -99,7 +98,8 @@ public class TfsConfigurationService : ITfsConfigurationService
                     TimeoutSeconds = timeoutSeconds,
                     ApiVersion = apiVersion ?? "7.0",
                     CreatedAt = DateTimeOffset.UtcNow,
-                    UpdatedAt = DateTimeOffset.UtcNow
+                    UpdatedAt = DateTimeOffset.UtcNow,
+                    UpdatedAtUtc = DateTime.UtcNow
                 };
 
                 await _db.TfsConfigs.AddAsync(existing, cancellationToken);
@@ -114,6 +114,7 @@ public class TfsConfigurationService : ITfsConfigurationService
                 existing.ApiVersion = apiVersion ?? "7.0";
 
                 existing.UpdatedAt = DateTimeOffset.UtcNow;
+                existing.UpdatedAtUtc = DateTime.UtcNow;
                 _db.TfsConfigs.Update(existing);
             }
 
@@ -127,10 +128,9 @@ public class TfsConfigurationService : ITfsConfigurationService
     {
         return await _efGate.ExecuteAsync(async () =>
         {
-            // Use ToListAsync then LINQ to Objects for DateTimeOffset ordering (SQLite compatibility)
-            // Note: TfsConfig typically contains only one record (updated in place), so loading all is acceptable
-            var entities = await _db.TfsConfigs.ToListAsync(cancellationToken);
-            return entities.OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
+            return await _db.TfsConfigs
+                .OrderByDescending(c => c.UpdatedAtUtc)
+                .FirstOrDefaultAsync(cancellationToken);
         }, cancellationToken);
     }
 
@@ -139,6 +139,7 @@ public class TfsConfigurationService : ITfsConfigurationService
         await _efGate.ExecuteAsync(async () =>
         {
             entity.UpdatedAt = DateTimeOffset.UtcNow;
+            entity.UpdatedAtUtc = DateTime.UtcNow;
             _db.TfsConfigs.Update(entity);
             await _db.SaveChangesAsync(cancellationToken);
             _logger.LogInformation("TFS configuration entity updated");

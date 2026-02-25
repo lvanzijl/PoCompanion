@@ -196,11 +196,14 @@ public class PoToolDbContext : DbContext
             entity.HasIndex(e => e.Type);
 
             entity.HasIndex(e => e.Title);
+
+            entity.HasIndex(e => e.TfsChangedDateUtc);
         });
 
         modelBuilder.Entity<TfsConfigEntity>(entity =>
         {
             entity.HasIndex(e => e.Url);
+            entity.HasIndex(e => e.UpdatedAtUtc);
             // NOTE: ProtectedPat property removed - PAT stored client-side now
             entity.Property(e => e.Url).HasMaxLength(1024).IsRequired();
             entity.Property(e => e.Project).HasMaxLength(256);
@@ -233,6 +236,8 @@ public class PoToolDbContext : DbContext
 
             entity.HasIndex(e => e.ProductId);
 
+            entity.HasIndex(e => e.CreatedDateUtc);
+
             entity.HasOne(e => e.Product)
                 .WithMany()
                 .HasForeignKey(e => e.ProductId)
@@ -250,6 +255,8 @@ public class PoToolDbContext : DbContext
             entity.HasIndex(e => e.PullRequestId);
 
             entity.HasIndex(e => e.ThreadId);
+
+            entity.HasIndex(e => e.CreatedDateUtc);
         });
 
         modelBuilder.Entity<PullRequestFileChangeEntity>(entity =>
@@ -372,6 +379,10 @@ public class PoToolDbContext : DbContext
         {
             entity.HasIndex(e => new { e.TeamId, e.Path })
                 .IsUnique();
+
+            entity.HasIndex(e => new { e.TeamId, e.StartDateUtc });
+
+            entity.HasIndex(e => new { e.TeamId, e.LastSyncedDateUtc });
 
             entity.Property(e => e.TfsIterationId).HasMaxLength(100);
             entity.Property(e => e.Path).HasMaxLength(500).IsRequired();

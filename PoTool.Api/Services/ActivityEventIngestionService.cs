@@ -54,9 +54,11 @@ public sealed class ActivityEventIngestionService
             : (DateTimeOffset?)null;
         var filterStart = persistedWatermark ?? backfillStart;
 
-        var workItemIds = persistedWatermark.HasValue
+        var persistedWatermarkUtc = persistedWatermark?.UtcDateTime;
+
+        var workItemIds = persistedWatermarkUtc.HasValue
             ? await _context.WorkItems
-                .Where(w => w.TfsChangedDate > persistedWatermark.Value)
+                .Where(w => w.TfsChangedDateUtc > persistedWatermarkUtc.Value)
                 .Select(w => w.TfsId)
                 .ToListAsync(cancellationToken)
             : await _context.WorkItems

@@ -31,7 +31,8 @@ public class ActivityEventIngestionServiceTests
             IterationPath = "Iteration A",
             State = "New",
             RetrievedAt = DateTimeOffset.UtcNow,
-            TfsChangedDate = DateTimeOffset.UtcNow
+            TfsChangedDate = DateTimeOffset.UtcNow,
+            TfsChangedDateUtc = DateTime.UtcNow
         });
         dbContext.ProductOwnerCacheStates.Add(new ProductOwnerCacheStateEntity
         {
@@ -91,7 +92,8 @@ public class ActivityEventIngestionServiceTests
             IterationPath = "Iteration A",
             State = "New",
             RetrievedAt = DateTimeOffset.UtcNow,
-            TfsChangedDate = DateTimeOffset.UtcNow
+            TfsChangedDate = DateTimeOffset.UtcNow,
+            TfsChangedDateUtc = DateTime.UtcNow
         });
         dbContext.ProductOwnerCacheStates.Add(new ProductOwnerCacheStateEntity
         {

@@ -176,6 +176,7 @@ public class PullRequestSyncStage : ISyncStage
         entity.Title = dto.Title;
         entity.CreatedBy = dto.CreatedBy;
         entity.CreatedDate = dto.CreatedDate;
+        entity.CreatedDateUtc = dto.CreatedDate.UtcDateTime;
         entity.CompletedDate = dto.CompletedDate;
         entity.Status = dto.Status;
         entity.IterationPath = dto.IterationPath;
@@ -194,6 +195,7 @@ public class PullRequestSyncStage : ISyncStage
             Title = dto.Title,
             CreatedBy = dto.CreatedBy,
             CreatedDate = dto.CreatedDate,
+            CreatedDateUtc = dto.CreatedDate.UtcDateTime,
             CompletedDate = dto.CompletedDate,
             Status = dto.Status,
             IterationPath = dto.IterationPath,

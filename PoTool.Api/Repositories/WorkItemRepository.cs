@@ -147,7 +147,9 @@ public class WorkItemRepository : IWorkItemRepository
                     existing.Tags = dto.Tags;
                     existing.IsBlocked = dto.IsBlocked;
                     existing.Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null;
-                    existing.TfsChangedDate = dto.ChangedDate ?? dto.RetrievedAt;
+                    var changedDate = dto.ChangedDate ?? dto.RetrievedAt;
+                    existing.TfsChangedDate = changedDate;
+                    existing.TfsChangedDateUtc = changedDate.UtcDateTime;
                 }
                 else
                 {
@@ -193,7 +195,9 @@ public class WorkItemRepository : IWorkItemRepository
                     entity.Tags = dto.Tags;
                     entity.IsBlocked = dto.IsBlocked;
                     entity.Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null;
-                    entity.TfsChangedDate = dto.ChangedDate ?? dto.RetrievedAt;
+                    var changedDate = dto.ChangedDate ?? dto.RetrievedAt;
+                    entity.TfsChangedDate = changedDate;
+                    entity.TfsChangedDateUtc = changedDate.UtcDateTime;
                 }
 
                 // Insert new items
@@ -271,7 +275,8 @@ public class WorkItemRepository : IWorkItemRepository
             Tags = dto.Tags,
             IsBlocked = dto.IsBlocked,
             Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null,
-            TfsChangedDate = dto.ChangedDate ?? dto.RetrievedAt
+            TfsChangedDate = dto.ChangedDate ?? dto.RetrievedAt,
+            TfsChangedDateUtc = (dto.ChangedDate ?? dto.RetrievedAt).UtcDateTime
         };
     }
 }

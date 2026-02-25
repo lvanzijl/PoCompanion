@@ -30,7 +30,7 @@ public sealed class GetFilteredPullRequestsQueryHandler : IQueryHandler<GetFilte
         _logger.LogDebug("Handling GetFilteredPullRequestsQuery");
 
         // Live-only mode: use injected provider directly
-        var allPrs = await _pullRequestReadProvider.GetByProductIdsAsync(query.ProductIds, null, cancellationToken);
+        var allPrs = await _pullRequestReadProvider.GetByProductIdsAsync(query.ProductIds, query.FromDate, cancellationToken);
 
         // Apply filters
         var filtered = allPrs.AsEnumerable();
@@ -43,11 +43,6 @@ public sealed class GetFilteredPullRequestsQueryHandler : IQueryHandler<GetFilte
         if (!string.IsNullOrWhiteSpace(query.CreatedBy))
         {
             filtered = filtered.Where(pr => pr.CreatedBy.Equals(query.CreatedBy, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (query.FromDate.HasValue)
-        {
-            filtered = filtered.Where(pr => pr.CreatedDate >= query.FromDate.Value);
         }
 
         if (query.ToDate.HasValue)

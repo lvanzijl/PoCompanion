@@ -93,6 +93,11 @@ public class WorkItemEntity
     public DateTimeOffset TfsChangedDate { get; set; }
 
     /// <summary>
+    /// UTC changed date used in SQLite-translatable predicates/sorting.
+    /// </summary>
+    public DateTime TfsChangedDateUtc { get; set; }
+
+    /// <summary>
     /// HTTP ETag from TFS for PATCH preconditions.
     /// Used for future write-back functionality.
     /// </summary>
