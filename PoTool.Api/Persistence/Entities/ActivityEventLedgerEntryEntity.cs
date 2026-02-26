@@ -15,6 +15,7 @@ public class ActivityEventLedgerEntryEntity
     public string FieldRefName { get; set; } = string.Empty;
 
     public DateTimeOffset EventTimestamp { get; set; }
+    public DateTime EventTimestampUtc { get; set; }
 
     [MaxLength(500)]
     public string? IterationPath { get; set; }

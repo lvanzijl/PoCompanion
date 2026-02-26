@@ -162,16 +162,18 @@ public class CacheManagementService
 
         if (fromChangedDate.HasValue)
         {
-            baseQuery = baseQuery.Where(e => e.EventTimestamp >= fromChangedDate.Value);
+            var fromChangedDateUtc = fromChangedDate.Value.UtcDateTime;
+            baseQuery = baseQuery.Where(e => e.EventTimestampUtc >= fromChangedDateUtc);
         }
 
         if (toChangedDate.HasValue)
         {
-            baseQuery = baseQuery.Where(e => e.EventTimestamp <= toChangedDate.Value);
+            var toChangedDateUtc = toChangedDate.Value.UtcDateTime;
+            baseQuery = baseQuery.Where(e => e.EventTimestampUtc <= toChangedDateUtc);
         }
 
         var events = await baseQuery
-            .OrderBy(e => e.EventTimestamp)
+            .OrderBy(e => e.EventTimestampUtc)
             .ThenBy(e => e.UpdateId)
             .ThenBy(e => e.Id)
             .ToListAsync(cancellationToken);
@@ -209,7 +211,7 @@ public class CacheManagementService
 
         var assignedTo = events
             .Where(e => string.Equals(e.FieldRefName, "System.AssignedTo", StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(e => e.EventTimestamp)
+            .OrderByDescending(e => e.EventTimestampUtc)
             .ThenByDescending(e => e.UpdateId)
             .Select(e => e.NewValue)
             .FirstOrDefault();

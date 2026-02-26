@@ -30,16 +30,18 @@ public sealed class LedgerActivityEventSource : IActivityEventSource
 
         if (from.HasValue)
         {
-            query = query.Where(e => e.EventTimestamp >= from.Value);
+            var fromUtc = from.Value.UtcDateTime;
+            query = query.Where(e => e.EventTimestampUtc >= fromUtc);
         }
 
         if (to.HasValue)
         {
-            query = query.Where(e => e.EventTimestamp <= to.Value);
+            var toUtc = to.Value.UtcDateTime;
+            query = query.Where(e => e.EventTimestampUtc <= toUtc);
         }
 
         return await query
-            .OrderBy(e => e.EventTimestamp)
+            .OrderBy(e => e.EventTimestampUtc)
             .Select(e => new ActivityEvent
             {
                 Timestamp = e.EventTimestamp,

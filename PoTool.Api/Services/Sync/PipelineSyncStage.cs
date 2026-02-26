@@ -189,6 +189,7 @@ public class PipelineSyncStage : ISyncStage
         entity.Result = dto.Result.ToString();
         entity.CreatedDate = dto.StartTime;
         entity.FinishedDate = dto.FinishTime;
+        entity.FinishedDateUtc = dto.FinishTime?.UtcDateTime;
         entity.SourceBranch = dto.Branch;
         entity.CachedAt = DateTimeOffset.UtcNow;
     }
@@ -205,6 +206,7 @@ public class PipelineSyncStage : ISyncStage
             Result = dto.Result.ToString(),
             CreatedDate = dto.StartTime,
             FinishedDate = dto.FinishTime,
+            FinishedDateUtc = dto.FinishTime?.UtcDateTime,
             SourceBranch = dto.Branch,
             CachedAt = DateTimeOffset.UtcNow
         };

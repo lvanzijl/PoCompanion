@@ -498,7 +498,7 @@ public class PoToolDbContext : DbContext
             entity.HasIndex(e => new { e.ProductOwnerId, e.PipelineDefinitionId, e.TfsRunId })
                 .IsUnique();
 
-            entity.HasIndex(e => e.FinishedDate);
+            entity.HasIndex(e => e.FinishedDateUtc);
 
             entity.Property(e => e.RunName).HasMaxLength(200);
             entity.Property(e => e.State).HasMaxLength(50);
@@ -566,13 +566,15 @@ public class PoToolDbContext : DbContext
 
         modelBuilder.Entity<ActivityEventLedgerEntryEntity>(entity =>
         {
-            entity.HasIndex(e => new { e.ProductOwnerId, e.EventTimestamp });
+            entity.HasIndex(e => new { e.ProductOwnerId, e.EventTimestampUtc });
             entity.HasIndex(e => new { e.WorkItemId, e.UpdateId });
             entity.HasIndex(e => new { e.WorkItemId, e.UpdateId, e.FieldRefName })
                 .IsUnique();
             entity.Property(e => e.FieldRefName).HasMaxLength(256).IsRequired();
             entity.Property(e => e.IterationPath).HasMaxLength(500);
         });
+
+        ValidateSqliteDateTimeOffsetGuardrail(modelBuilder.Model);
 
         // Sprint metrics projections
         modelBuilder.Entity<SprintMetricsProjectionEntity>(entity =>
@@ -593,5 +595,30 @@ public class PoToolDbContext : DbContext
                 .HasForeignKey(e => e.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+    }
+
+    private void ValidateSqliteDateTimeOffsetGuardrail(Microsoft.EntityFrameworkCore.Metadata.IMutableModel model)
+    {
+        if (!Database.IsSqlite())
+        {
+            return;
+        }
+
+        var offendingProperties = model.GetEntityTypes()
+            .SelectMany(entityType => entityType.GetIndexes()
+                .SelectMany(index => index.Properties)
+                .Where(property => property.ClrType == typeof(DateTimeOffset) || property.ClrType == typeof(DateTimeOffset?))
+                .Select(property => $"{entityType.ClrType.Name}.{property.Name}"))
+            .Distinct()
+            .ToList();
+
+        if (offendingProperties.Count == 0)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            "SQLite guardrail: DateTimeOffset mapped properties are forbidden. Persist predicate/sort timestamps as UTC DateTime (*Utc columns). Convert at edges."
+            + $" Offending indexed properties: {string.Join(", ", offendingProperties)}");
     }
 }
