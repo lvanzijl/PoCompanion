@@ -197,4 +197,83 @@ public class CacheManagementServiceTests
         Assert.AreEqual(203, result.Snapshot.EpicId);
         Assert.AreEqual("Resolved epic", result.Snapshot.EpicTitle);
     }
+
+    [TestMethod]
+    public async Task GetActivityLedgerValidationAsync_UsesDisplayNameForIdentityJsonValues()
+    {
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase($"CacheManagementService_IdentityJson_{Guid.NewGuid()}")
+            .Options;
+
+        await using var dbContext = new PoToolDbContext(options);
+
+        dbContext.WorkItems.Add(new WorkItemEntity
+        {
+            TfsId = 300,
+            Type = "Product Backlog Item",
+            Title = "Identity value test item",
+            AreaPath = "Area",
+            IterationPath = "Project\\Sprint C",
+            State = "Active",
+            RetrievedAt = DateTimeOffset.UtcNow,
+            TfsChangedDate = DateTimeOffset.UtcNow,
+            TfsChangedDateUtc = DateTime.UtcNow
+        });
+
+        dbContext.ActivityEventLedgerEntries.AddRange(
+            new ActivityEventLedgerEntryEntity
+            {
+                ProductOwnerId = 7,
+                WorkItemId = 300,
+                UpdateId = 10,
+                FieldRefName = "System.ChangedBy",
+                EventTimestamp = new DateTimeOffset(2026, 2, 5, 10, 0, 0, TimeSpan.Zero),
+                IterationPath = "Project\\Sprint C",
+                NewValue = "{\"displayName\":\"Lesley van Zijl\"}"
+            },
+            new ActivityEventLedgerEntryEntity
+            {
+                ProductOwnerId = 7,
+                WorkItemId = 300,
+                UpdateId = 10,
+                FieldRefName = "System.AssignedTo",
+                EventTimestamp = new DateTimeOffset(2026, 2, 5, 10, 0, 0, TimeSpan.Zero),
+                IterationPath = "Project\\Sprint C",
+                OldValue = "{\"displayName\":\"Old Owner\"}",
+                NewValue = "{\"displayName\":\"Lesley van Zijl\"}"
+            });
+
+        await dbContext.SaveChangesAsync();
+
+        var sprintRepository = new Mock<ISprintRepository>(MockBehavior.Strict);
+        sprintRepository
+            .Setup(x => x.GetAllSprintsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new SprintDto(
+                    Id: 12,
+                    TeamId: 1,
+                    TfsIterationId: "sprint-c",
+                    Path: "Project\\Sprint C",
+                    Name: "Sprint C",
+                    StartUtc: new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero),
+                    EndUtc: new DateTimeOffset(2026, 2, 14, 0, 0, 0, TimeSpan.Zero),
+                    TimeFrame: "current",
+                    LastSyncedUtc: DateTimeOffset.UtcNow)
+            ]);
+
+        var service = new CacheManagementService(
+            dbContext,
+            sprintRepository.Object,
+            NullLogger<CacheManagementService>.Instance);
+
+        var result = await service.GetActivityLedgerValidationAsync(7, 300, null, null, CancellationToken.None);
+        var assignedToEvent = result.SprintGroups[0].Events.Single(e => e.FieldRefName == "System.AssignedTo");
+        var changedByEvent = result.SprintGroups[0].Events.Single(e => e.FieldRefName == "System.ChangedBy");
+
+        Assert.IsNotNull(result.Snapshot);
+        Assert.AreEqual("Lesley van Zijl", result.Snapshot.AssignedTo);
+        Assert.AreEqual("Lesley van Zijl", changedByEvent.ChangedBy);
+        Assert.AreEqual("Old Owner", assignedToEvent.OldValue);
+        Assert.AreEqual("Lesley van Zijl", assignedToEvent.NewValue);
+    }
 }
