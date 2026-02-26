@@ -118,7 +118,7 @@ public sealed class GetWorkItemActivityDetailsQueryHandler
                     FieldRefName = e.FieldRefName,
                     OldValue = e.OldValue,
                     NewValue = e.NewValue,
-                    EventTimestampUtc = new DateTimeOffset(DateTime.SpecifyKind(e.EventTimestampUtc, DateTimeKind.Utc))
+                    EventTimestampUtc = new DateTimeOffset(e.EventTimestampUtc, TimeSpan.Zero)
                 };
             })
             .ToList();
