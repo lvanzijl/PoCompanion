@@ -10,6 +10,12 @@ namespace PoTool.Api.Services;
 
 public class SprintTrendProjectionService
 {
+    private static readonly HashSet<string> ExcludedActivityFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "System.ChangedBy",
+        "System.ChangedDate"
+    };
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<SprintTrendProjectionService> _logger;
 
@@ -172,13 +178,25 @@ public class SprintTrendProjectionService
         DateTimeOffset sprintStart,
         DateTimeOffset sprintEnd)
     {
+        var functionalActivityByWorkItem = activityByWorkItem
+            .Select(pair => new
+            {
+                pair.Key,
+                Events = pair.Value
+                    .Where(e => !string.IsNullOrWhiteSpace(e.FieldRefName)
+                        && !ExcludedActivityFields.Contains(e.FieldRefName))
+                    .ToList()
+            })
+            .Where(x => x.Events.Count > 0)
+            .ToDictionary(x => x.Key, x => x.Events);
+
         var productResolved = resolvedItems
             .Where(r => r.ResolvedProductId == productId)
             .ToList();
 
         var productWorkItemIds = productResolved.Select(r => r.WorkItemId).ToHashSet();
 
-        var workedItemIds = activityByWorkItem.Keys
+        var workedItemIds = functionalActivityByWorkItem.Keys
             .Where(k => productWorkItemIds.Contains(k))
             .ToHashSet();
 
@@ -189,7 +207,7 @@ public class SprintTrendProjectionService
             {
                 var hasChildActivity = productResolved
                     .Where(r => IsChildOf(r, resolved, workItemsByTfsId))
-                    .Any(r => activityByWorkItem.ContainsKey(r.WorkItemId));
+                    .Any(r => functionalActivityByWorkItem.ContainsKey(r.WorkItemId));
 
                 if (hasChildActivity)
                 {
@@ -210,7 +228,7 @@ public class SprintTrendProjectionService
             if (!workItemsByTfsId.TryGetValue(pbi.WorkItemId, out var wi))
                 continue;
 
-            var pbiActivity = activityByWorkItem.GetValueOrDefault(pbi.WorkItemId);
+            var pbiActivity = functionalActivityByWorkItem.GetValueOrDefault(pbi.WorkItemId);
             var transitionedToDone = pbiActivity?.Any(e =>
                 string.Equals(e.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase)
                 && string.Equals(e.NewValue, "Done", StringComparison.OrdinalIgnoreCase)) == true;
@@ -244,7 +262,7 @@ public class SprintTrendProjectionService
 
         // Feature/Epic progression delta
         var progressionDelta = ComputeProgressionDelta(
-            productResolved, workItemsByTfsId, activityByWorkItem);
+            productResolved, workItemsByTfsId, functionalActivityByWorkItem);
 
         // Bug metrics
         var bugResolved = productResolved.Where(r => r.WorkItemType == WorkItemType.Bug).ToList();
@@ -262,7 +280,7 @@ public class SprintTrendProjectionService
                 bugsCreated++;
             }
 
-            var bugActivity = activityByWorkItem.GetValueOrDefault(bug.WorkItemId);
+            var bugActivity = functionalActivityByWorkItem.GetValueOrDefault(bug.WorkItemId);
             var bugClosedInSprint = bugActivity?.Any(e =>
                 string.Equals(e.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase)
                 && (string.Equals(e.NewValue, "Done", StringComparison.OrdinalIgnoreCase)
@@ -282,7 +300,7 @@ public class SprintTrendProjectionService
                         return false;
                     return taskWi.ParentTfsId == bug.WorkItemId;
                 })
-                .Any(ct => activityByWorkItem.GetValueOrDefault(ct.WorkItemId)
+                .Any(ct => functionalActivityByWorkItem.GetValueOrDefault(ct.WorkItemId)
                     ?.Any(e => string.Equals(e.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase)) == true);
 
             if (childTaskHadStateChange)

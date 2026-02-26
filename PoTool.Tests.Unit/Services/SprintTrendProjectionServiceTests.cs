@@ -753,6 +753,108 @@ public class SprintTrendProjectionServiceTests
         Assert.AreEqual(0, result.BugsClosedCount, "BugsClosedCount should be 0");
     }
 
+    [TestMethod]
+    public void ComputeProductSprintProjection_MetadataOnlyActivity_DoesNotCountAsWorked()
+    {
+        var sprint = CreateSprint(1, "Sprint 1");
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1, ResolvedSprintId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100, ResolvedSprintId = 1 },
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 50, state: "Active", parentId: 100),
+        };
+
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [201] = new()
+            {
+                CreateActivity(201, sprintStart.AddDays(2), "System.ChangedBy"),
+                CreateActivity(201, sprintStart.AddDays(2), "System.ChangedDate")
+            }
+        };
+
+        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
+
+        Assert.AreEqual(0, result.WorkedCount, "Metadata-only changes should not count as worked activity");
+    }
+
+    [TestMethod]
+    public void ComputeProductSprintProjection_FunctionalActivity_CountsAsWorked()
+    {
+        var sprint = CreateSprint(1, "Sprint 1");
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1, ResolvedSprintId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100, ResolvedSprintId = 1 },
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 50, state: "Active", parentId: 100),
+        };
+
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [201] = new()
+            {
+                CreateActivity(201, sprintStart.AddDays(2), "System.Title")
+            }
+        };
+
+        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
+
+        Assert.IsGreaterThan(0, result.WorkedCount, "Functional changes should count as worked activity");
+    }
+
+    [TestMethod]
+    public void ComputeProductSprintProjection_MixedMetadataAndFunctionalActivity_CountsAsWorked()
+    {
+        var sprint = CreateSprint(1, "Sprint 1");
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1, ResolvedSprintId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100, ResolvedSprintId = 1 },
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 50, state: "Active", parentId: 100),
+        };
+
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [201] = new()
+            {
+                CreateActivity(201, sprintStart.AddDays(2), "System.ChangedBy"),
+                CreateActivity(201, sprintStart.AddDays(2), "System.ChangedDate"),
+                CreateActivity(201, sprintStart.AddDays(2), "System.Title")
+            }
+        };
+
+        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
+
+        Assert.IsGreaterThan(0, result.WorkedCount, "Mixed revisions should count as worked when functional fields changed");
+    }
+
     #endregion
 
     // Helper methods
@@ -826,14 +928,14 @@ public class SprintTrendProjectionServiceTests
     }
 
     private static ActivityEventLedgerEntryEntity CreateActivity(
-        int workItemId, DateTimeOffset timestamp)
+        int workItemId, DateTimeOffset timestamp, string fieldRefName = "System.Title")
     {
         return new ActivityEventLedgerEntryEntity
         {
             WorkItemId = workItemId,
             ProductOwnerId = 1,
             UpdateId = 1,
-            FieldRefName = "System.Title",
+            FieldRefName = fieldRefName,
             EventTimestamp = timestamp,
         };
     }
