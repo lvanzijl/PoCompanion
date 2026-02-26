@@ -12,6 +12,7 @@ namespace PoTool.Api.Handlers.Metrics;
 public sealed class GetWorkItemActivityDetailsQueryHandler
     : IQueryHandler<GetWorkItemActivityDetailsQuery, WorkItemActivityDetailsDto?>
 {
+    private static readonly string[] ExcludedFieldRefNames = ["SYSTEM.CHANGEDBY", "SYSTEM.CHANGEDDATE"];
     private readonly PoToolDbContext _context;
 
     public GetWorkItemActivityDetailsQueryHandler(PoToolDbContext context)
@@ -100,8 +101,7 @@ public sealed class GetWorkItemActivityDetailsQueryHandler
         }
 
         var eventRows = await eventQuery
-            .Where(e => !string.Equals(e.FieldRefName, "System.ChangedBy", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(e.FieldRefName, "System.ChangedDate", StringComparison.OrdinalIgnoreCase))
+            .Where(e => !ExcludedFieldRefNames.Contains((e.FieldRefName ?? string.Empty).ToUpper()))
             .OrderByDescending(e => e.EventTimestampUtc)
             .ToListAsync(cancellationToken);
 
