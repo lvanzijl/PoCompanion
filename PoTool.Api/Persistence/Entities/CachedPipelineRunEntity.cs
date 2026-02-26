@@ -60,6 +60,11 @@ public class CachedPipelineRunEntity
     public DateTimeOffset? FinishedDate { get; set; }
 
     /// <summary>
+    /// UTC finished date used in SQLite-translatable predicates/sorting.
+    /// </summary>
+    public DateTime? FinishedDateUtc { get; set; }
+
+    /// <summary>
     /// Source branch for the run.
     /// </summary>
     [MaxLength(500)]

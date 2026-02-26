@@ -155,6 +155,7 @@ public sealed class ActivityEventIngestionService
                         UpdateId = update.UpdateId,
                         FieldRefName = fieldChange.FieldRefName,
                         EventTimestamp = update.RevisedDate,
+                        EventTimestampUtc = update.RevisedDate.UtcDateTime,
                         IterationPath = currentIteration,
                         ParentId = hierarchyContext.ParentId,
                         FeatureId = hierarchyContext.FeatureId,

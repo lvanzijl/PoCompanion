@@ -83,14 +83,14 @@ public class SprintTrendProjectionService
         }
 
         // Batch-load all activity events for the full date range across all sprints
-        var rangeStart = validSprints.Min(s => new DateTimeOffset(s.StartDateUtc!.Value, TimeSpan.Zero));
-        var rangeEnd = validSprints.Max(s => new DateTimeOffset(s.EndDateUtc!.Value, TimeSpan.Zero));
+        var rangeStartUtc = validSprints.Min(s => DateTime.SpecifyKind(s.StartDateUtc!.Value, DateTimeKind.Utc));
+        var rangeEndUtc = validSprints.Max(s => DateTime.SpecifyKind(s.EndDateUtc!.Value, DateTimeKind.Utc));
 
         var allActivityEvents = await context.ActivityEventLedgerEntries
             .AsNoTracking()
             .Where(e => e.ProductOwnerId == productOwnerId
-                && e.EventTimestamp >= rangeStart
-                && e.EventTimestamp <= rangeEnd)
+                && e.EventTimestampUtc >= rangeStartUtc
+                && e.EventTimestampUtc <= rangeEndUtc)
             .ToListAsync(cancellationToken);
 
         // Batch-load existing projections for all sprint+product combinations
@@ -106,12 +106,14 @@ public class SprintTrendProjectionService
 
         foreach (var sprint in validSprints)
         {
-            var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
-            var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+            var sprintStartUtc = DateTime.SpecifyKind(sprint.StartDateUtc!.Value, DateTimeKind.Utc);
+            var sprintEndUtc = DateTime.SpecifyKind(sprint.EndDateUtc!.Value, DateTimeKind.Utc);
+            var sprintStart = new DateTimeOffset(sprintStartUtc, TimeSpan.Zero);
+            var sprintEnd = new DateTimeOffset(sprintEndUtc, TimeSpan.Zero);
 
             // Filter the pre-loaded activity events to this sprint's date range
             var sprintActivity = allActivityEvents
-                .Where(e => e.EventTimestamp >= sprintStart && e.EventTimestamp <= sprintEnd)
+                .Where(e => e.EventTimestampUtc >= sprintStartUtc && e.EventTimestampUtc <= sprintEndUtc)
                 .ToList();
 
             var activityByWorkItem = sprintActivity
