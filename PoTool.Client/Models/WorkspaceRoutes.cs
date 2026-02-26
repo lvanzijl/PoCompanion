@@ -107,6 +107,11 @@ public static class WorkspaceRoutes
     /// Sprint Trend route - shows sprint-based revision metrics.
     /// </summary>
     public const string SprintTrend = "/home/sprint-trend";
+
+    /// <summary>
+    /// Sprint Trend activity detail route.
+    /// </summary>
+    public const string SprintTrendActivity = "/home/sprint-trend/activity";
     
     // Legacy Landing route constant for backward compatibility - alias to the new Legacy constant
     public const string Landing = Legacy;

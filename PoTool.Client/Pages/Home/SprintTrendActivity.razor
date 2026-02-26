@@ -1,0 +1,191 @@
+@page "/home/sprint-trend/activity/{WorkItemId:int}"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Services
+@using PoTool.Shared.Metrics
+@using System.Web
+@inject SprintTrendService SprintTrendService
+@inject IProfileService ProfileService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Work Item Activity - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.History" Color="Color.Info" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">Work Item Activity</MudText>
+                </MudStack>
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            </MudStack>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.ArrowBack"
+                       OnClick="NavigateBack">
+                Back to Sprint Trend
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
+    }
+    else if (_details == null)
+    {
+        <MudAlert Severity="Severity.Warning">No activity details available for this work item.</MudAlert>
+    }
+    else
+    {
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h6">@_details.WorkItemType #@_details.WorkItemId</MudText>
+                <MudText Typo="Typo.body1">@_details.WorkItemTitle</MudText>
+                @if (_details.PeriodStartUtc.HasValue || _details.PeriodEndUtc.HasValue)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Period:
+                        @(_details.PeriodStartUtc?.ToString("u") ?? "Start unbounded")
+                        -
+                        @(_details.PeriodEndUtc?.ToString("u") ?? "End unbounded")
+                    </MudText>
+                }
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Elevation="2" Class="pa-4">
+            @if (_details.Activities.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    No activity events found in the selected period.
+                </MudAlert>
+            }
+            else
+            {
+                <MudSimpleTable Dense="true" Striped="true" Hover="true">
+                    <thead>
+                        <tr>
+                            <th style="width: 170px;">Timestamp (UTC)</th>
+                            <th style="width: 140px;">Work Item</th>
+                            <th style="width: 120px;">Source</th>
+                            <th style="width: 220px;">Field</th>
+                            <th>Old Value</th>
+                            <th>New Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var activity in _details.Activities)
+                        {
+                            <tr>
+                                <td>
+                                    <MudText Typo="Typo.body2">@activity.EventTimestampUtc.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                </td>
+                                <td>
+                                    <MudText Typo="Typo.body2">#@activity.WorkItemId (@activity.WorkItemType)</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@activity.WorkItemTitle</MudText>
+                                </td>
+                                <td>
+                                    <MudChip T="string" Size="Size.Small" Color="@(activity.IsSelectedWorkItem ? Color.Primary : Color.Default)">
+                                        @(activity.IsSelectedWorkItem ? "Selected" : "Child")
+                                    </MudChip>
+                                </td>
+                                <td><MudText Typo="Typo.body2">@activity.FieldRefName</MudText></td>
+                                <td><MudText Typo="Typo.body2">@activity.OldValue</MudText></td>
+                                <td><MudText Typo="Typo.body2">@activity.NewValue</MudText></td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public int WorkItemId { get; set; }
+
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private WorkItemActivityDetailsDto? _details;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+    private int? _productOwnerId;
+    private DateTimeOffset? _periodStartUtc;
+    private DateTimeOffset? _periodEndUtc;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _breadcrumbs =
+        [
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
+            new("Trends (Past)", WorkspaceRoutes.TrendsWorkspace, icon: Icons.Material.Filled.Timeline),
+            new("Sprint Trend", WorkspaceRoutes.SprintTrend, icon: Icons.Material.Filled.RunCircle),
+            new($"Activity #{WorkItemId}", null, disabled: true, icon: Icons.Material.Filled.History)
+        ];
+
+        try
+        {
+            ParseQueryParameters();
+
+            var productOwnerId = _productOwnerId;
+            if (!productOwnerId.HasValue)
+            {
+                var activeProfile = await ProfileService.GetActiveProfileAsync();
+                productOwnerId = activeProfile?.Id;
+            }
+
+            if (!productOwnerId.HasValue)
+            {
+                _errorMessage = "No active profile found.";
+                return;
+            }
+
+            _details = await SprintTrendService.GetWorkItemActivityDetailsAsync(
+                productOwnerId.Value,
+                WorkItemId,
+                _periodStartUtc,
+                _periodEndUtc);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load activity details: {ex.Message}";
+            Snackbar.Add(_errorMessage, Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void NavigateBack()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.SprintTrend);
+    }
+
+    private void ParseQueryParameters()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+
+        if (int.TryParse(queryParams["productOwnerId"], out var ownerId))
+        {
+            _productOwnerId = ownerId;
+        }
+
+        if (DateTimeOffset.TryParse(queryParams["periodStartUtc"], out var periodStartUtc))
+        {
+            _periodStartUtc = periodStartUtc;
+        }
+
+        if (DateTimeOffset.TryParse(queryParams["periodEndUtc"], out var periodEndUtc))
+        {
+            _periodEndUtc = periodEndUtc;
+        }
+    }
+}
