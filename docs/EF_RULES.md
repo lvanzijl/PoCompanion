@@ -127,6 +127,28 @@ This requires explicit justification in code review.
 
 ---
 
+SQLite timestamp rule (strict):
+- Do not use DateTimeOffset EF-mapped columns in server-side predicate/sort/aggregate query paths.
+- Persist queryable timestamps as UTC DateTime columns with *Utc suffix (for example, EventTimestampUtc, CreatedDateUtc, FinishedDateUtc).
+- Convert DateTimeOffset -> UTC DateTime at write time (`value.UtcDateTime`).
+- Compute UTC DateTime bounds outside LINQ queries; use those bounds inside Where/OrderBy/Min/Max.
+
+Do:
+- `var fromUtc = from.Value.UtcDateTime; query = query.Where(x => x.EventTimestampUtc >= fromUtc);`
+- `query = query.OrderBy(x => x.CreatedDateUtc);`
+
+Don’t:
+- `query = query.Where(x => x.EventTimestamp >= from);` (DateTimeOffset in EF predicate on SQLite)
+- `query = query.OrderBy(x => x.SomeDateTimeOffsetColumn);`
+- Force client evaluation (`AsEnumerable`, `ToList`) just to bypass translation.
+
+Common failure patterns to block:
+- Range filters (`>=`, `<=`) on DateTimeOffset columns
+- Watermark comparisons on DateTimeOffset columns
+- Min/Max/OrderBy/ThenBy on DateTimeOffset columns
+
+---
+
 ## Enforcement Expectation
 
 Any PR that violates these rules:
