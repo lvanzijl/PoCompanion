@@ -527,4 +527,35 @@ public class MetricsController : ControllerBase
             return StatusCode(500, "Error retrieving sprint trend metrics");
         }
     }
+
+    /// <summary>
+    /// Gets activity details for a work item and its descendants in the selected sprint period.
+    /// </summary>
+    [HttpGet("work-item-activity/{workItemId:int}")]
+    public async Task<ActionResult<WorkItemActivityDetailsDto>> GetWorkItemActivityDetails(
+        int workItemId,
+        [FromQuery][Required] int productOwnerId,
+        [FromQuery] DateTimeOffset? periodStartUtc = null,
+        [FromQuery] DateTimeOffset? periodEndUtc = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var details = await _mediator.Send(
+                new GetWorkItemActivityDetailsQuery(productOwnerId, workItemId, periodStartUtc, periodEndUtc),
+                cancellationToken);
+
+            if (details == null)
+            {
+                return NotFound($"Work item with ID {workItemId} not found for ProductOwner {productOwnerId}");
+            }
+
+            return Ok(details);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving work item activity details for WorkItemId: {WorkItemId}", workItemId);
+            return StatusCode(500, "Error retrieving work item activity details");
+        }
+    }
 }

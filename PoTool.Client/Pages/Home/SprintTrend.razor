@@ -443,6 +443,7 @@
                     <thead>
                         <tr>
                             <th>Product</th>
+                            <th style="width: 100px;">ID</th>
                             <th>Epic</th>
                             <th style="width: 200px;">Progress</th>
                             <th style="width: 120px; text-align: right;">Done / Total</th>
@@ -458,6 +459,9 @@
                                     <MudText Typo="Typo.body2">
                                         @GetProductName(epic.ProductId)
                                     </MudText>
+                                </td>
+                                <td>
+                                    <MudLink Href="@BuildWorkItemActivityUrl(epic.EpicId)">#@epic.EpicId</MudLink>
                                 </td>
                                 <td>
                                     <MudText Typo="Typo.body2"><strong>@epic.EpicTitle</strong></MudText>
@@ -510,6 +514,7 @@
                     <thead>
                         <tr>
                             <th>Product</th>
+                            <th style="width: 100px;">ID</th>
                             <th>Feature</th>
                             <th style="width: 200px;">Progress</th>
                             <th style="width: 100px; text-align: right;">Done / Total</th>
@@ -524,6 +529,9 @@
                                     <MudText Typo="Typo.body2">
                                         @GetProductName(feature.ProductId)
                                     </MudText>
+                                </td>
+                                <td>
+                                    <MudLink Href="@BuildWorkItemActivityUrl(feature.FeatureId)">#@feature.FeatureId</MudLink>
                                 </td>
                                 <td>
                                     <MudStack Spacing="0">
@@ -1229,6 +1237,37 @@
     private string GetProductName(int productId)
     {
         return _products.FirstOrDefault(p => p.Id == productId)?.Name ?? "Unknown";
+    }
+
+    private string BuildWorkItemActivityUrl(int workItemId)
+    {
+        var path = $"{WorkspaceRoutes.SprintTrendActivity}/{workItemId}";
+        if (!_profileId.HasValue)
+        {
+            return path;
+        }
+
+        var periodStartUtc = _currentSprint?.StartUtc;
+        var periodEndUtc = _currentSprint?.EndUtc;
+
+        if (_advancedMode && _trendMetrics.Count > 0)
+        {
+            periodStartUtc = _trendMetrics.First().StartUtc ?? periodStartUtc;
+            periodEndUtc = _trendMetrics.Last().EndUtc ?? periodEndUtc;
+        }
+
+        var query = new List<string> { $"productOwnerId={_profileId.Value}" };
+        if (periodStartUtc.HasValue)
+        {
+            query.Add($"periodStartUtc={Uri.EscapeDataString(periodStartUtc.Value.UtcDateTime.ToString("O"))}");
+        }
+
+        if (periodEndUtc.HasValue)
+        {
+            query.Add($"periodEndUtc={Uri.EscapeDataString(periodEndUtc.Value.UtcDateTime.ToString("O"))}");
+        }
+
+        return $"{path}?{string.Join("&", query)}";
     }
 
     private double[] GetPieChartData()

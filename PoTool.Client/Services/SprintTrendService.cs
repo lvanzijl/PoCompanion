@@ -46,4 +46,29 @@ public class SprintTrendService
 
         return await response.Content.ReadFromJsonAsync<GetSprintTrendMetricsResponse>(cancellationToken);
     }
+
+    /// <summary>
+    /// Gets activity details for a selected work item and its descendants.
+    /// </summary>
+    public async Task<WorkItemActivityDetailsDto?> GetWorkItemActivityDetailsAsync(
+        int productOwnerId,
+        int workItemId,
+        DateTimeOffset? periodStartUtc = null,
+        DateTimeOffset? periodEndUtc = null,
+        CancellationToken cancellationToken = default)
+    {
+        var queryParts = new List<string> { $"productOwnerId={productOwnerId}" };
+        if (periodStartUtc.HasValue)
+        {
+            queryParts.Add($"periodStartUtc={Uri.EscapeDataString(periodStartUtc.Value.UtcDateTime.ToString("O"))}");
+        }
+
+        if (periodEndUtc.HasValue)
+        {
+            queryParts.Add($"periodEndUtc={Uri.EscapeDataString(periodEndUtc.Value.UtcDateTime.ToString("O"))}");
+        }
+
+        var url = $"api/Metrics/work-item-activity/{workItemId}?{string.Join("&", queryParts)}";
+        return await _httpClient.GetFromJsonAsync<WorkItemActivityDetailsDto>(url, cancellationToken);
+    }
 }
