@@ -4,6 +4,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
+using System.Text.Json;
 
 namespace PoTool.Api.Services;
 
@@ -182,7 +183,7 @@ public class CacheManagementService
             .Where(e => string.Equals(e.FieldRefName, "System.ChangedBy", StringComparison.OrdinalIgnoreCase)
                         && !string.IsNullOrWhiteSpace(e.NewValue))
             .GroupBy(e => e.UpdateId)
-            .ToDictionary(g => g.Key, g => g.Last().NewValue, comparer: EqualityComparer<int>.Default);
+            .ToDictionary(g => g.Key, g => ExtractDisplayNameOrOriginal(g.Last().NewValue), comparer: EqualityComparer<int>.Default);
 
         var workItem = await _context.WorkItems
             .AsNoTracking()
@@ -213,7 +214,7 @@ public class CacheManagementService
             .Where(e => string.Equals(e.FieldRefName, "System.AssignedTo", StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(e => e.EventTimestampUtc)
             .ThenByDescending(e => e.UpdateId)
-            .Select(e => e.NewValue)
+            .Select(e => ExtractDisplayNameOrOriginal(e.NewValue))
             .FirstOrDefault();
 
         var snapshot = workItem == null
@@ -248,8 +249,8 @@ public class CacheManagementService
                     UpdateId = e.UpdateId,
                     ChangedBy = changedByByUpdateId.TryGetValue(e.UpdateId, out var changedBy) ? changedBy : null,
                     FieldRefName = e.FieldRefName,
-                    OldValue = e.OldValue,
-                    NewValue = e.NewValue,
+                    OldValue = NormalizeIdentityFieldValue(e.FieldRefName, e.OldValue),
+                    NewValue = NormalizeIdentityFieldValue(e.FieldRefName, e.NewValue),
                     IterationPathAtTime = e.IterationPath,
                     ParentIdAtTime = e.ParentId,
                     FeatureIdAtTime = e.FeatureId,
@@ -409,5 +410,42 @@ public class CacheManagementService
             .Where(e => e.ProductOwnerId == productOwnerId)
             .ExecuteDeleteAsync(ct);
         return count;
+    }
+
+    private static string? NormalizeIdentityFieldValue(string fieldRefName, string? value)
+    {
+        if (!string.Equals(fieldRefName, "System.AssignedTo", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(fieldRefName, "System.ChangedBy", StringComparison.OrdinalIgnoreCase))
+        {
+            return value;
+        }
+
+        return ExtractDisplayNameOrOriginal(value);
+    }
+
+    private static string? ExtractDisplayNameOrOriginal(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return value;
+        }
+
+        try
+        {
+            using var jsonDocument = JsonDocument.Parse(value);
+            if (jsonDocument.RootElement.ValueKind == JsonValueKind.Object &&
+                jsonDocument.RootElement.TryGetProperty("displayName", out var displayNameElement) &&
+                displayNameElement.ValueKind == JsonValueKind.String)
+            {
+                var displayName = displayNameElement.GetString();
+                return string.IsNullOrWhiteSpace(displayName) ? value : displayName;
+            }
+        }
+        catch (JsonException)
+        {
+            // Value is not JSON, keep original.
+        }
+
+        return value;
     }
 }
