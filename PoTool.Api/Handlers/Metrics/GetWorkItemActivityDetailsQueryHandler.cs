@@ -100,8 +100,8 @@ public sealed class GetWorkItemActivityDetailsQueryHandler
         }
 
         var eventRows = await eventQuery
-            .Where(e => !string.Equals(e.FieldRefName, "System.ChangedBy", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(e.FieldRefName, "System.ChangedDate", StringComparison.OrdinalIgnoreCase))
+            .Where(e => !new[] { "SYSTEM.CHANGEDBY", "SYSTEM.CHANGEDDATE" }
+                .Contains((e.FieldRefName ?? string.Empty).ToUpper()))
             .OrderByDescending(e => e.EventTimestampUtc)
             .ToListAsync(cancellationToken);
 
