@@ -291,6 +291,18 @@ public record FeatureProgressDto
     /// Whether the feature is in Done state.
     /// </summary>
     public bool IsDone { get; init; }
+
+    /// <summary>
+    /// Effort of PBIs that closed (transitioned to Done) during the selected sprint.
+    /// Zero when not in single-sprint view.
+    /// </summary>
+    public int SprintCompletedEffort { get; init; }
+
+    /// <summary>
+    /// Progression delta gained during the selected sprint for this feature (0-100).
+    /// Computed as SprintCompletedEffort / TotalEffort * 100. Zero when not in single-sprint view.
+    /// </summary>
+    public double SprintProgressionDelta { get; init; }
 }
 
 /// <summary>
@@ -345,4 +357,16 @@ public record EpicProgressDto
     /// Whether the epic is in Done state.
     /// </summary>
     public bool IsDone { get; init; }
+
+    /// <summary>
+    /// Effort of PBIs that closed (transitioned to Done) during the selected sprint across this epic's features.
+    /// Zero when not in single-sprint view.
+    /// </summary>
+    public int SprintCompletedEffort { get; init; }
+
+    /// <summary>
+    /// Progression delta gained during the selected sprint for this epic (0-100).
+    /// Computed as SprintCompletedEffort / TotalEffort * 100. Zero when not in single-sprint view.
+    /// </summary>
+    public double SprintProgressionDelta { get; init; }
 }
