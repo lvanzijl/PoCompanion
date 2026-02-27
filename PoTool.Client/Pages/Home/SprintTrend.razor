@@ -12,6 +12,7 @@
 @inject SprintTrendService SprintTrendService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <PageTitle>Sprint Trend - PO Companion</PageTitle>
 
@@ -460,6 +461,7 @@
                             <th style="width: 120px; text-align: right;">Sprint Scored</th>
                             <th style="width: 120px; text-align: right;">Features</th>
                             <th style="width: 80px; text-align: center;">Sprint Δ%</th>
+                            <th style="width: 100px; text-align: center;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -472,7 +474,7 @@
                                     </MudText>
                                 </td>
                                 <td>
-                                    <MudLink Href="@BuildWorkItemActivityUrl(epic.EpicId)">#@epic.EpicId</MudLink>
+                                    <MudText Typo="Typo.body2">#@epic.EpicId</MudText>
                                 </td>
                                 <td>
                                     <MudText Typo="Typo.body2"><strong>@epic.EpicTitle</strong></MudText>
@@ -491,81 +493,17 @@
                                 <td style="text-align: center;">
                                     <MudText Typo="Typo.body2" Color="@GetProgressColor((int)epic.SprintProgressionDelta)">@epic.SprintProgressionDelta.ToString("F1")%</MudText>
                                 </td>
-                            </tr>
-                        }
-                    </tbody>
-                </MudSimpleTable>
-            }
-        </MudPaper>
-
-        @* Phase 3: Feature/Epic Progress Table *@
-        <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudText Typo="Typo.h6" Class="mb-3">
-                <MudIcon Icon="@Icons.Material.Filled.Assessment" Class="mr-2" />
-                Feature Progress
-            </MudText>
-            
-            @if (_featureProgress.Count == 0)
-            {
-                <MudAlert Severity="Severity.Info" Dense="true">
-                    No feature progress data available for the selected sprint.
-                    Ensure work items are synced and products are configured.
-                </MudAlert>
-            }
-            else
-            {
-                @if (_featureProgress.Count > 1 && _featureProgress.Any(f => f.TotalEffort > 0))
-                {
-                    <MudChart ChartType="ChartType.Pie"
-                              InputData="@GetFeaturePieChartData()"
-                              InputLabels="@GetFeaturePieChartLabels()"
-                              Width="300px"
-                              Height="300px"
-                              ChartOptions="@_pieChartOptions"
-                              Class="mb-4" />
-                }
-                <MudSimpleTable Dense="true" Striped="true" Hover="true">
-                    <thead>
-                        <tr>
-                            <th>Product</th>
-                            <th style="width: 100px;">ID</th>
-                            <th>Feature</th>
-                            <th style="width: 200px;">Progress</th>
-                            <th style="width: 100px; text-align: right;">Sprint Scored</th>
-                            <th style="width: 80px; text-align: center;">Sprint Δ%</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var feature in _featureProgress)
-                        {
-                            <tr>
-                                <td>
-                                    <MudText Typo="Typo.body2">
-                                        @GetProductName(feature.ProductId)
-                                    </MudText>
-                                </td>
-                                <td>
-                                    <MudLink Href="@BuildWorkItemActivityUrl(feature.FeatureId)">#@feature.FeatureId</MudLink>
-                                </td>
-                                <td>
-                                    <MudStack Spacing="0">
-                                        <MudText Typo="Typo.body2"><strong>@feature.FeatureTitle</strong></MudText>
-                                        @if (!string.IsNullOrEmpty(feature.EpicTitle))
-                                        {
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Epic: @feature.EpicTitle</MudText>
-                                        }
-                                    </MudStack>
-                                </td>
-                                <td>
-                                    <MudProgressLinear Color="@GetProgressColor(feature.ProgressPercent)"
-                                                      Value="@feature.ProgressPercent"
-                                                      Max="100" />
-                                </td>
-                                <td style="text-align: right;">
-                                    <MudText Typo="Typo.body2">@feature.SprintCompletedEffort pts</MudText>
-                                </td>
                                 <td style="text-align: center;">
-                                    <MudText Typo="Typo.body2" Color="@GetProgressColor((int)feature.SprintProgressionDelta)">@feature.SprintProgressionDelta.ToString("F1")%</MudText>
+                                    <MudIconButton Icon="@Icons.Material.Filled.History"
+                                                   Size="Size.Small"
+                                                   Color="Color.Info"
+                                                   aria-label="Show activities for this epic"
+                                                   Href="@BuildWorkItemActivityUrl(epic.EpicId)" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.List"
+                                                   Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   aria-label="Show features for this epic"
+                                                   OnClick="@(() => ShowEpicFeaturesAsync(epic))" />
                                 </td>
                             </tr>
                         }
@@ -1310,28 +1248,29 @@
             .ToArray();
     }
 
-    private double[] GetFeaturePieChartData()
-    {
-        return _featureProgress
-            .Select(f => (double)f.TotalEffort)
-            .ToArray();
-    }
+    private static Color GetProgressColor(int progress) =>
+        SprintProgressColorHelper.GetProgressColor(progress);
 
-    private string[] GetFeaturePieChartLabels()
+    private async Task ShowEpicFeaturesAsync(EpicProgressDto epic)
     {
-        return _featureProgress
-            .Select(f => f.FeatureTitle.Length > MaxPieChartLabelLength ? f.FeatureTitle[..MaxPieChartLabelLength] + "…" : f.FeatureTitle)
-            .ToArray();
-    }
+        var epicFeatures = _featureProgress
+            .Where(f => f.EpicId == epic.EpicId)
+            .ToList();
 
-    private Color GetProgressColor(int progress)
-    {
-        return progress switch
+        var parameters = new DialogParameters
         {
-            >= 90 => Color.Success,
-            >= 50 => Color.Warning,
-            _ => Color.Error
+            { nameof(EpicFeaturesDialog.EpicTitle), epic.EpicTitle },
+            { nameof(EpicFeaturesDialog.Features), (IReadOnlyList<FeatureProgressDto>)epicFeatures }
         };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        await DialogService.ShowAsync<EpicFeaturesDialog>($"Features — {epic.EpicTitle}", parameters, options);
     }
 
     private void NavigateToTrends()
