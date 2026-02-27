@@ -478,6 +478,7 @@ public class SprintTrendProjectionService
         var workItemsByTfsId = workItems.ToDictionary(w => w.TfsId, w => w);
 
         HashSet<int>? activeWorkItemIds = null;
+        HashSet<int>? sprintCompletedPbiIds = null;
         if (sprintStartUtc.HasValue && sprintEndUtc.HasValue)
         {
             // Callers must supply UTC DateTime values; SpecifyKind guards against unspecified Kind
@@ -497,16 +498,31 @@ public class SprintTrendProjectionService
                 .ToListAsync(cancellationToken);
 
             activeWorkItemIds = sprintActivity.ToHashSet();
+
+            // Load PBI IDs that transitioned to Done during this sprint
+            var closedInSprint = await context.ActivityEventLedgerEntries
+                .AsNoTracking()
+                .Where(e => e.ProductOwnerId == productOwnerId
+                    && e.EventTimestampUtc >= sprintStart
+                    && e.EventTimestampUtc <= sprintEnd
+                    && e.FieldRefName == "System.State"
+                    && e.NewValue == "Done")
+                .Select(e => e.WorkItemId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            sprintCompletedPbiIds = closedInSprint.ToHashSet();
         }
 
-        return ComputeFeatureProgress(resolvedItems, workItemsByTfsId, productIds, activeWorkItemIds);
+        return ComputeFeatureProgress(resolvedItems, workItemsByTfsId, productIds, activeWorkItemIds, sprintCompletedPbiIds);
     }
 
     internal static IReadOnlyList<FeatureProgressDto> ComputeFeatureProgress(
         IReadOnlyList<ResolvedWorkItemEntity> resolvedItems,
         IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
         IReadOnlyList<int> productIds,
-        IReadOnlyCollection<int>? activeWorkItemIds = null)
+        IReadOnlyCollection<int>? activeWorkItemIds = null,
+        IReadOnlyCollection<int>? sprintCompletedPbiIds = null)
     {
         var results = new List<FeatureProgressDto>();
 
@@ -570,6 +586,17 @@ public class SprintTrendProjectionService
                 var rawPercent = totalEffort > 0 ? (int)Math.Round((double)doneEffort / totalEffort * 100) : 0;
                 var progressPercent = featureIsDone ? 100 : Math.Min(rawPercent, 90);
 
+                // Sprint-scoped metrics
+                var sprintCompletedEffort = sprintCompletedPbiIds == null
+                    ? 0
+                    : childPbis
+                        .Where(pbi => sprintCompletedPbiIds.Contains(pbi!.TfsId))
+                        .Sum(pbi => pbi!.Effort ?? 0);
+
+                var sprintProgressionDelta = totalEffort > 0
+                    ? Math.Round((double)sprintCompletedEffort / totalEffort * 100, 2)
+                    : 0.0;
+
                 // Resolve epic info
                 int? epicId = feature.ResolvedEpicId;
                 string? epicTitle = null;
@@ -588,7 +615,9 @@ public class SprintTrendProjectionService
                     ProgressPercent = progressPercent,
                     TotalEffort = totalEffort,
                     DoneEffort = doneEffort,
-                    IsDone = featureIsDone
+                    IsDone = featureIsDone,
+                    SprintCompletedEffort = sprintCompletedEffort,
+                    SprintProgressionDelta = sprintProgressionDelta
                 });
             }
         }
@@ -630,6 +659,12 @@ public class SprintTrendProjectionService
             var rawPercent = totalEffort > 0 ? (int)Math.Round((double)doneEffort / totalEffort * 100) : 0;
             var progressPercent = epicIsDone ? 100 : Math.Min(rawPercent, 90);
 
+            // Aggregate sprint-scoped metrics from child features
+            var epicSprintCompletedEffort = features.Sum(f => f.SprintCompletedEffort);
+            var epicSprintProgressionDelta = totalEffort > 0
+                ? Math.Round((double)epicSprintCompletedEffort / totalEffort * 100, 2)
+                : 0.0;
+
             // Get the product ID from the first feature (all should share the same product)
             var productId = features.First().ProductId;
 
@@ -643,7 +678,9 @@ public class SprintTrendProjectionService
                 DoneEffort = doneEffort,
                 FeatureCount = features.Count,
                 DoneFeatureCount = doneFeatureCount,
-                IsDone = epicIsDone
+                IsDone = epicIsDone,
+                SprintCompletedEffort = epicSprintCompletedEffort,
+                SprintProgressionDelta = epicSprintProgressionDelta
             });
         }
 

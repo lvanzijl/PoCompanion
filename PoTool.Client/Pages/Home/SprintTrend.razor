@@ -362,7 +362,8 @@
                               InputData="@GetPieChartData()"
                               InputLabels="@GetPieChartLabels()"
                               Width="300px"
-                              Height="300px" />
+                              Height="300px"
+                              ChartOptions="@_pieChartOptions" />
                 }
                 
                 <MudGrid Spacing="3" Class="mt-3">
@@ -446,6 +447,7 @@
                               InputLabels="@GetEpicPieChartLabels()"
                               Width="300px"
                               Height="300px"
+                              ChartOptions="@_pieChartOptions"
                               Class="mb-4" />
                 }
                 <MudSimpleTable Dense="true" Striped="true" Hover="true">
@@ -455,9 +457,9 @@
                             <th style="width: 100px;">ID</th>
                             <th>Epic</th>
                             <th style="width: 200px;">Progress</th>
-                            <th style="width: 120px; text-align: right;">Done / Total</th>
+                            <th style="width: 120px; text-align: right;">Sprint Scored</th>
                             <th style="width: 120px; text-align: right;">Features</th>
-                            <th style="width: 60px; text-align: center;">Status</th>
+                            <th style="width: 80px; text-align: center;">Sprint Δ%</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -481,20 +483,13 @@
                                                       Max="100" />
                                 </td>
                                 <td style="text-align: right;">
-                                    <MudText Typo="Typo.body2">@epic.DoneEffort / @epic.TotalEffort</MudText>
+                                    <MudText Typo="Typo.body2">@epic.SprintCompletedEffort pts</MudText>
                                 </td>
                                 <td style="text-align: right;">
                                     <MudText Typo="Typo.body2">@epic.DoneFeatureCount / @epic.FeatureCount done</MudText>
                                 </td>
                                 <td style="text-align: center;">
-                                    @if (epic.IsDone)
-                                    {
-                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
-                                    }
-                                    else
-                                    {
-                                        <MudText Typo="Typo.body2">@epic.ProgressPercent%</MudText>
-                                    }
+                                    <MudText Typo="Typo.body2" Color="@GetProgressColor((int)epic.SprintProgressionDelta)">@epic.SprintProgressionDelta.ToString("F1")%</MudText>
                                 </td>
                             </tr>
                         }
@@ -526,6 +521,7 @@
                               InputLabels="@GetFeaturePieChartLabels()"
                               Width="300px"
                               Height="300px"
+                              ChartOptions="@_pieChartOptions"
                               Class="mb-4" />
                 }
                 <MudSimpleTable Dense="true" Striped="true" Hover="true">
@@ -535,8 +531,8 @@
                             <th style="width: 100px;">ID</th>
                             <th>Feature</th>
                             <th style="width: 200px;">Progress</th>
-                            <th style="width: 100px; text-align: right;">Done / Total</th>
-                            <th style="width: 60px; text-align: center;">Status</th>
+                            <th style="width: 100px; text-align: right;">Sprint Scored</th>
+                            <th style="width: 80px; text-align: center;">Sprint Δ%</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -566,17 +562,10 @@
                                                       Max="100" />
                                 </td>
                                 <td style="text-align: right;">
-                                    <MudText Typo="Typo.body2">@feature.DoneEffort / @feature.TotalEffort</MudText>
+                                    <MudText Typo="Typo.body2">@feature.SprintCompletedEffort pts</MudText>
                                 </td>
                                 <td style="text-align: center;">
-                                    @if (feature.IsDone)
-                                    {
-                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
-                                    }
-                                    else
-                                    {
-                                        <MudText Typo="Typo.body2">@feature.ProgressPercent%</MudText>
-                                    }
+                                    <MudText Typo="Typo.body2" Color="@GetProgressColor((int)feature.SprintProgressionDelta)">@feature.SprintProgressionDelta.ToString("F1")%</MudText>
                                 </td>
                             </tr>
                         }
@@ -669,6 +658,11 @@
         MaxNumYAxisTicks = 10,
         YAxisLines = true,
         XAxisLines = true
+    };
+
+    private ChartOptions _pieChartOptions = new()
+    {
+        ShowLegend = false
     };
 
     protected override async Task OnInitializedAsync()
