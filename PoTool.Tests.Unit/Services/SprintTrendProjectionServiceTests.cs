@@ -386,6 +386,83 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
+    public void ComputeFeatureProgress_WithActivityFilter_ExcludesInactiveFeatures()
+    {
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Active Feature", state: "Active"),
+            [101] = CreateWorkItem(101, WorkItemType.Feature, "Inactive Feature", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 10, state: "Done", parentId: 100),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "PBI 2", effort: 10, state: "Active", parentId: 101),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 101, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 101 },
+        };
+
+        // Only PBI 201 had activity — Feature 101 / PBI 202 had none
+        var activeWorkItemIds = new HashSet<int> { 201 };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, activeWorkItemIds);
+
+        Assert.HasCount(1, result, "Only the feature with child PBI activity should be returned");
+        Assert.AreEqual(100, result[0].FeatureId);
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_WithActivityFilter_IncludesFeatureWithDirectActivity()
+    {
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 10, state: "Done", parentId: 100),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+        };
+
+        // Feature itself had direct activity (e.g. title change), but no PBI activity
+        var activeWorkItemIds = new HashSet<int> { 100 };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, activeWorkItemIds);
+
+        Assert.HasCount(1, result, "Feature with direct activity should be included even without PBI activity");
+        Assert.AreEqual(100, result[0].FeatureId);
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_WithNullActivityFilter_IncludesAllFeaturesWithPbis()
+    {
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [101] = CreateWorkItem(101, WorkItemType.Feature, "Feature B", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 10, state: "Done", parentId: 100),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "PBI 2", effort: 10, state: "Active", parentId: 101),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 101, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 101 },
+        };
+
+        // No activity filter — both features should be returned
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, null);
+
+        Assert.HasCount(2, result, "Without activity filter, all features with PBIs should be returned");
+    }
+
+    [TestMethod]
     public void ComputeFeatureProgress_MissingEffort_UsesSiblingAverage()
     {
         var workItems = new Dictionary<int, WorkItemEntity>

@@ -439,6 +439,15 @@
             }
             else
             {
+                @if (_epicProgress.Count > 1 && _epicProgress.Any(e => e.TotalEffort > 0))
+                {
+                    <MudChart ChartType="ChartType.Pie"
+                              InputData="@GetEpicPieChartData()"
+                              InputLabels="@GetEpicPieChartLabels()"
+                              Width="300px"
+                              Height="300px"
+                              Class="mb-4" />
+                }
                 <MudSimpleTable Dense="true" Striped="true" Hover="true">
                     <thead>
                         <tr>
@@ -510,6 +519,15 @@
             }
             else
             {
+                @if (_featureProgress.Count > 1 && _featureProgress.Any(f => f.TotalEffort > 0))
+                {
+                    <MudChart ChartType="ChartType.Pie"
+                              InputData="@GetFeaturePieChartData()"
+                              InputLabels="@GetFeaturePieChartLabels()"
+                              Width="300px"
+                              Height="300px"
+                              Class="mb-4" />
+                }
                 <MudSimpleTable Dense="true" Striped="true" Hover="true">
                     <thead>
                         <tr>
@@ -1270,6 +1288,8 @@
         return $"{path}?{string.Join("&", query)}";
     }
 
+    private const int MaxPieChartLabelLength = 25;
+
     private double[] GetPieChartData()
     {
         return _filteredProducts
@@ -1280,6 +1300,34 @@
     private string[] GetPieChartLabels()
     {
         return _filteredProducts.Select(p => p.Name).ToArray();
+    }
+
+    private double[] GetEpicPieChartData()
+    {
+        return _epicProgress
+            .Select(e => (double)e.TotalEffort)
+            .ToArray();
+    }
+
+    private string[] GetEpicPieChartLabels()
+    {
+        return _epicProgress
+            .Select(e => e.EpicTitle.Length > MaxPieChartLabelLength ? e.EpicTitle[..MaxPieChartLabelLength] + "…" : e.EpicTitle)
+            .ToArray();
+    }
+
+    private double[] GetFeaturePieChartData()
+    {
+        return _featureProgress
+            .Select(f => (double)f.TotalEffort)
+            .ToArray();
+    }
+
+    private string[] GetFeaturePieChartLabels()
+    {
+        return _featureProgress
+            .Select(f => f.FeatureTitle.Length > MaxPieChartLabelLength ? f.FeatureTitle[..MaxPieChartLabelLength] + "…" : f.FeatureTitle)
+            .ToArray();
     }
 
     private Color GetProgressColor(int progress)
