@@ -1,0 +1,76 @@
+@using PoTool.Shared.Metrics
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.subtitle1" Class="mb-3">
+            <strong>Features for Epic: @EpicTitle</strong>
+        </MudText>
+
+        @if (Features == null || Features.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">
+                No features found for this epic.
+            </MudAlert>
+        }
+        else
+        {
+            <MudSimpleTable Dense="true" Striped="true" Hover="true">
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">ID</th>
+                        <th>Feature</th>
+                        <th style="width: 200px;">Progress</th>
+                        <th style="width: 100px; text-align: right;">Sprint Scored</th>
+                        <th style="width: 80px; text-align: center;">Sprint Δ%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var feature in Features)
+                    {
+                        <tr>
+                            <td>
+                                <MudText Typo="Typo.body2">#@feature.FeatureId</MudText>
+                            </td>
+                            <td>
+                                <MudText Typo="Typo.body2"><strong>@feature.FeatureTitle</strong></MudText>
+                            </td>
+                            <td>
+                                <MudProgressLinear Color="@GetProgressColor(feature.ProgressPercent)"
+                                                  Value="@feature.ProgressPercent"
+                                                  Max="100" />
+                            </td>
+                            <td style="text-align: right;">
+                                <MudText Typo="Typo.body2">@feature.SprintCompletedEffort pts</MudText>
+                            </td>
+                            <td style="text-align: center;">
+                                <MudText Typo="Typo.body2" Color="@GetProgressColor((int)feature.SprintProgressionDelta)">@feature.SprintProgressionDelta.ToString("F1")%</MudText>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Default">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public string EpicTitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<FeatureProgressDto>? Features { get; set; }
+
+    private void Close()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private static Color GetProgressColor(int progress) =>
+        SprintProgressColorHelper.GetProgressColor(progress);
+}
