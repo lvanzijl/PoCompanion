@@ -444,9 +444,12 @@ public class SprintTrendProjectionService
     /// <summary>
     /// Computes feature-level progress from the resolved work item hierarchy.
     /// Returns one FeatureProgressDto per Feature that has child PBIs resolved to the PO's products.
+    /// When sprint dates are supplied, only features with functional activity during that sprint are returned.
     /// </summary>
     public virtual async Task<IReadOnlyList<FeatureProgressDto>> ComputeFeatureProgressAsync(
         int productOwnerId,
+        DateTime? sprintStartUtc = null,
+        DateTime? sprintEndUtc = null,
         CancellationToken cancellationToken = default)
     {
         using var scope = _scopeFactory.CreateScope();
@@ -474,13 +477,36 @@ public class SprintTrendProjectionService
 
         var workItemsByTfsId = workItems.ToDictionary(w => w.TfsId, w => w);
 
-        return ComputeFeatureProgress(resolvedItems, workItemsByTfsId, productIds);
+        HashSet<int>? activeWorkItemIds = null;
+        if (sprintStartUtc.HasValue && sprintEndUtc.HasValue)
+        {
+            // Callers must supply UTC DateTime values; SpecifyKind guards against unspecified Kind
+            var sprintStart = DateTime.SpecifyKind(sprintStartUtc.Value, DateTimeKind.Utc);
+            var sprintEnd = DateTime.SpecifyKind(sprintEndUtc.Value, DateTimeKind.Utc);
+
+            var sprintActivity = await context.ActivityEventLedgerEntries
+                .AsNoTracking()
+                .Where(e => e.ProductOwnerId == productOwnerId
+                    && e.EventTimestampUtc >= sprintStart
+                    && e.EventTimestampUtc <= sprintEnd
+                    && !string.IsNullOrEmpty(e.FieldRefName)
+                    && e.FieldRefName != "System.ChangedBy"
+                    && e.FieldRefName != "System.ChangedDate")
+                .Select(e => e.WorkItemId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            activeWorkItemIds = sprintActivity.ToHashSet();
+        }
+
+        return ComputeFeatureProgress(resolvedItems, workItemsByTfsId, productIds, activeWorkItemIds);
     }
 
     internal static IReadOnlyList<FeatureProgressDto> ComputeFeatureProgress(
         IReadOnlyList<ResolvedWorkItemEntity> resolvedItems,
         IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
-        IReadOnlyList<int> productIds)
+        IReadOnlyList<int> productIds,
+        IReadOnlyCollection<int>? activeWorkItemIds = null)
     {
         var results = new List<FeatureProgressDto>();
 
@@ -507,6 +533,15 @@ public class SprintTrendProjectionService
 
                 if (childPbis.Count == 0)
                     continue;
+
+                // When an activity filter is provided, skip features without sprint activity
+                if (activeWorkItemIds != null)
+                {
+                    var hasActivity = activeWorkItemIds.Contains(feature.WorkItemId)
+                        || childPbis.Any(pbi => activeWorkItemIds.Contains(pbi!.TfsId));
+                    if (!hasActivity)
+                        continue;
+                }
 
                 var totalEffort = 0;
                 var doneEffort = 0;

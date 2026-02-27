@@ -151,9 +151,24 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                 "Returning sprint trend metrics for ProductOwner {ProductOwnerId}: {SprintMetricCount} sprint rows from {ProjectionCount} projections.",
                 query.ProductOwnerId, metricsBySprint.Count, projections.Count);
 
-            // Compute real feature progress from resolved hierarchy
+            // Determine the most recent sprint's date range for activity-based filtering
+            var mostRecentSprint = sprints.Values
+                .Where(s => s.StartDateUtc != null)
+                .OrderByDescending(s => s.StartDateUtc)
+                .FirstOrDefault();
+
+            DateTime? sprintStartForFilter = mostRecentSprint?.StartDateUtc is { } startDate
+                ? DateTime.SpecifyKind(startDate, DateTimeKind.Utc)
+                : null;
+            DateTime? sprintEndForFilter = mostRecentSprint?.EndDateUtc is { } endDate
+                ? DateTime.SpecifyKind(endDate, DateTimeKind.Utc)
+                : null;
+
+            // Compute real feature progress from resolved hierarchy, filtered to sprint activity
             var featureProgress = await _projectionService.ComputeFeatureProgressAsync(
                 query.ProductOwnerId,
+                sprintStartForFilter,
+                sprintEndForFilter,
                 cancellationToken);
 
             // Compute epic progress from feature progress
