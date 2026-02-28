@@ -57,7 +57,7 @@ public sealed class GetVelocityTrendQueryHandler : IQueryHandler<GetVelocityTren
                     _logger.LogWarning("Product with ID {ProductId} not found, skipping", productId);
                     continue;
                 }
-                rootWorkItemIds.Add(product.BacklogRootWorkItemId);
+                rootWorkItemIds.AddRange(product.BacklogRootWorkItemIds);
             }
 
             if (rootWorkItemIds.Count > 0)
@@ -98,8 +98,8 @@ public sealed class GetVelocityTrendQueryHandler : IQueryHandler<GetVelocityTren
             if (productsList.Count > 0)
             {
                 var rootIds = productsList
-                    .Where(p => p.BacklogRootWorkItemId > 0)
-                    .Select(p => p.BacklogRootWorkItemId)
+                    .SelectMany(p => p.BacklogRootWorkItemIds)
+                    .Distinct()
                     .ToArray();
                 
                 if (rootIds.Length > 0)

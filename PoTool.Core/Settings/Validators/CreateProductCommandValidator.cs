@@ -16,8 +16,11 @@ public sealed class CreateProductCommandValidator : AbstractValidator<CreateProd
             .MaximumLength(200).WithMessage("Product name must not exceed 200 characters")
             .Matches(@"^[a-zA-Z0-9\s\-_\.]+$").WithMessage("Product name can only contain letters, numbers, spaces, hyphens, underscores, and periods");
 
-        RuleFor(x => x.BacklogRootWorkItemId)
-            .GreaterThan(0).WithMessage("Backlog root work item ID must be greater than 0");
+        RuleFor(x => x.BacklogRootWorkItemIds)
+            .NotEmpty().WithMessage("At least one backlog root work item ID is required");
+
+        RuleForEach(x => x.BacklogRootWorkItemIds)
+            .GreaterThan(0).WithMessage("All backlog root work item IDs must be greater than 0");
 
         RuleFor(x => x.ProductOwnerId)
             .GreaterThan(0).WithMessage("Product owner ID must be greater than 0")

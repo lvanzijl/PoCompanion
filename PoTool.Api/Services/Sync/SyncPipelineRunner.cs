@@ -473,9 +473,10 @@ public class SyncPipelineRunner : ISyncPipeline
             .Where(p => p.ProductOwnerId == productOwnerId)
             .ToListAsync(cancellationToken);
 
-        var rootWorkItemIds = products
-            .Select(p => p.BacklogRootWorkItemId)
-            .ToArray();
+        var rootWorkItemIds = await context.ProductBacklogRoots
+            .Where(r => products.Select(p => p.Id).Contains(r.ProductId))
+            .Select(r => r.WorkItemTfsId)
+            .ToArrayAsync(cancellationToken);
 
         // Get repositories for these products
         var productIds = products.Select(p => p.Id).ToList();

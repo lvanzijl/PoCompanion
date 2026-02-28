@@ -8,14 +8,14 @@ namespace PoTool.Core.Settings.Commands;
 /// </summary>
 /// <param name="Id">Product ID</param>
 /// <param name="Name">Product name</param>
-/// <param name="BacklogRootWorkItemId">Root work item ID that defines the backlog</param>
+/// <param name="BacklogRootWorkItemIds">Root work item IDs that define the backlog</param>
 /// <param name="PictureType">Optional: Type of product picture to update</param>
 /// <param name="DefaultPictureId">Optional: ID of default picture (0-63)</param>
 /// <param name="CustomPicturePath">Optional: Path to custom picture</param>
 public sealed record UpdateProductCommand(
     int Id,
     string Name,
-    int BacklogRootWorkItemId,
+    List<int> BacklogRootWorkItemIds,
     ProductPictureType? PictureType = null,
     int? DefaultPictureId = null,
     string? CustomPicturePath = null

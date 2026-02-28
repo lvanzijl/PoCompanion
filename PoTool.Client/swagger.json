@@ -7183,10 +7183,6 @@
           "name": {
             "type": "string"
           },
-          "backlogRootWorkItemId": {
-            "type": "integer",
-            "format": "int32"
-          },
           "order": {
             "type": "integer",
             "format": "int32"
@@ -7226,6 +7222,13 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/RepositoryDto"
+            }
+          },
+          "backlogRootWorkItemIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
             }
           }
         }
@@ -7275,10 +7278,6 @@
           "name": {
             "type": "string"
           },
-          "backlogRootWorkItemId": {
-            "type": "integer",
-            "format": "int32"
-          },
           "pictureType": {
             "$ref": "#/components/schemas/ProductPictureType"
           },
@@ -7289,6 +7288,13 @@
           "customPicturePath": {
             "type": "string",
             "nullable": true
+          },
+          "backlogRootWorkItemIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
           }
         }
       },
@@ -7298,10 +7304,6 @@
         "properties": {
           "name": {
             "type": "string"
-          },
-          "backlogRootWorkItemId": {
-            "type": "integer",
-            "format": "int32"
           },
           "pictureType": {
             "nullable": true,
@@ -7319,6 +7321,13 @@
           "customPicturePath": {
             "type": "string",
             "nullable": true
+          },
+          "backlogRootWorkItemIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
           }
         }
       },

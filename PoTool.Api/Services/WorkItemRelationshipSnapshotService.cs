@@ -36,6 +36,7 @@ public class WorkItemRelationshipSnapshotService
 
         var profile = await context.Profiles
             .Include(p => p.Products)
+                .ThenInclude(p => p.BacklogRoots)
             .FirstOrDefaultAsync(p => p.Id == productOwnerId, cancellationToken);
 
         if (profile == null)
@@ -44,8 +45,7 @@ public class WorkItemRelationshipSnapshotService
         }
 
         var rootIds = profile.Products
-            .Select(p => p.BacklogRootWorkItemId)
-            .Where(id => id > 0)
+            .SelectMany(p => p.BacklogRoots.Select(r => r.WorkItemTfsId))
             .Distinct()
             .ToArray();
 

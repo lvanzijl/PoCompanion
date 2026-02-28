@@ -177,7 +177,7 @@ public class GetSprintTrendMetricsQueryHandlerTests
         var product = new ProductEntity
         {
             Name = "Product A",
-            BacklogRootWorkItemId = 100,
+            BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 100 } },
             ProductOwnerId = 1
         };
         _context.Products.Add(product);
@@ -244,13 +244,13 @@ public class GetSprintTrendMetricsQueryHandlerTests
         var product1 = new ProductEntity 
         { 
             Name = "Product A", 
-            BacklogRootWorkItemId = 100,
+            BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 100 } },
             ProductOwnerId = 1
         };
         var product2 = new ProductEntity 
         { 
             Name = "Product B", 
-            BacklogRootWorkItemId = 200,
+            BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 200 } },
             ProductOwnerId = 1
         };
         _context.Products.AddRange(product1, product2);
@@ -351,7 +351,7 @@ public class GetSprintTrendMetricsQueryHandlerTests
         var product = new ProductEntity 
         { 
             Name = "Product", 
-            BacklogRootWorkItemId = 100,
+            BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 100 } },
             ProductOwnerId = 1
         };
         _context.Products.Add(product);

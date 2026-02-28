@@ -28,6 +28,7 @@ public class WorkItemResolutionService
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
 
         var products = await context.Products
+            .Include(p => p.BacklogRoots)
             .Where(p => p.ProductOwnerId == productOwnerId)
             .ToListAsync(cancellationToken);
 
@@ -82,13 +83,16 @@ public class WorkItemResolutionService
 
         foreach (var product in products)
         {
-            if (product.BacklogRootWorkItemId <= 0)
+            if (product.BacklogRoots.Count == 0)
                 continue;
 
-            // Walk the hierarchy from the backlog root
+            // Walk the hierarchy from all backlog roots
             var visited = new HashSet<int>();
             var stack = new Stack<int>();
-            stack.Push(product.BacklogRootWorkItemId);
+            foreach (var rootId in product.BacklogRoots.Select(r => r.WorkItemTfsId))
+            {
+                stack.Push(rootId);
+            }
 
             while (stack.Count > 0)
             {

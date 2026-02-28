@@ -217,7 +217,7 @@ public class GetAllWorkItemsWithValidationQueryHandlerTests
             Id: id,
             ProductOwnerId: 1,
             Name: name,
-            BacklogRootWorkItemId: backlogRootWorkItemId,
+            BacklogRootWorkItemIds: new List<int> { backlogRootWorkItemId },
             Order: id,
             PictureType: ProductPictureType.Default,
             DefaultPictureId: 0,

@@ -84,7 +84,14 @@
                                                 }
                                             </MudStack>
                                             <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                Work Item: @product.BacklogRootWorkItemId
+                                                @if (product.BacklogRootWorkItemIds.Count == 1)
+                                                {
+                                                    <text>Work Item: @product.BacklogRootWorkItemIds.First()</text>
+                                                }
+                                                else
+                                                {
+                                                    <text>Work Items: @string.Join(", ", product.BacklogRootWorkItemIds)</text>
+                                                }
                                             </MudText>
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
                                                 @if (product.ProductOwnerId.HasValue)

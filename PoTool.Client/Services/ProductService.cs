@@ -44,7 +44,7 @@ public class ProductService
     public async Task<ProductDto> CreateProductAsync(
         int? productOwnerId,
         string name,
-        int backlogRootWorkItemId,
+        List<int> backlogRootWorkItemIds,
         ProductPictureType pictureType = ProductPictureType.Default,
         int? defaultPictureId = null,
         string? customPicturePath = null,
@@ -57,7 +57,7 @@ public class ProductService
         {
             ProductOwnerId = productOwnerId,
             Name = name,
-            BacklogRootWorkItemId = backlogRootWorkItemId,
+            BacklogRootWorkItemIds = backlogRootWorkItemIds,
             PictureType = (ApiClient.ProductPictureType)pictureType,
             DefaultPictureId = pictureId,
             CustomPicturePath = customPicturePath
@@ -72,7 +72,7 @@ public class ProductService
     public async Task<ProductDto> UpdateProductAsync(
         int id,
         string name,
-        int backlogRootWorkItemId,
+        List<int> backlogRootWorkItemIds,
         ProductPictureType? pictureType = null,
         int? defaultPictureId = null,
         string? customPicturePath = null,
@@ -81,7 +81,7 @@ public class ProductService
         var request = new UpdateProductRequest
         {
             Name = name,
-            BacklogRootWorkItemId = backlogRootWorkItemId,
+            BacklogRootWorkItemIds = backlogRootWorkItemIds,
             PictureType = pictureType.HasValue ? (ApiClient.ProductPictureType?)pictureType.Value : null,
             DefaultPictureId = defaultPictureId,
             CustomPicturePath = customPicturePath

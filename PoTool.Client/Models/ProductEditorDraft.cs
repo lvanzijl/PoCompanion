@@ -7,7 +7,7 @@ namespace PoTool.Client.Models;
 public class ProductEditorDraft
 {
     public string Name { get; set; } = string.Empty;
-    public string BacklogRootWorkItemIdText { get; set; } = string.Empty;
+    public List<int> BacklogRootWorkItemIds { get; set; } = new();
     public int SelectedImageId { get; set; }
     public List<int> SelectedTeamIds { get; set; } = new();
 }

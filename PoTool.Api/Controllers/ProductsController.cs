@@ -64,7 +64,7 @@ public class ProductsController : ControllerBase
         var command = new CreateProductCommand(
             request.ProductOwnerId,
             request.Name,
-            request.BacklogRootWorkItemId,
+            request.BacklogRootWorkItemIds,
             request.PictureType,
             request.DefaultPictureId,
             request.CustomPicturePath);
@@ -90,7 +90,7 @@ public class ProductsController : ControllerBase
             var command = new UpdateProductCommand(
                 id,
                 request.Name,
-                request.BacklogRootWorkItemId,
+                request.BacklogRootWorkItemIds,
                 request.PictureType,
                 request.DefaultPictureId,
                 request.CustomPicturePath);
@@ -276,7 +276,7 @@ public class ProductsController : ControllerBase
 public record CreateProductRequest(
     int? ProductOwnerId,
     string Name,
-    int BacklogRootWorkItemId,
+    List<int> BacklogRootWorkItemIds,
     ProductPictureType PictureType = ProductPictureType.Default,
     int DefaultPictureId = 0,
     string? CustomPicturePath = null
@@ -287,7 +287,7 @@ public record CreateProductRequest(
 /// </summary>
 public record UpdateProductRequest(
     string Name,
-    int BacklogRootWorkItemId,
+    List<int> BacklogRootWorkItemIds,
     ProductPictureType? PictureType = null,
     int? DefaultPictureId = null,
     string? CustomPicturePath = null

@@ -22,7 +22,7 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
         return await _repository.CreateProductAsync(
             command.ProductOwnerId,
             command.Name,
-            command.BacklogRootWorkItemId,
+            command.BacklogRootWorkItemIds,
             command.PictureType,
             command.DefaultPictureId,
             command.CustomPicturePath,

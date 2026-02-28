@@ -125,6 +125,11 @@ public class PoToolDbContext : DbContext
     public DbSet<ProductTeamLinkEntity> ProductTeamLinks => Set<ProductTeamLinkEntity>();
 
     /// <summary>
+    /// Product backlog root work item IDs (one-to-many).
+    /// </summary>
+    public DbSet<ProductBacklogRootEntity> ProductBacklogRoots => Set<ProductBacklogRootEntity>();
+
+    /// <summary>
     /// Repositories configured per product.
     /// </summary>
     public DbSet<RepositoryEntity> Repositories => Set<RepositoryEntity>();
@@ -408,6 +413,17 @@ public class PoToolDbContext : DbContext
             entity.HasOne(e => e.Team)
                 .WithMany(t => t.ProductTeamLinks)
                 .HasForeignKey(e => e.TeamId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Product backlog root work item IDs (one-to-many)
+        modelBuilder.Entity<ProductBacklogRootEntity>(entity =>
+        {
+            entity.HasKey(e => new { e.ProductId, e.WorkItemTfsId });
+
+            entity.HasOne(e => e.Product)
+                .WithMany(p => p.BacklogRoots)
+                .HasForeignKey(e => e.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
