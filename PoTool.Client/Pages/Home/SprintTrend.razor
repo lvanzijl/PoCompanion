@@ -301,7 +301,7 @@
                                                 </td>
                                                 <td>
                                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                        <span style="width: 10px; height: 10px; border-radius: 2px; display: inline-block; background-color: @GetEpicPieColor(index);"></span>
+                                                        <span style="@GetEpicColorSquareStyle(index)"></span>
                                                         <MudText Typo="Typo.body2"><strong>@epic.EpicTitle</strong></MudText>
                                                     </MudStack>
                                                 </td>
@@ -385,6 +385,7 @@
     private bool _isStale;
     private bool _isRecomputing;
     private DateTimeOffset? _projectionsAsOfUtc;
+    private const int MaxEpicPieLabelLength = 40;
     
     // Trend data (Phase 2)
     private List<SprintTrendMetricsDto> _trendMetrics = new();
@@ -393,6 +394,17 @@
     private List<ChartSeries> _completedPbiEffortChartSeries = new();
     private List<ChartSeries> _bugTrendChartSeries = new();
     private string[] _trendXAxisLabels = Array.Empty<string>();
+    private static readonly string[] DefaultPiePalette =
+    [
+        Colors.Blue.Default,
+        Colors.Green.Default,
+        Colors.Orange.Default,
+        Colors.Purple.Default,
+        Colors.Red.Default,
+        Colors.Cyan.Default,
+        Colors.Teal.Default,
+        Colors.Brown.Default
+    ];
     private ChartOptions _chartOptions = new()
     {
         YAxisTicks = 5,
@@ -404,17 +416,7 @@
     private ChartOptions _pieChartOptions = new()
     {
         ShowLegend = false,
-        ChartPalette =
-        [
-            Colors.Blue.Default,
-            Colors.Green.Default,
-            Colors.Orange.Default,
-            Colors.Purple.Default,
-            Colors.Red.Default,
-            Colors.Cyan.Default,
-            Colors.Teal.Default,
-            Colors.Brown.Default
-        ]
+        ChartPalette = DefaultPiePalette
     };
 
     protected override async Task OnInitializedAsync()
@@ -1024,7 +1026,7 @@
         var missingEffort = GetProductMissingEffort(productId);
         return missingEffort > 0
             ? $"{productName}: {missingEffort} PBI(s) are missing effort. Sibling-average approximation was applied for progression."
-            : $"{productName}: Approximate progression values were used because effort data is incomplete.";
+            : $"{productName}: Approximate progression values were flagged by projection computation for this sprint.";
     }
 
     private string GetProductName(int productId)
@@ -1080,7 +1082,7 @@
     private string[] GetEpicPieChartLabels(int productId)
     {
         var productEpics = GetEpicProgressForProduct(productId);
-        var totalEffort = productEpics.Sum(e => Math.Max(0, e.TotalEffort));
+        var totalEffort = productEpics.Sum(e => e.TotalEffort);
 
         return productEpics
             .Select(epic =>
@@ -1088,7 +1090,10 @@
                 var percent = totalEffort > 0
                     ? (epic.TotalEffort / (double)totalEffort) * 100d
                     : 0d;
-                return $"{percent:F1}% — {epic.EpicTitle}";
+                var title = epic.EpicTitle.Length > MaxEpicPieLabelLength
+                    ? epic.EpicTitle[..MaxEpicPieLabelLength] + "…"
+                    : epic.EpicTitle;
+                return $"{percent:F1}% — {title}";
             })
             .ToArray();
     }
@@ -1100,7 +1105,12 @@
             return _pieChartOptions.ChartPalette[index % _pieChartOptions.ChartPalette.Length];
         }
 
-        return Colors.Gray.Default;
+        return DefaultPiePalette[index % DefaultPiePalette.Length];
+    }
+
+    private string GetEpicColorSquareStyle(int index)
+    {
+        return $"width: 10px; height: 10px; border-radius: 2px; display: inline-block; background-color: {GetEpicPieColor(index)};";
     }
 
     private static Color GetProgressColor(int progress) =>
