@@ -146,6 +146,43 @@
             </MudStack>
         </MudPaper>
 
+        @* Single-sprint: aggregated summary across all products *@
+        @if (!_advancedMode && _productMetrics.Count > 0)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.subtitle1" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Summarize" Class="mr-1" />
+                    All Products — Sprint Summary
+                </MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="1" Class="pa-3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Completed PBIs</MudText>
+                            <MudText Typo="Typo.h5" Color="Color.Success">@_completedPbiCount</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="1" Class="pa-3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Effort</MudText>
+                            <MudText Typo="Typo.h5" Color="Color.Info">@_completedPbiEffort pts</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="1" Class="pa-3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Progression Δ</MudText>
+                            <MudText Typo="Typo.h5" Color="Color.Primary">@_progressionDelta.ToString("F1")%</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="1" Class="pa-3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs (Created / Worked / Closed)</MudText>
+                            <MudText Typo="Typo.h5">@_bugsCreatedCount / @_bugsWorkedCount / @_bugsClosedCount</MudText>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        }
+
         @* Phase 2: Multi-sprint trend graphs *@
         @if (_advancedMode && _trendMetrics.Count > 1)
         {
@@ -415,7 +452,7 @@
 
     private ChartOptions _pieChartOptions = new()
     {
-        ShowLegend = false,
+        ShowLegend = true,
         ChartPalette = DefaultPiePalette
     };
 
