@@ -71,13 +71,13 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
         {
             // Product-scoped hierarchical loading
             var rootIds = productsList
-                .Where(p => p.BacklogRootWorkItemId > 0) // Filter out invalid root IDs
-                .Select(p => p.BacklogRootWorkItemId)
+                .SelectMany(p => p.BacklogRootWorkItemIds)
+                .Distinct()
                 .ToArray();
 
             if (rootIds.Length == 0)
             {
-                _logger.LogWarning("Products configured but all have invalid root work item IDs (≤ 0). Falling back to area path loading");
+                _logger.LogWarning("Products configured but none have backlog root work item IDs configured. Falling back to area path loading");
                 // Fall through to area path loading
             }
             else

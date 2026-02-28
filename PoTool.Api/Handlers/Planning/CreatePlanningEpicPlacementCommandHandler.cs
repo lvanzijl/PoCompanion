@@ -125,19 +125,21 @@ public sealed class CreatePlanningEpicPlacementCommandHandler : ICommandHandler<
 
     private async Task<int?> FindProductForEpicAsync(int epicId, int? parentId, CancellationToken cancellationToken)
     {
-        // Look for a product whose BacklogRootWorkItemId matches the epic's parent hierarchy
+        // Look for a product whose BacklogRootWorkItemIds contain the epic's parent hierarchy
         if (!parentId.HasValue)
         {
             return null;
         }
 
         // Check if parent is a backlog root
-        var product = await _dbContext.Products
-            .FirstOrDefaultAsync(p => p.BacklogRootWorkItemId == parentId.Value, cancellationToken);
+        var product = await _dbContext.ProductBacklogRoots
+            .Where(r => r.WorkItemTfsId == parentId.Value)
+            .Select(r => r.ProductId)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        if (product != null)
+        if (product != default)
         {
-            return product.Id;
+            return product;
         }
 
         // Check parent's parent

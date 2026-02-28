@@ -39,7 +39,7 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
         }
 
         var products = await productsQuery
-            .Select(p => new { p.Id, p.Name, p.BacklogRootWorkItemId })
+            .Select(p => new { p.Id, p.Name })
             .ToListAsync(cancellationToken);
 
         if (products.Count == 0)
@@ -47,12 +47,23 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
             return [];
         }
 
+        var productIds = products.Select(p => p.Id).ToList();
+
         // Get all placed epic IDs
         var placedEpicIds = await _dbContext.PlanningEpicPlacements
             .Select(p => p.EpicId)
             .ToHashSetAsync(cancellationToken);
 
-        var rootWorkItemIds = products.Select(p => p.BacklogRootWorkItemId).ToHashSet();
+        // Load all backlog roots for these products and build root → productId map
+        var rootsByProduct = await _dbContext.ProductBacklogRoots
+            .Where(r => productIds.Contains(r.ProductId))
+            .Select(r => new { r.ProductId, r.WorkItemTfsId })
+            .ToListAsync(cancellationToken);
+
+        var rootWorkItemIds = rootsByProduct.Select(r => r.WorkItemTfsId).ToHashSet();
+
+        // Build a mapping of root TfsId to productId
+        var rootToProductId = rootsByProduct.ToDictionary(r => r.WorkItemTfsId, r => r.ProductId);
 
         // Get all work items that are descendants of the backlog roots
         // Load all potentially relevant work items in one query to avoid N+1
@@ -61,7 +72,7 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
             .Select(w => w.TfsId)
             .ToHashSetAsync(cancellationToken);
 
-        // Build a mapping of TfsId to BacklogRootWorkItemId by traversing up the hierarchy
+        // Build a mapping of TfsId to backlog root TfsId by traversing up the hierarchy
         var workItemToRoot = new Dictionary<int, int>();
         
         foreach (var root in rootWorkItemIds)
@@ -102,7 +113,7 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
 
         foreach (var epic in epics)
         {
-            // Try to find which product this epic belongs to
+            // Try to find which backlog root this epic belongs to
             int? backlogRoot = null;
             
             // Check if epic's parent is in our mapping
@@ -119,9 +130,9 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
                 }
             }
 
-            if (backlogRoot.HasValue)
+            if (backlogRoot.HasValue && rootToProductId.TryGetValue(backlogRoot.Value, out var productId))
             {
-                var product = products.FirstOrDefault(p => p.BacklogRootWorkItemId == backlogRoot.Value);
+                var product = products.FirstOrDefault(p => p.Id == productId);
                 if (product != null)
                 {
                     result.Add(new UnplannedEpicDto

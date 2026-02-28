@@ -45,8 +45,7 @@ public sealed class GetAllWorkItemsQueryHandler : IQueryHandler<GetAllWorkItemsQ
         {
             // Product-scoped hierarchical loading
             var rootIds = productsList
-                .Where(p => p.BacklogRootWorkItemId > 0)
-                .Select(p => p.BacklogRootWorkItemId)
+                .SelectMany(p => p.BacklogRootWorkItemIds)
                 .ToArray();
 
             if (rootIds.Length > 0)

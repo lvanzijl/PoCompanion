@@ -61,7 +61,7 @@ public class SprintTrendProjectionServiceSqliteTests
             {
                 ProductOwnerId = productOwner.Id,
                 Name = "Product 1",
-                BacklogRootWorkItemId = 1000
+                BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 1000 } }
             };
             context.Products.Add(product);
             await context.SaveChangesAsync();

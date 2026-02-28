@@ -1100,7 +1100,7 @@
             var product = await ProductService.CreateProductAsync(
                 _createdProfileId,
                 _productName,
-                workItemId);
+                new List<int> { workItemId });
             
             // Track created product ID for linking with team later
             _createdProductId = product.Id;

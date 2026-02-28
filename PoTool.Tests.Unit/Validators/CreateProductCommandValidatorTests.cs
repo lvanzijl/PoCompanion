@@ -23,7 +23,7 @@ public class CreateProductCommandValidatorTests
         var command = new CreateProductCommand(
             ProductOwnerId: 1,
             Name: "Test Product",
-            BacklogRootWorkItemId: 100
+            BacklogRootWorkItemIds: new List<int> { 100 }
         );
 
         // Act
@@ -40,7 +40,7 @@ public class CreateProductCommandValidatorTests
         var command = new CreateProductCommand(
             ProductOwnerId: 1,
             Name: "",
-            BacklogRootWorkItemId: 100
+            BacklogRootWorkItemIds: new List<int> { 100 }
         );
 
         // Act
@@ -58,7 +58,7 @@ public class CreateProductCommandValidatorTests
         var command = new CreateProductCommand(
             ProductOwnerId: 1,
             Name: new string('a', 201),
-            BacklogRootWorkItemId: 100
+            BacklogRootWorkItemIds: new List<int> { 100 }
         );
 
         // Act
@@ -70,21 +70,56 @@ public class CreateProductCommandValidatorTests
     }
 
     [TestMethod]
-    public void Validate_InvalidBacklogRootId_ShouldFail()
+    public void Validate_EmptyBacklogRootIds_ShouldFail()
     {
         // Arrange
         var command = new CreateProductCommand(
             ProductOwnerId: 1,
             Name: "Test Product",
-            BacklogRootWorkItemId: 0
+            BacklogRootWorkItemIds: new List<int>()
         );
 
         // Act
         var result = _validator.TestValidate(command);
 
         // Assert
-        result.ShouldHaveValidationErrorFor(x => x.BacklogRootWorkItemId)
-            .WithErrorMessage("Backlog root work item ID must be greater than 0");
+        result.ShouldHaveValidationErrorFor(x => x.BacklogRootWorkItemIds)
+            .WithErrorMessage("At least one backlog root work item ID is required");
+    }
+
+    [TestMethod]
+    public void Validate_MultipleBacklogRootIds_ShouldPass()
+    {
+        // Arrange
+        var command = new CreateProductCommand(
+            ProductOwnerId: 1,
+            Name: "Test Product",
+            BacklogRootWorkItemIds: new List<int> { 100, 200, 300 }
+        );
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [TestMethod]
+    public void Validate_InvalidBacklogRootId_ShouldFail()
+    {
+        // Arrange
+        var command = new CreateProductCommand(
+            ProductOwnerId: 1,
+            Name: "Test Product",
+            BacklogRootWorkItemIds: new List<int> { 0 }
+        );
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldHaveValidationErrorFor(x => x.BacklogRootWorkItemIds)
+            .WithErrorMessage("All backlog root work item IDs must be greater than 0");
     }
 
     [TestMethod]
@@ -94,7 +129,7 @@ public class CreateProductCommandValidatorTests
         var command = new CreateProductCommand(
             ProductOwnerId: 0,
             Name: "Test Product",
-            BacklogRootWorkItemId: 100
+            BacklogRootWorkItemIds: new List<int> { 100 }
         );
 
         // Act
@@ -112,7 +147,7 @@ public class CreateProductCommandValidatorTests
         var command = new CreateProductCommand(
             ProductOwnerId: 1,
             Name: "Test Product",
-            BacklogRootWorkItemId: 100,
+            BacklogRootWorkItemIds: new List<int> { 100 },
             PictureType: ProductPictureType.Default,
             DefaultPictureId: 64
         );
@@ -132,7 +167,7 @@ public class CreateProductCommandValidatorTests
         var command = new CreateProductCommand(
             ProductOwnerId: 1,
             Name: "Test Product",
-            BacklogRootWorkItemId: 100,
+            BacklogRootWorkItemIds: new List<int> { 100 },
             PictureType: ProductPictureType.Custom,
             CustomPicturePath: null
         );

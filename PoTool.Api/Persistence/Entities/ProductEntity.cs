@@ -28,13 +28,6 @@ public class ProductEntity
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// The root work item ID that defines the product backlog.
-    /// This is the backlog root work item.
-    /// </summary>
-    [Required]
-    public int BacklogRootWorkItemId { get; set; }
-
-    /// <summary>
     /// Explicit ordering of products within a Product Owner's list.
     /// </summary>
     public int Order { get; set; } = 0;
@@ -89,4 +82,10 @@ public class ProductEntity
     /// Navigation property to configured repositories.
     /// </summary>
     public virtual ICollection<RepositoryEntity> Repositories { get; set; } = new List<RepositoryEntity>();
+
+    /// <summary>
+    /// Navigation property to backlog root work item IDs.
+    /// A product may have one or more backlog roots that define the scope of its product backlog.
+    /// </summary>
+    public virtual ICollection<ProductBacklogRootEntity> BacklogRoots { get; set; } = new List<ProductBacklogRootEntity>();
 }

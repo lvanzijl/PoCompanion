@@ -24,6 +24,7 @@ public class ProductRepository : IProductRepository
         var entities = await _context.Products
             .Include(p => p.ProductTeamLinks)
             .Include(p => p.Repositories)
+            .Include(p => p.BacklogRoots)
             .Where(p => p.ProductOwnerId == productOwnerId)
             .OrderBy(p => p.Order)
             .ToListAsync(cancellationToken);
@@ -37,6 +38,7 @@ public class ProductRepository : IProductRepository
         var entity = await _context.Products
             .Include(p => p.ProductTeamLinks)
             .Include(p => p.Repositories)
+            .Include(p => p.BacklogRoots)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
         return entity == null ? null : MapToDto(entity);
@@ -46,7 +48,7 @@ public class ProductRepository : IProductRepository
     public async Task<ProductDto> CreateProductAsync(
         int? productOwnerId,
         string name,
-        int backlogRootWorkItemId,
+        List<int> backlogRootWorkItemIds,
         ProductPictureType pictureType,
         int defaultPictureId,
         string? customPicturePath,
@@ -65,7 +67,6 @@ public class ProductRepository : IProductRepository
         {
             ProductOwnerId = productOwnerId,
             Name = name,
-            BacklogRootWorkItemId = backlogRootWorkItemId,
             Order = maxOrder + 1,
             PictureType = (int)pictureType,
             DefaultPictureId = defaultPictureId,
@@ -77,6 +78,18 @@ public class ProductRepository : IProductRepository
         _context.Products.Add(entity);
         await _context.SaveChangesAsync(cancellationToken);
 
+        // Add backlog roots
+        foreach (var rootId in backlogRootWorkItemIds.Distinct())
+        {
+            _context.ProductBacklogRoots.Add(new ProductBacklogRootEntity
+            {
+                ProductId = entity.Id,
+                WorkItemTfsId = rootId
+            });
+        }
+        await _context.SaveChangesAsync(cancellationToken);
+
+        await _context.Entry(entity).Collection(e => e.BacklogRoots).LoadAsync(cancellationToken);
         return MapToDto(entity);
     }
 
@@ -84,7 +97,7 @@ public class ProductRepository : IProductRepository
     public async Task<ProductDto> UpdateProductAsync(
         int id,
         string name,
-        int backlogRootWorkItemId,
+        List<int> backlogRootWorkItemIds,
         ProductPictureType? pictureType,
         int? defaultPictureId,
         string? customPicturePath,
@@ -93,6 +106,7 @@ public class ProductRepository : IProductRepository
         var entity = await _context.Products
             .Include(p => p.ProductTeamLinks)
             .Include(p => p.Repositories)
+            .Include(p => p.BacklogRoots)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
         if (entity == null)
@@ -101,7 +115,17 @@ public class ProductRepository : IProductRepository
         }
 
         entity.Name = name;
-        entity.BacklogRootWorkItemId = backlogRootWorkItemId;
+
+        // Replace backlog roots
+        _context.ProductBacklogRoots.RemoveRange(entity.BacklogRoots);
+        foreach (var rootId in backlogRootWorkItemIds.Distinct())
+        {
+            _context.ProductBacklogRoots.Add(new ProductBacklogRootEntity
+            {
+                ProductId = entity.Id,
+                WorkItemTfsId = rootId
+            });
+        }
 
         if (pictureType.HasValue)
         {
@@ -146,6 +170,7 @@ public class ProductRepository : IProductRepository
         var entities = await _context.Products
             .Include(p => p.ProductTeamLinks)
             .Include(p => p.Repositories)
+            .Include(p => p.BacklogRoots)
             .Where(p => p.ProductOwnerId == productOwnerId && productIds.Contains(p.Id))
             .ToListAsync(cancellationToken);
 
@@ -211,6 +236,7 @@ public class ProductRepository : IProductRepository
         var entity = await _context.Products
             .Include(p => p.ProductTeamLinks)
             .Include(p => p.Repositories)
+            .Include(p => p.BacklogRoots)
             .FirstOrDefaultAsync(p => p.Id == productId, cancellationToken);
 
         if (entity == null)
@@ -245,6 +271,7 @@ public class ProductRepository : IProductRepository
         var entities = await _context.Products
             .Include(p => p.ProductTeamLinks)
             .Include(p => p.Repositories)
+            .Include(p => p.BacklogRoots)
             .OrderBy(p => p.Name)
             .ToListAsync(cancellationToken);
 
@@ -257,6 +284,7 @@ public class ProductRepository : IProductRepository
         var entities = await _context.Products
             .Include(p => p.ProductTeamLinks)
             .Include(p => p.Repositories)
+            .Include(p => p.BacklogRoots)
             .Where(p => p.ProductOwnerId == null)
             .OrderBy(p => p.Name)
             .ToListAsync(cancellationToken);
@@ -270,6 +298,7 @@ public class ProductRepository : IProductRepository
         var entities = await _context.Products
             .Include(p => p.ProductTeamLinks)
             .Include(p => p.Repositories)
+            .Include(p => p.BacklogRoots)
             .Where(p => p.ProductOwnerId == productOwnerId || p.ProductOwnerId == null)
             .OrderBy(p => p.Order)
             .ThenBy(p => p.Name)
@@ -287,12 +316,13 @@ public class ProductRepository : IProductRepository
             r.Name,
             r.CreatedAt
         )).ToList() ?? new List<RepositoryDto>();
+        var backlogRootWorkItemIds = entity.BacklogRoots?.Select(r => r.WorkItemTfsId).ToList() ?? new List<int>();
 
         return new ProductDto(
             entity.Id,
             entity.ProductOwnerId,
             entity.Name,
-            entity.BacklogRootWorkItemId,
+            backlogRootWorkItemIds,
             entity.Order,
             (ProductPictureType)entity.PictureType,
             entity.DefaultPictureId,

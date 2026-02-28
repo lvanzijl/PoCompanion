@@ -19,13 +19,13 @@ public enum ProductPictureType
 /// <summary>
 /// Immutable DTO for a Product.
 /// A Product represents a single Scrum product with a product backlog.
-/// The backlog is defined by a root work item.
+/// The backlog is defined by one or more root work items.
 /// </summary>
 public sealed record ProductDto(
     int Id,
     int? ProductOwnerId,
     string Name,
-    int BacklogRootWorkItemId,
+    List<int> BacklogRootWorkItemIds,
     int Order,
     ProductPictureType PictureType,
     int DefaultPictureId,

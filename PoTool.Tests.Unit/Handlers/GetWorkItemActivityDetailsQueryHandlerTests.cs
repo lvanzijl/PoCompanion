@@ -39,7 +39,7 @@ public class GetWorkItemActivityDetailsQueryHandlerTests
         // Arrange
         _context.Profiles.Add(new ProfileEntity { Id = 5, Name = "PO 5" });
         _context.WorkItems.Add(new WorkItemEntity { TfsId = 1000, ParentTfsId = null, Title = "Backlog Root", Type = "Epic", AreaPath = "A", IterationPath = "I", State = "Active", RetrievedAt = DateTimeOffset.UtcNow });
-        var product = new ProductEntity { ProductOwnerId = 5, Name = "Product A", BacklogRootWorkItemId = 1000 };
+        var product = new ProductEntity { ProductOwnerId = 5, Name = "Product A", BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 1000 } } };
         _context.Products.Add(product);
         await _context.SaveChangesAsync();
 
@@ -111,7 +111,7 @@ public class GetWorkItemActivityDetailsQueryHandlerTests
         // Arrange
         _context.Profiles.Add(new ProfileEntity { Id = 3, Name = "PO 3" });
         _context.WorkItems.Add(new WorkItemEntity { TfsId = 1000, ParentTfsId = null, Title = "Backlog Root", Type = "Epic", AreaPath = "A", IterationPath = "I", State = "Active", RetrievedAt = DateTimeOffset.UtcNow });
-        _context.Products.Add(new ProductEntity { ProductOwnerId = 3, Name = "Product A", BacklogRootWorkItemId = 1000 });
+        _context.Products.Add(new ProductEntity { ProductOwnerId = 3, Name = "Product A", BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 1000 } } });
         _context.WorkItems.Add(new WorkItemEntity { TfsId = 5000, ParentTfsId = null, Title = "Epic A", Type = "Epic", AreaPath = "A", IterationPath = "I", State = "Active", RetrievedAt = DateTimeOffset.UtcNow });
         await _context.SaveChangesAsync();
 

@@ -259,7 +259,7 @@ public class GetVelocityTrendQueryHandlerMultiProductTests
             Id: id,
             ProductOwnerId: ownerId,
             Name: name,
-            BacklogRootWorkItemId: rootWorkItemId,
+            BacklogRootWorkItemIds: new List<int> { rootWorkItemId },
             Order: 0,
             PictureType: ProductPictureType.Default,
             DefaultPictureId: 0,

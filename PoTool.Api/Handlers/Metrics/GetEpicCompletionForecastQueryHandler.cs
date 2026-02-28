@@ -57,8 +57,7 @@ public sealed class GetEpicCompletionForecastQueryHandler
         if (productsList.Count > 0)
         {
             var rootIds = productsList
-                .Where(p => p.BacklogRootWorkItemId > 0)
-                .Select(p => p.BacklogRootWorkItemId)
+                .SelectMany(p => p.BacklogRootWorkItemIds)
                 .ToArray();
 
             if (rootIds.Length > 0)

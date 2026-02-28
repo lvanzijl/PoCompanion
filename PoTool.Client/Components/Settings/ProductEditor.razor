@@ -26,37 +26,59 @@
                           @bind-Value:after="@(() => SaveDraftAsync())" />
 
             <MudStack Spacing="1">
-                <CompactTextField @bind-Value="_backlogRootWorkItemIdText" 
-                              Label="Backlog Root Work Item ID" 
-                              Required="true"
-                              Immediate="true"
-                              HelperText="Enter the work item ID that defines the product backlog"
-                              InputType="InputType.Number"
-                              OnBlur="ValidateWorkItemId"
-                              Error="@_workItemValidationFailed"
-                              ErrorText="@_workItemValidationError"
-                              @bind-Value:after="@(() => SaveDraftAsync())" />
-                
-                @if (_isValidatingWorkItem)
+                <MudText Typo="Typo.body2">Backlog Root Work Items</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    Add one or more work item IDs that define the product backlog scope
+                </MudText>
+
+                @if (_backlogRootWorkItemIds.Count > 0)
                 {
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Validating work item...</MudText>
-                    </MudStack>
+                    @foreach (var entry in _backlogRootWorkItemIds.ToList())
+                    {
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudChip T="string" 
+                                     Label="true"
+                                     Size="Size.Small" 
+                                     Color="Color.Success"
+                                     Icon="@Icons.Material.Filled.CheckCircle">
+                                @entry.Id @(!string.IsNullOrEmpty(entry.Title) ? $"– {entry.Title}" : "")
+                            </MudChip>
+                            <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                           Size="Size.Small"
+                                           Color="Color.Error"
+                                           OnClick="@(() => RemoveBacklogRoot(entry.Id))" />
+                        </MudStack>
+                    }
                 }
-                else if (_workItemValidationSuccess)
+                else
                 {
-                    <MudAlert Severity="Severity.Success" Dense="true" Class="mt-1">
-                        @if (!string.IsNullOrEmpty(_validatedWorkItemTitle))
+                    <MudAlert Severity="Severity.Warning" Dense="true">At least one backlog root work item ID is required</MudAlert>
+                }
+
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                    <CompactTextField @bind-Value="_newRootWorkItemIdText" 
+                                  Label="Add Work Item ID"
+                                  Immediate="true"
+                                  InputType="InputType.Number"
+                                  Error="@_addRootValidationFailed"
+                                  ErrorText="@_addRootValidationError"
+                                  Style="flex: 1 1 auto;" />
+                    <CompactButton OnClick="AddBacklogRoot"
+                               Color="Color.Primary"
+                               Variant="Variant.Outlined"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               Disabled="@_isValidatingWorkItem">
+                        @if (_isValidatingWorkItem)
                         {
-                            <text>@_backlogRootWorkItemIdText – @_validatedWorkItemTitle</text>
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
                         }
                         else
                         {
-                            <text>Work item validated successfully</text>
+                            <text>Add</text>
                         }
-                    </MudAlert>
-                }
+                    </CompactButton>
+                </MudStack>
             </MudStack>
 
             <MudStack Spacing="1">
@@ -168,7 +190,7 @@
                 <CompactButton OnClick="SaveProduct" 
                            Color="Color.Primary" 
                            Variant="Variant.Filled" 
-                           Disabled="@(_isSaving || _workItemValidationFailed || _isValidatingWorkItem)"
+                           Disabled="@(_isSaving || _isValidatingWorkItem)"
                            StartIcon="@Icons.Material.Filled.Save">
                     @if (_isSaving)
                     {
@@ -209,16 +231,14 @@
     private bool _isSaving = false;
     private ErrorResponse? _errorResponse;
 
-    // TFS Work Item validation state
+    // TFS Work Item validation state (for adding new roots)
     private bool _isValidatingWorkItem = false;
-    private bool _workItemValidationFailed = false;
-    private bool _workItemValidationSuccess = false;
-    private string _workItemValidationError = string.Empty;
-    private string? _validatedWorkItemTitle = null;
+    private bool _addRootValidationFailed = false;
+    private string _addRootValidationError = string.Empty;
 
     private string _name = string.Empty;
-    private string _backlogRootWorkItemIdText = string.Empty;
-    private int _backlogRootWorkItemId = 0;
+    private List<(int Id, string? Title)> _backlogRootWorkItemIds = new();
+    private string _newRootWorkItemIdText = string.Empty;
     private int _selectedImageId = 0;
     private IEnumerable<int> _selectedTeamIds = new List<int>();
 
@@ -242,8 +262,9 @@
         {
             // Editing existing product - use product data
             _name = Product.Name;
-            _backlogRootWorkItemId = Product.BacklogRootWorkItemId;
-            _backlogRootWorkItemIdText = Product.BacklogRootWorkItemId.ToString();
+            _backlogRootWorkItemIds = Product.BacklogRootWorkItemIds
+                .Select(id => (id, (string?)null))
+                .ToList();
             _selectedImageId = Product.DefaultPictureId;
             _selectedTeamIds = Product.TeamIds.ToList();
             _repositories = Product.Repositories.ToList();
@@ -277,27 +298,10 @@
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(_backlogRootWorkItemIdText) || !int.TryParse(_backlogRootWorkItemIdText, out _backlogRootWorkItemId) || _backlogRootWorkItemId <= 0)
+        if (_backlogRootWorkItemIds.Count == 0)
         {
-            Snackbar.Add("Please enter a valid work item ID", Severity.Warning);
+            Snackbar.Add("Please add at least one backlog root work item ID", Severity.Warning);
             return;
-        }
-
-        // Check if validation passed
-        if (_workItemValidationFailed)
-        {
-            Snackbar.Add("Please fix the work item validation error before saving", Severity.Error);
-            return;
-        }
-
-        // Validate if not already validated
-        if (!_workItemValidationSuccess && !IsEditing)
-        {
-            await ValidateWorkItemId();
-            if (_workItemValidationFailed)
-            {
-                return;
-            }
         }
 
         try
@@ -306,13 +310,14 @@
             ClearError();
             
             bool repositoriesChanged = false;
+            var rootIds = _backlogRootWorkItemIds.Select(e => e.Id).ToList();
 
             if (IsEditing && Product != null)
             {
                 var updated = await ProductService.UpdateProductAsync(
                     Product.Id,
                     _name,
-                    _backlogRootWorkItemId,
+                    rootIds,
                     ProductPictureType.Default,
                     _selectedImageId,
                     null);
@@ -336,7 +341,7 @@
                 var created = await ProductService.CreateProductAsync(
                     ownerIdToUse,
                     _name,
-                    _backlogRootWorkItemId,
+                    rootIds,
                     ProductPictureType.Default,
                     _selectedImageId,
                     null);
@@ -474,19 +479,23 @@
         await OnCancelled.InvokeAsync();
     }
 
-    private async Task ValidateWorkItemId()
+    private async Task AddBacklogRoot()
     {
-        // Reset validation state
-        _workItemValidationFailed = false;
-        _workItemValidationSuccess = false;
-        _workItemValidationError = string.Empty;
-        _validatedWorkItemTitle = null;
+        // Reset validation state for adding
+        _addRootValidationFailed = false;
+        _addRootValidationError = string.Empty;
 
-        // Parse the work item ID
-        if (!int.TryParse(_backlogRootWorkItemIdText, out var workItemId) || workItemId <= 0)
+        if (!int.TryParse(_newRootWorkItemIdText, out var workItemId) || workItemId <= 0)
         {
-            _workItemValidationFailed = true;
-            _workItemValidationError = "Please enter a valid work item ID";
+            _addRootValidationFailed = true;
+            _addRootValidationError = "Please enter a valid work item ID";
+            return;
+        }
+
+        if (_backlogRootWorkItemIds.Any(e => e.Id == workItemId))
+        {
+            _addRootValidationFailed = true;
+            _addRootValidationError = "This work item ID has already been added";
             return;
         }
 
@@ -495,39 +504,38 @@
             _isValidatingWorkItem = true;
             StateHasChanged();
 
-            // Call TFS to validate the work item exists (direct validation, not cache)
             var response = await WorkItemService.ValidateWorkItemAsync(workItemId);
-            
+
             if (response.Exists)
             {
-                _workItemValidationSuccess = true;
-                _backlogRootWorkItemId = workItemId;
-                _validatedWorkItemTitle = response.Title;
-                _workItemValidationError = string.Empty;
+                _backlogRootWorkItemIds.Add((workItemId, response.Title));
+                _newRootWorkItemIdText = string.Empty;
+                await SaveDraftAsync();
             }
             else
             {
-                _workItemValidationFailed = true;
-                if (!string.IsNullOrEmpty(response.ErrorMessage))
-                {
-                    _workItemValidationError = response.ErrorMessage;
-                }
-                else
-                {
-                    _workItemValidationError = "Work item not found on TFS";
-                }
+                _addRootValidationFailed = true;
+                _addRootValidationError = !string.IsNullOrEmpty(response.ErrorMessage)
+                    ? response.ErrorMessage
+                    : "Work item not found on TFS";
             }
         }
         catch (Exception ex)
         {
-            _workItemValidationFailed = true;
-            _workItemValidationError = $"Error validating work item: {ex.Message}";
+            _addRootValidationFailed = true;
+            _addRootValidationError = $"Error validating work item: {ex.Message}";
         }
         finally
         {
             _isValidatingWorkItem = false;
             StateHasChanged();
         }
+    }
+
+    private async Task RemoveBacklogRoot(int workItemId)
+    {
+        _backlogRootWorkItemIds.RemoveAll(e => e.Id == workItemId);
+        await SaveDraftAsync();
     }
 
     private async Task OpenCreateTeamDialog()
@@ -572,7 +580,7 @@
         var draft = new ProductEditorDraft
         {
             Name = _name,
-            BacklogRootWorkItemIdText = _backlogRootWorkItemIdText,
+            BacklogRootWorkItemIds = _backlogRootWorkItemIds.Select(e => e.Id).ToList(),
             SelectedImageId = _selectedImageId,
             SelectedTeamIds = _selectedTeamIds.ToList()
         };
@@ -590,15 +598,11 @@
         if (draft != null)
         {
             _name = draft.Name;
-            _backlogRootWorkItemIdText = draft.BacklogRootWorkItemIdText;
+            _backlogRootWorkItemIds = draft.BacklogRootWorkItemIds
+                .Select(id => (id, (string?)null))
+                .ToList();
             _selectedImageId = draft.SelectedImageId;
             _selectedTeamIds = draft.SelectedTeamIds;
-            
-            // Parse work item ID if present
-            if (int.TryParse(_backlogRootWorkItemIdText, out var workItemId))
-            {
-                _backlogRootWorkItemId = workItemId;
-            }
         }
     }
 

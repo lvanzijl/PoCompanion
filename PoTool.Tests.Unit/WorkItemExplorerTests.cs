@@ -199,14 +199,14 @@ public class WorkItemExplorerTests
             {
                 Id = 1,
                 Name = "Product Alpha",
-                BacklogRootWorkItemId = 100,
+                BacklogRootWorkItemIds = new List<int> { 100 },
                 Order = 1
             },
             new ProductDto
             {
                 Id = 2,
                 Name = "Product Beta",
-                BacklogRootWorkItemId = 200,
+                BacklogRootWorkItemIds = new List<int> { 200 },
                 Order = 2
             }
         };
@@ -265,7 +265,7 @@ public class WorkItemExplorerTests
             {
                 Id = 1,
                 Name = "Product Alpha",
-                BacklogRootWorkItemId = 100,
+                BacklogRootWorkItemIds = new List<int> { 100 },
                 Order = 1
             }
         };
@@ -317,7 +317,7 @@ public class WorkItemExplorerTests
             {
                 Id = 1,
                 Name = "Product Alpha",
-                BacklogRootWorkItemId = 100,
+                BacklogRootWorkItemIds = new List<int> { 100 },
                 Order = 1
             }
         };
@@ -369,7 +369,7 @@ public class WorkItemExplorerTests
             {
                 Id = 1,
                 Name = "Product Alpha",
-                BacklogRootWorkItemId = 100,
+                BacklogRootWorkItemIds = new List<int> { 100 },
                 Order = 1
             }
         };
@@ -438,7 +438,7 @@ public class WorkItemExplorerTests
             {
                 Id = 1,
                 Name = "Product One",
-                BacklogRootWorkItemId = 1,
+                BacklogRootWorkItemIds = new List<int> { 1 },
                 Order = 1
             }
         };
@@ -517,7 +517,7 @@ public class WorkItemExplorerTests
             {
                 Id = 1,
                 Name = "Product",
-                BacklogRootWorkItemId = 1,
+                BacklogRootWorkItemIds = new List<int> { 1 },
                 Order = 1
             }
         };

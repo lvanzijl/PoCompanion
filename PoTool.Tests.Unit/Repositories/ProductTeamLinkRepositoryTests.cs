@@ -60,7 +60,7 @@ public class ProductTeamLinkRepositoryTests
         var product = await _productRepository.CreateProductAsync(
             productOwnerId: profile.Id,
             name: "Test Product",
-            backlogRootWorkItemId: 12345,
+            backlogRootWorkItemIds: new List<int> { 12345 },
             pictureType: Shared.Settings.ProductPictureType.Default,
             defaultPictureId: 0,
             customPicturePath: null
@@ -107,7 +107,7 @@ public class ProductTeamLinkRepositoryTests
         var product = await _productRepository.CreateProductAsync(
             productOwnerId: profile.Id,
             name: "Test Product",
-            backlogRootWorkItemId: 12345,
+            backlogRootWorkItemIds: new List<int> { 12345 },
             pictureType: Shared.Settings.ProductPictureType.Default,
             defaultPictureId: 0,
             customPicturePath: null
@@ -149,7 +149,7 @@ public class ProductTeamLinkRepositoryTests
         var product = await _productRepository.CreateProductAsync(
             productOwnerId: profile.Id,
             name: "Test Product",
-            backlogRootWorkItemId: 12345,
+            backlogRootWorkItemIds: new List<int> { 12345 },
             pictureType: Shared.Settings.ProductPictureType.Default,
             defaultPictureId: 0,
             customPicturePath: null

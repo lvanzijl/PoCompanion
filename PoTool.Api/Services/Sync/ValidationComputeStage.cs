@@ -43,13 +43,16 @@ public class ValidationComputeStage : ISyncStage
                 "Starting validation computation for ProductOwner {ProductOwnerId}",
                 context.ProductOwnerId);
 
-            // Get all cached work items for this ProductOwner's products
-            var productIds = await _context.Products
-                .Where(p => p.ProductOwnerId == context.ProductOwnerId)
-                .Select(p => p.BacklogRootWorkItemId)
+            // Get all backlog root work item IDs for this ProductOwner's products
+            var rootWorkItemIds = await _context.ProductBacklogRoots
+                .Where(r => _context.Products
+                    .Where(p => p.ProductOwnerId == context.ProductOwnerId)
+                    .Select(p => p.Id)
+                    .Contains(r.ProductId))
+                .Select(r => r.WorkItemTfsId)
                 .ToListAsync(cancellationToken);
 
-            if (productIds.Count == 0)
+            if (rootWorkItemIds.Count == 0)
             {
                 _logger.LogInformation("No products found for ProductOwner {ProductOwnerId}", context.ProductOwnerId);
                 progressCallback(100);
@@ -70,9 +73,9 @@ public class ValidationComputeStage : ISyncStage
             // Run validation on each product tree
             var validationResults = new List<(int WorkItemId, int Indicator)>();
             var processedTrees = 0;
-            var totalTrees = productIds.Count;
+            var totalTrees = rootWorkItemIds.Count;
 
-            foreach (var rootId in productIds)
+            foreach (var rootId in rootWorkItemIds)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 

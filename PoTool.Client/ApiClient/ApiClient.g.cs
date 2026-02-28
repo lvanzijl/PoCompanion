@@ -17246,9 +17246,6 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("name")]
         public string Name { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("backlogRootWorkItemId")]
-        public int BacklogRootWorkItemId { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("order")]
         public int Order { get; set; } = default!;
 
@@ -17275,6 +17272,9 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("repositories")]
         public System.Collections.Generic.ICollection<RepositoryDto> Repositories { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("backlogRootWorkItemIds")]
+        public System.Collections.Generic.ICollection<int> BacklogRootWorkItemIds { get; set; } = default!;
 
     }
 
@@ -17316,9 +17316,6 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("name")]
         public string Name { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("backlogRootWorkItemId")]
-        public int BacklogRootWorkItemId { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("pictureType")]
         public ProductPictureType PictureType { get; set; } = default!;
 
@@ -17327,6 +17324,9 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("customPicturePath")]
         public string? CustomPicturePath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("backlogRootWorkItemIds")]
+        public System.Collections.Generic.ICollection<int> BacklogRootWorkItemIds { get; set; } = default!;
 
     }
 
@@ -17337,9 +17337,6 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("name")]
         public string Name { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("backlogRootWorkItemId")]
-        public int BacklogRootWorkItemId { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("pictureType")]
         public ProductPictureType? PictureType { get; set; } = default!;
 
@@ -17348,6 +17345,9 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("customPicturePath")]
         public string? CustomPicturePath { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("backlogRootWorkItemIds")]
+        public System.Collections.Generic.ICollection<int> BacklogRootWorkItemIds { get; set; } = default!;
 
     }
 
