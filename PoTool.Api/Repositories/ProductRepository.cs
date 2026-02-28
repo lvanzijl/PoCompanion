@@ -78,18 +78,19 @@ public class ProductRepository : IProductRepository
         _context.Products.Add(entity);
         await _context.SaveChangesAsync(cancellationToken);
 
-        // Add backlog roots
+        // Add backlog roots - entity.BacklogRoots is tracked in-memory via the navigation property
         foreach (var rootId in backlogRootWorkItemIds.Distinct())
         {
-            _context.ProductBacklogRoots.Add(new ProductBacklogRootEntity
+            var root = new ProductBacklogRootEntity
             {
                 ProductId = entity.Id,
                 WorkItemTfsId = rootId
-            });
+            };
+            _context.ProductBacklogRoots.Add(root);
+            entity.BacklogRoots.Add(root);
         }
         await _context.SaveChangesAsync(cancellationToken);
 
-        await _context.Entry(entity).Collection(e => e.BacklogRoots).LoadAsync(cancellationToken);
         return MapToDto(entity);
     }
 

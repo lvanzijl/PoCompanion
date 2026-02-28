@@ -62,8 +62,10 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
 
         var rootWorkItemIds = rootsByProduct.Select(r => r.WorkItemTfsId).ToHashSet();
 
-        // Build a mapping of root TfsId to productId
-        var rootToProductId = rootsByProduct.ToDictionary(r => r.WorkItemTfsId, r => r.ProductId);
+        // Build a mapping of root TfsId to productId (first product wins if roots are shared)
+        var rootToProductId = rootsByProduct
+            .GroupBy(r => r.WorkItemTfsId)
+            .ToDictionary(g => g.Key, g => g.First().ProductId);
 
         // Get all work items that are descendants of the backlog roots
         // Load all potentially relevant work items in one query to avoid N+1
@@ -72,7 +74,7 @@ public sealed class GetUnplannedEpicsQueryHandler : IQueryHandler<GetUnplannedEp
             .Select(w => w.TfsId)
             .ToHashSetAsync(cancellationToken);
 
-        // Build a mapping of TfsId to backlog root TfsId by traversing up the hierarchy
+        // Build a mapping of work item TfsId to its ancestor backlog root TfsId by traversing up the hierarchy
         var workItemToRoot = new Dictionary<int, int>();
         
         foreach (var root in rootWorkItemIds)

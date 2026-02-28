@@ -41,7 +41,7 @@
                                      Size="Size.Small" 
                                      Color="Color.Success"
                                      Icon="@Icons.Material.Filled.CheckCircle">
-                                @entry.Id @(!string.IsNullOrEmpty(entry.Title) ? $"– {entry.Title}" : "")
+                                @entry.Id @(!string.IsNullOrEmpty(entry.Title) ? $" – {entry.Title}" : "")
                             </MudChip>
                             <MudIconButton Icon="@Icons.Material.Filled.Close"
                                            Size="Size.Small"
