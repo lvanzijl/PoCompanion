@@ -155,30 +155,46 @@
                     All Products — Sprint Summary
                 </MudText>
                 <MudGrid Spacing="2">
-                    <MudItem xs="12" sm="6" md="3">
-                        <MudPaper Elevation="1" Class="pa-3">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Completed PBIs</MudText>
-                            <MudText Typo="Typo.h5" Color="Color.Success">@_completedPbiCount</MudText>
-                        </MudPaper>
+                    <MudItem xs="12" md="@(_filteredProducts.Count > 1 ? 4 : 12)">
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12">
+                                <MudPaper Elevation="1" Class="pa-3">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Completed PBIs</MudText>
+                                    <MudText Typo="Typo.h5" Color="Color.Success">@_completedPbiCount</MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudPaper Elevation="1" Class="pa-3">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Effort</MudText>
+                                    <MudText Typo="Typo.h5" Color="Color.Info">@_completedPbiEffort pts</MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudPaper Elevation="1" Class="pa-3">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Progression Δ</MudText>
+                                    <MudText Typo="Typo.h5" Color="Color.Primary">@_progressionDelta.ToString("F1")%</MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudPaper Elevation="1" Class="pa-3">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs (Created / Worked / Closed)</MudText>
+                                    <MudText Typo="Typo.h5">@_bugsCreatedCount / @_bugsWorkedCount / @_bugsClosedCount</MudText>
+                                </MudPaper>
+                            </MudItem>
+                        </MudGrid>
                     </MudItem>
-                    <MudItem xs="12" sm="6" md="3">
-                        <MudPaper Elevation="1" Class="pa-3">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Effort</MudText>
-                            <MudText Typo="Typo.h5" Color="Color.Info">@_completedPbiEffort pts</MudText>
-                        </MudPaper>
-                    </MudItem>
-                    <MudItem xs="12" sm="6" md="3">
-                        <MudPaper Elevation="1" Class="pa-3">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Progression Δ</MudText>
-                            <MudText Typo="Typo.h5" Color="Color.Primary">@_progressionDelta.ToString("F1")%</MudText>
-                        </MudPaper>
-                    </MudItem>
-                    <MudItem xs="12" sm="6" md="3">
-                        <MudPaper Elevation="1" Class="pa-3">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs (Created / Worked / Closed)</MudText>
-                            <MudText Typo="Typo.h5">@_bugsCreatedCount / @_bugsWorkedCount / @_bugsClosedCount</MudText>
-                        </MudPaper>
-                    </MudItem>
+                    @if (_filteredProducts.Count > 1)
+                    {
+                        <MudItem xs="12" md="8">
+                            <MudChart ChartType="ChartType.Pie"
+                                      InputData="@GetAllProductsPieData()"
+                                      InputLabels="@GetAllProductsPieLabels()"
+                                      LegendPosition="Position.Right"
+                                      Width="100%"
+                                      Height="250px"
+                                      ChartOptions="@_pieChartOptions" />
+                        </MudItem>
+                    }
                 </MudGrid>
             </MudPaper>
         }
@@ -311,7 +327,8 @@
                                     <MudChart ChartType="ChartType.Pie"
                                               InputData="@GetEpicPieChartData(product.Id)"
                                               InputLabels="@GetEpicPieChartLabels(product.Id)"
-                                              Width="300px"
+                                              LegendPosition="Position.Right"
+                                              Width="100%"
                                               Height="300px"
                                               ChartOptions="@_pieChartOptions"
                                               Class="mb-4" />
@@ -452,8 +469,7 @@
 
     private ChartOptions _pieChartOptions = new()
     {
-        ShowLegend = true,
-        ChartPalette = DefaultPiePalette
+        ShowLegend = true
     };
 
     protected override async Task OnInitializedAsync()
@@ -1100,6 +1116,26 @@
         }
 
         return $"{path}?{string.Join("&", query)}";
+    }
+
+    private double[] GetAllProductsPieData()
+    {
+        return _filteredProducts
+            .Select(p => (double)GetProductCompletedEffort(p.Id))
+            .ToArray();
+    }
+
+    private string[] GetAllProductsPieLabels()
+    {
+        var totalEffort = _filteredProducts.Sum(p => GetProductCompletedEffort(p.Id));
+        return _filteredProducts
+            .Select(p =>
+            {
+                var effort = GetProductCompletedEffort(p.Id);
+                var percent = totalEffort > 0 ? (effort / (double)totalEffort) * 100d : 0d;
+                return $"{percent:F1}% — {p.Name}";
+            })
+            .ToArray();
     }
 
     private List<EpicProgressDto> GetEpicProgressForProduct(int productId)
