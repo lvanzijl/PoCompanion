@@ -284,30 +284,46 @@
                                 Progression by Product
                             </MudText>
                             <MudGrid Spacing="2" Class="mb-4">
-                                <MudItem xs="12" sm="6" md="3">
-                                    <MudPaper Elevation="1" Class="pa-3">
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Completed PBIs</MudText>
-                                        <MudText Typo="Typo.h5" Color="Color.Success">@GetProductCompletedPbis(product.Id)</MudText>
-                                    </MudPaper>
+                                <MudItem xs="12" md="@(HasEpicPieChart(product.Id) ? 4 : 12)">
+                                    <MudGrid Spacing="2">
+                                        <MudItem xs="12">
+                                            <MudPaper Elevation="1" Class="pa-3">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Completed PBIs</MudText>
+                                                <MudText Typo="Typo.h5" Color="Color.Success">@GetProductCompletedPbis(product.Id)</MudText>
+                                            </MudPaper>
+                                        </MudItem>
+                                        <MudItem xs="12">
+                                            <MudPaper Elevation="1" Class="pa-3">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Effort</MudText>
+                                                <MudText Typo="Typo.h5" Color="Color.Info">@GetProductCompletedEffort(product.Id) pts</MudText>
+                                            </MudPaper>
+                                        </MudItem>
+                                        <MudItem xs="12">
+                                            <MudPaper Elevation="1" Class="pa-3">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Progression Δ</MudText>
+                                                <MudText Typo="Typo.h5" Color="Color.Primary">@GetProductProgression(product.Id).ToString("F1")%</MudText>
+                                            </MudPaper>
+                                        </MudItem>
+                                        <MudItem xs="12">
+                                            <MudPaper Elevation="1" Class="pa-3">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs (Created / Worked / Closed)</MudText>
+                                                <MudText Typo="Typo.h6">@GetProductBugsCreated(product.Id) / @GetProductBugsWorked(product.Id) / @GetProductBugsClosed(product.Id)</MudText>
+                                            </MudPaper>
+                                        </MudItem>
+                                    </MudGrid>
                                 </MudItem>
-                                <MudItem xs="12" sm="6" md="3">
-                                    <MudPaper Elevation="1" Class="pa-3">
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Effort</MudText>
-                                        <MudText Typo="Typo.h5" Color="Color.Info">@GetProductCompletedEffort(product.Id) pts</MudText>
-                                    </MudPaper>
-                                </MudItem>
-                                <MudItem xs="12" sm="6" md="3">
-                                    <MudPaper Elevation="1" Class="pa-3">
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Progression Δ</MudText>
-                                        <MudText Typo="Typo.h5" Color="Color.Primary">@GetProductProgression(product.Id).ToString("F1")%</MudText>
-                                    </MudPaper>
-                                </MudItem>
-                                <MudItem xs="12" sm="6" md="3">
-                                    <MudPaper Elevation="1" Class="pa-3">
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs (Created / Worked / Closed)</MudText>
-                                        <MudText Typo="Typo.h6">@GetProductBugsCreated(product.Id) / @GetProductBugsWorked(product.Id) / @GetProductBugsClosed(product.Id)</MudText>
-                                    </MudPaper>
-                                </MudItem>
+                                @if (HasEpicPieChart(product.Id))
+                                {
+                                    <MudItem xs="12" md="8">
+                                        <MudChart ChartType="ChartType.Pie"
+                                                  InputData="@GetEpicPieChartData(product.Id)"
+                                                  InputLabels="@GetEpicPieChartLabels(product.Id)"
+                                                  LegendPosition="Position.Right"
+                                                  Width="100%"
+                                                  Height="300px"
+                                                  ChartOptions="@_pieChartOptions" />
+                                    </MudItem>
+                                }
                             </MudGrid>
 
                             <MudText Typo="Typo.subtitle1" Class="mb-2">
@@ -322,17 +338,6 @@
                             }
                             else
                             {
-                                @if (productEpics.Count > 1 && productEpics.Any(e => e.TotalEffort > 0))
-                                {
-                                    <MudChart ChartType="ChartType.Pie"
-                                              InputData="@GetEpicPieChartData(product.Id)"
-                                              InputLabels="@GetEpicPieChartLabels(product.Id)"
-                                              LegendPosition="Position.Right"
-                                              Width="100%"
-                                              Height="300px"
-                                              ChartOptions="@_pieChartOptions"
-                                              Class="mb-4" />
-                                }
                                 <MudSimpleTable Dense="true" Striped="true" Hover="true" Class="mb-4">
                                     <thead>
                                         <tr>
@@ -346,16 +351,15 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @for (var index = 0; index < productEpics.Count; index++)
+                                        @foreach (var epic in productEpics)
                                         {
-                                            var epic = productEpics[index];
                                             <tr>
                                                 <td>
                                                     <MudText Typo="Typo.body2">#@epic.EpicId</MudText>
                                                 </td>
                                                 <td>
                                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                        <span style="@GetEpicColorSquareStyle(index)"></span>
+                                                        <span style="@GetEpicColorSquareStyle(product.Id, epic.EpicId)"></span>
                                                         <MudText Typo="Typo.body2"><strong>@epic.EpicTitle</strong></MudText>
                                                     </MudStack>
                                                 </td>
@@ -450,14 +454,14 @@
     private string[] _trendXAxisLabels = Array.Empty<string>();
     private static readonly string[] DefaultPiePalette =
     [
-        Colors.Blue.Default,
-        Colors.Green.Default,
-        Colors.Orange.Default,
-        Colors.Purple.Default,
-        Colors.Red.Default,
-        Colors.Cyan.Default,
-        Colors.Teal.Default,
-        Colors.Brown.Default
+        "#2979FF",
+        "#1DE9B6",
+        "#FFC400",
+        "#FF9100",
+        "#651FFF",
+        "#00E676",
+        "#00B0FF",
+        "#26A69A",
     ];
     private ChartOptions _chartOptions = new()
     {
@@ -469,7 +473,8 @@
 
     private ChartOptions _pieChartOptions = new()
     {
-        ShowLegend = true
+        ShowLegend = true,
+        ChartPalette = DefaultPiePalette
     };
 
     protected override async Task OnInitializedAsync()
@@ -1145,16 +1150,24 @@
             .ToList();
     }
 
+    private bool HasEpicPieChart(int productId)
+    {
+        return GetEpicProgressForProduct(productId).Count(e => e.TotalEffort > 0) > 1;
+    }
+
     private double[] GetEpicPieChartData(int productId)
     {
         return GetEpicProgressForProduct(productId)
+            .Where(e => e.TotalEffort > 0)
             .Select(e => (double)e.TotalEffort)
             .ToArray();
     }
 
     private string[] GetEpicPieChartLabels(int productId)
     {
-        var productEpics = GetEpicProgressForProduct(productId);
+        var productEpics = GetEpicProgressForProduct(productId)
+            .Where(e => e.TotalEffort > 0)
+            .ToList();
         var totalEffort = productEpics.Sum(e => e.TotalEffort);
 
         return productEpics
@@ -1173,17 +1186,22 @@
 
     private string GetEpicPieColor(int index)
     {
-        if (_pieChartOptions.ChartPalette is { Length: > 0 })
-        {
-            return _pieChartOptions.ChartPalette[index % _pieChartOptions.ChartPalette.Length];
-        }
-
-        return DefaultPiePalette[index % DefaultPiePalette.Length];
+        return _pieChartOptions.ChartPalette[index % _pieChartOptions.ChartPalette.Length];
     }
 
-    private string GetEpicColorSquareStyle(int index)
+    private int GetEpicPieColorIndex(int productId, int epicId)
     {
-        return $"width: 10px; height: 10px; border-radius: 2px; display: inline-block; background-color: {GetEpicPieColor(index)};";
+        return GetEpicProgressForProduct(productId)
+            .Where(e => e.TotalEffort > 0)
+            .ToList()
+            .FindIndex(e => e.EpicId == epicId);
+    }
+
+    private string GetEpicColorSquareStyle(int productId, int epicId)
+    {
+        var index = GetEpicPieColorIndex(productId, epicId);
+        var color = index < 0 ? "#9E9E9E" : GetEpicPieColor(index);
+        return $"width: 10px; height: 10px; border-radius: 2px; display: inline-block; background-color: {color};";
     }
 
     private static Color GetProgressColor(int progress) =>
