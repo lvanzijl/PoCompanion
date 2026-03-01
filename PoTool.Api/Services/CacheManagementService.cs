@@ -125,6 +125,7 @@ public class CacheManagementService
                 cacheState.SyncStatus = CacheSyncStatus.Idle;
                 cacheState.LastAttemptSync = null;
                 cacheState.LastSuccessfulSync = null;
+                cacheState.PreviousSuccessfulSync = null;
                 cacheState.WorkItemCount = 0;
                 cacheState.PullRequestCount = 0;
                 cacheState.PipelineCount = 0;

@@ -142,6 +142,7 @@ public static class ApiServiceCollectionExtensions
 
         // Register Cache Management Service (insights, granular reset, validation)
         services.AddScoped<CacheManagementService>();
+        services.AddScoped<SyncChangesSummaryService>();
 
         // Register Classification service
         services.AddScoped<IWorkItemClassificationService, WorkItemClassificationService>();
