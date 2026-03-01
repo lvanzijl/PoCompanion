@@ -34,6 +34,30 @@
                     Current + 3 Iterations
                 </MudChip>
                 
+                @* Suggestion 4: Product context chip with clear button *@
+                @if (ProductId.HasValue)
+                {
+                    var contextProduct = _products.FirstOrDefault(p => p.Id == ProductId.Value);
+                    @if (contextProduct != null)
+                    {
+                        <MudChip T="string"
+                                 Icon="@Icons.Material.Filled.FilterAlt"
+                                 Size="Size.Small"
+                                 Color="Color.Primary"
+                                 OnClose="ClearProductFilter">
+                            @contextProduct.Name
+                        </MudChip>
+                    }
+                }
+                
+                @* Suggestion 3: Plan Board as primary action in Planning workspace *@
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Info"
+                           StartIcon="@Icons.Material.Filled.ViewColumn"
+                           OnClick="NavigateToPlanBoard">
+                    Plan Board
+                </MudButton>
+                
                     <MudButton Variant="Variant.Outlined"
                                Color="Color.Default"
                                StartIcon="@Icons.Material.Filled.Home"
@@ -468,6 +492,18 @@
     private void NavigateToTrends()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.TrendsWorkspace}{BuildContextQuery()}");
+    }
+    
+    private void NavigateToPlanBoard()
+    {
+        NavigationManager.NavigateTo(ProductId.HasValue
+            ? $"{WorkspaceRoutes.PlanBoard}{BuildContextQuery()}"
+            : $"{WorkspaceRoutes.PlanBoard}?allProducts=true");
+    }
+    
+    private void ClearProductFilter()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.PlanningWorkspace2);
     }
 
     

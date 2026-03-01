@@ -87,6 +87,7 @@ public class CacheStateRepository : ICacheStateRepository
         var entity = await GetOrCreateEntityAsync(productOwnerId, cancellationToken);
 
         entity.SyncStatus = CacheSyncStatus.Success;
+        entity.PreviousSuccessfulSync = entity.LastSuccessfulSync;
         entity.LastSuccessfulSync = DateTimeOffset.UtcNow;
         entity.LastAttemptSync = DateTimeOffset.UtcNow;
         entity.WorkItemCount = workItemCount;
@@ -117,6 +118,7 @@ public class CacheStateRepository : ICacheStateRepository
         var entity = await GetOrCreateEntityAsync(productOwnerId, cancellationToken);
 
         entity.SyncStatus = CacheSyncStatus.SuccessWithWarnings;
+        entity.PreviousSuccessfulSync = entity.LastSuccessfulSync;
         entity.LastSuccessfulSync = DateTimeOffset.UtcNow;
         entity.LastAttemptSync = DateTimeOffset.UtcNow;
         entity.WorkItemCount = workItemCount;
@@ -160,6 +162,7 @@ public class CacheStateRepository : ICacheStateRepository
         entity.SyncStatus = CacheSyncStatus.Idle;
         entity.LastAttemptSync = null;
         entity.LastSuccessfulSync = null;
+        entity.PreviousSuccessfulSync = null;
         entity.WorkItemCount = 0;
         entity.PullRequestCount = 0;
         entity.PipelineCount = 0;
@@ -343,6 +346,7 @@ public class CacheStateRepository : ICacheStateRepository
             SyncStatus = (CacheSyncStatusDto)entity.SyncStatus,
             LastAttemptSync = entity.LastAttemptSync,
             LastSuccessfulSync = entity.LastSuccessfulSync,
+            PreviousSuccessfulSync = entity.PreviousSuccessfulSync,
             WorkItemCount = entity.WorkItemCount,
             PullRequestCount = entity.PullRequestCount,
             PipelineCount = entity.PipelineCount,

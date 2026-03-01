@@ -15,23 +15,37 @@
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
 @inject ILogger<BugsTriage> Logger
+@inject NavigationManager NavigationManager
 @implements IAsyncDisposable
 
 <PageTitle>Bugs Triage</PageTitle>
 
 <div class="bugs-triage-page">
     <div class="bugs-triage-toolbar">
-        <MudText Typo="Typo.h5">
-            <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-2" />
-            Bugs Triage
-        </MudText>
+        <MudStack Spacing="0" Style="flex: 1;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-2" />
+                    Bugs Triage
+                </MudText>
+                
+                @if (!_isLoading && _bugs.Any())
+                {
+                    <MudText Typo="Typo.body2" Class="ml-3">
+                        @_bugs.Count bugs total | @_untriagedCount untriaged
+                    </MudText>
+                }
+            </MudStack>
+            @* Suggestion 1: Consistent breadcrumb on every page *@
+            <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+        </MudStack>
         
-        @if (!_isLoading && _bugs.Any())
-        {
-            <MudText Typo="Typo.body2" Class="ml-3">
-                @_bugs.Count bugs total | @_untriagedCount untriaged
-            </MudText>
-        }
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Default"
+                   StartIcon="@Icons.Material.Filled.Home"
+                   OnClick="@(() => NavigationManager.NavigateTo("/home"))">
+            Home
+        </MudButton>
     </div>
 
     @if (_isLoading)
@@ -154,6 +168,13 @@
     
     private List<string> _selectedTags = new();
     private TagMatchMode _tagMatchMode = TagMatchMode.Any;
+    
+    // Suggestion 1: Breadcrumbs for consistent navigation
+    private List<BreadcrumbItem> _breadcrumbs = new List<BreadcrumbItem>
+    {
+        new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
+        new("Bug Triage", null, disabled: true, icon: Icons.Material.Filled.BugReport)
+    };
 
     protected override async Task OnInitializedAsync()
     {

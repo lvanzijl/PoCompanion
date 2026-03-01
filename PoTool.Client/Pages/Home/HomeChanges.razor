@@ -1,0 +1,343 @@
+@page "/home/changes"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Services
+@using PoTool.Shared.Settings
+@inherits WorkspaceBase
+@inject CacheSyncService CacheSyncService
+
+<PageTitle>What's New Since Last Sync - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+
+    @* Page Header *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.NewReleases" Color="Color.Primary" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">What's New Since Last Sync</MudText>
+                </MudStack>
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            </MudStack>
+
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       StartIcon="@Icons.Material.Filled.Home"
+                       OnClick="NavigateToHome">
+                Home
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
+    }
+    else if (_summary == null || !_summary.HasData)
+    {
+        <MudPaper Elevation="2" Class="pa-6">
+            <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Size="Size.Large" Color="Color.Secondary" />
+                <MudText Typo="Typo.h6" Align="Align.Center">No change data available yet</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                    Change data is built by comparing two consecutive syncs.
+                    At least two successful syncs are required before changes can be shown.
+                    @if (_summary?.LastSyncTime.HasValue == true)
+                    {
+                        <span><br />Last sync: @_summary!.LastSyncTime!.Value.ToLocalTime().ToString("g")</span>
+                    }
+                </MudText>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Home"
+                           OnClick="NavigateToHome">
+                    Back to Home
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    }
+    else
+    {
+        @* Sync Window Summary *@
+        <MudAlert Severity="Severity.Info" Class="mb-4" Icon="@Icons.Material.Filled.Schedule">
+            Showing changes between
+            <strong>@_summary.SinceTime!.Value.ToLocalTime().ToString("g")</strong>
+            and
+            <strong>@_summary.LastSyncTime!.Value.ToLocalTime().ToString("g")</strong>
+        </MudAlert>
+
+        @* Quick Stats *@
+        <MudGrid Spacing="3" Class="mb-4">
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="2" Class="pa-4">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.BugReport" Color="Color.Error" Size="Size.Large" />
+                        <MudText Typo="Typo.h4" Color="Color.Error">@_summary.BugsOpenedCount</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Bugs Opened</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="2" Class="pa-4">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
+                        <MudText Typo="Typo.h4" Color="Color.Success">@_summary.BugsClosedCount</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Bugs Closed</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="2" Class="pa-4">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Large" />
+                        <MudText Typo="Typo.h4" Color="Color.Warning">@_summary.ValidationIssueWorkItemCount</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Items with Issues</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="2" Class="pa-4">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Primary" Size="Size.Large" />
+                        <MudText Typo="Typo.h4" Color="Color.Primary">@_summary.SprintsCompletedCount</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Sprints Completed</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        @* Bugs Opened *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.BugReport" Color="Color.Error" />
+                <MudText Typo="Typo.h6">Bugs Opened (@_summary.BugsOpenedCount)</MudText>
+            </MudStack>
+
+            @if (_summary.BugsOpened.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">No bugs were opened in this sync window.</MudText>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2" NoIcon="true">
+                    These bugs had their state changed to an active/non-done state during the sync window.
+                    @if (_summary.BugsOpenedCount > _summary.BugsOpened.Count)
+                    {
+                        <span> Showing first @_summary.BugsOpened.Count of @_summary.BugsOpenedCount.</span>
+                    }
+                </MudAlert>
+                <MudTable Items="@_summary.BugsOpened" Hover="true" Dense="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>ID</MudTh>
+                        <MudTh>Title</MudTh>
+                        <MudTh>State Change</MudTh>
+                        <MudTh>Changed At</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="ID">@context.TfsId</MudTd>
+                        <MudTd DataLabel="Title">@context.Title</MudTd>
+                        <MudTd DataLabel="State Change">
+                            @if (!string.IsNullOrEmpty(context.OldState))
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default">@context.OldState</MudChip>
+                                <MudText Typo="Typo.body2" Style="display: inline;">→</MudText>
+                            }
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.NewState</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Changed At">
+                            @(context.ChangedAt?.ToLocalTime().ToString("g") ?? "—")
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+
+        @* Bugs Closed *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                <MudText Typo="Typo.h6">Bugs Closed (@_summary.BugsClosedCount)</MudText>
+            </MudStack>
+
+            @if (_summary.BugsClosed.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">No bugs were closed in this sync window.</MudText>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Success" Dense="true" Class="mb-2" NoIcon="true">
+                    These bugs transitioned to a done/closed/resolved state during the sync window.
+                    @if (_summary.BugsClosedCount > _summary.BugsClosed.Count)
+                    {
+                        <span> Showing first @_summary.BugsClosed.Count of @_summary.BugsClosedCount.</span>
+                    }
+                </MudAlert>
+                <MudTable Items="@_summary.BugsClosed" Hover="true" Dense="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>ID</MudTh>
+                        <MudTh>Title</MudTh>
+                        <MudTh>State Change</MudTh>
+                        <MudTh>Changed At</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="ID">@context.TfsId</MudTd>
+                        <MudTd DataLabel="Title">@context.Title</MudTd>
+                        <MudTd DataLabel="State Change">
+                            @if (!string.IsNullOrEmpty(context.OldState))
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default">@context.OldState</MudChip>
+                                <MudText Typo="Typo.body2" Style="display: inline;">→</MudText>
+                            }
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success">@context.NewState</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Changed At">
+                            @(context.ChangedAt?.ToLocalTime().ToString("g") ?? "—")
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+
+        @* Validation Issues *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
+                <MudText Typo="Typo.h6">Work Items with Validation Issues (@_summary.ValidationIssueWorkItemCount)</MudText>
+            </MudStack>
+
+            @if (_summary.ValidationIssueItems.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">No recently changed work items have validation issues.</MudText>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2" NoIcon="true">
+                    Work items whose TFS change date falls in the sync window and that currently have at least one validation issue.
+                    These may have had issues introduced during this sync — a before/after baseline is not stored.
+                    @if (_summary.ValidationIssueWorkItemCount > _summary.ValidationIssueItems.Count)
+                    {
+                        <span> Showing first @_summary.ValidationIssueItems.Count of @_summary.ValidationIssueWorkItemCount.</span>
+                    }
+                </MudAlert>
+                <MudTable Items="@_summary.ValidationIssueItems" Hover="true" Dense="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>ID</MudTh>
+                        <MudTh>Title</MudTh>
+                        <MudTh>Type</MudTh>
+                        <MudTh>State</MudTh>
+                        <MudTh>Changed At</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="ID">@context.TfsId</MudTd>
+                        <MudTd DataLabel="Title">@context.Title</MudTd>
+                        <MudTd DataLabel="Type">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default">@context.Type</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="State">@context.NewState</MudTd>
+                        <MudTd DataLabel="Changed At">
+                            @(context.ChangedAt?.ToLocalTime().ToString("g") ?? "—")
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudTooltip Text="View in Health Workspace">
+                                <MudIconButton Icon="@Icons.Material.Filled.HealthAndSafety"
+                                               Size="Size.Small"
+                                               Color="Color.Warning"
+                                               OnClick="@(() => NavigationManager.NavigateTo(WorkspaceRoutes.HealthWorkspace))" />
+                            </MudTooltip>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+
+        @* Sprint Completions *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Primary" />
+                <MudText Typo="Typo.h6">Sprint Completions (@_summary.SprintsCompletedCount)</MudText>
+            </MudStack>
+
+            @if (_summary.SprintsCompleted.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">No sprints ended during this sync window.</MudText>
+            }
+            else
+            {
+                <MudTable Items="@_summary.SprintsCompleted" Hover="true" Dense="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Sprint</MudTh>
+                        <MudTh>Iteration Path</MudTh>
+                        <MudTh>End Date</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Sprint">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.SprintName</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Iteration Path">
+                            <MudText Typo="Typo.body2">@context.IterationPath</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="End Date">
+                            @(context.EndDate?.ToLocalTime().ToString("d") ?? "—")
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudTooltip Text="View Sprint Trend">
+                                <MudIconButton Icon="@Icons.Material.Filled.Timeline"
+                                               Size="Size.Small"
+                                               Color="Color.Primary"
+                                               OnClick="@(() => NavigationManager.NavigateTo(WorkspaceRoutes.SprintTrend))" />
+                            </MudTooltip>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private SyncChangesSummaryDto? _summary;
+    private List<BreadcrumbItem> _breadcrumbs = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            ParseContextQueryParameters();
+
+            if (!await EnsureProfileAsync(WorkspaceRoutes.Home + "/changes"))
+            {
+                return;
+            }
+
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+
+            if (activeProfile?.Id != null)
+            {
+                _summary = await CacheSyncService.GetChangesSinceSyncAsync(activeProfile.Id);
+            }
+
+            _breadcrumbs =
+            [
+                new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
+                new("What's New Since Last Sync", null, disabled: true, icon: Icons.Material.Filled.NewReleases)
+            ];
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading change summary: {ex.Message}";
+            Snackbar.Add(_errorMessage, Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

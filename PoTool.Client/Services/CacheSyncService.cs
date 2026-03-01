@@ -191,6 +191,26 @@ public class CacheSyncService
         }
     }
 
+    /// <summary>
+    /// Gets a summary of work-item and sprint changes detected in the last sync window.
+    /// Returns null on error (network/JSON failure).
+    /// </summary>
+    public async Task<SyncChangesSummaryDto?> GetChangesSinceSyncAsync(
+        int productOwnerId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<SyncChangesSummaryDto>(
+                $"api/CacheSync/{productOwnerId}/changes-since-sync",
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
+
 }
 
 /// <summary>

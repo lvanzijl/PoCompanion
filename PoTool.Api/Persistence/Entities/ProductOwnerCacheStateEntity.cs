@@ -36,6 +36,12 @@ public class ProductOwnerCacheStateEntity
     public DateTimeOffset? LastSuccessfulSync { get; set; }
 
     /// <summary>
+    /// Timestamp of the successful sync before the most recent one.
+    /// Used to compute what changed in the last sync window.
+    /// </summary>
+    public DateTimeOffset? PreviousSuccessfulSync { get; set; }
+
+    /// <summary>
     /// Count of cached work items after last successful sync.
     /// </summary>
     public int WorkItemCount { get; set; } = 0;

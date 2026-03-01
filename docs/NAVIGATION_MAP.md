@@ -390,6 +390,8 @@ The following suggestions are derived from analysing the current navigation stru
 
 **Suggestion:** Add a consistent breadcrumb trail to every page that reflects the path by which it was reached. This gives the user a mental model of where they are and allows them to step back one level without losing context. Breadcrumbs should carry product/team context forward.
 
+**Implemented:** Added `Home › Bug Triage` breadcrumb and a Home button to the Bug Triage toolbar (`/bugs-triage`). All other home-workspace pages already had breadcrumbs.
+
 ---
 
 ### Suggestion 2 — Expose cross-workspace navigation on all leaf pages

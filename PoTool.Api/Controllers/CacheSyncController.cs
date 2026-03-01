@@ -18,6 +18,7 @@ public class CacheSyncController : ControllerBase
     private readonly ISyncPipeline _syncPipeline;
     private readonly ISyncProgressBroadcaster _broadcaster;
     private readonly CacheManagementService _cacheManagement;
+    private readonly SyncChangesSummaryService _syncChangesSummary;
     private readonly ILogger<CacheSyncController> _logger;
 
     public CacheSyncController(
@@ -25,12 +26,14 @@ public class CacheSyncController : ControllerBase
         ISyncPipeline syncPipeline,
         ISyncProgressBroadcaster broadcaster,
         CacheManagementService cacheManagement,
+        SyncChangesSummaryService syncChangesSummary,
         ILogger<CacheSyncController> logger)
     {
         _cacheStateRepository = cacheStateRepository;
         _syncPipeline = syncPipeline;
         _broadcaster = broadcaster;
         _cacheManagement = cacheManagement;
+        _syncChangesSummary = syncChangesSummary;
         _logger = logger;
     }
 
@@ -209,6 +212,21 @@ public class CacheSyncController : ControllerBase
             toChangedDate,
             cancellationToken);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Returns a summary of work-item and sprint changes detected in the last sync window
+    /// (between the previous and the latest successful sync).
+    /// Returns empty summary with HasData=false when fewer than two syncs have completed.
+    /// </summary>
+    [HttpGet("{productOwnerId}/changes-since-sync")]
+    [ProducesResponseType(typeof(SyncChangesSummaryDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SyncChangesSummaryDto>> GetChangesSinceSync(
+        int productOwnerId,
+        CancellationToken cancellationToken)
+    {
+        var summary = await _syncChangesSummary.GetChangesSummaryAsync(productOwnerId, cancellationToken);
+        return Ok(summary);
     }
 
 }

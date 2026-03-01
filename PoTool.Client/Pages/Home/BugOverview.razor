@@ -196,6 +196,35 @@
                 </MudAlert>
             </MudPaper>
         }
+
+        @* Suggestion 6: Prominent "Go to Triage" contextual action panel *@
+        <MudPaper Elevation="2" Class="pa-4 mt-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-2" Color="Color.Error" />
+                        Ready to triage?
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @if (_totalOpenBugs?.Count > 0)
+                        {
+                            <span>@_totalOpenBugs.Count open bugs need triage attention</span>
+                        }
+                        else
+                        {
+                            <span>Go to Bug Triage to manage triage tags and prioritise bugs</span>
+                        }
+                    </MudText>
+                </MudStack>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.BugReport"
+                           OnClick="NavigateToBugTriage"
+                           Size="Size.Large">
+                    Go to Triage
+                </MudButton>
+            </MudStack>
+        </MudPaper>
     }
 </MudContainer>
 
