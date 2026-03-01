@@ -4,12 +4,14 @@
 @using PoTool.Client.Services
 @using PoTool.Client.Pages.Home.Components
 @using PoTool.Shared.Metrics
+@using PoTool.Shared.WorkItems
 @using System.Web
 @inject IProfileService ProfileService
 @inject TeamService TeamService
 @inject SprintService SprintService
 @inject ProductService ProductService
 @inject SprintTrendService SprintTrendService
+@inject TfsConfigService TfsConfigService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -74,15 +76,17 @@
                         Sprint Navigation
                     </MudText>
                     
-                    <MudToggleIconButton Toggled="@_advancedMode"
-                                         ToggledChanged="OnAdvancedModeToggled"
-                                         Icon="@Icons.Material.Filled.BarChart"
-                                         ToggledIcon="@Icons.Material.Filled.BarChart"
-                                         Color="Color.Default"
-                                         ToggledColor="Color.Primary"
-                                         Variant="Variant.Outlined"
-                                         ToggledSize="Size.Medium"
-                                         Size="Size.Medium" />
+                    <MudTooltip Text="@(_advancedMode ? $"Click to return to single sprint view (currently showing last {_trendSprintCount} sprints)" : "Click to show multi-sprint trend view")">
+                        <MudToggleIconButton Toggled="@_advancedMode"
+                                             ToggledChanged="OnAdvancedModeToggled"
+                                             Icon="@Icons.Material.Filled.BarChart"
+                                             ToggledIcon="@Icons.Material.Filled.BarChart"
+                                             Color="Color.Default"
+                                             ToggledColor="Color.Primary"
+                                             Variant="Variant.Outlined"
+                                             ToggledSize="Size.Medium"
+                                             Size="Size.Medium" />
+                    </MudTooltip>
                 </MudStack>
 
                 @if (!_advancedMode)
@@ -120,28 +124,36 @@
                 {
                     @* Advanced mode: multi-sprint trend view *@
                     <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
-                        Showing trend data for the previous @_trendSprintCount sprints (up to and including the currently selected sprint).
+                        Showing trend data for the previous @_trendSprintCount sprints ending at the selected sprint.
                     </MudAlert>
                     
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="3">
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
-                                       Color="Color.Primary"
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="int" Label="Last sprint to show"
+                                       Value="@(_currentSprint?.Id ?? 0)"
+                                       ValueChanged="OnTrendLastSprintChanged"
                                        Variant="Variant.Outlined"
-                                       Disabled="@(!CanNavigatePrevious())"
-                                       OnClick="NavigateToPreviousSprint"
-                                       aria-label="Previous Sprint" />
-                        
-                        <MudText Typo="Typo.h6" Align="Align.Center">
-                            @GetTrendRangeLabel()
-                        </MudText>
-                        
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowForward"
-                                       Color="Color.Primary"
-                                       Variant="Variant.Outlined"
-                                       Disabled="@(!CanNavigateNext())"
-                                       OnClick="NavigateToNextSprint"
-                                       aria-label="Next Sprint" />
-                    </MudStack>
+                                       Dense="true"
+                                       FullWidth="true">
+                                @foreach (var sprint in _filteredSprints)
+                                {
+                                    <MudSelectItem Value="@sprint.Id">@sprint.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudNumericField T="int" Label="Number of sprints to show"
+                                             Value="@_trendSprintCount"
+                                             ValueChanged="OnTrendSprintCountChanged"
+                                             Min="1"
+                                             Max="@MaxAvailableSprints"
+                                             Variant="Variant.Outlined"
+                                             FullWidth="true" />
+                        </MudItem>
+                        <MudItem xs="12" sm="2">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" aria-label="Current sprint range">@GetTrendRangeLabel()</MudText>
+                        </MudItem>
+                    </MudGrid>
                 }
 
             </MudStack>
@@ -356,7 +368,16 @@
                                         {
                                             <tr>
                                                 <td>
-                                                    <MudText Typo="Typo.body2">#@epic.EpicId</MudText>
+                                                    @if (_tfsConfig != null && !string.IsNullOrEmpty(_tfsConfig.Url) && !string.IsNullOrEmpty(_tfsConfig.Project))
+                                                    {
+                                                        <MudLink Href="@TfsUrlBuilder.BuildWorkItemUrl(_tfsConfig.Url, _tfsConfig.Project, epic.EpicId)"
+                                                                 Target="_blank"
+                                                                 Typo="Typo.body2">#@epic.EpicId</MudLink>
+                                                    }
+                                                    else
+                                                    {
+                                                        <MudText Typo="Typo.body2">#@epic.EpicId</MudText>
+                                                    }
                                                 </td>
                                                 <td>
                                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
@@ -410,6 +431,9 @@
     private string? _errorMessage;
     private int? _profileId;
     private List<BreadcrumbItem> _breadcrumbs = new();
+    
+    // TFS configuration (for work item links)
+    private TfsConfigDto? _tfsConfig;
     
     // Selection state
     private int? _selectedTeamId;
@@ -502,6 +526,9 @@
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
             _products = (await ProductService.GetProductsByOwnerAsync(_profileId.Value)).ToList();
             _filteredProducts = _products.ToList();
+            
+            // Load TFS config for work item links
+            _tfsConfig = await TfsConfigService.GetConfigAsync();
             
             // Load all sprints for all teams under this PO
             _allSprints.Clear();
@@ -883,6 +910,7 @@
 
     private bool CanNavigatePrevious() => _currentSprintIndex > 0;
     private bool CanNavigateNext() => _currentSprintIndex >= 0 && _currentSprintIndex < _filteredSprints.Count - 1;
+    private int MaxAvailableSprints => _filteredSprints.Count > 0 ? _filteredSprints.Count : 1;
 
     private async Task NavigateToPreviousSprint()
     {
@@ -928,6 +956,25 @@
     private async Task OnAdvancedModeToggled(bool toggled)
     {
         _advancedMode = toggled;
+        await LoadMetricsAsync();
+        StateHasChanged();
+    }
+
+    private async Task OnTrendLastSprintChanged(int sprintId)
+    {
+        var index = _filteredSprints.FindIndex(s => s.Id == sprintId);
+        if (index >= 0)
+        {
+            _currentSprintIndex = index;
+            _currentSprint = _filteredSprints[index];
+            await LoadMetricsAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnTrendSprintCountChanged(int count)
+    {
+        _trendSprintCount = Math.Max(1, count);
         await LoadMetricsAsync();
         StateHasChanged();
     }
@@ -1217,7 +1264,9 @@
         var parameters = new DialogParameters
         {
             { nameof(EpicFeaturesDialog.EpicTitle), epic.EpicTitle },
-            { nameof(EpicFeaturesDialog.Features), (IReadOnlyList<FeatureProgressDto>)epicFeatures }
+            { nameof(EpicFeaturesDialog.Features), (IReadOnlyList<FeatureProgressDto>)epicFeatures },
+            { nameof(EpicFeaturesDialog.TfsUrl), _tfsConfig?.Url },
+            { nameof(EpicFeaturesDialog.TfsProject), _tfsConfig?.Project }
         };
 
         var options = new DialogOptions
