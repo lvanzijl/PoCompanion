@@ -88,7 +88,7 @@
                 @if (!_advancedMode)
                 {
                     @* Single sprint navigation *@
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="3">
                         <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
                                        Color="Color.Primary"
                                        Variant="Variant.Outlined"
@@ -96,16 +96,17 @@
                                        OnClick="NavigateToPreviousSprint"
                                        aria-label="Previous Sprint" />
                         
-                        <MudText Typo="Typo.h5" Align="Align.Center">
-                            @(_currentSprint?.Name ?? "No sprint selected")
-                        </MudText>
-                        
-                        @if (_currentSprint?.StartUtc != null && _currentSprint?.EndUtc != null)
-                        {
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                @_currentSprint.StartUtc.Value.ToString("MMM d") — @_currentSprint.EndUtc.Value.ToString("MMM d, yyyy")
+                        <MudStack AlignItems="AlignItems.Center" Spacing="0">
+                            <MudText Typo="Typo.h5" Align="Align.Center">
+                                @(_currentSprint?.Name ?? "No sprint selected")
                             </MudText>
-                        }
+                            @if (_currentSprint?.StartUtc != null && _currentSprint?.EndUtc != null)
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    @_currentSprint.StartUtc.Value.ToString("MMM d") — @_currentSprint.EndUtc.Value.ToString("MMM d, yyyy")
+                                </MudText>
+                            }
+                        </MudStack>
                         
                         <MudIconButton Icon="@Icons.Material.Filled.ArrowForward"
                                        Color="Color.Primary"
@@ -122,7 +123,7 @@
                         Showing trend data for the previous @_trendSprintCount sprints (up to and including the currently selected sprint).
                     </MudAlert>
                     
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="3">
                         <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
                                        Color="Color.Primary"
                                        Variant="Variant.Outlined"
@@ -1152,29 +1153,29 @@
 
     private bool HasEpicPieChart(int productId)
     {
-        return GetEpicProgressForProduct(productId).Count(e => e.TotalEffort > 0) > 1;
+        return GetEpicProgressForProduct(productId).Count(e => e.DoneEffort > 0) > 1;
     }
 
     private double[] GetEpicPieChartData(int productId)
     {
         return GetEpicProgressForProduct(productId)
-            .Where(e => e.TotalEffort > 0)
-            .Select(e => (double)e.TotalEffort)
+            .Where(e => e.DoneEffort > 0)
+            .Select(e => (double)e.DoneEffort)
             .ToArray();
     }
 
     private string[] GetEpicPieChartLabels(int productId)
     {
         var productEpics = GetEpicProgressForProduct(productId)
-            .Where(e => e.TotalEffort > 0)
+            .Where(e => e.DoneEffort > 0)
             .ToList();
-        var totalEffort = productEpics.Sum(e => e.TotalEffort);
+        var totalDoneEffort = productEpics.Sum(e => e.DoneEffort);
 
         return productEpics
             .Select(epic =>
             {
-                var percent = totalEffort > 0
-                    ? (epic.TotalEffort / (double)totalEffort) * 100d
+                var percent = totalDoneEffort > 0
+                    ? (epic.DoneEffort / (double)totalDoneEffort) * 100d
                     : 0d;
                 var title = epic.EpicTitle.Length > MaxEpicPieLabelLength
                     ? epic.EpicTitle[..MaxEpicPieLabelLength] + "…"
@@ -1192,7 +1193,7 @@
     private int GetEpicPieColorIndex(int productId, int epicId)
     {
         return GetEpicProgressForProduct(productId)
-            .Where(e => e.TotalEffort > 0)
+            .Where(e => e.DoneEffort > 0)
             .ToList()
             .FindIndex(e => e.EpicId == epicId);
     }

@@ -388,10 +388,13 @@ public class SprintTrendProjectionService
 
             if (totalEffort > 0)
             {
-                var featureHadActivity = childPbis.Any(p =>
-                    activityByWorkItem.ContainsKey(p!.TfsId));
+                var featureHadProgress = childPbis.Any(p =>
+                    activityByWorkItem.TryGetValue(p!.TfsId, out var pbiEvents)
+                    && pbiEvents.Any(e =>
+                        string.Equals(e.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(e.NewValue, "Done", StringComparison.OrdinalIgnoreCase)));
 
-                if (featureHadActivity)
+                if (featureHadProgress)
                 {
                     var featurePercent = (double)doneEffort / totalEffort * 100;
                     totalFeatureProgression += featurePercent;

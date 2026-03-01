@@ -225,6 +225,7 @@ public class SprintTrendProjectionServiceTests
     public void ComputeProgressionDelta_CalculatesEffortWeightedCompletion()
     {
         // Feature with 2 PBIs: one Done (effort 50), one Active (effort 100)
+        // PBI 201 has a state-change-to-Done activity in this sprint
         // Expected: 50 / 150 * 100 = 33.33%
         var resolved = new List<ResolvedWorkItemEntity>
         {
@@ -242,12 +243,39 @@ public class SprintTrendProjectionServiceTests
 
         var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
         {
-            [201] = new() { CreateActivity(201, DateTimeOffset.UtcNow) },
+            [201] = new() { CreateStateChangeActivity(201, DateTimeOffset.UtcNow, "Active", "Done") },
         };
 
         var delta = SprintTrendProjectionService.ComputeProgressionDelta(resolved, workItems, activity);
 
         Assert.AreEqual(33.33, delta, 0.01, "Progression should be 33.33% (50/150 * 100)");
+    }
+
+    [TestMethod]
+    public void ComputeProgressionDelta_NonStatusActivity_DoesNotCountForProgression()
+    {
+        // Feature with a Done PBI but only non-status field activity — should yield 0 delta
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 50, state: "Done", parentId: 100),
+        };
+
+        // Only a title change — not a status transition to Done
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [201] = new() { CreateActivity(201, DateTimeOffset.UtcNow, "System.Title") },
+        };
+
+        var delta = SprintTrendProjectionService.ComputeProgressionDelta(resolved, workItems, activity);
+
+        Assert.AreEqual(0, delta, "Non-status activity should not contribute to progression delta");
     }
 
     #region ComputeFeatureProgress Tests
