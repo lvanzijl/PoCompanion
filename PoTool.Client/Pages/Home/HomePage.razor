@@ -36,10 +36,17 @@
                     <div>
                         <MudText Typo="Typo.h6">
                             <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
-                            Overview — All Products, All Teams
+                            What's New Since Last Sync
                         </MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            High-level signals: health, trends, sync state
+                            @if (_lastSyncTime.HasValue)
+                            {
+                                <span>Last sync: @_lastSyncTime.Value.ToLocalTime().ToString("g") — current snapshot</span>
+                            }
+                            else
+                            {
+                                <span>No sync recorded yet — run a sync to update</span>
+                            }
                         </MudText>
                     </div>
                     <MudButton Variant="Variant.Outlined" 
@@ -215,30 +222,7 @@
                            Size="Size.Large">
                     Work Item Explorer
                 </MudButton>
-                
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Error"
-                           StartIcon="@Icons.Material.Filled.BugReport"
-                           OnClick="NavigateToBugTriage"
-                           Size="Size.Large">
-                    Bug Triage
-                </MudButton>
-                
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Info"
-                           StartIcon="@Icons.Material.Filled.ViewColumn"
-                           OnClick="NavigateToPlanBoard"
-                           Size="Size.Large">
-                    Plan Board
-                </MudButton>
             </MudStack>
-
-            @* Legacy UI Link - Subtle footer link *@
-            <MudText Typo="Typo.caption" Class="mt-8" Style="color: var(--mud-palette-text-disabled);">
-                <MudLink Href="/legacy" Color="Color.Inherit" Underline="Underline.Hover" Style="cursor: pointer;">
-                    Classic Intent Navigation
-                </MudLink>
-            </MudText>
         }
     </MudStack>
 </MudContainer>
@@ -261,6 +245,9 @@
     private int _totalValidationIssues = 0;
     private int _workItemsWithIssues = 0;
     private int _activeBugCount = 0;
+    
+    // Sync state
+    private DateTimeOffset? _lastSyncTime;
     
     // Context propagation - product/team filter
     private int? _selectedProductId;
@@ -286,6 +273,10 @@
             
             // Load products for context filter
             _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            
+            // Load last sync time for "What's New Since Last Sync" display
+            var cacheState = await CacheSyncService.GetCacheStatusAsync(_profileId.Value);
+            _lastSyncTime = cacheState?.LastSuccessfulSync;
             
             // Load health signals
             await LoadHealthSignalsAsync();
@@ -339,18 +330,6 @@
     {
         // Task-driven entry always uses all products/teams
         NavigationManager.NavigateTo($"{WorkspaceRoutes.WorkItems}?allProducts=true&allTeams=true");
-    }
-
-    private void NavigateToBugTriage()
-    {
-        // Navigate to Bug Triage page for triaging bugs
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BugTriage}");
-    }
-
-    private void NavigateToPlanBoard()
-    {
-        // Task-driven entry always uses all products
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanBoard}?allProducts=true");
     }
 
     private async Task LoadHealthSignalsAsync()
@@ -452,6 +431,7 @@
                 {
                     // Reload health signals after successful sync
                     await LoadHealthSignalsAsync();
+                    _lastSyncTime = cacheState.LastSuccessfulSync;
                     var severity = cacheState.SyncStatus == PoTool.Shared.Settings.CacheSyncStatusDto.SuccessWithWarnings
                         ? Severity.Warning
                         : Severity.Success;

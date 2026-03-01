@@ -108,6 +108,18 @@
                     }
                 }
                 
+                @* Suggestion 4: Product context chip with clear button *@
+                @if (ProductId.HasValue)
+                {
+                    <MudChip T="string"
+                             Icon="@Icons.Material.Filled.FilterAlt"
+                             Size="Size.Small"
+                             Color="Color.Primary"
+                             OnClose="ClearProductFilter">
+                        Product Filter
+                    </MudChip>
+                }
+                
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
                            StartIcon="@Icons.Material.Filled.Home"
@@ -499,6 +511,11 @@
     private void NavigateToPlanning()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanningWorkspace2}{BuildContextQuery()}");
+    }
+    
+    private void ClearProductFilter()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.TrendsWorkspace);
     }
     
     /// <summary>

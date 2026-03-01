@@ -34,6 +34,26 @@
                     Current State
                 </MudChip>
                 
+                @* Suggestion 4: Product context chip with clear button *@
+                @if (ProductId.HasValue && _productName != null)
+                {
+                    <MudChip T="string"
+                             Icon="@Icons.Material.Filled.FilterAlt"
+                             Size="Size.Small"
+                             Color="Color.Primary"
+                             OnClose="ClearProductFilter">
+                        @_productName
+                    </MudChip>
+                }
+                
+                @* Suggestion 3: Bug Triage as primary action in Health workspace *@
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.BugReport"
+                           OnClick="NavigateToBugTriage">
+                    Bug Triage
+                </MudButton>
+                
                     <MudButton Variant="Variant.Outlined"
                                Color="Color.Default"
                                StartIcon="@Icons.Material.Filled.Home"
@@ -191,6 +211,7 @@
     private int? _profileId;
     private ProfileDto? _activeProfile;
     private List<BreadcrumbItem> _breadcrumbs = new();
+    private string? _productName;
     
     // Validation issue counts by category
     private int _structuralIntegrityCount;
@@ -250,6 +271,12 @@
                 // No active profile - load all products as fallback
                 profileProducts = (await ProductService.GetAllProductsAsync()).ToList();
                 Console.WriteLine($"[HealthWorkspace] No active profile, loaded all {profileProducts.Count} products");
+            }
+            
+            // Resolve product name for context chip (Suggestion 4)
+            if (ProductId.HasValue)
+            {
+                _productName = profileProducts.FirstOrDefault(p => p.Id == ProductId.Value)?.Name;
             }
             
             // Extract product IDs to pass to the backend for efficient filtering
@@ -350,6 +377,16 @@
     private void NavigateToBugOverview()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.BugOverview}{BuildContextQuery()}");
+    }
+    
+    private void NavigateToBugTriage()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BugTriage);
+    }
+    
+    private void ClearProductFilter()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.HealthWorkspace);
     }
     
     private void NavigateToTrends()
