@@ -448,7 +448,34 @@ The following suggestions are derived from analysing the current navigation stru
 
 **Suggestion:** Add a "What's New Since Last Sync" section to Home (or a dedicated `/home/changes` route) that shows: newly introduced validation issues, bugs opened or closed, and sprint completions since the last successful sync. This gives the PO immediate situational awareness after opening the application.
 
-**Implemented:** Renamed the Home overview section to "What's New Since Last Sync" and added the last successful sync timestamp beneath the section heading. The PO can now see immediately when data was last refreshed and whether the current snapshot is up to date.
+**Implemented:**
+
+*Previous implementation (insufficient):* Only renamed the overview section and displayed the last sync timestamp. No actual change data was shown.
+
+*Full implementation:*
+
+**Backend:**
+- Added `PreviousSuccessfulSync` column to `ProductOwnerCacheStateEntity` (migration `AddPreviousSuccessfulSync`). Each time a sync completes successfully, the previous `LastSuccessfulSync` is shifted into `PreviousSuccessfulSync` before the new timestamp is written. This creates the change window [PreviousSuccessfulSync, LastSuccessfulSync].
+- Created `SyncChangesSummaryService` that computes three data sets for the window:
+  1. **Bugs opened/closed** — queries `ActivityEventLedgerEntries` for `System.State` changes on Bug work items since `PreviousSuccessfulSync`. The last state-change event per bug determines whether it is "opened" (non-done state) or "closed" (done/closed/resolved state).
+  2. **Work items with validation issues changed in the window** — queries work items whose `TfsChangedDateUtc ≥ PreviousSuccessfulSync`, runs the composite `IWorkItemValidator`, and returns those with at least one issue. Honestly labelled: these are changed-and-currently-invalid items, not necessarily items with *newly introduced* issues (no before-snapshot is stored).
+  3. **Sprint completions** — queries all sprints whose `EndUtc` falls within the window.
+- Returns `SyncChangesSummaryDto` with counts and capped item lists (max 20 per category). `HasData = false` when `PreviousSuccessfulSync` is null (first sync or reset).
+- New API endpoint: `GET /api/CacheSync/{productOwnerId}/changes-since-sync`.
+
+**Client:**
+- Added `CacheSyncService.GetChangesSinceSyncAsync()`.
+- Created dedicated page `/home/changes` (`HomeChanges.razor`) showing:
+  - Sync window date range (since / until).
+  - Summary stat cards (bugs opened, bugs closed, items with issues, sprints completed).
+  - Four detail tables with collapsible data; each table has an honest caveat where approximations apply.
+  - Links to relevant workspaces (Health → validation issues; Sprint Trend → sprint completions).
+- Home page overview section now shows a "View Changes" button linking to `/home/changes` (visible only after at least one successful sync).
+
+**Honest limitations:**
+- "Validation issues" section shows items changed in the window that currently have issues. It does **not** guarantee that issues were introduced in this sync (a pre-sync baseline snapshot is not stored).
+- "Bugs opened/closed" relies on `ActivityEventLedger` state-change events. If activity ingestion is disabled or has a gap, some changes may not appear.
+- Change window requires at least two completed syncs (PreviousSuccessfulSync is null until the second sync).
 
 ---
 
@@ -482,16 +509,16 @@ The following suggestions are derived from analysing the current navigation stru
 
 | Suggestion | Status | Notes |
 |---|---|---|
-| 1 — Consistent breadcrumbs | ✅ Implemented | Added breadcrumb to Bug Triage page |
-| 2 — Cross-workspace navigation in top bar | ✅ Implemented | Health / Trends / Planning buttons added to global top bar |
-| 3 — Workspace-scoped Quick Actions | ✅ Implemented | Bug Triage → Health; Plan Board → Planning; Home simplified |
-| 4 — Product scope-widening chip | ✅ Implemented | Dismissible product chip on Health, Trends, Planning headers |
-| 5 — Dependency Overview first-class entry | ⏸️ Deferred | Requires design decision on merged vs. separate views |
-| 6 — Prominent Bug Triage CTA in Bug Insights | ✅ Implemented | "Ready to triage?" panel at bottom of Bug Insights |
-| 7 — "What's New Since Last Sync" on Home | ✅ Implemented | Last sync timestamp shown in Home overview section |
-| 8 — Sprint Trend context preservation | ⏸️ Deferred | URL-based context already partially present; full audit needed |
-| 9 — Health Focus Mode for Work Item Explorer | ⏸️ Deferred | Requires Work Item Explorer enhancements |
-| 10 — Remove legacy navigation link | ✅ Implemented | Legacy footer link removed from Home page |
+| 1 — Consistent breadcrumbs | ✅ Implemented | Added `Home › Bug Triage` breadcrumb + Home button to Bug Triage page |
+| 2 — Cross-workspace navigation in top bar | ✅ Implemented | Health / Trends / Planning buttons added to global `MainLayout.razor` top bar (no sidebar) |
+| 3 — Workspace-scoped Quick Actions | ✅ Implemented | Bug Triage moved to HealthWorkspace header; Plan Board to PlanningWorkspace header; Home Quick Actions simplified |
+| 4 — Product scope-widening chip | ✅ Implemented | Dismissible product-context chip (×) on Health, Trends, and Planning workspace headers |
+| 5 — Dependency Overview first-class entry | ⏸️ Deferred | Requires design decision: merge read-only + management vs. direct link to `/dependency-graph` |
+| 6 — Prominent Bug Triage CTA in Bug Insights | ✅ Implemented | "Ready to triage?" panel with open-bug count and large "Go to Triage" button at bottom of `/home/bugs` |
+| 7 — "What's New Since Last Sync" | ✅ Implemented | Dedicated `/home/changes` page with bugs opened/closed, validation issues, sprint completions; `PreviousSuccessfulSync` column tracks change window; "View Changes" button on Home |
+| 8 — Sprint Trend context preservation | ⏸️ Deferred | URL-based context partially present; full round-trip audit across drill-down/back navigation is outstanding |
+| 9 — Health Focus Mode for Work Item Explorer | ⏸️ Deferred | Requires persistent category chip strip in Work Item Explorer when entered from Health; not yet started |
+| 10 — Remove legacy navigation link | ✅ Implemented | "Classic Intent Navigation" footer link removed from Home page; `/legacy` route retained for backward compatibility |
 
 ---
 
