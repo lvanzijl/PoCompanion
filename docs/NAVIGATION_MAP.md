@@ -1,0 +1,467 @@
+# PO Companion — Navigation Map
+
+**Audience:** Product Owners and stakeholders  
+**Scope:** All non-legacy, non-settings pages  
+**Purpose:** Human-readable reference of available navigation and functionality; basis for improvement analysis  
+**Last Updated:** 2026-03-01
+
+---
+
+## 1. Navigation Overview
+
+After a Product Owner logs in, the application offers a workspace-driven model organised around three temporal questions: *What is wrong right now?* (Health), *What has been happening?* (Trends), and *What should we do next?* (Planning).
+
+### Entry Flow
+
+```
+[First Visit]
+     │
+     ▼
+/profiles  ──► (profile selected)
+     │
+     ▼
+/sync-gate  ──► (cache ready)
+     │
+     ▼
+/home  ──────────────────────────────────────────────────────────────┐
+  │                                                                   │
+  ├──► /home/health   (Health — Now)                                  │
+  │       ├──► /workitems?filter=issues&validationCategory=1/2/3      │
+  │       ├──► /home/bugs                                             │
+  │       ├──► /home/trends  (cross-workspace)                        │
+  │       └──► /home/planning  (cross-workspace)                      │
+  │                                                                   │
+  ├──► /home/trends  (Trends — Past)                                  │
+  │       ├──► /home/sprint-trend                                     │
+  │       │       └──► /home/sprint-trend/activity/{id}               │
+  │       ├──► /home/bugs  (bug trend drilldown)                      │
+  │       ├──► /home/pull-requests  (read-only insight)               │
+  │       ├──► /home/pipelines  (read-only insight)                   │
+  │       ├──► /home/health  (cross-workspace)                        │
+  │       └──► /home/planning  (cross-workspace)                      │
+  │                                                                   │
+  ├──► /home/planning  (Planning — Future)                            │
+  │       ├──► /home/trends  (velocity drilldown)                     │
+  │       ├──► /workitems?rootWorkItemId={epicId}                     │
+  │       ├──► /home/dependencies  (read-only)                        │
+  │       ├──► /home/health  (cross-workspace)                        │
+  │       └──► /home/trends  (cross-workspace)                        │
+  │                                                                   │
+  ├──► /workitems  (Work Item Explorer — Quick Action)                │
+  ├──► /bugs-triage  (Bug Triage — Quick Action)                      │
+  └──► /home/plan-board  (Plan Board — Quick Action)                  │
+                                                                       │
+Global header (available on every page) ◄─────────────────────────────┘
+  ├──► /home  (Home button)
+  ├──► ProfileSelector  (switch active profile, inline)
+  ├──► Onboarding wizard  (Help button → dialog)
+  ├──► Keyboard Shortcuts dialog  (? key or toolbar button)
+  └──► /settings  (Settings button — excluded from this map)
+```
+
+---
+
+## 2. Page-by-Page Functional Descriptions
+
+---
+
+### 2.1 Profiles Home — `/profiles`
+
+**Purpose:** Lets users select which Product Owner profile to activate before entering the application.
+
+| Functionality | Description |
+|---|---|
+| Profile grid | Displays all available Product Owner profiles as Netflix-style tiles (avatar, name). |
+| Select profile | Clicking a tile activates that profile and navigates to `/home` (or returns to the original page via `returnUrl` parameter). |
+| Return URL support | When redirected here due to missing profile context, the page returns to the original destination after selection. |
+
+**Outgoing navigation:** `/home` (after selection), `/settings/tfs` (if error — settings, out of scope)
+
+---
+
+### 2.2 Sync Gate — `/sync-gate`
+
+**Purpose:** Interstitial page that waits for the TFS cache sync to be ready before allowing the user to proceed. Prevents the rest of the app from opening with stale or empty data.
+
+| Functionality | Description |
+|---|---|
+| Sync status display | Shows a spinner, title, and description text while sync is in progress. |
+| Progress messaging | Updates the user with clear status messages (loading, syncing, ready, error). |
+| Auto-advance | Navigates automatically to `/home` once the cache is ready. |
+| Retry | If sync fails, offers a "Retry" button to attempt again. |
+| Back to Profiles | Allows the user to return to `/profiles` if a different profile is needed. |
+
+**Outgoing navigation:** `/home` (auto on success), `/profiles`, `/settings`
+
+---
+
+### 2.3 Home — `/home`
+
+**Purpose:** Central workspace hub. Provides a high-level health overview, a product context filter, workspace entry cards (Health, Trends, Planning), and quick-action buttons for task-driven navigation.
+
+| Functionality | Description |
+|---|---|
+| Health signal summary | Shows three live signals: validation issue count (color-coded), active bug count (color-coded), and total work item count. Colors follow fixed thresholds (0 = green, 1–9 = blue, 10–49 = yellow, 50+ = red). |
+| Sync Now button | Triggers a manual cache sync for the active profile and reloads health signals on completion. |
+| Product context filter | Optional product selector (dropdown). Selecting a product propagates a `productId` query parameter to all downstream workspaces. Shows "All Products" chip when no filter is active. |
+| Health (Now) workspace card | Click to enter the Health workspace. Carries product context. |
+| Trends (Past) workspace card | Click to enter the Trends workspace. Carries product context. |
+| Planning (Future) workspace card | Click to enter the Planning workspace. Carries product context. |
+| Work Item Explorer quick action | Opens Work Item Explorer for all products and all teams (`allProducts=true&allTeams=true`). |
+| Bug Triage quick action | Opens the Bug Triage page. |
+| Plan Board quick action | Opens the Plan Board for all products. |
+
+**Outgoing navigation:** `/home/health`, `/home/trends`, `/home/planning`, `/workitems`, `/bugs-triage`, `/home/plan-board`, `/profiles` (if no profile)
+
+---
+
+### 2.4 Health (Now) Workspace — `/home/health`
+
+**Purpose:** Shows the current-state health of the backlog via validation signal cards and an embedded Backlog Health Analysis panel. Designed for identifying actionable problems that need attention today.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Health (Now)` — provides clear location context. |
+| Structural Integrity signal card | Count of work items with structural integrity errors (rule IDs: SI-*). Red when count > 0. Click navigates to Work Item Explorer filtered by SI category. |
+| Refinement Readiness signal card | Count of work items blocking refinement readiness (RR-*). Orange/yellow when count > 0. Click navigates to Work Item Explorer with RR filter. |
+| Refinement Completeness signal card | Count of work items that need refinement (RC-*). Orange/yellow when count > 0. Click navigates to Work Item Explorer with RC filter. |
+| Bugs signal card | Count of all bug work items. Uses threshold-based color (0 = green, 1–9 = blue, 10–49 = yellow, 50+ = red). Click navigates to Bug Insights. |
+| Backlog Health Analysis panel | Embeds the BacklogHealthPanel component, showing up to 3 recent iterations. Offers "Full Dashboard" link for the complete view. |
+| Cross-workspace navigation | Buttons to navigate directly to Trends (Past) and Planning (Future) workspaces. |
+| Home button | Returns to `/home`. |
+
+**Outgoing navigation:** `/workitems` (filtered), `/home/bugs`, `/home/trends`, `/home/planning`, `/home`, `/backlog-health` (full dashboard)
+
+---
+
+### 2.5 Trends (Past) Workspace — `/home/trends`
+
+**Purpose:** Shows structural behavior patterns over the last 6 months (configurable via sprint selection). Designed for understanding "why is this happening?" from historical data.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Trends (Past)`. |
+| Team selector | Filters the sprint range selector to a specific team. When "All Teams" is selected, defaults to last 6 months. |
+| From Sprint / To Sprint selectors | Appear once a team is selected. Allow the user to define a custom time window for trend analysis. Sprint name and start month are shown. |
+| "Last 6 Months" chip | Shown when no sprint range is explicitly set. |
+| Velocity Trend signal card | Represents team delivery patterns. Click navigates to `/velocity` (full velocity dashboard). |
+| Bug Trend signal card | Represents bug patterns over time. Click navigates to Bug Insights (Bug Overview). |
+| PR Trend signal card | Read-only insight about pull request patterns. Click navigates to Pull Request Insights. |
+| Pipeline Trend signal card | Read-only insight about build and deployment health. Click navigates to Pipeline Insights. |
+| Sprint Trend signal card | Represents planned vs. worked sprint metrics. Click navigates to Sprint Trend. |
+| Bug Trend chart (interactive) | Three-series chart (Total bugs, Fixed bugs, Added bugs) for the selected time range. Clicking a bar navigates to Bug Insights filtered to that period. Hovering highlights the bar. |
+| Velocity Overview panel | Embeds the VelocityPanel component showing the last 10 sprints. "Full Dashboard" link to `/velocity`. |
+| Cross-workspace navigation | Buttons to Health (Now) and Planning (Future). |
+| Home button | Returns to `/home`. |
+
+**Outgoing navigation:** `/home/sprint-trend`, `/home/bugs`, `/home/pull-requests`, `/home/pipelines`, `/velocity`, `/home/health`, `/home/planning`, `/home`
+
+---
+
+### 2.6 Planning (Future) Workspace — `/home/planning`
+
+**Purpose:** Provides decision-making signals for upcoming work, focusing on capacity risks and backlog quality. Shows current iteration plus 3 future iterations.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Planning (Future)`. |
+| "Current + 3 Iterations" chip | Communicates the time horizon of the planning view. |
+| Epic Exceeds Velocity signal card | Counts epics whose remaining effort exceeds 3× average team velocity. Color-coded (green = all fine, yellow ≤ 2 at risk, red > 2). Average velocity is shown as a chip. Click navigates to Trends workspace with velocity metric. |
+| Epic Invalid Items signal card | Counts epics that contain child work items with validation issues. Click navigates to Work Item Explorer (all items). |
+| Epic Dependencies signal card | Read-only view. Click navigates to Dependency Overview. |
+| Epics Exceeding Velocity detail table | Shown when epics are at risk. Columns: ID, Title, State, Remaining Effort, Sprints to Complete, Confidence, and link to Velocity Trends. |
+| Epics with Invalid Items detail table | Shown when epics have validation issues. Columns: ID, Title, State, Invalid Item Count, and link to Work Item Explorer (scoped to that epic). |
+| Planning Board section | Embeds the PlanningBoard component with product selector. "Full Release Planning" link to `/release-planning`. |
+| Available Actions chips | Lists supported end-station actions: Epic Repositioning and Implicit Reprioritization. |
+| Cross-workspace navigation | Buttons to Health (Now) and Trends (Past). |
+| Home button | Returns to `/home`. |
+
+**Outgoing navigation:** `/home/trends`, `/workitems` (scoped to epic or all), `/home/dependencies`, `/home/health`, `/home/planning`, `/release-planning`, `/home`
+
+---
+
+### 2.7 Bug Insights — `/home/bugs`
+
+**Purpose:** Provides a detailed view of all active bugs, with filtering by product, team, and period. Read-oriented with a link to Bug Triage for action.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Bug Insights`. |
+| Bug Triage button | Navigates to the full Bug Triage page for triaging and categorising bugs. |
+| Product/Team filters | Allows filtering bugs by product and team context. |
+| Period filter | When a `period` query parameter is provided (e.g., from clicking a bar on the Bug Trend chart), bugs are filtered to that time period. |
+| Bug list / grid | Displays bugs with their key attributes (ID, title, state, severity, etc.). |
+| View All toggle | Shows all bugs across all products and teams, regardless of context filter. |
+| Home button | Returns to `/home`. |
+
+**Outgoing navigation:** `/bugs-triage`, `/home`, `/home/bugs/detail/{id}` (Bug Detail)
+
+---
+
+### 2.8 Bug Detail — `/home/bugs/detail/{id}`
+
+**Purpose:** Detailed view for a single bug. Allows the PO to review and edit bug attributes (severity, tags).
+
+| Functionality | Description |
+|---|---|
+| Bug metadata display | Shows all key fields: ID, title, state, severity, tags, description. |
+| Severity edit | PO can change the severity of the bug (subject to pending backend API — currently blocked). |
+| Triage tag edit | PO can assign or remove triage tags. |
+| Save Changes button | Persists changes (currently blocked pending backend API). |
+| Back navigation | Returns to Bug Insights. |
+
+**Outgoing navigation:** `/home/bugs`
+
+---
+
+### 2.9 Bug Triage — `/bugs-triage`
+
+**Purpose:** Focused tool for triaging all open bugs. Provides a tree-grid view of bugs grouped by product hierarchy, with triage tagging capabilities.
+
+| Functionality | Description |
+|---|---|
+| Bug tree grid | Displays all open bugs in a collapsible tree view organised by product hierarchy. Shows total bug count and untriaged count. |
+| Untriaged count | Prominently shows how many bugs still need triage attention. |
+| Triage tags | Allows assigning triage tags (e.g., "Won't Fix", "Next Sprint", "Deferred") to individual bugs. |
+| Product/profile filtering | Bugs are filtered to the active profile's products. |
+
+**Outgoing navigation:** (self-contained; accessed from Home quick actions or Bug Insights)
+
+---
+
+### 2.10 Pull Request Insights — `/home/pull-requests`
+
+**Purpose:** Read-only view of pull request metrics and trends. Insight-only; no editing.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Pull Request Insights`. |
+| Product/Team filter | Filters PR metrics by selected product or team. |
+| PR status chart | Shows PRs by status (active, completed, abandoned). |
+| PR time-open chart | Shows how long PRs remain open before resolution. |
+| PR user chart | Shows PR activity per team member. |
+| Summary panel | Aggregated totals and averages for the selected context. |
+| Date range filter | Limits the displayed PRs to a specific date window. |
+| Home button | Returns to `/home`. |
+
+**Outgoing navigation:** `/home`
+
+---
+
+### 2.11 Pipeline Insights — `/home/pipelines`
+
+**Purpose:** Read-only view of CI/CD pipeline health metrics. Insight-only; no editing.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Pipeline Insights`. |
+| Pipeline health table | Lists pipelines with success rate and recent run history. |
+| Success rate chart | Visual success rate over time. |
+| Duration chart | Shows build duration trends per pipeline. |
+| Summary panel | Aggregated metrics (overall success rate, avg duration, etc.). |
+| Error/Retry handling | If data cannot be loaded, shows an error message with a Retry button. |
+| Home button | Returns to `/home`. |
+
+**Outgoing navigation:** `/home`
+
+---
+
+### 2.12 Dependency Overview — `/home/dependencies`
+
+**Purpose:** Read-only visual overview of work item dependencies between epics and teams.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Dependency Overview`. |
+| Read-only notice | Prominent alert informing the user that this is an insight-only view. Links to the full `/dependency-graph` for management. |
+| Dependencies panel | Embedded DependenciesPanel component showing cross-team and cross-epic dependencies. |
+| Home button | Returns to `/home`. |
+
+**Outgoing navigation:** `/home`, `/dependency-graph` (full management, separate page)
+
+---
+
+### 2.13 Plan Board — `/home/plan-board`
+
+**Purpose:** Focused planning board showing epics and features organised by iteration. Accessed as a Quick Action from Home.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Plan Board`. |
+| "All Products" chip | Shown when accessed from the Home quick action (no product filter applied). |
+| Product selector | Allows narrowing the board to a specific product. |
+| Planning board | Embeds the PlanningBoard component with the selected product context. |
+| Home button | Returns to `/home`. |
+
+**Outgoing navigation:** `/home`
+
+---
+
+### 2.14 Sprint Trend — `/home/sprint-trend`
+
+**Purpose:** Detailed sprint-by-sprint analysis of planned versus worked metrics. Shows PBI completion, effort progression, bug counts per sprint, and Feature/Epic progress.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Trends (Past) › Sprint Trend`. |
+| Sprint navigation arrows | Navigate backwards and forwards one sprint at a time through the sprint history. |
+| Advanced mode toggle | Switches from single-sprint view to a multi-sprint trend graph (last N sprints, configurable). |
+| Product filter | Filters metrics to a specific product. |
+| Team filter | Filters metrics to a specific team. |
+| Sprint Trend metrics | In single-sprint mode: planned PBI count, completed PBI count, effort progression, bug count, and Feature/Epic-level breakdown with a pie chart. |
+| Multi-sprint trend graphs | In advanced mode: progression over last N sprints (PBI completion, effort, bug counts) as separate charts. |
+| Epic/Feature drilldown | Clicking an Epic or Feature ID in the sprint detail table navigates to the Work Item Activity page for that item. |
+| Stale data warning | If the calculated sprint metrics are older than the latest data sync, shows a warning with a "Recompute" button to refresh the analysis. |
+| Back to Trends button | Returns to `/home/trends`. |
+| Home button | Returns to `/home`. |
+
+**Outgoing navigation:** `/home/sprint-trend/activity/{id}`, `/home/trends`, `/home`
+
+---
+
+### 2.15 Work Item Activity — `/home/sprint-trend/activity/{workItemId}`
+
+**Purpose:** Shows the activity history (revision events) for a single work item (Feature or Epic) within the context of sprint trend analysis.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Trends (Past) › Sprint Trend › Work Item Activity`. |
+| Work item metadata | Displays type, ID, title, and relevant time period. |
+| Activity timeline | Lists revision events (state changes, effort updates, assignment changes) in chronological order. |
+| Back to Sprint Trend button | Returns to the Sprint Trend page. |
+
+**Outgoing navigation:** `/home/sprint-trend`
+
+---
+
+### 2.16 Work Item Explorer — `/workitems`
+
+**Purpose:** Hierarchical explorer for all work items in the active profile's products. Primary tool for reviewing and filtering the backlog by validation issues, type, or scope.
+
+| Functionality | Description |
+|---|---|
+| Toolbar | Shows selected item count and offers Select All / Clear Selection actions. |
+| Validation Summary Panel | Collapsible panel showing all validation issues across loaded work items, with auto-fix suggestions where available. |
+| Validation History Panel | Collapsible panel showing past validation runs and their results. |
+| Validation filter checkboxes | Quick-filter the tree by validation category (Structural Integrity, Refinement Readiness, Refinement Completeness). Counts shown per filter. |
+| Work Item Tree (left pane) | Hierarchical tree/grid of all work items. Supports text search, expand/collapse, and multi-select (click, Shift+click, Ctrl+click). Keyboard navigation supported. |
+| Work Item Detail Panel (right pane) | Shows full details of the selected work item: metadata, description, validation issues, and activity timeline (revision history via MudTimeline). |
+| Resizable splitter | User can drag the divider between tree and detail panes. Position is persisted per session. |
+| Root item scoping | When `rootWorkItemId` is provided via URL, the tree starts from that item and shows its descendants only. |
+| Validation category filtering | When `validationCategory` is provided (1=SI, 2=RR, 3=RC), filters the displayed items to those with issues in that category. |
+| All Products / All Teams toggle | When `allProducts=true` is passed, loads work items from all products regardless of profile scope. |
+
+**Outgoing navigation:** (self-contained detail page; accessed from Health, Planning, and Home quick action)
+
+---
+
+## 3. Navigation Map Summary Table
+
+| Page | Route | Entry Points | Key Actions | Outgoing Links |
+|---|---|---|---|---|
+| Profiles Home | `/profiles` | App start, redirect | Select profile | `/home` |
+| Sync Gate | `/sync-gate` | Post-profile-select | Wait/Retry | `/home`, `/profiles` |
+| Home | `/home` | Global header, direct | Choose workspace, filter, sync | `/home/health`, `/home/trends`, `/home/planning`, `/workitems`, `/bugs-triage`, `/home/plan-board` |
+| Health (Now) | `/home/health` | Home workspace card | Click signal card | `/workitems`, `/home/bugs`, `/home/trends`, `/home/planning` |
+| Trends (Past) | `/home/trends` | Home workspace card | Click trend signal | `/home/sprint-trend`, `/home/bugs`, `/home/pull-requests`, `/home/pipelines`, `/velocity`, `/home/health`, `/home/planning` |
+| Planning (Future) | `/home/planning` | Home workspace card | Click planning signal | `/home/trends`, `/workitems`, `/home/dependencies`, `/release-planning`, `/home/health` |
+| Bug Insights | `/home/bugs` | Health signal, Trends chart click | View/filter bugs | `/bugs-triage`, `/home/bugs/detail/{id}`, `/home` |
+| Bug Detail | `/home/bugs/detail/{id}` | Bug Insights | Edit severity/tags | `/home/bugs` |
+| Bug Triage | `/bugs-triage` | Home quick action, Bug Insights | Triage tags | (self-contained) |
+| PR Insights | `/home/pull-requests` | Trends workspace | View metrics | `/home` |
+| Pipeline Insights | `/home/pipelines` | Trends workspace | View metrics | `/home` |
+| Dependency Overview | `/home/dependencies` | Planning workspace | View dependencies | `/home`, `/dependency-graph` |
+| Plan Board | `/home/plan-board` | Home quick action | View/filter board | `/home` |
+| Sprint Trend | `/home/sprint-trend` | Trends workspace | Navigate sprints | `/home/sprint-trend/activity/{id}`, `/home/trends`, `/home` |
+| Work Item Activity | `/home/sprint-trend/activity/{id}` | Sprint Trend drilldown | View activity | `/home/sprint-trend` |
+| Work Item Explorer | `/workitems` | Health signals, Planning signals, Home quick action | Filter, explore, validate | (self-contained) |
+
+---
+
+## 4. Ten Suggestions for Navigation Improvement
+
+The following suggestions are derived from analysing the current navigation structure, the open decision backlog (`navigation_decision_backlog.md`), and the follow-up actions log (`navigation_followup_actions.md`).
+
+---
+
+### Suggestion 1 — Promote the "Return to workspace" breadcrumb consistently
+
+**Current situation:** Some pages show breadcrumbs (`Home › Health (Now) › ...`), but several leaf pages (Bug Triage, Plan Board, PR Insights, Pipeline Insights) do not. The user must rely on the global "Home" button or the browser back button.
+
+**Suggestion:** Add a consistent breadcrumb trail to every page that reflects the path by which it was reached. This gives the user a mental model of where they are and allows them to step back one level without losing context. Breadcrumbs should carry product/team context forward.
+
+---
+
+### Suggestion 2 — Expose cross-workspace navigation on all leaf pages
+
+**Current situation:** Health (Now), Trends (Past), and Planning (Future) each have a "Navigate to Other Workspaces" section, but leaf pages (Bug Insights, Sprint Trend, Work Item Explorer) do not. The user must navigate back to a workspace to switch.
+
+**Suggestion:** Add a compact cross-workspace navigation bar (or persistent sidebar strip) showing Health / Trends / Planning entry points on all pages. This removes unnecessary back-and-forth navigation and mirrors the three-workspace mental model throughout the entire session.
+
+---
+
+### Suggestion 3 — Replace "Quick Actions" section on Home with workspace-scoped entry
+
+**Current situation:** Home has two distinct navigation patterns side-by-side: workspace cards (Health/Trends/Planning) and quick-action buttons (Work Item Explorer, Bug Triage, Plan Board). These represent different mental models (temporal vs. task-based) and compete for the user's attention without a clear hierarchy.
+
+**Suggestion:** Move the quick-action buttons inside the relevant workspaces instead of displaying them redundantly on Home. For example, "Bug Triage" belongs inside the Health workspace as a primary action, and "Plan Board" belongs inside Planning. This gives every entry point a clear *why*.
+
+---
+
+### Suggestion 4 — Resolve the scope-widening problem (Decision #11)
+
+**Current situation:** Once a product context filter is applied on Home, all workspaces inherit it. However, there is no way to widen the scope from within a workspace — the user must return to Home and clear the filter. This is an unnecessary interruption.
+
+**Suggestion:** Add a small "All Products" toggle or a product context chip with a clear ("×") button on every workspace header. Clicking it resets the product filter for that workspace visit without requiring a full round-trip to Home.
+
+---
+
+### Suggestion 5 — Make the Dependency Overview a first-class entry point in Planning
+
+**Current situation:** Dependency Overview (`/home/dependencies`) is currently marked "Read-only" and offered as a secondary card in Planning workspace. The read-only notice points users to a separate `/dependency-graph` page for management. This creates a confusing two-page split.
+
+**Suggestion:** Merge the read-only dependency overview and the full dependency management into a single contextual view, toggled by an "Edit Dependencies" mode switch. Alternatively, replace the read-only card with a direct link to the full `/dependency-graph`, eliminating the intermediate read-only page entirely.
+
+---
+
+### Suggestion 6 — Surface the Bug Triage page from the Bug Insights page more prominently
+
+**Current situation:** Bug Insights (`/home/bugs`) has a "Bug Triage" button in the header, but it is visually equivalent to the "Home" button. A product owner visiting Bug Insights to understand bug state will often want to immediately triage, but the call-to-action is easy to miss.
+
+**Suggestion:** Add a contextual action panel at the bottom of Bug Insights with a prominent "Go to Triage" button, ideally indicating how many bugs are still untriaged. This creates a natural progression from insight to action.
+
+---
+
+### Suggestion 7 — Add a "What changed since last sync?" entry point on Home
+
+**Current situation:** Home shows a health snapshot (validation issues, active bugs, total items) and a "Sync Now" button, but there is no way to quickly see *what changed* since the previous sync. The user must inspect individual workspaces or the Work Item Explorer manually.
+
+**Suggestion:** Add a "What's New Since Last Sync" section to Home (or a dedicated `/home/changes` route) that shows: newly introduced validation issues, bugs opened or closed, and sprint completions since the last successful sync. This gives the PO immediate situational awareness after opening the application.
+
+---
+
+### Suggestion 8 — Give Sprint Trend a clearer path back to its team/product context
+
+**Current situation:** Sprint Trend (`/home/sprint-trend`) is accessed from the Trends workspace, where the user may have selected a team and sprint range. After drilling into Work Item Activity (`/home/sprint-trend/activity/{id}`) and returning via "Back to Sprint Trend", the team and sprint context may not be preserved in the URL.
+
+**Suggestion:** Ensure all sprint/team/product filter selections are consistently encoded in the URL query string on every Sprint Trend page and propagated to the back-navigation link. This prevents losing the selected context on drill-down/drill-up.
+
+---
+
+### Suggestion 9 — Introduce a "Focus Mode" for Health: one validation category at a time
+
+**Current situation:** The Health workspace shows all three validation signal categories (Structural Integrity, Refinement Readiness, Refinement Completeness) simultaneously and immediately forwards to the Work Item Explorer with a filter. Once in the explorer, navigating to a second category requires returning to Health and clicking again.
+
+**Suggestion:** Add a persistent validation category filter chip strip at the top of the Work Item Explorer when it is entered from a Health signal. This lets the user switch between SI / RR / RC work directly within the explorer without round-tripping through the Health workspace, enabling a focused review session.
+
+---
+
+### Suggestion 10 — Resolve the Beta Navigation promotion path (Decision #1)
+
+**Current situation:** The current navigation (`/home` and its workspaces) is the production navigation, but the legacy intent-based navigation (`/legacy`) is still accessible via a subtle footer link. This creates two parallel navigation systems. The legacy system serves no active use case in the current implementation.
+
+**Suggestion:** Define and implement a promotion plan for the current navigation as the sole navigation model. Remove the `/legacy` entry point from the Home page footer. This reduces confusion, eliminates dead code, and presents a single coherent user experience to the product owner.
+
+---
+
+*End of Navigation Map*
