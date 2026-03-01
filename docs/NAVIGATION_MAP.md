@@ -384,7 +384,7 @@ The following suggestions are derived from analysing the current navigation stru
 
 ---
 
-### Suggestion 1 — Promote the "Return to workspace" breadcrumb consistently ✅ IMPLEMENTED
+### Suggestion 1 — Promote the "Return to workspace" breadcrumb consistently
 
 **Current situation:** Some pages show breadcrumbs (`Home › Health (Now) › ...`), but several leaf pages (Bug Triage, Plan Board, PR Insights, Pipeline Insights) do not. The user must rely on the global "Home" button or the browser back button.
 
@@ -394,33 +394,27 @@ The following suggestions are derived from analysing the current navigation stru
 
 ---
 
-### Suggestion 2 — Expose cross-workspace navigation on all leaf pages ✅ IMPLEMENTED
+### Suggestion 2 — Expose cross-workspace navigation on all leaf pages
 
 **Current situation:** Health (Now), Trends (Past), and Planning (Future) each have a "Navigate to Other Workspaces" section, but leaf pages (Bug Insights, Sprint Trend, Work Item Explorer) do not. The user must navigate back to a workspace to switch.
 
-**Suggestion:** Add a compact cross-workspace navigation bar (using the top bar, not a sidebar) showing Health / Trends / Planning entry points on all pages. This removes unnecessary back-and-forth navigation and mirrors the three-workspace mental model throughout the entire session.
-
-**Implemented:** Added Health, Trends, and Planning navigation buttons to the global top bar in `MainLayout.razor`. These buttons are visible on every page without introducing a sidebar.
+**Suggestion:** Add a compact cross-workspace navigation bar (or persistent sidebar strip) showing Health / Trends / Planning entry points on all pages. This removes unnecessary back-and-forth navigation and mirrors the three-workspace mental model throughout the entire session.
 
 ---
 
-### Suggestion 3 — Replace "Quick Actions" section on Home with workspace-scoped entry ✅ IMPLEMENTED
+### Suggestion 3 — Replace "Quick Actions" section on Home with workspace-scoped entry
 
 **Current situation:** Home has two distinct navigation patterns side-by-side: workspace cards (Health/Trends/Planning) and quick-action buttons (Work Item Explorer, Bug Triage, Plan Board). These represent different mental models (temporal vs. task-based) and compete for the user's attention without a clear hierarchy.
 
 **Suggestion:** Move the quick-action buttons inside the relevant workspaces instead of displaying them redundantly on Home. For example, "Bug Triage" belongs inside the Health workspace as a primary action, and "Plan Board" belongs inside Planning. This gives every entry point a clear *why*.
 
-**Implemented:** Removed Bug Triage and Plan Board buttons from Home Quick Actions. Added "Bug Triage" as a primary action button in the Health workspace header. Added "Plan Board" as a primary action button in the Planning workspace header. Work Item Explorer remains as a global quick action on Home.
-
 ---
 
-### Suggestion 4 — Resolve the scope-widening problem (Decision #11) ✅ IMPLEMENTED
+### Suggestion 4 — Resolve the scope-widening problem (Decision #11)
 
 **Current situation:** Once a product context filter is applied on Home, all workspaces inherit it. However, there is no way to widen the scope from within a workspace — the user must return to Home and clear the filter. This is an unnecessary interruption.
 
 **Suggestion:** Add a small "All Products" toggle or a product context chip with a clear ("×") button on every workspace header. Clicking it resets the product filter for that workspace visit without requiring a full round-trip to Home.
-
-**Implemented:** Added a dismissible product context chip (with × close button) to the Health, Trends, and Planning workspace headers. When the chip is dismissed, the workspace reloads without the product filter applied.
 
 ---
 
@@ -432,50 +426,19 @@ The following suggestions are derived from analysing the current navigation stru
 
 ---
 
-### Suggestion 6 — Surface the Bug Triage page from the Bug Insights page more prominently ✅ IMPLEMENTED
+### Suggestion 6 — Surface the Bug Triage page from the Bug Insights page more prominently
 
 **Current situation:** Bug Insights (`/home/bugs`) has a "Bug Triage" button in the header, but it is visually equivalent to the "Home" button. A product owner visiting Bug Insights to understand bug state will often want to immediately triage, but the call-to-action is easy to miss.
 
 **Suggestion:** Add a contextual action panel at the bottom of Bug Insights with a prominent "Go to Triage" button, ideally indicating how many bugs are still untriaged. This creates a natural progression from insight to action.
 
-**Implemented:** Added a prominent "Ready to triage?" action panel at the bottom of the Bug Insights page (`/home/bugs`). The panel shows the current open bug count and a large "Go to Triage" button, creating a clear progression from insight to action.
-
 ---
 
-### Suggestion 7 — Add a "What changed since last sync?" entry point on Home ✅ IMPLEMENTED
+### Suggestion 7 — Add a "What changed since last sync?" entry point on Home
 
 **Current situation:** Home shows a health snapshot (validation issues, active bugs, total items) and a "Sync Now" button, but there is no way to quickly see *what changed* since the previous sync. The user must inspect individual workspaces or the Work Item Explorer manually.
 
 **Suggestion:** Add a "What's New Since Last Sync" section to Home (or a dedicated `/home/changes` route) that shows: newly introduced validation issues, bugs opened or closed, and sprint completions since the last successful sync. This gives the PO immediate situational awareness after opening the application.
-
-**Implemented:**
-
-*Previous implementation (insufficient):* Only renamed the overview section and displayed the last sync timestamp. No actual change data was shown.
-
-*Full implementation:*
-
-**Backend:**
-- Added `PreviousSuccessfulSync` column to `ProductOwnerCacheStateEntity` (migration `AddPreviousSuccessfulSync`). Each time a sync completes successfully, the previous `LastSuccessfulSync` is shifted into `PreviousSuccessfulSync` before the new timestamp is written. This creates the change window [PreviousSuccessfulSync, LastSuccessfulSync].
-- Created `SyncChangesSummaryService` that computes three data sets for the window:
-  1. **Bugs opened/closed** — queries `ActivityEventLedgerEntries` for `System.State` changes on Bug work items since `PreviousSuccessfulSync`. The last state-change event per bug determines whether it is "opened" (non-done state) or "closed" (done/closed/resolved state).
-  2. **Work items with validation issues changed in the window** — queries work items whose `TfsChangedDateUtc ≥ PreviousSuccessfulSync`, runs the composite `IWorkItemValidator`, and returns those with at least one issue. Honestly labelled: these are changed-and-currently-invalid items, not necessarily items with *newly introduced* issues (no before-snapshot is stored).
-  3. **Sprint completions** — queries all sprints whose `EndUtc` falls within the window.
-- Returns `SyncChangesSummaryDto` with counts and capped item lists (max 20 per category). `HasData = false` when `PreviousSuccessfulSync` is null (first sync or reset).
-- New API endpoint: `GET /api/CacheSync/{productOwnerId}/changes-since-sync`.
-
-**Client:**
-- Added `CacheSyncService.GetChangesSinceSyncAsync()`.
-- Created dedicated page `/home/changes` (`HomeChanges.razor`) showing:
-  - Sync window date range (since / until).
-  - Summary stat cards (bugs opened, bugs closed, items with issues, sprints completed).
-  - Four detail tables with collapsible data; each table has an honest caveat where approximations apply.
-  - Links to relevant workspaces (Health → validation issues; Sprint Trend → sprint completions).
-- Home page overview section now shows a "View Changes" button linking to `/home/changes` (visible only after at least one successful sync).
-
-**Honest limitations:**
-- "Validation issues" section shows items changed in the window that currently have issues. It does **not** guarantee that issues were introduced in this sync (a pre-sync baseline snapshot is not stored).
-- "Bugs opened/closed" relies on `ActivityEventLedger` state-change events. If activity ingestion is disabled or has a gap, some changes may not appear.
-- Change window requires at least two completed syncs (PreviousSuccessfulSync is null until the second sync).
 
 ---
 
@@ -495,30 +458,11 @@ The following suggestions are derived from analysing the current navigation stru
 
 ---
 
-### Suggestion 10 — Resolve the Beta Navigation promotion path (Decision #1) ✅ IMPLEMENTED
+### Suggestion 10 — Resolve the Beta Navigation promotion path (Decision #1)
 
 **Current situation:** The current navigation (`/home` and its workspaces) is the production navigation, but the legacy intent-based navigation (`/legacy`) is still accessible via a subtle footer link. This creates two parallel navigation systems. The legacy system serves no active use case in the current implementation.
 
 **Suggestion:** Define and implement a promotion plan for the current navigation as the sole navigation model. Remove the `/legacy` entry point from the Home page footer. This reduces confusion, eliminates dead code, and presents a single coherent user experience to the product owner.
-
-**Implemented:** Removed the "Classic Intent Navigation" footer link from the Home page (`/home`). The `/legacy` route still exists for backward compatibility but is no longer advertised to users.
-
----
-
-## 5. Implementation Status
-
-| Suggestion | Status | Notes |
-|---|---|---|
-| 1 — Consistent breadcrumbs | ✅ Implemented | Added `Home › Bug Triage` breadcrumb + Home button to Bug Triage page |
-| 2 — Cross-workspace navigation in top bar | ✅ Implemented | Health / Trends / Planning buttons added to global `MainLayout.razor` top bar (no sidebar) |
-| 3 — Workspace-scoped Quick Actions | ✅ Implemented | Bug Triage moved to HealthWorkspace header; Plan Board to PlanningWorkspace header; Home Quick Actions simplified |
-| 4 — Product scope-widening chip | ✅ Implemented | Dismissible product-context chip (×) on Health, Trends, and Planning workspace headers |
-| 5 — Dependency Overview first-class entry | ⏸️ Deferred | Requires design decision: merge read-only + management vs. direct link to `/dependency-graph` |
-| 6 — Prominent Bug Triage CTA in Bug Insights | ✅ Implemented | "Ready to triage?" panel with open-bug count and large "Go to Triage" button at bottom of `/home/bugs` |
-| 7 — "What's New Since Last Sync" | ✅ Implemented | Dedicated `/home/changes` page with bugs opened/closed, validation issues, sprint completions; `PreviousSuccessfulSync` column tracks change window; "View Changes" button on Home |
-| 8 — Sprint Trend context preservation | ⏸️ Deferred | URL-based context partially present; full round-trip audit across drill-down/back navigation is outstanding |
-| 9 — Health Focus Mode for Work Item Explorer | ⏸️ Deferred | Requires persistent category chip strip in Work Item Explorer when entered from Health; not yet started |
-| 10 — Remove legacy navigation link | ✅ Implemented | "Classic Intent Navigation" footer link removed from Home page; `/legacy` route retained for backward compatibility |
 
 ---
 
