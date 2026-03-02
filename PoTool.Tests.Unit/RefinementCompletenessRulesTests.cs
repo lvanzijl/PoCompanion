@@ -175,7 +175,7 @@ public class RefinementCompletenessRulesTests
         Assert.HasCount(1, results);
         Assert.AreEqual(1, results[0].WorkItemId);
         Assert.AreEqual("RC-2", results[0].Rule.RuleId);
-        Assert.AreEqual(ValidationCategory.RefinementCompleteness, results[0].Rule.Category);
+        Assert.AreEqual(ValidationCategory.MissingEffort, results[0].Rule.Category);
         Assert.AreEqual(ValidationConsequence.IncompleteRefinement, results[0].Rule.Consequence);
         Assert.AreEqual(ResponsibleParty.DevelopmentTeam, results[0].Rule.ResponsibleParty);
     }

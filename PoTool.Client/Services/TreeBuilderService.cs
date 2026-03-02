@@ -650,7 +650,10 @@ public class TreeBuilderService : ITreeBuilderService
                 }
                 else if (issue.RuleId.StartsWith("RC-"))
                 {
-                    category = SharedValidation.ValidationCategory.RefinementCompleteness;
+                    // RC-2 (missing effort) has its own category; all other RC rules are RefinementCompleteness
+                    category = issue.RuleId.Equals("RC-2", StringComparison.OrdinalIgnoreCase)
+                        ? SharedValidation.ValidationCategory.MissingEffort
+                        : SharedValidation.ValidationCategory.RefinementCompleteness;
                 }
             }
             

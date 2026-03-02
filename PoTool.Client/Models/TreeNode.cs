@@ -102,6 +102,7 @@ public class TreeNode
         ValidationCategory.StructuralIntegrity => "🔴", // Red circle for structural integrity
         ValidationCategory.RefinementReadiness => "🟡", // Yellow circle for refinement readiness
         ValidationCategory.RefinementCompleteness => "🟠", // Orange circle for refinement completeness
+        ValidationCategory.MissingEffort => "🟠", // Orange circle for missing effort
         _ => "❌" // Fallback error icon
     };
     

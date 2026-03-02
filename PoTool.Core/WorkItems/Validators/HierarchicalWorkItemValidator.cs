@@ -83,12 +83,19 @@ public sealed class HierarchicalWorkItemValidator : IHierarchicalWorkItemValidat
             wasSuppressed = false;
         }
 
+        // Phase 4: Evaluate MissingEffort rules (always evaluated, never suppressed)
+        var missingEffortRules = _rules
+            .Where(r => r.Category == ValidationCategory.MissingEffort)
+            .ToList();
+        var missingEffortIssues = EvaluateRules(missingEffortRules, treeItems);
+
         return new HierarchicalValidationResult(
             rootWorkItemId,
             backlogHealthProblems,
             refinementBlockers,
             incompleteRefinementIssues,
-            wasSuppressed
+            wasSuppressed,
+            missingEffortIssues
         );
     }
 

@@ -3,6 +3,7 @@ namespace PoTool.Shared.WorkItems;
 /// <summary>
 /// Categories of validation applied hierarchically to work items.
 /// Evaluated in order: StructuralIntegrity → RefinementReadiness → RefinementCompleteness.
+/// MissingEffort is always evaluated, independent of other category suppression.
 /// </summary>
 public enum ValidationCategory
 {
@@ -22,5 +23,11 @@ public enum ValidationCategory
     /// Assesses whether PBIs are ready for implementation.
     /// Only evaluated if all Refinement Readiness rules pass.
     /// </summary>
-    RefinementCompleteness = 3
+    RefinementCompleteness = 3,
+
+    /// <summary>
+    /// Identifies work items missing effort estimates.
+    /// Always evaluated, regardless of Refinement Readiness violations.
+    /// </summary>
+    MissingEffort = 4
 }

@@ -141,7 +141,8 @@ public class GetBacklogHealthQueryHandlerTests
                 {
                     CreateValidationRuleResult(1, "RC-2", ValidationConsequence.IncompleteRefinement)
                 },
-                WasSuppressed: false
+                WasSuppressed: false,
+                MissingEffortIssues: Array.Empty<ValidationRuleResult>()
             )
         };
 
@@ -181,7 +182,8 @@ public class GetBacklogHealthQueryHandlerTests
                 },
                 RefinementBlockers: Array.Empty<ValidationRuleResult>(),
                 IncompleteRefinementIssues: Array.Empty<ValidationRuleResult>(),
-                WasSuppressed: false
+                WasSuppressed: false,
+                MissingEffortIssues: Array.Empty<ValidationRuleResult>()
             )
         };
 
