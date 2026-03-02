@@ -21,7 +21,7 @@ public sealed class PbiEffortEmptyRule : HierarchicalValidationRuleBase
     public override string RuleId => "RC-2";
 
     /// <inheritdoc />
-    public override ValidationCategory Category => ValidationCategory.RefinementCompleteness;
+    public override ValidationCategory Category => ValidationCategory.MissingEffort;
 
     /// <inheritdoc />
     public override ValidationConsequence Consequence => ValidationConsequence.IncompleteRefinement;

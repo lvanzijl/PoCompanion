@@ -8,12 +8,14 @@ namespace PoTool.Shared.WorkItems;
 /// <param name="RefinementBlockers">Refinement readiness violations (Epic/Feature descriptions).</param>
 /// <param name="IncompleteRefinementIssues">PBI-level violations (only evaluated if no refinement blockers).</param>
 /// <param name="WasSuppressed">True if PBI validation was suppressed due to refinement blockers.</param>
+/// <param name="MissingEffortIssues">Missing effort violations (always evaluated, never suppressed).</param>
 public sealed record HierarchicalValidationResult(
     int RootWorkItemId,
     IReadOnlyList<ValidationRuleResult> BacklogHealthProblems,
     IReadOnlyList<ValidationRuleResult> RefinementBlockers,
     IReadOnlyList<ValidationRuleResult> IncompleteRefinementIssues,
-    bool WasSuppressed
+    bool WasSuppressed,
+    IReadOnlyList<ValidationRuleResult> MissingEffortIssues
 )
 {
     /// <summary>
@@ -37,9 +39,9 @@ public sealed record HierarchicalValidationResult(
     public bool IsReadyForRefinement => !HasRefinementBlockers;
 
     /// <summary>
-    /// Gets whether this tree is ready for implementation (no refinement blockers and no incomplete refinement).
+    /// Gets whether this tree is ready for implementation (no refinement blockers, no incomplete refinement, and no missing effort).
     /// </summary>
-    public bool IsReadyForImplementation => IsReadyForRefinement && !HasIncompleteRefinement;
+    public bool IsReadyForImplementation => IsReadyForRefinement && !HasIncompleteRefinement && MissingEffortIssues.Count == 0;
 
     /// <summary>
     /// Gets all validation violations across all categories.
@@ -47,5 +49,6 @@ public sealed record HierarchicalValidationResult(
     public IEnumerable<ValidationRuleResult> AllViolations =>
         BacklogHealthProblems
             .Concat(RefinementBlockers)
-            .Concat(IncompleteRefinementIssues);
+            .Concat(IncompleteRefinementIssues)
+            .Concat(MissingEffortIssues);
 }

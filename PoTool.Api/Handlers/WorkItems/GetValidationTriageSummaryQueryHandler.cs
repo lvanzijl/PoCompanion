@@ -62,12 +62,14 @@ public sealed class GetValidationTriageSummaryQueryHandler
                 }
                 else if (issue.RuleId.StartsWith("RC-", StringComparison.OrdinalIgnoreCase))
                 {
-                    AddItem(rcItems, issue.RuleId, wi.TfsId);
-
-                    // EFF tile = RC-2 (missing effort) surfaced as a separate focus area
+                    // EFF tile = RC-2 (missing effort) is a separate focus area, not in the RC tile
                     if (issue.RuleId.Equals(EffortRuleIdPrefix, StringComparison.OrdinalIgnoreCase))
                     {
                         AddItem(effItems, issue.RuleId, wi.TfsId);
+                    }
+                    else
+                    {
+                        AddItem(rcItems, issue.RuleId, wi.TfsId);
                     }
                 }
             }

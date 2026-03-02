@@ -25,7 +25,7 @@ public class WorkItemFilterer
         
         // Refinement Completeness rules
         { "RC-1", ValidationCategory.RefinementCompleteness },
-        { "RC-2", ValidationCategory.RefinementCompleteness },
+        { "RC-2", ValidationCategory.MissingEffort },
     };
     /// <summary>
     /// Interface for work items that can be filtered.
