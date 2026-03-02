@@ -78,38 +78,22 @@
     }
     else
     {
-        @* Health Signals Grid *@
+        @* ── REFINEMENT SIGNALS ────────────────────────────────────────────────── *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudText Typo="Typo.h5" Class="mb-3">
-                <MudIcon Icon="@Icons.Material.Filled.NotificationsActive" Class="mr-2" />
-                Health Signals
-            </MudText>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.EditNote" Color="Color.Warning" />
+                <MudText Typo="Typo.h5">Refinement Signals</MudText>
+            </MudStack>
             <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-                Click a signal to navigate to related work items
+                These signals affect backlog readiness. Click a card to navigate to related work items.
             </MudText>
-            
+
             @* 
                 Decision #2: Health Signal Thresholds
                 Decision #9: Single click = navigate immediately
                 Decision #10: Show "0 items" badge (don't hide empty cards)
             *@
             <MudGrid>
-                @* Structural Integrity Validation Category *@
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1" 
-                             Style="cursor: pointer; transition: all 0.2s;"
-                             Class="mud-card-hover"
-                             @onclick='() => NavigateToValidationCategory(ValidationCategory.StructuralIntegrity)'>
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Error" Color="@GetHealthColorBySeverity(_structuralIntegrityCount, HealthSignalSeverity.Error)" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Structural integrity errors</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColorBySeverity(_structuralIntegrityCount, HealthSignalSeverity.Error)">
-                                @_structuralIntegrityCount items
-                            </MudChip>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-                
                 @* Refinement Readiness Validation Category *@
                 <MudItem xs="12" sm="6" md="4">
                     <MudCard Elevation="1" 
@@ -160,7 +144,36 @@
             </MudGrid>
         </MudPaper>
 
-        @* Backlog Health Panel - Embedded existing component *@
+        @* ── INTEGRITY (MAINTENANCE) ──────────────────────────────────────────── *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Build" Color="Color.Default" />
+                <MudText Typo="Typo.h5">Integrity (Maintenance)</MudText>
+            </MudStack>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                Structural integrity findings are maintenance items. They do <strong>not</strong> affect refinement scores or backlog readiness.
+            </MudText>
+
+            <MudGrid>
+                @* Structural Integrity Validation Category *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="1" 
+                             Style="cursor: pointer; transition: all 0.2s;"
+                             Class="mud-card-hover"
+                             @onclick='() => NavigateToValidationCategory(ValidationCategory.StructuralIntegrity)'>
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.Error" Color="@GetHealthColorBySeverity(_structuralIntegrityCount, HealthSignalSeverity.Error)" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Structural integrity errors</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColorBySeverity(_structuralIntegrityCount, HealthSignalSeverity.Error)">
+                                @_structuralIntegrityCount items
+                            </MudChip>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        @* Backlog Health Panel - Embedded iteration-level health analysis *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
                 <MudText Typo="Typo.h5">
@@ -170,8 +183,8 @@
                 <MudButton Variant="Variant.Text" 
                            Color="Color.Primary" 
                            EndIcon="@Icons.Material.Filled.OpenInNew" 
-                           Href="/backlog-health">
-                    Full Dashboard
+                           OnClick="NavigateToBacklogOverview">
+                    Backlog Overview
                 </MudButton>
             </MudStack>
             
@@ -186,6 +199,12 @@
             </MudText>
             
             <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.Inventory2"
+                           OnClick="NavigateToBacklogOverview">
+                    Backlog Overview
+                </MudButton>
                 <MudButton Variant="Variant.Outlined" 
                            Color="Color.Info" 
                            StartIcon="@Icons.Material.Filled.Timeline"
@@ -418,6 +437,11 @@
     private void NavigateToPlanning()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanningWorkspace2}{BuildContextQuery()}");
+    }
+
+    private void NavigateToBacklogOverview()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BacklogOverview}{BuildContextQuery()}");
     }
 
     

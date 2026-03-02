@@ -1,7 +1,7 @@
 # Backlog State Model Specification
 
 ## Status  
-Concept — to be implemented  
+Implemented — Phases 1–6 complete  
 Scope: Product-centered Backlog Overview
 
 ---

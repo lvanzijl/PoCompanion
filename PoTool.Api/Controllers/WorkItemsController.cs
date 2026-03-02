@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
+using PoTool.Shared.Health;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Queries;
 using PoTool.Core.WorkItems.Commands;
@@ -768,6 +769,36 @@ public class WorkItemsController : ControllerBase
 
         _logger.LogDebug("Returning {Count} bug severity options", severityOptions.Count);
         return Ok(severityOptions);
+    }
+
+    /// <summary>
+    /// Gets the product-scoped backlog state with hierarchical refinement scores.
+    /// Returns scores per Epic → Feature → PBI without any SI / sprint / velocity data.
+    /// </summary>
+    /// <param name="productId">Product identifier.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Backlog state with refinement scores, or 404 if the product is not found.</returns>
+    [HttpGet("backlog-state/{productId:int}")]
+    public async Task<ActionResult<ProductBacklogStateDto>> GetBacklogState(
+        int productId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var state = await _mediator.Send(new GetProductBacklogStateQuery(productId), cancellationToken);
+
+            if (state is null)
+            {
+                return NotFound($"Product with ID {productId} not found");
+            }
+
+            return Ok(state);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving backlog state for ProductId: {ProductId}", productId);
+            return StatusCode(500, "Error retrieving backlog state");
+        }
     }
 
     /// <summary>

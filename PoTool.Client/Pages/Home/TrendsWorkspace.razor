@@ -271,13 +271,19 @@
             
             <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
                 <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.Inventory2"
+                           OnClick="NavigateToBacklogOverview">
+                    Backlog Overview
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
                            Color="Color.Success" 
                            StartIcon="@Icons.Material.Filled.HealthAndSafety"
                            OnClick="NavigateToHealth">
                     Health (Now)
                 </MudButton>
                 <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Primary" 
+                           Color="Color.Warning" 
                            StartIcon="@Icons.Material.Filled.CalendarMonth"
                            OnClick="NavigateToPlanning">
                     Planning (Future)
@@ -511,6 +517,11 @@
     private void NavigateToPlanning()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanningWorkspace2}{BuildContextQuery()}");
+    }
+
+    private void NavigateToBacklogOverview()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BacklogOverview}{BuildContextQuery()}");
     }
     
     private void ClearProductFilter()

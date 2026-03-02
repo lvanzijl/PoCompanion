@@ -128,6 +128,11 @@ public static class WorkspaceRoutes
     /// Validation Fix Session route — guided per-item fix flow.
     /// </summary>
     public const string ValidationFix = "/home/validation-fix";
+
+    /// <summary>
+    /// Backlog Overview route — product-scoped refinement maturity view (Backlog State Model).
+    /// </summary>
+    public const string BacklogOverview = "/home/backlog-overview";
     
     // Legacy Landing route constant for backward compatibility - alias to the new Legacy constant
     public const string Landing = Legacy;

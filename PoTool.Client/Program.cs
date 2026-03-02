@@ -168,6 +168,9 @@ builder.Services.AddScoped<BugTreeBuilderService>();
 // Register Sprint Trend service
 builder.Services.AddScoped<SprintTrendService>();
 
+// Register Backlog State service (Phase 2 - Backlog Health Overhaul)
+builder.Services.AddScoped<BacklogStateService>();
+
 // Register browser-based storage services
 builder.Services.AddScoped<IPreferencesService, BrowserPreferencesService>();
 builder.Services.AddScoped<ISecureStorageService, BrowserSecureStorageService>();
