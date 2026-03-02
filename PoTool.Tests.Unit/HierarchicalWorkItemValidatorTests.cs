@@ -375,9 +375,10 @@ public class HierarchicalWorkItemValidatorTests
         var allViolations = result.AllViolations.ToList();
         // SI-3 (Feature In Progress under New Epic) + RR-1 (Epic empty description)
         // + RC-2 for Epic (null effort) + RC-2 for Feature (null effort)
-        Assert.IsGreaterThanOrEqualTo(2, allViolations.Count);
+        Assert.HasCount(4, allViolations);
         Assert.IsTrue(allViolations.Any(v => v.Rule.RuleId == "SI-3"));
         Assert.IsTrue(allViolations.Any(v => v.Rule.RuleId == "RR-1"));
+        Assert.HasCount(2, allViolations.Where(v => v.Rule.RuleId == "RC-2").ToList());
     }
 
     [TestMethod]
