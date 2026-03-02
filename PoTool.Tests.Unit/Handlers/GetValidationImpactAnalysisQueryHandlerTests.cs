@@ -111,7 +111,7 @@ public class GetValidationImpactAnalysisQueryHandlerTests
         {
             [1] = new List<ValidationIssue>
             {
-                new ValidationIssue("Error", "Has children in progress but is not in progress (state: New). Children: #2 (Epic)", "RR-3")
+                new ValidationIssue("Error", "Has children in progress but is not in progress (state: New). Children: #2 (Epic)", "RR-4")
             }
         };
 
@@ -151,7 +151,7 @@ public class GetValidationImpactAnalysisQueryHandlerTests
         {
             [1] = new List<ValidationIssue>
             {
-                new ValidationIssue("Error", "Has children in progress but is not in progress (state: New). Children: #2 (Epic)", "RR-3")
+                new ValidationIssue("Error", "Has children in progress but is not in progress (state: New). Children: #2 (Epic)", "RR-4")
             }
         };
 
@@ -191,7 +191,7 @@ public class GetValidationImpactAnalysisQueryHandlerTests
         {
             [1] = new List<ValidationIssue>
             {
-                new ValidationIssue("Error", "Has children in progress but is not in progress (state: New). Children: #2 (Epic)", "RR-3")
+                new ValidationIssue("Error", "Has children in progress but is not in progress (state: New). Children: #2 (Epic)", "RR-4")
             }
         };
 

@@ -22,6 +22,7 @@ public class WorkItemFilterer
         { "RR-1", ValidationCategory.RefinementReadiness },
         { "RR-2", ValidationCategory.RefinementReadiness },
         { "RR-3", ValidationCategory.RefinementReadiness },
+        { "RR-4", ValidationCategory.RefinementReadiness },
         
         // Refinement Completeness rules
         { "RC-1", ValidationCategory.RefinementCompleteness },
