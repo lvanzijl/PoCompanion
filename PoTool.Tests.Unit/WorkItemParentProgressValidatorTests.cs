@@ -90,7 +90,7 @@ public class WorkItemParentProgressValidatorTests
         Assert.HasCount(1, issues, "Should have one error");
         Assert.AreEqual("Error", issues[0].Severity);
         Assert.Contains("children in progress", issues[0].Message.ToLower(), "Message should mention children in progress");
-        Assert.AreEqual("RR-3", issues[0].RuleId, "RuleId should be RR-3");
+        Assert.AreEqual("RR-4", issues[0].RuleId, "RuleId should be RR-4");
     }
 
     [TestMethod]
@@ -121,11 +121,11 @@ public class WorkItemParentProgressValidatorTests
         var warning = result[1].FirstOrDefault(i => i.Severity == "Warning");
         
         Assert.IsNotNull(error, "Should have error for direct child");
-        Assert.AreEqual("RR-3", error.RuleId, "Error should have RuleId RR-3");
+        Assert.AreEqual("RR-4", error.RuleId, "Error should have RuleId RR-4");
         Assert.Contains("children in progress", error.Message.ToLower());
         
         Assert.IsNotNull(warning, "Should have warning for descendants");
-        Assert.AreEqual("RR-3", warning.RuleId, "Warning should have RuleId RR-3");
+        Assert.AreEqual("RR-4", warning.RuleId, "Warning should have RuleId RR-4");
         Assert.Contains("descendants in progress", warning.Message.ToLower());
     }
 
@@ -155,12 +155,12 @@ public class WorkItemParentProgressValidatorTests
         var epicIssues = result[2];
         Assert.HasCount(1, epicIssues, "Epic should have one error");
         Assert.AreEqual("Error", epicIssues[0].Severity);
-        Assert.AreEqual("RR-3", epicIssues[0].RuleId, "Error should have RuleId RR-3");
+        Assert.AreEqual("RR-4", epicIssues[0].RuleId, "Error should have RuleId RR-4");
         
         var goalIssues = result[1];
         Assert.HasCount(1, goalIssues, "Goal should have one warning");
         Assert.AreEqual("Warning", goalIssues[0].Severity);
-        Assert.AreEqual("RR-3", goalIssues[0].RuleId, "Warning should have RuleId RR-3");
+        Assert.AreEqual("RR-4", goalIssues[0].RuleId, "Warning should have RuleId RR-4");
     }
 
     [TestMethod]

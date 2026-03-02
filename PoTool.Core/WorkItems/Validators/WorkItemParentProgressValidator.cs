@@ -82,7 +82,7 @@ public class WorkItemParentProgressValidator : IWorkItemValidator
                     result[item.TfsId].Add(new ValidationIssue(
                         ErrorSeverity,
                         $"Has children in progress but is not in progress (state: {item.State}). Children: {childList}",
-                        "RR-3"
+                        "RR-4"
                     ));
                 }
             }
@@ -108,7 +108,7 @@ public class WorkItemParentProgressValidator : IWorkItemValidator
                 result[item.TfsId].Add(new ValidationIssue(
                     WarningSeverity,
                     $"Has descendants in progress but is not in progress (state: {item.State}). Descendants: {descendantList}",
-                    "RR-3"
+                    "RR-4"
                 ));
             }
         }
