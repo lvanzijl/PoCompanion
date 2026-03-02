@@ -89,6 +89,7 @@ public sealed class GetProductBacklogStateQueryHandler
         return new EpicRefinementDto
         {
             TfsId = epic.TfsId,
+            Title = epic.Title,
             Score = epicScore.Score,
             Features = features
         };
@@ -115,6 +116,7 @@ public sealed class GetProductBacklogStateQueryHandler
         return new FeatureRefinementDto
         {
             TfsId = feature.TfsId,
+            Title = feature.Title,
             Score = featureScore.Score,
             OwnerState = featureScore.OwnerState,
             Pbis = pbis

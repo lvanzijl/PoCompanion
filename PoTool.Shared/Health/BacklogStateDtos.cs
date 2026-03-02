@@ -23,6 +23,9 @@ public sealed class FeatureRefinementDto
     /// <summary>TFS identifier of the Feature.</summary>
     public required int TfsId { get; init; }
 
+    /// <summary>Display title of the Feature work item.</summary>
+    public required string Title { get; init; }
+
     /// <summary>
     /// Refinement score: 0 (no description), 25 (no PBIs), or average PBI score otherwise.
     /// </summary>
@@ -45,6 +48,9 @@ public sealed class EpicRefinementDto
 {
     /// <summary>TFS identifier of the Epic.</summary>
     public required int TfsId { get; init; }
+
+    /// <summary>Display title of the Epic work item.</summary>
+    public required string Title { get; init; }
 
     /// <summary>
     /// Refinement score: 0 (no description), 30 (no Features), or average Feature score otherwise.
