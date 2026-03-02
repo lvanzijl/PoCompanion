@@ -377,9 +377,17 @@
     
     private void NavigateToValidationCategory(ValidationCategory category)
     {
-        // Navigate to Work Item Explorer with the validation category filter
-        // The filter ID matches the category enum value (1, 2, 3)
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.WorkItems}{BuildContextQuery($"filter=issues&validationCategory={(int)category}")}");
+        // Phase 4: navigate to the Validation Queue for the selected category;
+        // Explorer is now "advanced inspection" only and is no longer the primary entry.
+        var categoryKey = category switch
+        {
+            ValidationCategory.StructuralIntegrity    => "SI",
+            ValidationCategory.RefinementReadiness    => "RR",
+            ValidationCategory.RefinementCompleteness => "RC",
+            _                                         => "SI"
+        };
+        NavigationManager.NavigateTo(
+            $"{WorkspaceRoutes.ValidationQueue}{BuildContextQuery($"category={categoryKey}")}");
     }
     
     private void NavigateToBugOverview()
