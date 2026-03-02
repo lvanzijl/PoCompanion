@@ -23,7 +23,7 @@ the cached data.
 
 ## Linkage-Based Scoping — Not Currently Available
 
-A deeper scoping approach would link artefacts to sprints through work-item
+A deeper scoping approach would link artifacts to sprints through work-item
 relationships:
 
 - **PR → Work Item**: include PRs linked to work items assigned to the sprint.
