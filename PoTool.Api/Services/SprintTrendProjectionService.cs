@@ -564,6 +564,7 @@ public class SprintTrendProjectionService
 
                 var totalEffort = 0;
                 var doneEffort = 0;
+                var donePbiCount = 0;
 
                 foreach (var pbi in childPbis)
                 {
@@ -582,6 +583,7 @@ public class SprintTrendProjectionService
                     if (string.Equals(pbi!.State, "Done", StringComparison.OrdinalIgnoreCase))
                     {
                         doneEffort += effort;
+                        donePbiCount++;
                     }
                 }
 
@@ -618,6 +620,7 @@ public class SprintTrendProjectionService
                     ProgressPercent = progressPercent,
                     TotalEffort = totalEffort,
                     DoneEffort = doneEffort,
+                    DonePbiCount = donePbiCount,
                     IsDone = featureIsDone,
                     SprintCompletedEffort = sprintCompletedEffort,
                     SprintProgressionDelta = sprintProgressionDelta
@@ -658,6 +661,7 @@ public class SprintTrendProjectionService
             var totalEffort = features.Sum(f => f.TotalEffort);
             var doneEffort = features.Sum(f => f.DoneEffort);
             var doneFeatureCount = features.Count(f => f.IsDone);
+            var donePbiCount = features.Sum(f => f.DonePbiCount);
             var epicIsDone = string.Equals(epicWi.State, "Done", StringComparison.OrdinalIgnoreCase);
             var rawPercent = totalEffort > 0 ? (int)Math.Round((double)doneEffort / totalEffort * 100) : 0;
             var progressPercent = epicIsDone ? 100 : Math.Min(rawPercent, 90);
@@ -681,6 +685,7 @@ public class SprintTrendProjectionService
                 DoneEffort = doneEffort,
                 FeatureCount = features.Count,
                 DoneFeatureCount = doneFeatureCount,
+                DonePbiCount = donePbiCount,
                 IsDone = epicIsDone,
                 SprintCompletedEffort = epicSprintCompletedEffort,
                 SprintProgressionDelta = epicSprintProgressionDelta
