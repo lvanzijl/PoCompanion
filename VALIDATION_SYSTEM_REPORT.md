@@ -3,19 +3,17 @@
 ## Overview
 
 The PoCompanion validation system uses a **hierarchical validation system** as the primary engine
-for all rule-based checks. A single legacy validator (`WorkItemParentProgressValidator`) remains
-active and is bridged into the main pipeline via `HierarchicalToLegacyValidatorAdapter`.
+for all rule-based checks. The `HierarchicalToLegacyValidatorAdapter` bridges hierarchical validation
+results into the legacy `IWorkItemValidator` pipeline.
 
 ### Architecture
 
 ```
-IWorkItemValidator (CompositeWorkItemValidator)
-├── WorkItemParentProgressValidator  (legacy, RR-4)
-└── HierarchicalToLegacyValidatorAdapter
-        └── IHierarchicalWorkItemValidator (HierarchicalWorkItemValidator)
-                ├── SI rules: SI-1, SI-2, SI-3
-                ├── RR rules: RR-1, RR-2, RR-3
-                └── RC rules: RC-1, RC-2, RC-3
+IWorkItemValidator (HierarchicalToLegacyValidatorAdapter)
+└── IHierarchicalWorkItemValidator (HierarchicalWorkItemValidator)
+        ├── SI rules: SI-1, SI-2, SI-3
+        ├── RR rules: RR-1, RR-2, RR-3
+        └── RC rules: RC-1, RC-2, RC-3
 ```
 
 `IWorkItemValidator` is consumed by:
@@ -91,7 +89,7 @@ The system uses three validation categories that map to different stakeholder re
 - **Validates**: No descendant should be in "In Progress" state
 - **Severity**: Error
 - **Suppresses**: Nothing
-- **Overlap**: Same scenario also caught by RR-4, but from a refinement perspective
+- **Overlap**: Same scenario caught by SI-3 from a structural perspective
 - **File**: `NewParentWithInProgressDescendantsRule.cs`
 
 ---
@@ -130,25 +128,6 @@ The system uses three validation categories that map to different stakeholder re
 - **Severity**: Warning
 - **Suppresses**: All RC rules for this tree when violated
 - **File**: `EpicWithoutFeaturesRule.cs`
-
----
-
-### Refinement Readiness Rules (Legacy)
-
-> These rules run outside the hierarchical suppression engine and therefore
-> do **not** suppress RC rules when violated.
-
-#### RR-4: Parent Not In Progress
-- **Rule ID**: `RR-4`
-- **Category**: Refinement Readiness
-- **Applies When**: A work item is **not** in "In Progress" state AND has children/descendants that **are** in "In Progress" state
-- **Validates**:
-  - Direct children in progress → Error on the parent
-  - Non-direct descendants in progress → Warning on the parent
-- **Severity**: Error (direct children), Warning (deeper descendants)
-- **Suppresses**: Nothing (legacy validator, runs outside hierarchical engine)
-- **Overlap**: When parent is in "New" state, SI-3 also fires for the same tree
-- **File**: `WorkItemParentProgressValidator.cs`
 
 ---
 
@@ -197,9 +176,6 @@ Evaluation order per tree:
   Phase 1: SI rules (always run, never suppressed, never suppress others)
   Phase 2: RR rules (always run after SI, never suppressed)
   Phase 3: RC rules (only run if Phase 2 produced ZERO violations)
-
-Legacy (outside hierarchical engine):
-  RR-4 (WorkItemParentProgressValidator) — always runs, no suppression behavior
 ```
 
 ### Override Table
@@ -209,7 +185,7 @@ Legacy (outside hierarchical engine):
 | Epic description < 10 chars | SI-* (if applicable), **RR-1** | RC-1, RC-2, RC-3 |
 | Feature description < 10 chars | SI-* (if applicable), **RR-2** | RC-1, RC-2, RC-3 |
 | Epic has no Feature children | SI-* (if applicable), **RR-3** | RC-1, RC-2, RC-3 |
-| Parent (New) with InProgress child | **SI-3** (structural) + **RR-4** (legacy) | None |
+| Parent (New) with InProgress child | **SI-3** (structural) | None |
 | Parent (Done) with non-Done child | **SI-1** | None |
 | Parent (Removed) with non-Done child | **SI-2** | None |
 | PBI description empty (no RR issues) | **RC-1** | None |
@@ -230,24 +206,9 @@ Legacy (outside hierarchical engine):
 | RR-1 | Epic description empty | Refinement Readiness | Epic (non-terminal) | Warning | Hierarchical | RC-1, RC-2, RC-3 |
 | RR-2 | Feature description empty | Refinement Readiness | Feature (non-terminal) | Warning | Hierarchical | RC-1, RC-2, RC-3 |
 | RR-3 | Epic without Features | Refinement Readiness | Epic (non-terminal) | Warning | Hierarchical | RC-1, RC-2, RC-3 |
-| RR-4 | Parent not in progress | Refinement Readiness | Any non-InProgress parent with InProgress children | Error/Warning | **Legacy** | — |
 | RC-1 | PBI description empty | Refinement Completeness | PBI (non-terminal) | Warning | Hierarchical | — |
 | RC-2 | PBI effort empty | Refinement Completeness | PBI (non-terminal) | Warning | Hierarchical | — |
 | RC-3 | Feature without children (PBIs) | Refinement Completeness | Feature (non-terminal, valid desc) | Warning | Hierarchical | — |
-
----
-
-## Known Overlaps
-
-### SI-3 and RR-4
-
-When a parent is in "New" state with "InProgress" children, **both** SI-3 and RR-4 fire:
-
-- **SI-3** (structural perspective): The tree structure is logically inconsistent.
-- **RR-4** (refinement perspective): The parent is not active, so work can't be properly refined.
-
-This produces two distinct violations on the same work item, viewable under different categories
-(SI and RR respectively). This is intentional: they represent different stakeholder concerns.
 
 ---
 
@@ -270,28 +231,26 @@ Rules skip work items in terminal states (Done/Removed) unless the rule explicit
 ## Bug History
 
 ### Bug: Hierarchical Rule Violations Not Shown in Validation Queue
-**Symptom**: The Validation Queue and Fix Session pages showed no SI, RR, or RC violations
-(except RR-4 from the legacy validator). Health cards showed counts but clicking through
-showed empty queues.
+**Symptom**: The Validation Queue and Fix Session pages showed no SI, RR, or RC violations.
+Health cards showed counts but clicking through showed empty queues.
 
 **Root Cause**: `GetAllWorkItemsWithValidationQueryHandler` used only `IWorkItemValidator`
-(the legacy composite validator), which only ran `WorkItemParentProgressValidator`. The
+(the legacy composite validator), which only ran a now-removed legacy validator. The
 hierarchical rules were only used in health/metrics endpoints.
 
 **Fix**: Introduced `HierarchicalToLegacyValidatorAdapter` which implements `IWorkItemValidator`
 by delegating to `IHierarchicalWorkItemValidator` and converting `HierarchicalValidationResult`
-violations to `ValidationIssue` objects. The adapter is registered alongside `WorkItemParentProgressValidator`
-in the `CompositeWorkItemValidator`.
+violations to `ValidationIssue` objects.
 
-### Bug: RuleId "RR-3" Collision
+### Bug: RuleId Collision on Legacy Validator
 **Symptom**: The UI showed "Epic must have at least one Feature child" for violations that were
-actually "parent not in progress" issues. Violation counts and descriptions were mixed.
+actually from the legacy validator. Violation counts and descriptions were mixed.
 
-**Root Cause**: Both `EpicWithoutFeaturesRule` (hierarchical) and `WorkItemParentProgressValidator`
-(legacy) used RuleId `"RR-3"`.
+**Root Cause**: Both `EpicWithoutFeaturesRule` (hierarchical) and the now-removed legacy validator
+used the same RuleId `"RR-3"`.
 
-**Fix**: Renamed `WorkItemParentProgressValidator`'s RuleId from `"RR-3"` to `"RR-4"`.
-Updated `ValidationRuleDescriptions`, `WorkItemFilterer`, and all related tests.
+**Fix**: Renamed the legacy validator's RuleId to avoid collision. The legacy validator was
+subsequently removed entirely.
 
 ---
 

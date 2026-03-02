@@ -67,7 +67,7 @@
                          Size="Size.Medium" />
                 <MudStack Spacing="0">
                     <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">
-                        @_session.RuleId — @_session.RuleTitle
+                        @_session.RuleTitle
                     </MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
                         @_session.CategoryLabel
@@ -86,7 +86,7 @@
         @if (_session.Items.Count == 0)
         {
             <MudAlert Severity="Severity.Success">
-                No work items violate rule <strong>@_session.RuleId</strong> right now.
+                No work items need attention for this rule right now.
             </MudAlert>
         }
         else if (_activeItems.Count == 0)
@@ -163,7 +163,7 @@
                                 }
                             </MudStack>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                TFS #@CurrentItem.TfsId
+                                <WorkItemLink WorkItemId="@CurrentItem.TfsId" Text="@($"TFS #{CurrentItem.TfsId}")" />
                             </MudText>
                         </MudStack>
                     </CardHeaderContent>
@@ -177,7 +177,7 @@
                               Class="mb-3"
                               Dense="true">
                         <MudText Typo="Typo.body2">
-                            <strong>@_session.RuleId:</strong> @CurrentItem.ViolationMessage
+                            @CurrentItem.ViolationMessage
                         </MudText>
                     </MudAlert>
 
@@ -200,7 +200,9 @@
                             <MudItem xs="12" sm="6">
                                 <MudStack Spacing="0">
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">Parent TFS ID</MudText>
-                                    <MudText Typo="Typo.body2">#@CurrentItem.ParentTfsId</MudText>
+                                    <MudText Typo="Typo.body2">
+                                        <WorkItemLink WorkItemId="@CurrentItem.ParentTfsId.Value" />
+                                    </MudText>
                                 </MudStack>
                             </MudItem>
                         }
@@ -216,12 +218,24 @@
                     }
                 </MudCardContent>
 
+                @if (_refreshError != null)
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="mx-4 mb-2">@_refreshError</MudAlert>
+                }
+
                 <MudCardActions>
                     <MudButton Variant="Variant.Filled"
                                Color="Color.Success"
                                StartIcon="@Icons.Material.Filled.Check"
                                OnClick="DismissCurrent">
                         Done for now
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Info"
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               Disabled="@_isRefreshing"
+                               OnClick="RefreshCurrentFromTfs">
+                        @(_isRefreshing ? "Refreshing…" : "Refresh from TFS")
                     </MudButton>
                     <MudSpacer />
                     <MudButton Variant="Variant.Text"
@@ -256,6 +270,9 @@
     private int _currentIndex;
     private int _dismissedCount;
     private List<BreadcrumbItem> _breadcrumbs = new();
+    private bool _isRefreshing;
+    private string? _refreshError;
+    private int[]? _productIds;
 
     /// <summary>The current work item being reviewed in the session.</summary>
     private ValidationFixItemDto? CurrentItem =>
@@ -301,6 +318,7 @@
             if (productIds.Length == 0)
                 productIds = null;
 
+            _productIds = productIds;
             _session = await WorkItemService.GetValidationFixSessionAsync(_ruleId, _categoryKey, productIds);
             _activeItems = _session?.Items.ToList() ?? new();
             UpdateBreadcrumbs();
@@ -360,6 +378,45 @@
         _dismissedCount = 0;
         _activeItems = _session?.Items.ToList() ?? new();
         _currentIndex = 0;
+    }
+
+    private async Task RefreshCurrentFromTfs()
+    {
+        if (CurrentItem == null || _isRefreshing) return;
+        _refreshError = null;
+        _isRefreshing = true;
+        try
+        {
+            var found = await WorkItemService.RefreshWorkItemFromTfsAsync(CurrentItem.TfsId);
+            if (!found)
+            {
+                _refreshError = $"Work item #{CurrentItem.TfsId} was not found in TFS.";
+                return;
+            }
+
+            // Reload the fix session to reflect the updated state
+            var updated = await WorkItemService.GetValidationFixSessionAsync(_ruleId, _categoryKey, _productIds);
+            if (updated != null)
+            {
+                _session = updated;
+                // Rebuild active items, preserving dismissed set
+                _activeItems = _session.Items
+                    .Where(i => !_dismissedIds.Contains(i.TfsId))
+                    .ToList();
+                // Keep index in bounds
+                if (_currentIndex >= _activeItems.Count)
+                    _currentIndex = Math.Max(0, _activeItems.Count - 1);
+            }
+        }
+        catch (Exception ex)
+        {
+            _refreshError = $"Refresh failed: {ex.Message}";
+            Console.WriteLine($"[ValidationFix] {_refreshError}");
+        }
+        finally
+        {
+            _isRefreshing = false;
+        }
     }
 
     private void NavigateToQueue()

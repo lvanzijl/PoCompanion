@@ -213,21 +213,11 @@ public static class ApiServiceCollectionExtensions
             services.AddSingleton<BattleshipMockDataFacade>();
         }
 
-        // Legacy validators are being phased out in favor of hierarchical validation
-        // WorkItemInProgressWithoutEffortValidator is replaced by PbiEffortEmptyRule (RC-2)
-        services.AddScoped<WorkItemParentProgressValidator>();
+        // Bridge hierarchical rules into the legacy pipeline so all SI/RR/RC violations
+        // appear in the Validation Queue and Fix Session pages
         services.AddScoped<HierarchicalToLegacyValidatorAdapter>();
         services.AddScoped<IWorkItemValidator>(provider =>
-        {
-            var validators = new List<IWorkItemValidator>
-            {
-                provider.GetRequiredService<WorkItemParentProgressValidator>(),
-                // Bridge hierarchical rules into the legacy pipeline so all SI/RR/RC violations
-                // appear in the Validation Queue and Fix Session pages
-                provider.GetRequiredService<HierarchicalToLegacyValidatorAdapter>()
-            };
-            return new CompositeWorkItemValidator(validators);
-        });
+            provider.GetRequiredService<HierarchicalToLegacyValidatorAdapter>());
 
         // Register hierarchical validation rules (new validation system)
         // Structural Integrity (SI) rules

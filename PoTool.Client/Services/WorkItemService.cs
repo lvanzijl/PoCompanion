@@ -237,6 +237,20 @@ public class WorkItemService
     }
 
     /// <summary>
+    /// Re-fetches a work item from TFS and updates the local DB cache.
+    /// Returns true if the work item was found and updated, false if not found in TFS.
+    /// </summary>
+    /// <param name="tfsId">TFS work item ID to refresh.</param>
+    public async Task<bool> RefreshWorkItemFromTfsAsync(int tfsId)
+    {
+        var response = await _httpClient.PostAsync($"/api/workitems/{tfsId}/refresh-from-tfs", null);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            return false;
+        response.EnsureSuccessStatusCode();
+        return true;
+    }
+
+    /// <summary>
     /// Gets all distinct area paths from cached work items.
     /// </summary>
     public async Task<IEnumerable<string>> GetDistinctAreaPathsAsync()
