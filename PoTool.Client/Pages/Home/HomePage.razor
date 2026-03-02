@@ -157,8 +157,28 @@
             </MudText>
             
             <MudGrid Spacing="4" Justify="Justify.Center">
+                @* Backlog Overview Workspace *@
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Class="workspace-card" 
+                             Elevation="4"
+                             Style="cursor: pointer; height: 100%; min-height: 240px; transition: all 0.3s ease; border: 2px solid transparent;"
+                             @onclick="NavigateToBacklogOverview">
+                        <MudCardContent Class="d-flex flex-column align-center justify-center pa-6" Style="height: 100%;">
+                            <MudIcon Icon="@Icons.Material.Filled.Inventory2" 
+                                     Color="Color.Primary" 
+                                     Style="font-size: 3.5rem;" />
+                            <MudText Typo="Typo.h5" Class="mt-4 text-center" Style="font-weight: 600;">
+                                Backlog Overview
+                            </MudText>
+                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2" Style="color: var(--mud-palette-text-secondary);">
+                                Backlog maturity, refinement ownership
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
                 @* Health (Now) Workspace *@
-                <MudItem xs="12" sm="6" md="4">
+                <MudItem xs="12" sm="6" md="3">
                     <MudCard Class="workspace-card" 
                              Elevation="4"
                              Style="cursor: pointer; height: 100%; min-height: 240px; transition: all 0.3s ease; border: 2px solid transparent;"
@@ -178,7 +198,7 @@
                 </MudItem>
 
                 @* Trends (Past) Workspace *@
-                <MudItem xs="12" sm="6" md="4">
+                <MudItem xs="12" sm="6" md="3">
                     <MudCard Class="workspace-card" 
                              Elevation="4"
                              Style="cursor: pointer; height: 100%; min-height: 240px; transition: all 0.3s ease; border: 2px solid transparent;"
@@ -198,14 +218,14 @@
                 </MudItem>
 
                 @* Planning (Future) Workspace *@
-                <MudItem xs="12" sm="6" md="4">
+                <MudItem xs="12" sm="6" md="3">
                     <MudCard Class="workspace-card" 
                              Elevation="4"
                              Style="cursor: pointer; height: 100%; min-height: 240px; transition: all 0.3s ease; border: 2px solid transparent;"
                              @onclick="NavigateToPlanning">
                         <MudCardContent Class="d-flex flex-column align-center justify-center pa-6" Style="height: 100%;">
                             <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" 
-                                     Color="Color.Primary" 
+                                     Color="Color.Warning" 
                                      Style="font-size: 3.5rem;" />
                             <MudText Typo="Typo.h5" Class="mt-4 text-center" Style="font-weight: 600;">
                                 Planning (Future)
@@ -226,13 +246,6 @@
             </MudText>
             
             <MudStack Row="true" Spacing="3" Justify="Justify.Center" Wrap="Wrap.Wrap">
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Inventory2"
-                           OnClick='() => NavigationManager.NavigateTo(WorkspaceRoutes.BacklogOverview)'
-                           Size="Size.Large">
-                    Backlog Overview
-                </MudButton>
                 <MudButton Variant="Variant.Filled"
                            Color="Color.Warning"
                            StartIcon="@Icons.Material.Filled.FactCheck"
@@ -356,6 +369,11 @@
     private void NavigateToHealth()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.HealthWorkspace}{BuildContextQuery()}");
+    }
+
+    private void NavigateToBacklogOverview()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BacklogOverview}{BuildContextQuery()}");
     }
 
     private void NavigateToTrends()

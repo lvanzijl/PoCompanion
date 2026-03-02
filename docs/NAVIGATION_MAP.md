@@ -3,7 +3,7 @@
 **Audience:** Product Owners and stakeholders  
 **Scope:** All non-legacy, non-settings pages  
 **Purpose:** Human-readable reference of available navigation and functionality; basis for improvement analysis  
-**Last Updated:** 2026-03-02
+**Last Updated:** 2026-03-02 (Phase 4: Backlog Overview integrated into navigation)
 
 ---
 
@@ -25,6 +25,13 @@ After a Product Owner logs in, the application offers a workspace-driven model o
      ▼
 /home  ──────────────────────────────────────────────────────────────┐
   │                                                                   │
+  ├──► /home/backlog-overview  (Backlog Overview — primary workspace) │
+  │       ├──► /workitems?rootWorkItemId={epicId}  (ready/refinement) │
+  │       ├──► /home/validation-queue?category=SI  (integrity)        │
+  │       ├──► /home/health  (cross-workspace)                        │
+  │       ├──► /home/trends  (cross-workspace)                        │
+  │       └──► /home/planning  (cross-workspace)                      │
+  │                                                                   │
   ├──► /home/health   (Health — Now)                                  │
   │       ├──► /home/validation-triage  (Validation Triage — primary)  │
   │       │       ├──► /home/validation-queue?category=SI              │
@@ -37,6 +44,7 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       │               └──► /home/validation-fix?category=EFF&ruleId=RC-2 (EFF maps to RC-2) │
   │       ├──► /home/validation-queue?category=SI|RR|RC  (signal cards — direct queue entry) │
   │       ├──► /home/bugs                                              │
+  │       ├──► /home/backlog-overview  (cross-workspace)               │
   │       ├──► /home/trends  (cross-workspace)                         │
   │       └──► /home/planning  (cross-workspace)                       │
   │                                                                   │
@@ -46,6 +54,7 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       ├──► /home/bugs  (bug trend drilldown)                      │
   │       ├──► /home/pull-requests  (read-only insight)               │
   │       ├──► /home/pipelines  (read-only insight)                   │
+  │       ├──► /home/backlog-overview  (cross-workspace)               │
   │       ├──► /home/health  (cross-workspace)                        │
   │       └──► /home/planning  (cross-workspace)                      │
   │                                                                   │
@@ -53,6 +62,7 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       ├──► /home/trends  (velocity drilldown)                     │
   │       ├──► /workitems?rootWorkItemId={epicId}                     │
   │       ├──► /home/dependencies  (read-only)                        │
+  │       ├──► /home/backlog-overview  (cross-workspace)               │
   │       ├──► /home/health  (cross-workspace)                        │
   │       └──► /home/trends  (cross-workspace)                        │
   │                                                                   │
@@ -107,13 +117,14 @@ Global header (available on every page) ◄────────────�
 
 ### 2.3 Home — `/home`
 
-**Purpose:** Central workspace hub. Provides a high-level health overview, a product context filter, workspace entry cards (Health, Trends, Planning), and quick-action buttons for task-driven navigation.
+**Purpose:** Central workspace hub. Provides a high-level health overview, a product context filter, workspace entry cards (Backlog Overview, Health, Trends, Planning), and quick-action buttons for task-driven navigation.
 
 | Functionality | Description |
 |---|---|
 | Health signal summary | Shows three live signals: validation issue count (color-coded), active bug count (color-coded), and total work item count. Colors follow fixed thresholds (0 = green, 1–9 = blue, 10–49 = yellow, 50+ = red). |
 | Sync Now button | Triggers a manual cache sync for the active profile and reloads health signals on completion. |
 | Product context filter | Optional product selector (dropdown). Selecting a product propagates a `productId` query parameter to all downstream workspaces. Shows "All Products" chip when no filter is active. |
+| Backlog Overview workspace card | **First card.** Click to enter the Backlog Overview workspace. Carries product context. Primary entry point for backlog maturity decisions. |
 | Health (Now) workspace card | Click to enter the Health workspace. Carries product context. |
 | Trends (Past) workspace card | Click to enter the Trends workspace. Carries product context. |
 | Planning (Future) workspace card | Click to enter the Planning workspace. Carries product context. |
@@ -121,11 +132,27 @@ Global header (available on every page) ◄────────────�
 | Bug Triage quick action | Opens the Bug Triage page (`/bugs-triage`). |
 | Work Item Explorer (Advanced Tools) | Secondary action (text button, lower visual weight). Opens Work Item Explorer for all products and all teams. Explorer is now "advanced inspection" only; not the start of the validation workflow. |
 
-**Outgoing navigation:** `/home/health`, `/home/trends`, `/home/planning`, `/home/validation-triage`, `/bugs-triage`, `/workitems`, `/profiles` (if no profile)
+**Outgoing navigation:** `/home/backlog-overview`, `/home/health`, `/home/trends`, `/home/planning`, `/home/validation-triage`, `/bugs-triage`, `/workitems`, `/profiles` (if no profile)
 
 ---
 
-### 2.4 Health (Now) Workspace — `/home/health`
+### 2.3a Backlog Overview — `/home/backlog-overview`
+
+**Purpose:** Product-centered backlog maturity view. Shows refinement readiness per Epic → Feature → PBI based on the Backlog State Model. Primary entry point for the PO to understand what is plan-ready, what needs refinement, and what requires structural maintenance.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Backlog Overview` — clear location context. |
+| Product selector | Dropdown when multiple products exist; auto-selects when only one product is configured. Respects `?productId=` context from Home. |
+| Ready for Implementation section | Lists Epics with score = 100%. Each Epic shown as a card with feature count. Click → Work Item Explorer scoped to that Epic. |
+| Needs Refinement section | Lists Epics with score < 100%, sorted descending by score. Each Epic is an expandable panel showing its Features with score, owner badge (PO/Team/Ready), and progress bar. Click any Feature row → Work Item Explorer scoped to the parent Epic. |
+| Integrity Maintenance section | Shows count of Structural Integrity findings (product-scoped). Chip turns red when > 0. "Open Validation Queue" button navigates to `/home/validation-queue?category=SI`. SI findings do **not** affect refinement scores. |
+| Cross-workspace navigation | Buttons to Health (Now), Trends (Past), and Planning (Future). |
+| Home button | Returns to `/home`. |
+
+**Outgoing navigation:** `/workitems?rootWorkItemId={epicId}`, `/home/validation-queue?category=SI`, `/home/health`, `/home/trends`, `/home/planning`, `/home`
+
+---
 
 **Purpose:** Shows the current-state health of the backlog via validation signal cards and an embedded Backlog Health Analysis panel. Designed for identifying actionable problems that need attention today.
 
@@ -138,10 +165,10 @@ Global header (available on every page) ◄────────────�
 | Refinement Completeness signal card | Count of work items that need refinement (RC-*). Orange/yellow when count > 0. Click navigates to `/home/validation-queue?category=RC`. |
 | Bugs signal card | Count of all bug work items. Uses threshold-based color (0 = green, 1–9 = blue, 10–49 = yellow, 50+ = red). Click navigates to Bug Insights. |
 | Backlog Health Analysis panel | Embeds the BacklogHealthPanel component, showing up to 3 recent iterations. Offers "Full Dashboard" link for the complete view. |
-| Cross-workspace navigation | Buttons to navigate directly to Trends (Past) and Planning (Future) workspaces. |
+| Cross-workspace navigation | Buttons to navigate directly to Backlog Overview, Trends (Past), and Planning (Future) workspaces. |
 | Home button | Returns to `/home`. |
 
-**Outgoing navigation:** `/home/validation-triage`, `/home/validation-queue?category=SI|RR|RC`, `/home/bugs`, `/home/trends`, `/home/planning`, `/home`, `/backlog-health` (full dashboard)
+**Outgoing navigation:** `/home/validation-triage`, `/home/validation-queue?category=SI|RR|RC`, `/home/bugs`, `/home/backlog-overview`, `/home/trends`, `/home/planning`, `/home`, `/backlog-health` (full dashboard)
 
 ---
 
@@ -222,10 +249,10 @@ Global header (available on every page) ◄────────────�
 | Sprint Trend signal card | Represents planned vs. worked sprint metrics. Click navigates to Sprint Trend. |
 | Bug Trend chart (interactive) | Three-series chart (Total bugs, Fixed bugs, Added bugs) for the selected time range. Clicking a bar navigates to Bug Insights filtered to that period. Hovering highlights the bar. |
 | Velocity Overview panel | Embeds the VelocityPanel component showing the last 10 sprints. "Full Dashboard" link to `/velocity`. |
-| Cross-workspace navigation | Buttons to Health (Now) and Planning (Future). |
+| Cross-workspace navigation | Buttons to Backlog Overview, Health (Now), and Planning (Future). |
 | Home button | Returns to `/home`. |
 
-**Outgoing navigation:** `/home/sprint-trend`, `/home/bugs`, `/home/pull-requests`, `/home/pipelines`, `/velocity`, `/home/health`, `/home/planning`, `/home`
+**Outgoing navigation:** `/home/sprint-trend`, `/home/bugs`, `/home/pull-requests`, `/home/pipelines`, `/velocity`, `/home/backlog-overview`, `/home/health`, `/home/planning`, `/home`
 
 ---
 
@@ -244,10 +271,10 @@ Global header (available on every page) ◄────────────�
 | Epics with Invalid Items detail table | Shown when epics have validation issues. Columns: ID, Title, State, Invalid Item Count, and link to Work Item Explorer (scoped to that epic). |
 | Planning Board section | Embeds the PlanningBoard component with product selector. "Full Release Planning" link to `/release-planning`. |
 | Available Actions chips | Lists supported end-station actions: Epic Repositioning and Implicit Reprioritization. |
-| Cross-workspace navigation | Buttons to Health (Now) and Trends (Past). |
+| Cross-workspace navigation | Buttons to Backlog Overview, Health (Now), and Trends (Past). |
 | Home button | Returns to `/home`. |
 
-**Outgoing navigation:** `/home/trends`, `/workitems` (scoped to epic or all), `/home/dependencies`, `/home/health`, `/home/planning`, `/release-planning`, `/home`
+**Outgoing navigation:** `/home/trends`, `/workitems` (scoped to epic or all), `/home/dependencies`, `/home/backlog-overview`, `/home/health`, `/home/planning`, `/release-planning`, `/home`
 
 ---
 

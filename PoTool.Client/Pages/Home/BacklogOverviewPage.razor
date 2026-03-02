@@ -243,6 +243,34 @@
                 }
             </MudStack>
         </MudPaper>
+
+        @* ── CROSS-WORKSPACE NAVIGATION ──────────────────────────────────────── *@
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Explore" Class="mr-2" />
+                Navigate to Other Workspaces
+            </MudText>
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Success"
+                           StartIcon="@Icons.Material.Filled.HealthAndSafety"
+                           OnClick="NavigateToHealth">
+                    Health (Now)
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Info"
+                           StartIcon="@Icons.Material.Filled.Timeline"
+                           OnClick="NavigateToTrends">
+                    Trends (Past)
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Warning"
+                           StartIcon="@Icons.Material.Filled.CalendarMonth"
+                           OnClick="NavigateToPlanning">
+                    Planning (Future)
+                </MudButton>
+            </MudStack>
+        </MudPaper>
     }
 </MudContainer>
 
@@ -381,6 +409,21 @@
     {
         NavigationManager.NavigateTo(
             $"{WorkspaceRoutes.ValidationQueue}{BuildContextQuery("category=SI")}");
+    }
+
+    private void NavigateToHealth()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.HealthWorkspace}{BuildContextQuery()}");
+    }
+
+    private void NavigateToTrends()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.TrendsWorkspace}{BuildContextQuery()}");
+    }
+
+    private void NavigateToPlanning()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanningWorkspace2}{BuildContextQuery()}");
     }
 
     private static Color GetProgressColor(int score) => score switch
