@@ -38,7 +38,9 @@ public class PullRequestSyncStage : ISyncStage
         {
             if (context.RepositoryNames.Length == 0)
             {
-                _logger.LogInformation("No repositories configured for ProductOwner {ProductOwnerId}, skipping PR sync", context.ProductOwnerId);
+                _logger.LogInformation(
+                    "PR_INGEST_STAGE_SKIP: ProductOwner {ProductOwnerId} — reason: no repositories configured",
+                    context.ProductOwnerId);
                 progressCallback(100);
                 return SyncStageResult.CreateSuccess(0);
             }
@@ -46,9 +48,11 @@ public class PullRequestSyncStage : ISyncStage
             progressCallback(0);
 
             _logger.LogInformation(
-                "Starting pull request sync for ProductOwner {ProductOwnerId} with {RepoCount} repositories, watermark: {Watermark}",
+                "PR_INGEST_STAGE_START: ProductOwner {ProductOwnerId}, repos={RepoCount} [{RepoNames}], " +
+                "dateWindow from={FromDate} to=now",
                 context.ProductOwnerId,
                 context.RepositoryNames.Length,
+                string.Join(", ", context.RepositoryNames),
                 context.PullRequestWatermark?.ToString("O") ?? "null (full sync)");
 
             var allPullRequests = new List<PullRequestDto>();

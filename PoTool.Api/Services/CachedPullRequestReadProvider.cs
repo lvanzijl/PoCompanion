@@ -40,6 +40,12 @@ public sealed class CachedPullRequestReadProvider : IPullRequestReadProvider
         }
 
         var entities = await query.ToListAsync(cancellationToken);
+
+        if (entities.Count == 0)
+        {
+            await LogEmptyResultDiagnosticsAsync(fromDate, productIds: null, cancellationToken);
+        }
+
         return entities.Select(MapToDto);
     }
 
@@ -65,6 +71,11 @@ public sealed class CachedPullRequestReadProvider : IPullRequestReadProvider
         }
 
         var entities = await query.ToListAsync(cancellationToken);
+
+        if (entities.Count == 0)
+        {
+            await LogEmptyResultDiagnosticsAsync(fromDate, productIds, cancellationToken);
+        }
 
         return entities.Select(MapToDto);
     }
@@ -213,5 +224,42 @@ public sealed class CachedPullRequestReadProvider : IPullRequestReadProvider
             LinesDeleted: entity.LinesDeleted,
             LinesModified: entity.LinesModified
         );
+    }
+
+    /// <summary>
+    /// Logs debug-level diagnostics when a query returns an empty result set.
+    /// Helps diagnose whether the DB has data that was excluded by filters.
+    /// </summary>
+    private async Task LogEmptyResultDiagnosticsAsync(
+        DateTimeOffset? fromDate,
+        List<int>? productIds,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var totalRows = await _dbContext.PullRequests.CountAsync(cancellationToken);
+            DateTime? minDate = null;
+            DateTime? maxDate = null;
+
+            if (totalRows > 0)
+            {
+                minDate = await _dbContext.PullRequests.MinAsync(p => p.CreatedDateUtc, cancellationToken);
+                maxDate = await _dbContext.PullRequests.MaxAsync(p => p.CreatedDateUtc, cancellationToken);
+            }
+
+            _logger.LogDebug(
+                "PR_EMPTY_RESULT_DIAG: totalDbRows={TotalRows}, " +
+                "dbDateRange=[{MinDate} .. {MaxDate}], " +
+                "appliedFilters: fromDate={FromDate}, productIds={ProductIds}",
+                totalRows,
+                minDate?.ToString("O") ?? "n/a",
+                maxDate?.ToString("O") ?? "n/a",
+                fromDate?.ToString("O") ?? "none",
+                productIds != null ? string.Join(",", productIds) : "all");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to compute empty-result diagnostics for PRs");
+        }
     }
 }

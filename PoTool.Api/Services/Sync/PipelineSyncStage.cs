@@ -38,7 +38,9 @@ public class PipelineSyncStage : ISyncStage
         {
             if (context.PipelineDefinitionIds.Length == 0)
             {
-                _logger.LogInformation("No pipeline definitions configured for ProductOwner {ProductOwnerId}, skipping pipeline sync", context.ProductOwnerId);
+                _logger.LogInformation(
+                    "PIPELINE_INGEST_STAGE_SKIP: ProductOwner {ProductOwnerId} — reason: no pipeline definitions configured",
+                    context.ProductOwnerId);
                 progressCallback(100);
                 return SyncStageResult.CreateSuccess(0);
             }
@@ -46,9 +48,11 @@ public class PipelineSyncStage : ISyncStage
             progressCallback(0);
 
             _logger.LogInformation(
-                "Starting pipeline sync for ProductOwner {ProductOwnerId} with {PipelineCount} pipelines, watermark: {Watermark}",
+                "PIPELINE_INGEST_STAGE_START: ProductOwner {ProductOwnerId}, pipelineDefs={PipelineCount} [{PipelineIds}], " +
+                "dateWindow from={FromDate} to=now",
                 context.ProductOwnerId,
                 context.PipelineDefinitionIds.Length,
+                string.Join(", ", context.PipelineDefinitionIds),
                 context.PipelineWatermark?.ToString("O") ?? "null (full sync)");
 
             // Fetch pipeline runs from TFS
