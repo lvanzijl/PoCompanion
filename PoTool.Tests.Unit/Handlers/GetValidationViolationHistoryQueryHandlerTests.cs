@@ -78,7 +78,7 @@ public class GetValidationViolationHistoryQueryHandlerTests
         {
             [1] = new List<ValidationIssue>
             {
-                new ValidationIssue("Error", "Has children in progress but is not in progress (state: New). Children: #2 (Epic)", "RR-4")
+                new ValidationIssue("Error", "Has children in progress but is not in progress (state: New). Children: #2 (Epic)", "SI-1")
             }
         };
 

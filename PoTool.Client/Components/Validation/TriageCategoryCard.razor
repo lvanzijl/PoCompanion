@@ -31,7 +31,7 @@
                 {
                     <MudListItem T="string" Dense="true">
                         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                            <MudText Typo="Typo.body2">@group.RuleId</MudText>
+                            <MudText Typo="Typo.body2">@ValidationRuleDescriptions.GetTitle(group.RuleId)</MudText>
                             <MudChip T="string" Size="Size.Small" Color="Color.Default">@group.ItemCount</MudChip>
                         </MudStack>
                     </MudListItem>

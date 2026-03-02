@@ -1,0 +1,43 @@
+@using PoTool.Shared.WorkItems
+
+@* Renders a work item ID as a clickable TFS link, or plain text if no TFS config is available. *@
+@if (_href != null)
+{
+    <a href="@_href" target="_blank" rel="noopener noreferrer">@(_text ?? $"#{WorkItemId}")</a>
+}
+else
+{
+    <span>@(_text ?? $"#{WorkItemId}")</span>
+}
+
+@code {
+    [Inject] private TfsConfigService TfsConfigService { get; set; } = null!;
+
+    /// <summary>TFS work item ID to link to.</summary>
+    [Parameter, EditorRequired]
+    public int WorkItemId { get; set; }
+
+    /// <summary>Optional display text. Defaults to the work item ID.</summary>
+    [Parameter]
+    public string? Text { get; set; }
+
+    private string? _href;
+    private string? _text;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _text = Text;
+        try
+        {
+            var config = await TfsConfigService.GetConfigAsync();
+            if (config?.Url != null && config.Project != null)
+            {
+                _href = TfsUrlBuilder.BuildWorkItemUrl(config.Url, config.Project, WorkItemId);
+            }
+        }
+        catch (Exception)
+        {
+            // Gracefully degrade to plain text if TFS config is unavailable or the request fails
+        }
+    }
+}

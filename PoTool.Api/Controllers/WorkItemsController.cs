@@ -220,6 +220,29 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
+    /// Re-fetches a work item from TFS and updates the local DB cache.
+    /// Used by the Fix Session "Refresh from TFS" feature.
+    /// </summary>
+    /// <param name="tfsId">The TFS work item ID to refresh.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    [HttpPost("{tfsId:int}/refresh-from-tfs")]
+    public async Task<IActionResult> RefreshFromTfs(int tfsId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var found = await _mediator.Send(new RefreshWorkItemFromTfsCommand(tfsId), cancellationToken);
+            if (!found)
+                return NotFound($"Work item {tfsId} was not found in TFS.");
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing work item {TfsId} from TFS", tfsId);
+            return StatusCode(500, "Error refreshing work item from TFS");
+        }
+    }
+
+    /// <summary>
     /// Gets work items matching a filter.
     /// </summary>
     [HttpGet("filter/{filter}")]

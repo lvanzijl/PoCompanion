@@ -35,7 +35,6 @@ public static class ValidationRuleDescriptions
             ["RR-1"] = "Epic description is empty or too short",
             ["RR-2"] = "Feature description is empty or too short",
             ["RR-3"] = "Epic must have at least one Feature child",
-            ["RR-4"] = "Parent is not in progress but has in-progress children",
 
             // Refinement Completeness
             ["RC-1"] = "PBI description is empty",
