@@ -82,11 +82,11 @@ public sealed class GetValidationQueueQueryHandler
     {
         return categoryKey.ToUpperInvariant() switch
         {
-            "SI"  => ("Structural Integrity",    ruleId => ruleId.StartsWith("SI-",  StringComparison.OrdinalIgnoreCase)),
-            "RR"  => ("Refinement Readiness",    ruleId => ruleId.StartsWith("RR-",  StringComparison.OrdinalIgnoreCase)),
-            "RC"  => ("Refinement Completeness", ruleId => ruleId.StartsWith("RC-",  StringComparison.OrdinalIgnoreCase)),
-            "EFF" => ("Missing Effort",          ruleId => ruleId.Equals("RC-2",     StringComparison.OrdinalIgnoreCase)),
-            _     => (categoryKey,               ruleId => ruleId.StartsWith(categoryKey + "-", StringComparison.OrdinalIgnoreCase))
+            "SI"  => (ValidationRuleDescriptions.GetCategoryLabel("SI"),  ruleId => ruleId.StartsWith("SI-",  StringComparison.OrdinalIgnoreCase)),
+            "RR"  => (ValidationRuleDescriptions.GetCategoryLabel("RR"),  ruleId => ruleId.StartsWith("RR-",  StringComparison.OrdinalIgnoreCase)),
+            "RC"  => (ValidationRuleDescriptions.GetCategoryLabel("RC"),  ruleId => ruleId.StartsWith("RC-",  StringComparison.OrdinalIgnoreCase)),
+            "EFF" => (ValidationRuleDescriptions.GetCategoryLabel("EFF"), ruleId => ruleId.Equals("RC-2",    StringComparison.OrdinalIgnoreCase)),
+            _     => (categoryKey,                                         ruleId => ruleId.StartsWith(categoryKey + "-", StringComparison.OrdinalIgnoreCase))
         };
     }
 }

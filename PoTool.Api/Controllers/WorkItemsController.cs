@@ -181,6 +181,45 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets the validation fix session for a specific rule.
+    /// Returns all work items that violate the rule, ordered by TFS ID.
+    /// Used by the Validation Fix Session page.
+    /// </summary>
+    /// <param name="ruleId">Rule identifier (e.g. "SI-1", "RC-2")</param>
+    /// <param name="category">Category key: SI, RR, RC, or EFF</param>
+    /// <param name="productIds">Optional comma-separated list of product IDs to filter by</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    [HttpGet("validation-fix")]
+    public async Task<ActionResult<ValidationFixSessionDto>> GetValidationFixSession(
+        [FromQuery] string ruleId,
+        [FromQuery] string category,
+        [FromQuery] string? productIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(ruleId))
+            return BadRequest("ruleId query parameter is required.");
+
+        if (string.IsNullOrWhiteSpace(category))
+            return BadRequest("category query parameter is required.");
+
+        try
+        {
+            if (!TryParseProductIds(productIds, out var productIdArray, out var badRequest))
+                return badRequest!;
+
+            var session = await _mediator.Send(
+                new GetValidationFixSessionQuery(ruleId, category, productIdArray),
+                cancellationToken);
+            return Ok(session);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving validation fix session for rule {RuleId}", ruleId);
+            return StatusCode(500, "Error retrieving validation fix session");
+        }
+    }
+
+    /// <summary>
     /// Gets work items matching a filter.
     /// </summary>
     [HttpGet("filter/{filter}")]

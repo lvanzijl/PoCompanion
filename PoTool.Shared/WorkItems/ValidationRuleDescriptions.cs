@@ -14,6 +14,12 @@ public static class ValidationRuleDescriptions
         => KnownTitles.TryGetValue(ruleId, out var title) ? title : ruleId;
 
     /// <summary>
+    /// Returns the human-readable label for a category key, or the key itself if not found.
+    /// </summary>
+    public static string GetCategoryLabel(string categoryKey)
+        => KnownCategoryLabels.TryGetValue(categoryKey, out var label) ? label : categoryKey;
+
+    /// <summary>
     /// Mapping of all known rule IDs to their short display titles.
     /// Derived from the MessageTemplate properties on each rule class.
     /// </summary>
@@ -34,5 +40,18 @@ public static class ValidationRuleDescriptions
             ["RC-1"] = "PBI description is empty",
             ["RC-2"] = "Work item must have effort estimate",
             ["RC-3"] = "Feature has no children (PBIs)",
+        };
+
+    /// <summary>
+    /// Mapping of category keys to their human-readable labels.
+    /// Single source of truth used by both API handlers and client helpers.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string> KnownCategoryLabels =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["SI"]  = "Structural Integrity",
+            ["RR"]  = "Refinement Readiness",
+            ["RC"]  = "Refinement Completeness",
+            ["EFF"] = "Missing Effort",
         };
 }
