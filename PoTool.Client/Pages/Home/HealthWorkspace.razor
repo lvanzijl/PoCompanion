@@ -54,6 +54,14 @@
                     Bug Triage
                 </MudButton>
                 
+                @* Phase 1: Validation Triage as primary entry point for validation work *@
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Warning"
+                           StartIcon="@Icons.Material.Filled.FactCheck"
+                           OnClick="NavigateToValidationTriage">
+                    Validation Triage
+                </MudButton>
+                
                     <MudButton Variant="Variant.Outlined"
                                Color="Color.Default"
                                StartIcon="@Icons.Material.Filled.Home"
@@ -379,6 +387,11 @@
         NavigationManager.NavigateTo($"{WorkspaceRoutes.BugOverview}{BuildContextQuery()}");
     }
     
+    private void NavigateToValidationTriage()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.ValidationTriage}{BuildContextQuery()}");
+    }
+
     private void NavigateToBugTriage()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.BugTriage);

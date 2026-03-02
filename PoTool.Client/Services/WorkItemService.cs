@@ -4,6 +4,7 @@ using System.Text.Json;
 using SharedWorkItemDto = PoTool.Shared.WorkItems.WorkItemDto;
 using SharedValidateWorkItemResponse = PoTool.Shared.WorkItems.ValidateWorkItemResponse;
 using SharedValidateWorkItemRequest = PoTool.Shared.WorkItems.ValidateWorkItemRequest;
+using SharedValidationTriageSummaryDto = PoTool.Shared.WorkItems.ValidationTriageSummaryDto;
 
 namespace PoTool.Client.Services;
 
@@ -21,6 +22,7 @@ public class WorkItemService
     private const string AreaPathsFromTfsEndpoint = "/api/workitems/area-paths/from-tfs";
     private const string GoalsFromTfsEndpoint = "/api/workitems/goals/from-tfs";
     private const string ByRootIdsEndpoint = "/api/workitems/by-root-ids";
+    private const string ValidationTriageEndpoint = "/api/workitems/validation-triage";
 
     // JSON options for case-insensitive deserialization of API responses
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -159,6 +161,24 @@ public class WorkItemService
             productIdsParam = string.Join(",", productIds);
         }
         return await _client.GetAllWithValidationAsync(productIdsParam);
+    }
+
+    /// <summary>
+    /// Gets the grouped validation triage summary used by the Validation Triage page.
+    /// Returns per-category item counts and top rule groups (SI, RR, RC, EFF).
+    /// </summary>
+    /// <param name="productIds">Optional list of product IDs to filter by.</param>
+    public async Task<SharedValidationTriageSummaryDto?> GetValidationTriageSummaryAsync(int[]? productIds = null)
+    {
+        var url = ValidationTriageEndpoint;
+        if (productIds != null && productIds.Length > 0)
+        {
+            url += $"?productIds={string.Join(",", productIds)}";
+        }
+
+        var response = await _httpClient.GetAsync(url);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<SharedValidationTriageSummaryDto>(_jsonOptions);
     }
 
     /// <summary>

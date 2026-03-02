@@ -146,6 +146,44 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets a grouped validation triage summary for the Validation Triage page.
+    /// Returns per-category item counts and top rule groups (SI, RR, RC, EFF).
+    /// </summary>
+    /// <param name="productIds">Optional comma-separated list of product IDs to filter by</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    [HttpGet("validation-triage")]
+    public async Task<ActionResult<ValidationTriageSummaryDto>> GetValidationTriage(
+        [FromQuery] string? productIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            int[]? productIdArray = null;
+            if (!string.IsNullOrWhiteSpace(productIds))
+            {
+                try
+                {
+                    productIdArray = productIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(int.Parse)
+                        .ToArray();
+                }
+                catch (FormatException)
+                {
+                    return BadRequest("Invalid product ID format. Must be comma-separated integers.");
+                }
+            }
+
+            var summary = await _mediator.Send(new GetValidationTriageSummaryQuery(productIdArray), cancellationToken);
+            return Ok(summary);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving validation triage summary");
+            return StatusCode(500, "Error retrieving validation triage summary");
+        }
+    }
+
+    /// <summary>
     /// Gets work items matching a filter.
     /// </summary>
     [HttpGet("filter/{filter}")]

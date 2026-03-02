@@ -112,6 +112,22 @@ public static class WorkspaceRoutes
     /// Sprint Trend activity detail route.
     /// </summary>
     public const string SprintTrendActivity = "/home/sprint-trend/activity";
+
+    /// <summary>
+    /// Validation Triage route — grouped view of validation issues per category (SI/RR/RC/EFF).
+    /// Primary Health destination for validation work.
+    /// </summary>
+    public const string ValidationTriage = "/home/validation-triage";
+
+    /// <summary>
+    /// Validation Queue route — fix-card list for a selected validation category.
+    /// </summary>
+    public const string ValidationQueue = "/home/validation-queue";
+
+    /// <summary>
+    /// Validation Fix Session route — guided per-item fix flow.
+    /// </summary>
+    public const string ValidationFix = "/home/validation-fix";
     
     // Legacy Landing route constant for backward compatibility - alias to the new Legacy constant
     public const string Landing = Legacy;
