@@ -154,21 +154,23 @@ Global header (available on every page) ◄────────────�
 
 ---
 
-**Purpose:** Shows the current-state health of the backlog via validation signal cards and an embedded Backlog Health Analysis panel. Designed for identifying actionable problems that need attention today.
+**Purpose:** Shows the current-state health of the backlog via two separated signal sections and an embedded Backlog Health Analysis panel. Designed for identifying actionable problems that need attention today. Structural Integrity (SI) and Refinement signals are presented in separate sections per the Backlog State Model.
 
 | Functionality | Description |
 |---|---|
 | Breadcrumb | `Home › Health (Now)` — provides clear location context. |
 | Validation Triage button | Primary action button. Navigates to `/home/validation-triage` for grouped validation issue overview. |
-| Structural Integrity signal card | Count of work items with structural integrity errors (rule IDs: SI-*). Red when count > 0. Click navigates to `/home/validation-queue?category=SI`. |
+| **Refinement Signals section** | Groups signals that affect backlog readiness. |
 | Refinement Readiness signal card | Count of work items blocking refinement readiness (RR-*). Orange/yellow when count > 0. Click navigates to `/home/validation-queue?category=RR`. |
 | Refinement Completeness signal card | Count of work items that need refinement (RC-*). Orange/yellow when count > 0. Click navigates to `/home/validation-queue?category=RC`. |
 | Bugs signal card | Count of all bug work items. Uses threshold-based color (0 = green, 1–9 = blue, 10–49 = yellow, 50+ = red). Click navigates to Bug Insights. |
-| Backlog Health Analysis panel | Embeds the BacklogHealthPanel component, showing up to 3 recent iterations. Offers "Full Dashboard" link for the complete view. |
+| **Integrity (Maintenance) section** | Groups structural integrity signals. Explicitly labelled as maintenance — does not affect refinement scores. |
+| Structural Integrity signal card | Count of work items with structural integrity errors (rule IDs: SI-*). Red when count > 0. Click navigates to `/home/validation-queue?category=SI`. |
+| Backlog Health Analysis panel | Embeds the BacklogHealthPanel component, showing up to 3 recent iterations. "Backlog Overview" button navigates to `/home/backlog-overview`. |
 | Cross-workspace navigation | Buttons to navigate directly to Backlog Overview, Trends (Past), and Planning (Future) workspaces. |
 | Home button | Returns to `/home`. |
 
-**Outgoing navigation:** `/home/validation-triage`, `/home/validation-queue?category=SI|RR|RC`, `/home/bugs`, `/home/backlog-overview`, `/home/trends`, `/home/planning`, `/home`, `/backlog-health` (full dashboard)
+**Outgoing navigation:** `/home/validation-triage`, `/home/validation-queue?category=SI|RR|RC`, `/home/bugs`, `/home/backlog-overview`, `/home/trends`, `/home/planning`, `/home`
 
 ---
 
