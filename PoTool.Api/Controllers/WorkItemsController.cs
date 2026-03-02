@@ -74,20 +74,8 @@ public class WorkItemsController : ControllerBase
     {
         try
         {
-            int[]? productIdArray = null;
-            if (!string.IsNullOrWhiteSpace(productIds))
-            {
-                try
-                {
-                    productIdArray = productIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(int.Parse)
-                        .ToArray();
-                }
-                catch (FormatException)
-                {
-                    return BadRequest("Invalid product ID format. Must be comma-separated integers.");
-                }
-            }
+            if (!TryParseProductIds(productIds, out var productIdArray, out var badRequest))
+                return badRequest!;
 
             var workItems = await _mediator.Send(new GetAllWorkItemsWithValidationQuery(productIdArray), cancellationToken);
             return Ok(workItems);
@@ -114,20 +102,8 @@ public class WorkItemsController : ControllerBase
     {
         try
         {
-            int[]? productIdArray = null;
-            if (!string.IsNullOrWhiteSpace(productIds))
-            {
-                try
-                {
-                    productIdArray = productIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(int.Parse)
-                        .ToArray();
-                }
-                catch (FormatException)
-                {
-                    return BadRequest("Invalid product ID format. Must be comma-separated integers.");
-                }
-            }
+            if (!TryParseProductIds(productIds, out var productIdArray, out var badRequest))
+                return badRequest!;
 
             var workItem = await _mediator.Send(new GetWorkItemByIdWithValidationQuery(tfsId, productIdArray), cancellationToken);
             
@@ -158,20 +134,8 @@ public class WorkItemsController : ControllerBase
     {
         try
         {
-            int[]? productIdArray = null;
-            if (!string.IsNullOrWhiteSpace(productIds))
-            {
-                try
-                {
-                    productIdArray = productIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(int.Parse)
-                        .ToArray();
-                }
-                catch (FormatException)
-                {
-                    return BadRequest("Invalid product ID format. Must be comma-separated integers.");
-                }
-            }
+            if (!TryParseProductIds(productIds, out var productIdArray, out var badRequest))
+                return badRequest!;
 
             var summary = await _mediator.Send(new GetValidationTriageSummaryQuery(productIdArray), cancellationToken);
             return Ok(summary);
@@ -180,6 +144,39 @@ public class WorkItemsController : ControllerBase
         {
             _logger.LogError(ex, "Error retrieving validation triage summary");
             return StatusCode(500, "Error retrieving validation triage summary");
+        }
+    }
+
+    /// <summary>
+    /// Gets the validation queue for a specific category, listing rule groups sorted by item count.
+    /// Used by the Validation Queue page.
+    /// </summary>
+    /// <param name="category">Category key: SI, RR, RC, or EFF</param>
+    /// <param name="productIds">Optional comma-separated list of product IDs to filter by</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    [HttpGet("validation-queue")]
+    public async Task<ActionResult<ValidationQueueDto>> GetValidationQueue(
+        [FromQuery] string category,
+        [FromQuery] string? productIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(category))
+        {
+            return BadRequest("category query parameter is required.");
+        }
+
+        try
+        {
+            if (!TryParseProductIds(productIds, out var productIdArray, out var badRequest))
+                return badRequest!;
+
+            var queue = await _mediator.Send(new GetValidationQueueQuery(category, productIdArray), cancellationToken);
+            return Ok(queue);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving validation queue for category {Category}", category);
+            return StatusCode(500, "Error retrieving validation queue");
         }
     }
 
@@ -709,5 +706,34 @@ public class WorkItemsController : ControllerBase
 
         _logger.LogDebug("Returning {Count} bug severity options", severityOptions.Count);
         return Ok(severityOptions);
+    }
+
+    /// <summary>
+    /// Parses a comma-separated product IDs string into an int array.
+    /// Returns null when <paramref name="productIds"/> is null or whitespace.
+    /// Returns a BadRequest result when the format is invalid.
+    /// </summary>
+    private bool TryParseProductIds(string? productIds, out int[]? result, out ActionResult? badRequest)
+    {
+        result = null;
+        badRequest = null;
+
+        if (string.IsNullOrWhiteSpace(productIds))
+        {
+            return true;
+        }
+
+        try
+        {
+            result = productIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(int.Parse)
+                .ToArray();
+            return true;
+        }
+        catch (FormatException)
+        {
+            badRequest = BadRequest("Invalid product ID format. Must be comma-separated integers.");
+            return false;
+        }
     }
 }

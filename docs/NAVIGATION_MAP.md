@@ -28,9 +28,13 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   ├──► /home/health   (Health — Now)                                  │
   │       ├──► /home/validation-triage  (Validation Triage — primary)  │
   │       │       ├──► /home/validation-queue?category=SI              │
+  │       │       │       └──► /home/validation-fix?category=SI&ruleId=SI-* │
   │       │       ├──► /home/validation-queue?category=RR              │
+  │       │       │       └──► /home/validation-fix?category=RR&ruleId=RR-* │
   │       │       ├──► /home/validation-queue?category=RC              │
+  │       │       │       └──► /home/validation-fix?category=RC&ruleId=RC-* │
   │       │       └──► /home/validation-queue?category=EFF             │
+  │       │               └──► /home/validation-fix?category=EFF&ruleId=RC-2 (EFF maps to RC-2) │
   │       ├──► /workitems?filter=issues&validationCategory=1/2/3       │
   │       ├──► /home/bugs                                              │
   │       ├──► /home/trends  (cross-workspace)                         │
@@ -156,6 +160,25 @@ Global header (available on every page) ◄────────────�
 | Home button | Returns to `/home`. |
 
 **Outgoing navigation:** `/home/validation-queue?category=SI|RR|RC|EFF`, `/home/health`, `/home`
+
+---
+
+### 2.4b Validation Queue — `/home/validation-queue`
+
+**Purpose:** Lists "Fix Cards" grouped by rule ID for a selected validation category. Shows how many work items are affected by each rule, ordered by impact. Primary action per card is "Start fix session" which opens the guided Fix Session (Phase 3).
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Health (Now) › Validation Triage › {Category} Queue` — full context path. |
+| Product context chip | Shows active product filter (if any) with a clear button. |
+| Category summary header | Displays category icon, label, total item count, and total rule group count. |
+| Rule group cards | One card per rule ID, sorted by item count descending. Shows RuleId, short title, and affected item count. |
+| "Start fix session" button | Per card; navigates to `/home/validation-fix?category=...&ruleId=...`. Disabled when no items. |
+| Validation Triage button | Back navigation to `/home/validation-triage`, preserving context. |
+| Home button | Returns to `/home`. |
+| Empty state | Shows a success alert when no issues exist in the selected category. |
+
+**Outgoing navigation:** `/home/validation-fix?category=...&ruleId=...`, `/home/validation-triage`, `/home`
 
 ---
 
@@ -389,6 +412,7 @@ Global header (available on every page) ◄────────────�
 | Home | `/home` | Global header, direct | Choose workspace, filter, sync | `/home/health`, `/home/trends`, `/home/planning`, `/workitems`, `/bugs-triage`, `/home/plan-board` |
 | Health (Now) | `/home/health` | Home workspace card | Click signal card, open Validation Triage | `/home/validation-triage`, `/workitems`, `/home/bugs`, `/home/trends`, `/home/planning` |
 | Validation Triage | `/home/validation-triage` | Health workspace Validation Triage button | Open queue per category | `/home/validation-queue?category=SI\|RR\|RC\|EFF`, `/home/health`, `/home` |
+| Validation Queue | `/home/validation-queue` | Validation Triage "Open queue" | Start fix session per rule | `/home/validation-fix?category=...&ruleId=...`, `/home/validation-triage`, `/home` |
 | Trends (Past) | `/home/trends` | Home workspace card | Click trend signal | `/home/sprint-trend`, `/home/bugs`, `/home/pull-requests`, `/home/pipelines`, `/velocity`, `/home/health`, `/home/planning` |
 | Planning (Future) | `/home/planning` | Home workspace card | Click planning signal | `/home/trends`, `/workitems`, `/home/dependencies`, `/release-planning`, `/home/health` |
 | Bug Insights | `/home/bugs` | Health signal, Trends chart click | View/filter bugs | `/bugs-triage`, `/home/bugs/detail/{id}`, `/home` |
