@@ -4,6 +4,9 @@ using System.Text.Json;
 using SharedWorkItemDto = PoTool.Shared.WorkItems.WorkItemDto;
 using SharedValidateWorkItemResponse = PoTool.Shared.WorkItems.ValidateWorkItemResponse;
 using SharedValidateWorkItemRequest = PoTool.Shared.WorkItems.ValidateWorkItemRequest;
+using SharedValidationTriageSummaryDto = PoTool.Shared.WorkItems.ValidationTriageSummaryDto;
+using SharedValidationQueueDto = PoTool.Shared.WorkItems.ValidationQueueDto;
+using SharedValidationFixSessionDto = PoTool.Shared.WorkItems.ValidationFixSessionDto;
 
 namespace PoTool.Client.Services;
 
@@ -21,6 +24,9 @@ public class WorkItemService
     private const string AreaPathsFromTfsEndpoint = "/api/workitems/area-paths/from-tfs";
     private const string GoalsFromTfsEndpoint = "/api/workitems/goals/from-tfs";
     private const string ByRootIdsEndpoint = "/api/workitems/by-root-ids";
+    private const string ValidationTriageEndpoint = "/api/workitems/validation-triage";
+    private const string ValidationQueueEndpoint = "/api/workitems/validation-queue";
+    private const string ValidationFixEndpoint = "/api/workitems/validation-fix";
 
     // JSON options for case-insensitive deserialization of API responses
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -159,6 +165,66 @@ public class WorkItemService
             productIdsParam = string.Join(",", productIds);
         }
         return await _client.GetAllWithValidationAsync(productIdsParam);
+    }
+
+    /// <summary>
+    /// Gets the grouped validation triage summary used by the Validation Triage page.
+    /// Returns per-category item counts and top rule groups (SI, RR, RC, EFF).
+    /// </summary>
+    /// <param name="productIds">Optional list of product IDs to filter by.</param>
+    public async Task<SharedValidationTriageSummaryDto?> GetValidationTriageSummaryAsync(int[]? productIds = null)
+    {
+        var url = ValidationTriageEndpoint;
+        if (productIds != null && productIds.Length > 0)
+        {
+            url += $"?productIds={string.Join(",", productIds)}";
+        }
+
+        var response = await _httpClient.GetAsync(url);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<SharedValidationTriageSummaryDto>(_jsonOptions);
+    }
+
+    /// <summary>
+    /// Gets the validation queue for a specific category.
+    /// Returns rule groups with item counts sorted by count descending.
+    /// Used by the Validation Queue page.
+    /// </summary>
+    /// <param name="categoryKey">Category key: "SI", "RR", "RC", or "EFF".</param>
+    /// <param name="productIds">Optional list of product IDs to filter by.</param>
+    public async Task<SharedValidationQueueDto?> GetValidationQueueAsync(string categoryKey, int[]? productIds = null)
+    {
+        var url = $"{ValidationQueueEndpoint}?category={Uri.EscapeDataString(categoryKey)}";
+        if (productIds != null && productIds.Length > 0)
+        {
+            url += $"&productIds={string.Join(",", productIds)}";
+        }
+
+        var response = await _httpClient.GetAsync(url);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<SharedValidationQueueDto>(_jsonOptions);
+    }
+
+    /// <summary>
+    /// Gets the validation fix session for a specific rule.
+    /// Returns all work items that violate the rule, ordered by TFS ID.
+    /// Used by the Validation Fix Session page.
+    /// </summary>
+    /// <param name="ruleId">Rule identifier (e.g. "SI-1", "RC-2").</param>
+    /// <param name="categoryKey">Category key: "SI", "RR", "RC", or "EFF".</param>
+    /// <param name="productIds">Optional list of product IDs to filter by.</param>
+    public async Task<SharedValidationFixSessionDto?> GetValidationFixSessionAsync(
+        string ruleId, string categoryKey, int[]? productIds = null)
+    {
+        var url = $"{ValidationFixEndpoint}?ruleId={Uri.EscapeDataString(ruleId)}&category={Uri.EscapeDataString(categoryKey)}";
+        if (productIds != null && productIds.Length > 0)
+        {
+            url += $"&productIds={string.Join(",", productIds)}";
+        }
+
+        var response = await _httpClient.GetAsync(url);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<SharedValidationFixSessionDto>(_jsonOptions);
     }
 
     /// <summary>

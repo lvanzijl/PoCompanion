@@ -3,7 +3,7 @@
 **Audience:** Product Owners and stakeholders  
 **Scope:** All non-legacy, non-settings pages  
 **Purpose:** Human-readable reference of available navigation and functionality; basis for improvement analysis  
-**Last Updated:** 2026-03-01
+**Last Updated:** 2026-03-02
 
 ---
 
@@ -26,10 +26,19 @@ After a Product Owner logs in, the application offers a workspace-driven model o
 /home  ──────────────────────────────────────────────────────────────┐
   │                                                                   │
   ├──► /home/health   (Health — Now)                                  │
-  │       ├──► /workitems?filter=issues&validationCategory=1/2/3      │
-  │       ├──► /home/bugs                                             │
-  │       ├──► /home/trends  (cross-workspace)                        │
-  │       └──► /home/planning  (cross-workspace)                      │
+  │       ├──► /home/validation-triage  (Validation Triage — primary)  │
+  │       │       ├──► /home/validation-queue?category=SI              │
+  │       │       │       └──► /home/validation-fix?category=SI&ruleId=SI-* │
+  │       │       ├──► /home/validation-queue?category=RR              │
+  │       │       │       └──► /home/validation-fix?category=RR&ruleId=RR-* │
+  │       │       ├──► /home/validation-queue?category=RC              │
+  │       │       │       └──► /home/validation-fix?category=RC&ruleId=RC-* │
+  │       │       └──► /home/validation-queue?category=EFF             │
+  │       │               └──► /home/validation-fix?category=EFF&ruleId=RC-2 (EFF maps to RC-2) │
+  │       ├──► /home/validation-queue?category=SI|RR|RC  (signal cards — direct queue entry) │
+  │       ├──► /home/bugs                                              │
+  │       ├──► /home/trends  (cross-workspace)                         │
+  │       └──► /home/planning  (cross-workspace)                       │
   │                                                                   │
   ├──► /home/trends  (Trends — Past)                                  │
   │       ├──► /home/sprint-trend                                     │
@@ -47,8 +56,9 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       ├──► /home/health  (cross-workspace)                        │
   │       └──► /home/trends  (cross-workspace)                        │
   │                                                                   │
-  ├──► /workitems  (Work Item Explorer — Quick Action)                │
+  ├──► /home/validation-triage  (Validation Triage — Quick Action)    │
   ├──► /bugs-triage  (Bug Triage — Quick Action)                      │
+  ├──► /workitems  (Work Item Explorer — Advanced Tools)               │
   └──► /home/plan-board  (Plan Board — Quick Action)                  │
                                                                        │
 Global header (available on every page) ◄─────────────────────────────┘
@@ -107,11 +117,11 @@ Global header (available on every page) ◄────────────�
 | Health (Now) workspace card | Click to enter the Health workspace. Carries product context. |
 | Trends (Past) workspace card | Click to enter the Trends workspace. Carries product context. |
 | Planning (Future) workspace card | Click to enter the Planning workspace. Carries product context. |
-| Work Item Explorer quick action | Opens Work Item Explorer for all products and all teams (`allProducts=true&allTeams=true`). |
-| Bug Triage quick action | Opens the Bug Triage page. |
-| Plan Board quick action | Opens the Plan Board for all products. |
+| Validation Triage quick action | **Primary** validation quick action (filled button). Opens `/home/validation-triage` for structured validation work. |
+| Bug Triage quick action | Opens the Bug Triage page (`/bugs-triage`). |
+| Work Item Explorer (Advanced Tools) | Secondary action (text button, lower visual weight). Opens Work Item Explorer for all products and all teams. Explorer is now "advanced inspection" only; not the start of the validation workflow. |
 
-**Outgoing navigation:** `/home/health`, `/home/trends`, `/home/planning`, `/workitems`, `/bugs-triage`, `/home/plan-board`, `/profiles` (if no profile)
+**Outgoing navigation:** `/home/health`, `/home/trends`, `/home/planning`, `/home/validation-triage`, `/bugs-triage`, `/workitems`, `/profiles` (if no profile)
 
 ---
 
@@ -122,15 +132,76 @@ Global header (available on every page) ◄────────────�
 | Functionality | Description |
 |---|---|
 | Breadcrumb | `Home › Health (Now)` — provides clear location context. |
-| Structural Integrity signal card | Count of work items with structural integrity errors (rule IDs: SI-*). Red when count > 0. Click navigates to Work Item Explorer filtered by SI category. |
-| Refinement Readiness signal card | Count of work items blocking refinement readiness (RR-*). Orange/yellow when count > 0. Click navigates to Work Item Explorer with RR filter. |
-| Refinement Completeness signal card | Count of work items that need refinement (RC-*). Orange/yellow when count > 0. Click navigates to Work Item Explorer with RC filter. |
+| Validation Triage button | Primary action button. Navigates to `/home/validation-triage` for grouped validation issue overview. |
+| Structural Integrity signal card | Count of work items with structural integrity errors (rule IDs: SI-*). Red when count > 0. Click navigates to `/home/validation-queue?category=SI`. |
+| Refinement Readiness signal card | Count of work items blocking refinement readiness (RR-*). Orange/yellow when count > 0. Click navigates to `/home/validation-queue?category=RR`. |
+| Refinement Completeness signal card | Count of work items that need refinement (RC-*). Orange/yellow when count > 0. Click navigates to `/home/validation-queue?category=RC`. |
 | Bugs signal card | Count of all bug work items. Uses threshold-based color (0 = green, 1–9 = blue, 10–49 = yellow, 50+ = red). Click navigates to Bug Insights. |
 | Backlog Health Analysis panel | Embeds the BacklogHealthPanel component, showing up to 3 recent iterations. Offers "Full Dashboard" link for the complete view. |
 | Cross-workspace navigation | Buttons to navigate directly to Trends (Past) and Planning (Future) workspaces. |
 | Home button | Returns to `/home`. |
 
-**Outgoing navigation:** `/workitems` (filtered), `/home/bugs`, `/home/trends`, `/home/planning`, `/home`, `/backlog-health` (full dashboard)
+**Outgoing navigation:** `/home/validation-triage`, `/home/validation-queue?category=SI|RR|RC`, `/home/bugs`, `/home/trends`, `/home/planning`, `/home`, `/backlog-health` (full dashboard)
+
+---
+
+### 2.4a Validation Triage — `/home/validation-triage`
+
+**Purpose:** Grouped, read-only overview of validation issues by category (SI, RR, RC, EFF). Primary entry point for validation work in the Health workspace. Shows how many work items are affected per category and which rules contribute most, enabling the PO to choose where to focus.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Health (Now) › Validation Triage` — clear position in the Health path. |
+| Product context chip | Shows active product filter (if any) with a clear button. |
+| SI card | Total items with Structural Integrity violations + top 3 rule groups. "Open queue" button navigates to `/home/validation-queue?category=SI`. |
+| RR card | Total items with Refinement Readiness violations + top 3 rule groups. "Open queue" button navigates to `/home/validation-queue?category=RR`. |
+| RC card | Total items with Refinement Completeness violations + top 3 rule groups. "Open queue" button navigates to `/home/validation-queue?category=RC`. |
+| EFF card | Total items missing effort estimates (RC-2 rule). "Open queue" button navigates to `/home/validation-queue?category=EFF`. |
+| Health (Now) button | Returns to the Health workspace. |
+| Home button | Returns to `/home`. |
+
+**Outgoing navigation:** `/home/validation-queue?category=SI|RR|RC|EFF`, `/home/health`, `/home`
+
+---
+
+### 2.4b Validation Queue — `/home/validation-queue`
+
+**Purpose:** Lists "Fix Cards" grouped by rule ID for a selected validation category. Shows how many work items are affected by each rule, ordered by impact. Primary action per card is "Start fix session" which opens the guided Fix Session (Phase 3).
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Health (Now) › Validation Triage › {Category} Queue` — full context path. |
+| Product context chip | Shows active product filter (if any) with a clear button. |
+| Category summary header | Displays category icon, label, total item count, and total rule group count. |
+| Rule group cards | One card per rule ID, sorted by item count descending. Shows RuleId, short title, and affected item count. |
+| "Start fix session" button | Per card; navigates to `/home/validation-fix?category=...&ruleId=...`. Disabled when no items. |
+| Validation Triage button | Back navigation to `/home/validation-triage`, preserving context. |
+| Home button | Returns to `/home`. |
+| Empty state | Shows a success alert when no issues exist in the selected category. |
+
+**Outgoing navigation:** `/home/validation-fix?category=...&ruleId=...`, `/home/validation-triage`, `/home`
+
+---
+
+### 2.4c Validation Fix Session — `/home/validation-fix`
+
+**Purpose:** Guided per-item review flow for a single validation rule. Shows one work item at a time with its violation context, allowing the PO to work through the list methodically. Session progress (dismissed items) is tracked client-side only and resets on page reload.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Health (Now) › Validation Triage › {Category} Queue › Fix Session` — full context path. |
+| Product context chip | Shows active product filter (if any) with a clear button. |
+| Rule context banner | Displays category icon, rule ID, rule title, and category label. Shows a progress chip: "N dismissed · M remaining of total". |
+| Item card | Shows current item: Type chip, State chip, Effort chip (if set), TFS ID, Title, violation message, Area Path, Iteration Path, Parent TFS ID (if set), and Description (if present). |
+| Previous / Next buttons | Navigate through the active (non-dismissed) items. Disabled at start/end of list. |
+| "Done for now" button | Adds the current item to the session-local dismissed set and advances to the next item. |
+| "Skip" button | Advances to the next item without dismissing. |
+| Session complete state | Shown when all items are dismissed. Offers "Restart session" (clears dismissed set) and "Back to Queue". |
+| Empty state | Shown when no items violate the selected rule. |
+| Back to Queue button | Returns to `/home/validation-queue?category=...`, preserving context. |
+| Home button | Returns to `/home`. |
+
+**Outgoing navigation:** `/home/validation-queue?category=...`, `/home`, `/home/validation-triage`
 
 ---
 
@@ -362,7 +433,10 @@ Global header (available on every page) ◄────────────�
 | Profiles Home | `/profiles` | App start, redirect | Select profile | `/home` |
 | Sync Gate | `/sync-gate` | Post-profile-select | Wait/Retry | `/home`, `/profiles` |
 | Home | `/home` | Global header, direct | Choose workspace, filter, sync | `/home/health`, `/home/trends`, `/home/planning`, `/workitems`, `/bugs-triage`, `/home/plan-board` |
-| Health (Now) | `/home/health` | Home workspace card | Click signal card | `/workitems`, `/home/bugs`, `/home/trends`, `/home/planning` |
+| Health (Now) | `/home/health` | Home workspace card | Click signal card → queue; open Validation Triage | `/home/validation-triage`, `/home/validation-queue?category=SI\|RR\|RC`, `/home/bugs`, `/home/trends`, `/home/planning` |
+| Validation Triage | `/home/validation-triage` | Health workspace Validation Triage button | Open queue per category | `/home/validation-queue?category=SI\|RR\|RC\|EFF`, `/home/health`, `/home` |
+| Validation Queue | `/home/validation-queue` | Validation Triage "Open queue" | Start fix session per rule | `/home/validation-fix?category=...&ruleId=...`, `/home/validation-triage`, `/home` |
+| Validation Fix Session | `/home/validation-fix` | Validation Queue "Start fix session" | Review items one-by-one, dismiss or skip | `/home/validation-queue?category=...`, `/home` |
 | Trends (Past) | `/home/trends` | Home workspace card | Click trend signal | `/home/sprint-trend`, `/home/bugs`, `/home/pull-requests`, `/home/pipelines`, `/velocity`, `/home/health`, `/home/planning` |
 | Planning (Future) | `/home/planning` | Home workspace card | Click planning signal | `/home/trends`, `/workitems`, `/home/dependencies`, `/release-planning`, `/home/health` |
 | Bug Insights | `/home/bugs` | Health signal, Trends chart click | View/filter bugs | `/bugs-triage`, `/home/bugs/detail/{id}`, `/home` |
@@ -374,7 +448,7 @@ Global header (available on every page) ◄────────────�
 | Plan Board | `/home/plan-board` | Home quick action | View/filter board | `/home` |
 | Sprint Trend | `/home/sprint-trend` | Trends workspace | Navigate sprints | `/home/sprint-trend/activity/{id}`, `/home/trends`, `/home` |
 | Work Item Activity | `/home/sprint-trend/activity/{id}` | Sprint Trend drilldown | View activity | `/home/sprint-trend` |
-| Work Item Explorer | `/workitems` | Health signals, Planning signals, Home quick action | Filter, explore, validate | (self-contained) |
+| Work Item Explorer | `/workitems` | Home "Advanced Tools", Planning signals, Fix Session | Filter, explore, validate (advanced inspection) | (self-contained) |
 
 ---
 

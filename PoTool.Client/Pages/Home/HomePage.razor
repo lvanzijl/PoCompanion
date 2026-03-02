@@ -226,11 +226,35 @@
             </MudText>
             
             <MudStack Row="true" Spacing="3" Justify="Justify.Center" Wrap="Wrap.Wrap">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Warning"
+                           StartIcon="@Icons.Material.Filled.FactCheck"
+                           OnClick='() => NavigationManager.NavigateTo(WorkspaceRoutes.ValidationTriage)'
+                           Size="Size.Large">
+                    Validation Triage
+                </MudButton>
                 <MudButton Variant="Variant.Outlined"
-                           Color="Color.Primary"
+                           Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.BugReport"
+                           OnClick='() => NavigationManager.NavigateTo(WorkspaceRoutes.BugTriage)'
+                           Size="Size.Large">
+                    Bug Triage
+                </MudButton>
+            </MudStack>
+
+            @* Advanced Tools *@
+            <MudDivider Class="my-4" />
+            
+            <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary" Class="mb-2">
+                Advanced Tools
+            </MudText>
+            
+            <MudStack Row="true" Spacing="2" Justify="Justify.Center" Wrap="Wrap.Wrap">
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Default"
                            StartIcon="@Icons.Material.Filled.Search"
                            OnClick="NavigateToWorkItemExplorer"
-                           Size="Size.Large">
+                           Size="Size.Medium">
                     Work Item Explorer
                 </MudButton>
             </MudStack>
