@@ -288,6 +288,11 @@ public record FeatureProgressDto
     public int DoneEffort { get; init; }
 
     /// <summary>
+    /// Number of PBIs in Done state under this feature.
+    /// </summary>
+    public int DonePbiCount { get; init; }
+
+    /// <summary>
     /// Whether the feature is in Done state.
     /// </summary>
     public bool IsDone { get; init; }
@@ -352,6 +357,11 @@ public record EpicProgressDto
     /// Number of child features that are done.
     /// </summary>
     public int DoneFeatureCount { get; init; }
+
+    /// <summary>
+    /// Number of PBIs in Done state across all child features of this epic.
+    /// </summary>
+    public int DonePbiCount { get; init; }
 
     /// <summary>
     /// Whether the epic is in Done state.

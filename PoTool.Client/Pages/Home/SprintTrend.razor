@@ -363,7 +363,8 @@
                                             <th>Epic</th>
                                             <th style="width: 200px;">Progress</th>
                                             <th style="width: 120px; text-align: right;">Sprint Scored</th>
-                                            <th style="width: 120px; text-align: right;">Features</th>
+                                            <th style="width: 100px; text-align: right;">Features ✓</th>
+                                            <th style="width: 100px; text-align: right;">PBIs ✓</th>
                                             <th style="width: 80px; text-align: center;">Sprint Δ%</th>
                                             <th style="width: 100px; text-align: center;">Actions</th>
                                         </tr>
@@ -399,7 +400,10 @@
                                                     <MudText Typo="Typo.body2">@epic.SprintCompletedEffort pts</MudText>
                                                 </td>
                                                 <td style="text-align: right;">
-                                                    <MudText Typo="Typo.body2">@epic.DoneFeatureCount / @epic.FeatureCount done</MudText>
+                                                    <MudText Typo="Typo.body2">@epic.DoneFeatureCount</MudText>
+                                                </td>
+                                                <td style="text-align: right;">
+                                                    <MudText Typo="Typo.body2">@epic.DonePbiCount</MudText>
                                                 </td>
                                                 <td style="text-align: center;">
                                                     <MudText Typo="Typo.body2" Color="@GetProgressColor((int)epic.SprintProgressionDelta)">@epic.SprintProgressionDelta.ToString("F1")%</MudText>
