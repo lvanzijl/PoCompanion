@@ -85,6 +85,8 @@ public class SyncPipelineRunner : ISyncPipeline
             // Load context data
             var syncContext = await BuildSyncContextAsync(productOwnerId, context, cacheStateRepo, cts.Token);
 
+            LogEffectiveScope(syncContext);
+
             if (syncContext.RootWorkItemIds.Length == 0)
             {
                 _logger.LogWarning("No products found for ProductOwner {ProductOwnerId}", productOwnerId);
@@ -348,6 +350,9 @@ public class SyncPipelineRunner : ISyncPipeline
                 pullRequestCount,
                 pipelineCount);
 
+            // End-of-sync persistence diagnostics
+            await LogPersistenceDiagnosticsAsync(context, productOwnerId, cts.Token);
+
             yield return new SyncProgressUpdate
             {
                 CurrentStage = "Complete",
@@ -504,5 +509,104 @@ public class SyncPipelineRunner : ISyncPipeline
             RepositoryNames = repositories.ToArray(),
             PipelineDefinitionIds = pipelineDefinitionIds.ToArray()
         };
+    }
+
+    /// <summary>
+    /// Logs effective scope summary after context is built.
+    /// </summary>
+    private void LogEffectiveScope(SyncContext syncContext)
+    {
+        _logger.LogInformation(
+            "SYNC_EFFECTIVE_SCOPE: ProductOwner {ProductOwnerId} — " +
+            "rootWorkItems={RootCount}, repos={RepoCount} [{RepoNames}], " +
+            "pipelineDefs={PipelineCount} [{PipelineIds}], " +
+            "watermarks: workItem={WiWm}, pullRequest={PrWm}, pipeline={PlWm}",
+            syncContext.ProductOwnerId,
+            syncContext.RootWorkItemIds.Length,
+            syncContext.RepositoryNames.Length,
+            string.Join(", ", syncContext.RepositoryNames),
+            syncContext.PipelineDefinitionIds.Length,
+            string.Join(", ", syncContext.PipelineDefinitionIds),
+            syncContext.WorkItemWatermark?.ToString("O") ?? "null",
+            syncContext.PullRequestWatermark?.ToString("O") ?? "null",
+            syncContext.PipelineWatermark?.ToString("O") ?? "null");
+
+        if (syncContext.RepositoryNames.Length == 0)
+        {
+            _logger.LogWarning(
+                "SYNC_SCOPE_WARNING: ProductOwner {ProductOwnerId} has 0 repositories — PR sync will be skipped",
+                syncContext.ProductOwnerId);
+        }
+
+        if (syncContext.PipelineDefinitionIds.Length == 0)
+        {
+            _logger.LogWarning(
+                "SYNC_SCOPE_WARNING: ProductOwner {ProductOwnerId} has 0 pipeline definitions — pipeline sync will be skipped",
+                syncContext.ProductOwnerId);
+        }
+    }
+
+    /// <summary>
+    /// Logs end-of-sync persistence diagnostics: row counts and date ranges for PRs and pipelines.
+    /// </summary>
+    private async Task LogPersistenceDiagnosticsAsync(
+        PoToolDbContext context,
+        int productOwnerId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // PR diagnostics
+            var prCount = await context.PullRequests.CountAsync(cancellationToken);
+            DateTime? prMinDate = null;
+            DateTime? prMaxDate = null;
+            if (prCount > 0)
+            {
+                var prDateRange = await context.PullRequests
+                    .GroupBy(_ => 1)
+                    .Select(g => new { Min = g.Min(p => p.CreatedDateUtc), Max = g.Max(p => p.CreatedDateUtc) })
+                    .FirstOrDefaultAsync(cancellationToken);
+                prMinDate = prDateRange?.Min;
+                prMaxDate = prDateRange?.Max;
+            }
+
+            _logger.LogInformation(
+                "SYNC_PERSISTENCE_DIAG: ProductOwner {ProductOwnerId} — " +
+                "PR rows={PrCount}, PR dateRange=[{PrMin} .. {PrMax}]",
+                productOwnerId,
+                prCount,
+                prMinDate?.ToString("O") ?? "n/a",
+                prMaxDate?.ToString("O") ?? "n/a");
+
+            // Pipeline diagnostics
+            var pipelineCount = await context.CachedPipelineRuns
+                .Where(p => p.ProductOwnerId == productOwnerId)
+                .CountAsync(cancellationToken);
+
+            DateTime? plMinDate = null;
+            DateTime? plMaxDate = null;
+            if (pipelineCount > 0)
+            {
+                var plDateRange = await context.CachedPipelineRuns
+                    .Where(p => p.ProductOwnerId == productOwnerId && p.FinishedDateUtc != null)
+                    .GroupBy(_ => 1)
+                    .Select(g => new { Min = g.Min(p => p.FinishedDateUtc), Max = g.Max(p => p.FinishedDateUtc) })
+                    .FirstOrDefaultAsync(cancellationToken);
+                plMinDate = plDateRange?.Min;
+                plMaxDate = plDateRange?.Max;
+            }
+
+            _logger.LogInformation(
+                "SYNC_PERSISTENCE_DIAG: ProductOwner {ProductOwnerId} — " +
+                "Pipeline rows={PlCount}, Pipeline dateRange=[{PlMin} .. {PlMax}]",
+                productOwnerId,
+                pipelineCount,
+                plMinDate?.ToString("O") ?? "n/a",
+                plMaxDate?.ToString("O") ?? "n/a");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to compute end-of-sync persistence diagnostics for ProductOwner {ProductOwnerId}", productOwnerId);
+        }
     }
 }

@@ -164,6 +164,11 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
             .Take(top)
             .ToListAsync(cancellationToken);
 
+        if (runs.Count == 0)
+        {
+            await LogEmptyRunsDiagnosticsAsync(pipelineIdList, branchName, minStartTime, cancellationToken);
+        }
+
         return runs.Select(r => MapRunToDto(r, definitions[r.PipelineDefinitionId].Name));
     }
 
@@ -244,5 +249,49 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
             Url = entity.Url,
             LastSyncedUtc = entity.LastSyncedUtc
         };
+    }
+
+    /// <summary>
+    /// Logs debug-level diagnostics when a pipeline runs query returns an empty result set.
+    /// Helps diagnose whether the DB has runs that were excluded by filters.
+    /// </summary>
+    private async Task LogEmptyRunsDiagnosticsAsync(
+        List<int> pipelineIds,
+        string? branchName,
+        DateTimeOffset? minStartTime,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var totalRuns = await _dbContext.CachedPipelineRuns.CountAsync(cancellationToken);
+            DateTime? minDate = null;
+            DateTime? maxDate = null;
+
+            if (totalRuns > 0)
+            {
+                var dateRange = await _dbContext.CachedPipelineRuns
+                    .Where(r => r.FinishedDateUtc != null)
+                    .GroupBy(_ => 1)
+                    .Select(g => new { Min = g.Min(r => r.FinishedDateUtc), Max = g.Max(r => r.FinishedDateUtc) })
+                    .FirstOrDefaultAsync(cancellationToken);
+                minDate = dateRange?.Min;
+                maxDate = dateRange?.Max;
+            }
+
+            _logger.LogDebug(
+                "PIPELINE_EMPTY_RESULT_DIAG: totalDbRows={TotalRows}, " +
+                "dbDateRange=[{MinDate} .. {MaxDate}], " +
+                "appliedFilters: pipelineIds=[{PipelineIds}], branch={Branch}, minStartTime={MinStartTime}",
+                totalRuns,
+                minDate?.ToString("O") ?? "n/a",
+                maxDate?.ToString("O") ?? "n/a",
+                string.Join(",", pipelineIds),
+                branchName ?? "any",
+                minStartTime?.ToString("O") ?? "none");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to compute empty-result diagnostics for pipeline runs");
+        }
     }
 }
