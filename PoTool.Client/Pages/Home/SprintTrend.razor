@@ -76,17 +76,22 @@
                         Sprint Navigation
                     </MudText>
                     
-                    <MudTooltip Text="@(_advancedMode ? $"Click to return to single sprint view (currently showing last {_trendSprintCount} sprints)" : "Click to show multi-sprint trend view")">
-                        <MudToggleIconButton Toggled="@_advancedMode"
-                                             ToggledChanged="OnAdvancedModeToggled"
-                                             Icon="@Icons.Material.Filled.BarChart"
-                                             ToggledIcon="@Icons.Material.Filled.BarChart"
-                                             Color="Color.Default"
-                                             ToggledColor="Color.Primary"
-                                             Variant="Variant.Outlined"
-                                             ToggledSize="Size.Medium"
-                                             Size="Size.Medium" />
-                    </MudTooltip>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudText Typo="Typo.body2" Color="@(_advancedMode ? Color.Primary : Color.Default)">
+                            @(_advancedMode ? "Trend (Multi-sprint)" : "Zoom (Single sprint)")
+                        </MudText>
+                        <MudTooltip Text="@(_advancedMode ? "Click to switch to Zoom (Single sprint)" : "Click to switch to Trend (Multi-sprint)")">
+                            <MudToggleIconButton Toggled="@_advancedMode"
+                                                 ToggledChanged="OnAdvancedModeToggled"
+                                                 Icon="@Icons.Material.Filled.BarChart"
+                                                 ToggledIcon="@Icons.Material.Filled.BarChart"
+                                                 Color="Color.Default"
+                                                 ToggledColor="Color.Primary"
+                                                 Variant="Variant.Outlined"
+                                                 ToggledSize="Size.Medium"
+                                                 Size="Size.Medium" />
+                        </MudTooltip>
+                    </MudStack>
                 </MudStack>
 
                 @if (!_advancedMode)
@@ -438,7 +443,7 @@
     // Selection state
     private int? _selectedTeamId;
     private int? _selectedProductId;
-    private bool _advancedMode;
+    private bool _advancedMode = true;
     private int _trendSprintCount = TrendSprintCount;
     private List<TeamDto> _teams = new();
     private List<SprintDto> _allSprints = new();
@@ -504,6 +509,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ParseQueryParameters();
         await LoadDataAsync();
     }
 
@@ -956,6 +962,7 @@
     private async Task OnAdvancedModeToggled(bool toggled)
     {
         _advancedMode = toggled;
+        UpdateUrlViewMode();
         await LoadMetricsAsync();
         StateHasChanged();
     }
@@ -1168,6 +1175,11 @@
             query.Add($"periodEndUtc={Uri.EscapeDataString(periodEndUtc.Value.UtcDateTime.ToString("O"))}");
         }
 
+        if (!_advancedMode)
+        {
+            query.Add("view=zoom");
+        }
+
         return $"{path}?{string.Join("&", query)}";
     }
 
@@ -1287,6 +1299,37 @@
     private void NavigateToHome()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.Home);
+    }
+
+    private void ParseQueryParameters()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+
+        // view=zoom forces single-sprint (zoom) mode; anything else (missing or "trend") defaults to multi-sprint
+        _advancedMode = queryParams["view"] != "zoom";
+    }
+
+    private void UpdateUrlViewMode()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+
+        if (_advancedMode)
+        {
+            queryParams.Remove("view");
+        }
+        else
+        {
+            queryParams["view"] = "zoom";
+        }
+
+        var newQuery = queryParams.ToString();
+        var newUrl = string.IsNullOrEmpty(newQuery)
+            ? uri.AbsolutePath
+            : $"{uri.AbsolutePath}?{newQuery}";
+
+        NavigationManager.NavigateTo(newUrl, forceLoad: false, replace: true);
     }
 
     private record ProductMetrics(

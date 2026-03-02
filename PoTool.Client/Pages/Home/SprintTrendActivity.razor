@@ -118,6 +118,7 @@
     private int? _productOwnerId;
     private DateTimeOffset? _periodStartUtc;
     private DateTimeOffset? _periodEndUtc;
+    private string? _returnView;
 
     protected override async Task OnInitializedAsync()
     {
@@ -165,7 +166,12 @@
 
     private void NavigateBack()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.SprintTrend);
+        var url = WorkspaceRoutes.SprintTrend;
+        if (_returnView == "zoom")
+        {
+            url += "?view=zoom";
+        }
+        NavigationManager.NavigateTo(url);
     }
 
     private void ParseQueryParameters()
@@ -187,5 +193,7 @@
         {
             _periodEndUtc = periodEndUtc;
         }
+
+        _returnView = queryParams["view"];
     }
 }
