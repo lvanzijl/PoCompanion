@@ -1,5 +1,6 @@
 using PoTool.Core.Health;
 using PoTool.Core.WorkItems;
+using PoTool.Shared.Health;
 using PoTool.Shared.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;

@@ -241,6 +241,7 @@ public static class ApiServiceCollectionExtensions
         // Register Core business logic services
         services.AddScoped<WorkItemFilterer>();
         services.AddScoped<BacklogHealthCalculator>();
+        services.AddScoped<BacklogStateComputationService>();
 
         // Register TFS configuration and client
         services.AddDataProtection();
