@@ -135,6 +135,7 @@ public class WorkItemSyncStage : ISyncStage
                 {
                     // Update existing
                     var entity = await _context.WorkItems
+                        .OrderBy(w => w.TfsId)
                         .FirstAsync(w => w.TfsId == dto.TfsId, cancellationToken);
                     UpdateEntity(entity, dto);
                 }

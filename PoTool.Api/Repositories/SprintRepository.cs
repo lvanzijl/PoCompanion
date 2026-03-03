@@ -49,6 +49,7 @@ public class SprintRepository : ISprintRepository
         // Prefer timeFrame="current"
         var currentByTimeFrame = await _context.Sprints
             .Where(s => s.TeamId == teamId && s.TimeFrame == "current")
+            .OrderBy(s => s.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (currentByTimeFrame != null)
@@ -63,6 +64,8 @@ public class SprintRepository : ISprintRepository
                 && s.EndDateUtc.HasValue
                 && s.StartDateUtc <= nowUtc
                 && s.EndDateUtc > nowUtc)
+                .OrderBy(s => s.StartDateUtc)
+                .ThenBy(s => s.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         return currentByDate == null ? null : MapToDto(currentByDate);

@@ -36,6 +36,7 @@ public class BugTriageStateService
     public async Task<BugTriageStateDto?> GetTriageStateAsync(int bugId, CancellationToken cancellationToken = default)
     {
         var entity = await _db.BugTriageStates
+            .OrderBy(s => s.Id)
             .FirstOrDefaultAsync(s => s.BugId == bugId, cancellationToken);
 
         return entity == null ? null : MapToDto(entity);
@@ -81,6 +82,7 @@ public class BugTriageStateService
         CancellationToken cancellationToken = default)
     {
         var existing = await _db.BugTriageStates
+            .OrderBy(s => s.Id)
             .FirstOrDefaultAsync(s => s.BugId == bugId, cancellationToken);
 
         if (existing != null)
@@ -155,6 +157,7 @@ public class BugTriageStateService
             {
                 // Get current tags from the work item
                 var currentWorkItem = await _db.WorkItems
+                    .OrderBy(wi => wi.TfsId)
                     .FirstOrDefaultAsync(wi => wi.TfsId == request.BugId, cancellationToken);
                 
                 if (currentWorkItem != null)
@@ -221,6 +224,7 @@ public class BugTriageStateService
             
             // Update or create triage state entity
             var entity = await _db.BugTriageStates
+                .OrderBy(s => s.Id)
                 .FirstOrDefaultAsync(s => s.BugId == request.BugId, cancellationToken);
             
             if (entity == null)
@@ -362,6 +366,7 @@ public class BugTriageStateService
     private async Task UpdateCachedWorkItemAsync(WorkItemDto refreshedWorkItem, int bugId, CancellationToken cancellationToken)
     {
         var cachedEntity = await _db.WorkItems
+            .OrderBy(wi => wi.TfsId)
             .FirstOrDefaultAsync(wi => wi.TfsId == bugId, cancellationToken);
         
         if (cachedEntity != null)

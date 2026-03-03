@@ -32,6 +32,7 @@ public sealed class GetPlanningBoardQueryHandler : IQueryHandler<GetPlanningBoar
 
         // Get settings or create default
         var settings = await _dbContext.PlanningBoardSettings
+            .OrderBy(s => s.Id)
             .FirstOrDefaultAsync(s => s.ProductOwnerId == query.ProductOwnerId, cancellationToken);
 
         var scope = settings?.Scope ?? PlanningBoardScope.AllProducts;

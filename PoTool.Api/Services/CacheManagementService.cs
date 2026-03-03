@@ -30,6 +30,7 @@ public class CacheManagementService
     public async Task<CacheInsightsDto> GetInsightsAsync(int productOwnerId, CancellationToken cancellationToken)
     {
         var cacheState = await _context.ProductOwnerCacheStates
+            .OrderBy(e => e.Id)
             .FirstOrDefaultAsync(e => e.ProductOwnerId == productOwnerId, cancellationToken);
 
         var productIds = await _context.Products
@@ -119,6 +120,7 @@ public class CacheManagementService
         if (typesToReset.Count == CacheEntityTypes.All.Count)
         {
             var cacheState = await _context.ProductOwnerCacheStates
+                .OrderBy(e => e.Id)
                 .FirstOrDefaultAsync(e => e.ProductOwnerId == productOwnerId, cancellationToken);
             if (cacheState != null)
             {
@@ -188,10 +190,12 @@ public class CacheManagementService
 
         var workItem = await _context.WorkItems
             .AsNoTracking()
+            .OrderBy(w => w.TfsId)
             .FirstOrDefaultAsync(w => w.TfsId == workItemId, cancellationToken);
 
         var resolvedWorkItem = await _context.ResolvedWorkItems
             .AsNoTracking()
+            .OrderBy(r => r.Id)
             .FirstOrDefaultAsync(r => r.WorkItemId == workItemId, cancellationToken);
 
         var currentParentId = workItem?.ParentTfsId;

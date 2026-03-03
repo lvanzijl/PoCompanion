@@ -32,6 +32,7 @@ public sealed class CreatePlanningEpicPlacementCommandHandler : ICommandHandler<
 
         // Verify the row exists
         var row = await _dbContext.BoardRows
+            .OrderBy(r => r.Id)
             .FirstOrDefaultAsync(r => r.Id == command.RowId, cancellationToken);
 
         if (row == null)
@@ -55,6 +56,7 @@ public sealed class CreatePlanningEpicPlacementCommandHandler : ICommandHandler<
 
         // Verify the epic exists
         var epic = await _dbContext.WorkItems
+            .OrderBy(w => w.TfsId)
             .FirstOrDefaultAsync(w => w.TfsId == command.EpicId, cancellationToken);
 
         if (epic == null)
@@ -77,6 +79,7 @@ public sealed class CreatePlanningEpicPlacementCommandHandler : ICommandHandler<
 
         // Check if epic is already placed
         var existingPlacement = await _dbContext.PlanningEpicPlacements
+            .OrderBy(p => p.Id)
             .FirstOrDefaultAsync(p => p.EpicId == command.EpicId, cancellationToken);
 
         if (existingPlacement != null)
@@ -134,6 +137,7 @@ public sealed class CreatePlanningEpicPlacementCommandHandler : ICommandHandler<
         // Check if parent is a backlog root
         var product = await _dbContext.ProductBacklogRoots
             .Where(r => r.WorkItemTfsId == parentId.Value)
+            .OrderBy(r => r.ProductId)
             .Select(r => r.ProductId)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -144,6 +148,7 @@ public sealed class CreatePlanningEpicPlacementCommandHandler : ICommandHandler<
 
         // Check parent's parent
         var parentWorkItem = await _dbContext.WorkItems
+            .OrderBy(w => w.TfsId)
             .FirstOrDefaultAsync(w => w.TfsId == parentId.Value, cancellationToken);
 
         if (parentWorkItem?.ParentTfsId.HasValue == true)

@@ -49,6 +49,7 @@ public sealed class DataSourceModeProvider : IDataSourceModeProvider
         // Check if there's a cache state for this product owner with a successful sync
         var cacheState = await _dbContext.ProductOwnerCacheStates
             .AsNoTracking()
+            .OrderBy(cs => cs.Id)
             .FirstOrDefaultAsync(cs => cs.ProductOwnerId == productOwnerId, cancellationToken);
 
         if (cacheState == null)
@@ -84,6 +85,7 @@ public sealed class DataSourceModeProvider : IDataSourceModeProvider
         if (mode == DataSourceMode.Cache)
         {
             var cacheState = await _dbContext.ProductOwnerCacheStates
+                .OrderBy(cs => cs.Id)
                 .FirstOrDefaultAsync(cs => cs.ProductOwnerId == productOwnerId, cancellationToken);
 
             if (cacheState == null || !cacheState.LastSuccessfulSync.HasValue)

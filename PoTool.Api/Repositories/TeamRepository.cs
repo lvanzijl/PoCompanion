@@ -39,6 +39,7 @@ public class TeamRepository : ITeamRepository
     public async Task<TeamDto?> GetTeamByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var entity = await _context.Teams
+            .OrderBy(t => t.Id)
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
 
         return entity == null ? null : MapToDto(entity);
@@ -95,6 +96,7 @@ public class TeamRepository : ITeamRepository
         CancellationToken cancellationToken = default)
     {
         var entity = await _context.Teams
+            .OrderBy(t => t.Id)
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
 
         if (entity == null)
@@ -129,6 +131,7 @@ public class TeamRepository : ITeamRepository
     public async Task<TeamDto> ArchiveTeamAsync(int id, bool isArchived, CancellationToken cancellationToken = default)
     {
         var entity = await _context.Teams
+            .OrderBy(t => t.Id)
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
 
         if (entity == null)
@@ -149,6 +152,7 @@ public class TeamRepository : ITeamRepository
     public async Task<bool> DeleteTeamAsync(int id, CancellationToken cancellationToken = default)
     {
         var entity = await _context.Teams
+            .OrderBy(t => t.Id)
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
 
         if (entity == null)

@@ -151,6 +151,7 @@ public class WorkItemResolutionService
 
         // Update cache state
         var cacheState = await context.ProductOwnerCacheStates
+            .OrderBy(state => state.Id)
             .FirstOrDefaultAsync(state => state.ProductOwnerId == productOwnerId, cancellationToken);
 
         if (cacheState == null)

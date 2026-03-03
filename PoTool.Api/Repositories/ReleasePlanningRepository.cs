@@ -71,6 +71,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
     public async Task<LaneDto?> GetLaneByObjectiveIdAsync(int objectiveId, CancellationToken cancellationToken = default)
     {
         var lane = await _context.Lanes
+            .OrderBy(l => l.Id)
             .FirstOrDefaultAsync(l => l.ObjectiveId == objectiveId, cancellationToken);
 
         if (lane == null) return null;
@@ -149,6 +150,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
     public async Task<EpicPlacementDto?> GetPlacementByEpicIdAsync(int epicId, CancellationToken cancellationToken = default)
     {
         var placement = await _context.EpicPlacements
+            .OrderBy(p => p.Id)
             .FirstOrDefaultAsync(p => p.EpicId == epicId, cancellationToken);
 
         if (placement == null) return null;
@@ -407,6 +409,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
     public async Task<ValidationIndicator> GetCachedValidationAsync(int epicId, CancellationToken cancellationToken = default)
     {
         var cached = await _context.CachedValidationResults
+            .OrderBy(c => c.Id)
             .FirstOrDefaultAsync(c => c.EpicId == epicId, cancellationToken);
 
         return cached != null ? (ValidationIndicator)cached.Indicator : ValidationIndicator.None;
@@ -415,6 +418,7 @@ public class ReleasePlanningRepository : IReleasePlanningRepository
     public async Task UpdateCachedValidationAsync(int epicId, ValidationIndicator indicator, CancellationToken cancellationToken = default)
     {
         var cached = await _context.CachedValidationResults
+            .OrderBy(c => c.Id)
             .FirstOrDefaultAsync(c => c.EpicId == epicId, cancellationToken);
 
         if (cached == null)

@@ -37,6 +37,7 @@ public class WorkItemRelationshipSnapshotService
         var profile = await context.Profiles
             .Include(p => p.Products)
                 .ThenInclude(p => p.BacklogRoots)
+            .OrderBy(p => p.Id)
             .FirstOrDefaultAsync(p => p.Id == productOwnerId, cancellationToken);
 
         if (profile == null)
@@ -78,6 +79,7 @@ public class WorkItemRelationshipSnapshotService
         }
 
         var cacheState = await context.ProductOwnerCacheStates
+            .OrderBy(e => e.Id)
             .FirstOrDefaultAsync(e => e.ProductOwnerId == productOwnerId, cancellationToken);
 
         if (cacheState == null)

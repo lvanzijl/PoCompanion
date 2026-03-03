@@ -89,6 +89,7 @@ public sealed class CachedPullRequestReadProvider : IPullRequestReadProvider
 
         var entity = await _dbContext.PullRequests
             .AsNoTracking()
+            .OrderBy(pr => pr.Id)
             .FirstOrDefaultAsync(pr => pr.Id == pullRequestId, cancellationToken);
 
         return entity != null ? MapToDto(entity) : null;

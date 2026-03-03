@@ -65,6 +65,7 @@ public class SprintTrendProjectionSyncStage : ISyncStage
                 cancellationToken);
 
             var cacheState = await _context.ProductOwnerCacheStates
+                .OrderBy(state => state.Id)
                 .FirstOrDefaultAsync(state => state.ProductOwnerId == context.ProductOwnerId, cancellationToken);
             var now = DateTimeOffset.UtcNow;
             if (cacheState != null)

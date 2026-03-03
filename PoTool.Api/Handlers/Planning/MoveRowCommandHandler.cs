@@ -31,6 +31,7 @@ public sealed class MoveRowCommandHandler : ICommandHandler<MoveRowCommand, RowO
 
         // Get the row to move
         var rowToMove = await _dbContext.BoardRows
+            .OrderBy(r => r.Id)
             .FirstOrDefaultAsync(r => r.Id == command.RowId, cancellationToken);
 
         if (rowToMove == null)
@@ -44,6 +45,7 @@ public sealed class MoveRowCommandHandler : ICommandHandler<MoveRowCommand, RowO
 
         // Get the target row
         var targetRow = await _dbContext.BoardRows
+            .OrderBy(r => r.Id)
             .FirstOrDefaultAsync(r => r.Id == command.TargetRowId, cancellationToken);
 
         if (targetRow == null)

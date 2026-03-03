@@ -96,6 +96,7 @@ public class RepositoryRepository : IRepositoryConfigRepository
     public async Task DeleteRepositoryAsync(int repositoryId, CancellationToken cancellationToken = default)
     {
         var entity = await _context.Repositories
+            .OrderBy(r => r.Id)
             .FirstOrDefaultAsync(r => r.Id == repositoryId, cancellationToken);
 
         if (entity == null)

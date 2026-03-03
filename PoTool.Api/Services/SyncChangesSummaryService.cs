@@ -45,6 +45,7 @@ public sealed class SyncChangesSummaryService
     {
         var cacheState = await _context.ProductOwnerCacheStates
             .AsNoTracking()
+            .OrderBy(e => e.Id)
             .FirstOrDefaultAsync(e => e.ProductOwnerId == productOwnerId, cancellationToken);
 
         var sinceTime = cacheState?.PreviousSuccessfulSync;

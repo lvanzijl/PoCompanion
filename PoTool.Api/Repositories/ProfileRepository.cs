@@ -32,6 +32,7 @@ public class ProfileRepository : IProfileRepository
     public async Task<ProfileDto?> GetProfileByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var entity = await _context.Profiles
+            .OrderBy(p => p.Id)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
         return entity == null ? null : MapToDto(entity);
@@ -74,6 +75,7 @@ public class ProfileRepository : IProfileRepository
         CancellationToken cancellationToken = default)
     {
         var entity = await _context.Profiles
+            .OrderBy(p => p.Id)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
         if (entity == null)
@@ -108,6 +110,7 @@ public class ProfileRepository : IProfileRepository
     public async Task<bool> DeleteProfileAsync(int id, CancellationToken cancellationToken = default)
     {
         var entity = await _context.Profiles
+            .OrderBy(p => p.Id)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
         if (entity == null)
