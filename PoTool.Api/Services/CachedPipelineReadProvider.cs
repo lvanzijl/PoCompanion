@@ -93,7 +93,7 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
         var runs = await _dbContext.CachedPipelineRuns
             .AsNoTracking()
             .Where(r => r.PipelineDefinitionId == definition.Id)
-            .OrderByDescending(r => r.CreatedDate)
+            .OrderByDescending(r => r.CreatedDateUtc)
             .Take(top)
             .ToListAsync(cancellationToken);
 
@@ -110,7 +110,7 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
         var runs = await _dbContext.CachedPipelineRuns
             .AsNoTracking()
             .Include(r => r.PipelineDefinition)
-            .OrderByDescending(r => r.CreatedDate)
+            .OrderByDescending(r => r.CreatedDateUtc)
             .ToListAsync(cancellationToken);
 
         return runs.Select(r => MapRunToDto(r, r.PipelineDefinition.Name));
@@ -158,11 +158,12 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
         // Apply time filter
         if (minStartTime.HasValue)
         {
-            query = query.Where(r => r.CreatedDate >= minStartTime.Value);
+            var minStartTimeUtc = minStartTime.Value.UtcDateTime;
+            query = query.Where(r => r.CreatedDateUtc >= minStartTimeUtc);
         }
 
         var runs = await query
-            .OrderByDescending(r => r.CreatedDate)
+            .OrderByDescending(r => r.CreatedDateUtc)
             .Take(top)
             .ToListAsync(cancellationToken);
 

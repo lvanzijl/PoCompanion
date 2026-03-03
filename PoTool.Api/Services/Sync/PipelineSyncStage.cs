@@ -192,6 +192,7 @@ public class PipelineSyncStage : ISyncStage
         entity.State = dto.FinishTime.HasValue ? "completed" : "running";
         entity.Result = dto.Result.ToString();
         entity.CreatedDate = dto.StartTime;
+        entity.CreatedDateUtc = dto.StartTime?.UtcDateTime;
         entity.FinishedDate = dto.FinishTime;
         entity.FinishedDateUtc = dto.FinishTime?.UtcDateTime;
         entity.SourceBranch = dto.Branch;
@@ -209,6 +210,7 @@ public class PipelineSyncStage : ISyncStage
             State = dto.FinishTime.HasValue ? "completed" : "running",
             Result = dto.Result.ToString(),
             CreatedDate = dto.StartTime,
+            CreatedDateUtc = dto.StartTime?.UtcDateTime,
             FinishedDate = dto.FinishTime,
             FinishedDateUtc = dto.FinishTime?.UtcDateTime,
             SourceBranch = dto.Branch,

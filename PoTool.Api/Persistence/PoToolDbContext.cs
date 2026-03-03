@@ -514,6 +514,7 @@ public class PoToolDbContext : DbContext
             entity.HasIndex(e => new { e.ProductOwnerId, e.PipelineDefinitionId, e.TfsRunId })
                 .IsUnique();
 
+            entity.HasIndex(e => e.CreatedDateUtc);
             entity.HasIndex(e => e.FinishedDateUtc);
 
             entity.Property(e => e.RunName).HasMaxLength(200);
@@ -590,8 +591,6 @@ public class PoToolDbContext : DbContext
             entity.Property(e => e.IterationPath).HasMaxLength(500);
         });
 
-        ValidateSqliteDateTimeOffsetGuardrail(modelBuilder.Model);
-
         // Sprint metrics projections
         modelBuilder.Entity<SprintMetricsProjectionEntity>(entity =>
         {
@@ -611,6 +610,8 @@ public class PoToolDbContext : DbContext
                 .HasForeignKey(e => e.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        ValidateSqliteDateTimeOffsetGuardrail(modelBuilder.Model);
     }
 
     private void ValidateSqliteDateTimeOffsetGuardrail(Microsoft.EntityFrameworkCore.Metadata.IMutableModel model)

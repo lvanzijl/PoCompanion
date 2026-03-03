@@ -32,8 +32,9 @@ public sealed class WorkItemBackfillStartProvider : IBackfillStartProvider
 
         var earliest = await context.WorkItems
             .Where(w => workItemIds.Contains(w.TfsId) && w.CreatedDate != null)
-            .MinAsync(w => w.CreatedDate, cancellationToken);
+            .Select(w => w.CreatedDate)
+            .ToListAsync(cancellationToken);
 
-        return earliest;
+        return earliest.Count > 0 ? earliest.Min() : null;
     }
 }
