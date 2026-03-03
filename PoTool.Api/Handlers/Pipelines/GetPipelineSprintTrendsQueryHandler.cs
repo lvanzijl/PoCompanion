@@ -10,8 +10,9 @@ namespace PoTool.Api.Handlers.Pipelines;
 /// <summary>
 /// Handler for GetPipelineSprintTrendsQuery.
 /// Aggregates pipeline run metrics per sprint by mapping each run's FinishedDate
-/// to the sprint whose [StartDateUtc, EndDateUtc] boundary it falls within.
-/// Sprint mapping rule: run belongs to sprint S when S.StartDateUtc &lt;= run.FinishedDateUtc &lt; S.EndDateUtc.
+/// to the sprint whose [StartDateUtc, EndDateUtc) boundary it falls within.
+/// Sprint mapping rule: run belongs to sprint S when StartDateUtc is less-than-or-equal-to
+/// run.FinishedDateUtc and run.FinishedDateUtc is less-than S.EndDateUtc.
 /// </summary>
 public sealed class GetPipelineSprintTrendsQueryHandler
     : IQueryHandler<GetPipelineSprintTrendsQuery, GetPipelineSprintTrendsResponse>
@@ -142,8 +143,9 @@ public sealed class GetPipelineSprintTrendsQueryHandler
             return ComputeSprintMetrics(slot.Sprint.Id, slot.Sprint.Name, slot.Sprint.StartUtc, slot.Sprint.EndUtc, sprintRuns);
         }).ToList();
 
-        var totalRuns = runs.Count + unmappedCount;
-        var coveragePercent = totalRuns > 0 ? (double)(runs.Count) / totalRuns * 100 : 100.0;
+        var totalRuns = runs.Count;
+        var mappedRuns = totalRuns - unmappedCount;
+        var coveragePercent = totalRuns > 0 ? (double)mappedRuns / totalRuns * 100 : 100.0;
 
         return new GetPipelineSprintTrendsResponse
         {

@@ -203,15 +203,12 @@
         }
         else
         {
-            @* Sprint coverage diagnostics *@
-            @if (_sprintTrendsResponse != null && _sprintTrendsResponse.Success)
+            @* Sprint coverage diagnostics (only shown when there are unmapped runs) *@
+            @if (_sprintTrendsResponse != null && _sprintTrendsResponse.Success && _sprintTrendsResponse.UnmappedRunCount > 0)
             {
-                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
                     Sprint coverage: @_sprintTrendsResponse.SprintCoveragePercent.ToString("F0")% of runs mapped
-                    @if (_sprintTrendsResponse.UnmappedRunCount > 0)
-                    {
-                        <span> · @_sprintTrendsResponse.UnmappedRunCount unmapped run(s)</span>
-                    }
+                    · @_sprintTrendsResponse.UnmappedRunCount unmapped run(s) (finished outside sprint boundaries)
                 </MudAlert>
             }
 
