@@ -59,13 +59,17 @@ public sealed class GetPipelineSprintTrendsQueryHandler
             };
         }
 
-        // 2. Determine allowed pipeline definition IDs (filtered by product if requested)
+        // 2. Determine allowed pipeline definition IDs (filtered by product or team if requested)
+        // Priority: explicit ProductIds > TeamId via ProductTeamLinks > all
+        // NOTE: allowedPipelineDefIds contains PipelineDefinitionEntity.Id (DB primary key),
+        // which matches CachedPipelineRunEntity.PipelineDefinitionId (FK to PipelineDefinitionEntity.Id).
         List<int> allowedPipelineDefIds;
         if (query.ProductIds != null && query.ProductIds.Count > 0)
         {
+            // Explicit product filter
             allowedPipelineDefIds = await _context.PipelineDefinitions
                 .Where(d => query.ProductIds.Contains(d.ProductId))
-                .Select(d => d.PipelineDefinitionId)
+                .Select(d => d.Id)
                 .Distinct()
                 .ToListAsync(cancellationToken);
 
@@ -84,10 +88,57 @@ public sealed class GetPipelineSprintTrendsQueryHandler
                 };
             }
         }
+        else if (query.TeamId.HasValue)
+        {
+            // Team filter: resolve team → products via ProductTeamLinks, then to pipeline defs
+            var productIdsForTeam = await _context.ProductTeamLinks
+                .Where(l => l.TeamId == query.TeamId.Value)
+                .Select(l => l.ProductId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            if (productIdsForTeam.Count == 0)
+            {
+                _logger.LogDebug("No products linked to team {TeamId}; returning empty sprint metrics", query.TeamId.Value);
+                return new GetPipelineSprintTrendsResponse
+                {
+                    Success = true,
+                    Sprints = sprints.Select(s => new PipelineSprintMetricsDto
+                    {
+                        SprintId = s.Id,
+                        SprintName = s.Name,
+                        StartUtc = s.StartUtc,
+                        EndUtc = s.EndUtc
+                    }).ToList()
+                };
+            }
+
+            allowedPipelineDefIds = await _context.PipelineDefinitions
+                .Where(d => productIdsForTeam.Contains(d.ProductId))
+                .Select(d => d.Id)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            if (allowedPipelineDefIds.Count == 0)
+            {
+                _logger.LogDebug("No pipeline definitions found for products linked to team {TeamId}", query.TeamId.Value);
+                return new GetPipelineSprintTrendsResponse
+                {
+                    Success = true,
+                    Sprints = sprints.Select(s => new PipelineSprintMetricsDto
+                    {
+                        SprintId = s.Id,
+                        SprintName = s.Name,
+                        StartUtc = s.StartUtc,
+                        EndUtc = s.EndUtc
+                    }).ToList()
+                };
+            }
+        }
         else
         {
             allowedPipelineDefIds = await _context.PipelineDefinitions
-                .Select(d => d.PipelineDefinitionId)
+                .Select(d => d.Id)
                 .Distinct()
                 .ToListAsync(cancellationToken);
         }

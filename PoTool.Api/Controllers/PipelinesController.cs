@@ -135,6 +135,7 @@ public class PipelinesController : ControllerBase
         [FromQuery] int productOwnerId,
         [FromQuery] List<int>? sprintIds = null,
         [FromQuery] string? productIds = null,
+        [FromQuery] int? teamId = null,
         CancellationToken cancellationToken = default)
     {
         try
@@ -151,7 +152,7 @@ public class PipelinesController : ControllerBase
             }
 
             var result = await _mediator.Send(
-                new GetPipelineSprintTrendsQuery(productOwnerId, sprintIdList, productIdsList),
+                new GetPipelineSprintTrendsQuery(productOwnerId, sprintIdList, productIdsList, teamId),
                 cancellationToken);
             return Ok(result);
         }

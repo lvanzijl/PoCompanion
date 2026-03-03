@@ -528,7 +528,8 @@
             _sprintTrendsResponse = await PipelineSprintTrendsService.GetSprintTrendsAsync(
                 _profileId.Value,
                 sprintIds,
-                productFilter);
+                productFilter,
+                teamId: productFilter == null ? _selectedTeamId : null);
 
             if (_sprintTrendsResponse?.Success == true)
             {
