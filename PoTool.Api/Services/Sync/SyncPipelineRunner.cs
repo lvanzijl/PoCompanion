@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
+using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
 
@@ -83,7 +84,8 @@ public class SyncPipelineRunner : ISyncPipeline
             };
 
             // Load context data
-            var syncContext = await BuildSyncContextAsync(productOwnerId, context, cacheStateRepo, cts.Token);
+            var tfsClient = scope.ServiceProvider.GetRequiredService<ITfsClient>();
+            var syncContext = await BuildSyncContextAsync(productOwnerId, context, cacheStateRepo, tfsClient, cts.Token);
 
             LogEffectiveScope(syncContext);
 
@@ -471,6 +473,7 @@ public class SyncPipelineRunner : ISyncPipeline
         int productOwnerId,
         PoToolDbContext context,
         ICacheStateRepository cacheStateRepo,
+        ITfsClient tfsClient,
         CancellationToken cancellationToken)
     {
         // Get products for this ProductOwner
@@ -485,16 +488,24 @@ public class SyncPipelineRunner : ISyncPipeline
 
         // Get repositories for these products
         var productIds = products.Select(p => p.Id).ToList();
-        var repositories = await context.Repositories
+        var repositoryEntities = await context.Repositories
             .Where(r => productIds.Contains(r.ProductId))
-            .Select(r => r.Name)
             .ToListAsync(cancellationToken);
+
+        var repositories = repositoryEntities.Select(r => r.Name).ToList();
 
         // Get pipeline definitions for these products
         var pipelineDefinitionIds = await context.PipelineDefinitions
             .Where(pd => productIds.Contains(pd.ProductId))
             .Select(pd => pd.PipelineDefinitionId)
             .ToListAsync(cancellationToken);
+
+        // Auto-discover YAML pipeline definitions from configured repos
+        if (repositoryEntities.Count > 0)
+        {
+            await DiscoverAndUpsertPipelineDefinitionsAsync(
+                repositoryEntities, pipelineDefinitionIds, context, tfsClient, cancellationToken);
+        }
 
         // Get current watermarks
         var watermarks = await cacheStateRepo.GetWatermarksAsync(productOwnerId, cancellationToken);
@@ -509,6 +520,80 @@ public class SyncPipelineRunner : ISyncPipeline
             RepositoryNames = repositories.ToArray(),
             PipelineDefinitionIds = pipelineDefinitionIds.ToArray()
         };
+    }
+
+    /// <summary>
+    /// Discovers YAML pipeline definitions for configured repositories from TFS and upserts them
+    /// into the local PipelineDefinitions table. Appends newly discovered definition IDs to
+    /// <paramref name="pipelineDefinitionIds"/> so the pipeline sync stage picks them up.
+    /// Errors are swallowed and logged as warnings so a TFS outage does not block context building.
+    /// </summary>
+    private async Task DiscoverAndUpsertPipelineDefinitionsAsync(
+        List<RepositoryEntity> repositoryEntities,
+        List<int> pipelineDefinitionIds,
+        PoToolDbContext context,
+        ITfsClient tfsClient,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Pre-load all existing pipeline definitions for these products to avoid N+1 queries
+            var allProductIds = repositoryEntities.Select(r => r.ProductId).Distinct().ToList();
+            var existingDefs = await context.PipelineDefinitions
+                .Where(pd => allProductIds.Contains(pd.ProductId))
+                .ToListAsync(cancellationToken);
+            var existingByKey = existingDefs.ToDictionary(pd => (pd.ProductId, pd.PipelineDefinitionId));
+
+            foreach (var repo in repositoryEntities)
+            {
+                var discovered = await tfsClient.GetPipelineDefinitionsForRepositoryAsync(
+                    repo.Name, cancellationToken);
+
+                foreach (var def in discovered)
+                {
+                    var key = (repo.ProductId, def.PipelineDefinitionId);
+                    if (existingByKey.TryGetValue(key, out var existing))
+                    {
+                        existing.Name = def.Name;
+                        existing.YamlPath = def.YamlPath;
+                        existing.Url = def.Url;
+                        existing.LastSyncedUtc = def.LastSyncedUtc;
+                    }
+                    else
+                    {
+                        var entity = new PipelineDefinitionEntity
+                        {
+                            PipelineDefinitionId = def.PipelineDefinitionId,
+                            ProductId = repo.ProductId,
+                            RepositoryId = repo.Id,
+                            RepoId = def.RepoId,
+                            RepoName = def.RepoName,
+                            Name = def.Name,
+                            YamlPath = def.YamlPath,
+                            Folder = def.Folder,
+                            Url = def.Url,
+                            LastSyncedUtc = def.LastSyncedUtc
+                        };
+                        context.PipelineDefinitions.Add(entity);
+                        existingByKey[key] = entity;
+                    }
+
+                    if (!pipelineDefinitionIds.Contains(def.PipelineDefinitionId))
+                    {
+                        pipelineDefinitionIds.Add(def.PipelineDefinitionId);
+                    }
+                }
+
+                // Save per-repo for better error granularity and to avoid large single transactions
+                await context.SaveChangesAsync(cancellationToken);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex,
+                "PIPELINE_DEF_DISCOVERY_ERROR: Failed to discover/upsert pipeline definitions from TFS; " +
+                "sync will proceed with DB-configured definitions only");
+        }
     }
 
     /// <summary>

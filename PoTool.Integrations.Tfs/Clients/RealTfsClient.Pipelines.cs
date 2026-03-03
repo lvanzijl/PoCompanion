@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using PoTool.Core.Contracts;
 using PoTool.Core.Pipelines;
 using PoTool.Shared.Pipelines;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Integrations.Tfs.Clients;
 
@@ -608,6 +609,41 @@ public partial class RealTfsClient
     // ============================================
 
     /// <summary>
+    /// Resolves a repository name to its TFS ID and default branch in a single API call.
+    /// Returns null if the repository is not found or the response cannot be parsed.
+    /// </summary>
+    private async Task<(string Id, string? DefaultBranch)?> ResolveRepoIdAndDefaultBranchAsync(
+        TfsConfigEntity config,
+        HttpClient httpClient,
+        string repositoryName,
+        CancellationToken cancellationToken)
+    {
+        var encodedName = Uri.EscapeDataString(repositoryName);
+        var repoUrl = ProjectUrl(config, $"_apis/git/repositories/{encodedName}");
+        var response = await SendGetAsync(httpClient, config, repoUrl, cancellationToken, handleErrors: false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Failed to resolve repository '{RepoName}': {Status}", repositoryName, response.StatusCode);
+            return null;
+        }
+
+        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+        var id = doc.RootElement.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
+        var defaultBranch = doc.RootElement.TryGetProperty("defaultBranch", out var defaultBranchEl) ? defaultBranchEl.GetString() : null;
+
+        if (string.IsNullOrEmpty(id))
+        {
+            _logger.LogWarning("Repository '{RepoName}' resolved but has no ID", repositoryName);
+            return null;
+        }
+
+        return (id, defaultBranch);
+    }
+
+    /// <summary>
     /// Retrieves repository IDs for multiple repository names in a single API call.
     /// Prevents N+1 pattern when syncing pipeline definitions for multiple repositories.
     /// </summary>
@@ -690,13 +726,14 @@ public partial class RealTfsClient
         {
             var definitions = new List<PipelineDefinitionDto>();
 
-            // Step 1: Get repository ID
-            var repoId = await GetRepositoryIdByNameAsync(repositoryName, cancellationToken);
-            if (string.IsNullOrEmpty(repoId))
+            // Step 1: Resolve repository ID and default branch
+            var repoDetails = await ResolveRepoIdAndDefaultBranchAsync(config, httpClient, repositoryName, cancellationToken);
+            if (repoDetails == null)
             {
-                _logger.LogWarning("Cannot fetch pipeline definitions for repository '{RepoName}' - repository ID not found", repositoryName);
+                _logger.LogWarning("Cannot fetch pipeline definitions for repository '{RepoName}' - repository not found", repositoryName);
                 return definitions;
             }
+            var (repoId, repoDefaultBranch) = repoDetails.Value;
 
             // Step 2: Get all build definitions with full properties
             // GET {ServerUri}/{Project}/_apis/build/definitions?api-version=7.0&includeAllProperties=true
@@ -705,7 +742,9 @@ public partial class RealTfsClient
 
             var syncTime = DateTimeOffset.UtcNow;
             int processedCount = 0;
-            int filteredCount = 0;
+            int candidatesFromRepo = 0;
+            int filteredNotYaml = 0;
+            int filteredWrongBranch = 0;
             string? continuationToken = null;
             var pageUrl = url;
 
@@ -766,24 +805,43 @@ public partial class RealTfsClient
                         continue;
                     }
 
-                    filteredCount++;
+                    candidatesFromRepo++;
+
+                    // Filter: YAML only — process.type must be 2
+                    if (!def.TryGetProperty("process", out var process) ||
+                        !process.TryGetProperty("type", out var typeEl) ||
+                        typeEl.GetInt32() != 2)
+                    {
+                        filteredNotYaml++;
+                        continue;
+                    }
+
+                    // Filter: default branch only — skip pipelines targeting a non-default branch
+                    if (!string.IsNullOrEmpty(repoDefaultBranch))
+                    {
+                        var defDefaultBranch = def.TryGetProperty("defaultBranch", out var dbEl) ? dbEl.GetString() : null;
+                        if (defDefaultBranch != null &&
+                            !string.Equals(defDefaultBranch, repoDefaultBranch, StringComparison.OrdinalIgnoreCase))
+                        {
+                            filteredWrongBranch++;
+                            continue;
+                        }
+                    }
 
                     // Extract definition properties
                     var pipelineId = def.GetProperty("id").GetInt32();
                     var name = def.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
                     
                     // Extract YAML path from process.yamlFilename
+                    // process was already extracted during the YAML type filter above
                     string? yamlPath = null;
-                    if (def.TryGetProperty("process", out var process))
+                    if (process.TryGetProperty("yamlFilename", out var yamlFileElement))
                     {
-                        if (process.TryGetProperty("yamlFilename", out var yamlFileElement))
+                        var rawPath = yamlFileElement.GetString();
+                        if (!string.IsNullOrEmpty(rawPath))
                         {
-                            var rawPath = yamlFileElement.GetString();
-                            if (!string.IsNullOrEmpty(rawPath))
-                            {
-                                // Normalize: ensure leading /
-                                yamlPath = rawPath.StartsWith("/") ? rawPath : $"/{rawPath}";
-                            }
+                            // Normalize: ensure leading /
+                            yamlPath = rawPath.StartsWith("/") ? rawPath : $"/{rawPath}";
                         }
                     }
 
@@ -827,8 +885,10 @@ public partial class RealTfsClient
             } while (!string.IsNullOrWhiteSpace(continuationToken));
 
             _logger.LogInformation(
-                "Retrieved {Count} pipeline definitions for repository '{RepoName}' (processed {Processed}, filtered {Filtered})",
-                definitions.Count, repositoryName, processedCount, filteredCount);
+                "PIPELINE_DEF_DISCOVERY: repo={RepoName}, repoId={RepoId}, defaultBranch={DefaultBranch}, " +
+                "candidates={CandidateCount}, kept={KeptCount}, filteredNotYaml={FilteredNotYaml}, filteredWrongBranch={FilteredWrongBranch}",
+                repositoryName, repoId, repoDefaultBranch ?? "unknown",
+                candidatesFromRepo, definitions.Count, filteredNotYaml, filteredWrongBranch);
 
             return (IEnumerable<PipelineDefinitionDto>)definitions;
         }, cancellationToken);
