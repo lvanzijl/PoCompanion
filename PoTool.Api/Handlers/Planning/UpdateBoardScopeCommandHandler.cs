@@ -33,6 +33,7 @@ public sealed class UpdateBoardScopeCommandHandler : ICommandHandler<UpdateBoard
             command.ProductOwnerId, command.Scope);
 
         var settings = await _dbContext.PlanningBoardSettings
+            .OrderBy(s => s.Id)
             .FirstOrDefaultAsync(s => s.ProductOwnerId == command.ProductOwnerId, cancellationToken);
 
         if (settings == null)

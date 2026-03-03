@@ -31,6 +31,7 @@ public sealed class UpdateEffortEstimationSettingsCommandHandler
         _logger.LogInformation("Updating effort estimation settings");
 
         var entity = await _dbContext.EffortEstimationSettings
+            .OrderBy(e => e.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (entity == null)

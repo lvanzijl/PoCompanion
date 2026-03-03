@@ -50,6 +50,7 @@ public sealed class UpdateMarkerRowCommandHandler : ICommandHandler<UpdateMarker
         }
 
         var row = await _dbContext.BoardRows
+            .OrderBy(r => r.Id)
             .FirstOrDefaultAsync(r => r.Id == command.RowId, cancellationToken);
 
         if (row == null)

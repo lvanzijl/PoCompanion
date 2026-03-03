@@ -36,6 +36,7 @@ public sealed class CreateMarkerRowCommandHandler : ICommandHandler<CreateMarker
         if (command.InsertBeforeRowId.HasValue)
         {
             var referenceRow = await _dbContext.BoardRows
+                .OrderBy(r => r.Id)
                 .FirstOrDefaultAsync(r => r.Id == command.InsertBeforeRowId.Value, cancellationToken);
 
             if (referenceRow == null)

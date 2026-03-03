@@ -36,6 +36,7 @@ public sealed class ActivityEventIngestionService
         CancellationToken cancellationToken = default)
     {
         var cacheState = await _context.ProductOwnerCacheStates
+            .OrderBy(x => x.Id)
             .FirstOrDefaultAsync(x => x.ProductOwnerId == productOwnerId, cancellationToken);
 
         if (cacheState == null)

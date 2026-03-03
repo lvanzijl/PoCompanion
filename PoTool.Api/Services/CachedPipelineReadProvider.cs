@@ -54,6 +54,7 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
 
         var definition = await _dbContext.PipelineDefinitions
             .AsNoTracking()
+            .OrderBy(d => d.PipelineDefinitionId)
             .FirstOrDefaultAsync(d => d.PipelineDefinitionId == pipelineId, cancellationToken);
 
         if (definition == null)
@@ -80,6 +81,7 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
         // Get the internal definition ID first
         var definition = await _dbContext.PipelineDefinitions
             .AsNoTracking()
+            .OrderBy(d => d.PipelineDefinitionId)
             .FirstOrDefaultAsync(d => d.PipelineDefinitionId == pipelineId, cancellationToken);
 
         if (definition == null)

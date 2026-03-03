@@ -31,6 +31,7 @@ public sealed class DeleteBoardRowCommandHandler : ICommandHandler<DeleteBoardRo
 
         var row = await _dbContext.BoardRows
             .Include(r => r.Placements)
+            .OrderBy(r => r.Id)
             .FirstOrDefaultAsync(r => r.Id == command.RowId, cancellationToken);
 
         if (row == null)

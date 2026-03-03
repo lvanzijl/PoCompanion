@@ -23,6 +23,7 @@ public class CacheStateRepository : ICacheStateRepository
     public async Task<CacheStateDto> GetOrCreateCacheStateAsync(int productOwnerId, CancellationToken cancellationToken = default)
     {
         var entity = await _context.ProductOwnerCacheStates
+            .OrderBy(e => e.Id)
             .FirstOrDefaultAsync(e => e.ProductOwnerId == productOwnerId, cancellationToken);
 
         if (entity == null)
@@ -46,6 +47,7 @@ public class CacheStateRepository : ICacheStateRepository
     public async Task<CacheStateDto?> GetCacheStateAsync(int productOwnerId, CancellationToken cancellationToken = default)
     {
         var entity = await _context.ProductOwnerCacheStates
+            .OrderBy(e => e.Id)
             .FirstOrDefaultAsync(e => e.ProductOwnerId == productOwnerId, cancellationToken);
 
         return entity == null ? null : MapToDto(entity);
@@ -292,6 +294,7 @@ public class CacheStateRepository : ICacheStateRepository
         CancellationToken cancellationToken = default)
     {
         var entity = await _context.ProductOwnerCacheStates
+            .OrderBy(e => e.Id)
             .FirstOrDefaultAsync(e => e.ProductOwnerId == productOwnerId, cancellationToken);
 
         if (entity == null)
@@ -305,6 +308,7 @@ public class CacheStateRepository : ICacheStateRepository
     private async Task<ProductOwnerCacheStateEntity> GetOrCreateEntityAsync(int productOwnerId, CancellationToken cancellationToken)
     {
         var entity = await _context.ProductOwnerCacheStates
+            .OrderBy(e => e.Id)
             .FirstOrDefaultAsync(e => e.ProductOwnerId == productOwnerId, cancellationToken);
 
         if (entity == null)

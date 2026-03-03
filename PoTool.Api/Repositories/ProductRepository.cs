@@ -39,6 +39,7 @@ public class ProductRepository : IProductRepository
             .Include(p => p.ProductTeamLinks)
             .Include(p => p.Repositories)
             .Include(p => p.BacklogRoots)
+            .OrderBy(p => p.Id)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
         return entity == null ? null : MapToDto(entity);
@@ -108,6 +109,7 @@ public class ProductRepository : IProductRepository
             .Include(p => p.ProductTeamLinks)
             .Include(p => p.Repositories)
             .Include(p => p.BacklogRoots)
+            .OrderBy(p => p.Id)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
         if (entity == null)
@@ -152,6 +154,7 @@ public class ProductRepository : IProductRepository
     public async Task<bool> DeleteProductAsync(int id, CancellationToken cancellationToken = default)
     {
         var entity = await _context.Products
+            .OrderBy(p => p.Id)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
         if (entity == null)
@@ -195,6 +198,8 @@ public class ProductRepository : IProductRepository
     {
         // Check if already linked
         var existingLink = await _context.ProductTeamLinks
+            .OrderBy(l => l.ProductId)
+            .ThenBy(l => l.TeamId)
             .FirstOrDefaultAsync(l => l.ProductId == productId && l.TeamId == teamId, cancellationToken);
 
         if (existingLink != null)
@@ -218,6 +223,8 @@ public class ProductRepository : IProductRepository
     public async Task<bool> UnlinkTeamAsync(int productId, int teamId, CancellationToken cancellationToken = default)
     {
         var link = await _context.ProductTeamLinks
+            .OrderBy(l => l.ProductId)
+            .ThenBy(l => l.TeamId)
             .FirstOrDefaultAsync(l => l.ProductId == productId && l.TeamId == teamId, cancellationToken);
 
         if (link == null)
@@ -238,6 +245,7 @@ public class ProductRepository : IProductRepository
             .Include(p => p.ProductTeamLinks)
             .Include(p => p.Repositories)
             .Include(p => p.BacklogRoots)
+            .OrderBy(p => p.Id)
             .FirstOrDefaultAsync(p => p.Id == productId, cancellationToken);
 
         if (entity == null)

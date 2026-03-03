@@ -107,6 +107,7 @@ public class PullRequestRepository : IPullRequestRepository, IDisposable
         {
             var entity = await _context.PullRequests
                 .AsNoTracking()
+                .OrderBy(pr => pr.Id)
                 .FirstOrDefaultAsync(pr => pr.Id == pullRequestId, cancellationToken);
 
             return entity != null ? MapToDto(entity) : null;
@@ -161,6 +162,7 @@ public class PullRequestRepository : IPullRequestRepository, IDisposable
             foreach (var iteration in iterationsList)
             {
                 var existing = await _context.PullRequestIterations
+                    .OrderBy(i => i.Id)
                     .FirstOrDefaultAsync(
                         i => i.PullRequestId == iteration.PullRequestId &&
                              i.IterationNumber == iteration.IterationNumber,

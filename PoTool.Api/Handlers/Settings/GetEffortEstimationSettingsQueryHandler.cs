@@ -31,6 +31,7 @@ public sealed class GetEffortEstimationSettingsQueryHandler
         _logger.LogDebug("Handling GetEffortEstimationSettingsQuery");
 
         var entity = await _dbContext.EffortEstimationSettings
+            .OrderBy(e => e.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (entity == null)

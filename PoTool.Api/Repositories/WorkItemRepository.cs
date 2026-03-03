@@ -74,6 +74,7 @@ public class WorkItemRepository : IWorkItemRepository
     {
         var entity = await _context.WorkItems
             .AsNoTracking()
+            .OrderBy(w => w.TfsId)
             .FirstOrDefaultAsync(w => w.TfsId == tfsId, cancellationToken);
 
         return entity != null ? MapToDto(entity) : null;
@@ -127,7 +128,7 @@ public class WorkItemRepository : IWorkItemRepository
             // InMemory: simpler approach
             foreach (var dto in workItemList)
             {
-                var existing = await _context.WorkItems.FirstOrDefaultAsync(w => w.TfsId == dto.TfsId, cancellationToken);
+                var existing = await _context.WorkItems.OrderBy(w => w.TfsId).FirstOrDefaultAsync(w => w.TfsId == dto.TfsId, cancellationToken);
                 if (existing != null)
                 {
                     // Update existing
@@ -178,7 +179,7 @@ public class WorkItemRepository : IWorkItemRepository
                 // Update existing items
                 foreach (var dto in toUpdate)
                 {
-                    var entity = await _context.WorkItems.FirstAsync(w => w.TfsId == dto.TfsId, cancellationToken);
+                    var entity = await _context.WorkItems.OrderBy(w => w.TfsId).FirstAsync(w => w.TfsId == dto.TfsId, cancellationToken);
                     entity.ParentTfsId = dto.ParentTfsId;
                     entity.Type = dto.Type;
                     entity.Title = dto.Title;

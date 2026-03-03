@@ -180,6 +180,7 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
             // Detect staleness: activity events ingested after last projection computation
             var cacheState = await _context.ProductOwnerCacheStates
                 .AsNoTracking()
+                .OrderBy(s => s.Id)
                 .FirstOrDefaultAsync(s => s.ProductOwnerId == query.ProductOwnerId, cancellationToken);
 
             var projectionsAsOf = cacheState?.SprintTrendProjectionAsOfUtc;

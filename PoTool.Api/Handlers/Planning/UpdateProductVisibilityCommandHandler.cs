@@ -33,6 +33,7 @@ public sealed class UpdateProductVisibilityCommandHandler : ICommandHandler<Upda
             command.ProductId, command.IsVisible, command.ProductOwnerId);
 
         var settings = await _dbContext.PlanningBoardSettings
+            .OrderBy(s => s.Id)
             .FirstOrDefaultAsync(s => s.ProductOwnerId == command.ProductOwnerId, cancellationToken);
 
         if (settings == null)

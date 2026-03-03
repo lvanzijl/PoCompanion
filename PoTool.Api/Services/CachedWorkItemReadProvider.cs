@@ -91,6 +91,7 @@ public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
 
         var entity = await _dbContext.WorkItems
             .AsNoTracking()
+            .OrderBy(wi => wi.TfsId)
             .FirstOrDefaultAsync(wi => wi.TfsId == tfsId, cancellationToken);
 
         return entity != null ? MapToDto(entity) : null;

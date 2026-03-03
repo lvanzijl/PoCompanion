@@ -31,6 +31,7 @@ public sealed class MovePlanningEpicCommandHandler : ICommandHandler<MovePlannin
             command.PlacementId, command.NewRowId);
 
         var placement = await _dbContext.PlanningEpicPlacements
+            .OrderBy(p => p.Id)
             .FirstOrDefaultAsync(p => p.Id == command.PlacementId, cancellationToken);
 
         if (placement == null)
@@ -43,6 +44,7 @@ public sealed class MovePlanningEpicCommandHandler : ICommandHandler<MovePlannin
         }
 
         var newRow = await _dbContext.BoardRows
+            .OrderBy(r => r.Id)
             .FirstOrDefaultAsync(r => r.Id == command.NewRowId, cancellationToken);
 
         if (newRow == null)
