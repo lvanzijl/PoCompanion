@@ -108,7 +108,8 @@ public sealed class GetProductBacklogStateQueryHandler
                 return new PbiReadinessDto
                 {
                     TfsId = pbi.TfsId,
-                    Score = pbiScore.Score
+                    Score = pbiScore.Score,
+                    Effort = pbi.Effort
                 };
             })
             .ToList();

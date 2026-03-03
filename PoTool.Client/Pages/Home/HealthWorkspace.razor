@@ -1,12 +1,13 @@
 @page "/home/health"
 @using PoTool.Client.Components.Common
-@using PoTool.Client.Components.BacklogHealth
 @using PoTool.Client.ApiClient
 @using PoTool.Shared.WorkItems
+@using PoTool.Shared.Health
 @inherits WorkspaceBase
 @inject INavigationContextService NavigationContextService
 @inject WorkItemService WorkItemService
 @inject ProductService ProductService
+@inject BacklogStateService BacklogStateService
 
 <PageTitle>Health (Now) - PO Companion</PageTitle>
 
@@ -78,118 +79,134 @@
     }
     else
     {
-        @* ── REFINEMENT SIGNALS ────────────────────────────────────────────────── *@
-        <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
-                <MudIcon Icon="@Icons.Material.Filled.EditNote" Color="Color.Warning" />
-                <MudText Typo="Typo.h5">Refinement Signals</MudText>
+        @* ── COMPACT SIGNALS BAR ───────────────────────────────────────────────── *@
+        <MudPaper Elevation="1" Class="pa-2 mb-3">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="font-weight:600;">Refinement:</MudText>
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Icon="@Icons.Material.Filled.Warning"
+                         Color="@GetHealthColorBySeverity(_refinementReadinessCount, HealthSignalSeverity.Warning)"
+                         OnClick='() => NavigateToValidationCategory(ValidationCategory.RefinementReadiness)'
+                         Style="cursor:pointer;">
+                    Blockers · @_refinementReadinessCount
+                </MudChip>
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Icon="@Icons.Material.Filled.EditNote"
+                         Color="@GetHealthColorBySeverity(_refinementCompletenessCount, HealthSignalSeverity.Warning)"
+                         OnClick='() => NavigateToValidationCategory(ValidationCategory.RefinementCompleteness)'
+                         Style="cursor:pointer;">
+                    Needed · @_refinementCompletenessCount
+                </MudChip>
+                <MudDivider Vertical="true" FlexItem="true" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="font-weight:600;">Integrity:</MudText>
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Icon="@Icons.Material.Filled.Build"
+                         Color="@GetHealthColorBySeverity(_structuralIntegrityCount, HealthSignalSeverity.Error)"
+                         OnClick='() => NavigateToValidationCategory(ValidationCategory.StructuralIntegrity)'
+                         Style="cursor:pointer;">
+                    Errors · @_structuralIntegrityCount
+                </MudChip>
             </MudStack>
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-                These signals affect backlog readiness. Click a card to navigate to related work items.
-            </MudText>
+        </MudPaper>
 
-            @* 
-                Decision #2: Health Signal Thresholds
-                Decision #9: Single click = navigate immediately
-                Decision #10: Show "0 items" badge (don't hide empty cards)
-            *@
-            <MudGrid>
-                @* Refinement Readiness Validation Category *@
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1" 
-                             Style="cursor: pointer; transition: all 0.2s;"
-                             Class="mud-card-hover"
-                             @onclick='() => NavigateToValidationCategory(ValidationCategory.RefinementReadiness)'>
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="@GetHealthColorBySeverity(_refinementReadinessCount, HealthSignalSeverity.Warning)" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Refinement blockers</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColorBySeverity(_refinementReadinessCount, HealthSignalSeverity.Warning)">
-                                @_refinementReadinessCount items
-                            </MudChip>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
+        @* ── PER-PRODUCT TILES ────────────────────────────────────────────────── *@
+        @if (_profileProducts.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">No products configured for this profile.</MudAlert>
+        }
+        else
+        {
+            <MudGrid Class="mb-4">
+                @foreach (var product in _profileProducts)
+                {
+                    var stats = GetProductStats(product.Id);
+                    <MudItem xs="12" md="6" lg="4" @key="product.Id">
+                        <MudCard Elevation="2" Class="health-product-card">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" Size="Size.Small" />
+                                        <MudText Typo="Typo.h6" Class="health-product-title">@product.Name</MudText>
+                                    </MudStack>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent Class="pt-0">
+                                @if (stats == null)
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">No backlog data available.</MudText>
+                                }
+                                else
+                                {
+                                    @* Ready-to-pick-up + features ready in pending *@
+                                    <MudGrid Spacing="2" Class="mb-3">
+                                        <MudItem xs="6">
+                                            <MudPaper Elevation="0" Class="pa-2 health-tile-stat health-tile-stat--success">
+                                                <MudText Typo="Typo.h5" Color="Color.Success" Class="health-tile-stat-value">@stats.ReadyEffort</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">ready story points</MudText>
+                                            </MudPaper>
+                                        </MudItem>
+                                        <MudItem xs="6">
+                                            <MudPaper Elevation="0" Class="pa-2 health-tile-stat health-tile-stat--info">
+                                                <MudText Typo="Typo.h5" Color="Color.Info" Class="health-tile-stat-value">@stats.FeaturesReadyInPendingEpics</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">features ready in pending epics</MudText>
+                                            </MudPaper>
+                                        </MudItem>
+                                    </MudGrid>
 
-                @* Refinement Completeness Validation Category *@
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1" 
-                             Style="cursor: pointer; transition: all 0.2s;"
-                             Class="mud-card-hover"
-                             @onclick='() => NavigateToValidationCategory(ValidationCategory.RefinementCompleteness)'>
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="@GetHealthColorBySeverity(_refinementCompletenessCount, HealthSignalSeverity.Warning)" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Refinement needed</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColorBySeverity(_refinementCompletenessCount, HealthSignalSeverity.Warning)">
-                                @_refinementCompletenessCount items
-                            </MudChip>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-
-                @* Bug Overview Signal *@
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1" 
-                             Style="cursor: pointer; transition: all 0.2s;"
-                             Class="mud-card-hover"
-                             @onclick="NavigateToBugOverview">
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.BugReport" Color="@GetHealthColor(_bugCount)" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Bugs</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColor(_bugCount)">
-                                @_bugCount items
-                            </MudChip>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
+                                    @* Top 3 epics closest to ready *@
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="health-tile-section-label mb-1">
+                                        Closest to ready
+                                    </MudText>
+                                    <MudSimpleTable Dense="true" Class="health-epic-table">
+                                        <tbody>
+                                            @for (int i = 0; i < 3; i++)
+                                            {
+                                                int idx = i;
+                                                @if (idx < stats.TopEpics.Count)
+                                                {
+                                                    var epic = stats.TopEpics[idx];
+                                                    <tr @key="epic.TfsId">
+                                                        <td class="health-epic-title-cell">
+                                                            <MudText Typo="Typo.body2" Class="health-epic-title-text">@epic.Title</MudText>
+                                                        </td>
+                                                        <td class="health-epic-score-cell">
+                                                            <MudChip T="string" Size="Size.Small" Color="@GetEpicScoreColor(epic.Score)" Class="health-epic-score-chip">
+                                                                @epic.Score%
+                                                            </MudChip>
+                                                        </td>
+                                                        <td class="health-epic-effort-cell">
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@epic.Effort sp</MudText>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                                else
+                                                {
+                                                    <tr @key="@($"empty-{idx}")">
+                                                        <td colspan="3" class="health-epic-empty-cell">—</td>
+                                                    </tr>
+                                                }
+                                            }
+                                        </tbody>
+                                    </MudSimpleTable>
+                                }
+                            </MudCardContent>
+                            <MudCardActions>
+                                <MudButton Variant="Variant.Text"
+                                           Color="Color.Primary"
+                                           Size="Size.Small"
+                                           EndIcon="@Icons.Material.Filled.OpenInNew"
+                                           OnClick="() => NavigateToBacklogOverviewForProduct(product.Id)">
+                                    Backlog Overview
+                                </MudButton>
+                            </MudCardActions>
+                        </MudCard>
+                    </MudItem>
+                }
             </MudGrid>
-        </MudPaper>
-
-        @* ── INTEGRITY (MAINTENANCE) ──────────────────────────────────────────── *@
-        <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
-                <MudIcon Icon="@Icons.Material.Filled.Build" Color="Color.Default" />
-                <MudText Typo="Typo.h5">Integrity (Maintenance)</MudText>
-            </MudStack>
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-                Structural integrity findings are maintenance items. They do <strong>not</strong> affect refinement scores or backlog readiness.
-            </MudText>
-
-            <MudGrid>
-                @* Structural Integrity Validation Category *@
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1" 
-                             Style="cursor: pointer; transition: all 0.2s;"
-                             Class="mud-card-hover"
-                             @onclick='() => NavigateToValidationCategory(ValidationCategory.StructuralIntegrity)'>
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Error" Color="@GetHealthColorBySeverity(_structuralIntegrityCount, HealthSignalSeverity.Error)" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Structural integrity errors</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="@GetHealthColorBySeverity(_structuralIntegrityCount, HealthSignalSeverity.Error)">
-                                @_structuralIntegrityCount items
-                            </MudChip>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-            </MudGrid>
-        </MudPaper>
-
-        @* Backlog Health Panel - Embedded iteration-level health analysis *@
-        <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                <MudText Typo="Typo.h5">
-                    <MudIcon Icon="@Icons.Material.Filled.Analytics" Class="mr-2" />
-                    Backlog Health Analysis
-                </MudText>
-                <MudButton Variant="Variant.Text" 
-                           Color="Color.Primary" 
-                           EndIcon="@Icons.Material.Filled.OpenInNew" 
-                           OnClick="NavigateToBacklogOverview">
-                    Backlog Overview
-                </MudButton>
-            </MudStack>
-            
-            <BacklogHealthPanel MaxIterations="3" />
-        </MudPaper>
+        }
 
         @* Cross-Workspace Navigation *@
         <MudPaper Elevation="2" Class="pa-4">
@@ -197,22 +214,22 @@
                 <MudIcon Icon="@Icons.Material.Filled.Explore" Class="mr-2" />
                 Navigate to Other Workspaces
             </MudText>
-            
+
             <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Primary" 
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
                            StartIcon="@Icons.Material.Filled.Inventory2"
                            OnClick="NavigateToBacklogOverview">
                     Backlog Overview
                 </MudButton>
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Info" 
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Info"
                            StartIcon="@Icons.Material.Filled.Timeline"
                            OnClick="NavigateToTrends">
                     Trends (Past)
                 </MudButton>
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Primary" 
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
                            StartIcon="@Icons.Material.Filled.CalendarMonth"
                            OnClick="NavigateToPlanning">
                     Planning (Future)
@@ -231,6 +248,36 @@
         box-shadow: 0 6px 20px rgba(0,0,0,0.2) !important;
         border-color: var(--mud-palette-primary);
     }
+
+    /* Per-product tile card */
+    .health-product-card  { height: 100%; }
+    .health-product-title { font-weight: 600; }
+
+    /* Per-product tile stats */
+    .health-tile-stat {
+        border-radius: 8px;
+        text-align: center;
+    }
+    .health-tile-stat--success { background: var(--mud-palette-success-lighten); }
+    .health-tile-stat--info    { background: var(--mud-palette-info-lighten); }
+    .health-tile-stat-value    { font-weight: 700; }
+
+    /* Section label above top-3 table */
+    .health-tile-section-label {
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: block;
+    }
+
+    /* Top-3 epics table */
+    .health-epic-table         { font-size: 0.82rem; }
+    .health-epic-title-cell    { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .health-epic-title-text    { font-size: 0.82rem; }
+    .health-epic-score-cell    { text-align: right; white-space: nowrap; padding-left: 8px; }
+    .health-epic-score-chip    { font-size: 0.75rem; height: 20px; }
+    .health-epic-effort-cell   { text-align: right; white-space: nowrap; padding-left: 4px; }
+    .health-epic-empty-cell    { color: var(--mud-palette-text-disabled); font-style: italic; font-size: 0.8rem; }
 </style>
 
 @code {
@@ -239,29 +286,34 @@
     private ProfileDto? _activeProfile;
     private List<BreadcrumbItem> _breadcrumbs = new();
     private string? _productName;
-    
+
+    // Products for the active profile
+    private List<ProductDto> _profileProducts = new();
+
+    // Per-product backlog state
+    private Dictionary<int, ProductBacklogStateDto?> _productBacklogStates = new();
+
     // Validation issue counts by category
     private int _structuralIntegrityCount;
     private int _refinementReadinessCount;
     private int _refinementCompletenessCount;
-    private int _bugCount;
-    
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
             // Parse context from query string (inherited from base class)
             ParseContextQueryParameters();
-            
+
             if (!await EnsureProfileAsync(WorkspaceRoutes.HealthWorkspace))
             {
                 return;
             }
-            
+
             _activeProfile = await ProfileService.GetActiveProfileAsync();
             _profileId = _activeProfile?.Id;
-            
-            await LoadValidationCountsAsync();
+
+            await LoadDataAsync();
             UpdateBreadcrumbs();
         }
         catch (Exception ex)
@@ -273,8 +325,8 @@
             _isLoading = false;
         }
     }
-    
-    private async Task LoadValidationCountsAsync()
+
+    private async Task LoadDataAsync()
     {
         try
         {
@@ -282,59 +334,56 @@
             _structuralIntegrityCount = 0;
             _refinementReadinessCount = 0;
             _refinementCompletenessCount = 0;
-            _bugCount = 0;
-            
-            // Get products for the active profile (matching WorkItemExplorer approach)
-            List<ProductDto> profileProducts;
-            
+
+            // Get products for the active profile
             if (_activeProfile != null)
             {
-                // Load products for the active profile (Product Owner)
-                profileProducts = (await ProductService.GetProductsByOwnerAsync(_activeProfile.Id)).ToList();
-                Console.WriteLine($"[HealthWorkspace] Loaded {profileProducts.Count} products for active profile '{_activeProfile.Name}' (ID: {_activeProfile.Id})");
+                _profileProducts = (await ProductService.GetProductsByOwnerAsync(_activeProfile.Id)).ToList();
             }
             else
             {
-                // No active profile - load all products as fallback
-                profileProducts = (await ProductService.GetAllProductsAsync()).ToList();
-                Console.WriteLine($"[HealthWorkspace] No active profile, loaded all {profileProducts.Count} products");
+                _profileProducts = (await ProductService.GetAllProductsAsync()).ToList();
             }
-            
-            // Resolve product name for context chip (Suggestion 4)
+
+            // Resolve product name for context chip
             if (ProductId.HasValue)
             {
-                _productName = profileProducts.FirstOrDefault(p => p.Id == ProductId.Value)?.Name;
+                _productName = _profileProducts.FirstOrDefault(p => p.Id == ProductId.Value)?.Name;
             }
-            
-            // Extract product IDs to pass to the backend for efficient filtering
-            var productIds = profileProducts.Select(p => p.Id).ToArray();
-            Console.WriteLine($"[HealthWorkspace] Loading work items for {productIds.Length} products: {string.Join(", ", productIds)}");
-            
-            // Load work items with validation, filtered by product IDs (matching WorkItemExplorer)
+
+            var productIds = _profileProducts.Select(p => p.Id).ToArray();
+
+            // Load validation counts and per-product backlog states in parallel
+            var validationTask = LoadValidationCountsAsync(productIds);
+            var backlogTask = LoadBacklogStatesAsync(_profileProducts);
+            await Task.WhenAll(validationTask, backlogTask);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[HealthWorkspace] Failed to load data: {ex.Message}");
+        }
+    }
+
+    private async Task LoadValidationCountsAsync(int[] productIds)
+    {
+        try
+        {
             var workItemsWithValidation = await WorkItemService.GetAllWithValidationAsync(productIds);
             var workItemsList = workItemsWithValidation.ToList();
-            Console.WriteLine($"[HealthWorkspace] Loaded {workItemsList.Count} total work items from product hierarchies");
-            
-            // Track which work items have issues in each validation category
+
             var workItemsByCategory = new Dictionary<ValidationCategory, HashSet<int>>
             {
                 { ValidationCategory.StructuralIntegrity, new HashSet<int>() },
                 { ValidationCategory.RefinementReadiness, new HashSet<int>() },
                 { ValidationCategory.RefinementCompleteness, new HashSet<int>() }
             };
-            
+
             foreach (var wi in workItemsList)
             {
-                if (wi.Type == "Bug")
-                {
-                    _bugCount++;
-                }
-                
                 if (wi.ValidationIssues != null)
                 {
                     foreach (var issue in wi.ValidationIssues)
                     {
-                        // Determine category from rule ID prefix
                         var category = GetCategoryFromRuleId(issue.RuleId);
                         if (category.HasValue)
                         {
@@ -343,20 +392,88 @@
                     }
                 }
             }
-            
+
             _structuralIntegrityCount = workItemsByCategory[ValidationCategory.StructuralIntegrity].Count;
             _refinementReadinessCount = workItemsByCategory[ValidationCategory.RefinementReadiness].Count;
             _refinementCompletenessCount = workItemsByCategory[ValidationCategory.RefinementCompleteness].Count;
-            
-            Console.WriteLine($"[HealthWorkspace] Validation counts - SI: {_structuralIntegrityCount}, RR: {_refinementReadinessCount}, RC: {_refinementCompletenessCount}, Bugs: {_bugCount}");
         }
         catch (Exception ex)
         {
-            // Log the error but keep counts at 0
             Console.WriteLine($"[HealthWorkspace] Failed to load validation counts: {ex.Message}");
         }
     }
-    
+
+    private async Task LoadBacklogStatesAsync(List<ProductDto> products)
+    {
+        _productBacklogStates = new Dictionary<int, ProductBacklogStateDto?>();
+        using var semaphore = new SemaphoreSlim(5, 5);
+        var tasks = products.Select(async p =>
+        {
+            await semaphore.WaitAsync();
+            try
+            {
+                var state = await BacklogStateService.GetBacklogStateAsync(p.Id);
+                return (p.Id, state);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[HealthWorkspace] Failed to load backlog state for product {p.Id}: {ex.Message}");
+                return (p.Id, (ProductBacklogStateDto?)null);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        foreach (var (id, state) in results)
+        {
+            _productBacklogStates[id] = state;
+        }
+    }
+
+    // ── Per-product stats helpers ────────────────────────────────────────────
+
+    private sealed record EpicSummary(int TfsId, string Title, int Score, int Effort);
+
+    private sealed record ProductBacklogStats(
+        int ReadyEffort,
+        int FeaturesReadyInPendingEpics,
+        IReadOnlyList<EpicSummary> TopEpics);
+
+    private ProductBacklogStats? GetProductStats(int productId)
+    {
+        if (!_productBacklogStates.TryGetValue(productId, out var state) || state == null)
+            return null;
+
+        var readyEpics = state.Epics.Where(e => e.Score == 100).ToList();
+        var pendingEpics = state.Epics.Where(e => e.Score < 100).ToList();
+
+        int readyEffort = readyEpics
+            .SelectMany(e => e.Features)
+            .SelectMany(f => f.Pbis)
+            .Sum(p => p.Effort ?? 0);
+
+        int featuresReadyInPending = pendingEpics
+            .SelectMany(e => e.Features)
+            .Count(f => f.Score == 100);
+
+        var topEpics = state.Epics
+            .OrderByDescending(e => e.Score)
+            .Take(3)
+            .Select(e => new EpicSummary(
+                e.TfsId,
+                e.Title,
+                e.Score,
+                e.Features.SelectMany(f => f.Pbis).Sum(p => p.Effort ?? 0)))
+            .ToList();
+
+        return new ProductBacklogStats(readyEffort, featuresReadyInPending, topEpics);
+    }
+
+    // ── Navigation helpers ───────────────────────────────────────────────────
+
     /// <summary>
     /// Determines the validation category from a rule ID.
     /// Maps rule ID prefixes to ValidationCategory enum values.
@@ -367,7 +484,7 @@
         {
             return null;
         }
-        
+
         // Rule IDs follow pattern: SI-1, RR-1, RC-1
         if (ruleId.StartsWith("SI-", StringComparison.OrdinalIgnoreCase))
         {
@@ -381,23 +498,21 @@
         {
             return ValidationCategory.RefinementCompleteness;
         }
-        
+
         return null;
     }
-    
+
     private void UpdateBreadcrumbs()
     {
-            _breadcrumbs = new List<BreadcrumbItem>
+        _breadcrumbs = new List<BreadcrumbItem>
         {
             new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
             new("Health (Now)", null, disabled: true, icon: Icons.Material.Filled.HealthAndSafety)
         };
     }
-    
+
     private void NavigateToValidationCategory(ValidationCategory category)
     {
-        // Phase 4: navigate to the Validation Queue for the selected category;
-        // Explorer is now "advanced inspection" only and is no longer the primary entry.
         var categoryKey = category switch
         {
             ValidationCategory.StructuralIntegrity    => "SI",
@@ -408,12 +523,12 @@
         NavigationManager.NavigateTo(
             $"{WorkspaceRoutes.ValidationQueue}{BuildContextQuery($"category={categoryKey}")}");
     }
-    
+
     private void NavigateToBugOverview()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.BugOverview}{BuildContextQuery()}");
     }
-    
+
     private void NavigateToValidationTriage()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.ValidationTriage}{BuildContextQuery()}");
@@ -423,17 +538,17 @@
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.BugTriage);
     }
-    
+
     private void ClearProductFilter()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.HealthWorkspace);
     }
-    
+
     private void NavigateToTrends()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.TrendsWorkspace}{BuildContextQuery()}");
     }
-    
+
     private void NavigateToPlanning()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanningWorkspace2}{BuildContextQuery()}");
@@ -444,7 +559,13 @@
         NavigationManager.NavigateTo($"{WorkspaceRoutes.BacklogOverview}{BuildContextQuery()}");
     }
 
-    
+    private void NavigateToBacklogOverviewForProduct(int productId)
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BacklogOverview}?productId={productId}");
+    }
+
+    // ── Color helpers ────────────────────────────────────────────────────────
+
     /// <summary>
     /// Enum representing the severity level of a health signal.
     /// </summary>
@@ -454,7 +575,7 @@
         Warning,
         Info
     }
-    
+
     /// <summary>
     /// Gets the color based on severity and count.
     /// - Count == 0: Neutral (Default/Gray) - indicates no detected issues, not necessarily "good"
@@ -466,10 +587,9 @@
     {
         if (count == 0)
         {
-            // Zero count is neutral - absence of detected issues, not a positive indicator
             return Color.Default;
         }
-        
+
         return severity switch
         {
             HealthSignalSeverity.Error => Color.Error,
@@ -478,16 +598,12 @@
             _ => Color.Default
         };
     }
-    
-    /// <summary>
-    /// Legacy method for bug count - uses old threshold-based approach.
-    /// Kept for backward compatibility with Bug Overview signal.
-    /// </summary>
-    private Color GetHealthColor(int count) => count switch
+
+    private static Color GetEpicScoreColor(int score) => score switch
     {
-        0 => Color.Success,
-        < 10 => Color.Info,
-        < 50 => Color.Warning,
+        100 => Color.Success,
+        >= 70 => Color.Info,
+        >= 40 => Color.Warning,
         _ => Color.Error
     };
 }
