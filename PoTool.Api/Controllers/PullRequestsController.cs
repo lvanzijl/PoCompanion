@@ -198,6 +198,47 @@ public class PullRequestsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets per-sprint PR trend metrics for a set of sprint IDs.
+    /// Sprint mapping rule: a PR belongs to a sprint if its CreatedDate falls within [SprintStart, SprintEnd).
+    /// </summary>
+    /// <param name="sprintIds">Ordered list of sprint IDs defining the trend horizon.</param>
+    /// <param name="productIds">Optional comma-separated product IDs to scope PRs.</param>
+    /// <param name="teamId">Optional team ID; resolved to linked products when productIds is null.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    [HttpGet("sprint-trends")]
+    public async Task<ActionResult<GetPrSprintTrendsResponse>> GetSprintTrends(
+        [FromQuery] List<int> sprintIds,
+        [FromQuery] string? productIds = null,
+        [FromQuery] int? teamId = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (sprintIds.Count == 0)
+            {
+                return BadRequest("At least one sprint ID is required.");
+            }
+
+            var productIdsList = ParseProductIds(productIds, out var errorMessage);
+            if (errorMessage != null)
+            {
+                return BadRequest(errorMessage);
+            }
+
+            var result = await _mediator.Send(
+                new GetPrSprintTrendsQuery(sprintIds, productIdsList, teamId),
+                cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving PR sprint trends");
+            return StatusCode(500, "Error retrieving PR sprint trends");
+        }
+    }
+
+    /// <summary>
     /// Gets PR review bottleneck analysis showing reviewer performance and bottlenecks.
     /// </summary>
     /// <param name="maxPRs">Maximum number of PRs to analyze (default: 100)</param>
