@@ -13,6 +13,12 @@ public sealed class PbiReadinessDto
     /// Readiness score: 0 (no description), 75 (description, no effort), or 100 (description + effort).
     /// </summary>
     public required int Score { get; init; }
+
+    /// <summary>
+    /// Story-point effort for this PBI as stored in TFS. Null when not set.
+    /// Used to compute total ready work on the health dashboard.
+    /// </summary>
+    public int? Effort { get; init; }
 }
 
 /// <summary>
