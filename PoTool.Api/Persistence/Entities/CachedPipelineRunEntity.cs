@@ -55,6 +55,11 @@ public class CachedPipelineRunEntity
     public DateTimeOffset? CreatedDate { get; set; }
 
     /// <summary>
+    /// UTC created date used in SQLite-translatable predicates/sorting.
+    /// </summary>
+    public DateTime? CreatedDateUtc { get; set; }
+
+    /// <summary>
     /// Timestamp when the run finished.
     /// </summary>
     public DateTimeOffset? FinishedDate { get; set; }
