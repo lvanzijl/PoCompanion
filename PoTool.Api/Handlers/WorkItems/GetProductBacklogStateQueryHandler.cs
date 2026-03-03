@@ -4,6 +4,7 @@ using PoTool.Core.Health;
 using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Queries;
 using PoTool.Shared.Health;
+using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 
 namespace PoTool.Api.Handlers.WorkItems;
@@ -12,6 +13,7 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// Handler for <see cref="GetProductBacklogStateQuery"/>.
 /// Loads the work item graph for the requested product and delegates score computation
 /// to <see cref="BacklogStateComputationService"/>. No validation logic is involved.
+/// Done items (epics, features, PBIs) are excluded from refinement scoring.
 /// </summary>
 public sealed class GetProductBacklogStateQueryHandler
     : IQueryHandler<GetProductBacklogStateQuery, ProductBacklogStateDto?>
@@ -19,17 +21,20 @@ public sealed class GetProductBacklogStateQueryHandler
     private readonly IProductRepository _productRepository;
     private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly BacklogStateComputationService _computationService;
+    private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<GetProductBacklogStateQueryHandler> _logger;
 
     public GetProductBacklogStateQueryHandler(
         IProductRepository productRepository,
         IWorkItemReadProvider workItemReadProvider,
         BacklogStateComputationService computationService,
+        IWorkItemStateClassificationService stateClassificationService,
         ILogger<GetProductBacklogStateQueryHandler> logger)
     {
         _productRepository = productRepository;
         _workItemReadProvider = workItemReadProvider;
         _computationService = computationService;
+        _stateClassificationService = stateClassificationService;
         _logger = logger;
     }
 
@@ -64,9 +69,26 @@ public sealed class GetProductBacklogStateQueryHandler
             "Loaded {Count} work items for product {ProductId}",
             allItems.Count, query.ProductId);
 
-        var epics = allItems
+        // Build a set of done states per work item type to exclude done items from refinement.
+        var classifications = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
+        var doneStateLookup = classifications.Classifications
+            .Where(c => c.Classification == StateClassification.Done)
+            .Select(c => (Type: c.WorkItemType.ToLowerInvariant(), State: c.StateName.ToLowerInvariant()))
+            .ToHashSet();
+
+        // Pre-build the set of done TfsIds to avoid repeated string allocations in LINQ.
+        var doneItemIds = allItems
+            .Where(w => doneStateLookup.Contains(
+                (w.Type.ToLowerInvariant(), w.State.ToLowerInvariant())))
+            .Select(w => w.TfsId)
+            .ToHashSet();
+
+        // Only include active (non-done) items in refinement computation.
+        var activeItems = allItems.Where(w => !doneItemIds.Contains(w.TfsId)).ToList();
+
+        var epics = activeItems
             .Where(w => string.Equals(w.Type, WorkItemType.Epic, StringComparison.OrdinalIgnoreCase))
-            .Select(epic => BuildEpicDto(epic, allItems))
+            .Select(epic => BuildEpicDto(epic, activeItems))
             .ToList();
 
         return new ProductBacklogStateDto
@@ -76,14 +98,14 @@ public sealed class GetProductBacklogStateQueryHandler
         };
     }
 
-    private EpicRefinementDto BuildEpicDto(WorkItemDto epic, IReadOnlyList<WorkItemDto> allItems)
+    private EpicRefinementDto BuildEpicDto(WorkItemDto epic, IReadOnlyList<WorkItemDto> activeItems)
     {
-        var epicScore = _computationService.ComputeEpicScore(epic, allItems);
+        var epicScore = _computationService.ComputeEpicScore(epic, activeItems);
 
-        var features = allItems
+        var features = activeItems
             .Where(w => w.ParentTfsId == epic.TfsId &&
                         string.Equals(w.Type, WorkItemType.Feature, StringComparison.OrdinalIgnoreCase))
-            .Select(feature => BuildFeatureDto(feature, allItems))
+            .Select(feature => BuildFeatureDto(feature, activeItems))
             .ToList();
 
         return new EpicRefinementDto
@@ -95,11 +117,11 @@ public sealed class GetProductBacklogStateQueryHandler
         };
     }
 
-    private FeatureRefinementDto BuildFeatureDto(WorkItemDto feature, IReadOnlyList<WorkItemDto> allItems)
+    private FeatureRefinementDto BuildFeatureDto(WorkItemDto feature, IReadOnlyList<WorkItemDto> activeItems)
     {
-        var featureScore = _computationService.ComputeFeatureScore(feature, allItems);
+        var featureScore = _computationService.ComputeFeatureScore(feature, activeItems);
 
-        var pbis = allItems
+        var pbis = activeItems
             .Where(w => w.ParentTfsId == feature.TfsId &&
                         string.Equals(w.Type, WorkItemType.Pbi, StringComparison.OrdinalIgnoreCase))
             .Select(pbi =>
@@ -108,6 +130,7 @@ public sealed class GetProductBacklogStateQueryHandler
                 return new PbiReadinessDto
                 {
                     TfsId = pbi.TfsId,
+                    Title = pbi.Title,
                     Score = pbiScore.Score,
                     Effort = pbi.Effort
                 };

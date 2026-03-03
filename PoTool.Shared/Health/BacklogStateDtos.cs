@@ -15,6 +15,11 @@ public sealed class PbiReadinessDto
     public required int Score { get; init; }
 
     /// <summary>
+    /// Display title of the PBI work item.
+    /// </summary>
+    public string? Title { get; init; }
+
+    /// <summary>
     /// Story-point effort for this PBI as stored in TFS. Null when not set.
     /// Used to compute total ready work on the health dashboard.
     /// </summary>
