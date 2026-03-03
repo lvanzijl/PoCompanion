@@ -345,7 +345,7 @@
         {
             ParseContextQueryParameters();
 
-            if (!await EnsureProfileAsync(WorkspaceRoutes.BacklogOverview))
+            if (!await EnsureProfileAsync())
             {
                 return;
             }

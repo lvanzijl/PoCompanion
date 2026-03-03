@@ -312,7 +312,7 @@
         {
             ParseContextQueryParameters();
 
-            if (!await EnsureProfileAsync(WorkspaceRoutes.Home + "/changes"))
+            if (!await EnsureProfileAsync())
             {
                 return;
             }

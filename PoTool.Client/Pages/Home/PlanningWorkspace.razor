@@ -361,7 +361,7 @@
             // Parse context from query string (inherited from base class)
             ParseContextQueryParameters();
             
-            if (!await EnsureProfileAsync(WorkspaceRoutes.PlanningWorkspace2))
+            if (!await EnsureProfileAsync())
             {
                 return;
             }

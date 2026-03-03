@@ -305,7 +305,7 @@
             // Parse context from query string (inherited from base class)
             ParseContextQueryParameters();
 
-            if (!await EnsureProfileAsync(WorkspaceRoutes.HealthWorkspace))
+            if (!await EnsureProfileAsync())
             {
                 return;
             }

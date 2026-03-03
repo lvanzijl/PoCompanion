@@ -300,7 +300,7 @@
                 return;
             }
 
-            if (!await EnsureProfileAsync(WorkspaceRoutes.ValidationFix))
+            if (!await EnsureProfileAsync())
                 return;
 
             var activeProfile = await ProfileService.GetActiveProfileAsync();

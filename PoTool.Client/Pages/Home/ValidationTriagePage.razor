@@ -104,7 +104,7 @@
         {
             ParseContextQueryParameters();
 
-            if (!await EnsureProfileAsync(WorkspaceRoutes.ValidationTriage))
+            if (!await EnsureProfileAsync())
             {
                 return;
             }
