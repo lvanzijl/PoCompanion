@@ -43,14 +43,20 @@ public sealed class BacklogStateComputationService
 
     /// <summary>
     /// Computes the refinement score and ownership state for a single Feature.
+    /// Done PBIs (those in <paramref name="doneItemIds"/>) contribute a score of 100.
     /// </summary>
     /// <param name="feature">The Feature work item.</param>
-    /// <param name="allItems">All work items in the loaded graph (used to find PBI children).</param>
+    /// <param name="allItems">All non-removed work items in the loaded graph (used to find PBI children).</param>
+    /// <param name="doneItemIds">TFS IDs of items classified as Done; they contribute 100 to the average.</param>
     /// <returns>Score and OwnerState for the Feature.</returns>
-    public FeatureRefinementScore ComputeFeatureScore(WorkItemDto feature, IEnumerable<WorkItemDto> allItems)
+    public FeatureRefinementScore ComputeFeatureScore(
+        WorkItemDto feature,
+        IEnumerable<WorkItemDto> allItems,
+        IReadOnlySet<int> doneItemIds)
     {
         ArgumentNullException.ThrowIfNull(feature);
         ArgumentNullException.ThrowIfNull(allItems);
+        ArgumentNullException.ThrowIfNull(doneItemIds);
 
         if (string.IsNullOrWhiteSpace(feature.Description))
         {
@@ -67,22 +73,38 @@ public sealed class BacklogStateComputationService
             return new FeatureRefinementScore(feature.TfsId, 25, FeatureOwnerState.Team);
         }
 
-        var averageScore = (int)Math.Round(pbis.Average(pbi => ComputePbiScore(pbi).Score));
+        var averageScore = (int)Math.Round(
+            pbis.Average(pbi => doneItemIds.Contains(pbi.TfsId) ? 100.0 : ComputePbiScore(pbi).Score));
         var ownerState = averageScore == 100 ? FeatureOwnerState.Ready : FeatureOwnerState.Team;
 
         return new FeatureRefinementScore(feature.TfsId, averageScore, ownerState);
     }
 
     /// <summary>
+    /// Computes the refinement score and ownership state for a single Feature.
+    /// </summary>
+    /// <param name="feature">The Feature work item.</param>
+    /// <param name="allItems">All work items in the loaded graph (used to find PBI children).</param>
+    /// <returns>Score and OwnerState for the Feature.</returns>
+    public FeatureRefinementScore ComputeFeatureScore(WorkItemDto feature, IEnumerable<WorkItemDto> allItems)
+        => ComputeFeatureScore(feature, allItems, new HashSet<int>());
+
+    /// <summary>
     /// Computes the refinement score for a single Epic.
+    /// Done Features (those in <paramref name="doneItemIds"/>) contribute a score of 100.
     /// </summary>
     /// <param name="epic">The Epic work item.</param>
-    /// <param name="allItems">All work items in the loaded graph (used to find Feature children).</param>
+    /// <param name="allItems">All non-removed work items in the loaded graph (used to find Feature children).</param>
+    /// <param name="doneItemIds">TFS IDs of items classified as Done; they contribute 100 to the average.</param>
     /// <returns>Score for the Epic.</returns>
-    public EpicRefinementScore ComputeEpicScore(WorkItemDto epic, IEnumerable<WorkItemDto> allItems)
+    public EpicRefinementScore ComputeEpicScore(
+        WorkItemDto epic,
+        IEnumerable<WorkItemDto> allItems,
+        IReadOnlySet<int> doneItemIds)
     {
         ArgumentNullException.ThrowIfNull(epic);
         ArgumentNullException.ThrowIfNull(allItems);
+        ArgumentNullException.ThrowIfNull(doneItemIds);
 
         if (string.IsNullOrWhiteSpace(epic.Description))
         {
@@ -101,8 +123,19 @@ public sealed class BacklogStateComputationService
             return new EpicRefinementScore(epic.TfsId, 30);
         }
 
-        var averageScore = (int)Math.Round(features.Average(f => ComputeFeatureScore(f, itemsList).Score));
+        var averageScore = (int)Math.Round(
+            features.Average(f =>
+                doneItemIds.Contains(f.TfsId) ? 100.0 : ComputeFeatureScore(f, itemsList, doneItemIds).Score));
 
         return new EpicRefinementScore(epic.TfsId, averageScore);
     }
+
+    /// <summary>
+    /// Computes the refinement score for a single Epic.
+    /// </summary>
+    /// <param name="epic">The Epic work item.</param>
+    /// <param name="allItems">All work items in the loaded graph (used to find Feature children).</param>
+    /// <returns>Score for the Epic.</returns>
+    public EpicRefinementScore ComputeEpicScore(WorkItemDto epic, IEnumerable<WorkItemDto> allItems)
+        => ComputeEpicScore(epic, allItems, new HashSet<int>());
 }
