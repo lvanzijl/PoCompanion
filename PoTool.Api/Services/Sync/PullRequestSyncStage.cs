@@ -12,6 +12,9 @@ namespace PoTool.Api.Services.Sync;
 /// </summary>
 public class PullRequestSyncStage : ISyncStage
 {
+    private const string PullRequestStatusAll = "all";
+    private const string NoToDateFilter = "null";
+
     private readonly ITfsClient _tfsClient;
     private readonly PoToolDbContext _context;
     private readonly ILogger<PullRequestSyncStage> _logger;
@@ -49,11 +52,13 @@ public class PullRequestSyncStage : ISyncStage
 
             _logger.LogInformation(
                 "PR_INGEST_STAGE_START: ProductOwner {ProductOwnerId}, repos={RepoCount} [{RepoNames}], " +
-                "dateWindow from={FromDate} to=now",
+                "dateWindow from={FromDate} to={ToDate}, status={Status}",
                 context.ProductOwnerId,
                 context.RepositoryNames.Length,
                 string.Join(", ", context.RepositoryNames),
-                context.PullRequestWatermark?.ToString("O") ?? "null (full sync)");
+                context.PullRequestWatermark?.ToString("O") ?? "null",
+                NoToDateFilter,
+                PullRequestStatusAll);
 
             var allPullRequests = new List<PullRequestDto>();
             var totalRepos = context.RepositoryNames.Length;
