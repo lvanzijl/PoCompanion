@@ -53,7 +53,13 @@ Describe the single, clear goal of this PR.
 
 ---
 
-## 6. Review expectations
+## 6. Release notes (mandatory)
+- [ ] `docs/release-notes.json` updated with a new entry (newest first), **or**
+- [ ] PR description contains exactly: `ReleaseNotes: N/A (no user impact)`
+
+---
+
+## 7. Review expectations
 Reviewer focus:
 - Correctness
 - Rule compliance
@@ -64,14 +70,14 @@ Style and formatting are secondary.
 
 ---
 
-## 7. Notes for reviewers
+## 8. Notes for reviewers
 Explain:
 - What was intentionally not changed
 - Known limitations or follow-up items
 
 ---
 
-## 8. Final checklist
+## 9. Final checklist
 - [ ] All rules re-checked
 - [ ] Ready for senior-level review
 ```

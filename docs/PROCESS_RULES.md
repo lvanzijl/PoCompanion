@@ -214,3 +214,79 @@ Reviewers MUST treat any sync-over-async usage in `PoTool.Client` as:
 - an architectural violation
 - a mandatory fix before approval
 
+---
+
+## 14. Release Notes Discipline (mandatory)
+
+### 14.1 Canonical source
+
+All user-visible release notes MUST be stored in:
+
+```
+docs/release-notes.json
+```
+
+This is the **single canonical source** consumed by the Home "What's New" dialog.  
+No other file may duplicate or replace it.
+
+Schema — array of objects, newest first (prepend new entries at position 0):
+
+```json
+[
+  {
+    "date": "YYYY-MM-DD",
+    "type": "New | Changed | Fixed",
+    "title": "<string, max 60 chars>",
+    "impact": "<one sentence; user-facing; no marketing>",
+    "area": "<Home | Backlog | Health | Trends | Planning | Bugs | Settings>",
+    "link": "<optional route, e.g. /home/pipelines>"
+  }
+]
+```
+
+Field rules:
+- `date`: implementation date in `YYYY-MM-DD` format (calendar date; no time or timezone).
+- `type`: MUST be exactly one of `New`, `Changed`, or `Fixed`.
+- `area`: MUST be exactly one of `Home`, `Backlog`, `Health`, `Trends`, `Planning`, `Bugs`, or `Settings`.
+- `link`: optional; omit the field entirely if not applicable.
+- New entries MUST be prepended (inserted at index 0) to preserve newest-first order.
+
+Comments are not permitted inside the JSON file.
+
+### 14.2 When a release note is REQUIRED
+
+A release note entry is REQUIRED when a PR includes any of:
+
+- A new page/route added, removed, or renamed (Razor `@page` changes, route registrations, nav/menu changes).
+- Any workflow/UI behavior change (new buttons, changed primary actions, dialogs, changed defaults).
+- Any change to metrics or trend definitions (calculation, grouping, filtering, "what the number means").
+- Any change to scoping/filter behavior (product/team defaults, "all products/teams" logic, drill-down behavior).
+- Any cache/sync UX change (sync gate behavior, error/loading behavior affecting users).
+- Any validation rule change (RR/RC/SI/EFF logic or messages that users see).
+- Any change that could alter a PO decision made based on the UI.
+
+### 14.3 Paths that imply user-visible change
+
+If a PR touches the following paths, assume release notes are required unless the bypass below is used:
+
+- `PoTool.Client/**`
+- `PoTool.Api/**` — only if it affects DTOs consumed by the UI or trend/metric computations
+- `docs/GEBRUIKERSHANDLEIDING*.md` — only if it reflects shipped behavior
+
+### 14.4 Allowed bypass (narrow)
+
+Release notes may be skipped **only** if the change has no user impact (pure refactor, internal cleanup, comments, formatting) **and** the PR description contains **exactly** this line:
+
+```
+ReleaseNotes: N/A (no user impact)
+```
+
+If Copilot decides to skip release notes, it MUST add that line to the PR description text it outputs (or to the PR template section if the repo uses one).
+
+### 14.5 End-of-work confirmation (mandatory)
+
+At the end of any implementation, Copilot MUST explicitly output one of:
+
+- `Release notes: updated` — and point to the new entry in `docs/release-notes.json`
+- `Release notes: N/A (no user impact)`
+
