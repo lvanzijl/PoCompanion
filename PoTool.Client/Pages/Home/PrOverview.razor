@@ -6,8 +6,10 @@
 @using System.Web
 @inject IProfileService ProfileService
 @inject PullRequestService PullRequestService
+@inject PrSprintTrendsService PrSprintTrendsService
 @inject ProductService ProductService
 @inject TeamService TeamService
+@inject SprintService SprintService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -158,6 +160,166 @@
             </MudItem>
         </MudGrid>
 
+        @* Sprint Range Selector for Trend Charts *@
+        <MudPaper Elevation="2" Class="pa-4 mt-4 mb-2">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
+                <MudText Typo="Typo.h6">
+                    <MudIcon Icon="@Icons.Material.Filled.ShowChart" Class="mr-1" />
+                    Sprint Trends
+                </MudText>
+                <MudSelect T="int?"
+                           Value="_trendTeamId"
+                           Label="Team (for sprint range)"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Clearable="true"
+                           ValueChanged="OnTrendTeamChanged"
+                           Style="min-width: 180px;">
+                    <MudSelectItem T="int?" Value="@((int?)null)">Select team…</MudSelectItem>
+                    @foreach (var team in _teams)
+                    {
+                        <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                    }
+                </MudSelect>
+                @if (_trendTeamId.HasValue && _trendSprints.Any())
+                {
+                    <MudSelect T="int?"
+                               Value="_fromSprintId"
+                               Label="From Sprint"
+                               Variant="Variant.Outlined"
+                               Dense="true"
+                               Clearable="true"
+                               ValueChanged="OnFromSprintChanged"
+                               Style="min-width: 200px;">
+                        @foreach (var sprint in _trendSprints)
+                        {
+                            <MudSelectItem T="int?" Value="@sprint.Id">
+                                @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudSelect T="int?"
+                               Value="_toSprintId"
+                               Label="To Sprint"
+                               Variant="Variant.Outlined"
+                               Dense="true"
+                               Clearable="true"
+                               ValueChanged="OnToSprintChanged"
+                               Style="min-width: 200px;">
+                        @foreach (var sprint in _trendSprints)
+                        {
+                            <MudSelectItem T="int?" Value="@sprint.Id">
+                                @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+            </MudStack>
+        </MudPaper>
+
+        @* 2×2 Sprint Trend Charts *@
+        @if (_trendsLoading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Info" Class="mb-2" />
+        }
+
+        @if (_sprintTrendData != null && _sprintTrendData.Sprints.Count > 0)
+        {
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;" class="pr-trend-grid">
+
+                @* Chart 1: Median PR Size per Sprint *@
+                <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                    <MudStack Spacing="0" Class="mb-2">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudText Typo="Typo.subtitle2">Median PR Size per Sprint</MudText>
+                            <TrendSlopeBadge StartValue="@_prSizeStart"
+                                             EndValue="@_prSizeEnd"
+                                             LowerIsBetter="true"
+                                             MetricLabel="PR size" />
+                        </MudStack>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @(_sprintTrendData.Sprints.Any(s => s.PrSizeIsLinesChanged)
+                                ? "Lines changed (LinesAdded + LinesDeleted)"
+                                : "Files changed (fallback — lines data unavailable)")
+                        </MudText>
+                    </MudStack>
+                    <MudChart ChartType="ChartType.Bar"
+                              ChartSeries="@_prSizeChartSeries"
+                              XAxisLabels="@_trendXAxisLabels"
+                              Width="100%"
+                              Height="180px"
+                              ChartOptions="@_chartOptions" />
+                </MudPaper>
+
+                @* Chart 2: Median Time to First Review per Sprint *@
+                <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                    <MudStack Spacing="0" Class="mb-2">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudText Typo="Typo.subtitle2">Median Time to First Review per Sprint</MudText>
+                            <TrendSlopeBadge StartValue="@_ttfrStart"
+                                             EndValue="@_ttfrEnd"
+                                             LowerIsBetter="true"
+                                             MetricLabel="time to first review" />
+                        </MudStack>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Hours: PR created → first non-author comment</MudText>
+                    </MudStack>
+                    <MudChart ChartType="ChartType.Line"
+                              ChartSeries="@_ttfrChartSeries"
+                              XAxisLabels="@_trendXAxisLabels"
+                              Width="100%"
+                              Height="180px"
+                              ChartOptions="@_chartOptions" />
+                </MudPaper>
+
+                @* Chart 3: Median Time to Merge per Sprint *@
+                <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                    <MudStack Spacing="0" Class="mb-2">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudText Typo="Typo.subtitle2">Median Time to Merge per Sprint</MudText>
+                            <TrendSlopeBadge StartValue="@_ttmMedianStart"
+                                             EndValue="@_ttmMedianEnd"
+                                             LowerIsBetter="true"
+                                             MetricLabel="median time to merge" />
+                        </MudStack>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Hours: PR created → completed (median)</MudText>
+                    </MudStack>
+                    <MudChart ChartType="ChartType.Line"
+                              ChartSeries="@_ttmMedianChartSeries"
+                              XAxisLabels="@_trendXAxisLabels"
+                              Width="100%"
+                              Height="180px"
+                              ChartOptions="@_chartOptions" />
+                </MudPaper>
+
+                @* Chart 4: P90 Time to Merge per Sprint *@
+                <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                    <MudStack Spacing="0" Class="mb-2">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudText Typo="Typo.subtitle2">P90 Time to Merge per Sprint</MudText>
+                            <TrendSlopeBadge StartValue="@_ttmP90Start"
+                                             EndValue="@_ttmP90End"
+                                             LowerIsBetter="true"
+                                             MetricLabel="P90 time to merge" />
+                        </MudStack>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Hours: 90th percentile (gaps = &lt;3 PRs)</MudText>
+                    </MudStack>
+                    <MudChart ChartType="ChartType.Bar"
+                              ChartSeries="@_ttmP90ChartSeries"
+                              XAxisLabels="@_trendXAxisLabels"
+                              Width="100%"
+                              Height="180px"
+                              ChartOptions="@_chartOptions" />
+                </MudPaper>
+
+            </div>
+        }
+        else if (!_trendsLoading && _trendTeamId.HasValue)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                No sprint trend data available. Select a sprint range to view trends.
+            </MudAlert>
+        }
+
         @if (_pullRequests.Count == 0 && !_metricsLoading)
         {
             <MudPaper Elevation="2" Class="pa-6 mt-4">
@@ -188,6 +350,18 @@
     }
 </MudContainer>
 
+<style>
+    /* Responsive 2x2 grid: 2 columns on desktop, 1 column on narrow screens */
+    @@media (max-width: 768px) {
+        .pr-trend-grid {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    .trend-slope-badge {
+        font-size: 0.7rem;
+    }
+</style>
+
 @code {
     private bool _isLoading = true;
     private bool _metricsLoading = false;
@@ -215,6 +389,32 @@
     private MetricResult? _prSizeLines;
     private MetricResult? _prSizeFiles;
     private MetricResult? _reworkRate;
+    
+    // Sprint Trend state
+    private int? _trendTeamId;
+    private int? _fromSprintId;
+    private int? _toSprintId;
+    private List<SprintDto> _trendSprints = new();
+    private bool _trendsLoading = false;
+    private PoTool.Shared.PullRequests.GetPrSprintTrendsResponse? _sprintTrendData;
+    private string[] _trendXAxisLabels = Array.Empty<string>();
+    private List<ChartSeries> _prSizeChartSeries = new();
+    private List<ChartSeries> _ttfrChartSeries = new();
+    private List<ChartSeries> _ttmMedianChartSeries = new();
+    private List<ChartSeries> _ttmP90ChartSeries = new();
+    // TrendSlopeBadge endpoint values derived from first/last non-null sprint data points
+    private double? _prSizeStart, _prSizeEnd;
+    private double? _ttfrStart, _ttfrEnd;
+    private double? _ttmMedianStart, _ttmMedianEnd;
+    private double? _ttmP90Start, _ttmP90End;
+    
+    private ChartOptions _chartOptions = new()
+    {
+        YAxisTicks = 5,
+        MaxNumYAxisTicks = 8,
+        YAxisLines = true,
+        XAxisLines = true
+    };
     
     // Calculator
     private readonly PullRequestInsightsCalculator _calculator = new();
@@ -437,7 +637,169 @@
         
         NavigationManager.NavigateTo(newUrl, forceLoad: false);
     }
-    
+
+    // Sprint Trend handlers
+    private async Task OnTrendTeamChanged(int? teamId)
+    {
+        _trendTeamId = teamId;
+        _fromSprintId = null;
+        _toSprintId = null;
+        _trendSprints.Clear();
+        _sprintTrendData = null;
+        ClearTrendCharts();
+
+        if (teamId.HasValue)
+        {
+            try
+            {
+                var sprints = (await SprintService.GetSprintsForTeamAsync(teamId.Value))
+                    .Where(s => s.StartUtc.HasValue && s.EndUtc.HasValue)
+                    .OrderBy(s => s.StartUtc)
+                    .ToList();
+                _trendSprints = sprints;
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error loading sprints: {ex.Message}", Severity.Warning);
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task OnFromSprintChanged(int? sprintId)
+    {
+        _fromSprintId = sprintId;
+        await LoadSprintTrendsAsync();
+    }
+
+    private async Task OnToSprintChanged(int? sprintId)
+    {
+        _toSprintId = sprintId;
+        await LoadSprintTrendsAsync();
+    }
+
+    private async Task LoadSprintTrendsAsync()
+    {
+        if (!_fromSprintId.HasValue || !_toSprintId.HasValue)
+        {
+            _sprintTrendData = null;
+            ClearTrendCharts();
+            StateHasChanged();
+            return;
+        }
+
+        _trendsLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Build ordered list of sprint IDs between from and to (inclusive)
+            var fromSprint = _trendSprints.FirstOrDefault(s => s.Id == _fromSprintId.Value);
+            var toSprint = _trendSprints.FirstOrDefault(s => s.Id == _toSprintId.Value);
+
+            if (fromSprint == null || toSprint == null)
+                return;
+
+            // Ensure from <= to (swap if needed)
+            if (fromSprint.StartUtc > toSprint.StartUtc)
+                (fromSprint, toSprint) = (toSprint, fromSprint);
+
+            var selectedSprintIds = _trendSprints
+                .Where(s => s.StartUtc >= fromSprint.StartUtc && s.StartUtc <= toSprint.StartUtc)
+                .Select(s => s.Id)
+                .ToList();
+
+            if (selectedSprintIds.Count == 0)
+                return;
+
+            // Determine product scope (mirror the metrics filter selection)
+            IEnumerable<int>? productFilter = null;
+            if (_selectedProductId.HasValue)
+            {
+                productFilter = new[] { _selectedProductId.Value };
+            }
+            else if (_selectedTeamId.HasValue)
+            {
+                var teamProducts = _products
+                    .Where(p => p.TeamIds != null && p.TeamIds.Contains(_selectedTeamId.Value))
+                    .Select(p => p.Id)
+                    .ToList();
+                if (teamProducts.Count > 0)
+                    productFilter = teamProducts;
+            }
+
+            _sprintTrendData = await PrSprintTrendsService.GetSprintTrendsAsync(
+                selectedSprintIds,
+                productFilter,
+                teamId: productFilter == null ? _trendTeamId : null);
+
+            if (_sprintTrendData?.Success == true)
+            {
+                BuildTrendCharts();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading sprint trends: {ex.Message}", Severity.Warning);
+        }
+        finally
+        {
+            _trendsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void BuildTrendCharts()
+    {
+        if (_sprintTrendData == null || _sprintTrendData.Sprints.Count == 0)
+            return;
+
+        var sprints = _sprintTrendData.Sprints.OrderBy(s => s.StartUtc ?? DateTimeOffset.MaxValue).ToList();
+        _trendXAxisLabels = sprints.Select(s => s.SprintName).ToArray();
+
+        // Charts use 0 for missing data points (gap indication in caption)
+        _prSizeChartSeries = new List<ChartSeries>
+        {
+            new() { Name = "Median PR Size", Data = sprints.Select(s => s.MedianPrSize ?? 0).ToArray() }
+        };
+        _ttfrChartSeries = new List<ChartSeries>
+        {
+            new() { Name = "Median TTFR (h)", Data = sprints.Select(s => s.MedianTimeToFirstReviewHours ?? 0).ToArray() }
+        };
+        _ttmMedianChartSeries = new List<ChartSeries>
+        {
+            new() { Name = "Median TTM (h)", Data = sprints.Select(s => s.MedianTimeToMergeHours ?? 0).ToArray() }
+        };
+        _ttmP90ChartSeries = new List<ChartSeries>
+        {
+            new() { Name = "P90 TTM (h)", Data = sprints.Select(s => s.P90TimeToMergeHours ?? 0).ToArray() }
+        };
+
+        // Compute slope badge endpoints from first and last sprint with non-null data
+        _prSizeStart = sprints.FirstOrDefault(s => s.MedianPrSize.HasValue)?.MedianPrSize;
+        _prSizeEnd = sprints.LastOrDefault(s => s.MedianPrSize.HasValue)?.MedianPrSize;
+        _ttfrStart = sprints.FirstOrDefault(s => s.MedianTimeToFirstReviewHours.HasValue)?.MedianTimeToFirstReviewHours;
+        _ttfrEnd = sprints.LastOrDefault(s => s.MedianTimeToFirstReviewHours.HasValue)?.MedianTimeToFirstReviewHours;
+        _ttmMedianStart = sprints.FirstOrDefault(s => s.MedianTimeToMergeHours.HasValue)?.MedianTimeToMergeHours;
+        _ttmMedianEnd = sprints.LastOrDefault(s => s.MedianTimeToMergeHours.HasValue)?.MedianTimeToMergeHours;
+        _ttmP90Start = sprints.FirstOrDefault(s => s.P90TimeToMergeHours.HasValue)?.P90TimeToMergeHours;
+        _ttmP90End = sprints.LastOrDefault(s => s.P90TimeToMergeHours.HasValue)?.P90TimeToMergeHours;
+    }
+
+    private void ClearTrendCharts()
+    {
+        _trendXAxisLabels = Array.Empty<string>();
+        _prSizeChartSeries = new();
+        _ttfrChartSeries = new();
+        _ttmMedianChartSeries = new();
+        _ttmP90ChartSeries = new();
+        _prSizeStart = _prSizeEnd = null;
+        _ttfrStart = _ttfrEnd = null;
+        _ttmMedianStart = _ttmMedianEnd = null;
+        _ttmP90Start = _ttmP90End = null;
+    }
+
     private void UpdateBreadcrumbs()
     {
         _breadcrumbs = new List<BreadcrumbItem>

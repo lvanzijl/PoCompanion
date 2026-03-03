@@ -1,0 +1,135 @@
+@*
+    TrendSlopeBadge — Reusable slope/trend direction indicator.
+
+    Shows one of three states based on start/end values and polarity:
+      ↑  Improving   (green)
+      →  Stable      (grey)
+      ↓  Worsening   (red)
+
+    Parameters:
+      StartValue        — first value in the series (typically earliest sprint)
+      EndValue          — last value in the series (typically latest sprint)
+      LowerIsBetter     — true for "time" and "size" metrics where lower = better (default: true)
+      TolerancePercent  — percentage change within which the trend is considered stable (default: 5.0)
+      MetricLabel       — short label used in the aria-description (e.g. "time to merge")
+*@
+
+@if (_direction.HasValue)
+{
+    <MudTooltip Text="@_tooltipText">
+        <MudChip T="string"
+                 Size="Size.Small"
+                 Color="@_color"
+                 Icon="@_icon"
+                 aria-label="@_ariaLabel"
+                 Class="trend-slope-badge">
+            @_label
+        </MudChip>
+    </MudTooltip>
+}
+
+@code {
+    private enum TrendDirection { Improving, Stable, Worsening }
+
+    /// <summary>First (oldest) value in the selected sprint range.</summary>
+    [Parameter]
+    public double? StartValue { get; set; }
+
+    /// <summary>Last (newest) value in the selected sprint range.</summary>
+    [Parameter]
+    public double? EndValue { get; set; }
+
+    /// <summary>
+    /// When true, a decrease in value is "Improving" (applies to time and size metrics).
+    /// When false, an increase in value is "Improving" (e.g. velocity).
+    /// </summary>
+    [Parameter]
+    public bool LowerIsBetter { get; set; } = true;
+
+    /// <summary>
+    /// Percentage change (relative to StartValue) within which the trend is considered Stable.
+    /// Default: 5.0 (i.e. ±5%).
+    /// </summary>
+    [Parameter]
+    public double TolerancePercent { get; set; } = 5.0;
+
+    /// <summary>Short description of the metric used in aria-label and tooltip.</summary>
+    [Parameter]
+    public string MetricLabel { get; set; } = "metric";
+
+    private TrendDirection? _direction;
+    private string _label = string.Empty;
+    private string _icon = string.Empty;
+    private Color _color;
+    private string _ariaLabel = string.Empty;
+    private string _tooltipText = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        if (!StartValue.HasValue || !EndValue.HasValue)
+        {
+            _direction = null;
+            return;
+        }
+
+        var start = StartValue.Value;
+        var end = EndValue.Value;
+        var delta = end - start;
+
+        // Compute relative change; if start is zero use absolute delta
+        var relativePct = start != 0
+            ? Math.Abs(delta / start) * 100.0
+            : Math.Abs(delta);
+
+        if (relativePct <= TolerancePercent)
+        {
+            _direction = TrendDirection.Stable;
+        }
+        else if (delta > 0)
+        {
+            // Value went up
+            _direction = LowerIsBetter ? TrendDirection.Worsening : TrendDirection.Improving;
+        }
+        else
+        {
+            // Value went down
+            _direction = LowerIsBetter ? TrendDirection.Improving : TrendDirection.Worsening;
+        }
+
+        (_label, _color, _ariaLabel, _tooltipText) = _direction switch
+        {
+            TrendDirection.Improving => (
+                "Improving",
+                Color.Success,
+                $"{MetricLabel}: improving trend",
+                $"{MetricLabel} moved from {start:F1} to {end:F1} — improving"
+            ),
+            TrendDirection.Stable => (
+                "Stable",
+                Color.Default,
+                $"{MetricLabel}: stable trend",
+                $"{MetricLabel} moved from {start:F1} to {end:F1} — stable (within {TolerancePercent:F0}% tolerance)"
+            ),
+            TrendDirection.Worsening => (
+                "Worsening",
+                Color.Error,
+                $"{MetricLabel}: worsening trend",
+                $"{MetricLabel} moved from {start:F1} to {end:F1} — worsening"
+            ),
+            _ => (string.Empty, Color.Default, string.Empty, string.Empty)
+        };
+
+        // Icon selection: for lower-is-better metrics a declining value (↓) is Improving;
+        // for higher-is-better a rising value (↑) is Improving. Stable always uses the flat icon.
+        _icon = _direction switch
+        {
+            TrendDirection.Improving => LowerIsBetter
+                ? Icons.Material.Filled.TrendingDown
+                : Icons.Material.Filled.TrendingUp,
+            TrendDirection.Worsening => LowerIsBetter
+                ? Icons.Material.Filled.TrendingUp
+                : Icons.Material.Filled.TrendingDown,
+            _ => Icons.Material.Filled.TrendingFlat
+        };
+    }
+}

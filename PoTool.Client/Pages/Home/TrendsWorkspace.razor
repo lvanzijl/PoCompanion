@@ -11,6 +11,7 @@
 @inject StateClassificationService StateClassificationService
 @inject TeamService TeamService
 @inject SprintService SprintService
+@inject PrSprintTrendsService PrSprintTrendsService
 
 @* 
     Decision #3: Time Horizon Default - Configurable sprint range (defaults to last 6 months if no sprints selected)
@@ -185,6 +186,13 @@
                             <MudIcon Icon="@Icons.Material.Filled.MergeType" Color="Color.Info" Size="Size.Large" />
                             <MudText Typo="Typo.subtitle1" Class="mt-2">PR Trend</MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Pull request insights</MudText>
+                            @* Slope badge: summarises median time-to-merge over the selected horizon.
+                               Median TTM is chosen as the primary signal because it captures end-to-end
+                               flow efficiency and is the most actionable metric for a PO. *@
+                            <TrendSlopeBadge StartValue="@_prTtmSlopeStart"
+                                             EndValue="@_prTtmSlopeEnd"
+                                             LowerIsBetter="true"
+                                             MetricLabel="median time to merge" />
                             <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
                         </MudCardContent>
                     </MudCard>
@@ -322,6 +330,10 @@
     private Dictionary<string, int> _bugTrendTotal = new();   // Bugs existing/active in that month
     private Dictionary<string, int> _bugTrendFixed = new();   // Bugs moved to Done in that month
     private Dictionary<string, int> _bugTrendAdded = new();   // Bugs created in that month
+
+    // PR slope badge: first/last median time-to-merge values over the selected sprint horizon
+    private double? _prTtmSlopeStart;
+    private double? _prTtmSlopeEnd;
     
     protected override async Task OnInitializedAsync()
     {
@@ -574,6 +586,56 @@
             _sprints = new List<PoTool.Client.ApiClient.SprintDto>();
         }
     }
+
+    /// <summary>
+    /// Loads median time-to-merge data for the selected sprint range to populate the PR Trend slope badge.
+    /// Only called when both from/to sprints are selected.
+    /// </summary>
+    private async Task LoadPrSprintTrendSlopeAsync()
+    {
+        _prTtmSlopeStart = null;
+        _prTtmSlopeEnd = null;
+
+        if (!_selectedFromSprintId.HasValue || !_selectedToSprintId.HasValue || _sprints.Count == 0)
+            return;
+
+        try
+        {
+            var fromSprint = _sprints.FirstOrDefault(s => s.Id == _selectedFromSprintId.Value);
+            var toSprint = _sprints.FirstOrDefault(s => s.Id == _selectedToSprintId.Value);
+
+            if (fromSprint == null || toSprint == null)
+                return;
+
+            // Ensure ordering
+            if (fromSprint.StartUtc > toSprint.StartUtc)
+                (fromSprint, toSprint) = (toSprint, fromSprint);
+
+            var selectedSprintIds = _sprints
+                .Where(s => s.StartUtc >= fromSprint.StartUtc && s.StartUtc <= toSprint.StartUtc)
+                .Select(s => s.Id)
+                .ToList();
+
+            if (selectedSprintIds.Count == 0)
+                return;
+
+            var response = await PrSprintTrendsService.GetSprintTrendsAsync(
+                selectedSprintIds,
+                teamId: _selectedTeamId);
+
+            if (response?.Success == true && response.Sprints.Count > 0)
+            {
+                var ordered = response.Sprints.OrderBy(s => s.StartUtc ?? DateTimeOffset.MaxValue).ToList();
+                _prTtmSlopeStart = ordered.FirstOrDefault(s => s.MedianTimeToMergeHours.HasValue)?.MedianTimeToMergeHours;
+                _prTtmSlopeEnd = ordered.LastOrDefault(s => s.MedianTimeToMergeHours.HasValue)?.MedianTimeToMergeHours;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Non-blocking: slope badge simply stays hidden on error
+            Console.WriteLine($"PR slope badge load failed: {ex.Message}");
+        }
+    }
     
     /// <summary>
     /// Calculates the date range based on sprint selection or defaults to 6 months.
@@ -637,6 +699,8 @@
         _selectedFromSprintId = null;
         _selectedToSprintId = null;
         _sprints.Clear();
+        _prTtmSlopeStart = null;
+        _prTtmSlopeEnd = null;
         
         if (teamId.HasValue)
         {
@@ -657,7 +721,7 @@
         _selectedFromSprintId = sprintId;
         CalculateDateRange();
         UpdateSprintUrlParameters();
-        await LoadBugTrendDataAsync();
+        await Task.WhenAll(LoadBugTrendDataAsync(), LoadPrSprintTrendSlopeAsync());
         StateHasChanged();
     }
     
@@ -669,7 +733,7 @@
         _selectedToSprintId = sprintId;
         CalculateDateRange();
         UpdateSprintUrlParameters();
-        await LoadBugTrendDataAsync();
+        await Task.WhenAll(LoadBugTrendDataAsync(), LoadPrSprintTrendSlopeAsync());
         StateHasChanged();
     }
     
