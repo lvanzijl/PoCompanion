@@ -135,9 +135,17 @@
             }
             else
             {
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" Icon="@Icons.Material.Filled.Info">
+                    <strong>Score key:</strong>
+                    Feature 0% = no description (PO action) ·
+                    25% = no PBIs yet (Team action) ·
+                    &gt;25% = average PBI readiness.
+                    PBI: 0% = no description · 75% = no story points · 100% = ready for implementation.
+                </MudAlert>
+
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
                     Epics sorted by refinement progress — highest first.
-                    Click a feature to open it in the Work Item Explorer.
+                    Expand an epic to review its features, then expand a feature to see individual PBI readiness.
                 </MudText>
 
                 @foreach (var epic in _refinementEpics)
@@ -152,9 +160,11 @@
                                                    Color="@GetProgressColor(epic.Score)"
                                                    Style="width: 120px; height: 8px;"
                                                    Rounded="true" />
-                                <MudText Typo="Typo.body2" Style="min-width: 40px; text-align: right;">
-                                    @epic.Score%
-                                </MudText>
+                                <MudTooltip Text="Percentage of features ready for implementation (average feature readiness score)">
+                                    <MudText Typo="Typo.body2" Style="min-width: 40px; text-align: right;">
+                                        @epic.Score%
+                                    </MudText>
+                                </MudTooltip>
                             </MudStack>
                         </TitleContent>
                         <ChildContent>
@@ -166,44 +176,74 @@
                             }
                             else
                             {
-                                <MudSimpleTable Dense="true" Hover="true" Style="margin: 0;">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 45%;">Feature</th>
-                                            <th style="width: 25%;">Owner</th>
-                                            <th style="width: 20%;">Progress</th>
-                                            <th style="width: 10%; text-align: right;">Score</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var feature in epic.Features.OrderBy(f => f.Score))
-                                        {
-                                            <tr style="cursor: pointer;"
-                                                @onclick="() => NavigateToExplorer(epic.TfsId)"
-                                                @key="feature.TfsId">
-                                                <td>
-                                                    <MudText Typo="Typo.body2">@feature.Title</MudText>
-                                                </td>
-                                                <td>
-                                                    <MudChip T="string"
-                                                             Color="@GetOwnerColor(feature.OwnerState)"
-                                                             Size="Size.Small">
-                                                        @feature.OwnerState.ToString()
-                                                    </MudChip>
-                                                </td>
-                                                <td>
-                                                    <MudProgressLinear Value="@feature.Score"
-                                                                       Color="@GetProgressColor(feature.Score)"
-                                                                       Style="height: 6px;"
-                                                                       Rounded="true" />
-                                                </td>
-                                                <td style="text-align: right;">
-                                                    <MudText Typo="Typo.body2">@feature.Score%</MudText>
-                                                </td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </MudSimpleTable>
+                                @foreach (var feature in epic.Features.OrderBy(f => f.Score))
+                                {
+                                    <MudExpansionPanel Class="mb-1 ml-2" @key="feature.TfsId" Dense="true">
+                                        <TitleContent>
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width: 100%;">
+                                                <MudText Typo="Typo.body1" Style="flex: 1;">@feature.Title</MudText>
+                                                <MudChip T="string"
+                                                         Color="@GetOwnerColor(feature.OwnerState)"
+                                                         Size="Size.Small">
+                                                    @feature.OwnerState.ToString()
+                                                </MudChip>
+                                                <MudProgressLinear Value="@feature.Score"
+                                                                   Color="@GetProgressColor(feature.Score)"
+                                                                   Style="width: 80px; height: 6px;"
+                                                                   Rounded="true" />
+                                                <MudTooltip Text="@GetFeatureScoreTooltip(feature)">
+                                                    <MudText Typo="Typo.body2" Style="min-width: 36px; text-align: right; cursor: help;">
+                                                        @feature.Score%
+                                                    </MudText>
+                                                </MudTooltip>
+                                            </MudStack>
+                                        </TitleContent>
+                                        <ChildContent>
+                                            @if (feature.Pbis.Count == 0)
+                                            {
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-2">
+                                                    No PBIs found. Team must create and refine PBIs under this feature.
+                                                </MudText>
+                                            }
+                                            else
+                                            {
+                                                <MudSimpleTable Dense="true" Hover="true" Style="margin: 0 8px 4px 8px;">
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="width: 55%;">PBI</th>
+                                                            <th style="width: 35%;">Status</th>
+                                                            <th style="width: 10%; text-align: right;">Ready %</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var pbi in feature.Pbis.OrderBy(p => p.Score))
+                                                        {
+                                                            <tr @key="pbi.TfsId">
+                                                                <td>
+                                                                    <MudText Typo="Typo.body2">
+                                                                        @GetPbiDisplayTitle(pbi)
+                                                                    </MudText>
+                                                                </td>
+                                                                <td>
+                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                                        @GetPbiStatusText(pbi.Score)
+                                                                    </MudText>
+                                                                </td>
+                                                                <td style="text-align: right;">
+                                                                    <MudChip T="string"
+                                                                             Color="@GetProgressColor(pbi.Score)"
+                                                                             Size="Size.Small">
+                                                                        @pbi.Score%
+                                                                    </MudChip>
+                                                                </td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </MudSimpleTable>
+                                            }
+                                        </ChildContent>
+                                    </MudExpansionPanel>
+                                }
                             }
                         </ChildContent>
                     </MudExpansionPanel>
@@ -426,6 +466,9 @@
         NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanningWorkspace2}{BuildContextQuery()}");
     }
 
+    private static string GetPbiDisplayTitle(PbiReadinessDto pbi) =>
+        string.IsNullOrWhiteSpace(pbi.Title) ? $"PBI #{pbi.TfsId}" : pbi.Title;
+
     private static Color GetProgressColor(int score) => score switch
     {
         100 => Color.Success,
@@ -440,5 +483,21 @@
         FeatureOwnerState.Team => Color.Info,
         FeatureOwnerState.PO => Color.Error,
         _ => Color.Default
+    };
+
+    private static string GetFeatureScoreTooltip(FeatureRefinementDto feature) => feature.Score switch
+    {
+        0  => "0% — Feature has no description. PO must write the description before refinement can begin.",
+        25 => "25% — Feature has a description but no PBIs yet. Team must create and refine PBIs.",
+        100 => "100% — All PBIs have description and story points. Feature is ready for implementation.",
+        _  => $"{feature.Score}% — Average PBI readiness: {feature.Pbis.Count(p => p.Score == 100)} of {feature.Pbis.Count} PBIs fully ready."
+    };
+
+    private static string GetPbiStatusText(int score) => score switch
+    {
+        100 => "Ready — has description and story points",
+        75  => "Needs story points — description present",
+        0   => "Needs description",
+        _   => $"Partial readiness"
     };
 }

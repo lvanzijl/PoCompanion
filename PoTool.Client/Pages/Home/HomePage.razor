@@ -157,28 +157,8 @@
             </MudText>
             
             <MudGrid Spacing="4" Justify="Justify.Center">
-                @* Backlog Overview Workspace *@
-                <MudItem xs="12" sm="6" md="3">
-                    <MudCard Class="workspace-card" 
-                             Elevation="4"
-                             Style="cursor: pointer; height: 100%; min-height: 240px; transition: all 0.3s ease; border: 2px solid transparent;"
-                             @onclick="NavigateToBacklogOverview">
-                        <MudCardContent Class="d-flex flex-column align-center justify-center pa-6" Style="height: 100%;">
-                            <MudIcon Icon="@Icons.Material.Filled.Inventory2" 
-                                     Color="Color.Primary" 
-                                     Style="font-size: 3.5rem;" />
-                            <MudText Typo="Typo.h5" Class="mt-4 text-center" Style="font-weight: 600;">
-                                Backlog Overview
-                            </MudText>
-                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2" Style="color: var(--mud-palette-text-secondary);">
-                                Backlog maturity, refinement ownership
-                            </MudText>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-
                 @* Health (Now) Workspace *@
-                <MudItem xs="12" sm="6" md="3">
+                <MudItem xs="12" sm="6" md="4">
                     <MudCard Class="workspace-card" 
                              Elevation="4"
                              Style="cursor: pointer; height: 100%; min-height: 240px; transition: all 0.3s ease; border: 2px solid transparent;"
@@ -191,14 +171,14 @@
                                 Health (Now)
                             </MudText>
                             <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2" Style="color: var(--mud-palette-text-secondary);">
-                                Current-state problems, actionable issues
+                                Backlog maturity, refinement ownership
                             </MudText>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
 
                 @* Trends (Past) Workspace *@
-                <MudItem xs="12" sm="6" md="3">
+                <MudItem xs="12" sm="6" md="4">
                     <MudCard Class="workspace-card" 
                              Elevation="4"
                              Style="cursor: pointer; height: 100%; min-height: 240px; transition: all 0.3s ease; border: 2px solid transparent;"
@@ -218,7 +198,7 @@
                 </MudItem>
 
                 @* Planning (Future) Workspace *@
-                <MudItem xs="12" sm="6" md="3">
+                <MudItem xs="12" sm="6" md="4">
                     <MudCard Class="workspace-card" 
                              Elevation="4"
                              Style="cursor: pointer; height: 100%; min-height: 240px; transition: all 0.3s ease; border: 2px solid transparent;"
