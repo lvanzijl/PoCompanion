@@ -332,6 +332,102 @@ public class BacklogStateComputationServiceTests
 
     #endregion
 
+    #region Done-item scoring (done items count as 100%)
+
+    [TestMethod]
+    public void ComputeFeatureScore_DonePbi_CountsAs100()
+    {
+        // Feature has one done PBI (no description, would score 0) and one incomplete PBI (75).
+        // Done PBI should count as 100, so average = (100 + 75) / 2 = 88.
+        var feature = CreateWorkItem(10, WorkItemType.Feature, description: "Feature desc", effort: null);
+        var donePbi = CreateWorkItem(101, WorkItemType.Pbi, description: null, effort: null, parentId: 10); // would score 0
+        var activePbi = CreateWorkItem(102, WorkItemType.Pbi, description: "desc", effort: null, parentId: 10); // scores 75
+        var items = new[] { feature, donePbi, activePbi };
+        var doneIds = new HashSet<int> { 101 };
+
+        var result = _service.ComputeFeatureScore(feature, items, doneIds);
+
+        Assert.AreEqual(88, result.Score); // Math.Round((100 + 75) / 2.0) = 88
+        Assert.AreEqual(FeatureOwnerState.Team, result.OwnerState);
+    }
+
+    [TestMethod]
+    public void ComputeFeatureScore_AllPbisDone_Returns100_OwnerReady()
+    {
+        var feature = CreateWorkItem(10, WorkItemType.Feature, description: "Feature desc", effort: null);
+        var pbi1 = CreateWorkItem(101, WorkItemType.Pbi, description: null, effort: null, parentId: 10); // would score 0
+        var pbi2 = CreateWorkItem(102, WorkItemType.Pbi, description: "desc", effort: null, parentId: 10); // would score 75
+        var items = new[] { feature, pbi1, pbi2 };
+        var doneIds = new HashSet<int> { 101, 102 };
+
+        var result = _service.ComputeFeatureScore(feature, items, doneIds);
+
+        Assert.AreEqual(100, result.Score);
+        Assert.AreEqual(FeatureOwnerState.Ready, result.OwnerState);
+    }
+
+    [TestMethod]
+    public void ComputeEpicScore_DoneFeature_CountsAs100()
+    {
+        // Epic with one done feature (would score 0, no description) and one active feature at 100.
+        // Done feature counts as 100, so average = (100 + 100) / 2 = 100.
+        var epic = CreateWorkItem(1, WorkItemType.Epic, description: "Epic desc", effort: null);
+        var doneFeature = CreateWorkItem(10, WorkItemType.Feature, description: null, effort: null, parentId: 1); // would score 0
+        var activeFeature = CreateWorkItem(11, WorkItemType.Feature, description: "desc", effort: null, parentId: 1);
+        var pbi = CreateWorkItem(101, WorkItemType.Pbi, description: "PBI desc", effort: 5, parentId: 11); // 100
+        var items = new[] { epic, doneFeature, activeFeature, pbi };
+        var doneIds = new HashSet<int> { 10 };
+
+        var result = _service.ComputeEpicScore(epic, items, doneIds);
+
+        Assert.AreEqual(100, result.Score);
+    }
+
+    [TestMethod]
+    public void ComputeEpicScore_AllFeaturesDone_Returns100()
+    {
+        var epic = CreateWorkItem(1, WorkItemType.Epic, description: "Epic desc", effort: null);
+        var feature1 = CreateWorkItem(10, WorkItemType.Feature, description: null, effort: null, parentId: 1); // would score 0
+        var feature2 = CreateWorkItem(11, WorkItemType.Feature, description: null, effort: null, parentId: 1); // would score 0
+        var items = new[] { epic, feature1, feature2 };
+        var doneIds = new HashSet<int> { 10, 11 };
+
+        var result = _service.ComputeEpicScore(epic, items, doneIds);
+
+        Assert.AreEqual(100, result.Score);
+    }
+
+    [TestMethod]
+    public void ComputeFeatureScore_EmptyDoneIds_BehavesLikeOriginalOverload()
+    {
+        // Using empty doneItemIds should produce the same result as the parameterless overload.
+        var feature = CreateWorkItem(10, WorkItemType.Feature, description: "Feature desc", effort: null);
+        var pbi = CreateWorkItem(101, WorkItemType.Pbi, description: "PBI desc", effort: 5, parentId: 10); // 100
+        var items = new[] { feature, pbi };
+
+        var resultOld = _service.ComputeFeatureScore(feature, items);
+        var resultNew = _service.ComputeFeatureScore(feature, items, new HashSet<int>());
+
+        Assert.AreEqual(resultOld.Score, resultNew.Score);
+        Assert.AreEqual(resultOld.OwnerState, resultNew.OwnerState);
+    }
+
+    [TestMethod]
+    public void ComputeEpicScore_EmptyDoneIds_BehavesLikeOriginalOverload()
+    {
+        var epic = CreateWorkItem(1, WorkItemType.Epic, description: "Epic desc", effort: null);
+        var feature = CreateWorkItem(10, WorkItemType.Feature, description: "Feature desc", effort: null, parentId: 1);
+        var pbi = CreateWorkItem(101, WorkItemType.Pbi, description: "PBI desc", effort: 5, parentId: 10); // 100
+        var items = new[] { epic, feature, pbi };
+
+        var resultOld = _service.ComputeEpicScore(epic, items);
+        var resultNew = _service.ComputeEpicScore(epic, items, new HashSet<int>());
+
+        Assert.AreEqual(resultOld.Score, resultNew.Score);
+    }
+
+    #endregion
+
     #region Suppression alignment (RR suppresses RC per Feature subtree)
 
     [TestMethod]

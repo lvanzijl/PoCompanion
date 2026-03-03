@@ -69,26 +69,40 @@ public sealed class GetProductBacklogStateQueryHandler
             "Loaded {Count} work items for product {ProductId}",
             allItems.Count, query.ProductId);
 
-        // Build a set of done states per work item type to exclude done items from refinement.
+        // Build state classification lookups for Done and Removed items.
         var classifications = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
         var doneStateLookup = classifications.Classifications
             .Where(c => c.Classification == StateClassification.Done)
             .Select(c => (Type: c.WorkItemType.ToLowerInvariant(), State: c.StateName.ToLowerInvariant()))
             .ToHashSet();
+        var removedStateLookup = classifications.Classifications
+            .Where(c => c.Classification == StateClassification.Removed)
+            .Select(c => (Type: c.WorkItemType.ToLowerInvariant(), State: c.StateName.ToLowerInvariant()))
+            .ToHashSet();
 
-        // Pre-build the set of done TfsIds to avoid repeated string allocations in LINQ.
+        // Removed items are excluded entirely (not shown, not counted).
+        var removedItemIds = allItems
+            .Where(w => removedStateLookup.Contains(
+                (w.Type.ToLowerInvariant(), w.State.ToLowerInvariant())))
+            .Select(w => w.TfsId)
+            .ToHashSet();
+
+        // Done items are hidden from display but counted as 100% in score calculations.
         var doneItemIds = allItems
             .Where(w => doneStateLookup.Contains(
                 (w.Type.ToLowerInvariant(), w.State.ToLowerInvariant())))
             .Select(w => w.TfsId)
             .ToHashSet();
 
-        // Only include active (non-done) items in refinement computation.
-        var activeItems = allItems.Where(w => !doneItemIds.Contains(w.TfsId)).ToList();
+        // Scoring items: all non-removed items (includes done — they contribute 100% to averages).
+        var scoringItems = allItems.Where(w => !removedItemIds.Contains(w.TfsId)).ToList();
 
-        var epics = activeItems
+        // Display items: non-removed AND non-done (what the UI actually renders).
+        var displayItems = scoringItems.Where(w => !doneItemIds.Contains(w.TfsId)).ToList();
+
+        var epics = displayItems
             .Where(w => string.Equals(w.Type, WorkItemType.Epic, StringComparison.OrdinalIgnoreCase))
-            .Select(epic => BuildEpicDto(epic, activeItems))
+            .Select(epic => BuildEpicDto(epic, scoringItems, displayItems, doneItemIds))
             .ToList();
 
         return new ProductBacklogStateDto
@@ -98,14 +112,18 @@ public sealed class GetProductBacklogStateQueryHandler
         };
     }
 
-    private EpicRefinementDto BuildEpicDto(WorkItemDto epic, IReadOnlyList<WorkItemDto> activeItems)
+    private EpicRefinementDto BuildEpicDto(
+        WorkItemDto epic,
+        IReadOnlyList<WorkItemDto> scoringItems,
+        IReadOnlyList<WorkItemDto> displayItems,
+        IReadOnlySet<int> doneItemIds)
     {
-        var epicScore = _computationService.ComputeEpicScore(epic, activeItems);
+        var epicScore = _computationService.ComputeEpicScore(epic, scoringItems, doneItemIds);
 
-        var features = activeItems
+        var features = displayItems
             .Where(w => w.ParentTfsId == epic.TfsId &&
                         string.Equals(w.Type, WorkItemType.Feature, StringComparison.OrdinalIgnoreCase))
-            .Select(feature => BuildFeatureDto(feature, activeItems))
+            .Select(feature => BuildFeatureDto(feature, scoringItems, displayItems, doneItemIds))
             .ToList();
 
         return new EpicRefinementDto
@@ -117,11 +135,15 @@ public sealed class GetProductBacklogStateQueryHandler
         };
     }
 
-    private FeatureRefinementDto BuildFeatureDto(WorkItemDto feature, IReadOnlyList<WorkItemDto> activeItems)
+    private FeatureRefinementDto BuildFeatureDto(
+        WorkItemDto feature,
+        IReadOnlyList<WorkItemDto> scoringItems,
+        IReadOnlyList<WorkItemDto> displayItems,
+        IReadOnlySet<int> doneItemIds)
     {
-        var featureScore = _computationService.ComputeFeatureScore(feature, activeItems);
+        var featureScore = _computationService.ComputeFeatureScore(feature, scoringItems, doneItemIds);
 
-        var pbis = activeItems
+        var pbis = displayItems
             .Where(w => w.ParentTfsId == feature.TfsId &&
                         string.Equals(w.Type, WorkItemType.Pbi, StringComparison.OrdinalIgnoreCase))
             .Select(pbi =>
