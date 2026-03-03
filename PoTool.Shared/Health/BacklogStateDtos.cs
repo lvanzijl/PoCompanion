@@ -68,6 +68,13 @@ public sealed class EpicRefinementDto
     /// </summary>
     public required int Score { get; init; }
 
+    /// <summary>
+    /// Whether the epic work item has a non-empty description.
+    /// When false the score is 0 regardless of the underlying feature scores;
+    /// the UI should surface this reason so the PO can act on it.
+    /// </summary>
+    public required bool HasDescription { get; init; }
+
     /// <summary>Per-Feature refinement scores for this epic's children.</summary>
     public required IReadOnlyList<FeatureRefinementDto> Features { get; init; }
 }
