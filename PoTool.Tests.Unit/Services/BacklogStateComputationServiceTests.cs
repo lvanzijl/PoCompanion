@@ -340,8 +340,8 @@ public class BacklogStateComputationServiceTests
         // Feature has one done PBI (no description, would score 0) and one incomplete PBI (75).
         // Done PBI should count as 100, so average = (100 + 75) / 2 = 88.
         var feature = CreateWorkItem(10, WorkItemType.Feature, description: "Feature desc", effort: null);
-        var donePbi = CreateWorkItem(101, WorkItemType.Pbi, description: null, effort: null, parentId: 10); // would be 0
-        var activePbi = CreateWorkItem(102, WorkItemType.Pbi, description: "desc", effort: null, parentId: 10); // 75
+        var donePbi = CreateWorkItem(101, WorkItemType.Pbi, description: null, effort: null, parentId: 10); // would score 0
+        var activePbi = CreateWorkItem(102, WorkItemType.Pbi, description: "desc", effort: null, parentId: 10); // scores 75
         var items = new[] { feature, donePbi, activePbi };
         var doneIds = new HashSet<int> { 101 };
 
@@ -355,8 +355,8 @@ public class BacklogStateComputationServiceTests
     public void ComputeFeatureScore_AllPbisDone_Returns100_OwnerReady()
     {
         var feature = CreateWorkItem(10, WorkItemType.Feature, description: "Feature desc", effort: null);
-        var pbi1 = CreateWorkItem(101, WorkItemType.Pbi, description: null, effort: null, parentId: 10); // would be 0
-        var pbi2 = CreateWorkItem(102, WorkItemType.Pbi, description: "desc", effort: null, parentId: 10); // would be 75
+        var pbi1 = CreateWorkItem(101, WorkItemType.Pbi, description: null, effort: null, parentId: 10); // would score 0
+        var pbi2 = CreateWorkItem(102, WorkItemType.Pbi, description: "desc", effort: null, parentId: 10); // would score 75
         var items = new[] { feature, pbi1, pbi2 };
         var doneIds = new HashSet<int> { 101, 102 };
 
@@ -372,7 +372,7 @@ public class BacklogStateComputationServiceTests
         // Epic with one done feature (would score 0, no description) and one active feature at 100.
         // Done feature counts as 100, so average = (100 + 100) / 2 = 100.
         var epic = CreateWorkItem(1, WorkItemType.Epic, description: "Epic desc", effort: null);
-        var doneFeature = CreateWorkItem(10, WorkItemType.Feature, description: null, effort: null, parentId: 1); // would be 0
+        var doneFeature = CreateWorkItem(10, WorkItemType.Feature, description: null, effort: null, parentId: 1); // would score 0
         var activeFeature = CreateWorkItem(11, WorkItemType.Feature, description: "desc", effort: null, parentId: 1);
         var pbi = CreateWorkItem(101, WorkItemType.Pbi, description: "PBI desc", effort: 5, parentId: 11); // 100
         var items = new[] { epic, doneFeature, activeFeature, pbi };
@@ -387,8 +387,8 @@ public class BacklogStateComputationServiceTests
     public void ComputeEpicScore_AllFeaturesDone_Returns100()
     {
         var epic = CreateWorkItem(1, WorkItemType.Epic, description: "Epic desc", effort: null);
-        var feature1 = CreateWorkItem(10, WorkItemType.Feature, description: null, effort: null, parentId: 1); // would be 0
-        var feature2 = CreateWorkItem(11, WorkItemType.Feature, description: null, effort: null, parentId: 1); // would be 0
+        var feature1 = CreateWorkItem(10, WorkItemType.Feature, description: null, effort: null, parentId: 1); // would score 0
+        var feature2 = CreateWorkItem(11, WorkItemType.Feature, description: null, effort: null, parentId: 1); // would score 0
         var items = new[] { epic, feature1, feature2 };
         var doneIds = new HashSet<int> { 10, 11 };
 

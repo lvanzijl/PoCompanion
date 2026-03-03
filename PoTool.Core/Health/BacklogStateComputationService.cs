@@ -19,6 +19,7 @@ namespace PoTool.Core.Health;
 /// </summary>
 public sealed class BacklogStateComputationService
 {
+    private static readonly IReadOnlySet<int> EmptyDoneIds = new HashSet<int>();
     /// <summary>
     /// Computes the readiness score for a single PBI.
     /// </summary>
@@ -87,7 +88,7 @@ public sealed class BacklogStateComputationService
     /// <param name="allItems">All work items in the loaded graph (used to find PBI children).</param>
     /// <returns>Score and OwnerState for the Feature.</returns>
     public FeatureRefinementScore ComputeFeatureScore(WorkItemDto feature, IEnumerable<WorkItemDto> allItems)
-        => ComputeFeatureScore(feature, allItems, new HashSet<int>());
+        => ComputeFeatureScore(feature, allItems, EmptyDoneIds);
 
     /// <summary>
     /// Computes the refinement score for a single Epic.
@@ -137,5 +138,5 @@ public sealed class BacklogStateComputationService
     /// <param name="allItems">All work items in the loaded graph (used to find Feature children).</param>
     /// <returns>Score for the Epic.</returns>
     public EpicRefinementScore ComputeEpicScore(WorkItemDto epic, IEnumerable<WorkItemDto> allItems)
-        => ComputeEpicScore(epic, allItems, new HashSet<int>());
+        => ComputeEpicScore(epic, allItems, EmptyDoneIds);
 }
