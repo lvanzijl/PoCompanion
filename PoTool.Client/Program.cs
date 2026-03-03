@@ -168,6 +168,9 @@ builder.Services.AddScoped<BugTreeBuilderService>();
 // Register Sprint Trend service
 builder.Services.AddScoped<SprintTrendService>();
 
+// Register Pipeline Sprint Trends service
+builder.Services.AddScoped<PipelineSprintTrendsService>();
+
 // Register Backlog State service (Phase 2 - Backlog Health Overhaul)
 builder.Services.AddScoped<BacklogStateService>();
 

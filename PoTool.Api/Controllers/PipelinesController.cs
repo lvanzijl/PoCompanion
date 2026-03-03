@@ -127,6 +127,43 @@ public class PipelinesController : ControllerBase
     }
 
     /// <summary>
+    /// Gets per-sprint pipeline trend metrics for a set of sprint IDs.
+    /// Sprint mapping rule: a run belongs to a sprint when its FinishedDate falls within the sprint boundaries.
+    /// </summary>
+    [HttpGet("sprint-trends")]
+    public async Task<ActionResult<GetPipelineSprintTrendsResponse>> GetSprintTrends(
+        [FromQuery] int productOwnerId,
+        [FromQuery] List<int>? sprintIds = null,
+        [FromQuery] string? productIds = null,
+        [FromQuery] int? teamId = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var sprintIdList = sprintIds ?? new List<int>();
+            List<int>? productIdsList = null;
+            if (!string.IsNullOrWhiteSpace(productIds))
+            {
+                productIdsList = productIds
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(id => int.TryParse(id.Trim(), out var pid) ? pid : 0)
+                    .Where(id => id > 0)
+                    .ToList();
+            }
+
+            var result = await _mediator.Send(
+                new GetPipelineSprintTrendsQuery(productOwnerId, sprintIdList, productIdsList, teamId),
+                cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving pipeline sprint trends");
+            return StatusCode(500, "Error retrieving pipeline sprint trends");
+        }
+    }
+
+    /// <summary>
     /// Gets all pipeline definitions.
     /// </summary>
     [HttpGet("definitions")]
