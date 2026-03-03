@@ -7,6 +7,8 @@ namespace PoTool.Integrations.Tfs.Clients;
 
 public partial class RealTfsClient
 {
+    private const long UnknownContentLength = -1L;
+
     // Pull Request methods - Phase 2 implementation with Phase 4 enhancements
     public async Task<IEnumerable<PullRequestDto>> GetPullRequestsAsync(
         string? repositoryName = null,
@@ -103,8 +105,7 @@ public partial class RealTfsClient
 
                     await HandleHttpErrorsAsync(response, cancellationToken);
 
-                    var contentBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-                    var contentLength = contentBytes.LongLength;
+                    var contentLength = response.Content.Headers.ContentLength ?? UnknownContentLength;
                     JsonDocument? doc = null;
                     var jsonParsedSuccessfully = false;
                     var hasValue = false;
@@ -112,20 +113,20 @@ public partial class RealTfsClient
 
                     try
                     {
-                        doc = JsonDocument.Parse(contentBytes);
+                        using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                        doc = await JsonDocument.ParseAsync(contentStream, cancellationToken: cancellationToken);
                         jsonParsedSuccessfully = true;
 
                         if (!doc.RootElement.TryGetProperty("value", out var valueArray))
                         {
                             missingValueCount++;
-                            _logger.LogDebug(
-                                "PR_INGEST_REPO_PAGE: repoName={RepoName}, pageIndex={PageIndex}, requestUrl={RequestUrl}, statusCode={StatusCode}, continuationTokenHeaderPresent={ContinuationTokenHeaderPresent}, continuationTokenHeaderValue={ContinuationTokenHeaderValue}, contentLengthBytes={ContentLengthBytes}, jsonParsed={JsonParsed}, hasValue={HasValue}, valueCount={ValueCount}",
+                            LogPullRequestPageDiagnostics(
                                 repo.Name,
                                 pageIndex,
                                 requestUrlForLog,
                                 (int)response.StatusCode,
                                 headerContinuationTokenPresent,
-                                headerContinuationToken ?? "null",
+                                headerContinuationToken,
                                 contentLength,
                                 jsonParsedSuccessfully,
                                 hasValue,
@@ -182,14 +183,13 @@ public partial class RealTfsClient
                         lastContinuationTokenPresent = !string.IsNullOrWhiteSpace(continuationToken);
                         pageUrl = AddContinuationToken(url, continuationToken);
 
-                        _logger.LogDebug(
-                            "PR_INGEST_REPO_PAGE: repoName={RepoName}, pageIndex={PageIndex}, requestUrl={RequestUrl}, statusCode={StatusCode}, continuationTokenHeaderPresent={ContinuationTokenHeaderPresent}, continuationTokenHeaderValue={ContinuationTokenHeaderValue}, contentLengthBytes={ContentLengthBytes}, jsonParsed={JsonParsed}, hasValue={HasValue}, valueCount={ValueCount}",
+                        LogPullRequestPageDiagnostics(
                             repo.Name,
                             pageIndex,
                             requestUrlForLog,
                             (int)response.StatusCode,
                             headerContinuationTokenPresent,
-                            headerContinuationToken ?? "null",
+                            headerContinuationToken,
                             contentLength,
                             jsonParsedSuccessfully,
                             hasValue,
@@ -198,14 +198,13 @@ public partial class RealTfsClient
                     catch (JsonException)
                     {
                         jsonParseFailuresCount++;
-                        _logger.LogDebug(
-                            "PR_INGEST_REPO_PAGE: repoName={RepoName}, pageIndex={PageIndex}, requestUrl={RequestUrl}, statusCode={StatusCode}, continuationTokenHeaderPresent={ContinuationTokenHeaderPresent}, continuationTokenHeaderValue={ContinuationTokenHeaderValue}, contentLengthBytes={ContentLengthBytes}, jsonParsed={JsonParsed}, hasValue={HasValue}, valueCount={ValueCount}",
+                        LogPullRequestPageDiagnostics(
                             repo.Name,
                             pageIndex,
                             requestUrlForLog,
                             (int)response.StatusCode,
                             headerContinuationTokenPresent,
-                            headerContinuationToken ?? "null",
+                            headerContinuationToken,
                             contentLength,
                             jsonParsedSuccessfully,
                             hasValue,
@@ -265,9 +264,10 @@ public partial class RealTfsClient
                     observedBuckets.Add("All repos list empty");
                 }
 
+                var bucketsText = observedBuckets.Count == 0 ? "none" : string.Join(", ", observedBuckets);
                 _logger.LogWarning(
                     "PR_INGEST_ZERO_RESULT_OBSERVED: buckets=[{Buckets}]",
-                    observedBuckets.Count == 0 ? "none" : string.Join(", ", observedBuckets));
+                    bucketsText);
             }
 
             return allPRs;
@@ -278,10 +278,36 @@ public partial class RealTfsClient
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
-            return url;
+            return "[invalid-url]";
         }
 
         return $"{uri.AbsolutePath}{uri.Query}";
+    }
+
+    private void LogPullRequestPageDiagnostics(
+        string repoName,
+        int pageIndex,
+        string requestUrl,
+        int statusCode,
+        bool continuationTokenHeaderPresent,
+        string? continuationTokenHeaderValue,
+        long contentLengthBytes,
+        bool jsonParsed,
+        bool hasValue,
+        int valueCount)
+    {
+        _logger.LogDebug(
+            "PR_INGEST_REPO_PAGE: repoName={RepoName}, pageIndex={PageIndex}, requestUrl={RequestUrl}, statusCode={StatusCode}, continuationTokenHeaderPresent={ContinuationTokenHeaderPresent}, continuationTokenHeaderValue={ContinuationTokenHeaderValue}, contentLengthBytes={ContentLengthBytes}, jsonParsed={JsonParsed}, hasValue={HasValue}, valueCount={ValueCount}",
+            repoName,
+            pageIndex,
+            requestUrl,
+            statusCode,
+            continuationTokenHeaderPresent,
+            continuationTokenHeaderValue ?? "null",
+            contentLengthBytes,
+            jsonParsed,
+            hasValue,
+            valueCount);
     }
 
     public async Task<IEnumerable<PullRequestIterationDto>> GetPullRequestIterationsAsync(
