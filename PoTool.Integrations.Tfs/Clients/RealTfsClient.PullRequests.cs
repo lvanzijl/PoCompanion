@@ -28,6 +28,22 @@ public partial class RealTfsClient
             // Get all repositories or specific one
             var repositories = await GetRepositoriesInternalAsync(config, httpClient, repositoryName, cancellationToken);
             var allPRs = new List<PullRequestDto>();
+            var totalPagesProcessed = 0;
+            var nonSuccessCount = 0;
+            var jsonParseFailuresCount = 0;
+            var missingValueCount = 0;
+            var emptyValueCount = 0;
+
+            var fromDateText = fromDate.HasValue ? fromDate.Value.ToString("O") : "null";
+            var toDateText = toDate.HasValue ? toDate.Value.ToString("O") : "null";
+
+            _logger.LogInformation(
+                "PR_INGEST_CLIENT_START: repositoryNameParameter={RepositoryNameParameter}, fromDate={FromDate}, toDate={ToDate}, status={Status}, resolvedRepositories={ResolvedRepositories}",
+                repositoryName ?? "null",
+                fromDateText,
+                toDateText,
+                "all",
+                repositories.Count);
 
             _logger.LogDebug("Querying {RepoCount} repositories for pull requests", repositories.Count);
 
@@ -54,71 +70,218 @@ public partial class RealTfsClient
                 var encodedRepoName = Uri.EscapeDataString(repo.Name);
                 var url = ProjectUrl(config, $"_apis/git/repositories/{encodedRepoName}/pullrequests?{string.Join("&", queryParams)}");
 
-                _logger.LogDebug("Fetching PRs from repository {Repository}", repo.Name);
+                _logger.LogInformation(
+                    "PR_INGEST_REPO_START: repoName={RepoName}, repoId={RepoId}, fromDate={FromDate}, toDate={ToDate}, initialUrl={InitialUrl}",
+                    repo.Name,
+                    string.IsNullOrWhiteSpace(repo.Id) ? "n/a" : repo.Id,
+                    fromDateText,
+                    toDateText,
+                    SanitizeUrlForDiagnostics(url));
 
                 string? continuationToken = null;
                 var pageUrl = url;
+                var pagesProcessedForRepo = 0;
+                var prsParsedForRepo = 0;
+                var lastContinuationTokenPresent = false;
 
                 do
                 {
+                    pagesProcessedForRepo++;
+                    totalPagesProcessed++;
+                    var pageIndex = pagesProcessedForRepo;
+                    var requestUrlForLog = SanitizeUrlForDiagnostics(pageUrl);
+
                     var response = await SendGetAsync(httpClient, config, pageUrl, cancellationToken, handleErrors: false);
-                    await HandleHttpErrorsAsync(response, cancellationToken);
-
-                    using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                    using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
-                    if (!doc.RootElement.TryGetProperty("value", out var valueArray))
-                        break;
-
-                    foreach (var pr in valueArray.EnumerateArray())
+                    var headerContinuationToken = response.Headers.TryGetValues("x-ms-continuationtoken", out var headerTokens)
+                        ? headerTokens.FirstOrDefault()
+                        : null;
+                    var headerContinuationTokenPresent = !string.IsNullOrWhiteSpace(headerContinuationToken);
+                    if (!response.IsSuccessStatusCode)
                     {
-                        var prId = pr.GetProperty("pullRequestId").GetInt32();
-                        var title = pr.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "";
-                        var status = pr.TryGetProperty("status", out var s) ? s.GetString() ?? "" : "";
-                        var sourceBranch = pr.TryGetProperty("sourceRefName", out var src) ? src.GetString() ?? "" : "";
-                        var targetBranch = pr.TryGetProperty("targetRefName", out var tgt) ? tgt.GetString() ?? "" : "";
-
-                        var createdBy = "";
-                        if (pr.TryGetProperty("createdBy", out var creator))
-                        {
-                            createdBy = creator.TryGetProperty("displayName", out var name) ? name.GetString() ?? "" : "";
-                        }
-
-                        var createdDate = pr.TryGetProperty("creationDate", out var cd) ? cd.GetDateTimeOffset() : DateTimeOffset.UtcNow;
-                        var completedDate = pr.TryGetProperty("closedDate", out var cld) && cld.ValueKind != JsonValueKind.Null
-                            ? (DateTimeOffset?)cld.GetDateTimeOffset()
-                            : null;
-
-                        // Determine iteration path from work items or use project root
-                        var iterationPath = config.Project; // Default to project root path
-
-                        allPRs.Add(new PullRequestDto(
-                            Id: prId,
-                            RepositoryName: repo.Name,
-                            Title: title,
-                            CreatedBy: createdBy,
-                            CreatedDate: createdDate,
-                            CompletedDate: completedDate,
-                            Status: status,
-                            IterationPath: iterationPath,
-                            SourceBranch: sourceBranch,
-                            TargetBranch: targetBranch,
-                            RetrievedAt: DateTimeOffset.UtcNow
-                        ));
+                        nonSuccessCount++;
                     }
 
-                    continuationToken = GetContinuationToken(response, doc);
-                    pageUrl = AddContinuationToken(url, continuationToken);
+                    await HandleHttpErrorsAsync(response, cancellationToken);
+
+                    var contentBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+                    var contentLength = contentBytes.LongLength;
+                    JsonDocument? doc = null;
+                    var jsonParsedSuccessfully = false;
+                    var hasValue = false;
+                    var valueItemsCount = 0;
+
+                    try
+                    {
+                        doc = JsonDocument.Parse(contentBytes);
+                        jsonParsedSuccessfully = true;
+
+                        if (!doc.RootElement.TryGetProperty("value", out var valueArray))
+                        {
+                            missingValueCount++;
+                            _logger.LogDebug(
+                                "PR_INGEST_REPO_PAGE: repoName={RepoName}, pageIndex={PageIndex}, requestUrl={RequestUrl}, statusCode={StatusCode}, continuationTokenHeaderPresent={ContinuationTokenHeaderPresent}, continuationTokenHeaderValue={ContinuationTokenHeaderValue}, contentLengthBytes={ContentLengthBytes}, jsonParsed={JsonParsed}, hasValue={HasValue}, valueCount={ValueCount}",
+                                repo.Name,
+                                pageIndex,
+                                requestUrlForLog,
+                                (int)response.StatusCode,
+                                headerContinuationTokenPresent,
+                                headerContinuationToken ?? "null",
+                                contentLength,
+                                jsonParsedSuccessfully,
+                                hasValue,
+                                valueItemsCount);
+                            break;
+                        }
+
+                        hasValue = true;
+                        valueItemsCount = valueArray.GetArrayLength();
+                        if (valueItemsCount == 0)
+                        {
+                            emptyValueCount++;
+                        }
+
+                        foreach (var pr in valueArray.EnumerateArray())
+                        {
+                            var prId = pr.GetProperty("pullRequestId").GetInt32();
+                            var title = pr.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "";
+                            var status = pr.TryGetProperty("status", out var s) ? s.GetString() ?? "" : "";
+                            var sourceBranch = pr.TryGetProperty("sourceRefName", out var src) ? src.GetString() ?? "" : "";
+                            var targetBranch = pr.TryGetProperty("targetRefName", out var tgt) ? tgt.GetString() ?? "" : "";
+
+                            var createdBy = "";
+                            if (pr.TryGetProperty("createdBy", out var creator))
+                            {
+                                createdBy = creator.TryGetProperty("displayName", out var name) ? name.GetString() ?? "" : "";
+                            }
+
+                            var createdDate = pr.TryGetProperty("creationDate", out var cd) ? cd.GetDateTimeOffset() : DateTimeOffset.UtcNow;
+                            var completedDate = pr.TryGetProperty("closedDate", out var cld) && cld.ValueKind != JsonValueKind.Null
+                                ? (DateTimeOffset?)cld.GetDateTimeOffset()
+                                : null;
+
+                            // Determine iteration path from work items or use project root
+                            var iterationPath = config.Project; // Default to project root path
+
+                            allPRs.Add(new PullRequestDto(
+                                Id: prId,
+                                RepositoryName: repo.Name,
+                                Title: title,
+                                CreatedBy: createdBy,
+                                CreatedDate: createdDate,
+                                CompletedDate: completedDate,
+                                Status: status,
+                                IterationPath: iterationPath,
+                                SourceBranch: sourceBranch,
+                                TargetBranch: targetBranch,
+                                RetrievedAt: DateTimeOffset.UtcNow
+                            ));
+                            prsParsedForRepo++;
+                        }
+
+                        continuationToken = GetContinuationToken(response, doc);
+                        lastContinuationTokenPresent = !string.IsNullOrWhiteSpace(continuationToken);
+                        pageUrl = AddContinuationToken(url, continuationToken);
+
+                        _logger.LogDebug(
+                            "PR_INGEST_REPO_PAGE: repoName={RepoName}, pageIndex={PageIndex}, requestUrl={RequestUrl}, statusCode={StatusCode}, continuationTokenHeaderPresent={ContinuationTokenHeaderPresent}, continuationTokenHeaderValue={ContinuationTokenHeaderValue}, contentLengthBytes={ContentLengthBytes}, jsonParsed={JsonParsed}, hasValue={HasValue}, valueCount={ValueCount}",
+                            repo.Name,
+                            pageIndex,
+                            requestUrlForLog,
+                            (int)response.StatusCode,
+                            headerContinuationTokenPresent,
+                            headerContinuationToken ?? "null",
+                            contentLength,
+                            jsonParsedSuccessfully,
+                            hasValue,
+                            valueItemsCount);
+                    }
+                    catch (JsonException)
+                    {
+                        jsonParseFailuresCount++;
+                        _logger.LogDebug(
+                            "PR_INGEST_REPO_PAGE: repoName={RepoName}, pageIndex={PageIndex}, requestUrl={RequestUrl}, statusCode={StatusCode}, continuationTokenHeaderPresent={ContinuationTokenHeaderPresent}, continuationTokenHeaderValue={ContinuationTokenHeaderValue}, contentLengthBytes={ContentLengthBytes}, jsonParsed={JsonParsed}, hasValue={HasValue}, valueCount={ValueCount}",
+                            repo.Name,
+                            pageIndex,
+                            requestUrlForLog,
+                            (int)response.StatusCode,
+                            headerContinuationTokenPresent,
+                            headerContinuationToken ?? "null",
+                            contentLength,
+                            jsonParsedSuccessfully,
+                            hasValue,
+                            valueItemsCount);
+                        throw;
+                    }
+                    finally
+                    {
+                        doc?.Dispose();
+                    }
                 } while (!string.IsNullOrWhiteSpace(continuationToken));
+
+                _logger.LogInformation(
+                    "PR_INGEST_REPO_DONE: repoName={RepoName}, pagesProcessed={PagesProcessed}, prsParsedForRepo={PrsParsedForRepo}, lastContinuationTokenPresent={LastContinuationTokenPresent}",
+                    repo.Name,
+                    pagesProcessedForRepo,
+                    prsParsedForRepo,
+                    lastContinuationTokenPresent);
             }
 
             // Phase 4: Performance metrics
             var elapsed = DateTimeOffset.UtcNow - startTime;
-            _logger.LogInformation("Retrieved {Count} pull requests across {RepoCount} repositories in {ElapsedMs}ms",
-                allPRs.Count, repositories.Count, elapsed.TotalMilliseconds);
+            _logger.LogInformation(
+                "PR_INGEST_RUN_SUMMARY: totalReposQueried={TotalReposQueried}, totalPagesProcessed={TotalPagesProcessed}, totalPRsParsed={TotalPRsParsed}, elapsedMs={ElapsedMs}, fromDate={FromDate}, toDate={ToDate}",
+                repositories.Count,
+                totalPagesProcessed,
+                allPRs.Count,
+                elapsed.TotalMilliseconds,
+                fromDateText,
+                toDateText);
+
+            if (allPRs.Count == 0)
+            {
+                var observedBuckets = new List<string>();
+                if (nonSuccessCount > 0)
+                {
+                    observedBuckets.Add("HTTP non-success");
+                }
+
+                if (jsonParseFailuresCount > 0)
+                {
+                    observedBuckets.Add("JSON parse failed");
+                }
+
+                if (missingValueCount > 0)
+                {
+                    observedBuckets.Add("Missing 'value'");
+                }
+
+                if (emptyValueCount > 0)
+                {
+                    observedBuckets.Add("Empty 'value'");
+                }
+
+                if (repositories.Count == 0)
+                {
+                    observedBuckets.Add("All repos list empty");
+                }
+
+                _logger.LogWarning(
+                    "PR_INGEST_ZERO_RESULT_OBSERVED: buckets=[{Buckets}]",
+                    observedBuckets.Count == 0 ? "none" : string.Join(", ", observedBuckets));
+            }
 
             return allPRs;
         }, cancellationToken);
+    }
+
+    private static string SanitizeUrlForDiagnostics(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return url;
+        }
+
+        return $"{uri.AbsolutePath}{uri.Query}";
     }
 
     public async Task<IEnumerable<PullRequestIterationDto>> GetPullRequestIterationsAsync(
