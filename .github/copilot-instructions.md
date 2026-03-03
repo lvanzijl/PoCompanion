@@ -32,6 +32,9 @@ Before producing any output, you MUST load, understand, and apply:
 7. Mock data rules  
    `docs/mock-data-rules.md`
 
+8. Release notes discipline  
+   `docs/PROCESS_RULES.md` §14
+
 If any rule conflicts, is ambiguous, or cannot be satisfied, you MUST stop and ask for clarification.
 
 ---
@@ -45,6 +48,7 @@ Before generating any output, you MUST internally verify that:
 - Process rules are respected
 - No duplication will be introduced
 - No new or unapproved dependencies are required
+- Release notes updated or bypass marker present (PROCESS_RULES §14)
 
 This verification is mandatory and MUST NOT be mentioned in the output.
 
