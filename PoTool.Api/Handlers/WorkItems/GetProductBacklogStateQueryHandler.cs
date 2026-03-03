@@ -131,6 +131,7 @@ public sealed class GetProductBacklogStateQueryHandler
             TfsId = epic.TfsId,
             Title = epic.Title,
             Score = epicScore.Score,
+            HasDescription = !string.IsNullOrWhiteSpace(epic.Description),
             Features = features
         };
     }

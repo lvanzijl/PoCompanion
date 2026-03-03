@@ -148,12 +148,20 @@
                                 <MudText Typo="Typo.subtitle1" Style="font-weight: 600; flex: 1;">
                                     @epic.Title
                                 </MudText>
+                                @if (!epic.HasDescription)
+                                {
+                                    <MudTooltip Text="Epic has no description. The PO must add a description before refinement can progress.">
+                                        <MudChip T="string" Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.ErrorOutline">
+                                            Missing description
+                                        </MudChip>
+                                    </MudTooltip>
+                                }
                                 <MudProgressLinear Value="@epic.Score"
                                                    Color="@GetProgressColor(epic.Score)"
                                                    Style="width: 120px; height: 8px;"
                                                    Rounded="true" />
-                                <MudTooltip Text="Percentage of features ready for implementation (average feature readiness score)">
-                                    <MudText Typo="Typo.body2" Style="min-width: 40px; text-align: right;">
+                                <MudTooltip Text="@GetEpicScoreTooltip(epic)">
+                                    <MudText Typo="Typo.body2" Style="min-width: 40px; text-align: right; cursor: help;">
                                         @epic.Score%
                                     </MudText>
                                 </MudTooltip>
@@ -476,6 +484,18 @@
         FeatureOwnerState.PO => Color.Error,
         _ => Color.Default
     };
+
+    private static string GetEpicScoreTooltip(EpicRefinementDto epic)
+    {
+        if (!epic.HasDescription)
+            return "0% — Epic has no description. PO must write the description before refinement can begin.";
+        return epic.Score switch
+        {
+            30 => "30% — Epic has a description but no features yet. PO must create features.",
+            100 => "100% — All features are fully refined. Epic is ready for implementation.",
+            _ => $"{epic.Score}% — Average feature readiness: {epic.Features.Count(f => f.Score == 100)} of {epic.Features.Count} features fully ready."
+        };
+    }
 
     private static string GetFeatureScoreTooltip(FeatureRefinementDto feature) => feature.Score switch
     {
