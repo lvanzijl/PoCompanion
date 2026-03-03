@@ -168,6 +168,9 @@ builder.Services.AddScoped<BugTreeBuilderService>();
 // Register Sprint Trend service
 builder.Services.AddScoped<SprintTrendService>();
 
+// Register Portfolio Progress Trend service
+builder.Services.AddScoped<PortfolioProgressTrendService>();
+
 // Register Pipeline Sprint Trends service
 builder.Services.AddScoped<PipelineSprintTrendsService>();
 

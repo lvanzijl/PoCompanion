@@ -133,6 +133,11 @@ public static class WorkspaceRoutes
     /// Backlog Overview route — product-scoped refinement maturity view (Backlog State Model).
     /// </summary>
     public const string BacklogOverview = "/home/backlog-overview";
+
+    /// <summary>
+    /// Portfolio Progress Trend route — strategic, product-level progress insight over a sprint range.
+    /// </summary>
+    public const string PortfolioProgress = "/home/portfolio-progress";
     
     // Legacy Landing route constant for backward compatibility - alias to the new Legacy constant
     public const string Landing = Legacy;
