@@ -80,16 +80,15 @@ public abstract class WorkspaceBase : ComponentBase
     }
     
     /// <summary>
-    /// Checks if the user has a valid profile selected and redirects to profile selection if not.
+    /// Checks if the user has a valid profile selected and redirects to home if not.
     /// </summary>
-    /// <param name="returnUrl">The URL to return to after profile selection.</param>
-    /// <returns>True if profile is valid, false if redirecting to profile selection.</returns>
-    protected async Task<bool> EnsureProfileAsync(string returnUrl)
+    /// <returns>True if profile is valid, false if redirecting to home.</returns>
+    protected async Task<bool> EnsureProfileAsync()
     {
         var activeProfile = await ProfileService.GetActiveProfileAsync();
         if (activeProfile == null)
         {
-            NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(returnUrl)}");
+            NavigationManager.NavigateTo($"{WorkspaceRoutes.Home}?noProfile=true");
             return false;
         }
         

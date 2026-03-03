@@ -2,9 +2,11 @@
 @using PoTool.Client.Components.Onboarding
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
+@using PoTool.Client.Models
 @inject IOnboardingService OnboardingService
 @inject IStartupOrchestratorService StartupOrchestrator
 @inject INavigationContextService NavigationContextService
+@inject IProfileService ProfileService
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
 @inherits LayoutComponentBase
@@ -30,21 +32,21 @@
             </div>
             @* Workspace navigation — cross-workspace shortcuts in top bar (Suggestion 2) *@
             <div class="d-flex align-items-center gap-1">
-                <MudButton Href="/home/health"
+                <MudButton OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.HealthWorkspace))"
                            Variant="Variant.Text"
                            Color="Color.Success"
                            StartIcon="@Icons.Material.Filled.HealthAndSafety"
                            Size="Size.Small">
                     Health
                 </MudButton>
-                <MudButton Href="/home/trends"
+                <MudButton OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.TrendsWorkspace))"
                            Variant="Variant.Text"
                            Color="Color.Info"
                            StartIcon="@Icons.Material.Filled.Timeline"
                            Size="Size.Small">
                     Trends
                 </MudButton>
-                <MudButton Href="/home/planning"
+                <MudButton OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.PlanningWorkspace2))"
                            Variant="Variant.Text"
                            Color="Color.Primary"
                            StartIcon="@Icons.Material.Filled.CalendarMonth"
@@ -133,6 +135,17 @@
     private void NavigateToHome()
     {
         NavigationManager.NavigateTo("/home");
+    }
+
+    private async Task NavigateToWorkspaceAsync(string route)
+    {
+        var activeProfile = await ProfileService.GetActiveProfileAsync();
+        if (activeProfile == null)
+        {
+            NavigationManager.NavigateTo($"{WorkspaceRoutes.Home}?noProfile=true");
+            return;
+        }
+        NavigationManager.NavigateTo(route);
     }
 
     private async Task OpenOnboardingWizard()

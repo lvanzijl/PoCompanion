@@ -24,11 +24,24 @@
             Situation overview — no editing, no filtering, no forced workflow
         </MudText>
 
+        @if (_showNoProfileAlert)
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mb-4" Style="width: 100%;">
+                <MudText Typo="Typo.h6" Style="color: inherit;">
+                    <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Class="mr-2" />
+                    No user selected — please select a user to continue
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mt-1" Style="color: inherit;">
+                    Use the profile selector in the top bar to select or add a user.
+                </MudText>
+            </MudAlert>
+        }
+
         @if (_isLoading)
         {
             <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
         }
-        else
+        else if (!_showNoProfileAlert)
         {
             @* High-level Overview Section *@
             <MudPaper Elevation="2" Class="pa-4 mb-4" Style="width: 100%;">
@@ -273,6 +286,7 @@
 @code {
     private bool _isLoading = true;
     private bool _isSyncing = false;
+    private bool _showNoProfileAlert = false;
     private int? _profileId;
     
     // Health signal data
@@ -298,8 +312,8 @@
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             if (activeProfile == null)
             {
-                // No profile selected, redirect to profiles with return URL
-                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(WorkspaceRoutes.Home)}");
+                // No profile selected — stay on /home and show red prompt
+                _showNoProfileAlert = true;
                 return;
             }
             
