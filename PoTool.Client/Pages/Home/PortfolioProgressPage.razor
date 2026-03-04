@@ -189,7 +189,7 @@
                             <MudPaper Outlined="true" Class="pa-3">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">Total Scope Change</MudText>
-                                    <MudTooltip Text="TotalScopeEffort is a current-state snapshot; historical per-sprint scope tracking is not yet implemented. Value may be 0 (no change) or N/A depending on data availability.">
+                                    <MudTooltip Text="Total scope per sprint is reconstructed from the activity ledger by undoing effort changes that occurred after each sprint's end. Accuracy improves as more history accumulates in the ledger.">
                                         <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
                                     </MudTooltip>
                                 </MudStack>

@@ -13,10 +13,9 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Computes portfolio-level stock-and-flow metrics across a selected sprint range.
 ///
 /// Stock metrics (level at end of each sprint):
-///   - TotalScopeEffort:  sum of Effort of all resolved PBIs, excluding Removed items.
-///                        Uses a current-state snapshot — the same value is applied to all
-///                        sprints in the range. Historical per-sprint scope tracking is not
-///                        implemented.
+///   - TotalScopeEffort:  sum of Effort of all resolved PBIs (excl. Removed) at the END of
+///                        each sprint. Computed historically by replaying effort change events
+///                        from the ActivityEventLedger (see ComputeHistoricalScopeEffort).
 ///   - RemainingEffort:   TotalScopeEffort − CumulativeDoneEffort.
 ///
 /// Flow metrics (per-sprint deltas):
@@ -32,6 +31,11 @@ namespace PoTool.Api.Handlers.Metrics;
 ///   (ActivityEventLedger extension) which is not yet available.
 ///   Additionally, PlannedEffort includes re-estimated items; large re-estimations may distort
 ///   Net Flow temporarily, since creation vs. estimation deltas cannot be distinguished.
+///
+/// Historical scope reconstruction accuracy:
+///   The ActivityEventLedger only contains events captured since the ledger was first seeded
+///   for this product owner. Sprints predating the first ingest may show the current effort
+///   value (no events to undo). Accuracy improves over time as more events accumulate.
 ///
 /// Edge cases:
 ///   - TotalScopeEffort = 0 → PercentDone is null (avoid divide-by-zero).
@@ -106,10 +110,7 @@ public sealed class GetPortfolioProgressTrendQueryHandler
             return EmptyResult();
         }
 
-        // Compute total scope from current work item state:
-        // Sum effort of all resolved PBIs (type "Product Backlog Item" or "Bug" that acts as PBI)
-        // for these products, excluding items in a "Removed" state.
-        // Note: we use the current snapshot as the baseline for scope.
+        // Load resolved PBI IDs for these products (PBIs + Bugs used as PBIs)
         var resolvedPbiIds = await _context.ResolvedWorkItems
             .Where(r => r.ResolvedProductId != null && productIds.Contains(r.ResolvedProductId.Value)
                 && (r.WorkItemType == "Product Backlog Item" || r.WorkItemType == "Bug"))
@@ -117,16 +118,47 @@ public sealed class GetPortfolioProgressTrendQueryHandler
             .Distinct()
             .ToListAsync(cancellationToken);
 
-        var pbiEffortSum = await _context.WorkItems
-            .Where(w => resolvedPbiIds.Contains(w.TfsId)
-                && !w.State.Contains("Removed"))
-            .SumAsync(w => (double?)(w.Effort ?? 0), cancellationToken) ?? 0.0;
+        // Load current work item details needed for historical scope reconstruction.
+        // We need Effort (current value), State (to detect Removed items), and CreatedDate
+        // (to exclude items that didn't yet exist at a given sprint end).
+        var pbiDetails = await _context.WorkItems
+            .Where(w => resolvedPbiIds.Contains(w.TfsId))
+            .Select(w => new PbiSnapshot { TfsId = w.TfsId, Effort = w.Effort, State = w.State, CreatedDate = w.CreatedDate })
+            .ToListAsync(cancellationToken);
+        var pbiDetailsById = pbiDetails.ToDictionary(w => w.TfsId);
 
-        var totalScopeEffort = pbiEffortSum;
+        // Load all effort and state change events for these PBIs from the ActivityEventLedger.
+        // We load the FULL history (not clamped to the sprint range) so we can reconstruct
+        // historical scope at any sprint's end date by undoing future changes.
+        // Field refs: "Microsoft.VSTS.Scheduling.Effort" and "System.State"
+        var scopeChangeEvents = await _context.ActivityEventLedgerEntries
+            .AsNoTracking()
+            .Where(e => e.ProductOwnerId == query.ProductOwnerId
+                && resolvedPbiIds.Contains(e.WorkItemId)
+                && (e.FieldRefName == EffortFieldRef || e.FieldRefName == StateFieldRef))
+            .Select(e => new ScopeEvent
+            {
+                WorkItemId = e.WorkItemId,
+                FieldRefName = e.FieldRefName,
+                EventTimestamp = e.EventTimestamp,
+                OldValue = e.OldValue,
+                NewValue = e.NewValue
+            })
+            .ToListAsync(cancellationToken);
+
+        var effortEventsByItem = scopeChangeEvents
+            .Where(e => e.FieldRefName == EffortFieldRef)
+            .GroupBy(e => e.WorkItemId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(e => e.EventTimestamp).ToList());
+
+        var stateEventsByItem = scopeChangeEvents
+            .Where(e => e.FieldRefName == StateFieldRef)
+            .GroupBy(e => e.WorkItemId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(e => e.EventTimestamp).ToList());
 
         _logger.LogDebug(
-            "Total scope effort for ProductOwner {ProductOwnerId}: {TotalScope} pts across {PbiCount} PBIs",
-            query.ProductOwnerId, totalScopeEffort, resolvedPbiIds.Count);
+            "Loaded {PbiCount} PBIs and {EventCount} scope history events for ProductOwner {ProductOwnerId}",
+            pbiDetails.Count, scopeChangeEvents.Count, query.ProductOwnerId);
 
         // Load sprint projections for all requested sprints and products
         var projections = await _context.SprintMetricsProjections
@@ -166,16 +198,25 @@ public sealed class GetPortfolioProgressTrendQueryHandler
                 cumulativeDone += throughput;
             }
 
+            // Compute historical total scope at the end of this sprint.
+            // Uses activity event replay to reconstruct the backlog state as it was then.
+            var sprintEndUtc = sprint.EndDateUtc.HasValue
+                ? new DateTimeOffset(DateTime.SpecifyKind(sprint.EndDateUtc.Value, DateTimeKind.Utc), TimeSpan.Zero)
+                : DateTimeOffset.UtcNow;
+
+            var sprintScopeEffort = ComputeHistoricalScopeEffort(
+                sprintEndUtc, resolvedPbiIds, pbiDetailsById, effortEventsByItem, stateEventsByItem);
+
             // PercentDone and RemainingEffort are null when no scope data exists
             double? percentDone = null;
             double? remaining = null;
 
-            if (totalScopeEffort > 0)
+            if (sprintScopeEffort > 0)
             {
                 // Cap cumulative done at total scope (completed effort cannot exceed scope)
-                var effectiveDone = Math.Min(cumulativeDone, totalScopeEffort);
-                percentDone = effectiveDone / totalScopeEffort * 100.0;
-                remaining = totalScopeEffort - effectiveDone;
+                var effectiveDone = Math.Min(cumulativeDone, sprintScopeEffort);
+                percentDone = effectiveDone / sprintScopeEffort * 100.0;
+                remaining = sprintScopeEffort - effectiveDone;
             }
 
             // NetFlow = Throughput − Added (positive = backlog shrinking, negative = expanding)
@@ -188,7 +229,7 @@ public sealed class GetPortfolioProgressTrendQueryHandler
                 StartUtc = sprint.StartUtc,
                 EndUtc = sprint.EndUtc,
                 PercentDone = hasData ? percentDone : null,
-                TotalScopeEffort = hasData ? totalScopeEffort : null,
+                TotalScopeEffort = hasData ? sprintScopeEffort : null,
                 RemainingEffort = hasData ? remaining : null,
                 ThroughputEffort = hasData ? throughput : null,
                 AddedEffort = hasData ? addedEffort : null,
@@ -226,9 +267,8 @@ public sealed class GetPortfolioProgressTrendQueryHandler
     /// meaningful (a single sprint where Net &gt; 5 is genuinely Contracting). No special
     /// handling is required.
     ///
-    /// TotalScopeChangePts: always 0 in the current data model because TotalScopeEffort is a
-    /// current-state snapshot applied uniformly to all sprints in the range. Historical
-    /// per-sprint scope tracking is not yet implemented.
+    /// TotalScopeChangePts: reflects actual scope change between the first and last sprint in
+    /// the range, computed using the historical scope reconstruction algorithm.
     /// </summary>
     private static PortfolioProgressSummaryDto ComputeSummary(
         IReadOnlyList<PortfolioSprintProgressDto> sprints)
@@ -251,7 +291,7 @@ public sealed class GetPortfolioProgressTrendQueryHandler
         // Cumulative Net Flow across the range
         var cumulativeNet = withData.Sum(s => s.NetFlow ?? 0.0);
 
-        // Total scope change: snapshot model means first == last, so always 0
+        // Total scope change: now uses historically-reconstructed per-sprint TotalScopeEffort
         var totalScopeChangePts = (first.TotalScopeEffort.HasValue && last.TotalScopeEffort.HasValue)
             ? last.TotalScopeEffort.Value - first.TotalScopeEffort.Value
             : (double?)null;
@@ -291,6 +331,90 @@ public sealed class GetPortfolioProgressTrendQueryHandler
         };
     }
 
+    /// <summary>
+    /// Reconstructs the total portfolio scope effort at the END of the given sprint.
+    ///
+    /// Algorithm:
+    ///   1. For each resolved PBI, start from its CURRENT effort value.
+    ///   2. Undo all effort change events that occurred AFTER <paramref name="sprintEndUtc"/> by
+    ///      subtracting (NewValue − OldValue) for each future event.
+    ///      Formula:  historicalEffort = currentEffort + Σ(oldVal − newVal) for events after T
+    ///   3. Exclude items that did not yet exist at <paramref name="sprintEndUtc"/> (CreatedDate &gt; T).
+    ///   4. For items currently in a "Removed" state: check whether they were already in
+    ///      "Removed" at <paramref name="sprintEndUtc"/>. If yes, exclude them. If not (they
+    ///      were removed later), include them.
+    ///
+    /// Accuracy note:
+    ///   If no activity events are available for a PBI (e.g. the ledger was seeded after the
+    ///   sprint ended), the current effort is used as the historical value. This means older
+    ///   sprints may over- or under-count scope if estimates changed significantly. The accuracy
+    ///   improves as the ledger accumulates more history.
+    /// </summary>
+    internal static double ComputeHistoricalScopeEffort(
+        DateTimeOffset sprintEndUtc,
+        IReadOnlyList<int> resolvedPbiIds,
+        IReadOnlyDictionary<int, PbiSnapshot> pbiDetailsById,
+        IReadOnlyDictionary<int, List<ScopeEvent>> effortEventsByItem,
+        IReadOnlyDictionary<int, List<ScopeEvent>> stateEventsByItem)
+    {
+        double totalScope = 0.0;
+
+        foreach (var pbiId in resolvedPbiIds)
+        {
+            if (!pbiDetailsById.TryGetValue(pbiId, out var wi))
+                continue;
+
+            // 1. Exclude items that didn't exist at sprint end
+            if (wi.CreatedDate.HasValue && wi.CreatedDate.Value > sprintEndUtc)
+                continue;
+
+            // 2. Handle items currently in a "Removed" state
+            if (wi.State.Contains("Removed", StringComparison.OrdinalIgnoreCase))
+            {
+                // Check whether the item was already in "Removed" state at or before sprint end.
+                // If ANY state-change event to "Removed" occurred on or before sprintEndUtc,
+                // the item was out-of-scope at sprint end — exclude it.
+                var stateEvts = stateEventsByItem.GetValueOrDefault(pbiId);
+                var wasRemovedAtSprintEnd = stateEvts?.Any(e =>
+                    e.NewValue != null
+                    && e.NewValue.Contains("Removed", StringComparison.OrdinalIgnoreCase)
+                    && e.EventTimestamp <= sprintEndUtc) == true;
+
+                if (wasRemovedAtSprintEnd)
+                    continue; // Was already removed at sprint end; exclude from scope
+
+                // Item was removed AFTER sprint end → include it in historical scope
+            }
+
+            // 3. Reconstruct effort at sprint end by undoing future changes
+            double historicalEffort = wi.Effort ?? 0.0;
+
+            var effortEvts = effortEventsByItem.GetValueOrDefault(pbiId);
+            if (effortEvts != null)
+            {
+                foreach (var evt in effortEvts.Where(e => e.EventTimestamp > sprintEndUtc))
+                {
+                    var oldVal = ParseEffortValue(evt.OldValue);
+                    var newVal = ParseEffortValue(evt.NewValue);
+                    // Undo future change: restore the value the item had before this event
+                    historicalEffort += oldVal - newVal;
+                }
+            }
+
+            // Clamp to 0 — effort should never be negative
+            totalScope += Math.Max(0.0, historicalEffort);
+        }
+
+        return totalScope;
+    }
+
+    /// <summary>
+    /// Parses an effort value string from the activity ledger.
+    /// Returns 0.0 for null, empty, or unparseable strings.
+    /// </summary>
+    private static double ParseEffortValue(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && double.TryParse(value, out var d) ? d : 0.0;
+
     private static PortfolioProgressTrendDto EmptyResult() =>
         new()
         {
@@ -300,4 +424,26 @@ public sealed class GetPortfolioProgressTrendQueryHandler
                 Trajectory = PortfolioTrajectory.Stable
             }
         };
+
+    // Field reference names for the ActivityEventLedger
+    private const string EffortFieldRef = "Microsoft.VSTS.Scheduling.Effort";
+    private const string StateFieldRef = "System.State";
+
+    // Private projection types for EF Core queries
+    internal sealed class PbiSnapshot
+    {
+        public int TfsId { get; init; }
+        public int? Effort { get; init; }
+        public string State { get; init; } = string.Empty;
+        public DateTimeOffset? CreatedDate { get; init; }
+    }
+
+    internal sealed class ScopeEvent
+    {
+        public int WorkItemId { get; init; }
+        public string FieldRefName { get; init; } = string.Empty;
+        public DateTimeOffset EventTimestamp { get; init; }
+        public string? OldValue { get; init; }
+        public string? NewValue { get; init; }
+    }
 }

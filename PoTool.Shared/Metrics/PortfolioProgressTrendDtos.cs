@@ -60,9 +60,16 @@ public record PortfolioSprintProgressDto
     public double? PercentDone { get; init; }
 
     /// <summary>
-    /// Total effort in scope (sum of effort of all resolved PBIs, excluding Removed items).
-    /// Uses current backlog snapshot; represents the known scope baseline.
-    /// NOTE: This is a snapshot value — all sprints in a range will reflect the same scope total.
+    /// Total effort in scope (sum of effort of all resolved PBIs, excluding Removed items)
+    /// at the END of this sprint.
+    ///
+    /// Computed historically by replaying <c>Microsoft.VSTS.Scheduling.Effort</c> change
+    /// events from the ActivityEventLedger. Items created after this sprint's end date are
+    /// excluded; items currently in "Removed" state that were removed after this sprint's end
+    /// date are included.
+    ///
+    /// Accuracy: if the activity ledger does not contain events going back to this sprint's
+    /// end date, the current effort value is used as a best-effort approximation.
     /// </summary>
     public double? TotalScopeEffort { get; init; }
 
@@ -108,9 +115,8 @@ public record PortfolioProgressSummaryDto
 
     /// <summary>
     /// Change in TotalScopeEffort across the selected range (last − first), in story points.
-    /// NOTE: TotalScopeEffort is a current-state snapshot; this will be 0 when the same
-    /// snapshot is applied to all sprints. Historical per-sprint scope tracking is not
-    /// yet implemented.
+    /// Computed from historically-reconstructed per-sprint scope values.
+    /// Positive = scope grew; Negative = scope contracted.
     /// </summary>
     public double? TotalScopeChangePts { get; init; }
 

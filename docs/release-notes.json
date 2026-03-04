@@ -2,6 +2,14 @@
   {
     "date": "2026-03-04",
     "type": "Changed",
+    "title": "Portfolio Progress Trend — historical per-sprint scope tracking via activity ledger",
+    "impact": "TotalScopeEffort is now computed historically for each sprint in the selected range instead of using a single current-state snapshot. The handler replays Microsoft.VSTS.Scheduling.Effort change events from the ActivityEventLedger to reconstruct the total backlog scope as it was at each sprint's end date. Items created after a sprint's end are excluded; items currently in 'Removed' state that were removed after a sprint's end are included. TotalScopeChangePts in the summary now reflects actual scope growth or contraction across the selected range. Accuracy improves as more history accumulates in the ledger.",
+    "area": "Trends / Portfolio Progress",
+    "link": "/home/portfolio-progress"
+  },
+  {
+    "date": "2026-03-04",
+    "type": "Changed",
     "title": "Portfolio Progress Trend — stock-and-flow model with Combined Flow graph",
     "impact": "The Portfolio Progress Trend page has been refactored from a % Done / scope snapshot view into a stock-and-flow product-dynamics model. Graph 1 is now a Combined Flow chart showing Completed (green), Added (orange, proxy from PlannedEffort), and Net Flow (blue, dominant) per sprint — Net > 0 means the backlog is shrinking. Graphs 2–4 retain Total Scope (Stock), Remaining Effort (Stock), and Throughput Trend. The summary block now shows Cumulative Net Flow, Total Scope Change, Remaining Effort Change, and classifies the range as Contracting / Stable / Expanding. The page auto-loads with All Products, the first available team, and the current sprint + past 4 sprints (5 total) as the default selection. The % Done graph has been removed. A documented limitation note explains that Added Effort uses PlannedEffort as an inflow proxy and cannot distinguish newly created items from re-estimations.",
     "area": "Trends / Portfolio Progress",
