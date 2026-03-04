@@ -17,21 +17,17 @@
 <PageTitle>Portfolio Progress - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    @* Workspace Header *@
-    <MudPaper Elevation="2" Class="pa-4 mb-4">
+    @* Workspace Header — compact *@
+    <MudPaper Elevation="2" Class="pa-2 mb-2">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-            <MudStack Spacing="1">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudIcon Icon="@Icons.Material.Filled.Insights" Color="Color.Warning" Size="Size.Large" />
-                    <MudText Typo="Typo.h4">
-                        Portfolio Progress Trend
-                    </MudText>
-                </MudStack>
-                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Insights" Color="Color.Warning" />
+                <MudText Typo="Typo.h5">Portfolio Progress Trend</MudText>
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0 d-none d-sm-flex" />
             </MudStack>
-
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Primary"
+                       Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Timeline"
                        OnClick="NavigateToTrends">
                 Back to Trends
@@ -54,22 +50,98 @@
     }
     else
     {
-        @* Context row — chips + inline filter controls in one compact bar *@
-        <MudPaper Elevation="1" Class="pa-2 mb-3">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Wrap="Wrap.Wrap">
-                @* Context chips *@
-                <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Inventory2" Color="Color.Default">
+        @* Context row — compact chip toolbar; dropdowns hidden in popovers *@
+        <MudPaper Elevation="1" Class="pa-1 mb-2">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Wrap="Wrap.NoWrap">
+
+                @* Product chip — click to open product picker *@
+                <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Inventory2"
+                         Color="Color.Default" Style="cursor: pointer;"
+                         OnClick="ToggleProductPopover">
                     @ContextProductLabel
                 </MudChip>
-                <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Group" Color="Color.Default">
+                <MudPopover Open="@_productPopoverOpen" AnchorOrigin="Origin.BottomLeft"
+                            TransformOrigin="Origin.TopLeft" Paper="true" Elevation="8" Class="pa-3 ppt-scope-popover">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.overline">Product</MudText>
+                        <MudSelect T="int?" Value="_selectedProductId" Label="Product"
+                                   Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
+                                   ValueChanged="@(async v => { await OnProductChangedAsync(v); _productPopoverOpen = false; })"
+                                   Style="min-width: 200px;">
+                            <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
+                            @foreach (var product in _products)
+                            {
+                                <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudButton Size="Size.Small" OnClick="@(() => _productPopoverOpen = false)">Done</MudButton>
+                    </MudStack>
+                </MudPopover>
+
+                @* Team chip — click to open team picker *@
+                <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Group"
+                         Color="Color.Default" Style="cursor: pointer;"
+                         OnClick="ToggleTeamPopover">
                     @ContextTeamLabel
                 </MudChip>
+                <MudPopover Open="@_teamPopoverOpen" AnchorOrigin="Origin.BottomLeft"
+                            TransformOrigin="Origin.TopLeft" Paper="true" Elevation="8" Class="pa-3 ppt-scope-popover">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.overline">Team</MudText>
+                        <MudSelect T="int?" Value="_selectedTeamId" Label="Team"
+                                   Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
+                                   ValueChanged="@(async v => { await OnTeamChangedAsync(v); _teamPopoverOpen = false; })"
+                                   Style="min-width: 200px;">
+                            <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
+                            @foreach (var team in _teams)
+                            {
+                                <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudButton Size="Size.Small" OnClick="@(() => _teamPopoverOpen = false)">Done</MudButton>
+                    </MudStack>
+                </MudPopover>
+
+                @* Sprint range chip — click to open sprint picker *@
                 @if (_sprints.Any())
                 {
-                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.DateRange" Color="Color.Default">
+                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.DateRange"
+                             Color="Color.Default" Style="cursor: pointer;"
+                             OnClick="ToggleSprintPopover">
                         @ContextSprintRangeLabel
                     </MudChip>
+                    <MudPopover Open="@_sprintPopoverOpen" AnchorOrigin="Origin.BottomLeft"
+                                TransformOrigin="Origin.TopLeft" Paper="true" Elevation="8" Class="pa-3 ppt-scope-popover">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.overline">Sprint Range</MudText>
+                            <MudSelect T="int?" Value="_fromSprintId" Label="From Sprint"
+                                       Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
+                                       ValueChanged="OnFromSprintChangedAsync"
+                                       Style="min-width: 210px;">
+                                @foreach (var sprint in _sprints)
+                                {
+                                    <MudSelectItem T="int?" Value="@sprint.Id">
+                                        @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudSelect T="int?" Value="_toSprintId" Label="To Sprint"
+                                       Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
+                                       ValueChanged="OnToSprintChangedAsync"
+                                       Style="min-width: 210px;">
+                                @foreach (var sprint in _sprints)
+                                {
+                                    <MudSelectItem T="int?" Value="@sprint.Id">
+                                        @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudButton Size="Size.Small" OnClick="@(() => _sprintPopoverOpen = false)">Done</MudButton>
+                        </MudStack>
+                    </MudPopover>
                 }
+
+                @* Custom scope indicator *@
                 @if (IsCustomScope)
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.Tune">
@@ -77,96 +149,68 @@
                     </MudChip>
                 }
 
-                <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+                <MudSpacer />
 
-                @* Inline filter controls — Product and Team *@
-                <MudSelect T="int?"
-                           Value="_selectedProductId"
-                           Label="Product"
-                           Variant="Variant.Outlined"
-                           Dense="true"
-                           Margin="Margin.Dense"
-                           Clearable="true"
-                           ValueChanged="OnProductChangedAsync"
-                           Style="min-width: 140px; max-width: 180px;">
-                    <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
-                    @foreach (var product in _products)
-                    {
-                        <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
-                    }
-                </MudSelect>
-
-                <MudSelect T="int?"
-                           Value="_selectedTeamId"
-                           Label="Team"
-                           Variant="Variant.Outlined"
-                           Dense="true"
-                           Margin="Margin.Dense"
-                           Clearable="true"
-                           ValueChanged="OnTeamChangedAsync"
-                           Style="min-width: 130px; max-width: 170px;">
-                    <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
-                    @foreach (var team in _teams)
-                    {
-                        <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
-                    }
-                </MudSelect>
-
-                @* Sprint range expander — collapsed by default *@
-                @if (_selectedTeamId.HasValue && _sprints.Any())
-                {
-                    <MudButton Variant="Variant.Text"
-                               Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.DateRange"
-                               EndIcon="@(_filtersExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                               OnClick="@(() => _filtersExpanded = !_filtersExpanded)"
-                               Color="Color.Default">
-                        Sprint range
-                    </MudButton>
-                }
-            </MudStack>
-
-            @* Sprint range selectors — revealed by "Sprint range" button *@
-            @if (_selectedTeamId.HasValue && _sprints.Any())
-            {
-                <MudCollapse Expanded="_filtersExpanded">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap" Class="pt-2">
-                        <MudSelect T="int?"
-                                   Value="_fromSprintId"
-                                   Label="From Sprint"
-                                   Variant="Variant.Outlined"
-                                   Dense="true"
-                                   Margin="Margin.Dense"
-                                   Clearable="true"
-                                   ValueChanged="OnFromSprintChangedAsync"
-                                   Style="min-width: 180px; max-width: 220px;">
-                            @foreach (var sprint in _sprints)
+                @* Scope… button — opens a single popover with all three selectors *@
+                <MudButton Size="Size.Small" Variant="Variant.Outlined"
+                           StartIcon="@Icons.Material.Filled.Tune"
+                           OnClick="ToggleScopePopover">
+                    Scope…
+                </MudButton>
+                <MudPopover Open="@_scopePopoverOpen" AnchorOrigin="Origin.BottomRight"
+                            TransformOrigin="Origin.TopRight" Paper="true" Elevation="8" Class="pa-3 ppt-scope-popover">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.overline">Scope Filters</MudText>
+                        <MudSelect T="int?" Value="_selectedProductId" Label="Product"
+                                   Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
+                                   ValueChanged="OnProductChangedAsync"
+                                   Style="min-width: 220px;">
+                            <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
+                            @foreach (var product in _products)
                             {
-                                <MudSelectItem T="int?" Value="@sprint.Id">
-                                    @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
-                                </MudSelectItem>
+                                <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
                             }
                         </MudSelect>
-
-                        <MudSelect T="int?"
-                                   Value="_toSprintId"
-                                   Label="To Sprint"
-                                   Variant="Variant.Outlined"
-                                   Dense="true"
-                                   Margin="Margin.Dense"
-                                   Clearable="true"
-                                   ValueChanged="OnToSprintChangedAsync"
-                                   Style="min-width: 180px; max-width: 220px;">
-                            @foreach (var sprint in _sprints)
+                        <MudSelect T="int?" Value="_selectedTeamId" Label="Team"
+                                   Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
+                                   ValueChanged="OnTeamChangedAsync"
+                                   Style="min-width: 220px;">
+                            <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
+                            @foreach (var team in _teams)
                             {
-                                <MudSelectItem T="int?" Value="@sprint.Id">
-                                    @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
-                                </MudSelectItem>
+                                <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
                             }
                         </MudSelect>
+                        @if (_selectedTeamId.HasValue && _sprints.Any())
+                        {
+                            <MudSelect T="int?" Value="_fromSprintId" Label="From Sprint"
+                                       Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
+                                       ValueChanged="OnFromSprintChangedAsync"
+                                       Style="min-width: 220px;">
+                                @foreach (var sprint in _sprints)
+                                {
+                                    <MudSelectItem T="int?" Value="@sprint.Id">
+                                        @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudSelect T="int?" Value="_toSprintId" Label="To Sprint"
+                                       Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
+                                       ValueChanged="OnToSprintChangedAsync"
+                                       Style="min-width: 220px;">
+                                @foreach (var sprint in _sprints)
+                                {
+                                    <MudSelectItem T="int?" Value="@sprint.Id">
+                                        @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                        }
+                        <MudButton Size="Size.Small" OnClick="@(() => _scopePopoverOpen = false)">Done</MudButton>
                     </MudStack>
-                </MudCollapse>
-            }
+                </MudPopover>
+
+            </MudStack>
         </MudPaper>
 
         @if (_trendsLoading)
@@ -176,108 +220,92 @@
 
         @if (_trendData != null)
         {
-            @* ── Summary Block ── *@
-            <MudPaper Elevation="2" Class="pa-4 mb-4">
-                <MudStack Spacing="2">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        <MudText Typo="Typo.h6">
-                            <MudIcon Icon="@Icons.Material.Filled.Summarize" Class="mr-2" />
-                            Summary
-                        </MudText>
+            @* ── Summary Block — compact single row ── *@
+            <MudPaper Elevation="2" Class="pa-2 mb-2">
+                @{
+                    var (classColor, classIcon, classLabel) = _trendData.Summary.Trajectory switch
+                    {
+                        PortfolioTrajectory.Contracting => (Color.Success, Icons.Material.Filled.TrendingDown,  "Contracting"),
+                        PortfolioTrajectory.Expanding   => (Color.Warning, Icons.Material.Filled.TrendingUp,    "Expanding"),
+                        _                               => (Color.Default, Icons.Material.Filled.TrendingFlat,  "Stable")
+                    };
+                }
+                <MudGrid Spacing="1">
+                    @* Trajectory badge tile *@
+                    <MudItem xs="6" sm="3" md="3">
+                        <MudPaper Outlined="true" Class="pa-2 d-flex align-center" Style="gap: 6px;">
+                            <MudChip T="string" Color="@classColor" Icon="@classIcon" Size="Size.Small">@classLabel</MudChip>
+                            <MudTooltip Text="Contracting: backlog shrinking (Net Flow > 0). Expanding: backlog growing (Net Flow < 0). Stable: within tolerance.">
+                                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
+                            </MudTooltip>
+                        </MudPaper>
+                    </MudItem>
 
-                        @* Classification badge *@
-                        @{
-                            var (classColor, classIcon, classLabel) = _trendData.Summary.Trajectory switch
-                            {
-                                PortfolioTrajectory.Contracting => (Color.Success, Icons.Material.Filled.TrendingDown,  "Contracting"),
-                                PortfolioTrajectory.Expanding   => (Color.Warning, Icons.Material.Filled.TrendingUp,    "Expanding"),
-                                _                               => (Color.Default, Icons.Material.Filled.TrendingFlat,  "Stable")
-                            };
-                        }
-                        <MudChip T="string" Color="@classColor" Icon="@classIcon" Size="Size.Medium">
-                            @classLabel
-                        </MudChip>
+                    @* Cumulative Net Flow *@
+                    <MudItem xs="6" sm="3" md="3">
+                        <MudPaper Outlined="true" Class="pa-2">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Net Flow (cumul.)</MudText>
+                            <MudText Typo="Typo.subtitle2">
+                                @if (_trendData.Summary.CumulativeNetFlow.HasValue)
+                                {
+                                    var net = _trendData.Summary.CumulativeNetFlow.Value;
+                                    var sign = net >= 0 ? "+" : "";
+                                    <span style="color: @(net >= 0 ? "var(--mud-palette-success)" : "var(--mud-palette-warning)")">
+                                        @($"{sign}{net:F0} pts")
+                                    </span>
+                                }
+                                else { <span>N/A</span> }
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
 
-                        <MudTooltip Text="Contracting: backlog shrinking (Net Flow > 0). Expanding: backlog growing (Net Flow < 0). Stable: within tolerance.">
-                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
-                        </MudTooltip>
-                    </MudStack>
-
-                    <MudGrid Spacing="2">
-                        @* Cumulative Net Flow *@
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudPaper Outlined="true" Class="pa-3">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Net Flow (cumulative)</MudText>
-                                <MudText Typo="Typo.h6">
-                                    @if (_trendData.Summary.CumulativeNetFlow.HasValue)
+                    @* Total scope change *@
+                    <MudItem xs="6" sm="3" md="3">
+                        <MudPaper Outlined="true" Class="pa-2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Scope Change</MudText>
+                                <MudTooltip Text="Total scope per sprint is reconstructed from the activity ledger by undoing effort changes that occurred after each sprint's end. Accuracy improves as more history accumulates in the ledger.">
+                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" Class="ml-1" />
+                                </MudTooltip>
+                            </MudStack>
+                            <MudText Typo="Typo.subtitle2">
+                                @if (_trendData.Summary.TotalScopeChangePts.HasValue)
+                                {
+                                    var pts = _trendData.Summary.TotalScopeChangePts.Value;
+                                    var pct = _trendData.Summary.TotalScopeChangePercent;
+                                    var sign = pts >= 0 ? "+" : "";
+                                    @if (pct.HasValue)
                                     {
-                                        var net = _trendData.Summary.CumulativeNetFlow.Value;
-                                        var sign = net >= 0 ? "+" : "";
-                                        <span style="color: @(net >= 0 ? "var(--mud-palette-success)" : "var(--mud-palette-warning)")">
-                                            @($"{sign}{net:F0} pts")
-                                        </span>
+                                        @($"{sign}{pts:F0} pts ({sign}{pct:F1}%)")
                                     }
-                                    else { <span>N/A</span> }
-                                </MudText>
-                            </MudPaper>
-                        </MudItem>
-
-                        @* Total scope change *@
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudPaper Outlined="true" Class="pa-3">
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Total Scope Change</MudText>
-                                    <MudTooltip Text="Total scope per sprint is reconstructed from the activity ledger by undoing effort changes that occurred after each sprint's end. Accuracy improves as more history accumulates in the ledger.">
-                                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
-                                    </MudTooltip>
-                                </MudStack>
-                                <MudText Typo="Typo.h6">
-                                    @if (_trendData.Summary.TotalScopeChangePts.HasValue)
+                                    else
                                     {
-                                        var pts = _trendData.Summary.TotalScopeChangePts.Value;
-                                        var pct = _trendData.Summary.TotalScopeChangePercent;
-                                        var sign = pts >= 0 ? "+" : "";
-                                        @if (pct.HasValue)
-                                        {
-                                            @($"{sign}{pts:F0} pts ({sign}{pct:F1}%)")
-                                        }
-                                        else
-                                        {
-                                            @($"{sign}{pts:F0} pts")
-                                        }
+                                        @($"{sign}{pts:F0} pts")
                                     }
-                                    else { <span>N/A</span> }
-                                </MudText>
-                            </MudPaper>
-                        </MudItem>
+                                }
+                                else { <span>N/A</span> }
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
 
-                        @* Remaining effort change *@
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudPaper Outlined="true" Class="pa-3">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Remaining Effort Change</MudText>
-                                <MudText Typo="Typo.h6">
-                                    @if (_trendData.Summary.RemainingEffortChangePts.HasValue)
-                                    {
-                                        var delta = _trendData.Summary.RemainingEffortChangePts.Value;
-                                        var sign = delta >= 0 ? "+" : "";
-                                        <span style="color: @(delta <= 0 ? "var(--mud-palette-success)" : "var(--mud-palette-warning)")">
-                                            @($"{sign}{delta:F0} pts")
-                                        </span>
-                                    }
-                                    else { <span>N/A</span> }
-                                </MudText>
-                            </MudPaper>
-                        </MudItem>
-
-                        @* Sprint range *@
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudPaper Outlined="true" Class="pa-3">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Sprints</MudText>
-                                <MudText Typo="Typo.h6">@_trendData.Sprints.Count sprint(s)</MudText>
-                            </MudPaper>
-                        </MudItem>
-                    </MudGrid>
-                </MudStack>
+                    @* Remaining effort change *@
+                    <MudItem xs="6" sm="3" md="3">
+                        <MudPaper Outlined="true" Class="pa-2">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Remaining Change</MudText>
+                            <MudText Typo="Typo.subtitle2">
+                                @if (_trendData.Summary.RemainingEffortChangePts.HasValue)
+                                {
+                                    var delta = _trendData.Summary.RemainingEffortChangePts.Value;
+                                    var sign = delta >= 0 ? "+" : "";
+                                    <span style="color: @(delta <= 0 ? "var(--mud-palette-success)" : "var(--mud-palette-warning)")">
+                                        @($"{sign}{delta:F0} pts")
+                                    </span>
+                                }
+                                else { <span>N/A</span> }
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
             </MudPaper>
 
             @* ── Chart Layout — true 2×2 grid ── *@
@@ -287,7 +315,7 @@
 
                     @* Cell 1 — Combined Flow (Net emphasis) *@
                     <MudItem xs="12" sm="12" md="6">
-                        <MudPaper Elevation="2" Class="pa-3" Style="height: 340px; overflow: hidden;">
+                        <MudPaper Elevation="2" Class="pa-3" Style="height: 280px; overflow: hidden;">
                             <MudStack Spacing="0" Class="mb-1">
                                 @* Title row with Net Focus toggle *@
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Justify="Justify.SpaceBetween">
@@ -303,6 +331,9 @@
                                                              NeutralLabel="Balanced"
                                                              MetricLabel="net flow" />
                                         }
+                                        <MudTooltip Text="Net > 0 = backlog shrinking; Net < 0 = expanding. Added Effort approximates scope inflow via sprint commitment data; may include re-estimation changes.">
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
+                                        </MudTooltip>
                                     </MudStack>
                                     @* Net focus toggle *@
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0">
@@ -314,32 +345,20 @@
                                                    Size="Size.Small" />
                                     </MudStack>
                                 </MudStack>
-                                @* Net cumulative anchor *@
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-primary); font-weight: 600;">
-                                        Net (cumulative): @CumulativeNetFlowLabel
-                                    </MudText>
-                                    <MudTooltip Text="Added Effort approximates scope inflow using sprint commitment data. It may include re-estimation changes and does not track new backlog item creation directly.">
-                                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
-                                    </MudTooltip>
-                                </MudStack>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    Net &gt; 0 = backlog shrinking; Net &lt; 0 = expanding
-                                </MudText>
                             </MudStack>
                             <MudChart ChartType="ChartType.Bar"
                                       ChartSeries="@_flowSeries"
                                       XAxisLabels="@_xAxisLabels"
                                       Width="100%"
-                                      Height="240px"
+                                      Height="210px"
                                       ChartOptions="@_flowChartOptions" />
                         </MudPaper>
                     </MudItem>
 
                     @* Cell 2 — Total Scope Trend (Stock) *@
                     <MudItem xs="12" sm="12" md="6">
-                        <MudPaper Elevation="2" Class="pa-3" Style="height: 340px; overflow: hidden;">
-                            <MudStack Spacing="0" Class="mb-2">
+                        <MudPaper Elevation="2" Class="pa-3" Style="height: 280px; overflow: hidden;">
+                            <MudStack Spacing="0" Class="mb-1">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                     <MudText Typo="Typo.subtitle2">Total Scope Trend</MudText>
                                     <TrendSlopeBadge StartValue="@_scopeStart"
@@ -348,24 +367,24 @@
                                                      PositiveLabel="Decreasing"
                                                      NegativeLabel="Increasing"
                                                      MetricLabel="total scope" />
+                                    <MudTooltip Text="Total effort in scope (pts, excl. Removed) — structural product growth">
+                                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
+                                    </MudTooltip>
                                 </MudStack>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    Total effort in scope (pts, excl. Removed) — structural product growth
-                                </MudText>
                             </MudStack>
                             <MudChart ChartType="ChartType.Line"
                                       ChartSeries="@_scopeSeries"
                                       XAxisLabels="@_xAxisLabels"
                                       Width="100%"
-                                      Height="240px"
+                                      Height="210px"
                                       ChartOptions="@_chartOptions" />
                         </MudPaper>
                     </MudItem>
 
                     @* Cell 3 — Remaining Effort Ratio (% of Total Scope) *@
                     <MudItem xs="12" sm="12" md="6">
-                        <MudPaper Elevation="2" Class="pa-3" Style="height: 340px; overflow: hidden;">
-                            <MudStack Spacing="0" Class="mb-2">
+                        <MudPaper Elevation="2" Class="pa-3" Style="height: 280px; overflow: hidden;">
+                            <MudStack Spacing="0" Class="mb-1">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                     <MudText Typo="Typo.subtitle2">Remaining Effort Ratio</MudText>
                                     <TrendSlopeBadge StartValue="@_remainingRatioStart"
@@ -374,24 +393,24 @@
                                                      PositiveLabel="Decreasing"
                                                      NegativeLabel="Increasing"
                                                      MetricLabel="remaining ratio" />
+                                    <MudTooltip Text="Remaining effort as % of total scope — backlog load ratio (lower is better)">
+                                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
+                                    </MudTooltip>
                                 </MudStack>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    Remaining effort as % of total scope — backlog load ratio (lower is better)
-                                </MudText>
                             </MudStack>
                             <MudChart ChartType="ChartType.Line"
                                       ChartSeries="@_remainingSeries"
                                       XAxisLabels="@_xAxisLabels"
                                       Width="100%"
-                                      Height="240px"
+                                      Height="210px"
                                       ChartOptions="@_ratioChartOptions" />
                         </MudPaper>
                     </MudItem>
 
                     @* Cell 4 — Throughput Trend (Flow Capacity) *@
                     <MudItem xs="12" sm="12" md="6">
-                        <MudPaper Elevation="2" Class="pa-3" Style="height: 340px; overflow: hidden;">
-                            <MudStack Spacing="0" Class="mb-2">
+                        <MudPaper Elevation="2" Class="pa-3" Style="height: 280px; overflow: hidden;">
+                            <MudStack Spacing="0" Class="mb-1">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                     <MudText Typo="Typo.subtitle2">Throughput Trend</MudText>
                                     <TrendSlopeBadge StartValue="@_throughputStart"
@@ -400,16 +419,16 @@
                                                      PositiveLabel="Rising"
                                                      NegativeLabel="Falling"
                                                      MetricLabel="throughput" />
+                                    <MudTooltip Text="Effort completed per sprint (pts) — delivery capacity; higher is better">
+                                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
+                                    </MudTooltip>
                                 </MudStack>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    Effort completed per sprint (pts) — delivery capacity; higher is better
-                                </MudText>
                             </MudStack>
                             <MudChart ChartType="ChartType.Bar"
                                       ChartSeries="@_throughputSeries"
                                       XAxisLabels="@_xAxisLabels"
                                       Width="100%"
-                                      Height="240px"
+                                      Height="210px"
                                       ChartOptions="@_chartOptions" />
                         </MudPaper>
                     </MudItem>
@@ -449,15 +468,42 @@
     .trend-slope-badge {
         font-size: 0.7rem;
     }
+    .ppt-scope-popover {
+        min-width: 240px;
+    }
 </style>
 
 @code {
     private bool _isLoading = true;
     private bool _trendsLoading = false;
-    private bool _filtersExpanded = false;
     private int? _profileId;
     private string? _errorMessage;
     private List<BreadcrumbItem> _breadcrumbs = new();
+
+    // Scope popover state
+    private bool _productPopoverOpen = false;
+    private bool _teamPopoverOpen = false;
+    private bool _sprintPopoverOpen = false;
+    private bool _scopePopoverOpen = false;
+
+    private void CloseAllPopovers()
+    {
+        _productPopoverOpen = false;
+        _teamPopoverOpen = false;
+        _sprintPopoverOpen = false;
+        _scopePopoverOpen = false;
+    }
+
+    private void ToggleOnePopover(Action<bool> setTarget, bool currentValue)
+    {
+        CloseAllPopovers();
+        setTarget(!currentValue);
+    }
+
+    private void ToggleProductPopover() => ToggleOnePopover(v => _productPopoverOpen = v, _productPopoverOpen);
+    private void ToggleTeamPopover()    => ToggleOnePopover(v => _teamPopoverOpen    = v, _teamPopoverOpen);
+    private void ToggleSprintPopover()  => ToggleOnePopover(v => _sprintPopoverOpen  = v, _sprintPopoverOpen);
+    private void ToggleScopePopover()   => ToggleOnePopover(v => _scopePopoverOpen   = v, _scopePopoverOpen);
 
     // Selectors
     private int? _selectedProductId;
