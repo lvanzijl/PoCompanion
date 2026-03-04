@@ -11,6 +11,11 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Handler for GetEpicCompletionForecastQuery.
 /// Calculates completion forecast for an Epic/Feature based on historical velocity.
 /// Uses product-scoped hierarchical loading when products are configured.
+///
+/// Velocity computation: iterates the distinct iteration paths of the epic's child work
+/// items, retrieves SprintMetrics for each (via GetSprintMetricsQuery), and derives
+/// average velocity from CompletedStoryPoints. Sprints older than 6 months are excluded,
+/// and the result is capped at MaxSprintsForVelocity.
 /// </summary>
 public sealed class GetEpicCompletionForecastQueryHandler
     : IQueryHandler<GetEpicCompletionForecastQuery, EpicCompletionForecastDto?>
@@ -94,12 +99,17 @@ public sealed class GetEpicCompletionForecastQueryHandler
 
         var remainingEffort = totalEffort - completedEffort;
 
-        // Get velocity trend for the area path
-        var velocityTrend = await _mediator.Send(
-            new GetVelocityTrendQuery(ProductIds: null, AreaPath: epic.AreaPath, MaxSprints: query.MaxSprintsForVelocity ?? 5),
+        // Compute velocity inline from the distinct iteration paths of the epic's work items.
+        // Avoids a dependency on a separate velocity query handler.
+        var sprintMetricsList = await GetVelocitySprintsAsync(
+            allWorkItems.ToList(),
+            epic.AreaPath,
+            query.MaxSprintsForVelocity ?? 5,
             cancellationToken);
 
-        var estimatedVelocity = velocityTrend.AverageVelocity;
+        var estimatedVelocity = sprintMetricsList.Count > 0
+            ? sprintMetricsList.Average(s => (double)s.CompletedStoryPoints)
+            : 0.0;
 
         // Calculate forecast
         var sprintsRemaining = estimatedVelocity > 0
@@ -107,19 +117,19 @@ public sealed class GetEpicCompletionForecastQueryHandler
             : 0;
 
         // Determine confidence based on data availability
-        var confidence = DetermineConfidence(velocityTrend.Sprints.Count);
+        var confidence = DetermineConfidence(sprintMetricsList.Count);
 
         // Build sprint-by-sprint forecast
         var forecastByDate = BuildSprintForecast(
-            velocityTrend.Sprints,
+            sprintMetricsList,
             remainingEffort,
             estimatedVelocity);
 
         // Estimate completion date based on last sprint end date + remaining sprints
         DateTimeOffset? estimatedCompletionDate = null;
-        if (velocityTrend.Sprints.Any() && sprintsRemaining > 0)
+        if (sprintMetricsList.Any() && sprintsRemaining > 0)
         {
-            var lastSprint = velocityTrend.Sprints.OrderBy(s => s.EndDate).Last();
+            var lastSprint = sprintMetricsList.OrderBy(s => s.EndDate).Last();
             // Assume 2-week sprints (14 days)
             if (lastSprint.EndDate.HasValue)
             {
@@ -161,6 +171,53 @@ public sealed class GetEpicCompletionForecastQueryHandler
     private async Task<bool> IsCompletedAsync(string workItemType, string state, CancellationToken cancellationToken)
     {
         return await _stateClassificationService.IsDoneStateAsync(workItemType, state, cancellationToken);
+    }
+
+    /// <summary>
+    /// Derives sprint velocity data directly from work items and sprint metrics.
+    /// Replaces the former dependency on GetVelocityTrendQuery.
+    ///
+    /// Algorithm:
+    ///   1. Collect distinct iteration paths from all work items scoped to the epic's area path.
+    ///   2. For each iteration path, call GetSprintMetricsQuery.
+    ///   3. Exclude sprints that ended more than 6 months ago.
+    ///   4. Return the most recent maxSprints results ordered by end date descending.
+    /// </summary>
+    private async Task<List<SprintMetricsDto>> GetVelocitySprintsAsync(
+        List<WorkItemDto> allWorkItems,
+        string? areaPath,
+        int maxSprints,
+        CancellationToken cancellationToken)
+    {
+        var sixMonthsAgo = DateTimeOffset.UtcNow.AddMonths(-6);
+
+        // Scope iteration paths to the epic's area path when available
+        var iterationPaths = allWorkItems
+            .Where(wi => string.IsNullOrWhiteSpace(areaPath)
+                         || wi.AreaPath.StartsWith(areaPath, StringComparison.OrdinalIgnoreCase))
+            .Select(wi => wi.IterationPath)
+            .Distinct()
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .OrderByDescending(p => p)   // simple lexicographic ordering; refine if sprint naming is non-sortable
+            .Take(maxSprints * 2)        // over-fetch to allow 6-month filtering below
+            .ToList();
+
+        var results = new List<SprintMetricsDto>(maxSprints);
+
+        foreach (var path in iterationPaths)
+        {
+            if (results.Count >= maxSprints) break;
+
+            var metrics = await _mediator.Send(new GetSprintMetricsQuery(path), cancellationToken);
+            if (metrics == null) continue;
+
+            // Skip sprints outside the 6-month window
+            if (metrics.EndDate.HasValue && metrics.EndDate < sixMonthsAgo) continue;
+
+            results.Add(metrics);
+        }
+
+        return results;
     }
 
     private static ForecastConfidence DetermineConfidence(int sprintCount)

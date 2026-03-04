@@ -62,43 +62,6 @@ public class MetricsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets velocity trend data across multiple sprints.
-    /// </summary>
-    /// <param name="productIds">Optional product IDs to filter work items (comma-separated for multiple)</param>
-    /// <param name="areaPath">Optional area path to filter work items</param>
-    /// <param name="maxSprints">Maximum number of sprints to include (default: 10)</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Velocity trend data including sprint metrics and averages</returns>
-    [HttpGet("velocity")]
-    public async Task<ActionResult<VelocityTrendDto>> GetVelocityTrend(
-        [FromQuery] int[]? productIds = null,
-        [FromQuery] string? areaPath = null,
-        [FromQuery] int maxSprints = 10,
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            if (maxSprints < 1 || maxSprints > 50)
-            {
-                return BadRequest("MaxSprints must be between 1 and 50");
-            }
-
-            var velocityTrend = await _mediator.Send(
-                new GetVelocityTrendQuery(productIds, areaPath, maxSprints),
-                cancellationToken);
-
-            return Ok(velocityTrend);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving velocity trend for products: {ProductIds}, area: {AreaPath}", 
-                productIds != null ? string.Join(", ", productIds) : "None",
-                areaPath ?? "All");
-            return StatusCode(500, "Error retrieving velocity trend");
-        }
-    }
-
-    /// <summary>
     /// Gets backlog health metrics for a specific iteration.
     /// </summary>
     /// <param name="iterationPath">The iteration path of the sprint</param>
