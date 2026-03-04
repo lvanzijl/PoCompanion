@@ -2,6 +2,14 @@
   {
     "date": "2026-03-04",
     "type": "Changed",
+    "title": "PR Overview — migrated to Primary Visualization Pattern",
+    "impact": "PrOverview.razor (/home/pull-requests) migrated from inline 2×2 CSS grid to AnalyticalPageLayout / PrimaryVisualizationSection / SecondaryVisualizationGrid. Median PR Size per Sprint is now the full-width primary visualization (340px chart); Median Time to First Review, Median Time to Merge, and P90 Time to Merge are arranged in a 3-column secondary grid (260px each). Page-local .pr-trend-grid <style> block removed. No logic, data, or density changes.",
+    "area": "Layout / Pull Requests",
+    "link": "/home/pull-requests"
+  },
+  {
+    "date": "2026-03-04",
+    "type": "Changed",
     "title": "Sprint Trend and Pipeline Trend — migrated to Primary Visualization Pattern",
     "impact": "Sprint Trend (advanced/trend mode) and Pipeline Trend pages migrated from page-local inline CSS grids to the global AnalyticalPageLayout / PrimaryVisualizationSection / SecondaryVisualizationGrid components. Pipeline Trend: Reliability Trend is now the full-width primary visualization (340px chart); Time-to-Green, Tail Risk, and Flakiness are arranged in a 3-column secondary grid (260px each). Sprint Trend (trend mode): Progression per Sprint is the full-width primary visualization (340px); Completed PBIs Count, Completed PBI Effort, and Bug Activity are arranged in a 3-column secondary grid (260px each). Inline min-height pixel values and page-local grid CSS blocks removed. No logic, data, or density changes.",
     "area": "Layout / Trends",

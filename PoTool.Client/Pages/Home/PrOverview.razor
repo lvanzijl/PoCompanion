@@ -1,4 +1,5 @@
 @page "/home/pull-requests"
+@using PoTool.Client.Components.Analytical
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Services
@@ -217,7 +218,7 @@
             </MudStack>
         </MudPaper>
 
-        @* 2×2 Sprint Trend Charts *@
+        @* Chart Layout (Primary Visualization Pattern) *@
         @if (_trendsLoading)
         {
             <MudProgressLinear Indeterminate="true" Color="Color.Info" Class="mb-2" />
@@ -225,10 +226,10 @@
 
         @if (_sprintTrendData != null && _sprintTrendData.Sprints.Count > 0)
         {
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;" class="pr-trend-grid">
+            <AnalyticalPageLayout>
 
-                @* Chart 1: Median PR Size per Sprint *@
-                <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                @* Row 1 — Primary Visualization: Median PR Size per Sprint (full width, dominant) *@
+                <PrimaryVisualizationSection>
                     <MudStack Spacing="0" Class="mb-2">
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                             <MudText Typo="Typo.subtitle2">Median PR Size per Sprint</MudText>
@@ -247,71 +248,76 @@
                               ChartSeries="@_prSizeChartSeries"
                               XAxisLabels="@_trendXAxisLabels"
                               Width="100%"
-                              Height="180px"
+                              Height="340px"
                               ChartOptions="@_chartOptions" />
-                </MudPaper>
+                </PrimaryVisualizationSection>
 
-                @* Chart 2: Median Time to First Review per Sprint *@
-                <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
-                    <MudStack Spacing="0" Class="mb-2">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                            <MudText Typo="Typo.subtitle2">Median Time to First Review per Sprint</MudText>
-                            <TrendSlopeBadge StartValue="@_ttfrStart"
-                                             EndValue="@_ttfrEnd"
-                                             LowerIsBetter="true"
-                                             MetricLabel="time to first review" />
+                @* Row 2 — Secondary Visualizations: 3 equal columns *@
+                <SecondaryVisualizationGrid Columns="3">
+
+                    @* Cell 1 — Median Time to First Review *@
+                    <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                        <MudStack Spacing="0" Class="mb-2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.subtitle2">Median Time to First Review per Sprint</MudText>
+                                <TrendSlopeBadge StartValue="@_ttfrStart"
+                                                 EndValue="@_ttfrEnd"
+                                                 LowerIsBetter="true"
+                                                 MetricLabel="time to first review" />
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Hours: PR created → first non-author comment</MudText>
                         </MudStack>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Hours: PR created → first non-author comment</MudText>
-                    </MudStack>
-                    <MudChart ChartType="ChartType.Line"
-                              ChartSeries="@_ttfrChartSeries"
-                              XAxisLabels="@_trendXAxisLabels"
-                              Width="100%"
-                              Height="180px"
-                              ChartOptions="@_chartOptions" />
-                </MudPaper>
+                        <MudChart ChartType="ChartType.Line"
+                                  ChartSeries="@_ttfrChartSeries"
+                                  XAxisLabels="@_trendXAxisLabels"
+                                  Width="100%"
+                                  Height="260px"
+                                  ChartOptions="@_chartOptions" />
+                    </MudPaper>
 
-                @* Chart 3: Median Time to Merge per Sprint *@
-                <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
-                    <MudStack Spacing="0" Class="mb-2">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                            <MudText Typo="Typo.subtitle2">Median Time to Merge per Sprint</MudText>
-                            <TrendSlopeBadge StartValue="@_ttmMedianStart"
-                                             EndValue="@_ttmMedianEnd"
-                                             LowerIsBetter="true"
-                                             MetricLabel="median time to merge" />
+                    @* Cell 2 — Median Time to Merge *@
+                    <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                        <MudStack Spacing="0" Class="mb-2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.subtitle2">Median Time to Merge per Sprint</MudText>
+                                <TrendSlopeBadge StartValue="@_ttmMedianStart"
+                                                 EndValue="@_ttmMedianEnd"
+                                                 LowerIsBetter="true"
+                                                 MetricLabel="median time to merge" />
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Hours: PR created → completed (median)</MudText>
                         </MudStack>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Hours: PR created → completed (median)</MudText>
-                    </MudStack>
-                    <MudChart ChartType="ChartType.Line"
-                              ChartSeries="@_ttmMedianChartSeries"
-                              XAxisLabels="@_trendXAxisLabels"
-                              Width="100%"
-                              Height="180px"
-                              ChartOptions="@_chartOptions" />
-                </MudPaper>
+                        <MudChart ChartType="ChartType.Line"
+                                  ChartSeries="@_ttmMedianChartSeries"
+                                  XAxisLabels="@_trendXAxisLabels"
+                                  Width="100%"
+                                  Height="260px"
+                                  ChartOptions="@_chartOptions" />
+                    </MudPaper>
 
-                @* Chart 4: P90 Time to Merge per Sprint *@
-                <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
-                    <MudStack Spacing="0" Class="mb-2">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                            <MudText Typo="Typo.subtitle2">P90 Time to Merge per Sprint</MudText>
-                            <TrendSlopeBadge StartValue="@_ttmP90Start"
-                                             EndValue="@_ttmP90End"
-                                             LowerIsBetter="true"
-                                             MetricLabel="P90 time to merge" />
+                    @* Cell 3 — P90 Time to Merge *@
+                    <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                        <MudStack Spacing="0" Class="mb-2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.subtitle2">P90 Time to Merge per Sprint</MudText>
+                                <TrendSlopeBadge StartValue="@_ttmP90Start"
+                                                 EndValue="@_ttmP90End"
+                                                 LowerIsBetter="true"
+                                                 MetricLabel="P90 time to merge" />
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Hours: 90th percentile (gaps = &lt;3 PRs)</MudText>
                         </MudStack>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Hours: 90th percentile (gaps = &lt;3 PRs)</MudText>
-                    </MudStack>
-                    <MudChart ChartType="ChartType.Bar"
-                              ChartSeries="@_ttmP90ChartSeries"
-                              XAxisLabels="@_trendXAxisLabels"
-                              Width="100%"
-                              Height="180px"
-                              ChartOptions="@_chartOptions" />
-                </MudPaper>
+                        <MudChart ChartType="ChartType.Bar"
+                                  ChartSeries="@_ttmP90ChartSeries"
+                                  XAxisLabels="@_trendXAxisLabels"
+                                  Width="100%"
+                                  Height="260px"
+                                  ChartOptions="@_chartOptions" />
+                    </MudPaper>
 
-            </div>
+                </SecondaryVisualizationGrid>
+
+            </AnalyticalPageLayout>
         }
         else if (!_trendsLoading && _trendTeamId.HasValue)
         {
@@ -351,12 +357,6 @@
 </MudContainer>
 
 <style>
-    /* Responsive 2x2 grid: 2 columns on desktop, 1 column on narrow screens */
-    @@media (max-width: 768px) {
-        .pr-trend-grid {
-            grid-template-columns: 1fr !important;
-        }
-    }
     .trend-slope-badge {
         font-size: 0.7rem;
     }
