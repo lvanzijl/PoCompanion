@@ -10212,14 +10212,14 @@
         "type": "string",
         "description": "",
         "x-enumNames": [
-          "Improving",
+          "Contracting",
           "Stable",
-          "AtRisk"
+          "Expanding"
         ],
         "enum": [
-          "Improving",
+          "Contracting",
           "Stable",
-          "AtRisk"
+          "Expanding"
         ]
       },
       "PortfolioSprintProgressDto": {
@@ -10267,6 +10267,16 @@
             "format": "double",
             "nullable": true
           },
+          "addedEffort": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "netFlow": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
           "hasData": {
             "type": "boolean"
           }
@@ -10276,22 +10286,22 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "firstPercentDone": {
+          "cumulativeNetFlow": {
             "type": "number",
             "format": "double",
             "nullable": true
           },
-          "lastPercentDone": {
+          "totalScopeChangePts": {
             "type": "number",
             "format": "double",
             "nullable": true
           },
-          "scopeChangePercent": {
+          "totalScopeChangePercent": {
             "type": "number",
             "format": "double",
             "nullable": true
           },
-          "remainingEffortDelta": {
+          "remainingEffortChangePts": {
             "type": "number",
             "format": "double",
             "nullable": true

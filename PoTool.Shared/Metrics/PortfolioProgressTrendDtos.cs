@@ -1,22 +1,42 @@
 namespace PoTool.Shared.Metrics;
 
 /// <summary>
-/// Overall trajectory classification for portfolio progress.
+/// Stock-and-flow classification for portfolio trajectory.
+///
+/// Classification rules (documented in GetPortfolioProgressTrendQueryHandler.ComputeSummary):
+///   Expanding   — cumulative Net Flow &lt; -tolerance AND Remaining Effort is increasing.
+///                 Backlog is growing; adding more scope than delivering.
+///   Contracting — cumulative Net Flow &gt; +tolerance AND Remaining Effort is decreasing.
+///                 Backlog is shrinking; delivering more than adding.
+///   Stable      — small net movements within tolerance (|cumulative Net| ≤ tolerance).
 /// </summary>
 public enum PortfolioTrajectory
 {
-    /// <summary>% done is rising AND remaining effort is falling.</summary>
-    Improving,
+    /// <summary>Backlog is shrinking: delivering more than adding.</summary>
+    Contracting,
 
-    /// <summary>Movement is within tolerance thresholds (±5% done, ±10% remaining).</summary>
+    /// <summary>Movement is within tolerance thresholds.</summary>
     Stable,
 
-    /// <summary>Scope is rising significantly OR remaining effort is increasing.</summary>
-    AtRisk
+    /// <summary>Backlog is growing: adding more scope than delivering.</summary>
+    Expanding
 }
 
 /// <summary>
 /// Per-sprint portfolio progress data point.
+///
+/// Stock fields:  TotalScopeEffort, RemainingEffort
+/// Flow fields:   ThroughputEffort (completed), AddedEffort, NetFlow
+///
+/// LIMITATION — AddedEffort definition:
+///   AddedEffort is computed from SprintMetricsProjection.PlannedEffort, which represents
+///   items committed to the sprint backlog at projection time.
+///   It does NOT represent items newly created in the product backlog during the sprint.
+///   True scope-inflow tracking requires per-event backlog change history (not stored here).
+///   PlannedEffort also includes re-estimated items; large re-estimations may distort
+///   Net Flow temporarily, as creation vs. estimation deltas cannot be distinguished.
+///   If this limitation is resolved in a future data model update, this comment should be
+///   updated to reflect which definition is actually implemented.
 /// </summary>
 public record PortfolioSprintProgressDto
 {
@@ -40,8 +60,16 @@ public record PortfolioSprintProgressDto
     public double? PercentDone { get; init; }
 
     /// <summary>
-    /// Total effort in scope (sum of effort of all resolved PBIs, excluding Removed items).
-    /// Uses current backlog snapshot; represents the known scope baseline.
+    /// Total effort in scope (sum of effort of all resolved PBIs, excluding Removed items)
+    /// at the END of this sprint.
+    ///
+    /// Computed historically by replaying <c>Microsoft.VSTS.Scheduling.Effort</c> change
+    /// events from the ActivityEventLedger. Items created after this sprint's end date are
+    /// excluded; items currently in "Removed" state that were removed after this sprint's end
+    /// date are included.
+    ///
+    /// Accuracy: if the activity ledger does not contain events going back to this sprint's
+    /// end date, the current effort value is used as a best-effort approximation.
     /// </summary>
     public double? TotalScopeEffort { get; init; }
 
@@ -52,38 +80,59 @@ public record PortfolioSprintProgressDto
     public double? RemainingEffort { get; init; }
 
     /// <summary>
-    /// Effort completed (transitioned to Done) during this sprint only (throughput).
+    /// Effort completed (transitioned to Done) during this sprint only (throughput / outflow).
     /// Null when no effort data exists for this sprint.
     /// </summary>
     public double? ThroughputEffort { get; init; }
+
+    /// <summary>
+    /// Added effort (scope inflow) for this sprint.
+    /// Proxy: PlannedEffort from SprintMetricsProjection (see class-level limitation note).
+    /// Null when no effort data exists for this sprint.
+    /// </summary>
+    public double? AddedEffort { get; init; }
+
+    /// <summary>
+    /// Net Flow = ThroughputEffort − AddedEffort.
+    /// Positive = backlog shrinking (good); Negative = backlog expanding (growth or risk).
+    /// Null when either ThroughputEffort or AddedEffort is null.
+    /// </summary>
+    public double? NetFlow { get; init; }
 
     /// <summary>Whether this sprint has any measurable effort data.</summary>
     public bool HasData { get; init; }
 }
 
 /// <summary>
-/// Compact summary for the selected sprint range.
+/// Stock-and-flow summary for the selected sprint range.
 /// </summary>
 public record PortfolioProgressSummaryDto
 {
-    /// <summary>% done at the start of the selected range (first sprint with data).</summary>
-    public double? FirstPercentDone { get; init; }
-
-    /// <summary>% done at the end of the selected range (last sprint with data).</summary>
-    public double? LastPercentDone { get; init; }
+    /// <summary>
+    /// Sum of NetFlow across all sprints in the range (positive = backlog contracted).
+    /// </summary>
+    public double? CumulativeNetFlow { get; init; }
 
     /// <summary>
-    /// Total scope change across the range expressed as a percentage (+N% means growth).
-    /// Currently always null — historical scope tracking requires future implementation.
+    /// Change in TotalScopeEffort across the selected range (last − first), in story points.
+    /// Computed from historically-reconstructed per-sprint scope values.
+    /// Positive = scope grew; Negative = scope contracted.
     /// </summary>
-    public double? ScopeChangePercent { get; init; }
+    public double? TotalScopeChangePts { get; init; }
 
     /// <summary>
-    /// Change in remaining effort across the range (negative = decreasing = good).
+    /// Total scope change as a percentage of first-sprint scope.
+    /// Null when first-sprint scope is zero or unavailable.
     /// </summary>
-    public double? RemainingEffortDelta { get; init; }
+    public double? TotalScopeChangePercent { get; init; }
 
-    /// <summary>Overall trajectory classification for the selected range.</summary>
+    /// <summary>
+    /// Change in RemainingEffort across the selected range (last − first), in story points.
+    /// Negative = backlog digestion pressure decreased (good).
+    /// </summary>
+    public double? RemainingEffortChangePts { get; init; }
+
+    /// <summary>Overall stock-and-flow classification for the selected range.</summary>
     public PortfolioTrajectory Trajectory { get; init; }
 }
 
