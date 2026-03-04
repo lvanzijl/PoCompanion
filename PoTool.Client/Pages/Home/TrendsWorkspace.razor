@@ -211,6 +211,20 @@
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
+
+                @* Delivery Trends Signal *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="1"
+                             Style="cursor: pointer; transition: all 0.2s;"
+                             Class="mud-card-hover"
+                             @onclick="NavigateToDeliveryTrends">
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.LocalShipping" Color="Color.Success" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">Delivery Trends</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">PBI & effort throughput over time</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
             </MudGrid>
         </MudPaper>
 
@@ -485,6 +499,11 @@
     private void NavigateToPortfolioProgress()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.PortfolioProgress}{BuildContextQuery()}");
+    }
+
+    private void NavigateToDeliveryTrends()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.DeliveryTrends}{BuildContextQuery()}");
     }
     
     private void NavigateToHealth()

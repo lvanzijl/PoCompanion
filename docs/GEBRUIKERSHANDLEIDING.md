@@ -25,6 +25,7 @@
 9. [Trends-werkruimte — Verleden](#9-trends-werkruimte--verleden)
    - 9.1 [Pull Request-inzichten](#91-pull-request-inzichten)
    - 9.2 [Pipeline-inzichten](#92-pipeline-inzichten)
+   - 9.3 [Delivery Trends](#93-delivery-trends)
 10. [Planning-werkruimte — Toekomst](#10-planning-werkruimte--toekomst)
     - 10.1 [Planbord](#101-planbord)
     - 10.2 [Afhankelijkheidsoverzicht](#102-afhankelijkheidsoverzicht)
@@ -452,6 +453,7 @@ De Trends-werkruimte beantwoordt de vraag: *Wat zijn de structurele patronen in 
 | **PR Trend** | Pull request-patronen | PR-inzichten |
 | **Pipeline Trend** | Build- en deployment-gezondheid | Pipeline-inzichten |
 | **Portfolio Progress** | Strategische voortgang per product over een sprintbereik | Portfolio Progress |
+| **Delivery Trends** | PBI-doorvoer, inspanningsdoorvoer en bugtrend per sprint | Delivery Trends |
 
 > **Velocity en voorspelbaarheid** zijn niet langer een aparte signaalkaart in Trends. Ze zijn ingebed als *Calibratiepaneel* in Sprint Delivery (tactische context) en als *Capaciteitsvertrouwen* in Planning (voorspellingscontext).
 
@@ -492,6 +494,36 @@ Een alleen-lezen overzicht van CI/CD-pipeline-gezondheidsmetrieken.
 - **Samenvattingspaneel** — geaggregeerde metrieken (totaal slagingspercentage, gemiddelde duur, etc.).
 
 Als gegevens niet geladen kunnen worden, verschijnt een foutmelding met een **Opnieuw proberen**-knop.
+
+---
+
+### 9.3 Delivery Trends
+
+**Pagina:** `/home/trends/delivery`
+
+De Delivery Trends-pagina analyseert leveringsgedrag over meerdere sprints. Gebruik deze pagina om structurele patronen te herkennen in doorvoer, inspanning en bugactiviteit. Alle grafieken tonen een sprinttijdlijn op de X-as.
+
+#### Wat zie je hier?
+
+- **Teamselector** — filter de sprintlijst op een specifiek team.
+- **Productselector** — optioneel filter op een specifiek product. Standaard worden totalen over alle producten getoond.
+- **Eind-sprint** — de meest recente sprint die in het bereik wordt getoond.
+- **Aantal sprints** — stel in hoeveel sprints worden weergegeven (minimaal 2, standaard 6).
+
+#### Grafieken
+
+| Grafiek | Omschrijving |
+|---|---|
+| **PBI-doorvoertrend** | Aantal voltooide PBI's per sprint (primaire visualisatie, volledige breedte). Hogere waarden zijn beter. |
+| **Inspanningsdoorvoertrend** | Story points opgeleverd per sprint. Hogere waarden zijn beter. |
+| **Voortgangstrend** | Voltooide inspanning als percentage van geplande inspanning per sprint. Hogere waarden zijn beter. |
+| **Bugtrend** | Aangemaakte versus gesloten bugs per sprint. Minder aangemaakt is beter. |
+
+Elke grafiek toont een **helling-badge** (Verbeterend / Stabiel / Verslechterend) op basis van het eerste en laatste datapunt in het bereik.
+
+#### Drill-down
+
+Onderaan de pagina bevindt zich een ingeklapt **Drill-down**-paneel met een tabel van per-sprintdetails: voltooide PBI's, voltooide inspanning, geplande inspanning, voltooiingspercentage, aangemaakt bugs en gesloten bugs.
 
 ---
 

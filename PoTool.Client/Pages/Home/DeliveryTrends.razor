@@ -1,0 +1,626 @@
+@page "/home/trends/delivery"
+@using PoTool.Client.Components.Analytical
+@using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Services
+@using PoTool.Client.Pages.Home.Components
+@using PoTool.Shared.Metrics
+@using System.Web
+@inject IProfileService ProfileService
+@inject IMetricsClient MetricsClient
+@inject ProductService ProductService
+@inject TeamService TeamService
+@inject SprintService SprintService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Delivery Trends - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @* Workspace Header *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.LocalShipping" Color="Color.Success" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">Delivery Trends</MudText>
+                </MudStack>
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            </MudStack>
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Info"
+                           StartIcon="@Icons.Material.Filled.Timeline"
+                           OnClick="NavigateToTrends">
+                    Back to Trends
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Home"
+                           OnClick="NavigateToHome">
+                    Home
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _errorMessage = null)">
+            @_errorMessage
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@LoadDataAsync" Class="ml-2">Retry</MudButton>
+        </MudAlert>
+    }
+    else
+    {
+        @* Sprint range + filter controls *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.h6">
+                    <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Class="mr-2" />
+                    Sprint Range
+                </MudText>
+
+                <MudGrid Spacing="2">
+                    @* Team selector (drives sprint list) *@
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudSelect T="int?"
+                                   Value="_selectedTeamId"
+                                   Label="Team"
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   ValueChanged="OnTeamChanged">
+                            <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
+                            @foreach (var team in _teams)
+                            {
+                                <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+
+                    @* Product filter *@
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudSelect T="int?"
+                                   Value="_selectedProductId"
+                                   Label="Product"
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   ValueChanged="OnProductChanged">
+                            <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
+                            @foreach (var product in _products)
+                            {
+                                <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+
+                    @* Last sprint to show *@
+                    @if (_filteredSprints.Count > 0)
+                    {
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudSelect T="int"
+                                       Label="End sprint"
+                                       Value="@(_currentSprint?.Id ?? 0)"
+                                       ValueChanged="OnEndSprintChanged"
+                                       Variant="Variant.Outlined"
+                                       FullWidth="true">
+                                @foreach (var sprint in _filteredSprints)
+                                {
+                                    <MudSelectItem Value="@sprint.Id">@sprint.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        @* Sprint count *@
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudNumericField T="int"
+                                             Label="Sprints to show"
+                                             Value="@_trendSprintCount"
+                                             ValueChanged="OnTrendSprintCountChanged"
+                                             Min="2"
+                                             Max="@MaxAvailableSprints"
+                                             Variant="Variant.Outlined"
+                                             FullWidth="true" />
+                        </MudItem>
+                    }
+                </MudGrid>
+
+                @if (_filteredSprints.Count > 0 && _currentSprint != null)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Showing @GetTrendRangeLabel()
+                    </MudText>
+                }
+            </MudStack>
+        </MudPaper>
+
+        @if (_metricsLoading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Success" Class="mb-2" />
+        }
+
+        @if (_filteredSprints.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">No sprints found. Ensure sprint data has been synced.</MudAlert>
+        }
+        else if (_currentSprint == null)
+        {
+            <MudAlert Severity="Severity.Info">No sprint selected.</MudAlert>
+        }
+        else if (_trendMetrics.Count > 0)
+        {
+            @* Chart Layout (Primary Visualization Pattern) *@
+            <AnalyticalPageLayout>
+
+                @* Row 1 — Primary Visualization: PBI Throughput Trend (full width, dominant) *@
+                <PrimaryVisualizationSection>
+                    <MudStack Spacing="0" Class="mb-2">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudText Typo="Typo.subtitle2">PBI Throughput Trend</MudText>
+                            <TrendSlopeBadge StartValue="@_pbiThroughputStart"
+                                             EndValue="@_pbiThroughputEnd"
+                                             LowerIsBetter="false"
+                                             MetricLabel="completed PBIs" />
+                        </MudStack>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Completed PBIs per sprint — delivery capacity; higher is better
+                        </MudText>
+                    </MudStack>
+                    <MudChart ChartType="ChartType.Bar"
+                              ChartSeries="@_pbiThroughputSeries"
+                              XAxisLabels="@_trendXAxisLabels"
+                              Width="100%"
+                              Height="340px"
+                              ChartOptions="@_chartOptions" />
+                </PrimaryVisualizationSection>
+
+                @* Row 2 — Secondary Visualizations: 3 equal columns *@
+                <SecondaryVisualizationGrid Columns="3">
+
+                    @* Cell 1 — Effort Throughput Trend *@
+                    <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                        <MudStack Spacing="0" Class="mb-2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.subtitle2">Effort Throughput Trend</MudText>
+                                <TrendSlopeBadge StartValue="@_effortThroughputStart"
+                                                 EndValue="@_effortThroughputEnd"
+                                                 LowerIsBetter="false"
+                                                 MetricLabel="story points" />
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Story points delivered per sprint; higher is better
+                            </MudText>
+                        </MudStack>
+                        <MudChart ChartType="ChartType.Bar"
+                                  ChartSeries="@_effortThroughputSeries"
+                                  XAxisLabels="@_trendXAxisLabels"
+                                  Width="100%"
+                                  Height="260px"
+                                  ChartOptions="@_chartOptions" />
+                    </MudPaper>
+
+                    @* Cell 2 — Progress Trend *@
+                    <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                        <MudStack Spacing="0" Class="mb-2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.subtitle2">Progress Trend</MudText>
+                                <TrendSlopeBadge StartValue="@_progressStart"
+                                                 EndValue="@_progressEnd"
+                                                 LowerIsBetter="false"
+                                                 MetricLabel="completion rate" />
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Completed effort as % of planned effort per sprint; higher is better
+                            </MudText>
+                        </MudStack>
+                        <MudChart ChartType="ChartType.Line"
+                                  ChartSeries="@_progressSeries"
+                                  XAxisLabels="@_trendXAxisLabels"
+                                  Width="100%"
+                                  Height="260px"
+                                  ChartOptions="@_chartOptions" />
+                    </MudPaper>
+
+                    @* Cell 3 — Bug Trend *@
+                    <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                        <MudStack Spacing="0" Class="mb-2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.subtitle2">Bug Trend</MudText>
+                                <TrendSlopeBadge StartValue="@_bugsCreatedStart"
+                                                 EndValue="@_bugsCreatedEnd"
+                                                 LowerIsBetter="true"
+                                                 MetricLabel="bugs created" />
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Bugs created vs closed per sprint; fewer created is better
+                            </MudText>
+                        </MudStack>
+                        <MudChart ChartType="ChartType.Line"
+                                  ChartSeries="@_bugTrendSeries"
+                                  XAxisLabels="@_trendXAxisLabels"
+                                  Width="100%"
+                                  Height="260px"
+                                  ChartOptions="@_chartOptions" />
+                    </MudPaper>
+
+                </SecondaryVisualizationGrid>
+
+            </AnalyticalPageLayout>
+
+            @* Drill-down table *@
+            <MudExpansionPanels Class="mt-4">
+                <MudExpansionPanel Text="Drill-down — per sprint data" Icon="@Icons.Material.Filled.ExpandMore">
+                    <MudSimpleTable Dense="true" Hover="true" Bordered="false">
+                        <thead>
+                            <tr>
+                                <th>Sprint</th>
+                                <th>Completed PBIs</th>
+                                <th>Completed Effort (pts)</th>
+                                <th>Planned Effort (pts)</th>
+                                <th>Completion %</th>
+                                <th>Bugs Created</th>
+                                <th>Bugs Closed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var m in _trendMetrics)
+                            {
+                                var completedPbis = GetMetricValue(m, pm => (double)pm.CompletedPbiCount, m.TotalCompletedPbiCount);
+                                var completedEffort = GetMetricValue(m, pm => (double)pm.CompletedPbiEffort, m.TotalCompletedPbiEffort);
+                                var plannedEffort = (double)m.TotalPlannedEffort;
+                                var completionPct = plannedEffort > 0 ? completedEffort / plannedEffort * 100.0 : 0.0;
+                                var bugsCreated = GetMetricValue(m, pm => (double)pm.BugsCreatedCount, m.TotalBugsCreatedCount);
+                                var bugsClosed = GetMetricValue(m, pm => (double)pm.BugsClosedCount, m.TotalBugsClosedCount);
+                                <tr>
+                                    <td>@m.SprintName</td>
+                                    <td>@((int)completedPbis)</td>
+                                    <td>@((int)completedEffort)</td>
+                                    <td>@((int)plannedEffort)</td>
+                                    <td>@(plannedEffort > 0 ? $"{completionPct:F1}%" : "—")</td>
+                                    <td>@((int)bugsCreated)</td>
+                                    <td>@((int)bugsClosed)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        }
+        else if (!_metricsLoading)
+        {
+            <MudAlert Severity="Severity.Info">No delivery data available for the selected sprint range.</MudAlert>
+        }
+    }
+</MudContainer>
+
+@code {
+    private const int DefaultTrendSprintCount = 6;
+
+    private bool _isLoading = true;
+    private bool _metricsLoading = false;
+    private int? _profileId;
+    private string? _errorMessage;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+
+    // Selectors
+    private int? _selectedTeamId;
+    private int? _selectedProductId;
+    private int _trendSprintCount = DefaultTrendSprintCount;
+    private List<TeamDto> _teams = new();
+    private List<ProductDto> _products = new();
+    private List<SprintDto> _allSprints = new();
+    private List<SprintDto> _filteredSprints = new();
+    private SprintDto? _currentSprint;
+    private int _currentSprintIndex = -1;
+
+    // Trend data
+    private List<SprintTrendMetricsDto> _trendMetrics = new();
+    private string[] _trendXAxisLabels = Array.Empty<string>();
+
+    // Chart series
+    private List<ChartSeries> _pbiThroughputSeries = new();
+    private List<ChartSeries> _effortThroughputSeries = new();
+    private List<ChartSeries> _progressSeries = new();
+    private List<ChartSeries> _bugTrendSeries = new();
+
+    // Slope badge endpoints
+    private double? _pbiThroughputStart, _pbiThroughputEnd;
+    private double? _effortThroughputStart, _effortThroughputEnd;
+    private double? _progressStart, _progressEnd;
+    private double? _bugsCreatedStart, _bugsCreatedEnd;
+
+    private ChartOptions _chartOptions = new()
+    {
+        YAxisTicks = 5,
+        MaxNumYAxisTicks = 8,
+        YAxisLines = true,
+        XAxisLines = true
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        ParseQueryParameters();
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            _errorMessage = null;
+
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            _profileId = activeProfile?.Id;
+
+            if (_profileId == null)
+            {
+                _errorMessage = "No active profile selected.";
+                return;
+            }
+
+            _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
+            _products = (await ProductService.GetProductsByOwnerAsync(_profileId.Value)).ToList();
+
+            _allSprints.Clear();
+            foreach (var team in _teams)
+            {
+                try
+                {
+                    var teamSprints = (await SprintService.GetSprintsForTeamAsync(team.Id)).ToList();
+                    _allSprints.AddRange(teamSprints);
+                }
+                catch { /* skip teams without sprints */ }
+            }
+
+            ApplySprintFilters();
+            FindCurrentSprint();
+            await LoadMetricsAsync();
+            UpdateBreadcrumbs();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load data: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void ApplySprintFilters()
+    {
+        var sprints = _allSprints.AsEnumerable();
+        if (_selectedTeamId.HasValue)
+            sprints = sprints.Where(s => s.TeamId == _selectedTeamId.Value);
+
+        _filteredSprints = sprints
+            .Where(s => s.StartUtc.HasValue && s.EndUtc.HasValue)
+            .OrderBy(s => s.StartUtc)
+            .DistinctBy(s => s.Id)
+            .ToList();
+    }
+
+    private void FindCurrentSprint()
+    {
+        var now = DateTimeOffset.UtcNow;
+        _currentSprintIndex = _filteredSprints.FindIndex(s => s.StartUtc <= now && s.EndUtc >= now);
+
+        if (_currentSprintIndex < 0 && _filteredSprints.Count > 0)
+        {
+            _currentSprintIndex = _filteredSprints.FindLastIndex(s => s.EndUtc <= now);
+            if (_currentSprintIndex < 0)
+                _currentSprintIndex = _filteredSprints.Count - 1;
+        }
+
+        _currentSprint = _currentSprintIndex >= 0 ? _filteredSprints[_currentSprintIndex] : null;
+    }
+
+    private async Task LoadMetricsAsync()
+    {
+        _metricsLoading = true;
+        _trendMetrics.Clear();
+        _trendXAxisLabels = Array.Empty<string>();
+        StateHasChanged();
+
+        try
+        {
+            if (!_profileId.HasValue || _currentSprint == null)
+                return;
+
+            var startIndex = Math.Max(0, _currentSprintIndex - _trendSprintCount + 1);
+            var sprintIds = _filteredSprints
+                .Skip(startIndex)
+                .Take(_currentSprintIndex - startIndex + 1)
+                .Select(s => s.Id)
+                .ToList();
+
+            if (sprintIds.Count == 0)
+                return;
+
+            var response = await MetricsClient.GetSprintTrendMetricsAsync(
+                _profileId.Value,
+                sprintIds,
+                recompute: false,
+                CancellationToken.None);
+
+            if (response?.Success == true && response.Metrics != null)
+            {
+                _trendMetrics = response.Metrics
+                    .OrderBy(m => m.StartUtc ?? DateTimeOffset.MaxValue)
+                    .ToList();
+
+                BuildTrendCharts();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading delivery metrics: {ex.Message}", Severity.Warning);
+        }
+        finally
+        {
+            _metricsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void BuildTrendCharts()
+    {
+        if (_trendMetrics.Count == 0) return;
+
+        _trendXAxisLabels = _trendMetrics.Select(m => m.SprintName).ToArray();
+
+        // Chart 1: PBI Throughput
+        var pbiData = _trendMetrics
+            .Select(m => GetMetricValue(m, pm => (double)pm.CompletedPbiCount, m.TotalCompletedPbiCount))
+            .ToArray();
+        _pbiThroughputSeries = new List<ChartSeries>
+        {
+            new() { Name = "Completed PBIs", Data = pbiData }
+        };
+        (_pbiThroughputStart, _pbiThroughputEnd) = FirstLastNonZero(pbiData);
+
+        // Chart 2: Effort Throughput
+        var effortData = _trendMetrics
+            .Select(m => GetMetricValue(m, pm => (double)pm.CompletedPbiEffort, m.TotalCompletedPbiEffort))
+            .ToArray();
+        _effortThroughputSeries = new List<ChartSeries>
+        {
+            new() { Name = "Completed Effort (pts)", Data = effortData }
+        };
+        (_effortThroughputStart, _effortThroughputEnd) = FirstLastNonZero(effortData);
+
+        // Chart 3: Progress Trend — completion rate (%)
+        var progressData = _trendMetrics
+            .Select(m =>
+            {
+                var completed = GetMetricValue(m, pm => (double)pm.CompletedPbiEffort, m.TotalCompletedPbiEffort);
+                var planned = (double)m.TotalPlannedEffort;
+                return planned > 0 ? completed / planned * 100.0 : 0.0;
+            })
+            .ToArray();
+        _progressSeries = new List<ChartSeries>
+        {
+            new() { Name = "Completion Rate (%)", Data = progressData }
+        };
+        (_progressStart, _progressEnd) = FirstLastNonZero(progressData);
+
+        // Chart 4: Bug Trend — Created vs Closed
+        var bugsCreatedData = _trendMetrics
+            .Select(m => GetMetricValue(m, pm => (double)pm.BugsCreatedCount, m.TotalBugsCreatedCount))
+            .ToArray();
+        var bugsClosedData = _trendMetrics
+            .Select(m => GetMetricValue(m, pm => (double)pm.BugsClosedCount, m.TotalBugsClosedCount))
+            .ToArray();
+        _bugTrendSeries = new List<ChartSeries>
+        {
+            new() { Name = "Created", Data = bugsCreatedData },
+            new() { Name = "Closed", Data = bugsClosedData }
+        };
+        (_bugsCreatedStart, _bugsCreatedEnd) = FirstLastNonZero(bugsCreatedData);
+    }
+
+    /// <summary>
+    /// Returns the metric value for the selected product (if any), or the total aggregated value.
+    /// </summary>
+    private double GetMetricValue(
+        SprintTrendMetricsDto metric,
+        Func<ProductSprintMetricsDto, double> productSelector,
+        double totalFallback)
+    {
+        if (_selectedProductId.HasValue)
+        {
+            var pm = metric.ProductMetrics.FirstOrDefault(p => p.ProductId == _selectedProductId.Value);
+            return pm != null ? productSelector(pm) : 0.0;
+        }
+        return totalFallback;
+    }
+
+    /// <summary>Returns the first and last non-zero values in an array for slope badge computation.</summary>
+    private static (double? first, double? last) FirstLastNonZero(double[] values)
+    {
+        var nonZero = values.Where(v => v > 0).ToList();
+        if (nonZero.Count < 2) return (null, null);
+        return (nonZero.First(), nonZero.Last());
+    }
+
+    private void ParseQueryParameters()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+
+        var teamIdStr = queryParams["teamId"];
+        if (!string.IsNullOrEmpty(teamIdStr) && int.TryParse(teamIdStr, out var teamId))
+            _selectedTeamId = teamId;
+
+        var productIdStr = queryParams["productId"];
+        if (!string.IsNullOrEmpty(productIdStr) && int.TryParse(productIdStr, out var productId))
+            _selectedProductId = productId;
+    }
+
+    private void UpdateUrlParameters()
+    {
+        var queryParams = new List<string>();
+        if (_selectedTeamId.HasValue) queryParams.Add($"teamId={_selectedTeamId.Value}");
+        if (_selectedProductId.HasValue) queryParams.Add($"productId={_selectedProductId.Value}");
+        var qs = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : string.Empty;
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.DeliveryTrends}{qs}", forceLoad: false);
+    }
+
+    private int MaxAvailableSprints => _filteredSprints.Count > 0 ? _filteredSprints.Count : 1;
+
+    private string GetTrendRangeLabel()
+    {
+        if (_filteredSprints.Count == 0 || _currentSprintIndex < 0) return string.Empty;
+        var startIndex = Math.Max(0, _currentSprintIndex - _trendSprintCount + 1);
+        return $"{_filteredSprints[startIndex].Name} – {_currentSprint!.Name}";
+    }
+
+    private void UpdateBreadcrumbs()
+    {
+        _breadcrumbs = new List<BreadcrumbItem>
+        {
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
+            new("Trends (Past)", WorkspaceRoutes.TrendsWorkspace, icon: Icons.Material.Filled.Timeline),
+            new("Delivery Trends", null, disabled: true, icon: Icons.Material.Filled.LocalShipping)
+        };
+    }
+
+    private async Task OnTeamChanged(int? teamId)
+    {
+        _selectedTeamId = teamId;
+        UpdateUrlParameters();
+        ApplySprintFilters();
+        FindCurrentSprint();
+        await LoadMetricsAsync();
+    }
+
+    private void OnProductChanged(int? productId)
+    {
+        _selectedProductId = productId;
+        UpdateUrlParameters();
+        if (_trendMetrics.Count > 0)
+            BuildTrendCharts();
+        StateHasChanged();
+    }
+
+    private async Task OnEndSprintChanged(int sprintId)
+    {
+        _currentSprintIndex = _filteredSprints.FindIndex(s => s.Id == sprintId);
+        _currentSprint = _currentSprintIndex >= 0 ? _filteredSprints[_currentSprintIndex] : null;
+        await LoadMetricsAsync();
+    }
+
+    private async Task OnTrendSprintCountChanged(int count)
+    {
+        _trendSprintCount = count;
+        await LoadMetricsAsync();
+    }
+
+    private void NavigateToTrends() => NavigationManager.NavigateTo(WorkspaceRoutes.TrendsWorkspace);
+    private void NavigateToHome() => NavigationManager.NavigateTo(WorkspaceRoutes.Home);
+}
