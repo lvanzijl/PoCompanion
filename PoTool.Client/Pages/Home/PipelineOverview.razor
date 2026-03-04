@@ -1,4 +1,5 @@
 @page "/home/pipelines"
+@using PoTool.Client.Components.Analytical
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Services
@@ -153,12 +154,11 @@
                 </MudAlert>
             }
 
-            @* 2×2 PO Trend Grid *@
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;"
-                 class="pipeline-trend-grid">
+            @* Chart Layout (Primary Visualization Pattern) *@
+            <AnalyticalPageLayout>
 
-                @* Chart 1 — Reliability Trend (Success Rate) *@
-                <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                @* Row 1 — Primary Visualization: Reliability Trend (full width, dominant) *@
+                <PrimaryVisualizationSection>
                     <MudStack Spacing="0" Class="mb-2">
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                             <MudText Typo="Typo.subtitle2">Reliability Trend</MudText>
@@ -175,84 +175,89 @@
                               ChartSeries="@_reliabilityChartSeries"
                               XAxisLabels="@_trendXAxisLabels"
                               Width="100%"
-                              Height="180px"
+                              Height="340px"
                               ChartOptions="@_chartOptions" />
-                </MudPaper>
+                </PrimaryVisualizationSection>
 
-                @* Chart 2 — Time-to-Green Trend (Median Duration) *@
-                <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
-                    <MudStack Spacing="0" Class="mb-2">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                            <MudText Typo="Typo.subtitle2">Time-to-Green Trend</MudText>
-                            <TrendSlopeBadge StartValue="@_ttgStart"
-                                             EndValue="@_ttgEnd"
-                                             LowerIsBetter="true"
-                                             MetricLabel="time to green" />
+                @* Row 2 — Secondary Visualizations: 3 equal columns *@
+                <SecondaryVisualizationGrid Columns="3">
+
+                    @* Cell 1 — Time-to-Green Trend *@
+                    <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                        <MudStack Spacing="0" Class="mb-2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.subtitle2">Time-to-Green Trend</MudText>
+                                <TrendSlopeBadge StartValue="@_ttgStart"
+                                                 EndValue="@_ttgEnd"
+                                                 LowerIsBetter="true"
+                                                 MetricLabel="time to green" />
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @if (_hasMainBranchData)
+                                {
+                                    <text>Median duration (h) of main/master branch runs per sprint</text>
+                                }
+                                else
+                                {
+                                    <text>Median pipeline duration (h) per sprint — all branches (no main-branch runs detected)</text>
+                                }
+                            </MudText>
                         </MudStack>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            @if (_hasMainBranchData)
-                            {
-                                <text>Median duration (h) of main/master branch runs per sprint</text>
-                            }
-                            else
-                            {
-                                <text>Median pipeline duration (h) per sprint — all branches (no main-branch runs detected)</text>
-                            }
-                        </MudText>
-                    </MudStack>
-                    <MudChart ChartType="ChartType.Line"
-                              ChartSeries="@_ttgChartSeries"
-                              XAxisLabels="@_trendXAxisLabels"
-                              Width="100%"
-                              Height="180px"
-                              ChartOptions="@_chartOptions" />
-                </MudPaper>
+                        <MudChart ChartType="ChartType.Line"
+                                  ChartSeries="@_ttgChartSeries"
+                                  XAxisLabels="@_trendXAxisLabels"
+                                  Width="100%"
+                                  Height="260px"
+                                  ChartOptions="@_chartOptions" />
+                    </MudPaper>
 
-                @* Chart 3 — Tail Risk Trend (P90 Duration) *@
-                <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
-                    <MudStack Spacing="0" Class="mb-2">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                            <MudText Typo="Typo.subtitle2">Tail Risk Trend</MudText>
-                            <TrendSlopeBadge StartValue="@_tailRiskStart"
-                                             EndValue="@_tailRiskEnd"
-                                             LowerIsBetter="true"
-                                             MetricLabel="P90 duration" />
+                    @* Cell 2 — Tail Risk Trend *@
+                    <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                        <MudStack Spacing="0" Class="mb-2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.subtitle2">Tail Risk Trend</MudText>
+                                <TrendSlopeBadge StartValue="@_tailRiskStart"
+                                                 EndValue="@_tailRiskEnd"
+                                                 LowerIsBetter="true"
+                                                 MetricLabel="P90 duration" />
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                P90 pipeline duration (h) per sprint — gaps shown when fewer than 3 runs
+                            </MudText>
                         </MudStack>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            P90 pipeline duration (h) per sprint — gaps shown when fewer than 3 runs
-                        </MudText>
-                    </MudStack>
-                    <MudChart ChartType="ChartType.Bar"
-                              ChartSeries="@_tailRiskChartSeries"
-                              XAxisLabels="@_trendXAxisLabels"
-                              Width="100%"
-                              Height="180px"
-                              ChartOptions="@_chartOptions" />
-                </MudPaper>
+                        <MudChart ChartType="ChartType.Bar"
+                                  ChartSeries="@_tailRiskChartSeries"
+                                  XAxisLabels="@_trendXAxisLabels"
+                                  Width="100%"
+                                  Height="260px"
+                                  ChartOptions="@_chartOptions" />
+                    </MudPaper>
 
-                @* Chart 4 — Flakiness Trend *@
-                <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
-                    <MudStack Spacing="0" Class="mb-2">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                            <MudText Typo="Typo.subtitle2">Flakiness / Instability Trend</MudText>
-                            <TrendSlopeBadge StartValue="@_flakinessStart"
-                                             EndValue="@_flakinessEnd"
-                                             LowerIsBetter="true"
-                                             MetricLabel="flakiness rate" />
+                    @* Cell 3 — Flakiness Trend *@
+                    <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                        <MudStack Spacing="0" Class="mb-2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.subtitle2">Flakiness / Instability Trend</MudText>
+                                <TrendSlopeBadge StartValue="@_flakinessStart"
+                                                 EndValue="@_flakinessEnd"
+                                                 LowerIsBetter="true"
+                                                 MetricLabel="flakiness rate" />
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                % of distinct pipelines with both successes and failures in the same sprint
+                            </MudText>
                         </MudStack>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            % of distinct pipelines with both successes and failures in the same sprint
-                        </MudText>
-                    </MudStack>
-                    <MudChart ChartType="ChartType.Bar"
-                              ChartSeries="@_flakinessChartSeries"
-                              XAxisLabels="@_trendXAxisLabels"
-                              Width="100%"
-                              Height="180px"
-                              ChartOptions="@_chartOptions" />
-                </MudPaper>
+                        <MudChart ChartType="ChartType.Bar"
+                                  ChartSeries="@_flakinessChartSeries"
+                                  XAxisLabels="@_trendXAxisLabels"
+                                  Width="100%"
+                                  Height="260px"
+                                  ChartOptions="@_chartOptions" />
+                    </MudPaper>
 
-            </div>
+                </SecondaryVisualizationGrid>
+
+            </AnalyticalPageLayout>
 
             @* Advanced drill-down (secondary; collapsed by default) *@
             <MudExpansionPanels>
@@ -302,11 +307,6 @@
 </MudContainer>
 
 <style>
-    @@media (max-width: 768px) {
-        .pipeline-trend-grid {
-            grid-template-columns: 1fr !important;
-        }
-    }
     .trend-slope-badge {
         font-size: 0.7rem;
     }
