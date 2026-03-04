@@ -159,6 +159,11 @@ public static class WorkspaceRoutes
     /// Portfolio Progress Trend route — strategic, product-level progress insight over a sprint range.
     /// </summary>
     public const string PortfolioProgress = "/home/portfolio-progress";
+
+    /// <summary>
+    /// Delivery Trends route — temporal delivery patterns across multiple sprints (Trends workspace).
+    /// </summary>
+    public const string DeliveryTrends = "/home/trends/delivery";
     
     // Legacy Landing route constant for backward compatibility - alias to the new Legacy constant
     public const string Landing = Legacy;
