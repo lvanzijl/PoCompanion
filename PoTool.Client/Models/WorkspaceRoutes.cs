@@ -64,6 +64,11 @@ public static class WorkspaceRoutes
     public const string TrendsWorkspace = "/home/trends";
 
     /// <summary>
+    /// Delivery workspace route — inspection of delivered work per sprint or aggregated.
+    /// </summary>
+    public const string DeliveryWorkspace = "/home/delivery";
+
+    /// <summary>
     /// Planning (Future) workspace route.
     /// </summary>
     public const string PlanningWorkspace2 = "/home/planning";
@@ -105,13 +110,29 @@ public static class WorkspaceRoutes
 
     /// <summary>
     /// Sprint Trend route - shows sprint-based revision metrics.
+    /// Legacy route kept for backward compatibility; canonical route is SprintDelivery.
     /// </summary>
     public const string SprintTrend = "/home/sprint-trend";
+
+    /// <summary>
+    /// Sprint Delivery route — canonical Delivery workspace entry for sprint inspection.
+    /// </summary>
+    public const string SprintDelivery = "/home/delivery/sprint";
+
+    /// <summary>
+    /// Portfolio Delivery route — aggregated delivery view across products (placeholder).
+    /// </summary>
+    public const string PortfolioDelivery = "/home/delivery/portfolio";
 
     /// <summary>
     /// Sprint Trend activity detail route.
     /// </summary>
     public const string SprintTrendActivity = "/home/sprint-trend/activity";
+
+    /// <summary>
+    /// Sprint Delivery activity detail route.
+    /// </summary>
+    public const string SprintDeliveryActivity = "/home/delivery/sprint/activity";
 
     /// <summary>
     /// Validation Triage route — grouped view of validation issues per category (SI/RR/RC/EFF).

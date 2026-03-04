@@ -229,6 +229,26 @@
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
+
+                @* Delivery Workspace *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Class="workspace-card" 
+                             Elevation="4"
+                             Style="cursor: pointer; height: 100%; min-height: 240px; transition: all 0.3s ease; border: 2px solid transparent;"
+                             @onclick="NavigateToDelivery">
+                        <MudCardContent Class="d-flex flex-column align-center justify-center pa-6" Style="height: 100%;">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
+                                     Color="Color.Secondary" 
+                                     Style="font-size: 3.5rem;" />
+                            <MudText Typo="Typo.h5" Class="mt-4 text-center" Style="font-weight: 600;">
+                                Delivery
+                            </MudText>
+                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2" Style="color: var(--mud-palette-text-secondary);">
+                                What was delivered per sprint or period
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
             </MudGrid>
 
             @* Task-Driven Entry Section *@
@@ -378,6 +398,11 @@
     private void NavigateToPlanning()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanningWorkspace2}{BuildContextQuery()}");
+    }
+
+    private void NavigateToDelivery()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.DeliveryWorkspace);
     }
 
     private void NavigateToWorkItemExplorer()

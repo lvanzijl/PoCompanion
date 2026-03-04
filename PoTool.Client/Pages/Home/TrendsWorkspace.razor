@@ -198,20 +198,6 @@
                     </MudCard>
                 </MudItem>
 
-                @* Sprint Trend Signal *@
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1" 
-                             Style="cursor: pointer; transition: all 0.2s;"
-                             Class="mud-card-hover"
-                             @onclick="NavigateToSprintTrend">
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.RunCircle" Color="Color.Success" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Sprint Trend</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Planned vs worked metrics</MudText>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-
                 @* Portfolio Progress Trend Signal *@
                 <MudItem xs="12" sm="6" md="4">
                     <MudCard Elevation="1"
@@ -269,6 +255,12 @@
                            StartIcon="@Icons.Material.Filled.HealthAndSafety"
                            OnClick="NavigateToHealth">
                     Health (Now)
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Secondary"
+                           StartIcon="@Icons.Material.Filled.CheckCircle"
+                           OnClick="NavigateToDelivery">
+                    Delivery
                 </MudButton>
                 <MudButton Variant="Variant.Outlined" 
                            Color="Color.Warning" 
@@ -490,11 +482,6 @@
         NavigationManager.NavigateTo($"{WorkspaceRoutes.PipelineOverview}{BuildContextQuery("insightOnly=true")}");
     }
     
-    private void NavigateToSprintTrend()
-    {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.SprintTrend}{BuildContextQuery()}");
-    }
-
     private void NavigateToPortfolioProgress()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.PortfolioProgress}{BuildContextQuery()}");
@@ -508,6 +495,11 @@
     private void NavigateToPlanning()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanningWorkspace2}{BuildContextQuery()}");
+    }
+
+    private void NavigateToDelivery()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.DeliveryWorkspace);
     }
 
     private void NavigateToBacklogOverview()

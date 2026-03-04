@@ -2,7 +2,7 @@
 
 **Doelgroep:** Product Owners  
 **Taal:** Nederlands  
-**Laatste bijwerking:** 2026-03-03
+**Laatste bijwerking:** 2026-03-04
 
 ---
 
@@ -18,27 +18,29 @@
    - 7.1 [Validatie Triage](#71-validatie-triage)
    - 7.2 [Validatiewachtrij](#72-validatiewachtrij)
    - 7.3 [Validatie-fixsessie](#73-validatie-fixsessie)
-8. [Trends-werkruimte — Verleden](#8-trends-werkruimte--verleden)
-   - 8.1 [Sprint Trend](#81-sprint-trend)
+8. [Delivery-werkruimte](#8-delivery-werkruimte)
+   - 8.1 [Sprint Delivery](#81-sprint-delivery)
    - 8.2 [Werkitem-activiteit](#82-werkitem-activiteit)
-   - 8.3 [Pull Request-inzichten](#83-pull-request-inzichten)
-   - 8.4 [Pipeline-inzichten](#84-pipeline-inzichten)
-9. [Planning-werkruimte — Toekomst](#9-planning-werkruimte--toekomst)
-   - 9.1 [Planbord](#91-planbord)
-   - 9.2 [Afhankelijkheidsoverzicht](#92-afhankelijkheidsoverzicht)
-10. [Bugbeheer](#10-bugbeheer)
-    - 10.1 [Bug-inzichten](#101-bug-inzichten)
-    - 10.2 [Bug-triage](#102-bug-triage)
-11. [Work Item Explorer](#11-work-item-explorer)
-12. [Instellingen](#12-instellingen)
-    - 12.1 [Product Owners beheren](#121-product-owners-beheren)
-    - 12.2 [Producten beheren](#122-producten-beheren)
-    - 12.3 [Teams beheren](#123-teams-beheren)
-    - 12.4 [Werkitemstatussen configureren](#124-werkitemstatussen-configureren)
-    - 12.5 [TFS-verbinding configureren](#125-tfs-verbinding-configureren)
-13. [Validatieregels — uitleg](#13-validatieregels--uitleg)
-14. [Sneltoetsen](#14-sneltoetsen)
-15. [Veelgestelde vragen](#15-veelgestelde-vragen)
+   - 8.3 [Portfolio Delivery](#83-portfolio-delivery)
+9. [Trends-werkruimte — Verleden](#9-trends-werkruimte--verleden)
+   - 9.1 [Pull Request-inzichten](#91-pull-request-inzichten)
+   - 9.2 [Pipeline-inzichten](#92-pipeline-inzichten)
+10. [Planning-werkruimte — Toekomst](#10-planning-werkruimte--toekomst)
+    - 10.1 [Planbord](#101-planbord)
+    - 10.2 [Afhankelijkheidsoverzicht](#102-afhankelijkheidsoverzicht)
+11. [Bugbeheer](#11-bugbeheer)
+    - 11.1 [Bug-inzichten](#111-bug-inzichten)
+    - 11.2 [Bug-triage](#112-bug-triage)
+12. [Work Item Explorer](#12-work-item-explorer)
+13. [Instellingen](#13-instellingen)
+    - 13.1 [Product Owners beheren](#131-product-owners-beheren)
+    - 13.2 [Producten beheren](#132-producten-beheren)
+    - 13.3 [Teams beheren](#133-teams-beheren)
+    - 13.4 [Werkitemstatussen configureren](#134-werkitemstatussen-configureren)
+    - 13.5 [TFS-verbinding configureren](#135-tfs-verbinding-configureren)
+14. [Validatieregels — uitleg](#14-validatieregels--uitleg)
+15. [Sneltoetsen](#15-sneltoetsen)
+16. [Veelgestelde vragen](#16-veelgestelde-vragen)
 
 ---
 
@@ -46,13 +48,16 @@
 
 PO Companion is een hulpmiddel voor Product Owners die werken met Azure DevOps (TFS). Het haalt je backlog op uit TFS, slaat die lokaal op in een cache, en geeft je vervolgens een overzicht van de gezondheid van je backlog, trends over tijd, en hulp bij plannen.
 
-De applicatie is opgebouwd rond drie vragen die een Product Owner zichzelf elke dag stelt:
+De applicatie is opgebouwd rond vier vragen die een Product Owner zichzelf elke dag stelt:
 
 | Vraag | Werkruimte |
 |---|---|
 | Wat is er op dit moment aan de hand? | **Health** (Nu) |
+| Wat hebben we opgeleverd? | **Delivery** |
 | Wat is er in het verleden gebeurd? | **Trends** (Verleden) |
 | Wat moet er als volgende komen? | **Planning** (Toekomst) |
+
+> **Delivery vs. Trends:** De Delivery-werkruimte richt zich op *wat er daadwerkelijk is opgeleverd* — per sprint of geaggregeerd over producten. De Trends-werkruimte richt zich op *patronen over tijd* met een sprinttijdlijn op de X-as. Gebruik Delivery voor sprintinspectie; gebruik Trends voor structurele prestatieanalyse.
 
 Daarnaast is er een **Backlog Overzicht** als primaire startpagina voor backlogbeslissingen: welke epics zijn klaar voor implementatie, welke hebben nog verfijning nodig, en waar zitten structurele problemen?
 
@@ -147,12 +152,13 @@ Onder de signaalkaarten staat een optionele productfilter. Als je een product se
 
 ### Werkruimtekaarten
 
-Er zijn vier werkruimtekaarten:
+Er zijn vijf werkruimtekaarten:
 
 1. **Backlog Overzicht** — primaire startpagina voor backlogbeslissingen.
 2. **Health (Nu)** — validatieproblemen en bugs die direct aandacht vragen.
-3. **Trends (Verleden)** — historische analyses van sprint- en teamprestaties.
+3. **Trends (Verleden)** — historische analyses van teamprestaties over tijd.
 4. **Planning (Toekomst)** — capaciteitsrisico's en opzet van aankomende sprints.
+5. **Delivery** — overzicht van wat er is opgeleverd per sprint of per periode.
 
 ### Snelkoppelingen
 
@@ -329,40 +335,30 @@ Als alle items zijn afgehandeld, zie je een voltooiingsstatus. Knoppen:
 
 ---
 
-## 8. Trends-werkruimte — Verleden
+## 8. Delivery-werkruimte
 
-**Pagina:** `/home/trends`
+**Pagina:** `/home/delivery`
 
-De Trends-werkruimte beantwoordt de vraag: *Wat heeft mijn team in de afgelopen maanden gepresteerd?* Je ziet structurele patronen over de afgelopen 6 maanden (of een door jou gekozen sprintbereik).
+De Delivery-werkruimte beantwoordt de vraag: *Wat heeft mijn team daadwerkelijk opgeleverd?* Hier kun je per sprint bekijken wat er geleverd is, of je kunt een geaggregeerd overzicht bekijken over meerdere producten heen.
 
-### Filters
+> **Verschil met Trends:** De Delivery-werkruimte gaat over *wat er is opgeleverd* (resultaten, voltooide items, capaciteitsbenutting). De Trends-werkruimte gaat over *patronen over tijd* — bugtrends, PR-throughput, pipeline-betrouwbaarheid. Gebruik Delivery voor sprintinspectie en retrospectieve; gebruik Trends voor structurele patroonanalyse.
 
-- **Teamselector** — filter het sprintbereik op een specifiek team. Bij "Alle teams" worden de afgelopen 6 maanden getoond.
-- **Van sprint / Tot sprint** — zodra je een team selecteert, verschijnen deze velden. Stel een eigen tijdvenster in voor de analyse. De sprintnaam en startmaand worden getoond.
-- **Chip "Afgelopen 6 maanden"** — zichtbaar wanneer geen sprintbereik is ingesteld.
+### Overzichtskaarten
 
-### Signaalkaarten
-
-| Signaalkaart | Wat meet het? | Doorklik |
-|---|---|---|
-| **Bug Trend** | Bugpatronen over tijd | Bug-inzichten |
-| **PR Trend** | Pull request-patronen | PR-inzichten |
-| **Pipeline Trend** | Build- en deployment-gezondheid | Pipeline-inzichten |
-| **Sprint Trend** | Geplande vs. gewerkte sprintmetrieken | Sprint Trend |
-
-> **Velocity en voorspelbaarheid** zijn niet langer een aparte signaalkaart in Trends. Ze zijn ingebed als *Calibratiepaneel* in Sprint Trend (tactische context) en als *Capaciteitsvertrouwen* in Planning (voorspellingscontext).
-
-### Interactieve bug-trendgrafiek
-
-Onderaan de pagina zie je een drieseriengrafiek (Totaal bugs, Opgeloste bugs, Toegevoegde bugs) voor het geselecteerde tijdvak. Klik op een staaf om door te gaan naar Bug-inzichten gefilterd op die periode.
+| Kaart | Omschrijving |
+|---|---|
+| **Sprint Delivery** | Geplande vs. opgeleverde metrieken per sprint |
+| **Portfolio Delivery** | Geaggregeerd leveringsoverzicht over producten (binnenkort beschikbaar) |
 
 ---
 
-### 8.1 Sprint Trend
+### 8.1 Sprint Delivery
 
-**Pagina:** `/home/sprint-trend`
+**Pagina:** `/home/delivery/sprint`
 
-De Sprint Trend toont sprint-voor-sprint een analyse van geplande versus gewerkte metrieken: PBI-voltooiing, inspanningsprogressie, bugs per sprint, en Feature-/Epic-voortgang. In de meersprints-modus toont de pagina ook een **Calibratiepaneel** met velocity- en voorspelbaarheidssignalen.
+> **Voormalige naam:** Sprint Trend. De pagina is verplaatst van de Trends-werkruimte naar Delivery en hernoemd.
+
+De Sprint Delivery-pagina toont sprint-voor-sprint een analyse van geplande versus opgeleverde metrieken: PBI-voltooiing, inspanningsprogressie, bugs per sprint, en Feature-/Epic-voortgang. In de meersprints-modus toont de pagina ook een **Calibratiepaneel** met velocity- en voorspelbaarheidssignalen.
 
 #### Navigatiepijlen
 
@@ -405,9 +401,9 @@ Als de berekende sprintmetrieken ouder zijn dan de laatste datasync, verschijnt 
 
 ### 8.2 Werkitem-activiteit
 
-**Pagina:** `/home/sprint-trend/activity/{werkitemId}`
+**Pagina:** `/home/delivery/sprint/activity/{werkitemId}`
 
-De Werkitem-activiteitspagina toont de revisiegeschiedenis van één werkitem (Feature of Epic) in de context van de sprint-trendanalyse.
+De Werkitem-activiteitspagina toont de revisiegeschiedenis van één werkitem (Feature of Epic) in de context van de Sprint Delivery-analyse.
 
 #### Wat zie je hier?
 
@@ -416,7 +412,48 @@ De Werkitem-activiteitspagina toont de revisiegeschiedenis van één werkitem (F
 
 ---
 
-### 8.3 Pull Request-inzichten
+### 8.3 Portfolio Delivery
+
+**Pagina:** `/home/delivery/portfolio`
+
+> **Status:** Binnenkort beschikbaar.
+
+Het Portfolio Delivery-overzicht biedt een geaggregeerd leveringsoverzicht over alle producten heen voor één of meerdere geselecteerde sprints. Het beantwoordt de vraag: *Wat hebben we als portfolio opgeleverd?*
+
+---
+
+## 9. Trends-werkruimte — Verleden
+
+**Pagina:** `/home/trends`
+
+De Trends-werkruimte beantwoordt de vraag: *Wat zijn de structurele patronen in teamprestaties over de afgelopen maanden?* Je ziet tijdgebaseerde analyses met een sprinttijdlijn op de X-as.
+
+> **Opmerking:** Sprint Delivery (voorheen Sprint Trend) is verplaatst naar de Delivery-werkruimte. Ga naar Delivery voor sprintinspectie.
+
+### Filters
+
+- **Teamselector** — filter het sprintbereik op een specifiek team. Bij "Alle teams" worden de afgelopen 6 maanden getoond.
+- **Van sprint / Tot sprint** — zodra je een team selecteert, verschijnen deze velden. Stel een eigen tijdvenster in voor de analyse. De sprintnaam en startmaand worden getoond.
+- **Chip "Afgelopen 6 maanden"** — zichtbaar wanneer geen sprintbereik is ingesteld.
+
+### Signaalkaarten
+
+| Signaalkaart | Wat meet het? | Doorklik |
+|---|---|---|
+| **Bug Trend** | Bugpatronen over tijd | Bug-inzichten |
+| **PR Trend** | Pull request-patronen | PR-inzichten |
+| **Pipeline Trend** | Build- en deployment-gezondheid | Pipeline-inzichten |
+| **Portfolio Progress** | Strategische voortgang per product over een sprintbereik | Portfolio Progress |
+
+> **Velocity en voorspelbaarheid** zijn niet langer een aparte signaalkaart in Trends. Ze zijn ingebed als *Calibratiepaneel* in Sprint Delivery (tactische context) en als *Capaciteitsvertrouwen* in Planning (voorspellingscontext).
+
+### Interactieve bug-trendgrafiek
+
+Onderaan de pagina zie je een drieseriengrafiek (Totaal bugs, Opgeloste bugs, Toegevoegde bugs) voor het geselecteerde tijdvak. Klik op een staaf om door te gaan naar Bug-inzichten gefilterd op die periode.
+
+---
+
+### 9.1 Pull Request-inzichten
 
 **Pagina:** `/home/pull-requests`
 
@@ -433,7 +470,7 @@ Een alleen-lezen overzicht van pull request-metrieken en -trends.
 
 ---
 
-### 8.4 Pipeline-inzichten
+### 9.2 Pipeline-inzichten
 
 **Pagina:** `/home/pipelines`
 
@@ -450,7 +487,7 @@ Als gegevens niet geladen kunnen worden, verschijnt een foutmelding met een **Op
 
 ---
 
-## 9. Planning-werkruimte — Toekomst
+## 10. Planning-werkruimte — Toekomst
 
 **Pagina:** `/home/planning`
 
@@ -485,7 +522,7 @@ Het blok werkt bij als de productselectie verandert.
 
 | Kolom | Omschrijving |
 |---|---|
-| ID | Epic-ID (klikbaar naar Sprint Trend voor calibratiedetails) |
+| ID | Epic-ID (klikbaar naar Sprint Delivery voor calibratiedetails) |
 | Titel | Epic-naam |
 | Status | Huidige status |
 | Resterende inspanning | Story points die nog open staan |
@@ -507,7 +544,7 @@ Onderaan is een ingesloten planbord met een productselector. De link **Volledig 
 
 ---
 
-### 9.1 Planbord
+### 10.1 Planbord
 
 **Pagina:** `/home/plan-board`
 
@@ -518,7 +555,7 @@ Het Planbord toont epics en features georganiseerd per iteratie. Het is toeganke
 
 ---
 
-### 9.2 Afhankelijkheidsoverzicht
+### 10.2 Afhankelijkheidsoverzicht
 
 **Pagina:** `/home/dependencies`
 
@@ -528,9 +565,9 @@ Een alleen-lezen visueel overzicht van werkitem-afhankelijkheden tussen epics en
 
 ---
 
-## 10. Bugbeheer
+## 11. Bugbeheer
 
-### 10.1 Bug-inzichten
+### 11.1 Bug-inzichten
 
 **Pagina:** `/home/bugs`
 
@@ -554,7 +591,7 @@ De knop **Bug Triage** bovenaan de pagina brengt je naar de bug-triagepagina voo
 
 ---
 
-### 10.2 Bug-triage
+### 11.2 Bug-triage
 
 **Pagina:** `/bugs-triage`
 
@@ -570,7 +607,7 @@ Bugs worden gefilterd op de actieve profielsproducten.
 
 ---
 
-## 11. Work Item Explorer
+## 12. Work Item Explorer
 
 **Pagina:** `/workitems`
 
@@ -621,7 +658,7 @@ Bij het selecteren van een werkitem zie je:
 
 ---
 
-## 12. Instellingen
+## 13. Instellingen
 
 **Pagina:** `/settings`
 
@@ -629,7 +666,7 @@ Via de **Instellingen**-knop (tandwielpictogram) in de bovenste balk ga je naar 
 
 ---
 
-### 12.1 Product Owners beheren
+### 13.1 Product Owners beheren
 
 **Pagina:** `/settings/productowner/{profielId}`
 
@@ -650,7 +687,7 @@ Klik op een bestaand profiel in de lijst en pas de velden aan. Klik op **Opslaan
 
 ---
 
-### 12.2 Producten beheren
+### 13.2 Producten beheren
 
 **Pagina:** `/settings/products`
 
@@ -667,7 +704,7 @@ Producten zonder gekoppelde Product Owner worden als "wees" gemarkeerd. Gebruik 
 
 ---
 
-### 12.3 Teams beheren
+### 13.3 Teams beheren
 
 **Pagina:** `/settings/teams`
 
@@ -680,7 +717,7 @@ Gearchiveerde teams worden verborgen. Gebruik de schakeloptie **Toon gearchiveer
 
 ---
 
-### 12.4 Werkitemstatussen configureren
+### 13.4 Werkitemstatussen configureren
 
 **Pagina:** `/settings/workitem-states`
 
@@ -695,13 +732,13 @@ TFS gebruikt projectspecifieke statusnamen (zoals "In behandeling", "Gereed", "G
 
 Op de statusconfiguratiepagina stel je in welke TFS-status overeenkomt met welke canonieke status. Deze mapping is nodig voor:
 
-- Correcte voortgangsberekeningen in Sprint Trend.
+- Correcte voortgangsberekeningen in Sprint Delivery.
 - Structurele integriteitscontroles (SI-regels).
 - Verfijningsscores in het Backlog Overzicht.
 
 ---
 
-### 12.5 TFS-verbinding configureren
+### 13.5 TFS-verbinding configureren
 
 Via **Instellingen → TFS** configureer je de verbinding met Azure DevOps of TFS:
 
@@ -713,7 +750,7 @@ Wijzigingen in de TFS-verbinding vereisen een nieuwe synchronisatie (via de **Ha
 
 ---
 
-## 13. Validatieregels — uitleg
+## 14. Validatieregels — uitleg
 
 De applicatie valideert werkitems automatisch op basis van drie categorieën en negen regels. Hieronder vind je een uitleg van elke regel.
 
@@ -749,7 +786,7 @@ Deze regels detecteren items die onvolledig zijn en daarmee implementatiegereedh
 
 ---
 
-## 14. Sneltoetsen
+## 15. Sneltoetsen
 
 De applicatie ondersteunt een reeks sneltoetsen voor snellere navigatie en interactie. Druk op **?** op elk scherm om het sneltoetsenvenster te openen.
 
@@ -764,7 +801,7 @@ Veelgebruikte sneltoetsen in de Work Item Explorer:
 
 ---
 
-## 15. Veelgestelde vragen
+## 16. Veelgestelde vragen
 
 **V: Ik zie lege of verouderde gegevens. Wat moet ik doen?**  
 A: Klik op **Handmatig synchroniseren** op de Startpagina. Als de synchronisatie mislukt, controleer dan de TFS-verbindingsinstellingen onder **Instellingen → TFS**.
