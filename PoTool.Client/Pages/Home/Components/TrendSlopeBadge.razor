@@ -2,9 +2,9 @@
     TrendSlopeBadge — Reusable slope/trend direction indicator.
 
     Shows one of three states based on start/end values and polarity:
-      ↑  Improving   (green)
-      →  Stable      (grey)
-      ↓  Worsening   (red)
+      ↑  Improving / custom positive label   (green)
+      →  Stable    / custom neutral label    (grey)
+      ↓  Worsening / custom negative label   (red)
 
     Parameters:
       StartValue        — first value in the series (typically earliest sprint)
@@ -12,6 +12,9 @@
       LowerIsBetter     — true for "time" and "size" metrics where lower = better (default: true)
       TolerancePercent  — percentage change within which the trend is considered stable (default: 5.0)
       MetricLabel       — short label used in the aria-description (e.g. "time to merge")
+      PositiveLabel     — overrides "Improving" (e.g. "Decreasing", "Rising", "Contracting")
+      NegativeLabel     — overrides "Worsening" (e.g. "Increasing", "Falling", "Expanding")
+      NeutralLabel      — overrides "Stable"    (e.g. "Balanced")
 *@
 
 @if (_direction.HasValue)
@@ -57,6 +60,27 @@
     [Parameter]
     public string MetricLabel { get; set; } = "metric";
 
+    /// <summary>
+    /// Overrides the default "Improving" label for the positive direction.
+    /// E.g. "Decreasing" (scope/remaining), "Rising" (throughput), "Contracting" (net flow).
+    /// </summary>
+    [Parameter]
+    public string? PositiveLabel { get; set; }
+
+    /// <summary>
+    /// Overrides the default "Worsening" label for the negative direction.
+    /// E.g. "Increasing" (scope/remaining), "Falling" (throughput), "Expanding" (net flow).
+    /// </summary>
+    [Parameter]
+    public string? NegativeLabel { get; set; }
+
+    /// <summary>
+    /// Overrides the default "Stable" label for the neutral direction.
+    /// E.g. "Balanced" (net flow).
+    /// </summary>
+    [Parameter]
+    public string? NeutralLabel { get; set; }
+
     private TrendDirection? _direction;
     private string _label = string.Empty;
     private string _icon = string.Empty;
@@ -99,22 +123,22 @@
         (_label, _color, _ariaLabel, _tooltipText) = _direction switch
         {
             TrendDirection.Improving => (
-                "Improving",
+                PositiveLabel ?? "Improving",
                 Color.Success,
-                $"{MetricLabel}: improving trend",
-                $"{MetricLabel} moved from {start:F1} to {end:F1} — improving"
+                $"{MetricLabel}: {(PositiveLabel ?? "improving").ToLowerInvariant()} trend",
+                $"{MetricLabel} moved from {start:F1} to {end:F1} — {(PositiveLabel ?? "improving").ToLowerInvariant()}"
             ),
             TrendDirection.Stable => (
-                "Stable",
+                NeutralLabel ?? "Stable",
                 Color.Default,
-                $"{MetricLabel}: stable trend",
-                $"{MetricLabel} moved from {start:F1} to {end:F1} — stable (within {TolerancePercent:F0}% tolerance)"
+                $"{MetricLabel}: {(NeutralLabel ?? "stable").ToLowerInvariant()} trend",
+                $"{MetricLabel} moved from {start:F1} to {end:F1} — {(NeutralLabel ?? "stable").ToLowerInvariant()} (within {TolerancePercent:F0}% tolerance)"
             ),
             TrendDirection.Worsening => (
-                "Worsening",
+                NegativeLabel ?? "Worsening",
                 Color.Error,
-                $"{MetricLabel}: worsening trend",
-                $"{MetricLabel} moved from {start:F1} to {end:F1} — worsening"
+                $"{MetricLabel}: {(NegativeLabel ?? "worsening").ToLowerInvariant()} trend",
+                $"{MetricLabel} moved from {start:F1} to {end:F1} — {(NegativeLabel ?? "worsening").ToLowerInvariant()}"
             ),
             _ => (string.Empty, Color.Default, string.Empty, string.Empty)
         };
