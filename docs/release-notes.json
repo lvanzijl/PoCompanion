@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-04",
+    "type": "Changed",
+    "title": "Velocity Trend cleanup — signals embedded in Sprint Trend & Planning",
+    "impact": "The standalone Velocity Trend tile has been removed from Trends. Velocity distribution (median, P25–P75 band) and predictability ratio are now embedded directly in Sprint Trend (Calibration panel, visible in advanced multi-sprint mode) and Planning (Capacity Confidence block). The Trends page is now more focused; calibration signals appear in their tactical and forecasting contexts.",
+    "area": "Trends / Sprint Trend / Planning",
+    "link": "/home/sprint-trend"
+  },
+  {
+    "date": "2026-03-04",
     "type": "New",
     "title": "Portfolio Progress Trend",
     "impact": "New Trends page showing % done, remaining effort, throughput, and scope over a user-selected sprint range, with a trajectory badge (Improving / Stable / At Risk) and per-product filtering.",

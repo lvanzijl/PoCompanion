@@ -7,7 +7,7 @@
 @inject INavigationContextService NavigationContextService
 @inject WorkItemService WorkItemService
 @inject ProductService ProductService
-@inject BacklogStateService BacklogStateService
+@inject IWorkItemsClient WorkItemsClient
 
 <PageTitle>Health (Now) - PO Companion</PageTitle>
 
@@ -412,7 +412,7 @@
             await semaphore.WaitAsync();
             try
             {
-                var state = await BacklogStateService.GetBacklogStateAsync(p.Id);
+                var state = await WorkItemsClient.GetBacklogStateAsync(p.Id);
                 return (p.Id, state);
             }
             catch (Exception ex)

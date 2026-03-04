@@ -7,7 +7,7 @@
 @using PoTool.Shared.BugTriage
 @using MudBlazor
 @inject WorkItemService WorkItemService
-@inject BugTriageService BugTriageService
+@inject IBugTriageClient BugTriageClient
 @inject BugTreeBuilderService TreeBuilderService
 @inject TriageTagService TriageTagService
 @inject IProfileService ProfileService
@@ -217,7 +217,7 @@
 
             // Get untriaged bug IDs
             var bugIds = _bugs.Select(b => b.TfsId).ToList();
-            _untriagedBugIds = await BugTriageService.GetUntriagedBugIdsAsync(bugIds);
+            _untriagedBugIds = new HashSet<int>(await BugTriageClient.GetUntriagedBugIdsAsync(bugIds, CancellationToken.None));
             
             Logger.LogInformation("Found {Count} untriaged bugs", _untriagedBugIds.Count);
 
@@ -226,7 +226,7 @@
             {
                 var severity = GetBugSeverity(bug);
                 // Use null-coalescing to provide "Unknown" if severity is null
-                await BugTriageService.RecordFirstSeenAsync(bug.TfsId, severity ?? "Unknown");
+                await BugTriageClient.RecordFirstSeenAsync(bug.TfsId, severity ?? "Unknown", CancellationToken.None);
             }
 
             ApplyFilters();
@@ -315,7 +315,7 @@
                 bugId,
                 NewSeverity: newSeverity);
             
-            var response = await BugTriageService.MarkAsTriagedAsync(request);
+            var response = await BugTriageClient.MarkAsTriagedAsync(request, CancellationToken.None);
             
             if (response.Success)
             {
@@ -404,7 +404,7 @@
                 TagsAdded: isAdded ? new List<string> { tagName } : null,
                 TagsRemoved: !isAdded ? new List<string> { tagName } : null);
             
-            var response = await BugTriageService.MarkAsTriagedAsync(request);
+            var response = await BugTriageClient.MarkAsTriagedAsync(request, CancellationToken.None);
             
             if (response.Success)
             {
@@ -488,7 +488,7 @@
             // Mark as triaged without any changes
             var request = new Shared.BugTriage.UpdateBugTriageStateRequest(bugId);
             
-            var response = await BugTriageService.MarkAsTriagedAsync(request);
+            var response = await BugTriageClient.MarkAsTriagedAsync(request, CancellationToken.None);
             
             if (response.Success)
             {

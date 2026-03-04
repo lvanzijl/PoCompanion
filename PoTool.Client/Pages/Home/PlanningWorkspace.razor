@@ -1,5 +1,6 @@
 @page "/home/planning"
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Components.Metrics
 @using PoTool.Client.Components.Planning
 @using PoTool.Client.ApiClient
 @inherits WorkspaceBase
@@ -7,6 +8,8 @@
 @inject ProductService ProductService
 @inject WorkItemService WorkItemService
 @inject IMetricsClient MetricsClient
+@inject SprintService SprintService
+@inject TeamService TeamService
 
 <PageTitle>Planning (Future) - PO Companion</PageTitle>
 
@@ -246,6 +249,24 @@
             </MudPaper>
         }
 
+        @* Capacity Confidence block — velocity calibration signals for forecasting context.
+           Uses past sprint projections to show planning risk in plain language. *@
+        @if (_activeProfileId.HasValue && _pastSprintIds.Count > 0)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h5" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.BarChart" Color="Color.Info" Class="mr-2" />
+                    Capacity Confidence
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                    Based on the last @_pastSprintIds.Count completed sprint(s). Plan at P25 velocity for high confidence; median for typical output.
+                </MudText>
+                <CapacityCalibrationPanel ProfileId="@_activeProfileId!.Value"
+                                          SprintIds="@_pastSprintIds"
+                                          ProductIds="@(_selectedProductId.HasValue ? new[] { _selectedProductId.Value } : null)" />
+            </MudPaper>
+        }
+
         @* Information Notice *@
         <MudAlert Severity="Severity.Info" Class="mb-4">
             <MudText Typo="Typo.body2">
@@ -344,11 +365,14 @@
     private int? _selectedProductId;
     private List<ProductDto> _products = new();
     private List<BreadcrumbItem> _breadcrumbs = new();
-    
+
+    // Past sprint IDs for Capacity Confidence block (past completed sprints)
+    private IReadOnlyList<int> _pastSprintIds = Array.Empty<int>();
+
     // Epic invalid items detection
     private int _epicsWithInvalidItems = 0;
     private List<EpicWithIssues> _epicItemsWithIssues = new();
-    
+
     // Epic velocity analysis
     private int _epicsExceedingVelocity = 0;
     private double _averageVelocity = 0;
@@ -381,9 +405,13 @@
                 _selectedProductId = ProductId;
             }
             
+            // Load past sprint IDs first so velocity analysis and the Capacity Confidence panel
+            // can use them for the calibration endpoint.
+            await LoadPastSprintIdsAsync();
+
             // Load velocity data and analyze epics
             await LoadVelocityAnalysisAsync();
-            
+
             // Detect epics with invalid items
             await LoadEpicInvalidItemsAsync();
             
@@ -468,7 +496,8 @@
     
     private void NavigateToVelocityTrend()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.TrendsWorkspace}{BuildContextQuery("metric=Velocity")}");
+        // Velocity calibration signals are now embedded in Sprint Trend (tactical execution context)
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.SprintTrend}{BuildContextQuery()}");
     }
     
     private void NavigateToEpicInvalidItems(int? epicId)
@@ -519,13 +548,57 @@
 
     
     /// <summary>
+    /// Loads past completed sprint IDs for the Capacity Confidence panel.
+    /// Uses all teams visible to the active profile, filtering to past sprints only.
+    /// </summary>
+    private async Task LoadPastSprintIdsAsync()
+    {
+        try
+        {
+            var now = DateTimeOffset.UtcNow;
+            var teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
+            var pastIds = new List<int>();
+
+            foreach (var team in teams)
+            {
+                try
+                {
+                    var teamSprints = await SprintService.GetSprintsForTeamAsync(team.Id);
+                    // Only include sprints that have ended
+                    pastIds.AddRange(teamSprints
+                        .Where(s => s.EndUtc.HasValue && s.EndUtc.Value < now)
+                        .Select(s => s.Id));
+                }
+                catch
+                {
+                    // Per-team sprint load failures are expected for teams without synced sprints;
+                    // simply skip those teams so the remaining ones still contribute.
+                }
+            }
+
+            _pastSprintIds = pastIds.Distinct().ToList().AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            // Capacity Confidence panel is non-critical; log and continue so the rest of the page loads.
+            Snackbar.Add($"Could not load sprint history for capacity calibration: {ex.Message}", Severity.Warning);
+        }
+    }
+
+    /// <summary>
     /// Load velocity data and analyze epics that exceed historical velocity capacity.
-    /// An epic is considered "at risk" if its remaining effort exceeds 3x average velocity.
+    /// An epic is considered "at risk" if its remaining effort exceeds 3x median velocity.
+    /// Uses GetCapacityCalibrationAsync with past sprint IDs (loaded in LoadPastSprintIdsAsync).
     /// </summary>
     private async Task LoadVelocityAnalysisAsync()
     {
         try
         {
+            if (!_activeProfileId.HasValue || _pastSprintIds.Count == 0)
+            {
+                return;
+            }
+
             // Get product IDs for velocity query
             var productIds = _selectedProductId.HasValue 
                 ? new List<int> { _selectedProductId.Value } 
@@ -533,13 +606,13 @@
             
             if (productIds.Count == 0)
             {
-                // No products to analyze
                 return;
             }
             
-            // Load velocity trend (last 10 sprints)
-            var velocityTrend = await MetricsClient.GetVelocityTrendAsync(productIds, null, 10);
-            _averageVelocity = velocityTrend.AverageVelocity;
+            // Use capacity calibration (median velocity) instead of the removed velocity-trend endpoint
+            var calibration = await MetricsClient.GetCapacityCalibrationAsync(
+                _activeProfileId.Value, _pastSprintIds, productIds);
+            _averageVelocity = calibration.MedianVelocity;
             
             if (_averageVelocity <= 0)
             {

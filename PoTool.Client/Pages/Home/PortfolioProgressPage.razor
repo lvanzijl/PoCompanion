@@ -9,7 +9,7 @@
 @inject TeamService TeamService
 @inject SprintService SprintService
 @inject ProductService ProductService
-@inject PortfolioProgressTrendService PortfolioProgressTrendService
+@inject IMetricsClient MetricsClient
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -538,10 +538,11 @@
                 ? new[] { _selectedProductId.Value }
                 : null;
 
-            _trendData = await PortfolioProgressTrendService.GetPortfolioProgressTrendAsync(
+            _trendData = await MetricsClient.GetPortfolioProgressTrendAsync(
                 _profileId.Value,
                 sprintIds,
-                productFilter);
+                productFilter,
+                CancellationToken.None);
 
             if (_trendData != null)
             {

@@ -62,43 +62,6 @@ public class MetricsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets velocity trend data across multiple sprints.
-    /// </summary>
-    /// <param name="productIds">Optional product IDs to filter work items (comma-separated for multiple)</param>
-    /// <param name="areaPath">Optional area path to filter work items</param>
-    /// <param name="maxSprints">Maximum number of sprints to include (default: 10)</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Velocity trend data including sprint metrics and averages</returns>
-    [HttpGet("velocity")]
-    public async Task<ActionResult<VelocityTrendDto>> GetVelocityTrend(
-        [FromQuery] int[]? productIds = null,
-        [FromQuery] string? areaPath = null,
-        [FromQuery] int maxSprints = 10,
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            if (maxSprints < 1 || maxSprints > 50)
-            {
-                return BadRequest("MaxSprints must be between 1 and 50");
-            }
-
-            var velocityTrend = await _mediator.Send(
-                new GetVelocityTrendQuery(productIds, areaPath, maxSprints),
-                cancellationToken);
-
-            return Ok(velocityTrend);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving velocity trend for products: {ProductIds}, area: {AreaPath}", 
-                productIds != null ? string.Join(", ", productIds) : "None",
-                areaPath ?? "All");
-            return StatusCode(500, "Error retrieving velocity trend");
-        }
-    }
-
-    /// <summary>
     /// Gets backlog health metrics for a specific iteration.
     /// </summary>
     /// <param name="iterationPath">The iteration path of the sprint</param>
@@ -561,6 +524,42 @@ public class MetricsController : ControllerBase
         {
             _logger.LogError(ex, "Error retrieving portfolio progress trend for ProductOwner: {ProductOwnerId}", productOwnerId);
             return StatusCode(500, "Error retrieving portfolio progress trend");
+        }
+    }
+
+    /// <summary>
+    /// Gets capacity calibration metrics (velocity distribution + predictability) for a selected sprint range.
+    /// Returns median/P25/P75 velocity, median predictability, and outlier sprint names.
+    /// </summary>
+    /// <param name="productOwnerId">Product Owner ID</param>
+    /// <param name="sprintIds">Sprint IDs to include (ordered chronologically)</param>
+    /// <param name="productIds">Optional product IDs to filter (default = all products)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Capacity calibration DTO</returns>
+    [HttpGet("capacity-calibration")]
+    public async Task<ActionResult<CapacityCalibrationDto>> GetCapacityCalibration(
+        [FromQuery][Required] int productOwnerId,
+        [FromQuery][Required] int[] sprintIds,
+        [FromQuery] int[]? productIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (sprintIds.Length == 0)
+            {
+                return BadRequest("At least one sprint ID is required");
+            }
+
+            var result = await _mediator.Send(
+                new GetCapacityCalibrationQuery(productOwnerId, sprintIds, productIds),
+                cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving capacity calibration for ProductOwner: {ProductOwnerId}", productOwnerId);
+            return StatusCode(500, "Error retrieving capacity calibration");
         }
     }
 

@@ -4,7 +4,7 @@
 @using PoTool.Shared.Health
 @using PoTool.Shared.WorkItems
 @inherits WorkspaceBase
-@inject BacklogStateService BacklogStateService
+@inject IWorkItemsClient WorkItemsClient
 @inject WorkItemService WorkItemService
 @inject ProductService ProductService
 
@@ -415,7 +415,14 @@
 
     private async Task LoadDataAsync(int productId)
     {
-        _state = await BacklogStateService.GetBacklogStateAsync(productId);
+        try
+        {
+            _state = await WorkItemsClient.GetBacklogStateAsync(productId);
+        }
+        catch (ApiException ex) when (ex.StatusCode == 404)
+        {
+            _state = null;
+        }
         if (_state != null)
         {
             _readyEpics = _state.Epics.Where(e => e.Score == 100).ToList();

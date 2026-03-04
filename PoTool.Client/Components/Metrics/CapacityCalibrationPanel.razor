@@ -1,0 +1,129 @@
+@using PoTool.Client.ApiClient
+@using PoTool.Shared.Metrics
+@inject IMetricsClient MetricsClient
+@inject ISnackbar Snackbar
+
+@* Capacity Calibration Panel — compact velocity/predictability signal block.
+   Shows median velocity, P25–P75 volatility band, and median predictability
+   for the selected sprint range. Updates whenever SprintIds changes. *@
+
+@if (_isLoading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Info" Class="my-2" />
+}
+else if (_calibration != null && _calibration.Sprints.Count > 0)
+{
+    <MudPaper Elevation="1" Class="pa-3">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-2">
+            <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Info" Size="Size.Small" />
+            <MudText Typo="Typo.subtitle2">Calibration (@_calibration.Sprints.Count sprints)</MudText>
+            @if (_calibration.OutlierSprintNames.Count > 0)
+            {
+                <MudTooltip Text="@($"Outlier sprints (P10/P90): {string.Join(", ", _calibration.OutlierSprintNames)}")">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                </MudTooltip>
+            }
+        </MudStack>
+
+        <MudGrid Spacing="1">
+            @* Median velocity — primary capacity signal *@
+            <MudItem xs="6" sm="3">
+                <MudTooltip Text="Median velocity (P50) — typical sprint output">
+                    <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.h6" Color="Color.Primary">@_calibration.MedianVelocity.ToString("F0")</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Median pts</MudText>
+                    </MudStack>
+                </MudTooltip>
+            </MudItem>
+
+            @* P25–P75 volatility band *@
+            <MudItem xs="6" sm="3">
+                <MudTooltip Text="Volatility band P25–P75 — plan at P25 for high confidence">
+                    <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.h6" Color="Color.Secondary">
+                            @_calibration.P25Velocity.ToString("F0")–@_calibration.P75Velocity.ToString("F0")
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">P25–P75 band</MudText>
+                    </MudStack>
+                </MudTooltip>
+            </MudItem>
+
+            @* Median predictability *@
+            <MudItem xs="6" sm="3">
+                <MudTooltip Text="Median predictability — ratio of done/committed (1.0 = full delivery)">
+                    <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.h6" Color="@GetPredictabilityColor()">
+                            @(_calibration.MedianPredictability * 100).ToString("F0")%
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Predictability</MudText>
+                    </MudStack>
+                </MudTooltip>
+            </MudItem>
+
+            @* Conservative planning tip *@
+            <MudItem xs="6" sm="3">
+                <MudTooltip Text="Plan at P25 velocity for high-confidence sprint commitment">
+                    <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.h6" Color="Color.Success">@_calibration.P25Velocity.ToString("F0")</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Safe plan pts</MudText>
+                    </MudStack>
+                </MudTooltip>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+}
+
+@code {
+    /// <summary>Product owner profile ID — required to scope data.</summary>
+    [Parameter, EditorRequired]
+    public int ProfileId { get; set; }
+
+    /// <summary>Sprint IDs to compute calibration for (ordered chronologically).</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<int> SprintIds { get; set; } = Array.Empty<int>();
+
+    /// <summary>Optional product IDs to filter. Null = all products.</summary>
+    [Parameter]
+    public IEnumerable<int>? ProductIds { get; set; }
+
+    private bool _isLoading;
+    private CapacityCalibrationDto? _calibration;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ProfileId > 0 && SprintIds.Count > 0)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+        try
+        {
+            _calibration = await MetricsClient.GetCapacityCalibrationAsync(
+                ProfileId,
+                SprintIds,
+                ProductIds,
+                CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading calibration data: {ex.Message}", Severity.Warning);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private Color GetPredictabilityColor()
+    {
+        if (_calibration == null) return Color.Default;
+        return _calibration.MedianPredictability >= 0.85 ? Color.Success
+            : _calibration.MedianPredictability >= 0.65 ? Color.Warning
+            : Color.Error;
+    }
+}

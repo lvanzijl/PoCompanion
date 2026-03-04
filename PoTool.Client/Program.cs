@@ -161,24 +161,14 @@ builder.Services.AddScoped<INavigationContextService, NavigationContextService>(
 builder.Services.AddScoped<CacheSyncService>();
 
 // Register bug triage services
-builder.Services.AddScoped<BugTriageService>();
 builder.Services.AddScoped<TriageTagService>();
 builder.Services.AddScoped<BugTreeBuilderService>();
 
-// Register Sprint Trend service
-builder.Services.AddScoped<SprintTrendService>();
+// Register Portfolio Progress Trend service (removed: PortfolioProgressTrendService — use IMetricsClient)
 
-// Register Portfolio Progress Trend service
-builder.Services.AddScoped<PortfolioProgressTrendService>();
+// Register Pipeline Sprint Trends service (removed: PipelineSprintTrendsService — use IPipelinesClient)
 
-// Register Pipeline Sprint Trends service
-builder.Services.AddScoped<PipelineSprintTrendsService>();
-
-// Register PR Sprint Trends service
-builder.Services.AddScoped<PrSprintTrendsService>();
-
-// Register Backlog State service (Phase 2 - Backlog Health Overhaul)
-builder.Services.AddScoped<BacklogStateService>();
+// Register PR Sprint Trends service (removed: PrSprintTrendsService — use IPullRequestsClient)
 
 // Register browser-based storage services
 builder.Services.AddScoped<IPreferencesService, BrowserPreferencesService>();

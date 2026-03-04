@@ -596,62 +596,6 @@
         }
       }
     },
-    "/api/Metrics/velocity": {
-      "get": {
-        "tags": [
-          "Metrics"
-        ],
-        "operationId": "Metrics_GetVelocityTrend",
-        "parameters": [
-          {
-            "name": "productIds",
-            "in": "query",
-            "style": "form",
-            "explode": true,
-            "schema": {
-              "type": "array",
-              "nullable": true,
-              "items": {
-                "type": "integer",
-                "format": "int32"
-              }
-            },
-            "x-position": 1
-          },
-          {
-            "name": "areaPath",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            },
-            "x-position": 2
-          },
-          {
-            "name": "maxSprints",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 10
-            },
-            "x-position": 3
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VelocityTrendDto"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/Metrics/backlog-health": {
       "get": {
         "tags": [
@@ -4872,6 +4816,577 @@
           }
         }
       }
+    },
+    "/api/Metrics/sprint-trend": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetSprintTrendMetrics",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "sprintIds",
+            "in": "query",
+            "required": true,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            },
+            "x-position": 2
+          },
+          {
+            "name": "recompute",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetSprintTrendMetricsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Metrics/portfolio-progress-trend": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetPortfolioProgressTrend",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "sprintIds",
+            "in": "query",
+            "required": true,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            },
+            "x-position": 2
+          },
+          {
+            "name": "productIds",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioProgressTrendDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Metrics/capacity-calibration": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetCapacityCalibration",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "sprintIds",
+            "in": "query",
+            "required": true,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            },
+            "x-position": 2
+          },
+          {
+            "name": "productIds",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapacityCalibrationDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Metrics/work-item-activity/{workItemId}": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetWorkItemActivityDetails",
+        "parameters": [
+          {
+            "name": "workItemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "productOwnerId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 2
+          },
+          {
+            "name": "periodStartUtc",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "nullable": true
+            },
+            "x-position": 3
+          },
+          {
+            "name": "periodEndUtc",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "nullable": true
+            },
+            "x-position": 4
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkItemActivityDetailsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/PullRequests/sprint-trends": {
+      "get": {
+        "tags": [
+          "PullRequests"
+        ],
+        "operationId": "PullRequests_GetSprintTrends",
+        "parameters": [
+          {
+            "name": "sprintIds",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            },
+            "x-position": 1
+          },
+          {
+            "name": "productIds",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
+          },
+          {
+            "name": "teamId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPrSprintTrendsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Pipelines/sprint-trends": {
+      "get": {
+        "tags": [
+          "Pipelines"
+        ],
+        "operationId": "Pipelines_GetSprintTrends",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "sprintIds",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            },
+            "x-position": 2
+          },
+          {
+            "name": "productIds",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 3
+          },
+          {
+            "name": "teamId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 4
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPipelineSprintTrendsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/WorkItems/backlog-state/{productId}": {
+      "get": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_GetBacklogState",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductBacklogStateDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/BugTriage/{bugId}": {
+      "get": {
+        "tags": [
+          "BugTriage"
+        ],
+        "operationId": "BugTriage_GetTriageState",
+        "parameters": [
+          {
+            "name": "bugId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BugTriageStateDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/BugTriage/states": {
+      "post": {
+        "tags": [
+          "BugTriage"
+        ],
+        "operationId": "BugTriage_GetTriageStates",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BugTriageStateDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/BugTriage/untriaged": {
+      "post": {
+        "tags": [
+          "BugTriage"
+        ],
+        "operationId": "BugTriage_GetUntriagedBugIds",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "int32"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/BugTriage/first-seen": {
+      "post": {
+        "tags": [
+          "BugTriage"
+        ],
+        "operationId": "BugTriage_RecordFirstSeen",
+        "parameters": [
+          {
+            "name": "bugId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "currentSeverity",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/BugTriage/mark-triaged": {
+      "post": {
+        "tags": [
+          "BugTriage"
+        ],
+        "operationId": "BugTriage_MarkAsTriaged",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBugTriageStateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateBugTriageStateResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5455,38 +5970,6 @@
             "format": "int32"
           },
           "completedTasks": {
-            "type": "integer",
-            "format": "int32"
-          }
-        }
-      },
-      "VelocityTrendDto": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "sprints": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/SprintMetricsDto"
-            }
-          },
-          "averageVelocity": {
-            "type": "number",
-            "format": "double"
-          },
-          "threeSprintAverage": {
-            "type": "number",
-            "format": "double"
-          },
-          "sixSprintAverage": {
-            "type": "number",
-            "format": "double"
-          },
-          "totalCompletedStoryPoints": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "totalSprints": {
             "type": "integer",
             "format": "int32"
           }
@@ -9660,6 +10143,953 @@
           "effortValue": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "SprintCalibrationEntry": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sprintName"
+        ],
+        "properties": {
+          "sprintName": {
+            "type": "string"
+          },
+          "committed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "done": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "predictabilityRatio": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "CapacityCalibrationDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sprints",
+          "outlierSprintNames"
+        ],
+        "properties": {
+          "sprints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SprintCalibrationEntry"
+            }
+          },
+          "medianVelocity": {
+            "type": "number",
+            "format": "double"
+          },
+          "p25Velocity": {
+            "type": "number",
+            "format": "double"
+          },
+          "p75Velocity": {
+            "type": "number",
+            "format": "double"
+          },
+          "medianPredictability": {
+            "type": "number",
+            "format": "double"
+          },
+          "outlierSprintNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PortfolioTrajectory": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "Improving",
+          "Stable",
+          "AtRisk"
+        ],
+        "enum": [
+          "Improving",
+          "Stable",
+          "AtRisk"
+        ]
+      },
+      "PortfolioSprintProgressDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sprintId",
+          "sprintName"
+        ],
+        "properties": {
+          "sprintId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sprintName": {
+            "type": "string"
+          },
+          "startUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "percentDone": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "totalScopeEffort": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "remainingEffort": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "throughputEffort": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "hasData": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PortfolioProgressSummaryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "firstPercentDone": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "lastPercentDone": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "scopeChangePercent": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "remainingEffortDelta": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "trajectory": {
+            "$ref": "#/components/schemas/PortfolioTrajectory"
+          }
+        }
+      },
+      "PortfolioProgressTrendDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sprints",
+          "summary"
+        ],
+        "properties": {
+          "sprints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortfolioSprintProgressDto"
+            }
+          },
+          "summary": {
+            "$ref": "#/components/schemas/PortfolioProgressSummaryDto"
+          }
+        }
+      },
+      "ProductSprintMetricsDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "productId",
+          "productName"
+        ],
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "plannedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "plannedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bugsPlannedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bugsWorkedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedPbiCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedPbiEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "progressionDelta": {
+            "type": "number",
+            "format": "double"
+          },
+          "bugsCreatedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bugsClosedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "missingEffortCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isApproximate": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SprintTrendMetricsDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sprintId",
+          "sprintName",
+          "productMetrics"
+        ],
+        "properties": {
+          "sprintId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sprintName": {
+            "type": "string"
+          },
+          "startUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "productMetrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductSprintMetricsDto"
+            }
+          },
+          "totalPlannedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPlannedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalWorkedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalWorkedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalBugsPlannedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalBugsWorkedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalCompletedPbiCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalCompletedPbiEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalProgressionDelta": {
+            "type": "number",
+            "format": "double"
+          },
+          "totalBugsCreatedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalBugsClosedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalMissingEffortCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isApproximate": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FeatureProgressDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "featureId",
+          "featureTitle",
+          "productId"
+        ],
+        "properties": {
+          "featureId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "featureTitle": {
+            "type": "string"
+          },
+          "epicId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "epicTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "productId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "progressPercent": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "doneEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "donePbiCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isDone": {
+            "type": "boolean"
+          },
+          "sprintCompletedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sprintProgressionDelta": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "EpicProgressDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "epicId",
+          "epicTitle",
+          "productId"
+        ],
+        "properties": {
+          "epicId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "epicTitle": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "progressPercent": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "doneEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "featureCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "doneFeatureCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "donePbiCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isDone": {
+            "type": "boolean"
+          },
+          "sprintCompletedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sprintProgressionDelta": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "GetSprintTrendMetricsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "metrics": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/SprintTrendMetricsDto"
+            }
+          },
+          "featureProgress": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/FeatureProgressDto"
+            }
+          },
+          "epicProgress": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/EpicProgressDto"
+            }
+          },
+          "isStale": {
+            "type": "boolean"
+          },
+          "projectionsAsOfUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "WorkItemActivityEntryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workItemId",
+          "workItemTitle",
+          "workItemType",
+          "isSelectedWorkItem",
+          "fieldRefName",
+          "eventTimestampUtc"
+        ],
+        "properties": {
+          "workItemId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemTitle": {
+            "type": "string"
+          },
+          "workItemType": {
+            "type": "string"
+          },
+          "isSelectedWorkItem": {
+            "type": "boolean"
+          },
+          "fieldRefName": {
+            "type": "string"
+          },
+          "oldValue": {
+            "type": "string",
+            "nullable": true
+          },
+          "newValue": {
+            "type": "string",
+            "nullable": true
+          },
+          "eventTimestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WorkItemActivityDetailsDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workItemId",
+          "workItemTitle",
+          "workItemType",
+          "activities"
+        ],
+        "properties": {
+          "workItemId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemTitle": {
+            "type": "string"
+          },
+          "workItemType": {
+            "type": "string"
+          },
+          "periodStartUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "periodEndUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "activities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkItemActivityEntryDto"
+            }
+          }
+        }
+      },
+      "FeatureOwnerState": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "PO",
+          "Team",
+          "Ready"
+        ],
+        "enum": [
+          "PO",
+          "Team",
+          "Ready"
+        ]
+      },
+      "PbiReadinessDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tfsId",
+          "score"
+        ],
+        "properties": {
+          "tfsId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "score": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "effort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "FeatureRefinementDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tfsId",
+          "title",
+          "score",
+          "ownerState",
+          "pbis"
+        ],
+        "properties": {
+          "tfsId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "score": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "ownerState": {
+            "$ref": "#/components/schemas/FeatureOwnerState"
+          },
+          "pbis": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PbiReadinessDto"
+            }
+          }
+        }
+      },
+      "EpicRefinementDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tfsId",
+          "title",
+          "score",
+          "hasDescription",
+          "features"
+        ],
+        "properties": {
+          "tfsId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "score": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasDescription": {
+            "type": "boolean"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeatureRefinementDto"
+            }
+          }
+        }
+      },
+      "ProductBacklogStateDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "productId",
+          "epics"
+        ],
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "epics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EpicRefinementDto"
+            }
+          }
+        }
+      },
+      "PrSprintMetricsDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sprintId",
+          "sprintName"
+        ],
+        "properties": {
+          "sprintId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sprintName": {
+            "type": "string"
+          },
+          "startUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "totalPrs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "medianPrSize": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "prSizeIsLinesChanged": {
+            "type": "boolean"
+          },
+          "medianTimeToFirstReviewHours": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "medianTimeToMergeHours": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "p90TimeToMergeHours": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        }
+      },
+      "GetPrSprintTrendsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "sprints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrSprintMetricsDto"
+            }
+          }
+        }
+      },
+      "PipelineSprintMetricsDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sprintId",
+          "sprintName"
+        ],
+        "properties": {
+          "sprintId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sprintName": {
+            "type": "string"
+          },
+          "startUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "totalRuns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedRuns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "successRate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "failureRate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "medianMttrHours": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "p75MttrHours": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "medianDurationHours": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "p75DurationHours": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "flakinessRate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "medianTimeToFirstFailureHours": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        }
+      },
+      "GetPipelineSprintTrendsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "sprints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineSprintMetricsDto"
+            }
+          },
+          "unmappedRunCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sprintCoveragePercent": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "BugTriageStateDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "bugId",
+          "firstSeenAt",
+          "firstObservedSeverity",
+          "isTriaged"
+        ],
+        "properties": {
+          "bugId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "firstObservedSeverity": {
+            "type": "string"
+          },
+          "isTriaged": {
+            "type": "boolean"
+          },
+          "lastTriageActionAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "UpdateBugTriageStateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "bugId"
+        ],
+        "properties": {
+          "bugId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "newSeverity": {
+            "type": "string",
+            "nullable": true
+          },
+          "tagsAdded": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "tagsRemoved": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "UpdateBugTriageStateResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
           }
         }
       }

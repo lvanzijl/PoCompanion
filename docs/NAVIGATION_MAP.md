@@ -244,18 +244,18 @@ Global header (available on every page) ◄────────────�
 | Team selector | Filters the sprint range selector to a specific team. When "All Teams" is selected, defaults to last 6 months. |
 | From Sprint / To Sprint selectors | Appear once a team is selected. Allow the user to define a custom time window for trend analysis. Sprint name and start month are shown. |
 | "Last 6 Months" chip | Shown when no sprint range is explicitly set. |
-| Velocity Trend signal card | Represents team delivery patterns. Click navigates to `/velocity` (full velocity dashboard). |
 | Bug Trend signal card | Represents bug patterns over time. Click navigates to Bug Insights (Bug Overview). |
 | PR Trend signal card | Read-only insight about pull request patterns. Click navigates to Pull Request Insights. |
 | Pipeline Trend signal card | Read-only insight about build and deployment health. Click navigates to Pipeline Insights. |
 | Sprint Trend signal card | Represents planned vs. worked sprint metrics. Click navigates to Sprint Trend. |
 | Portfolio Progress signal card | Represents strategic product-level progress over a sprint range. Click navigates to Portfolio Progress Trend. |
 | Bug Trend chart (interactive) | Three-series chart (Total bugs, Fixed bugs, Added bugs) for the selected time range. Clicking a bar navigates to Bug Insights filtered to that period. Hovering highlights the bar. |
-| Velocity Overview panel | Embeds the VelocityPanel component showing the last 10 sprints. "Full Dashboard" link to `/velocity`. |
 | Cross-workspace navigation | Buttons to Backlog Overview, Health (Now), and Planning (Future). |
 | Home button | Returns to `/home`. |
 
-**Outgoing navigation:** `/home/sprint-trend`, `/home/portfolio-progress`, `/home/bugs`, `/home/pull-requests`, `/home/pipelines`, `/velocity`, `/home/backlog-overview`, `/home/health`, `/home/planning`, `/home`
+> **Note:** Velocity and predictability signals (median velocity, P25–P75 band, median predictability) are now embedded in Sprint Trend (calibration panel) and Planning (Capacity Confidence block). They are no longer a top-level tile in Trends.
+
+**Outgoing navigation:** `/home/sprint-trend`, `/home/portfolio-progress`, `/home/bugs`, `/home/pull-requests`, `/home/pipelines`, `/home/backlog-overview`, `/home/health`, `/home/planning`, `/home`
 
 ---
 
@@ -267,17 +267,18 @@ Global header (available on every page) ◄────────────�
 |---|---|
 | Breadcrumb | `Home › Planning (Future)`. |
 | "Current + 3 Iterations" chip | Communicates the time horizon of the planning view. |
-| Epic Exceeds Velocity signal card | Counts epics whose remaining effort exceeds 3× average team velocity. Color-coded (green = all fine, yellow ≤ 2 at risk, red > 2). Average velocity is shown as a chip. Click navigates to Trends workspace with velocity metric. |
+| Epic Exceeds Velocity signal card | Counts epics whose remaining effort exceeds 3× average team velocity. Color-coded (green = all fine, yellow ≤ 2 at risk, red > 2). Average velocity is shown as a chip. Click navigates to Sprint Trend (calibration context). |
 | Epic Invalid Items signal card | Counts epics that contain child work items with validation issues. Click navigates to Work Item Explorer (all items). |
 | Epic Dependencies signal card | Read-only view. Click navigates to Dependency Overview. |
-| Epics Exceeding Velocity detail table | Shown when epics are at risk. Columns: ID, Title, State, Remaining Effort, Sprints to Complete, Confidence, and link to Velocity Trends. |
+| Epics Exceeding Velocity detail table | Shown when epics are at risk. Columns: ID, Title, State, Remaining Effort, Sprints to Complete, Confidence, and link to Sprint Trend. |
 | Epics with Invalid Items detail table | Shown when epics have validation issues. Columns: ID, Title, State, Invalid Item Count, and link to Work Item Explorer (scoped to that epic). |
+| Capacity Confidence block | Shown when past sprint data is available. Displays median velocity (P50), P25–P75 band, median predictability, and a safe planning capacity (P25). Updates when product selection changes. |
 | Planning Board section | Embeds the PlanningBoard component with product selector. "Full Release Planning" link to `/release-planning`. |
 | Available Actions chips | Lists supported end-station actions: Epic Repositioning and Implicit Reprioritization. |
 | Cross-workspace navigation | Buttons to Backlog Overview, Health (Now), and Trends (Past). |
 | Home button | Returns to `/home`. |
 
-**Outgoing navigation:** `/home/trends`, `/workitems` (scoped to epic or all), `/home/dependencies`, `/home/backlog-overview`, `/home/health`, `/home/planning`, `/release-planning`, `/home`
+**Outgoing navigation:** `/home/sprint-trend`, `/workitems` (scoped to epic or all), `/home/dependencies`, `/home/backlog-overview`, `/home/health`, `/home/planning`, `/release-planning`, `/home`
 
 ---
 
@@ -400,7 +401,7 @@ Global header (available on every page) ◄────────────�
 
 ### 2.14 Sprint Trend — `/home/sprint-trend`
 
-**Purpose:** Detailed sprint-by-sprint analysis of planned versus worked metrics. Shows PBI completion, effort progression, bug counts per sprint, and Feature/Epic progress.
+**Purpose:** Detailed sprint-by-sprint analysis of planned versus worked metrics. Shows PBI completion, effort progression, bug counts per sprint, and Feature/Epic progress. In multi-sprint mode, also shows a Calibration panel with velocity distribution and predictability signals.
 
 | Functionality | Description |
 |---|---|
@@ -411,6 +412,7 @@ Global header (available on every page) ◄────────────�
 | Team filter | Filters metrics to a specific team. |
 | Sprint Trend metrics | In single-sprint mode: planned PBI count, completed PBI count, effort progression, bug count, and Feature/Epic-level breakdown with a pie chart. |
 | Multi-sprint trend graphs | In advanced mode: progression over last N sprints (PBI completion, effort, bug counts) as separate charts. |
+| Calibration panel | In advanced mode (multi-sprint): shows median velocity (P50), P25–P75 volatility band, median predictability, and safe planning capacity (P25). Updates when sprint range or product selection changes. |
 | Epic/Feature drilldown | Clicking an Epic or Feature ID in the sprint detail table navigates to the Work Item Activity page for that item. |
 | Stale data warning | If the calculated sprint metrics are older than the latest data sync, shows a warning with a "Recompute" button to refresh the analysis. |
 | Back to Trends button | Returns to `/home/trends`. |
@@ -488,8 +490,8 @@ Global header (available on every page) ◄────────────�
 | Validation Triage | `/home/validation-triage` | Health workspace Validation Triage button | Open queue per category | `/home/validation-queue?category=SI\|RR\|RC\|EFF`, `/home/health`, `/home` |
 | Validation Queue | `/home/validation-queue` | Validation Triage "Open queue" | Start fix session per rule | `/home/validation-fix?category=...&ruleId=...`, `/home/validation-triage`, `/home` |
 | Validation Fix Session | `/home/validation-fix` | Validation Queue "Start fix session" | Review items one-by-one, dismiss or skip | `/home/validation-queue?category=...`, `/home` |
-| Trends (Past) | `/home/trends` | Home workspace card | Click trend signal | `/home/sprint-trend`, `/home/portfolio-progress`, `/home/bugs`, `/home/pull-requests`, `/home/pipelines`, `/velocity`, `/home/health`, `/home/planning` |
-| Planning (Future) | `/home/planning` | Home workspace card | Click planning signal | `/home/trends`, `/workitems`, `/home/dependencies`, `/release-planning`, `/home/health` |
+| Trends (Past) | `/home/trends` | Home workspace card | Click trend signal | `/home/sprint-trend`, `/home/portfolio-progress`, `/home/bugs`, `/home/pull-requests`, `/home/pipelines`, `/home/health`, `/home/planning` |
+| Planning (Future) | `/home/planning` | Home workspace card | Click planning signal | `/home/sprint-trend`, `/workitems`, `/home/dependencies`, `/release-planning`, `/home/health` |
 | Bug Insights | `/home/bugs` | Health signal, Trends chart click | View/filter bugs | `/bugs-triage`, `/home/bugs/detail/{id}`, `/home` |
 | Bug Detail | `/home/bugs/detail/{id}` | Bug Insights | Edit severity/tags | `/home/bugs` |
 | Bug Triage | `/bugs-triage` | Home quick action, Bug Insights | Triage tags | (self-contained) |

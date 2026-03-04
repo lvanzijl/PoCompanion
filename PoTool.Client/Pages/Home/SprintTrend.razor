@@ -1,5 +1,6 @@
 @page "/home/sprint-trend"
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Components.Metrics
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Services
 @using PoTool.Client.Pages.Home.Components
@@ -10,7 +11,7 @@
 @inject TeamService TeamService
 @inject SprintService SprintService
 @inject ProductService ProductService
-@inject SprintTrendService SprintTrendService
+@inject IMetricsClient MetricsClient
 @inject TfsConfigService TfsConfigService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -277,6 +278,20 @@
             </MudPaper>
         }
 
+        @* Calibration panel — shown in multi-sprint mode when we have sprint context *@
+        @if (_advancedMode && _profileId.HasValue && _calibrationSprintIds.Count > 0)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Info" Class="mr-2" />
+                    Calibration
+                </MudText>
+                <CapacityCalibrationPanel ProfileId="@_profileId!.Value"
+                                          SprintIds="@_calibrationSprintIds"
+                                          ProductIds="@(_selectedProductId.HasValue ? new[] { _selectedProductId.Value } : null)" />
+            </MudPaper>
+        }
+
         @if (_filteredProducts.Count > 0)
         {
             <MudExpansionPanels MultiExpansion="true" Class="mb-4">
@@ -486,6 +501,9 @@
     private List<ChartSeries> _completedPbiEffortChartSeries = new();
     private List<ChartSeries> _bugTrendChartSeries = new();
     private string[] _trendXAxisLabels = Array.Empty<string>();
+
+    // Calibration panel — sprint IDs in the current multi-sprint view
+    private IReadOnlyList<int> _calibrationSprintIds = Array.Empty<int>();
     private static readonly string[] DefaultPiePalette =
     [
         "#2979FF",
@@ -641,10 +659,14 @@
                 return;
             }
 
-            var response = await SprintTrendService.GetSprintTrendMetricsAsync(
+            // Capture sprint IDs for the calibration panel (used in advanced/multi-sprint mode)
+            _calibrationSprintIds = _advancedMode ? sprintIds.AsReadOnly() : Array.Empty<int>();
+
+            var response = await MetricsClient.GetSprintTrendMetricsAsync(
                 _profileId.Value,
                 sprintIds,
-                recompute: true);
+                recompute: true,
+                CancellationToken.None);
 
             if (response == null || !response.Success || response.Metrics == null)
             {
@@ -1015,10 +1037,11 @@
                 sprintIds = new List<int> { _currentSprint.Id };
             }
 
-            var response = await SprintTrendService.GetSprintTrendMetricsAsync(
+            var response = await MetricsClient.GetSprintTrendMetricsAsync(
                 _profileId.Value,
                 sprintIds,
-                recompute: true);
+                recompute: true,
+                CancellationToken.None);
 
             if (response != null && response.Success && response.Metrics != null)
             {
