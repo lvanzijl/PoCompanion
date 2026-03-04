@@ -358,7 +358,7 @@ De Delivery-werkruimte beantwoordt de vraag: *Wat heeft mijn team daadwerkelijk 
 
 > **Voormalige naam:** Sprint Trend. De pagina is verplaatst van de Trends-werkruimte naar Delivery en hernoemd.
 
-De Sprint Delivery-pagina toont sprint-voor-sprint een analyse van geplande versus opgeleverde metrieken: PBI-voltooiing, inspanningsprogressie, bugs per sprint, en Feature-/Epic-voortgang. In de meersprints-modus toont de pagina ook een **Calibratiepaneel** met velocity- en voorspelbaarheidssignalen.
+De Sprint Delivery-pagina toont sprint-voor-sprint een analyse van geplande versus opgeleverde metrieken: PBI-voltooiing, inspanningsprogressie, bugs per sprint, en de verdeling van het werk per Epic/Feature. In de meersprints-modus toont de pagina ook een **Calibratiepaneel** met velocity- en voorspelbaarheidssignalen.
 
 #### Navigatiepijlen
 
@@ -367,14 +367,22 @@ Gebruik de pijlen links en rechts om door de sprintgeschiedenis te bladeren, é�
 #### Modus
 
 - **Enkelvoudige sprintmodus** (standaard) — focus op één sprint:
-  - Aantal geplande PBI's.
-  - Aantal voltooide PBI's.
-  - Inspanningsprogressiepercentage.
-  - Bugaantal.
-  - Feature-/Epic-uitsplitsing met taartgrafiek.
+  - Aantal voltooide PBI's, inclusief vergelijking met de vorige sprint (bijv. `5 (+2 vs previous sprint)`).
+  - Opgeleverde inspanning in story points, inclusief vergelijking met de vorige sprint (bijv. `100 pts (-30 pts vs previous sprint)`).
+  - Inspanningsprogressiepercentage, inclusief vergelijking met de vorige sprint (bijv. `58% (+12% vs previous sprint)`).
+  - Bugaantal (aangemaakt / bewerkt / gesloten).
+  - Verdeling van het werk per Epic als horizontale staafgrafiek (rechts van de KPI-blokken).
 - **Geavanceerde modus** (schakelknop) — meerdere sprints in één grafiek:
   - Progressie over de laatste N sprints (PBI-voltooiing, inspanning, bugaantallen) als afzonderlijke grafieken.
   - N is instelbaar.
+
+#### Vergelijking met de vorige sprint
+
+In de enkelvoudige sprintmodus worden de drie primaire KPI's (voltooide PBI's, opgeleverde inspanning en progressiepercentage) aangevuld met een vergelijkingsbadge ten opzichte van de direct voorafgaande sprint. Een positieve waarde is groen, een negatieve waarde is rood.
+
+#### Verdeling van het werk (horizontale staafgrafiek)
+
+Rechts van de KPI-blokken toont een horizontale staafgrafiek hoe de opgeleverde inspanning verdeeld is over de Epics (of producten bij meerdere producten). De staafjes maken onderlinge vergelijking eenvoudiger en de labels blijven leesbaar.
 
 #### Calibratiepaneel (geavanceerde modus)
 
