@@ -1,0 +1,14 @@
+@* Equal-width grid of secondary visualizations arranged in 2 or 3 columns.
+   Each cell enforces min-height from --analytical-secondary-height.
+   Collapses to single column on narrow viewports (< 900px). *@
+<div class="analytical-secondary-grid analytical-secondary-grid--@Columns">
+    @ChildContent
+</div>
+
+@code {
+    /// <summary>Number of equal columns. Supported values: 2, 3. Defaults to 3.</summary>
+    [Parameter] public int Columns { get; set; } = 3;
+
+    /// <summary>Secondary chart cells (each wrapped in a MudPaper with analytical-secondary-cell class).</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

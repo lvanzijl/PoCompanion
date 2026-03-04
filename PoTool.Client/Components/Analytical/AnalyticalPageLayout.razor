@@ -1,0 +1,10 @@
+@* Semantic wrapper for analytical pages (trend, behavioral, system-insight, multi-chart).
+   Establishes vertical stacking with consistent section gap using the analytical layout token. *@
+<div class="analytical-page-layout">
+    @ChildContent
+</div>
+
+@code {
+    /// <summary>Page sections: typically one PrimaryVisualizationSection followed by one SecondaryVisualizationGrid.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

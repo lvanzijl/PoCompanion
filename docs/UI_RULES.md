@@ -132,3 +132,60 @@ Validation strategy depends on data source:
 - UI logic with conditional behavior MUST be testable.
 - Critical user flows SHOULD be covered by automated tests.
 - Purely visual structure does not require tests; behavior does.
+
+## 16. Primary Visualization Pattern (Analytical Pages)
+
+An **analytical page** is any page whose primary purpose is trend analysis, behavioral modeling, structural system insight, or multi-chart comparison.
+
+### Definition
+If a page is analytical:
+
+1. It MUST designate exactly one **Primary Visualization**.
+2. The Primary Visualization MUST:
+   - Span full width (12 columns / full container width)
+   - Use `PrimaryVisualizationSection` component (enforces `--analytical-primary-height: 400px`)
+   - Visually dominate summary tiles and filters
+3. Secondary visualizations MUST:
+   - Appear below the primary visualization
+   - Use `SecondaryVisualizationGrid` component with `Columns="2"` or `Columns="3"`
+   - Enforce equal height via `analytical-secondary-cell` class (`--analytical-secondary-height: 320px`)
+4. Configuration UI (filters, selectors):
+   - MUST NOT visually dominate charts
+   - MUST be collapsible or inline-editable
+   - MUST default to collapsed state if meaningful defaults exist
+5. Summary tiles:
+   - MUST use compact padding
+   - MUST NOT exceed visual weight of the primary visualization
+
+### Implementation
+
+Use the semantic layout components from `PoTool.Client/Components/Analytical/`:
+
+```razor
+<AnalyticalPageLayout>
+    <PrimaryVisualizationSection>
+        <!-- one full-width primary chart, Height="340px" -->
+    </PrimaryVisualizationSection>
+
+    <SecondaryVisualizationGrid Columns="3">
+        <MudPaper Class="pa-3 analytical-secondary-cell"><!-- chart, Height="260px" --></MudPaper>
+        <MudPaper Class="pa-3 analytical-secondary-cell"><!-- chart, Height="260px" --></MudPaper>
+        <MudPaper Class="pa-3 analytical-secondary-cell"><!-- chart, Height="260px" --></MudPaper>
+    </SecondaryVisualizationGrid>
+</AnalyticalPageLayout>
+```
+
+### CSS Tokens (in `app.css`)
+
+| Token | Value | Usage |
+|---|---|---|
+| `--analytical-primary-height` | 400px | `min-height` of primary visualization container |
+| `--analytical-secondary-height` | 320px | `min-height` of secondary visualization cells |
+| `--analytical-primary-chart-height` | 340px | SVG chart height inside primary container |
+| `--analytical-secondary-chart-height` | 260px | SVG chart height inside secondary containers |
+
+### Applies To
+- Portfolio Progress Trend (`/home/portfolio-progress`)
+- Sprint Trend
+- Any future "Trends (Past)" pages
+

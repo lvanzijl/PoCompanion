@@ -1,4 +1,5 @@
 @page "/home/sprint-trend"
+@using PoTool.Client.Components.Analytical
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.Metrics
 @using PoTool.Client.ApiClient
@@ -218,64 +219,73 @@
             </MudPaper>
         }
 
-        @* Phase 2: Multi-sprint trend graphs *@
+        @* Phase 2: Multi-sprint trend graphs (Primary Visualization Pattern) *@
         @if (_advancedMode && _trendMetrics.Count > 1)
         {
-            @* Progression Trend Chart *@
-            <MudPaper Elevation="2" Class="pa-4 mb-4">
-                <MudText Typo="Typo.h6" Class="mb-3">
-                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="mr-2" />
-                    Progression per Sprint
-                </MudText>
-                <MudChart ChartType="ChartType.Bar"
-                          ChartSeries="@_progressionChartSeries"
-                          XAxisLabels="@_trendXAxisLabels"
-                          Width="100%"
-                          Height="300px"
-                          ChartOptions="@_chartOptions" />
-            </MudPaper>
+            <AnalyticalPageLayout>
 
-            @* Completed PBIs Count Trend Chart *@
-            <MudPaper Elevation="2" Class="pa-4 mb-4">
-                <MudText Typo="Typo.h6" Class="mb-3">
-                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Class="mr-2" />
-                    Completed PBIs (Count) per Sprint
-                </MudText>
-                <MudChart ChartType="ChartType.Line"
-                          ChartSeries="@_completedPbiCountChartSeries"
-                          XAxisLabels="@_trendXAxisLabels"
-                          Width="100%"
-                          Height="300px"
-                          ChartOptions="@_chartOptions" />
-            </MudPaper>
+                @* Row 1 — Primary Visualization: Progression per Sprint (full width, dominant) *@
+                <PrimaryVisualizationSection>
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="mr-2" />
+                        Progression per Sprint
+                    </MudText>
+                    <MudChart ChartType="ChartType.Bar"
+                              ChartSeries="@_progressionChartSeries"
+                              XAxisLabels="@_trendXAxisLabels"
+                              Width="100%"
+                              Height="340px"
+                              ChartOptions="@_chartOptions" />
+                </PrimaryVisualizationSection>
 
-            @* Completed PBI Effort Trend Chart *@
-            <MudPaper Elevation="2" Class="pa-4 mb-4">
-                <MudText Typo="Typo.h6" Class="mb-3">
-                    <MudIcon Icon="@Icons.Material.Filled.FitnessCenter" Class="mr-2" />
-                    Completed PBI Effort per Sprint
-                </MudText>
-                <MudChart ChartType="ChartType.Line"
-                          ChartSeries="@_completedPbiEffortChartSeries"
-                          XAxisLabels="@_trendXAxisLabels"
-                          Width="100%"
-                          Height="300px"
-                          ChartOptions="@_chartOptions" />
-            </MudPaper>
+                @* Row 2 — Secondary Visualizations: 3 equal columns *@
+                <SecondaryVisualizationGrid Columns="3">
 
-            @* Bug Trend Chart *@
-            <MudPaper Elevation="2" Class="pa-4 mb-4">
-                <MudText Typo="Typo.h6" Class="mb-3">
-                    <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-2" />
-                    Bug Activity Trend
-                </MudText>
-                <MudChart ChartType="ChartType.Line"
-                          ChartSeries="@_bugTrendChartSeries"
-                          XAxisLabels="@_trendXAxisLabels"
-                          Width="100%"
-                          Height="300px"
-                          ChartOptions="@_chartOptions" />
-            </MudPaper>
+                    @* Cell 1 — Completed PBIs Count *@
+                    <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Class="mr-2" />
+                            Completed PBIs (Count) per Sprint
+                        </MudText>
+                        <MudChart ChartType="ChartType.Line"
+                                  ChartSeries="@_completedPbiCountChartSeries"
+                                  XAxisLabels="@_trendXAxisLabels"
+                                  Width="100%"
+                                  Height="260px"
+                                  ChartOptions="@_chartOptions" />
+                    </MudPaper>
+
+                    @* Cell 2 — Completed PBI Effort *@
+                    <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.FitnessCenter" Class="mr-2" />
+                            Completed PBI Effort per Sprint
+                        </MudText>
+                        <MudChart ChartType="ChartType.Line"
+                                  ChartSeries="@_completedPbiEffortChartSeries"
+                                  XAxisLabels="@_trendXAxisLabels"
+                                  Width="100%"
+                                  Height="260px"
+                                  ChartOptions="@_chartOptions" />
+                    </MudPaper>
+
+                    @* Cell 3 — Bug Activity Trend *@
+                    <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-2" />
+                            Bug Activity Trend
+                        </MudText>
+                        <MudChart ChartType="ChartType.Line"
+                                  ChartSeries="@_bugTrendChartSeries"
+                                  XAxisLabels="@_trendXAxisLabels"
+                                  Width="100%"
+                                  Height="260px"
+                                  ChartOptions="@_chartOptions" />
+                    </MudPaper>
+
+                </SecondaryVisualizationGrid>
+
+            </AnalyticalPageLayout>
         }
 
         @* Calibration panel — shown in multi-sprint mode when we have sprint context *@
