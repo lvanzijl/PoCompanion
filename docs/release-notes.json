@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-04",
+    "type": "Added",
+    "title": "Primary Visualization Pattern — global analytical layout components and Portfolio Progress Trend refactor",
+    "impact": "Introduced three reusable Blazor components (AnalyticalPageLayout, PrimaryVisualizationSection, SecondaryVisualizationGrid) implementing the new Primary Visualization Pattern for analytical pages. CSS tokens --analytical-primary-height (400px) and --analytical-secondary-height (320px) added to app.css. Portfolio Progress Trend page refactored: Combined Flow is now a full-width primary visualization (Row 1, min 400px, chart 340px tall) and Total Scope / Remaining Effort / Throughput are arranged in a 3-column secondary grid (Row 2, min 320px, chart 260px each). The old 2×2 symmetric grid is removed. No density rules altered; filter collapse behaviour preserved. UI_RULES.md §16 documents the pattern as binding for all future analytical pages.",
+    "area": "Layout / Trends / Portfolio Progress",
+    "link": "/home/portfolio-progress"
+  },
+  {
+    "date": "2026-03-04",
     "type": "Changed",
     "title": "Portfolio Progress Trend — graph semantics, neutral slope wording, and collapsible filters",
     "impact": "Combined Flow chart changed from Line to Bar (flow metrics are discrete per-sprint quantities). Total Scope chart changed from Bar to Line (stock metric showing accumulated state). Slope badges now use neutral system-dynamics terminology: Net Flow → Contracting/Expanding/Balanced; Scope & Remaining → Decreasing/Increasing/Stable; Throughput → Rising/Falling/Stable. Filter panel is now collapsed by default; context chips (Product, Team, Sprint range, Custom Scope badge) are always visible under the header showing the active scope without needing to open filters. TrendSlopeBadge component extended with optional PositiveLabel/NegativeLabel/NeutralLabel parameters for per-metric custom wording (fully backward-compatible).",

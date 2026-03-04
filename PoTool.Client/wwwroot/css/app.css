@@ -29,6 +29,12 @@
     --d2: 8px;   /* Control padding, cell padding */
     --d3: 12px;  /* Group spacing */
     --d4: 16px;  /* Section separation */
+
+    /* Analytical Layout Tokens — Primary Visualization Pattern */
+    --analytical-primary-height: 400px;    /* Min height for primary full-width visualization */
+    --analytical-secondary-height: 320px;  /* Min height for secondary visualization columns */
+    --analytical-primary-chart-height: 340px;    /* SVG chart height inside primary container */
+    --analytical-secondary-chart-height: 260px;  /* SVG chart height inside secondary container */
     
     /* Typography */
     --font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -244,3 +250,49 @@ code {
     opacity: 0.9;
 }
 .settings-top-right:hover svg { opacity: 1; transform: rotate(10deg); }
+
+/* ═══════════════════════════════════════════════════════════
+   Analytical Layout — Primary Visualization Pattern
+   Used by AnalyticalPageLayout, PrimaryVisualizationSection,
+   and SecondaryVisualizationGrid components.
+   ═══════════════════════════════════════════════════════════ */
+
+.analytical-page-layout {
+    display: flex;
+    flex-direction: column;
+    gap: var(--d4);
+}
+
+.analytical-primary-viz {
+    min-height: var(--analytical-primary-height);
+    width: 100%;
+}
+
+.analytical-secondary-grid {
+    display: grid;
+    gap: var(--d4);
+    margin-bottom: var(--d4);
+}
+
+.analytical-secondary-grid--2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.analytical-secondary-grid--3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.analytical-secondary-cell {
+    min-height: var(--analytical-secondary-height);
+}
+
+/* Responsive: collapse to single column on narrow viewports.
+   900px threshold (vs. common 768px) is intentional: a 3-column analytical grid
+   requires at least ~300px per chart to remain readable on desktop/tablet.
+   At 768px the columns would be too narrow for chart legibility. */
+@media (max-width: 900px) {
+    .analytical-secondary-grid--2,
+    .analytical-secondary-grid--3 {
+        grid-template-columns: 1fr;
+    }
+}

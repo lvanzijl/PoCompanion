@@ -1,0 +1,11 @@
+@* Full-width primary visualization container.
+   Enforces min-height from --analytical-primary-height and spans all 12 columns.
+   Must contain exactly one primary chart. *@
+<MudPaper Elevation="2" Class="pa-3 analytical-primary-viz">
+    @ChildContent
+</MudPaper>
+
+@code {
+    /// <summary>Primary chart content (full-width, dominant visualization).</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

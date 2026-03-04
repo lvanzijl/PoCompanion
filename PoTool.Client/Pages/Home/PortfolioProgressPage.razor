@@ -1,4 +1,5 @@
 @page "/home/portfolio-progress"
+@using PoTool.Client.Components.Analytical
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Services
@@ -274,14 +275,13 @@
                 </MudStack>
             </MudPaper>
 
-            @* ── 2×2 Chart Grid ── *@
+            @* ── Chart Layout (Primary Visualization Pattern) ── *@
             @if (_trendData.Sprints.Any(s => s.HasData))
             {
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;"
-                     class="portfolio-trend-grid">
+                <AnalyticalPageLayout>
 
-                    @* Graph 1 — Combined Flow Graph (Primary) *@
-                    <MudPaper Elevation="2" Class="pa-3" Style="min-height: 300px;">
+                    @* Row 1 — Primary Visualization: Combined Flow (full width, dominant) *@
+                    <PrimaryVisualizationSection>
                         <MudStack Spacing="0" Class="mb-2">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                 <MudText Typo="Typo.subtitle2">Combined Flow</MudText>
@@ -308,85 +308,90 @@
                                   ChartSeries="@_flowSeries"
                                   XAxisLabels="@_xAxisLabels"
                                   Width="100%"
-                                  Height="200px"
+                                  Height="340px"
                                   ChartOptions="@_flowChartOptions" />
-                    </MudPaper>
+                    </PrimaryVisualizationSection>
 
-                    @* Graph 2 — Total Scope Trend (Stock) *@
-                    <MudPaper Elevation="2" Class="pa-3" Style="min-height: 300px;">
-                        <MudStack Spacing="0" Class="mb-2">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudText Typo="Typo.subtitle2">Total Scope Trend</MudText>
-                                <TrendSlopeBadge StartValue="@_scopeStart"
-                                                 EndValue="@_scopeEnd"
-                                                 LowerIsBetter="true"
-                                                 PositiveLabel="Decreasing"
-                                                 NegativeLabel="Increasing"
-                                                 MetricLabel="total scope" />
+                    @* Row 2 — Secondary Visualizations: 3 equal columns *@
+                    <SecondaryVisualizationGrid Columns="3">
+
+                        @* Cell 1 — Total Scope Trend (Stock) *@
+                        <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                            <MudStack Spacing="0" Class="mb-2">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudText Typo="Typo.subtitle2">Total Scope Trend</MudText>
+                                    <TrendSlopeBadge StartValue="@_scopeStart"
+                                                     EndValue="@_scopeEnd"
+                                                     LowerIsBetter="true"
+                                                     PositiveLabel="Decreasing"
+                                                     NegativeLabel="Increasing"
+                                                     MetricLabel="total scope" />
+                                </MudStack>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Total effort in scope (pts, excl. Removed) — structural product growth
+                                </MudText>
                             </MudStack>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                Total effort in scope (pts, excl. Removed) — structural product growth
-                            </MudText>
-                        </MudStack>
-                        <MudChart ChartType="ChartType.Line"
-                                  ChartSeries="@_scopeSeries"
-                                  XAxisLabels="@_xAxisLabels"
-                                  Width="100%"
-                                  Height="200px"
-                                  ChartOptions="@_chartOptions" />
-                    </MudPaper>
+                            <MudChart ChartType="ChartType.Line"
+                                      ChartSeries="@_scopeSeries"
+                                      XAxisLabels="@_xAxisLabels"
+                                      Width="100%"
+                                      Height="260px"
+                                      ChartOptions="@_chartOptions" />
+                        </MudPaper>
 
-                    @* Graph 3 — Remaining Effort Trend (Stock) *@
-                    <MudPaper Elevation="2" Class="pa-3" Style="min-height: 300px;">
-                        <MudStack Spacing="0" Class="mb-2">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudText Typo="Typo.subtitle2">Remaining Effort Trend</MudText>
-                                @* Lower-is-better burndown signal *@
-                                <TrendSlopeBadge StartValue="@_remainingStart"
-                                                 EndValue="@_remainingEnd"
-                                                 LowerIsBetter="true"
-                                                 PositiveLabel="Decreasing"
-                                                 NegativeLabel="Increasing"
-                                                 MetricLabel="remaining effort" />
+                        @* Cell 2 — Remaining Effort Trend (Stock) *@
+                        <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                            <MudStack Spacing="0" Class="mb-2">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudText Typo="Typo.subtitle2">Remaining Effort Trend</MudText>
+                                    @* Lower-is-better burndown signal *@
+                                    <TrendSlopeBadge StartValue="@_remainingStart"
+                                                     EndValue="@_remainingEnd"
+                                                     LowerIsBetter="true"
+                                                     PositiveLabel="Decreasing"
+                                                     NegativeLabel="Increasing"
+                                                     MetricLabel="remaining effort" />
+                                </MudStack>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Remaining effort (pts) — digestion pressure; lower is better
+                                </MudText>
                             </MudStack>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                Remaining effort (pts) — digestion pressure; lower is better
-                            </MudText>
-                        </MudStack>
-                        <MudChart ChartType="ChartType.Line"
-                                  ChartSeries="@_remainingSeries"
-                                  XAxisLabels="@_xAxisLabels"
-                                  Width="100%"
-                                  Height="200px"
-                                  ChartOptions="@_chartOptions" />
-                    </MudPaper>
+                            <MudChart ChartType="ChartType.Line"
+                                      ChartSeries="@_remainingSeries"
+                                      XAxisLabels="@_xAxisLabels"
+                                      Width="100%"
+                                      Height="260px"
+                                      ChartOptions="@_chartOptions" />
+                        </MudPaper>
 
-                    @* Graph 4 — Throughput Trend (Flow Capacity) *@
-                    <MudPaper Elevation="2" Class="pa-3" Style="min-height: 300px;">
-                        <MudStack Spacing="0" Class="mb-2">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudText Typo="Typo.subtitle2">Throughput Trend</MudText>
-                                @* Higher-is-better: Rising/Falling *@
-                                <TrendSlopeBadge StartValue="@_throughputStart"
-                                                 EndValue="@_throughputEnd"
-                                                 LowerIsBetter="false"
-                                                 PositiveLabel="Rising"
-                                                 NegativeLabel="Falling"
-                                                 MetricLabel="throughput" />
+                        @* Cell 3 — Throughput Trend (Flow Capacity) *@
+                        <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                            <MudStack Spacing="0" Class="mb-2">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudText Typo="Typo.subtitle2">Throughput Trend</MudText>
+                                    @* Higher-is-better: Rising/Falling *@
+                                    <TrendSlopeBadge StartValue="@_throughputStart"
+                                                     EndValue="@_throughputEnd"
+                                                     LowerIsBetter="false"
+                                                     PositiveLabel="Rising"
+                                                     NegativeLabel="Falling"
+                                                     MetricLabel="throughput" />
+                                </MudStack>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Effort completed per sprint (pts) — delivery capacity; higher is better
+                                </MudText>
                             </MudStack>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                Effort completed per sprint (pts) — delivery capacity; higher is better
-                            </MudText>
-                        </MudStack>
-                        <MudChart ChartType="ChartType.Bar"
-                                  ChartSeries="@_throughputSeries"
-                                  XAxisLabels="@_xAxisLabels"
-                                  Width="100%"
-                                  Height="200px"
-                                  ChartOptions="@_chartOptions" />
-                    </MudPaper>
+                            <MudChart ChartType="ChartType.Bar"
+                                      ChartSeries="@_throughputSeries"
+                                      XAxisLabels="@_xAxisLabels"
+                                      Width="100%"
+                                      Height="260px"
+                                      ChartOptions="@_chartOptions" />
+                        </MudPaper>
 
-                </div>
+                    </SecondaryVisualizationGrid>
+
+                </AnalyticalPageLayout>
             }
             else if (!_trendsLoading)
             {
@@ -418,12 +423,6 @@
 </MudContainer>
 
 <style>
-    /* Responsive 2x2 grid: 2 columns on desktop, 1 column on narrow screens */
-    @@media (max-width: 768px) {
-        .portfolio-trend-grid {
-            grid-template-columns: 1fr !important;
-        }
-    }
     .trend-slope-badge {
         font-size: 0.7rem;
     }
