@@ -2,6 +2,14 @@
   {
     "date": "2026-03-04",
     "type": "Changed",
+    "title": "Portfolio Progress Trend — graph semantics, neutral slope wording, and collapsible filters",
+    "impact": "Combined Flow chart changed from Line to Bar (flow metrics are discrete per-sprint quantities). Total Scope chart changed from Bar to Line (stock metric showing accumulated state). Slope badges now use neutral system-dynamics terminology: Net Flow → Contracting/Expanding/Balanced; Scope & Remaining → Decreasing/Increasing/Stable; Throughput → Rising/Falling/Stable. Filter panel is now collapsed by default; context chips (Product, Team, Sprint range, Custom Scope badge) are always visible under the header showing the active scope without needing to open filters. TrendSlopeBadge component extended with optional PositiveLabel/NegativeLabel/NeutralLabel parameters for per-metric custom wording (fully backward-compatible).",
+    "area": "Trends / Portfolio Progress",
+    "link": "/home/portfolio-progress"
+  },
+  {
+    "date": "2026-03-04",
+    "type": "Changed",
     "title": "Portfolio Progress Trend — historical per-sprint scope tracking via activity ledger",
     "impact": "TotalScopeEffort is now computed historically for each sprint in the selected range instead of using a single current-state snapshot. The handler replays Microsoft.VSTS.Scheduling.Effort change events from the ActivityEventLedger to reconstruct the total backlog scope as it was at each sprint's end date. Items created after a sprint's end are excluded; items currently in 'Removed' state that were removed after a sprint's end are included. TotalScopeChangePts in the summary now reflects actual scope growth or contraction across the selected range. Accuracy improves as more history accumulates in the ledger.",
     "area": "Trends / Portfolio Progress",
