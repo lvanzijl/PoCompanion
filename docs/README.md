@@ -31,6 +31,9 @@ Violating these rules is a design error, not an implementation shortcut.
 6. **[Fluent_UI_compat_rules.md](Fluent_UI_compat_rules.md)** - Fluent UI Compact rules
 7. **[mock-data-rules.md](mock-data-rules.md)** - Mock data generation rules (MANDATORY for testing and development)
 
+### Reference Documents
+- **[DATA_PERSISTENCE_INVENTORY.md](DATA_PERSISTENCE_INVENTORY.md)** - Complete inventory of all 34 EF Core entities: where each is persisted, whether it is recoverable from TFS, and migration risk level (🔴 CRITICAL / 🟠 HIGH / 🟡 MEDIUM / 🟢 LOW)
+
 
 
 ---
