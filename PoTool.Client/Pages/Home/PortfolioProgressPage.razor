@@ -1,0 +1,694 @@
+@page "/home/portfolio-progress"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Services
+@using PoTool.Client.Pages.Home.Components
+@using PoTool.Shared.Metrics
+@using System.Web
+@inject IProfileService ProfileService
+@inject TeamService TeamService
+@inject SprintService SprintService
+@inject ProductService ProductService
+@inject PortfolioProgressTrendService PortfolioProgressTrendService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Portfolio Progress - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @* Workspace Header *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Insights" Color="Color.Warning" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">
+                        Portfolio Progress Trend
+                    </MudText>
+                </MudStack>
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            </MudStack>
+
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Timeline"
+                       OnClick="NavigateToTrends">
+                Back to Trends
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _errorMessage = null)">
+            @_errorMessage
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@LoadInitialDataAsync" Class="ml-2">
+                Retry
+            </MudButton>
+        </MudAlert>
+    }
+    else
+    {
+        @* Sprint range selector *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.h6">
+                    <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Class="mr-2" />
+                    Filters
+                </MudText>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
+                    @* Product selector — defaults to All Products *@
+                    <MudSelect T="int?"
+                               Value="_selectedProductId"
+                               Label="Product"
+                               Variant="Variant.Outlined"
+                               Dense="true"
+                               Clearable="true"
+                               ValueChanged="OnProductChangedAsync"
+                               Style="min-width: 200px;">
+                        <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
+                        @foreach (var product in _products)
+                        {
+                            <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudSelect T="int?"
+                               Value="_selectedTeamId"
+                               Label="Team"
+                               Variant="Variant.Outlined"
+                               Dense="true"
+                               Clearable="true"
+                               ValueChanged="OnTeamChangedAsync"
+                               Style="min-width: 180px;">
+                        <MudSelectItem T="int?" Value="@((int?)null)">Select team…</MudSelectItem>
+                        @foreach (var team in _teams)
+                        {
+                            <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    @if (_selectedTeamId.HasValue && _sprints.Any())
+                    {
+                        <MudSelect T="int?"
+                                   Value="_fromSprintId"
+                                   Label="From Sprint"
+                                   Variant="Variant.Outlined"
+                                   Dense="true"
+                                   Clearable="true"
+                                   ValueChanged="OnFromSprintChangedAsync"
+                                   Style="min-width: 200px;">
+                            @foreach (var sprint in _sprints)
+                            {
+                                <MudSelectItem T="int?" Value="@sprint.Id">
+                                    @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+
+                        <MudSelect T="int?"
+                                   Value="_toSprintId"
+                                   Label="To Sprint"
+                                   Variant="Variant.Outlined"
+                                   Dense="true"
+                                   Clearable="true"
+                                   ValueChanged="OnToSprintChangedAsync"
+                                   Style="min-width: 200px;">
+                            @foreach (var sprint in _sprints)
+                            {
+                                <MudSelectItem T="int?" Value="@sprint.Id">
+                                    @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+
+        @if (_trendsLoading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Warning" Class="mb-4" />
+        }
+
+        @if (_trendData != null)
+        {
+            @* Top Summary Block *@
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudStack Spacing="2">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.Summarize" Class="mr-2" />
+                            Summary
+                        </MudText>
+
+                        @* Trajectory badge *@
+                        @{
+                            var (trajColor, trajIcon, trajLabel) = _trendData.Summary.Trajectory switch
+                            {
+                                PortfolioTrajectory.Improving => (Color.Success, Icons.Material.Filled.TrendingUp, "Improving"),
+                                PortfolioTrajectory.AtRisk    => (Color.Error,   Icons.Material.Filled.Warning,    "At Risk"),
+                                _                             => (Color.Default, Icons.Material.Filled.TrendingFlat, "Stable")
+                            };
+                        }
+                        <MudChip T="string" Color="@trajColor" Icon="@trajIcon" Size="Size.Medium">
+                            @trajLabel
+                        </MudChip>
+                    </MudStack>
+
+                    <MudGrid Spacing="2">
+                        @* Progress change *@
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudPaper Outlined="true" Class="pa-3">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Progress</MudText>
+                                <MudText Typo="Typo.h6">
+                                    @if (_trendData.Summary.FirstPercentDone.HasValue && _trendData.Summary.LastPercentDone.HasValue)
+                                    {
+                                        @($"{_trendData.Summary.FirstPercentDone:F1}% → {_trendData.Summary.LastPercentDone:F1}%")
+                                    }
+                                    else
+                                    {
+                                        <span>N/A</span>
+                                    }
+                                </MudText>
+                            </MudPaper>
+                        </MudItem>
+
+                        @* Scope change *@
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudPaper Outlined="true" Class="pa-3">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Scope Change</MudText>
+                                    <MudTooltip Text="Historical per-sprint scope tracking is not yet available. Total scope shown is the current backlog snapshot.">
+                                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
+                                    </MudTooltip>
+                                </MudStack>
+                                <MudText Typo="Typo.h6">
+                                    @if (_trendData.Summary.ScopeChangePercent.HasValue)
+                                    {
+                                        var pct = _trendData.Summary.ScopeChangePercent.Value;
+                                        var sign = pct >= 0 ? "+" : "";
+                                        @($"{sign}{pct:F1}%")
+                                    }
+                                    else
+                                    {
+                                        <span>N/A</span>
+                                    }
+                                </MudText>
+                            </MudPaper>
+                        </MudItem>
+
+                        @* Remaining effort change *@
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudPaper Outlined="true" Class="pa-3">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Remaining Effort Change</MudText>
+                                <MudText Typo="Typo.h6">
+                                    @if (_trendData.Summary.RemainingEffortDelta.HasValue)
+                                    {
+                                        var delta = _trendData.Summary.RemainingEffortDelta.Value;
+                                        var sign = delta >= 0 ? "+" : "";
+                                        @($"{sign}{delta:F0} pts")
+                                    }
+                                    else
+                                    {
+                                        <span>N/A</span>
+                                    }
+                                </MudText>
+                            </MudPaper>
+                        </MudItem>
+
+                        @* Sprint range *@
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudPaper Outlined="true" Class="pa-3">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Sprints</MudText>
+                                <MudText Typo="Typo.h6">@_trendData.Sprints.Count sprint(s)</MudText>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                </MudStack>
+            </MudPaper>
+
+            @* 2×2 Chart Grid *@
+            @if (_trendData.Sprints.Any(s => s.HasData))
+            {
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;"
+                     class="portfolio-trend-grid">
+
+                    @* Graph 1 — % Done Over Time (Primary) *@
+                    <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                        <MudStack Spacing="0" Class="mb-2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.subtitle2">% Done Over Time</MudText>
+                                @* Higher-is-better: slope badge with LowerIsBetter=false *@
+                                <TrendSlopeBadge StartValue="@_pctDoneStart"
+                                                 EndValue="@_pctDoneEnd"
+                                                 LowerIsBetter="false"
+                                                 MetricLabel="% done" />
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Cumulative done effort / total scope — higher is better
+                            </MudText>
+                        </MudStack>
+                        <MudChart ChartType="ChartType.Line"
+                                  ChartSeries="@_pctDoneSeries"
+                                  XAxisLabels="@_xAxisLabels"
+                                  Width="100%"
+                                  Height="180px"
+                                  ChartOptions="@_chartOptions" />
+                    </MudPaper>
+
+                    @* Graph 2 — Total Scope Over Time *@
+                    <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                        <MudStack Spacing="0" Class="mb-2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.subtitle2">Total Scope Over Time</MudText>
+                                @* Neutral interpretation: rising late is a risk signal *@
+                                <TrendSlopeBadge StartValue="@_scopeStart"
+                                                 EndValue="@_scopeEnd"
+                                                 LowerIsBetter="true"
+                                                 MetricLabel="total scope" />
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Total effort in scope — rising late signals risk
+                            </MudText>
+                        </MudStack>
+                        <MudChart ChartType="ChartType.Bar"
+                                  ChartSeries="@_scopeSeries"
+                                  XAxisLabels="@_xAxisLabels"
+                                  Width="100%"
+                                  Height="180px"
+                                  ChartOptions="@_chartOptions" />
+                    </MudPaper>
+
+                    @* Graph 3 — Remaining Effort Trend *@
+                    <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                        <MudStack Spacing="0" Class="mb-2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.subtitle2">Remaining Effort Trend</MudText>
+                                @* Lower-is-better burndown signal *@
+                                <TrendSlopeBadge StartValue="@_remainingStart"
+                                                 EndValue="@_remainingEnd"
+                                                 LowerIsBetter="true"
+                                                 MetricLabel="remaining effort" />
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Remaining effort (pts) — long-horizon burndown
+                            </MudText>
+                        </MudStack>
+                        <MudChart ChartType="ChartType.Line"
+                                  ChartSeries="@_remainingSeries"
+                                  XAxisLabels="@_xAxisLabels"
+                                  Width="100%"
+                                  Height="180px"
+                                  ChartOptions="@_chartOptions" />
+                    </MudPaper>
+
+                    @* Graph 4 — Throughput Trend *@
+                    <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                        <MudStack Spacing="0" Class="mb-2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.subtitle2">Throughput per Sprint</MudText>
+                                @* Higher-is-better *@
+                                <TrendSlopeBadge StartValue="@_throughputStart"
+                                                 EndValue="@_throughputEnd"
+                                                 LowerIsBetter="false"
+                                                 MetricLabel="throughput" />
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Effort completed per sprint (pts) — higher is better
+                            </MudText>
+                        </MudStack>
+                        <MudChart ChartType="ChartType.Bar"
+                                  ChartSeries="@_throughputSeries"
+                                  XAxisLabels="@_xAxisLabels"
+                                  Width="100%"
+                                  Height="180px"
+                                  ChartOptions="@_chartOptions" />
+                    </MudPaper>
+
+                </div>
+            }
+            else if (!_trendsLoading)
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-4">
+                    No sprint projection data available for the selected range.
+                    Sprint projections are computed when Sprint Trend is loaded with recompute enabled.
+                    @if (_selectedProductId.HasValue)
+                    {
+                        var product = _products.FirstOrDefault(p => p.Id == _selectedProductId.Value);
+                        <text> Showing data for product: @(product?.Name ?? _selectedProductId.ToString()).</text>
+                    }
+                </MudAlert>
+            }
+        }
+        else if (!_trendsLoading && _selectedTeamId.HasValue)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                Select a sprint range to view portfolio progress data.
+            </MudAlert>
+        }
+        else if (!_selectedTeamId.HasValue)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                Select a team and sprint range to view portfolio progress data.
+            </MudAlert>
+        }
+    }
+</MudContainer>
+
+<style>
+    /* Responsive 2x2 grid: 2 columns on desktop, 1 column on narrow screens */
+    @@media (max-width: 768px) {
+        .portfolio-trend-grid {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    .trend-slope-badge {
+        font-size: 0.7rem;
+    }
+</style>
+
+@code {
+    private bool _isLoading = true;
+    private bool _trendsLoading = false;
+    private int? _profileId;
+    private string? _errorMessage;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+
+    // Selectors
+    private int? _selectedProductId;
+    private int? _selectedTeamId;
+    private int? _fromSprintId;
+    private int? _toSprintId;
+    private List<ProductDto> _products = new();
+    private List<TeamDto> _teams = new();
+    private List<SprintDto> _sprints = new();
+
+    // Trend data
+    private PortfolioProgressTrendDto? _trendData;
+
+    // Chart data
+    private string[] _xAxisLabels = Array.Empty<string>();
+    private List<ChartSeries> _pctDoneSeries = new();
+    private List<ChartSeries> _scopeSeries = new();
+    private List<ChartSeries> _remainingSeries = new();
+    private List<ChartSeries> _throughputSeries = new();
+
+    // TrendSlopeBadge start/end values (first and last non-null data point)
+    private double? _pctDoneStart, _pctDoneEnd;
+    private double? _scopeStart, _scopeEnd;
+    private double? _remainingStart, _remainingEnd;
+    private double? _throughputStart, _throughputEnd;
+
+    private ChartOptions _chartOptions = new()
+    {
+        YAxisTicks = 5,
+        MaxNumYAxisTicks = 8,
+        YAxisLines = true,
+        XAxisLines = true
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}");
+                return;
+            }
+
+            _profileId = activeProfile.Id;
+            ProfileService.SetCachedActiveProfileId(_profileId);
+
+            _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
+            _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+
+            ParseQueryParameters();
+            UpdateBreadcrumbs();
+
+            // If context passes a teamId, auto-load sprints
+            if (_selectedTeamId.HasValue)
+            {
+                await LoadSprintsAsync(_selectedTeamId.Value);
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            Snackbar.Add($"Error loading portfolio progress: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void ParseQueryParameters()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var queryParams = HttpUtility.ParseQueryString(uri.Query);
+
+        if (int.TryParse(queryParams["productId"], out var productId))
+        {
+            _selectedProductId = productId;
+        }
+
+        if (int.TryParse(queryParams["teamId"], out var teamId))
+        {
+            _selectedTeamId = teamId;
+        }
+    }
+
+    private async Task OnProductChangedAsync(int? productId)
+    {
+        _selectedProductId = productId;
+        // Re-trigger data load with the new product filter (sprint range unchanged)
+        await LoadTrendDataAsync();
+    }
+
+    private async Task OnTeamChangedAsync(int? teamId)
+    {
+        _selectedTeamId = teamId;
+        _fromSprintId = null;
+        _toSprintId = null;
+        _sprints.Clear();
+        _trendData = null;
+
+        if (teamId.HasValue)
+        {
+            await LoadSprintsAsync(teamId.Value);
+        }
+    }
+
+    private async Task OnFromSprintChangedAsync(int? sprintId)
+    {
+        _fromSprintId = sprintId;
+        await LoadTrendDataAsync();
+    }
+
+    private async Task OnToSprintChangedAsync(int? sprintId)
+    {
+        _toSprintId = sprintId;
+        await LoadTrendDataAsync();
+    }
+
+    private async Task LoadSprintsAsync(int teamId)
+    {
+        try
+        {
+            _sprints = (await SprintService.GetSprintsForTeamAsync(teamId))
+                .OrderBy(s => s.StartUtc)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load sprints: {ex.Message}", Severity.Warning);
+        }
+    }
+
+    private async Task LoadTrendDataAsync()
+    {
+        if (!_profileId.HasValue)
+        {
+            return;
+        }
+
+        // Determine the sprint IDs to include in the range
+        var sprintIds = GetSelectedSprintIds();
+        if (sprintIds.Count == 0)
+        {
+            _trendData = null;
+            return;
+        }
+
+        _trendsLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // When a specific product is selected, pass it to the backend.
+            // When "All Products" (null), no product filter is sent — backend uses all owner products.
+            int[]? productFilter = _selectedProductId.HasValue
+                ? new[] { _selectedProductId.Value }
+                : null;
+
+            _trendData = await PortfolioProgressTrendService.GetPortfolioProgressTrendAsync(
+                _profileId.Value,
+                sprintIds,
+                productFilter);
+
+            if (_trendData != null)
+            {
+                BuildChartData(_trendData);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load portfolio progress: {ex.Message}", Severity.Warning);
+        }
+        finally
+        {
+            _trendsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Returns the IDs of sprints in the selected range (From..To inclusive).
+    /// When only one bound is selected the single sprint is used.
+    /// When neither is selected, returns empty.
+    /// </summary>
+    private List<int> GetSelectedSprintIds()
+    {
+        if (!_fromSprintId.HasValue && !_toSprintId.HasValue)
+        {
+            return new List<int>();
+        }
+
+        var orderedSprints = _sprints.OrderBy(s => s.StartUtc).ToList();
+
+        var fromIdx = _fromSprintId.HasValue
+            ? orderedSprints.FindIndex(s => s.Id == _fromSprintId.Value)
+            : 0;
+        var toIdx = _toSprintId.HasValue
+            ? orderedSprints.FindIndex(s => s.Id == _toSprintId.Value)
+            : orderedSprints.Count - 1;
+
+        if (fromIdx < 0) fromIdx = 0;
+        if (toIdx < 0) toIdx = orderedSprints.Count - 1;
+        fromIdx = Math.Clamp(fromIdx, 0, orderedSprints.Count - 1);
+        toIdx   = Math.Clamp(toIdx,   0, orderedSprints.Count - 1);
+        if (fromIdx > toIdx) (fromIdx, toIdx) = (toIdx, fromIdx);
+
+        return orderedSprints
+            .Skip(fromIdx)
+            .Take(toIdx - fromIdx + 1)
+            .Select(s => s.Id)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Builds chart series and axis labels from the trend DTO.
+    /// Only sprints with actual data are included in chart series to avoid
+    /// misleading zero values for sprints where no projection data exists.
+    /// </summary>
+    private void BuildChartData(PortfolioProgressTrendDto data)
+    {
+        // Use only sprints with data for charts to avoid false zero values
+        var dataPoints = data.Sprints.Where(s => s.HasData).ToList();
+
+        _xAxisLabels = dataPoints.Select(s => ShortSprintLabel(s.SprintName)).ToArray();
+
+        _pctDoneSeries = new List<ChartSeries>
+        {
+            new ChartSeries
+            {
+                Name = "% Done",
+                Data = dataPoints.Select(s => s.PercentDone ?? 0.0).ToArray()
+            }
+        };
+
+        _scopeSeries = new List<ChartSeries>
+        {
+            new ChartSeries
+            {
+                Name = "Total Scope (pts)",
+                Data = dataPoints.Select(s => s.TotalScopeEffort ?? 0.0).ToArray()
+            }
+        };
+
+        _remainingSeries = new List<ChartSeries>
+        {
+            new ChartSeries
+            {
+                Name = "Remaining (pts)",
+                Data = dataPoints.Select(s => s.RemainingEffort ?? 0.0).ToArray()
+            }
+        };
+
+        _throughputSeries = new List<ChartSeries>
+        {
+            new ChartSeries
+            {
+                Name = "Throughput (pts)",
+                Data = dataPoints.Select(s => s.ThroughputEffort ?? 0.0).ToArray()
+            }
+        };
+
+        // Slope badge values: first and last sprints with actual data
+        _pctDoneStart = dataPoints.FirstOrDefault()?.PercentDone;
+        _pctDoneEnd   = dataPoints.LastOrDefault()?.PercentDone;
+        _scopeStart   = dataPoints.FirstOrDefault()?.TotalScopeEffort;
+        _scopeEnd     = dataPoints.LastOrDefault()?.TotalScopeEffort;
+        _remainingStart = dataPoints.FirstOrDefault()?.RemainingEffort;
+        _remainingEnd   = dataPoints.LastOrDefault()?.RemainingEffort;
+        _throughputStart = dataPoints.FirstOrDefault()?.ThroughputEffort;
+        _throughputEnd   = dataPoints.LastOrDefault()?.ThroughputEffort;
+    }
+
+    /// <summary>
+    /// Returns a short sprint label for chart x-axis (max ~10 chars).
+    /// </summary>
+    private static string ShortSprintLabel(string name)
+    {
+        if (name.Length <= 10) return name;
+        // Try to extract a sprint number e.g. "Sprint 42" → "S42"
+        var lower = name.ToLowerInvariant();
+        var idx = lower.IndexOf("sprint ", StringComparison.Ordinal);
+        if (idx >= 0)
+        {
+            var remainder = name[(idx + 7)..].Trim();
+            return remainder.Length <= 5 ? $"S{remainder}" : name[..10];
+        }
+        return name[..10];
+    }
+
+    private async Task LoadInitialDataAsync()
+    {
+        _errorMessage = null;
+        _isLoading = true;
+        StateHasChanged();
+        await OnInitializedAsync();
+    }
+
+    private void UpdateBreadcrumbs()
+    {
+        _breadcrumbs = new List<BreadcrumbItem>
+        {
+            new("Home", WorkspaceRoutes.Home),
+            new("Trends", WorkspaceRoutes.TrendsWorkspace),
+            new("Portfolio Progress", href: null, disabled: true)
+        };
+    }
+
+    private void NavigateToTrends()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.TrendsWorkspace);
+    }
+}

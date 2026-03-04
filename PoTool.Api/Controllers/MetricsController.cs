@@ -529,6 +529,42 @@ public class MetricsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets portfolio progress trend metrics across a selected sprint range.
+    /// Returns per-sprint % done, total scope, remaining effort, and throughput.
+    /// </summary>
+    /// <param name="productOwnerId">Product Owner ID</param>
+    /// <param name="sprintIds">Sprint IDs to include in the trend (ordered chronologically)</param>
+    /// <param name="productIds">Optional product IDs to filter to a specific product (default = all products)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Portfolio progress trend with per-sprint data and summary</returns>
+    [HttpGet("portfolio-progress-trend")]
+    public async Task<ActionResult<PortfolioProgressTrendDto>> GetPortfolioProgressTrend(
+        [FromQuery][Required] int productOwnerId,
+        [FromQuery][Required] int[] sprintIds,
+        [FromQuery] int[]? productIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (sprintIds.Length == 0)
+            {
+                return BadRequest("At least one sprint ID is required");
+            }
+
+            var result = await _mediator.Send(
+                new GetPortfolioProgressTrendQuery(productOwnerId, sprintIds, productIds),
+                cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving portfolio progress trend for ProductOwner: {ProductOwnerId}", productOwnerId);
+            return StatusCode(500, "Error retrieving portfolio progress trend");
+        }
+    }
+
+    /// <summary>
     /// Gets activity details for a work item and its descendants in the selected sprint period.
     /// </summary>
     [HttpGet("work-item-activity/{workItemId:int}")]
