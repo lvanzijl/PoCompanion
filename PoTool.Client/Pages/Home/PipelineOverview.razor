@@ -6,7 +6,6 @@
 @using PoTool.Shared.Pipelines
 @using System.Web
 @inject IProfileService ProfileService
-@inject PipelineService PipelineService
 @inject IPipelinesClient PipelinesClient
 @inject ProductService ProductService
 @inject TeamService TeamService
@@ -14,7 +13,7 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
-<PageTitle>Pipeline Insights - PO Companion</PageTitle>
+<PageTitle>Pipeline Trend - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     @* Workspace Header *@
@@ -22,16 +21,11 @@
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudIcon Icon="@Icons.Material.Filled.Insights" Color="Color.Info" Size="Size.Large" />
-                    <MudText Typo="Typo.h4">
-                        Pipeline Insights
-                    </MudText>
+                    <MudIcon Icon="@Icons.Material.Filled.ShowChart" Color="Color.Info" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">Pipeline Trend</MudText>
                 </MudStack>
-
-                @* Breadcrumb *@
                 <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
             </MudStack>
-
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Default"
                        StartIcon="@Icons.Material.Filled.Home"
@@ -49,110 +43,22 @@
     {
         <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _errorMessage = null)">
             @_errorMessage
-            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@LoadDataAsync" Class="ml-2">
-                Retry
-            </MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@LoadDataAsync" Class="ml-2">Retry</MudButton>
         </MudAlert>
     }
     else
     {
-        @* Sprint Navigation *@
+        @* Sprint range + filter controls *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudStack Spacing="3">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                    <MudText Typo="Typo.h6">
-                        <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Class="mr-2" />
-                        Sprint Navigation
-                    </MudText>
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.h6">
+                    <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Class="mr-2" />
+                    Sprint Range
+                </MudText>
 
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                        <MudText Typo="Typo.body2" Color="@(_advancedMode ? Color.Primary : Color.Default)">
-                            @(_advancedMode ? "Trend (Multi-sprint)" : "Zoom (Single sprint)")
-                        </MudText>
-                        <MudTooltip Text="@(_advancedMode ? "Click to switch to Zoom (Single sprint)" : "Click to switch to Trend (Multi-sprint)")">
-                            <MudToggleIconButton Toggled="@_advancedMode"
-                                                 ToggledChanged="OnAdvancedModeToggled"
-                                                 Icon="@Icons.Material.Filled.BarChart"
-                                                 ToggledIcon="@Icons.Material.Filled.BarChart"
-                                                 Color="Color.Default"
-                                                 ToggledColor="Color.Primary"
-                                                 Variant="Variant.Outlined"
-                                                 Size="Size.Medium"
-                                                 ToggledSize="Size.Medium" />
-                        </MudTooltip>
-                    </MudStack>
-                </MudStack>
-
-                @if (!_advancedMode)
-                {
-                    @* Single sprint navigation *@
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="3">
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
-                                       Color="Color.Primary"
-                                       Variant="Variant.Outlined"
-                                       Disabled="@(!CanNavigatePrevious())"
-                                       OnClick="NavigateToPreviousSprint"
-                                       aria-label="Previous Sprint" />
-
-                        <MudStack AlignItems="AlignItems.Center" Spacing="0">
-                            <MudText Typo="Typo.h5" Align="Align.Center">
-                                @(_currentSprint?.Name ?? "No sprint selected")
-                            </MudText>
-                            @if (_currentSprint?.StartUtc != null && _currentSprint?.EndUtc != null)
-                            {
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                    @_currentSprint.StartUtc.Value.ToString("MMM d") — @_currentSprint.EndUtc.Value.ToString("MMM d, yyyy")
-                                </MudText>
-                            }
-                        </MudStack>
-
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowForward"
-                                       Color="Color.Primary"
-                                       Variant="Variant.Outlined"
-                                       Disabled="@(!CanNavigateNext())"
-                                       OnClick="NavigateToNextSprint"
-                                       aria-label="Next Sprint" />
-                    </MudStack>
-                }
-                else
-                {
-                    @* Advanced mode: multi-sprint trend *@
-                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
-                        Showing pipeline trends for the previous @_trendSprintCount sprints ending at the selected sprint.
-                    </MudAlert>
-
-                    <MudGrid Spacing="2">
-                        <MudItem xs="12" sm="6">
-                            <MudSelect T="int" Label="Last sprint to show"
-                                       Value="@(_currentSprint?.Id ?? 0)"
-                                       ValueChanged="OnTrendLastSprintChanged"
-                                       Variant="Variant.Outlined"
-                                       Dense="true"
-                                       FullWidth="true">
-                                @foreach (var sprint in _filteredSprints)
-                                {
-                                    <MudSelectItem Value="@sprint.Id">@sprint.Name</MudSelectItem>
-                                }
-                            </MudSelect>
-                        </MudItem>
-                        <MudItem xs="12" sm="4">
-                            <MudNumericField T="int" Label="Number of sprints to show"
-                                             Value="@_trendSprintCount"
-                                             ValueChanged="OnTrendSprintCountChanged"
-                                             Min="1"
-                                             Max="@MaxAvailableSprints"
-                                             Variant="Variant.Outlined"
-                                             FullWidth="true" />
-                        </MudItem>
-                        <MudItem xs="12" sm="2">
-                            <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">@GetTrendRangeLabel()</MudText>
-                        </MudItem>
-                    </MudGrid>
-                }
-
-                @* Filter row *@
                 <MudGrid Spacing="2">
-                    <MudItem xs="12" sm="6">
+                    @* Team selector (drives sprint list) *@
+                    <MudItem xs="12" sm="6" md="3">
                         <MudSelect T="int?"
                                    Value="_selectedTeamId"
                                    Label="Team"
@@ -167,7 +73,8 @@
                         </MudSelect>
                     </MudItem>
 
-                    <MudItem xs="12" sm="6">
+                    @* Product filter *@
+                    <MudItem xs="12" sm="6" md="3">
                         <MudSelect T="int?"
                                    Value="_selectedProductId"
                                    Label="Product"
@@ -181,196 +88,232 @@
                             }
                         </MudSelect>
                     </MudItem>
+
+                    @* Last sprint to show *@
+                    @if (_filteredSprints.Count > 0)
+                    {
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudSelect T="int"
+                                       Label="End sprint"
+                                       Value="@(_currentSprint?.Id ?? 0)"
+                                       ValueChanged="OnEndSprintChanged"
+                                       Variant="Variant.Outlined"
+                                       FullWidth="true">
+                                @foreach (var sprint in _filteredSprints)
+                                {
+                                    <MudSelectItem Value="@sprint.Id">@sprint.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        @* Sprint count *@
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudNumericField T="int"
+                                             Label="Sprints to show"
+                                             Value="@_trendSprintCount"
+                                             ValueChanged="OnTrendSprintCountChanged"
+                                             Min="2"
+                                             Max="@MaxAvailableSprints"
+                                             Variant="Variant.Outlined"
+                                             FullWidth="true" />
+                        </MudItem>
+                    }
                 </MudGrid>
+
+                @if (_filteredSprints.Count > 0 && _currentSprint != null)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Showing @GetTrendRangeLabel()
+                    </MudText>
+                }
             </MudStack>
         </MudPaper>
 
         @if (_metricsLoading)
         {
-            <LoadingIndicator IsLoading="true" />
+            <MudProgressLinear Indeterminate="true" Color="Color.Info" Class="mb-2" />
         }
-        else if (_filteredSprints.Count == 0)
+
+        @if (_filteredSprints.Count == 0)
         {
-            <MudAlert Severity="Severity.Info" Class="mb-4">
-                No sprints found. Ensure sprint data has been synced.
-            </MudAlert>
+            <MudAlert Severity="Severity.Info">No sprints found. Ensure sprint data has been synced.</MudAlert>
         }
         else if (_currentSprint == null)
         {
-            <MudAlert Severity="Severity.Info" Class="mb-4">
-                No sprint selected.
-            </MudAlert>
+            <MudAlert Severity="Severity.Info">No sprint selected.</MudAlert>
         }
-        else
+        else if (_trendSprints.Count > 0)
         {
-            @* Sprint coverage diagnostics (only shown when there are unmapped runs) *@
-            @if (_sprintTrendsResponse != null && _sprintTrendsResponse.Success && _sprintTrendsResponse.UnmappedRunCount > 0)
+            @* Coverage notice (only when unmapped runs exist) *@
+            @if (_sprintTrendsResponse?.UnmappedRunCount > 0)
             {
                 <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
                     Sprint coverage: @_sprintTrendsResponse.SprintCoveragePercent.ToString("F0")% of runs mapped
-                    · @_sprintTrendsResponse.UnmappedRunCount unmapped run(s) (finished outside sprint boundaries)
+                    · @_sprintTrendsResponse.UnmappedRunCount unmapped run(s) finished outside sprint boundaries.
                 </MudAlert>
             }
 
-            @* Single-sprint: KPI snapshot *@
-            @if (!_advancedMode)
-            {
-                var sprintData = _sprintTrendsResponse?.Sprints.FirstOrDefault(s => s.SprintId == _currentSprint.Id);
+            @* 2×2 PO Trend Grid *@
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;"
+                 class="pipeline-trend-grid">
 
-                <MudGrid Spacing="3" Class="mb-4">
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudPaper Elevation="2" Class="pa-4">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Build Success Rate</MudText>
-                            <MudText Typo="Typo.h5" Color="Color.Success">
-                                @(sprintData?.SuccessRate.HasValue == true ? $"{sprintData.SuccessRate.Value:F1}%" : "—")
-                            </MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@(sprintData?.CompletedRuns ?? 0) completed runs</MudText>
-                        </MudPaper>
-                    </MudItem>
-
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudPaper Elevation="2" Class="pa-4">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Build Failure Rate</MudText>
-                            <MudText Typo="Typo.h5" Color="@(sprintData?.FailureRate > 20 ? Color.Error : Color.Default)">
-                                @(sprintData?.FailureRate.HasValue == true ? $"{sprintData.FailureRate.Value:F1}%" : "—")
-                            </MudText>
-                        </MudPaper>
-                    </MudItem>
-
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudPaper Elevation="2" Class="pa-4">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">MTTR (Median)</MudText>
-                            <MudText Typo="Typo.h5">
-                                @FormatHours(sprintData?.MedianMttrHours)
-                            </MudText>
-                            @if (sprintData?.P75MttrHours.HasValue == true)
-                            {
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">P75: @FormatHours(sprintData.P75MttrHours)</MudText>
-                            }
-                        </MudPaper>
-                    </MudItem>
-
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudPaper Elevation="2" Class="pa-4">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Pipeline Duration (Median)</MudText>
-                            <MudText Typo="Typo.h5">
-                                @FormatHours(sprintData?.MedianDurationHours)
-                            </MudText>
-                            @if (sprintData?.P75DurationHours.HasValue == true)
-                            {
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">P75: @FormatHours(sprintData.P75DurationHours)</MudText>
-                            }
-                        </MudPaper>
-                    </MudItem>
-
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudPaper Elevation="2" Class="pa-4">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Time to First Failure</MudText>
-                            <MudText Typo="Typo.h5">
-                                @FormatHours(sprintData?.MedianTimeToFirstFailureHours)
-                            </MudText>
-                        </MudPaper>
-                    </MudItem>
-
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudPaper Elevation="2" Class="pa-4">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Flakiness Rate</MudText>
-                            <MudText Typo="Typo.h5" Color="@(sprintData?.FlakinessRate > 30 ? Color.Warning : Color.Default)">
-                                @(sprintData?.FlakinessRate.HasValue == true ? $"{sprintData.FlakinessRate.Value:F1}%" : "—")
-                            </MudText>
-                        </MudPaper>
-                    </MudItem>
-                </MudGrid>
-
-                @if (sprintData == null || sprintData.TotalRuns == 0)
-                {
-                    <MudAlert Severity="Severity.Info">No pipeline runs found for this sprint.</MudAlert>
-                }
-            }
-
-            @* Multi-sprint trend charts *@
-            @if (_advancedMode && _trendSprints.Count > 0)
-            {
-                @* Build Success & Failure Rate Trend *@
-                <MudPaper Elevation="2" Class="pa-4 mb-4">
-                    <MudText Typo="Typo.h6" Class="mb-3">
-                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Class="mr-2" />
-                        Build Success / Failure Rate per Sprint
-                    </MudText>
+                @* Chart 1 — Reliability Trend (Success Rate) *@
+                <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                    <MudStack Spacing="0" Class="mb-2">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudText Typo="Typo.subtitle2">Reliability Trend</MudText>
+                            <TrendSlopeBadge StartValue="@_reliabilityStart"
+                                             EndValue="@_reliabilityEnd"
+                                             LowerIsBetter="false"
+                                             MetricLabel="success rate" />
+                        </MudStack>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Success rate % per sprint (successful / completed runs; cancelled excluded)
+                        </MudText>
+                    </MudStack>
                     <MudChart ChartType="ChartType.Line"
-                              ChartSeries="@_successFailureChartSeries"
+                              ChartSeries="@_reliabilityChartSeries"
                               XAxisLabels="@_trendXAxisLabels"
                               Width="100%"
-                              Height="300px"
+                              Height="180px"
                               ChartOptions="@_chartOptions" />
                 </MudPaper>
 
-                @* MTTR Trend *@
-                <MudPaper Elevation="2" Class="pa-4 mb-4">
-                    <MudText Typo="Typo.h6" Class="mb-3">
-                        <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-2" />
-                        MTTR per Sprint (hours)
-                    </MudText>
+                @* Chart 2 — Time-to-Green Trend (Median Duration) *@
+                <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                    <MudStack Spacing="0" Class="mb-2">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudText Typo="Typo.subtitle2">Time-to-Green Trend</MudText>
+                            <TrendSlopeBadge StartValue="@_ttgStart"
+                                             EndValue="@_ttgEnd"
+                                             LowerIsBetter="true"
+                                             MetricLabel="time to green" />
+                        </MudStack>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @if (_hasMainBranchData)
+                            {
+                                <text>Median duration (h) of main/master branch runs per sprint</text>
+                            }
+                            else
+                            {
+                                <text>Median pipeline duration (h) per sprint — all branches (no main-branch runs detected)</text>
+                            }
+                        </MudText>
+                    </MudStack>
+                    <MudChart ChartType="ChartType.Line"
+                              ChartSeries="@_ttgChartSeries"
+                              XAxisLabels="@_trendXAxisLabels"
+                              Width="100%"
+                              Height="180px"
+                              ChartOptions="@_chartOptions" />
+                </MudPaper>
+
+                @* Chart 3 — Tail Risk Trend (P90 Duration) *@
+                <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                    <MudStack Spacing="0" Class="mb-2">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudText Typo="Typo.subtitle2">Tail Risk Trend</MudText>
+                            <TrendSlopeBadge StartValue="@_tailRiskStart"
+                                             EndValue="@_tailRiskEnd"
+                                             LowerIsBetter="true"
+                                             MetricLabel="P90 duration" />
+                        </MudStack>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            P90 pipeline duration (h) per sprint — gaps shown when fewer than 3 runs
+                        </MudText>
+                    </MudStack>
                     <MudChart ChartType="ChartType.Bar"
-                              ChartSeries="@_mttrChartSeries"
+                              ChartSeries="@_tailRiskChartSeries"
                               XAxisLabels="@_trendXAxisLabels"
                               Width="100%"
-                              Height="300px"
+                              Height="180px"
                               ChartOptions="@_chartOptions" />
                 </MudPaper>
 
-                @* Duration Trend *@
-                <MudPaper Elevation="2" Class="pa-4 mb-4">
-                    <MudText Typo="Typo.h6" Class="mb-3">
-                        <MudIcon Icon="@Icons.Material.Filled.Timer" Class="mr-2" />
-                        Pipeline Duration per Sprint (hours)
-                    </MudText>
-                    <MudChart ChartType="ChartType.Line"
-                              ChartSeries="@_durationChartSeries"
-                              XAxisLabels="@_trendXAxisLabels"
-                              Width="100%"
-                              Height="300px"
-                              ChartOptions="@_chartOptions" />
-                </MudPaper>
-
-                @* Flakiness Trend *@
-                <MudPaper Elevation="2" Class="pa-4 mb-4">
-                    <MudText Typo="Typo.h6" Class="mb-3">
-                        <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" />
-                        Flakiness Rate per Sprint (%)
-                    </MudText>
+                @* Chart 4 — Flakiness Trend *@
+                <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                    <MudStack Spacing="0" Class="mb-2">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudText Typo="Typo.subtitle2">Flakiness / Instability Trend</MudText>
+                            <TrendSlopeBadge StartValue="@_flakinessStart"
+                                             EndValue="@_flakinessEnd"
+                                             LowerIsBetter="true"
+                                             MetricLabel="flakiness rate" />
+                        </MudStack>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            % of distinct pipelines with both successes and failures in the same sprint
+                        </MudText>
+                    </MudStack>
                     <MudChart ChartType="ChartType.Bar"
                               ChartSeries="@_flakinessChartSeries"
                               XAxisLabels="@_trendXAxisLabels"
                               Width="100%"
-                              Height="300px"
+                              Height="180px"
                               ChartOptions="@_chartOptions" />
                 </MudPaper>
 
-                @* Time to First Failure Trend *@
-                <MudPaper Elevation="2" Class="pa-4 mb-4">
-                    <MudText Typo="Typo.h6" Class="mb-3">
-                        <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Class="mr-2" />
-                        Time to First Failure Detection per Sprint (hours)
+            </div>
+
+            @* Advanced drill-down (secondary; collapsed by default) *@
+            <MudExpansionPanels>
+                <MudExpansionPanel Text="Advanced / Drill-down" Icon="@Icons.Material.Filled.ExpandMore">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+                        Detailed sprint metrics table. Sprint coverage:
+                        @_sprintTrendsResponse?.SprintCoveragePercent.ToString("F0")%
+                        (@_sprintTrendsResponse?.UnmappedRunCount unmapped runs)
                     </MudText>
-                    <MudChart ChartType="ChartType.Line"
-                              ChartSeries="@_ttffChartSeries"
-                              XAxisLabels="@_trendXAxisLabels"
-                              Width="100%"
-                              Height="300px"
-                              ChartOptions="@_chartOptions" />
-                </MudPaper>
-            }
-            else if (_advancedMode && _trendSprints.Count == 0 && !_metricsLoading)
-            {
-                <MudAlert Severity="Severity.Info">No pipeline data available for the selected sprint range.</MudAlert>
-            }
+                    <MudSimpleTable Dense="true" Hover="true" Bordered="false">
+                        <thead>
+                            <tr>
+                                <th>Sprint</th>
+                                <th>Runs</th>
+                                <th>Success&nbsp;%</th>
+                                <th>Median&nbsp;Duration&nbsp;(h)</th>
+                                <th>P75&nbsp;Duration&nbsp;(h)</th>
+                                <th>P90&nbsp;Duration&nbsp;(h)</th>
+                                <th>Main-Branch&nbsp;Runs</th>
+                                <th>Flakiness&nbsp;%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in _trendSprints)
+                            {
+                                <tr>
+                                    <td>@s.SprintName</td>
+                                    <td>@s.TotalRuns</td>
+                                    <td>@(s.SuccessRate.HasValue ? $"{s.SuccessRate.Value:F1}" : "—")</td>
+                                    <td>@FormatHours(s.MedianDurationHours)</td>
+                                    <td>@FormatHours(s.P75DurationHours)</td>
+                                    <td>@FormatHours(s.P90DurationHours)</td>
+                                    <td>@(s.MainBranchRunCount > 0 ? $"{s.MainBranchRunCount} ({FormatHours(s.MedianMainBranchDurationHours)})" : "—")</td>
+                                    <td>@(s.FlakinessRate.HasValue ? $"{s.FlakinessRate.Value:F1}" : "—")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        }
+        else if (!_metricsLoading)
+        {
+            <MudAlert Severity="Severity.Info">No pipeline data available for the selected sprint range.</MudAlert>
         }
     }
 </MudContainer>
 
+<style>
+    @@media (max-width: 768px) {
+        .pipeline-trend-grid {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    .trend-slope-badge {
+        font-size: 0.7rem;
+    }
+</style>
+
 @code {
-    private const int TrendSprintCount = 10;
+    private const int DefaultTrendSprintCount = 6;
 
     private bool _isLoading = true;
     private bool _metricsLoading = false;
@@ -381,8 +324,7 @@
     // Selectors
     private int? _selectedTeamId;
     private int? _selectedProductId;
-    private bool _advancedMode = true;
-    private int _trendSprintCount = TrendSprintCount;
+    private int _trendSprintCount = DefaultTrendSprintCount;
     private List<TeamDto> _teams = new();
     private List<ProductDto> _products = new();
     private List<SprintDto> _allSprints = new();
@@ -394,16 +336,26 @@
     private GetPipelineSprintTrendsResponse? _sprintTrendsResponse;
     private List<PipelineSprintMetricsDto> _trendSprints = new();
     private string[] _trendXAxisLabels = Array.Empty<string>();
-    private List<ChartSeries> _successFailureChartSeries = new();
-    private List<ChartSeries> _mttrChartSeries = new();
-    private List<ChartSeries> _durationChartSeries = new();
+
+    // 2×2 chart series
+    private List<ChartSeries> _reliabilityChartSeries = new();
+    private List<ChartSeries> _ttgChartSeries = new();
+    private List<ChartSeries> _tailRiskChartSeries = new();
     private List<ChartSeries> _flakinessChartSeries = new();
-    private List<ChartSeries> _ttffChartSeries = new();
+
+    // Whether this response has main-branch data (affects Time-to-Green subtitle)
+    private bool _hasMainBranchData = false;
+
+    // Slope badge endpoints (first/last non-null point in the sprint range)
+    private double? _reliabilityStart, _reliabilityEnd;
+    private double? _ttgStart, _ttgEnd;
+    private double? _tailRiskStart, _tailRiskEnd;
+    private double? _flakinessStart, _flakinessEnd;
 
     private ChartOptions _chartOptions = new()
     {
         YAxisTicks = 5,
-        MaxNumYAxisTicks = 10,
+        MaxNumYAxisTicks = 8,
         YAxisLines = true,
         XAxisLines = true
     };
@@ -433,7 +385,6 @@
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
             _products = (await ProductService.GetProductsByOwnerAsync(_profileId.Value)).ToList();
 
-            // Load all sprints for all teams
             _allSprints.Clear();
             foreach (var team in _teams)
             {
@@ -447,7 +398,6 @@
 
             ApplySprintFilters();
             FindCurrentSprint();
-
             await LoadMetricsAsync();
             UpdateBreadcrumbs();
         }
@@ -465,13 +415,12 @@
     {
         var sprints = _allSprints.AsEnumerable();
         if (_selectedTeamId.HasValue)
-        {
             sprints = sprints.Where(s => s.TeamId == _selectedTeamId.Value);
-        }
 
         _filteredSprints = sprints
             .Where(s => s.StartUtc.HasValue && s.EndUtc.HasValue)
             .OrderBy(s => s.StartUtc)
+            .DistinctBy(s => s.Id)
             .ToList();
     }
 
@@ -503,34 +452,25 @@
             if (!_profileId.HasValue || _currentSprint == null)
                 return;
 
-            List<int> sprintIds;
-            if (_advancedMode)
-            {
-                var startIndex = Math.Max(0, _currentSprintIndex - _trendSprintCount + 1);
-                sprintIds = _filteredSprints
-                    .Skip(startIndex)
-                    .Take(_currentSprintIndex - startIndex + 1)
-                    .Select(s => s.Id)
-                    .ToList();
-            }
-            else
-            {
-                sprintIds = new List<int> { _currentSprint.Id };
-            }
+            var startIndex = Math.Max(0, _currentSprintIndex - _trendSprintCount + 1);
+            var sprintIds = _filteredSprints
+                .Skip(startIndex)
+                .Take(_currentSprintIndex - startIndex + 1)
+                .Select(s => s.Id)
+                .ToList();
 
             if (sprintIds.Count == 0)
                 return;
 
-            IEnumerable<int>? productFilter = _selectedProductId.HasValue
-                ? new[] { _selectedProductId.Value }
+            var productIdsString = _selectedProductId.HasValue
+                ? _selectedProductId.Value.ToString()
                 : null;
 
-            var productIdsString = productFilter != null ? string.Join(",", productFilter) : null;
             _sprintTrendsResponse = await PipelinesClient.GetSprintTrendsAsync(
                 _profileId.Value,
                 sprintIds,
                 productIds: productIdsString,
-                teamId: productFilter == null ? _selectedTeamId : null,
+                teamId: !_selectedProductId.HasValue ? _selectedTeamId : null,
                 CancellationToken.None);
 
             if (_sprintTrendsResponse?.Success == true)
@@ -539,10 +479,8 @@
                     .OrderBy(s => s.StartUtc ?? DateTimeOffset.MaxValue)
                     .ToList();
 
-                if (_advancedMode)
-                {
-                    BuildTrendCharts();
-                }
+                _hasMainBranchData = _sprintTrendsResponse.HasMainBranchData;
+                BuildTrendCharts();
             }
         }
         catch (Exception ex)
@@ -562,33 +500,52 @@
 
         _trendXAxisLabels = _trendSprints.Select(s => s.SprintName).ToArray();
 
-        _successFailureChartSeries = new List<ChartSeries>
+        // Chart 1: Reliability — null → 0 gap representation
+        _reliabilityChartSeries = new List<ChartSeries>
         {
-            new() { Name = "Success %", Data = _trendSprints.Select(s => s.SuccessRate ?? 0).ToArray() },
-            new() { Name = "Failure %", Data = _trendSprints.Select(s => s.FailureRate ?? 0).ToArray() }
+            new() { Name = "Success %", Data = _trendSprints.Select(s => s.SuccessRate ?? 0).ToArray() }
         };
+        (_reliabilityStart, _reliabilityEnd) = FirstLastNonNull(_trendSprints.Select(s => s.SuccessRate));
 
-        _mttrChartSeries = new List<ChartSeries>
+        // Chart 2: Time-to-Green — prefer main-branch median; fall back to all-branch median
+        if (_hasMainBranchData)
         {
-            new() { Name = "Median MTTR (h)", Data = _trendSprints.Select(s => s.MedianMttrHours ?? 0).ToArray() },
-            new() { Name = "P75 MTTR (h)", Data = _trendSprints.Select(s => s.P75MttrHours ?? 0).ToArray() }
-        };
-
-        _durationChartSeries = new List<ChartSeries>
+            _ttgChartSeries = new List<ChartSeries>
+            {
+                new() { Name = "Median Main-Branch Duration (h)", Data = _trendSprints.Select(s => s.MedianMainBranchDurationHours ?? 0).ToArray() }
+            };
+            (_ttgStart, _ttgEnd) = FirstLastNonNull(_trendSprints.Select(s => s.MedianMainBranchDurationHours));
+        }
+        else
         {
-            new() { Name = "Median Duration (h)", Data = _trendSprints.Select(s => s.MedianDurationHours ?? 0).ToArray() },
-            new() { Name = "P75 Duration (h)", Data = _trendSprints.Select(s => s.P75DurationHours ?? 0).ToArray() }
-        };
+            _ttgChartSeries = new List<ChartSeries>
+            {
+                new() { Name = "Median Duration (h)", Data = _trendSprints.Select(s => s.MedianDurationHours ?? 0).ToArray() }
+            };
+            (_ttgStart, _ttgEnd) = FirstLastNonNull(_trendSprints.Select(s => s.MedianDurationHours));
+        }
 
+        // Chart 3: Tail Risk (P90 duration; null shown as 0 in chart)
+        _tailRiskChartSeries = new List<ChartSeries>
+        {
+            new() { Name = "P90 Duration (h)", Data = _trendSprints.Select(s => s.P90DurationHours ?? 0).ToArray() }
+        };
+        (_tailRiskStart, _tailRiskEnd) = FirstLastNonNull(_trendSprints.Select(s => s.P90DurationHours));
+
+        // Chart 4: Flakiness
         _flakinessChartSeries = new List<ChartSeries>
         {
             new() { Name = "Flakiness %", Data = _trendSprints.Select(s => s.FlakinessRate ?? 0).ToArray() }
         };
+        (_flakinessStart, _flakinessEnd) = FirstLastNonNull(_trendSprints.Select(s => s.FlakinessRate));
+    }
 
-        _ttffChartSeries = new List<ChartSeries>
-        {
-            new() { Name = "Median TTFF (h)", Data = _trendSprints.Select(s => s.MedianTimeToFirstFailureHours ?? 0).ToArray() }
-        };
+    /// <summary>Returns the first and last non-null values in a series for slope badge computation.</summary>
+    private static (double? first, double? last) FirstLastNonNull(IEnumerable<double?> values)
+    {
+        var nonNull = values.Where(v => v.HasValue).Select(v => v!.Value).ToList();
+        if (nonNull.Count < 2) return (null, null);
+        return (nonNull.First(), nonNull.Last());
     }
 
     private void ParseQueryParameters()
@@ -610,13 +567,10 @@
         var queryParams = new List<string>();
         if (_selectedTeamId.HasValue) queryParams.Add($"teamId={_selectedTeamId.Value}");
         if (_selectedProductId.HasValue) queryParams.Add($"productId={_selectedProductId.Value}");
-
         var qs = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : string.Empty;
         NavigationManager.NavigateTo($"{WorkspaceRoutes.PipelineOverview}{qs}", forceLoad: false);
     }
 
-    private bool CanNavigatePrevious() => _currentSprintIndex > 0;
-    private bool CanNavigateNext() => _currentSprintIndex >= 0 && _currentSprintIndex < _filteredSprints.Count - 1;
     private int MaxAvailableSprints => _filteredSprints.Count > 0 ? _filteredSprints.Count : 1;
 
     private string GetTrendRangeLabel()
@@ -631,26 +585,6 @@
         if (!hours.HasValue) return "—";
         if (hours.Value < 1) return $"{hours.Value * 60:F0} min";
         return $"{hours.Value:F1} h";
-    }
-
-    private async Task NavigateToPreviousSprint()
-    {
-        if (CanNavigatePrevious())
-        {
-            _currentSprintIndex--;
-            _currentSprint = _filteredSprints[_currentSprintIndex];
-            await LoadMetricsAsync();
-        }
-    }
-
-    private async Task NavigateToNextSprint()
-    {
-        if (CanNavigateNext())
-        {
-            _currentSprintIndex++;
-            _currentSprint = _filteredSprints[_currentSprintIndex];
-            await LoadMetricsAsync();
-        }
     }
 
     private async Task OnTeamChanged(int? teamId)
@@ -669,13 +603,7 @@
         await LoadMetricsAsync();
     }
 
-    private async Task OnAdvancedModeToggled(bool toggled)
-    {
-        _advancedMode = toggled;
-        await LoadMetricsAsync();
-    }
-
-    private async Task OnTrendLastSprintChanged(int sprintId)
+    private async Task OnEndSprintChanged(int sprintId)
     {
         var index = _filteredSprints.FindIndex(s => s.Id == sprintId);
         if (index >= 0)
@@ -688,7 +616,7 @@
 
     private async Task OnTrendSprintCountChanged(int count)
     {
-        _trendSprintCount = Math.Max(1, count);
+        _trendSprintCount = Math.Max(2, count);
         await LoadMetricsAsync();
     }
 
@@ -698,7 +626,7 @@
         {
             new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
             new("Trends (Past)", WorkspaceRoutes.TrendsWorkspace, icon: Icons.Material.Filled.Timeline),
-            new("Pipeline Insights", null, disabled: true, icon: Icons.Material.Filled.Insights)
+            new("Pipeline Trend", null, disabled: true, icon: Icons.Material.Filled.ShowChart)
         };
     }
 

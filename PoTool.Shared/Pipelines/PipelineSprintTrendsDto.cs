@@ -19,6 +19,13 @@ public sealed class GetPipelineSprintTrendsResponse
 
     /// <summary>Percentage of runs that were mapped to a sprint (0–100).</summary>
     public double SprintCoveragePercent { get; set; }
+
+    /// <summary>
+    /// True when at least one sprint in the response has main-branch runs and uses
+    /// MedianMainBranchDurationHours for the Time-to-Green signal.
+    /// False means all sprints fall back to all-branch MedianDurationHours.
+    /// </summary>
+    public bool HasMainBranchData { get; set; }
 }
 
 /// <summary>
@@ -62,6 +69,19 @@ public sealed class PipelineSprintMetricsDto
 
     /// <summary>75th-percentile pipeline duration in hours.</summary>
     public double? P75DurationHours { get; set; }
+
+    /// <summary>90th-percentile pipeline duration in hours. Null when fewer than 3 runs have duration data.</summary>
+    public double? P90DurationHours { get; set; }
+
+    /// <summary>
+    /// Median duration (h) of runs on the main/master branch per sprint.
+    /// Used as the Time-to-Green signal when main-branch runs are present.
+    /// Null when no main-branch runs in this sprint.
+    /// </summary>
+    public double? MedianMainBranchDurationHours { get; set; }
+
+    /// <summary>Number of main/master branch runs with duration data in this sprint.</summary>
+    public int MainBranchRunCount { get; set; }
 
     /// <summary>
     /// Flakiness rate: percentage of distinct pipelines that had both successes and failures.

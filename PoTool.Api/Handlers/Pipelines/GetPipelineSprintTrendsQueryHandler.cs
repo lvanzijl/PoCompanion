@@ -157,7 +157,8 @@ public sealed class GetPipelineSprintTrendsQueryHandler
                 r.PipelineDefinitionId,
                 r.FinishedDateUtc,
                 r.CreatedDateUtc,
-                r.Result
+                r.Result,
+                r.SourceBranch
             })
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -165,7 +166,7 @@ public sealed class GetPipelineSprintTrendsQueryHandler
         _logger.LogDebug("Pipeline sprint trends: loaded {RunCount} runs for {SprintCount} sprints", runs.Count, sprints.Count);
 
         // 4. Assign each run to a sprint based on FinishedDateUtc
-        var sprintSlots = sprints.Select(s => (Sprint: s, Runs: new List<(int PipelineId, DateTime? Finished, DateTime? Started, string? Result)>())).ToList();
+        var sprintSlots = sprints.Select(s => (Sprint: s, Runs: new List<(int PipelineId, DateTime? Finished, DateTime? Started, string? Result, string? Branch)>())).ToList();
 
         int unmappedCount = 0;
         foreach (var run in runs)
@@ -176,7 +177,7 @@ public sealed class GetPipelineSprintTrendsQueryHandler
                 if (run.FinishedDateUtc!.Value >= slot.Sprint.StartDateUtc!.Value &&
                     run.FinishedDateUtc.Value < slot.Sprint.EndDateUtc!.Value)
                 {
-                    slot.Runs.Add((run.PipelineDefinitionId, run.FinishedDateUtc, run.CreatedDateUtc, run.Result));
+                    slot.Runs.Add((run.PipelineDefinitionId, run.FinishedDateUtc, run.CreatedDateUtc, run.Result, run.SourceBranch));
                     matched = true;
                     break;
                 }
@@ -203,7 +204,8 @@ public sealed class GetPipelineSprintTrendsQueryHandler
             Success = true,
             Sprints = sprintMetrics,
             UnmappedRunCount = unmappedCount,
-            SprintCoveragePercent = Math.Round(coveragePercent, 1)
+            SprintCoveragePercent = Math.Round(coveragePercent, 1),
+            HasMainBranchData = sprintMetrics.Any(s => s.MainBranchRunCount > 0)
         };
     }
 
@@ -212,7 +214,7 @@ public sealed class GetPipelineSprintTrendsQueryHandler
         string sprintName,
         DateTimeOffset? startUtc,
         DateTimeOffset? endUtc,
-        List<(int PipelineId, DateTime? Finished, DateTime? Started, string? Result)> runs)
+        List<(int PipelineId, DateTime? Finished, DateTime? Started, string? Result, string? Branch)> runs)
     {
         var dto = new PipelineSprintMetricsDto
         {
@@ -251,6 +253,24 @@ public sealed class GetPipelineSprintTrendsQueryHandler
         {
             dto.MedianDurationHours = Median(durations);
             dto.P75DurationHours = Percentile(durations, 75);
+            // P90 requires at least 3 data points to avoid misleading values
+            if (durations.Count >= 3)
+                dto.P90DurationHours = Percentile(durations, 90);
+        }
+
+        // Main-branch duration — Time-to-Green proxy.
+        // Definition: median (CreatedDateUtc → FinishedDateUtc) for runs whose SourceBranch
+        // ends with "main" or "master" (case-insensitive), e.g. "refs/heads/main", "main".
+        var mainBranchDurations = runs
+            .Where(r => IsMainBranch(r.Branch) && r.Started.HasValue && r.Finished.HasValue && r.Finished.Value > r.Started.Value)
+            .Select(r => (r.Finished!.Value - r.Started!.Value).TotalHours)
+            .OrderBy(x => x)
+            .ToList();
+
+        dto.MainBranchRunCount = mainBranchDurations.Count;
+        if (mainBranchDurations.Count > 0)
+        {
+            dto.MedianMainBranchDurationHours = Median(mainBranchDurations);
         }
 
         // MTTR — per-pipeline: time from failure start to next success start
@@ -310,6 +330,11 @@ public sealed class GetPipelineSprintTrendsQueryHandler
 
         return dto;
     }
+
+    private static bool IsMainBranch(string? branch) =>
+        branch != null && (
+            branch.EndsWith("main", StringComparison.OrdinalIgnoreCase) ||
+            branch.EndsWith("master", StringComparison.OrdinalIgnoreCase));
 
     private static bool IsCompletedResult(string? result) =>
         !string.IsNullOrEmpty(result) &&
