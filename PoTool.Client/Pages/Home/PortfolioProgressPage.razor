@@ -57,10 +57,26 @@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Spacing="2">
                 <MudText Typo="Typo.h6">
-                    <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Class="mr-2" />
-                    Sprint Range
+                    <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Class="mr-2" />
+                    Filters
                 </MudText>
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
+                    @* Product selector — defaults to All Products *@
+                    <MudSelect T="int?"
+                               Value="_selectedProductId"
+                               Label="Product"
+                               Variant="Variant.Outlined"
+                               Dense="true"
+                               Clearable="true"
+                               ValueChanged="OnProductChangedAsync"
+                               Style="min-width: 200px;">
+                        <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
+                        @foreach (var product in _products)
+                        {
+                            <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+
                     <MudSelect T="int?"
                                Value="_selectedTeamId"
                                Label="Team"
@@ -165,7 +181,12 @@
                         @* Scope change *@
                         <MudItem xs="12" sm="6" md="3">
                             <MudPaper Outlined="true" Class="pa-3">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Scope Change</MudText>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Scope Change</MudText>
+                                    <MudTooltip Text="Historical per-sprint scope tracking is not yet available. Total scope shown is the current backlog snapshot.">
+                                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
+                                    </MudTooltip>
+                                </MudStack>
                                 <MudText Typo="Typo.h6">
                                     @if (_trendData.Summary.ScopeChangePercent.HasValue)
                                     {
@@ -316,6 +337,11 @@
                 <MudAlert Severity="Severity.Info" Class="mb-4">
                     No sprint projection data available for the selected range.
                     Sprint projections are computed when Sprint Trend is loaded with recompute enabled.
+                    @if (_selectedProductId.HasValue)
+                    {
+                        var product = _products.FirstOrDefault(p => p.Id == _selectedProductId.Value);
+                        <text> Showing data for product: @(product?.Name ?? _selectedProductId.ToString()).</text>
+                    }
                 </MudAlert>
             }
         }
@@ -354,9 +380,11 @@
     private List<BreadcrumbItem> _breadcrumbs = new();
 
     // Selectors
+    private int? _selectedProductId;
     private int? _selectedTeamId;
     private int? _fromSprintId;
     private int? _toSprintId;
+    private List<ProductDto> _products = new();
     private List<TeamDto> _teams = new();
     private List<SprintDto> _sprints = new();
 
@@ -399,6 +427,7 @@
             ProfileService.SetCachedActiveProfileId(_profileId);
 
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
+            _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
 
             ParseQueryParameters();
             UpdateBreadcrumbs();
@@ -425,10 +454,22 @@
         var uri = new Uri(NavigationManager.Uri);
         var queryParams = HttpUtility.ParseQueryString(uri.Query);
 
+        if (int.TryParse(queryParams["productId"], out var productId))
+        {
+            _selectedProductId = productId;
+        }
+
         if (int.TryParse(queryParams["teamId"], out var teamId))
         {
             _selectedTeamId = teamId;
         }
+    }
+
+    private async Task OnProductChangedAsync(int? productId)
+    {
+        _selectedProductId = productId;
+        // Re-trigger data load with the new product filter (sprint range unchanged)
+        await LoadTrendDataAsync();
     }
 
     private async Task OnTeamChangedAsync(int? teamId)
@@ -491,9 +532,16 @@
 
         try
         {
+            // When a specific product is selected, pass it to the backend.
+            // When "All Products" (null), no product filter is sent — backend uses all owner products.
+            int[]? productFilter = _selectedProductId.HasValue
+                ? new[] { _selectedProductId.Value }
+                : null;
+
             _trendData = await PortfolioProgressTrendService.GetPortfolioProgressTrendAsync(
                 _profileId.Value,
-                sprintIds);
+                sprintIds,
+                productFilter);
 
             if (_trendData != null)
             {

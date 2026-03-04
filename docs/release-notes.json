@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "date": "2026-03-04",
+    "type": "New",
+    "title": "Portfolio Progress Trend",
+    "impact": "New Trends page showing % done, remaining effort, throughput, and scope over a user-selected sprint range, with a trajectory badge (Improving / Stable / At Risk) and per-product filtering.",
+    "area": "Trends",
+    "link": "/home/portfolio-progress"
+  }
+]

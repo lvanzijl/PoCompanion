@@ -52,15 +52,37 @@ public sealed class GetPortfolioProgressTrendQueryHandler
             query.ProductOwnerId, query.SprintIds.Count);
 
         // Resolve product IDs for this product owner
-        var productIds = await _context.Products
+        var allOwnerProductIds = await _context.Products
             .Where(p => p.ProductOwnerId == query.ProductOwnerId)
             .Select(p => p.Id)
             .ToListAsync(cancellationToken);
 
-        if (productIds.Count == 0)
+        if (allOwnerProductIds.Count == 0)
         {
             _logger.LogWarning("No products found for ProductOwner {ProductOwnerId}", query.ProductOwnerId);
             return EmptyResult();
+        }
+
+        // If a product filter is specified, intersect with the owner's products to prevent
+        // cross-owner data leakage. If no filter, use all owner products (Default = All Products).
+        List<int> productIds;
+        if (query.ProductIds is { Length: > 0 })
+        {
+            productIds = allOwnerProductIds
+                .Intersect(query.ProductIds)
+                .ToList();
+
+            if (productIds.Count == 0)
+            {
+                _logger.LogWarning(
+                    "Requested product IDs {RequestedIds} do not belong to ProductOwner {ProductOwnerId}",
+                    string.Join(", ", query.ProductIds), query.ProductOwnerId);
+                return EmptyResult();
+            }
+        }
+        else
+        {
+            productIds = allOwnerProductIds;
         }
 
         // Load sprints for the requested IDs, ordered by start date

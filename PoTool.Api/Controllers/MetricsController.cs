@@ -534,12 +534,14 @@ public class MetricsController : ControllerBase
     /// </summary>
     /// <param name="productOwnerId">Product Owner ID</param>
     /// <param name="sprintIds">Sprint IDs to include in the trend (ordered chronologically)</param>
+    /// <param name="productIds">Optional product IDs to filter to a specific product (default = all products)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Portfolio progress trend with per-sprint data and summary</returns>
     [HttpGet("portfolio-progress-trend")]
     public async Task<ActionResult<PortfolioProgressTrendDto>> GetPortfolioProgressTrend(
         [FromQuery][Required] int productOwnerId,
         [FromQuery][Required] int[] sprintIds,
+        [FromQuery] int[]? productIds = null,
         CancellationToken cancellationToken = default)
     {
         try
@@ -550,7 +552,7 @@ public class MetricsController : ControllerBase
             }
 
             var result = await _mediator.Send(
-                new GetPortfolioProgressTrendQuery(productOwnerId, sprintIds),
+                new GetPortfolioProgressTrendQuery(productOwnerId, sprintIds, productIds),
                 cancellationToken);
 
             return Ok(result);
