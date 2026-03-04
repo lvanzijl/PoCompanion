@@ -190,7 +190,14 @@
                                              MetricLabel="time to green" />
                         </MudStack>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            Median pipeline duration (h) per sprint — fallback: no PR/commit association available
+                            @if (_hasMainBranchData)
+                            {
+                                <text>Median duration (h) of main/master branch runs per sprint</text>
+                            }
+                            else
+                            {
+                                <text>Median pipeline duration (h) per sprint — all branches (no main-branch runs detected)</text>
+                            }
                         </MudText>
                     </MudStack>
                     <MudChart ChartType="ChartType.Line"
@@ -262,7 +269,9 @@
                                 <th>Runs</th>
                                 <th>Success&nbsp;%</th>
                                 <th>Median&nbsp;Duration&nbsp;(h)</th>
+                                <th>P75&nbsp;Duration&nbsp;(h)</th>
                                 <th>P90&nbsp;Duration&nbsp;(h)</th>
+                                <th>Main-Branch&nbsp;Runs</th>
                                 <th>Flakiness&nbsp;%</th>
                             </tr>
                         </thead>
@@ -274,7 +283,9 @@
                                     <td>@s.TotalRuns</td>
                                     <td>@(s.SuccessRate.HasValue ? $"{s.SuccessRate.Value:F1}" : "—")</td>
                                     <td>@FormatHours(s.MedianDurationHours)</td>
+                                    <td>@FormatHours(s.P75DurationHours)</td>
                                     <td>@FormatHours(s.P90DurationHours)</td>
+                                    <td>@(s.MainBranchRunCount > 0 ? $"{s.MainBranchRunCount} ({FormatHours(s.MedianMainBranchDurationHours)})" : "—")</td>
                                     <td>@(s.FlakinessRate.HasValue ? $"{s.FlakinessRate.Value:F1}" : "—")</td>
                                 </tr>
                             }
@@ -331,6 +342,9 @@
     private List<ChartSeries> _ttgChartSeries = new();
     private List<ChartSeries> _tailRiskChartSeries = new();
     private List<ChartSeries> _flakinessChartSeries = new();
+
+    // Whether this response has main-branch data (affects Time-to-Green subtitle)
+    private bool _hasMainBranchData = false;
 
     // Slope badge endpoints (first/last non-null point in the sprint range)
     private double? _reliabilityStart, _reliabilityEnd;
@@ -465,6 +479,7 @@
                     .OrderBy(s => s.StartUtc ?? DateTimeOffset.MaxValue)
                     .ToList();
 
+                _hasMainBranchData = _sprintTrendsResponse.HasMainBranchData;
                 BuildTrendCharts();
             }
         }
@@ -492,12 +507,23 @@
         };
         (_reliabilityStart, _reliabilityEnd) = FirstLastNonNull(_trendSprints.Select(s => s.SuccessRate));
 
-        // Chart 2: Time-to-Green (median duration fallback)
-        _ttgChartSeries = new List<ChartSeries>
+        // Chart 2: Time-to-Green — prefer main-branch median; fall back to all-branch median
+        if (_hasMainBranchData)
         {
-            new() { Name = "Median Duration (h)", Data = _trendSprints.Select(s => s.MedianDurationHours ?? 0).ToArray() }
-        };
-        (_ttgStart, _ttgEnd) = FirstLastNonNull(_trendSprints.Select(s => s.MedianDurationHours));
+            _ttgChartSeries = new List<ChartSeries>
+            {
+                new() { Name = "Median Main-Branch Duration (h)", Data = _trendSprints.Select(s => s.MedianMainBranchDurationHours ?? 0).ToArray() }
+            };
+            (_ttgStart, _ttgEnd) = FirstLastNonNull(_trendSprints.Select(s => s.MedianMainBranchDurationHours));
+        }
+        else
+        {
+            _ttgChartSeries = new List<ChartSeries>
+            {
+                new() { Name = "Median Duration (h)", Data = _trendSprints.Select(s => s.MedianDurationHours ?? 0).ToArray() }
+            };
+            (_ttgStart, _ttgEnd) = FirstLastNonNull(_trendSprints.Select(s => s.MedianDurationHours));
+        }
 
         // Chart 3: Tail Risk (P90 duration; null shown as 0 in chart)
         _tailRiskChartSeries = new List<ChartSeries>

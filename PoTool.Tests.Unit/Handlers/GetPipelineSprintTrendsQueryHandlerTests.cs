@@ -408,4 +408,129 @@ public class GetPipelineSprintTrendsQueryHandlerTests
         Assert.IsNull(sprintDto.P90DurationHours, "P90DurationHours must be null (gap) for empty sprint");
         Assert.IsNull(sprintDto.FlakinessRate, "FlakinessRate must be null (gap) for empty sprint");
     }
+
+    // -----------------------------------------------------------------------
+    // Main-branch Time-to-Green tests
+    // -----------------------------------------------------------------------
+
+    [TestMethod]
+    [Description("MedianMainBranchDurationHours is set when main-branch runs exist; non-main runs don't count")]
+    public async Task Handle_MainBranch_ComputesMedianDurationForMainBranchRunsOnly()
+    {
+        var profile = new ProfileEntity { Id = 80, Name = "Profile 80" };
+        var team    = new TeamEntity    { Id = 80, Name = "Team 80", TeamAreaPath = "Area 80" };
+        var product = new ProductEntity { Id = 80, Name = "Product 80", ProductOwnerId = 80 };
+        var repo    = new RepositoryEntity { Id = 80, ProductId = 80, Name = "Repo 80" };
+        var link    = new ProductTeamLinkEntity { ProductId = 80, TeamId = 80 };
+        var pipelineDef = new PipelineDefinitionEntity
+        {
+            Id = 80, PipelineDefinitionId = 8000, ProductId = 80, RepositoryId = 80,
+            RepoId = "repo-guid-80", RepoName = "Repo 80", Name = "Pipeline 80",
+            LastSyncedUtc = DateTimeOffset.UtcNow
+        };
+        var sprint = new SprintEntity
+        {
+            Id = 80, TeamId = 80, Path = "\\Sprint 80", Name = "Sprint 80",
+            StartUtc = new DateTimeOffset(SprintStart), StartDateUtc = SprintStart,
+            EndUtc = new DateTimeOffset(SprintEnd), EndDateUtc = SprintEnd,
+            LastSyncedDateUtc = DateTime.UtcNow
+        };
+
+        var runBase = new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc);
+        // main-branch run: 1h duration
+        // feature-branch run: 3h duration (should NOT affect MedianMainBranchDurationHours)
+        _context.Profiles.Add(profile);
+        _context.Teams.Add(team);
+        _context.Products.Add(product);
+        _context.Repositories.Add(repo);
+        _context.ProductTeamLinks.Add(link);
+        _context.PipelineDefinitions.Add(pipelineDef);
+        _context.Sprints.Add(sprint);
+        _context.CachedPipelineRuns.AddRange(
+            new CachedPipelineRunEntity
+            {
+                Id = 801, ProductOwnerId = 80, PipelineDefinitionId = 80, TfsRunId = 801,
+                Result = "Succeeded", SourceBranch = "refs/heads/main",
+                CreatedDateUtc = runBase, FinishedDateUtc = runBase.AddHours(1),
+                FinishedDate = new DateTimeOffset(runBase.AddHours(1)), CachedAt = DateTimeOffset.UtcNow
+            },
+            new CachedPipelineRunEntity
+            {
+                Id = 802, ProductOwnerId = 80, PipelineDefinitionId = 80, TfsRunId = 802,
+                Result = "Succeeded", SourceBranch = "refs/heads/feature/my-feature",
+                CreatedDateUtc = runBase.AddHours(2), FinishedDateUtc = runBase.AddHours(5),
+                FinishedDate = new DateTimeOffset(runBase.AddHours(5)), CachedAt = DateTimeOffset.UtcNow
+            });
+        await _context.SaveChangesAsync();
+
+        var query = new GetPipelineSprintTrendsQuery(
+            ProductOwnerId: 80, SprintIds: new[] { 80 }, ProductIds: null, TeamId: null);
+
+        var response = await _handler.Handle(query, CancellationToken.None);
+
+        Assert.IsTrue(response.Success);
+        Assert.IsTrue(response.HasMainBranchData, "HasMainBranchData must be true when main-branch runs exist");
+        var sprintDto = response.Sprints[0];
+        Assert.AreEqual(2, sprintDto.TotalRuns);
+        Assert.AreEqual(1, sprintDto.MainBranchRunCount, "Only the main-branch run should count");
+        Assert.IsNotNull(sprintDto.MedianMainBranchDurationHours);
+        Assert.AreEqual(1.0, sprintDto.MedianMainBranchDurationHours!.Value, delta: 0.01,
+            "MedianMainBranchDurationHours should reflect only the 1h main-branch run");
+        // All-branch median should include both runs: (1h + 3h)/2 = 2h
+        Assert.IsNotNull(sprintDto.MedianDurationHours);
+        Assert.AreEqual(2.0, sprintDto.MedianDurationHours!.Value, delta: 0.01);
+    }
+
+    [TestMethod]
+    [Description("HasMainBranchData is false and MedianMainBranchDurationHours is null when no main-branch runs exist")]
+    public async Task Handle_MainBranch_NullWhenNoMainBranchRuns()
+    {
+        var profile = new ProfileEntity { Id = 90, Name = "Profile 90" };
+        var team    = new TeamEntity    { Id = 90, Name = "Team 90", TeamAreaPath = "Area 90" };
+        var product = new ProductEntity { Id = 90, Name = "Product 90", ProductOwnerId = 90 };
+        var repo    = new RepositoryEntity { Id = 90, ProductId = 90, Name = "Repo 90" };
+        var link    = new ProductTeamLinkEntity { ProductId = 90, TeamId = 90 };
+        var pipelineDef = new PipelineDefinitionEntity
+        {
+            Id = 90, PipelineDefinitionId = 9000, ProductId = 90, RepositoryId = 90,
+            RepoId = "repo-guid-90", RepoName = "Repo 90", Name = "Pipeline 90",
+            LastSyncedUtc = DateTimeOffset.UtcNow
+        };
+        var sprint = new SprintEntity
+        {
+            Id = 90, TeamId = 90, Path = "\\Sprint 90", Name = "Sprint 90",
+            StartUtc = new DateTimeOffset(SprintStart), StartDateUtc = SprintStart,
+            EndUtc = new DateTimeOffset(SprintEnd), EndDateUtc = SprintEnd,
+            LastSyncedDateUtc = DateTime.UtcNow
+        };
+
+        var runBase = new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc);
+        _context.Profiles.Add(profile);
+        _context.Teams.Add(team);
+        _context.Products.Add(product);
+        _context.Repositories.Add(repo);
+        _context.ProductTeamLinks.Add(link);
+        _context.PipelineDefinitions.Add(pipelineDef);
+        _context.Sprints.Add(sprint);
+        _context.CachedPipelineRuns.Add(new CachedPipelineRunEntity
+        {
+            Id = 901, ProductOwnerId = 90, PipelineDefinitionId = 90, TfsRunId = 901,
+            Result = "Succeeded", SourceBranch = "refs/heads/feature/some-branch",
+            CreatedDateUtc = runBase, FinishedDateUtc = runBase.AddHours(2),
+            FinishedDate = new DateTimeOffset(runBase.AddHours(2)), CachedAt = DateTimeOffset.UtcNow
+        });
+        await _context.SaveChangesAsync();
+
+        var query = new GetPipelineSprintTrendsQuery(
+            ProductOwnerId: 90, SprintIds: new[] { 90 }, ProductIds: null, TeamId: null);
+
+        var response = await _handler.Handle(query, CancellationToken.None);
+
+        Assert.IsTrue(response.Success);
+        Assert.IsFalse(response.HasMainBranchData, "HasMainBranchData must be false when no main-branch runs exist");
+        var sprintDto = response.Sprints[0];
+        Assert.AreEqual(0, sprintDto.MainBranchRunCount);
+        Assert.IsNull(sprintDto.MedianMainBranchDurationHours,
+            "MedianMainBranchDurationHours must be null when no main-branch runs exist");
+    }
 }
