@@ -251,6 +251,9 @@ public sealed class GetPipelineSprintTrendsQueryHandler
         {
             dto.MedianDurationHours = Median(durations);
             dto.P75DurationHours = Percentile(durations, 75);
+            // P90 requires at least 3 data points to avoid misleading values
+            if (durations.Count >= 3)
+                dto.P90DurationHours = Percentile(durations, 90);
         }
 
         // MTTR — per-pipeline: time from failure start to next success start

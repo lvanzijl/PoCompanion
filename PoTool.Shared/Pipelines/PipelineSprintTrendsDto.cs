@@ -63,6 +63,9 @@ public sealed class PipelineSprintMetricsDto
     /// <summary>75th-percentile pipeline duration in hours.</summary>
     public double? P75DurationHours { get; set; }
 
+    /// <summary>90th-percentile pipeline duration in hours. Null when fewer than 3 runs have duration data.</summary>
+    public double? P90DurationHours { get; set; }
+
     /// <summary>
     /// Flakiness rate: percentage of distinct pipelines that had both successes and failures.
     /// Null when no pipelines ran.

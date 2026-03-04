@@ -246,7 +246,7 @@ Global header (available on every page) ◄────────────�
 | "Last 6 Months" chip | Shown when no sprint range is explicitly set. |
 | Bug Trend signal card | Represents bug patterns over time. Click navigates to Bug Insights (Bug Overview). |
 | PR Trend signal card | Read-only insight about pull request patterns. Click navigates to Pull Request Insights. |
-| Pipeline Trend signal card | Read-only insight about build and deployment health. Click navigates to Pipeline Insights. |
+| Pipeline Trend signal card | Read-only insight about build and deployment health. Click navigates to Pipeline Trend. |
 | Sprint Trend signal card | Represents planned vs. worked sprint metrics. Click navigates to Sprint Trend. |
 | Portfolio Progress signal card | Represents strategic product-level progress over a sprint range. Click navigates to Portfolio Progress Trend. |
 | Bug Trend chart (interactive) | Three-series chart (Total bugs, Fixed bugs, Added bugs) for the selected time range. Clicking a bar navigates to Bug Insights filtered to that period. Hovering highlights the bar. |
@@ -350,21 +350,23 @@ Global header (available on every page) ◄────────────�
 
 ---
 
-### 2.11 Pipeline Insights — `/home/pipelines`
+### 2.11 Pipeline Trend — `/home/pipelines`
 
-**Purpose:** Read-only view of CI/CD pipeline health metrics. Insight-only; no editing.
+**Purpose:** PO-facing trend view of CI/CD pipeline health signals, sprint-bucketed. Insight-only; no editing.
 
 | Functionality | Description |
 |---|---|
-| Breadcrumb | `Home › Pipeline Insights`. |
-| Pipeline health table | Lists pipelines with success rate and recent run history. |
-| Success rate chart | Visual success rate over time. |
-| Duration chart | Shows build duration trends per pipeline. |
-| Summary panel | Aggregated metrics (overall success rate, avg duration, etc.). |
+| Breadcrumb | `Home › Trends (Past) › Pipeline Trend`. |
+| Sprint range selector | Team, product, end-sprint, and sprint count selectors. Defaults to last 6 sprints ending at the active/latest sprint. |
+| Reliability Trend chart | Success rate % per sprint (higher-is-better). Slope badge included. |
+| Time-to-Green Trend chart | Median pipeline duration (h) per sprint — fallback metric (no PR/commit association). Lower-is-better. Slope badge included. |
+| Tail Risk Trend chart | P90 pipeline duration (h) per sprint. Null/gap when fewer than 3 runs. Lower-is-better. Slope badge included. |
+| Flakiness Trend chart | % of distinct pipelines with both successes and failures in the same sprint. Lower-is-better. Slope badge included. |
+| Advanced drill-down panel | Collapsed by default. Contains a per-sprint metrics table. |
 | Error/Retry handling | If data cannot be loaded, shows an error message with a Retry button. |
 | Home button | Returns to `/home`. |
 
-**Outgoing navigation:** `/home`
+**Outgoing navigation:** `/home/trends`, `/home`
 
 ---
 
@@ -496,7 +498,7 @@ Global header (available on every page) ◄────────────�
 | Bug Detail | `/home/bugs/detail/{id}` | Bug Insights | Edit severity/tags | `/home/bugs` |
 | Bug Triage | `/bugs-triage` | Home quick action, Bug Insights | Triage tags | (self-contained) |
 | PR Insights | `/home/pull-requests` | Trends workspace | View metrics | `/home` |
-| Pipeline Insights | `/home/pipelines` | Trends workspace | View metrics | `/home` |
+| Pipeline Trend | `/home/pipelines` | Trends workspace | View metrics | `/home/trends`, `/home` |
 | Dependency Overview | `/home/dependencies` | Planning workspace | View dependencies | `/home`, `/dependency-graph` |
 | Plan Board | `/home/plan-board` | Home quick action | View/filter board | `/home` |
 | Sprint Trend | `/home/sprint-trend` | Trends workspace | Navigate sprints | `/home/sprint-trend/activity/{id}`, `/home/trends`, `/home` |
@@ -514,7 +516,7 @@ The following suggestions are derived from analysing the current navigation stru
 
 ### Suggestion 1 — Promote the "Return to workspace" breadcrumb consistently
 
-**Current situation:** Some pages show breadcrumbs (`Home › Health (Now) › ...`), but several leaf pages (Bug Triage, Plan Board, PR Insights, Pipeline Insights) do not. The user must rely on the global "Home" button or the browser back button.
+**Current situation:** Some pages show breadcrumbs (`Home › Health (Now) › ...`), but several leaf pages (Bug Triage, Plan Board, PR Insights, Pipeline Trend) do not. The user must rely on the global "Home" button or the browser back button.
 
 **Suggestion:** Add a consistent breadcrumb trail to every page that reflects the path by which it was reached. This gives the user a mental model of where they are and allows them to step back one level without losing context. Breadcrumbs should carry product/team context forward.
 
