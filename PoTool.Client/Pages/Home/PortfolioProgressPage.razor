@@ -189,7 +189,7 @@
                             <MudPaper Outlined="true" Class="pa-3">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">Total Scope Change</MudText>
-                                    <MudTooltip Text="TotalScopeEffort is a current-state snapshot; historical per-sprint scope tracking is not yet implemented. Value will be 0 when scope has not changed since the window was loaded.">
+                                    <MudTooltip Text="TotalScopeEffort is a current-state snapshot; historical per-sprint scope tracking is not yet implemented. Value may be 0 (no change) or N/A depending on data availability.">
                                         <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
                                     </MudTooltip>
                                 </MudStack>
@@ -264,7 +264,7 @@
                                     Completed (green) · Added (orange) · Net Flow (blue, dominant) — Net &gt; 0 = backlog shrinking
                                 </MudText>
                                 @* Limitation notice *@
-                                <MudTooltip Text="Added Effort includes both newly created work and estimation changes on existing items. Large re-estimations may distort Net Flow temporarily if creation vs. estimation deltas cannot be distinguished. Current implementation: Added = PlannedEffort (sprint commitment proxy, not true scope inflow).">
+                                <MudTooltip Text="Added Effort is based on sprint commitment (PlannedEffort), not actual scope additions. May include re-estimation changes. See code comments for full limitation details.">
                                     <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
                                 </MudTooltip>
                             </MudStack>

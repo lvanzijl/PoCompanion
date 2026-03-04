@@ -154,8 +154,12 @@ public sealed class GetPortfolioProgressTrendQueryHandler
 
         foreach (var sprint in sprints)
         {
-            var hasData = throughputBySprint.TryGetValue(sprint.Id, out var throughput);
-            addedBySprint.TryGetValue(sprint.Id, out var addedEffort);
+            var hasData  = throughputBySprint.TryGetValue(sprint.Id, out var throughput);
+            // addedBySprint is derived from the same projections as throughputBySprint,
+            // so hasAdded == hasData in practice. If a sprint has throughput data but
+            // no planned effort (all items had 0 effort), addedEffort defaults to 0.0
+            // which is correct (no committed work = pure backlog reduction).
+            var hasAdded = addedBySprint.TryGetValue(sprint.Id, out var addedEffort);
 
             if (hasData)
             {
@@ -217,6 +221,10 @@ public sealed class GetPortfolioProgressTrendQueryHandler
     ///   Stable      — |cumulative Net Flow| ≤ tolerance (small movement within threshold).
     ///
     /// Tolerance: 5 story points (absolute), chosen to ignore minor rounding differences.
+    ///
+    /// Single-sprint ranges: cumulative Net Flow equals that sprint's Net Flow, which is
+    /// meaningful (a single sprint where Net &gt; 5 is genuinely Contracting). No special
+    /// handling is required.
     ///
     /// TotalScopeChangePts: always 0 in the current data model because TotalScopeEffort is a
     /// current-state snapshot applied uniformly to all sprints in the range. Historical
