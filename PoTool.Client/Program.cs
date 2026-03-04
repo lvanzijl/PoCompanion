@@ -167,6 +167,7 @@ builder.Services.AddScoped<BugTreeBuilderService>();
 
 // Register Sprint Trend service
 builder.Services.AddScoped<SprintTrendService>();
+builder.Services.AddScoped<CapacityCalibrationService>();
 
 // Register Portfolio Progress Trend service
 builder.Services.AddScoped<PortfolioProgressTrendService>();

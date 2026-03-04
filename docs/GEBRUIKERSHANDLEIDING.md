@@ -345,19 +345,16 @@ De Trends-werkruimte beantwoordt de vraag: *Wat heeft mijn team in de afgelopen 
 
 | Signaalkaart | Wat meet het? | Doorklik |
 |---|---|---|
-| **Velocity Trend** | Teamleveringspatronen over tijd | Velocity-dashboard |
 | **Bug Trend** | Bugpatronen over tijd | Bug-inzichten |
 | **PR Trend** | Pull request-patronen | PR-inzichten |
 | **Pipeline Trend** | Build- en deployment-gezondheid | Pipeline-inzichten |
 | **Sprint Trend** | Geplande vs. gewerkte sprintmetrieken | Sprint Trend |
 
+> **Velocity en voorspelbaarheid** zijn niet langer een aparte signaalkaart in Trends. Ze zijn ingebed als *Calibratiepaneel* in Sprint Trend (tactische context) en als *Capaciteitsvertrouwen* in Planning (voorspellingscontext).
+
 ### Interactieve bug-trendgrafiek
 
 Onderaan de pagina zie je een drieseriengrafiek (Totaal bugs, Opgeloste bugs, Toegevoegde bugs) voor het geselecteerde tijdvak. Klik op een staaf om door te gaan naar Bug-inzichten gefilterd op die periode.
-
-### Velocity-overzichtspaneel
-
-Een ingesloten paneel met de velocity van de laatste 10 sprints. De link **Volledig dashboard** brengt je naar het uitgebreide velocity-dashboard.
 
 ---
 
@@ -365,7 +362,7 @@ Een ingesloten paneel met de velocity van de laatste 10 sprints. De link **Volle
 
 **Pagina:** `/home/sprint-trend`
 
-De Sprint Trend toont sprint-voor-sprint een analyse van geplande versus gewerkte metrieken: PBI-voltooiing, inspanningsprogressie, bugs per sprint, en Feature-/Epic-voortgang.
+De Sprint Trend toont sprint-voor-sprint een analyse van geplande versus gewerkte metrieken: PBI-voltooiing, inspanningsprogressie, bugs per sprint, en Feature-/Epic-voortgang. In de meersprints-modus toont de pagina ook een **Calibratiepaneel** met velocity- en voorspelbaarheidssignalen.
 
 #### Navigatiepijlen
 
@@ -382,6 +379,19 @@ Gebruik de pijlen links en rechts om door de sprintgeschiedenis te bladeren, é�
 - **Geavanceerde modus** (schakelknop) — meerdere sprints in één grafiek:
   - Progressie over de laatste N sprints (PBI-voltooiing, inspanning, bugaantallen) als afzonderlijke grafieken.
   - N is instelbaar.
+
+#### Calibratiepaneel (geavanceerde modus)
+
+In de geavanceerde modus verschijnt het Calibratiepaneel met de volgende signalen voor het geselecteerde sprintbereik:
+
+| Signaal | Omschrijving |
+|---|---|
+| **Mediaan velocity** (P50) | Typische sprintoutput in story points. |
+| **P25–P75 band** | Volatiliteitsband: gebruik P25 als conservatieve planningscapaciteit. |
+| **Mediaan voorspelbaarheid** | Verhouding voltooid/gepland (1,0 = volledig geleverd). |
+| **Veilige plancapaciteit** | P25-velocity — voor plannen met hoge betrouwbaarheid. |
+
+Het paneel werkt bij wanneer het sprintbereik of de productselectie verandert. Uitschieterssprints (beneden P10 of boven P90) worden aangeduid met een waarschuwingspictogram.
 
 #### Doorklikken op epics en features
 
@@ -454,13 +464,28 @@ De Planning-werkruimte beantwoordt de vraag: *Wat moet er als volgende komen?* J
 | **Epic met ongeldige items** | Epics met child-werkitems die validatiefouten hebben. | Informatief |
 | **Epic-afhankelijkheden** | Alleen-lezen overzicht van afhankelijkheden. | Informatief |
 
+### Capaciteitsvertrouwen
+
+Als er voltooide sprintdata beschikbaar is, toont de Planning-werkruimte een **Capaciteitsvertrouwen**-blok met calibratiesignalen:
+
+| Signaal | Omschrijving |
+|---|---|
+| **Mediaan velocity** | Typische sprintcapaciteit in story points (P50). |
+| **P25–P75 band** | Volatiliteitsband — gebruik P25 voor conservatieve plannen. |
+| **Mediaan voorspelbaarheid** | Verhouding voltooid/gepland over de beschikbare sprints. |
+| **Veilige plancapaciteit** | P25-velocity: hoge betrouwbaarheid voor sprintplanning. |
+
+> **Plan bij ~P25 punten als je hoge betrouwbaarheid wilt.** Gebruik de mediaan als typische output.
+
+Het blok werkt bij als de productselectie verandert.
+
 ### Detailtabellen
 
 **Epics die velocity overschrijden** — zichtbaar als er epics in risico zijn:
 
 | Kolom | Omschrijving |
 |---|---|
-| ID | Epic-ID (klikbaar naar Velocity Trends) |
+| ID | Epic-ID (klikbaar naar Sprint Trend voor calibratiedetails) |
 | Titel | Epic-naam |
 | Status | Huidige status |
 | Resterende inspanning | Story points die nog open staan |

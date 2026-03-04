@@ -565,6 +565,42 @@ public class MetricsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets capacity calibration metrics (velocity distribution + predictability) for a selected sprint range.
+    /// Returns median/P25/P75 velocity, median predictability, and outlier sprint names.
+    /// </summary>
+    /// <param name="productOwnerId">Product Owner ID</param>
+    /// <param name="sprintIds">Sprint IDs to include (ordered chronologically)</param>
+    /// <param name="productIds">Optional product IDs to filter (default = all products)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Capacity calibration DTO</returns>
+    [HttpGet("capacity-calibration")]
+    public async Task<ActionResult<CapacityCalibrationDto>> GetCapacityCalibration(
+        [FromQuery][Required] int productOwnerId,
+        [FromQuery][Required] int[] sprintIds,
+        [FromQuery] int[]? productIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (sprintIds.Length == 0)
+            {
+                return BadRequest("At least one sprint ID is required");
+            }
+
+            var result = await _mediator.Send(
+                new GetCapacityCalibrationQuery(productOwnerId, sprintIds, productIds),
+                cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving capacity calibration for ProductOwner: {ProductOwnerId}", productOwnerId);
+            return StatusCode(500, "Error retrieving capacity calibration");
+        }
+    }
+
+    /// <summary>
     /// Gets activity details for a work item and its descendants in the selected sprint period.
     /// </summary>
     [HttpGet("work-item-activity/{workItemId:int}")]

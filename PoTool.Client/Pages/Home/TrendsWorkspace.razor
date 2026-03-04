@@ -1,6 +1,5 @@
 @page "/home/trends"
 @using PoTool.Client.Components.Common
-@using PoTool.Client.Components.Velocity
 @using PoTool.Client.Pages.Home.Components
 @using PoTool.Shared.Settings
 @using System.Web
@@ -148,20 +147,6 @@
             </MudText>
             
             <MudGrid>
-                @* Velocity Trend Signal *@
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1" 
-                             Style="cursor: pointer; transition: all 0.2s;"
-                             Class="mud-card-hover"
-                             @onclick="NavigateToVelocityDetails">
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Primary" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Velocity Trend</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Team delivery patterns</MudText>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-                
                 @* Bug Trend Signal *@
                 <MudItem xs="12" sm="6" md="4">
                     <MudCard Elevation="1" 
@@ -263,25 +248,6 @@
                 SeriesAdded="@_bugTrendAdded"
                 OnPeriodClick="OnBugTrendPeriodClick"
                 MaxPeriods="6" />
-        </MudPaper>
-
-        @* Velocity Overview Section *@
-        <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                <MudText Typo="Typo.h5">
-                    <MudIcon Icon="@Icons.Material.Filled.Speed" Class="mr-2" />
-                    Velocity Overview
-                </MudText>
-                <MudButton Variant="Variant.Text" 
-                           Color="Color.Primary" 
-                           EndIcon="@Icons.Material.Filled.OpenInNew" 
-                           Href="/velocity">
-                    Full Dashboard
-                </MudButton>
-            </MudStack>
-            
-            @* Embedded VelocityPanel component with max 10 bars *@
-            <VelocityPanel MaxSprints="10" />
         </MudPaper>
 
         @* Cross-Workspace Navigation *@
@@ -507,13 +473,7 @@
             new("Trends (Past)", null, disabled: true, icon: Icons.Material.Filled.Timeline)
         };
     }
-    
-    private void NavigateToVelocityDetails()
-    {
-        // Navigate to velocity dashboard for now
-        NavigationManager.NavigateTo("/velocity");
-    }
-    
+
     private void NavigateToBugTrend()
     {
         // Navigate to bug overview with period scoped
