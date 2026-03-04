@@ -54,9 +54,10 @@
     }
     else
     {
-        @* Context chips — always visible; show current active scope *@
+        @* Context row — chips + inline filter controls in one compact bar *@
         <MudPaper Elevation="1" Class="pa-2 mb-3">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Wrap="Wrap.Wrap">
+                @* Context chips *@
                 <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Inventory2" Color="Color.Default">
                     @ContextProductLabel
                 </MudChip>
@@ -75,93 +76,97 @@
                         Custom Scope
                     </MudChip>
                 }
-            </MudStack>
-        </MudPaper>
 
-        @* Collapsible filters — collapsed by default *@
-        <MudPaper Elevation="2" Class="pa-3 mb-4">
-            <MudStack Spacing="0">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+
+                @* Inline filter controls — Product and Team *@
+                <MudSelect T="int?"
+                           Value="_selectedProductId"
+                           Label="Product"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Margin="Margin.Dense"
+                           Clearable="true"
+                           ValueChanged="OnProductChangedAsync"
+                           Style="min-width: 140px; max-width: 180px;">
+                    <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
+                    @foreach (var product in _products)
+                    {
+                        <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudSelect T="int?"
+                           Value="_selectedTeamId"
+                           Label="Team"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Margin="Margin.Dense"
+                           Clearable="true"
+                           ValueChanged="OnTeamChangedAsync"
+                           Style="min-width: 130px; max-width: 170px;">
+                    <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
+                    @foreach (var team in _teams)
+                    {
+                        <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                @* Sprint range expander — collapsed by default *@
+                @if (_selectedTeamId.HasValue && _sprints.Any())
+                {
                     <MudButton Variant="Variant.Text"
-                               StartIcon="@Icons.Material.Filled.FilterAlt"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.DateRange"
                                EndIcon="@(_filtersExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
                                OnClick="@(() => _filtersExpanded = !_filtersExpanded)"
-                               Size="Size.Small"
                                Color="Color.Default">
-                        Filters
+                        Sprint range
                     </MudButton>
-                </MudStack>
+                }
+            </MudStack>
+
+            @* Sprint range selectors — revealed by "Sprint range" button *@
+            @if (_selectedTeamId.HasValue && _sprints.Any())
+            {
                 <MudCollapse Expanded="_filtersExpanded">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap" Class="pt-2">
-                        @* Product selector — defaults to All Products *@
                         <MudSelect T="int?"
-                                   Value="_selectedProductId"
-                                   Label="Product"
+                                   Value="_fromSprintId"
+                                   Label="From Sprint"
                                    Variant="Variant.Outlined"
                                    Dense="true"
+                                   Margin="Margin.Dense"
                                    Clearable="true"
-                                   ValueChanged="OnProductChangedAsync"
-                                   Style="min-width: 200px;">
-                            <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
-                            @foreach (var product in _products)
+                                   ValueChanged="OnFromSprintChangedAsync"
+                                   Style="min-width: 180px; max-width: 220px;">
+                            @foreach (var sprint in _sprints)
                             {
-                                <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
+                                <MudSelectItem T="int?" Value="@sprint.Id">
+                                    @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
+                                </MudSelectItem>
                             }
                         </MudSelect>
 
-                        @* Team selector — used to resolve sprint list for the range selector *@
                         <MudSelect T="int?"
-                                   Value="_selectedTeamId"
-                                   Label="Team (sprint list)"
+                                   Value="_toSprintId"
+                                   Label="To Sprint"
                                    Variant="Variant.Outlined"
                                    Dense="true"
+                                   Margin="Margin.Dense"
                                    Clearable="true"
-                                   ValueChanged="OnTeamChangedAsync"
-                                   Style="min-width: 180px;">
-                            <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
-                            @foreach (var team in _teams)
+                                   ValueChanged="OnToSprintChangedAsync"
+                                   Style="min-width: 180px; max-width: 220px;">
+                            @foreach (var sprint in _sprints)
                             {
-                                <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                                <MudSelectItem T="int?" Value="@sprint.Id">
+                                    @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
+                                </MudSelectItem>
                             }
                         </MudSelect>
-
-                        @if (_selectedTeamId.HasValue && _sprints.Any())
-                        {
-                            <MudSelect T="int?"
-                                       Value="_fromSprintId"
-                                       Label="From Sprint"
-                                       Variant="Variant.Outlined"
-                                       Dense="true"
-                                       Clearable="true"
-                                       ValueChanged="OnFromSprintChangedAsync"
-                                       Style="min-width: 200px;">
-                                @foreach (var sprint in _sprints)
-                                {
-                                    <MudSelectItem T="int?" Value="@sprint.Id">
-                                        @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
-                                    </MudSelectItem>
-                                }
-                            </MudSelect>
-
-                            <MudSelect T="int?"
-                                       Value="_toSprintId"
-                                       Label="To Sprint"
-                                       Variant="Variant.Outlined"
-                                       Dense="true"
-                                       Clearable="true"
-                                       ValueChanged="OnToSprintChangedAsync"
-                                       Style="min-width: 200px;">
-                                @foreach (var sprint in _sprints)
-                                {
-                                    <MudSelectItem T="int?" Value="@sprint.Id">
-                                        @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
-                                    </MudSelectItem>
-                                }
-                            </MudSelect>
-                        }
                     </MudStack>
                 </MudCollapse>
-            </MudStack>
+            }
         </MudPaper>
 
         @if (_trendsLoading)
@@ -275,48 +280,65 @@
                 </MudStack>
             </MudPaper>
 
-            @* ── Chart Layout (Primary Visualization Pattern) ── *@
+            @* ── Chart Layout — true 2×2 grid ── *@
             @if (_trendData.Sprints.Any(s => s.HasData))
             {
-                <AnalyticalPageLayout>
+                <MudGrid Spacing="3">
 
-                    @* Row 1 — Primary Visualization: Combined Flow (full width, dominant) *@
-                    <PrimaryVisualizationSection>
-                        <MudStack Spacing="0" Class="mb-2">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudText Typo="Typo.subtitle2">Combined Flow</MudText>
-                                @* Net Flow: Contracting/Expanding/Balanced (higher Net = backlog shrinking = Contracting) *@
-                                <TrendSlopeBadge StartValue="@_netFlowStart"
-                                                 EndValue="@_netFlowEnd"
-                                                 LowerIsBetter="false"
-                                                 PositiveLabel="Contracting"
-                                                 NegativeLabel="Expanding"
-                                                 NeutralLabel="Balanced"
-                                                 MetricLabel="net flow" />
-                            </MudStack>
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                    @* Cell 1 — Combined Flow (Net emphasis) *@
+                    <MudItem xs="12" sm="12" md="6">
+                        <MudPaper Elevation="2" Class="pa-3" Style="height: 340px; overflow: hidden;">
+                            <MudStack Spacing="0" Class="mb-1">
+                                @* Title row with Net Focus toggle *@
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Justify="Justify.SpaceBetween">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudText Typo="Typo.subtitle2">Combined Flow</MudText>
+                                        @if (_netFocusOnly)
+                                        {
+                                            <TrendSlopeBadge StartValue="@_netFlowStart"
+                                                             EndValue="@_netFlowEnd"
+                                                             LowerIsBetter="false"
+                                                             PositiveLabel="Contracting"
+                                                             NegativeLabel="Expanding"
+                                                             NeutralLabel="Balanced"
+                                                             MetricLabel="net flow" />
+                                        }
+                                    </MudStack>
+                                    @* Net focus toggle *@
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0">
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Net only</MudText>
+                                        <MudSwitch T="bool"
+                                                   Value="_netFocusOnly"
+                                                   ValueChanged="OnNetFocusToggled"
+                                                   Color="Color.Primary"
+                                                   Size="Size.Small" />
+                                    </MudStack>
+                                </MudStack>
+                                @* Net cumulative anchor *@
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-primary); font-weight: 600;">
+                                        Net (cumulative): @CumulativeNetFlowLabel
+                                    </MudText>
+                                    <MudTooltip Text="Added Effort approximates scope inflow using sprint commitment data. It may include re-estimation changes and does not track new backlog item creation directly.">
+                                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
+                                    </MudTooltip>
+                                </MudStack>
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    Completed (green) · Added (orange) · Net Flow (blue) — Net &gt; 0 = backlog shrinking
+                                    Net &gt; 0 = backlog shrinking; Net &lt; 0 = expanding
                                 </MudText>
-                                @* Limitation notice *@
-                                <MudTooltip Text="Added Effort is based on sprint commitment (PlannedEffort), not actual scope additions. May include re-estimation changes. See code comments for full limitation details.">
-                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
-                                </MudTooltip>
                             </MudStack>
-                        </MudStack>
-                        <MudChart ChartType="ChartType.Bar"
-                                  ChartSeries="@_flowSeries"
-                                  XAxisLabels="@_xAxisLabels"
-                                  Width="100%"
-                                  Height="340px"
-                                  ChartOptions="@_flowChartOptions" />
-                    </PrimaryVisualizationSection>
+                            <MudChart ChartType="ChartType.Bar"
+                                      ChartSeries="@_flowSeries"
+                                      XAxisLabels="@_xAxisLabels"
+                                      Width="100%"
+                                      Height="240px"
+                                      ChartOptions="@_flowChartOptions" />
+                        </MudPaper>
+                    </MudItem>
 
-                    @* Row 2 — Secondary Visualizations: 3 equal columns *@
-                    <SecondaryVisualizationGrid Columns="3">
-
-                        @* Cell 1 — Total Scope Trend (Stock) *@
-                        <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                    @* Cell 2 — Total Scope Trend (Stock) *@
+                    <MudItem xs="12" sm="12" md="6">
+                        <MudPaper Elevation="2" Class="pa-3" Style="height: 340px; overflow: hidden;">
                             <MudStack Spacing="0" Class="mb-2">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                     <MudText Typo="Typo.subtitle2">Total Scope Trend</MudText>
@@ -335,41 +357,43 @@
                                       ChartSeries="@_scopeSeries"
                                       XAxisLabels="@_xAxisLabels"
                                       Width="100%"
-                                      Height="260px"
+                                      Height="240px"
                                       ChartOptions="@_chartOptions" />
                         </MudPaper>
+                    </MudItem>
 
-                        @* Cell 2 — Remaining Effort Trend (Stock) *@
-                        <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                    @* Cell 3 — Remaining Effort Ratio (% of Total Scope) *@
+                    <MudItem xs="12" sm="12" md="6">
+                        <MudPaper Elevation="2" Class="pa-3" Style="height: 340px; overflow: hidden;">
                             <MudStack Spacing="0" Class="mb-2">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                    <MudText Typo="Typo.subtitle2">Remaining Effort Trend</MudText>
-                                    @* Lower-is-better burndown signal *@
-                                    <TrendSlopeBadge StartValue="@_remainingStart"
-                                                     EndValue="@_remainingEnd"
+                                    <MudText Typo="Typo.subtitle2">Remaining Effort Ratio</MudText>
+                                    <TrendSlopeBadge StartValue="@_remainingRatioStart"
+                                                     EndValue="@_remainingRatioEnd"
                                                      LowerIsBetter="true"
                                                      PositiveLabel="Decreasing"
                                                      NegativeLabel="Increasing"
-                                                     MetricLabel="remaining effort" />
+                                                     MetricLabel="remaining ratio" />
                                 </MudStack>
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    Remaining effort (pts) — digestion pressure; lower is better
+                                    Remaining effort as % of total scope — backlog load ratio (lower is better)
                                 </MudText>
                             </MudStack>
                             <MudChart ChartType="ChartType.Line"
                                       ChartSeries="@_remainingSeries"
                                       XAxisLabels="@_xAxisLabels"
                                       Width="100%"
-                                      Height="260px"
-                                      ChartOptions="@_chartOptions" />
+                                      Height="240px"
+                                      ChartOptions="@_ratioChartOptions" />
                         </MudPaper>
+                    </MudItem>
 
-                        @* Cell 3 — Throughput Trend (Flow Capacity) *@
-                        <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
+                    @* Cell 4 — Throughput Trend (Flow Capacity) *@
+                    <MudItem xs="12" sm="12" md="6">
+                        <MudPaper Elevation="2" Class="pa-3" Style="height: 340px; overflow: hidden;">
                             <MudStack Spacing="0" Class="mb-2">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                     <MudText Typo="Typo.subtitle2">Throughput Trend</MudText>
-                                    @* Higher-is-better: Rising/Falling *@
                                     <TrendSlopeBadge StartValue="@_throughputStart"
                                                      EndValue="@_throughputEnd"
                                                      LowerIsBetter="false"
@@ -385,13 +409,12 @@
                                       ChartSeries="@_throughputSeries"
                                       XAxisLabels="@_xAxisLabels"
                                       Width="100%"
-                                      Height="260px"
+                                      Height="240px"
                                       ChartOptions="@_chartOptions" />
                         </MudPaper>
+                    </MudItem>
 
-                    </SecondaryVisualizationGrid>
-
-                </AnalyticalPageLayout>
+                </MudGrid>
             }
             else if (!_trendsLoading)
             {
@@ -476,6 +499,9 @@
     // Trend data
     private PortfolioProgressTrendDto? _trendData;
 
+    // Net focus toggle — default ON (show Net only in Combined Flow)
+    private bool _netFocusOnly = true;
+
     // Chart data
     private string[] _xAxisLabels = Array.Empty<string>();
     private List<ChartSeries> _flowSeries = new();
@@ -486,17 +512,17 @@
     // TrendSlopeBadge start/end values (first and last non-null data point)
     private double? _netFlowStart, _netFlowEnd;
     private double? _scopeStart, _scopeEnd;
-    private double? _remainingStart, _remainingEnd;
+    private double? _remainingRatioStart, _remainingRatioEnd;  // ratio values (%)
     private double? _throughputStart, _throughputEnd;
 
-    // Palette: index 0 = Completed (green), 1 = Added (orange/red), 2 = Net Flow (blue/primary)
+    // Palette: Net only = primary blue; all series = Net first (blue), Completed (muted green), Added (muted orange)
     private ChartOptions _flowChartOptions = new()
     {
         YAxisTicks = 5,
         MaxNumYAxisTicks = 8,
         YAxisLines = true,
         XAxisLines = true,
-        ChartPalette = new[] { "#4caf50", "#ff9800", "#1976d2" }
+        ChartPalette = new[] { "#1976d2" }
     };
 
     private ChartOptions _chartOptions = new()
@@ -506,6 +532,27 @@
         YAxisLines = true,
         XAxisLines = true
     };
+
+    // Ratio chart options for Remaining Effort % chart
+    private ChartOptions _ratioChartOptions = new()
+    {
+        YAxisTicks = 5,
+        MaxNumYAxisTicks = 8,
+        YAxisLines = true,
+        XAxisLines = true
+    };
+
+    // Computed label for Net cumulative in Combined Flow header
+    private string CumulativeNetFlowLabel
+    {
+        get
+        {
+            if (_trendData?.Summary.CumulativeNetFlow == null) return "N/A";
+            var net = _trendData.Summary.CumulativeNetFlow.Value;
+            var sign = net >= 0 ? "+" : "";
+            return $"{sign}{net:F0} pts";
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -743,26 +790,21 @@
 
         _xAxisLabels = dataPoints.Select(s => ShortSprintLabel(s.SprintName)).ToArray();
 
-        // Graph 1 — Combined Flow: Completed (outflow), Added (inflow), Net Flow
-        // Series order matches ChartPalette: green, orange, blue.
-        // Net Flow is last so it renders on top.
-        _flowSeries = new List<ChartSeries>
-        {
-            new() { Name = "Completed",  Data = dataPoints.Select(s => s.ThroughputEffort ?? 0.0).ToArray() },
-            new() { Name = "Added",      Data = dataPoints.Select(s => s.AddedEffort      ?? 0.0).ToArray() },
-            new() { Name = "Net Flow",   Data = dataPoints.Select(s => s.NetFlow           ?? 0.0).ToArray() }
-        };
-
         // Graph 2 — Total Scope (Stock)
         _scopeSeries = new List<ChartSeries>
         {
             new() { Name = "Total Scope (pts)", Data = dataPoints.Select(s => s.TotalScopeEffort ?? 0.0).ToArray() }
         };
 
-        // Graph 3 — Remaining Effort (Stock)
+        // Graph 3 — Remaining Effort Ratio (% of Total Scope)
+        // Reuses ComputeRemainingRatio for consistent divide-by-zero handling.
         _remainingSeries = new List<ChartSeries>
         {
-            new() { Name = "Remaining (pts)", Data = dataPoints.Select(s => s.RemainingEffort ?? 0.0).ToArray() }
+            new()
+            {
+                Name = "Remaining %",
+                Data = dataPoints.Select(s => ComputeRemainingRatio(s) ?? 0.0).ToArray()
+            }
         };
 
         // Graph 4 — Throughput (Flow Capacity)
@@ -772,14 +814,75 @@
         };
 
         // Slope badge values — first and last sprints with actual data
-        _netFlowStart     = dataPoints.FirstOrDefault()?.NetFlow;
-        _netFlowEnd       = dataPoints.LastOrDefault()?.NetFlow;
-        _scopeStart       = dataPoints.FirstOrDefault()?.TotalScopeEffort;
-        _scopeEnd         = dataPoints.LastOrDefault()?.TotalScopeEffort;
-        _remainingStart   = dataPoints.FirstOrDefault()?.RemainingEffort;
-        _remainingEnd     = dataPoints.LastOrDefault()?.RemainingEffort;
-        _throughputStart  = dataPoints.FirstOrDefault()?.ThroughputEffort;
-        _throughputEnd    = dataPoints.LastOrDefault()?.ThroughputEffort;
+        _netFlowStart    = dataPoints.FirstOrDefault()?.NetFlow;
+        _netFlowEnd      = dataPoints.LastOrDefault()?.NetFlow;
+        _scopeStart      = dataPoints.FirstOrDefault()?.TotalScopeEffort;
+        _scopeEnd        = dataPoints.LastOrDefault()?.TotalScopeEffort;
+        _throughputStart = dataPoints.FirstOrDefault()?.ThroughputEffort;
+        _throughputEnd   = dataPoints.LastOrDefault()?.ThroughputEffort;
+
+        // Remaining slope badge uses ratio values (%)
+        _remainingRatioStart = ComputeRemainingRatio(dataPoints.FirstOrDefault());
+        _remainingRatioEnd   = ComputeRemainingRatio(dataPoints.LastOrDefault());
+
+        // Graph 1 — Combined Flow (built from _netFocusOnly state)
+        RebuildFlowSeries(dataPoints);
+    }
+
+    /// <summary>Computes remaining ratio (%) for a single sprint data point.</summary>
+    private static double? ComputeRemainingRatio(PortfolioSprintProgressDto? sprint)
+    {
+        if (sprint == null) return null;
+        if (!sprint.RemainingEffort.HasValue || !sprint.TotalScopeEffort.HasValue || sprint.TotalScopeEffort.Value == 0)
+            return null;
+        return Math.Round((sprint.RemainingEffort.Value / sprint.TotalScopeEffort.Value) * 100.0, 1);
+    }
+
+    /// <summary>
+    /// Rebuilds the Combined Flow series based on <see cref="_netFocusOnly"/>.
+    /// When focus is ON: only Net Flow (primary blue).
+    /// When focus is OFF: Net Flow first (blue), then Completed (muted green), Added (muted orange).
+    /// </summary>
+    private void RebuildFlowSeries(IList<PortfolioSprintProgressDto>? dataPoints = null)
+    {
+        dataPoints ??= _trendData?.Sprints.Where(s => s.HasData).ToList() ?? new List<PortfolioSprintProgressDto>();
+
+        if (_netFocusOnly)
+        {
+            _flowSeries = new List<ChartSeries>
+            {
+                new() { Name = "Net Flow", Data = dataPoints.Select(s => s.NetFlow ?? 0.0).ToArray() }
+            };
+            _flowChartOptions = CreateFlowChartOptions(new[] { "#1976d2" });
+        }
+        else
+        {
+            _flowSeries = new List<ChartSeries>
+            {
+                new() { Name = "Net Flow",  Data = dataPoints.Select(s => s.NetFlow           ?? 0.0).ToArray() },
+                new() { Name = "Completed", Data = dataPoints.Select(s => s.ThroughputEffort  ?? 0.0).ToArray() },
+                new() { Name = "Added",     Data = dataPoints.Select(s => s.AddedEffort       ?? 0.0).ToArray() }
+            };
+            _flowChartOptions = CreateFlowChartOptions(new[] { "#1976d2", "#81c784", "#ffcc80" });
+        }
+    }
+
+    /// <summary>Creates flow chart options with the given palette; all other settings are fixed.</summary>
+    private static ChartOptions CreateFlowChartOptions(string[] palette) => new()
+    {
+        YAxisTicks = 5,
+        MaxNumYAxisTicks = 8,
+        YAxisLines = true,
+        XAxisLines = true,
+        ChartPalette = palette
+    };
+
+    /// <summary>Handles the Net Focus toggle in Combined Flow card.</summary>
+    private void OnNetFocusToggled(bool value)
+    {
+        _netFocusOnly = value;
+        RebuildFlowSeries();
+        StateHasChanged();
     }
 
     /// <summary>Returns a short sprint label for the chart x-axis (max ~10 chars).</summary>
