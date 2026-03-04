@@ -564,6 +564,41 @@ public class MetricsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets an aggregated portfolio delivery snapshot across products for a selected sprint range.
+    /// Returns composition and distribution data — no time-series information.
+    /// Delivery workspace: Portfolio Delivery view.
+    /// </summary>
+    /// <param name="productOwnerId">Product Owner ID</param>
+    /// <param name="sprintIds">Sprint IDs to include in the aggregated snapshot</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Portfolio delivery snapshot DTO</returns>
+    [HttpGet("portfolio-delivery")]
+    public async Task<ActionResult<PortfolioDeliveryDto>> GetPortfolioDelivery(
+        [FromQuery][Required] int productOwnerId,
+        [FromQuery][Required] int[] sprintIds,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (sprintIds.Length == 0)
+            {
+                return BadRequest("At least one sprint ID is required");
+            }
+
+            var result = await _mediator.Send(
+                new GetPortfolioDeliveryQuery(productOwnerId, sprintIds),
+                cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving portfolio delivery for ProductOwner: {ProductOwnerId}", productOwnerId);
+            return StatusCode(500, "Error retrieving portfolio delivery");
+        }
+    }
+
+    /// <summary>
     /// Gets activity details for a work item and its descendants in the selected sprint period.
     /// </summary>
     [HttpGet("work-item-activity/{workItemId:int}")]

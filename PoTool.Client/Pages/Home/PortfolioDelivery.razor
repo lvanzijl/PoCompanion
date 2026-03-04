@@ -1,69 +1,676 @@
 @page "/home/delivery/portfolio"
 @using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Services
 @using PoTool.Client.Models
+@using PoTool.Shared.Metrics
+@inject IProfileService ProfileService
+@inject TeamService TeamService
+@inject SprintService SprintService
+@inject ProductService ProductService
+@inject IMetricsClient MetricsClient
 @inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
 
 <PageTitle>Portfolio Delivery - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     @* Workspace Header *@
-    <MudPaper Elevation="2" Class="pa-4 mb-4">
+    <MudPaper Elevation="2" Class="pa-2 mb-2">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-            <MudStack Spacing="1">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Warning" Size="Size.Large" />
-                    <MudText Typo="Typo.h4">
-                        Portfolio Delivery
-                    </MudText>
-                </MudStack>
-
-                @* Breadcrumb *@
-                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Warning" />
+                <MudText Typo="Typo.h5">Portfolio Delivery</MudText>
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0 d-none d-sm-flex" />
             </MudStack>
-
-            <MudStack Row="true" Spacing="2">
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.CheckCircle"
-                           OnClick="NavigateToDelivery">
-                    Back to Delivery
-                </MudButton>
-
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Default"
-                           StartIcon="@Icons.Material.Filled.Home"
-                           OnClick="NavigateToHome">
-                    Home
-                </MudButton>
-            </MudStack>
-        </MudStack>
-    </MudPaper>
-
-    @* Placeholder content *@
-    <MudPaper Elevation="2" Class="pa-8 mb-4">
-        <MudStack AlignItems="AlignItems.Center" Spacing="4">
-            <MudIcon Icon="@Icons.Material.Filled.Construction" Color="Color.Warning" Style="font-size: 4rem;" />
-            <MudText Typo="Typo.h5" Align="Align.Center">
-                Portfolio Delivery — Coming Soon
-            </MudText>
-            <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary" Style="max-width: 600px;">
-                This view will provide an aggregated delivery overview across all products for selected sprint(s).
-                It will answer: what did we collectively deliver, and how does that compare across products?
-            </MudText>
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Primary"
+                       Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.CheckCircle"
                        OnClick="NavigateToDelivery">
                 Back to Delivery
             </MudButton>
         </MudStack>
     </MudPaper>
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _errorMessage = null)">
+            @_errorMessage
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@LoadInitialDataAsync" Class="ml-2">
+                Retry
+            </MudButton>
+        </MudAlert>
+    }
+    else
+    {
+        @* ── Sprint range selector (chip toolbar) ── *@
+        <MudPaper Elevation="1" Class="pa-1 mb-2">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Wrap="Wrap.NoWrap">
+
+                @* Team chip — sprint list depends on team *@
+                <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Group"
+                         Color="Color.Default" Style="cursor: pointer;"
+                         OnClick="ToggleTeamPopover">
+                    @ContextTeamLabel
+                </MudChip>
+                <MudPopover Open="@_teamPopoverOpen" AnchorOrigin="Origin.BottomLeft"
+                            TransformOrigin="Origin.TopLeft" Paper="true" Elevation="8" Class="pa-3 pd-scope-popover">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.overline">Team</MudText>
+                        <MudSelect T="int?" Value="_selectedTeamId" Label="Team"
+                                   Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
+                                   ValueChanged="OnTeamSelectedFromPopoverAsync"
+                                   Style="min-width: 200px;">
+                            <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
+                            @foreach (var team in _teams)
+                            {
+                                <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudButton Size="Size.Small" OnClick="@(() => _teamPopoverOpen = false)">Done</MudButton>
+                    </MudStack>
+                </MudPopover>
+
+                @* Sprint range chip *@
+                @if (_sprints.Any())
+                {
+                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.DateRange"
+                             Color="Color.Default" Style="cursor: pointer;"
+                             OnClick="ToggleSprintPopover">
+                        @ContextSprintRangeLabel
+                    </MudChip>
+                    <MudPopover Open="@_sprintPopoverOpen" AnchorOrigin="Origin.BottomLeft"
+                                TransformOrigin="Origin.TopLeft" Paper="true" Elevation="8" Class="pa-3 pd-scope-popover">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.overline">Sprint Range</MudText>
+                            <MudSelect T="int?" Value="_fromSprintId" Label="From Sprint"
+                                       Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
+                                       ValueChanged="OnFromSprintChangedAsync"
+                                       Style="min-width: 210px;">
+                                @foreach (var sprint in _sprints)
+                                {
+                                    <MudSelectItem T="int?" Value="@sprint.Id">
+                                        @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudSelect T="int?" Value="_toSprintId" Label="To Sprint"
+                                       Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
+                                       ValueChanged="OnToSprintSelectedFromPopoverAsync"
+                                       Style="min-width: 210px;">
+                                @foreach (var sprint in _sprints)
+                                {
+                                    <MudSelectItem T="int?" Value="@sprint.Id">
+                                        @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudStack>
+                    </MudPopover>
+                }
+
+                <MudSpacer />
+
+                <MudButton Size="Size.Small" Variant="Variant.Outlined"
+                           StartIcon="@Icons.Material.Filled.Tune"
+                           OnClick="ToggleScopePopover">
+                    Scope…
+                </MudButton>
+                <MudPopover Open="@_scopePopoverOpen" AnchorOrigin="Origin.BottomRight"
+                            TransformOrigin="Origin.TopRight" Paper="true" Elevation="8" Class="pa-3 pd-scope-popover">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.overline">Scope Filters</MudText>
+                        <MudSelect T="int?" Value="_selectedTeamId" Label="Team"
+                                   Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
+                                   ValueChanged="OnTeamChangedAsync"
+                                   Style="min-width: 220px;">
+                            <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
+                            @foreach (var team in _teams)
+                            {
+                                <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                        @if (_sprints.Any())
+                        {
+                            <MudSelect T="int?" Value="_fromSprintId" Label="From Sprint"
+                                       Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
+                                       ValueChanged="OnFromSprintChangedAsync"
+                                       Style="min-width: 220px;">
+                                @foreach (var sprint in _sprints)
+                                {
+                                    <MudSelectItem T="int?" Value="@sprint.Id">
+                                        @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudSelect T="int?" Value="_toSprintId" Label="To Sprint"
+                                       Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
+                                       ValueChanged="OnToSprintChangedAsync"
+                                       Style="min-width: 220px;">
+                                @foreach (var sprint in _sprints)
+                                {
+                                    <MudSelectItem T="int?" Value="@sprint.Id">
+                                        @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                        }
+                        <MudButton Size="Size.Small" OnClick="@(() => _scopePopoverOpen = false)">Done</MudButton>
+                    </MudStack>
+                </MudPopover>
+            </MudStack>
+        </MudPaper>
+
+        @if (_deliveryLoading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Warning" Class="mb-4" />
+        }
+
+        @if (_data == null && !_deliveryLoading && _selectedSprintIds.Count > 0)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                No delivery data found for the selected sprint range.
+            </MudAlert>
+        }
+
+        @if (_data != null)
+        {
+            @* ── Section header *@
+            <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-1" Spacing="1">
+                <MudText Typo="Typo.overline" Color="Color.Secondary">
+                    @if (_data.SprintCount == 1)
+                    {
+                        <text>Single sprint snapshot</text>
+                    }
+                    else
+                    {
+                        <text>Aggregated snapshot — @_data.SprintCount sprints</text>
+                    }
+                </MudText>
+                @if (_data.SprintCount > 1)
+                {
+                    <MudTooltip Text="Multiple sprints selected. All metrics are aggregated (summed) across the sprint range. This is a composition view — no time trends are shown.">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
+                    </MudTooltip>
+                }
+            </MudStack>
+
+            @* ── Portfolio summary metrics ── *@
+            <MudPaper Elevation="2" Class="pa-3 mb-3">
+                <MudText Typo="Typo.subtitle1" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Summarize" Class="mr-1" Size="Size.Small" />
+                    Portfolio Summary
+                </MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="6" sm="4" md="2">
+                        <MudPaper Outlined="true" Class="pa-2 text-center">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Completed PBIs</MudText>
+                            <MudText Typo="Typo.h5" Color="Color.Success">@_data.Summary.TotalCompletedPbis</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="6" sm="4" md="2">
+                        <MudPaper Outlined="true" Class="pa-2 text-center">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Effort Delivered</MudText>
+                            <MudText Typo="Typo.h5">@_data.Summary.TotalCompletedEffort<MudText Typo="Typo.caption" Color="Color.Secondary" Inline="true"> pts</MudText></MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="6" sm="4" md="2">
+                        <MudPaper Outlined="true" Class="pa-2 text-center">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Avg. Progress</MudText>
+                            <MudText Typo="Typo.h5">@_data.Summary.AverageProgressPercent.ToString("F0")<MudText Typo="Typo.caption" Color="Color.Secondary" Inline="true">%</MudText></MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="6" sm="4" md="2">
+                        <MudPaper Outlined="true" Class="pa-2 text-center">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs Created</MudText>
+                            <MudText Typo="Typo.h5" Color="@(_data.Summary.TotalBugsCreated > 0 ? Color.Warning : Color.Default)">@_data.Summary.TotalBugsCreated</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="6" sm="4" md="2">
+                        <MudPaper Outlined="true" Class="pa-2 text-center">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs Worked</MudText>
+                            <MudText Typo="Typo.h5">@_data.Summary.TotalBugsWorked</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="6" sm="4" md="2">
+                        <MudPaper Outlined="true" Class="pa-2 text-center">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs Closed</MudText>
+                            <MudText Typo="Typo.h5" Color="@(_data.Summary.TotalBugsClosed > 0 ? Color.Success : Color.Default)">@_data.Summary.TotalBugsClosed</MudText>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            @* ── Product contribution + Feature contribution ── *@
+            <MudGrid Spacing="3" Class="mb-3">
+                @* Product contribution chart *@
+                <MudItem xs="12" md="6">
+                    <MudPaper Elevation="2" Class="pa-3" Style="height: 100%;">
+                        <MudText Typo="Typo.subtitle1" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.PieChart" Class="mr-1" Size="Size.Small" />
+                            Product Contribution
+                            <MudTooltip Text="Share of delivered effort per product across the selected sprint range.">
+                                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" Class="ml-1" />
+                            </MudTooltip>
+                        </MudText>
+                        @if (_data.Products.Count == 0)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">No delivery data available.</MudText>
+                        }
+                        else
+                        {
+                            @foreach (var product in _data.Products)
+                            {
+                                <MudStack Class="mb-2" Spacing="0">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                        <MudText Typo="Typo.body2" Style="max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                                                 title="@product.ProductName">
+                                            @product.ProductName
+                                        </MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                            @product.CompletedEffort pts &nbsp; @product.EffortShare.ToString("F0")%
+                                        </MudText>
+                                    </MudStack>
+                                    <MudProgressLinear Value="@product.EffortShare" Max="100"
+                                                       Color="Color.Primary" Rounded="true" Size="Size.Medium" />
+                                </MudStack>
+                            }
+                        }
+                    </MudPaper>
+                </MudItem>
+
+                @* Feature contribution chart *@
+                <MudItem xs="12" md="6">
+                    <MudPaper Elevation="2" Class="pa-3" Style="height: 100%;">
+                        <MudText Typo="Typo.subtitle1" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="mr-1" Size="Size.Small" />
+                            Feature Contribution
+                            <MudTooltip Text="Top features by delivered effort. Share is relative to total portfolio delivered effort.">
+                                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" Class="ml-1" />
+                            </MudTooltip>
+                        </MudText>
+                        @if (_data.TopFeatures.Count == 0)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">No feature delivery data available for the selected sprint range.</MudText>
+                        }
+                        else
+                        {
+                            @foreach (var feature in _data.TopFeatures)
+                            {
+                                <MudStack Class="mb-2" Spacing="0">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                        <MudStack Spacing="0" Style="max-width: 60%; overflow: hidden;">
+                                            <MudText Typo="Typo.body2"
+                                                     Style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                                                     title="@feature.FeatureTitle">
+                                                @feature.FeatureTitle
+                                            </MudText>
+                                            @if (!string.IsNullOrEmpty(feature.EpicTitle))
+                                            {
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary"
+                                                         Style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                                                         title="@feature.EpicTitle">
+                                                    @feature.EpicTitle
+                                                </MudText>
+                                            }
+                                        </MudStack>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                            @feature.SprintCompletedEffort pts &nbsp; @feature.EffortShare.ToString("F0")%
+                                        </MudText>
+                                    </MudStack>
+                                    <MudProgressLinear Value="@feature.EffortShare" Max="100"
+                                                       Color="Color.Secondary" Rounded="true" Size="Size.Medium" />
+                                </MudStack>
+                            }
+                        }
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            @* ── Bug distribution summary ── *@
+            @if (_data.Products.Any(p => p.BugsCreated > 0 || p.BugsWorked > 0 || p.BugsClosed > 0))
+            {
+                <MudPaper Elevation="2" Class="pa-3 mb-3">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-1" Size="Size.Small" />
+                        Bug Distribution
+                        <MudTooltip Text="Bug activity per product. Products with high creation relative to closure indicate operational pressure.">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" Class="ml-1" />
+                        </MudTooltip>
+                    </MudText>
+                    <MudSimpleTable Dense="true" Hover="true" Striped="true">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th style="text-align: right;">Bugs Created</th>
+                                <th style="text-align: right;">Bugs Worked</th>
+                                <th style="text-align: right;">Bugs Closed</th>
+                                <th style="text-align: right;">Net (Created − Closed)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var product in _data.Products.OrderByDescending(p => p.BugsCreated))
+                            {
+                                var net = product.BugsCreated - product.BugsClosed;
+                                <tr>
+                                    <td>@product.ProductName</td>
+                                    <td style="text-align: right;">
+                                        @if (product.BugsCreated > 0)
+                                        {
+                                            <MudText Typo="Typo.body2" Color="Color.Warning">@product.BugsCreated</MudText>
+                                        }
+                                        else
+                                        {
+                                            <text>—</text>
+                                        }
+                                    </td>
+                                    <td style="text-align: right;">@(product.BugsWorked > 0 ? product.BugsWorked.ToString() : "—")</td>
+                                    <td style="text-align: right;">
+                                        @if (product.BugsClosed > 0)
+                                        {
+                                            <MudText Typo="Typo.body2" Color="Color.Success">@product.BugsClosed</MudText>
+                                        }
+                                        else
+                                        {
+                                            <text>—</text>
+                                        }
+                                    </td>
+                                    <td style="text-align: right;">
+                                        @{
+                                            var netColor = net > 0 ? Color.Error : (net < 0 ? Color.Success : Color.Default);
+                                            var netText = net > 0 ? $"+{net}" : net.ToString();
+                                        }
+                                        <MudText Typo="Typo.body2" Color="@netColor">@(net == 0 ? "—" : netText)</MudText>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </MudPaper>
+            }
+            else if (_data.HasData)
+            {
+                <MudPaper Elevation="2" Class="pa-3 mb-3">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-1" Size="Size.Small" />
+                        Bug Distribution
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">No bug activity recorded for the selected sprint range.</MudText>
+                </MudPaper>
+            }
+        }
+
+        @* Initial state — no sprint range selected *@
+        @if (_data == null && !_deliveryLoading && _selectedSprintIds.Count == 0 && _sprints.Any())
+        {
+            <MudPaper Elevation="1" Class="pa-6 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.DateRange" Color="Color.Secondary" Style="font-size: 2.5rem;" />
+                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-2">
+                    Select a sprint range above to view the portfolio delivery snapshot.
+                </MudText>
+            </MudPaper>
+        }
+
+        @if (!_sprints.Any() && !_isLoading)
+        {
+            <MudPaper Elevation="1" Class="pa-6 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Secondary" Style="font-size: 2.5rem;" />
+                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-2">
+                    Select a team to load sprints.
+                </MudText>
+            </MudPaper>
+        }
+    }
 </MudContainer>
+
+<style>
+    .pd-scope-popover {
+        min-width: 260px;
+        z-index: 1400;
+    }
+</style>
 
 @code {
     private List<BreadcrumbItem> _breadcrumbs = new();
 
-    protected override void OnInitialized()
+    // State
+    private bool _isLoading = true;
+    private bool _deliveryLoading;
+    private string? _errorMessage;
+    private int? _profileId;
+
+    // Teams and sprints
+    private List<TeamDto> _teams = new();
+    private List<SprintDto> _sprints = new();
+    private int? _selectedTeamId;
+    private int? _fromSprintId;
+    private int? _toSprintId;
+
+    // Popover state
+    private bool _teamPopoverOpen;
+    private bool _sprintPopoverOpen;
+    private bool _scopePopoverOpen;
+
+    // Delivery data
+    private PortfolioDeliveryDto? _data;
+    private List<int> _selectedSprintIds = new();
+
+    // ── Computed labels ──────────────────────────────────────────────────────────
+
+    private string ContextTeamLabel =>
+        _selectedTeamId.HasValue
+            ? _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value)?.Name ?? "Team"
+            : "All Teams";
+
+    private string ContextSprintRangeLabel
+    {
+        get
+        {
+            if (_fromSprintId == null && _toSprintId == null) return "Sprint range";
+            var from = _fromSprintId.HasValue
+                ? _sprints.FirstOrDefault(s => s.Id == _fromSprintId.Value)?.Name ?? "?"
+                : "?";
+            var to = _toSprintId.HasValue
+                ? _sprints.FirstOrDefault(s => s.Id == _toSprintId.Value)?.Name ?? "?"
+                : "?";
+            return from == to ? from : $"{from} → {to}";
+        }
+    }
+
+    // ── Lifecycle ────────────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialDataAsync();
+    }
+
+    private async Task LoadInitialDataAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            _errorMessage = null;
+            _data = null;
+
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}");
+                return;
+            }
+
+            _profileId = activeProfile.Id;
+            ProfileService.SetCachedActiveProfileId(_profileId);
+
+            _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
+
+            UpdateBreadcrumbs();
+
+            // Auto-select first team and load sprint window
+            if (!_selectedTeamId.HasValue && _teams.Count > 0)
+            {
+                _selectedTeamId = _teams[0].Id;
+            }
+
+            if (_selectedTeamId.HasValue)
+            {
+                await LoadSprintsAsync(_selectedTeamId.Value);
+                ApplyDefaultSprintWindow();
+                await LoadDeliveryDataAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            Snackbar.Add($"Error loading Portfolio Delivery: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task LoadSprintsAsync(int teamId)
+    {
+        try
+        {
+            _sprints = (await SprintService.GetSprintsForTeamAsync(teamId))
+                .Where(s => s.StartUtc.HasValue && s.EndUtc.HasValue)
+                .OrderBy(s => s.StartUtc)
+                .ToList();
+        }
+        catch
+        {
+            _sprints = new List<SprintDto>();
+        }
+    }
+
+    private void ApplyDefaultSprintWindow()
+    {
+        if (_sprints.Count == 0) return;
+
+        var now = DateTimeOffset.UtcNow;
+        var current = _sprints.FirstOrDefault(s => s.TimeFrame == "current")
+            ?? _sprints.FirstOrDefault(s => s.StartUtc <= now && (s.EndUtc == null || s.EndUtc >= now))
+            ?? _sprints.LastOrDefault(s => s.EndUtc <= now);
+
+        if (current == null) return;
+
+        var currentIdx = _sprints.IndexOf(current);
+        var fromIdx = Math.Max(0, currentIdx - 4);
+
+        _fromSprintId = _sprints[fromIdx].Id;
+        _toSprintId = current.Id;
+    }
+
+    private async Task LoadDeliveryDataAsync()
+    {
+        if (!_profileId.HasValue) return;
+
+        // Build sprint ID list from the from/to range
+        _selectedSprintIds = BuildSprintRange(_fromSprintId, _toSprintId);
+        if (_selectedSprintIds.Count == 0)
+        {
+            _data = null;
+            return;
+        }
+
+        try
+        {
+            _deliveryLoading = true;
+            _data = null;
+            StateHasChanged();
+
+            var result = await MetricsClient.GetPortfolioDeliveryAsync(_profileId.Value, _selectedSprintIds);
+            _data = result.HasData ? result : null;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading portfolio delivery data: {ex.Message}", Severity.Error);
+            _data = null;
+        }
+        finally
+        {
+            _deliveryLoading = false;
+        }
+    }
+
+    private List<int> BuildSprintRange(int? fromId, int? toId)
+    {
+        if (_sprints.Count == 0) return new List<int>();
+
+        var fromIdx = fromId.HasValue ? _sprints.FindIndex(s => s.Id == fromId.Value) : 0;
+        var toIdx = toId.HasValue ? _sprints.FindIndex(s => s.Id == toId.Value) : _sprints.Count - 1;
+
+        if (fromIdx < 0) fromIdx = 0;
+        if (toIdx < 0) toIdx = _sprints.Count - 1;
+        if (fromIdx > toIdx) (fromIdx, toIdx) = (toIdx, fromIdx);
+
+        return _sprints.Skip(fromIdx).Take(toIdx - fromIdx + 1).Select(s => s.Id).ToList();
+    }
+
+    // ── Popover toggles ──────────────────────────────────────────────────────────
+
+    private void CloseAllPopovers() { _teamPopoverOpen = false; _sprintPopoverOpen = false; _scopePopoverOpen = false; }
+
+    private void ToggleTeamPopover() { var open = !_teamPopoverOpen; CloseAllPopovers(); _teamPopoverOpen = open; }
+    private void ToggleSprintPopover() { var open = !_sprintPopoverOpen; CloseAllPopovers(); _sprintPopoverOpen = open; }
+    private void ToggleScopePopover() { var open = !_scopePopoverOpen; CloseAllPopovers(); _scopePopoverOpen = open; }
+
+    // ── Event handlers ───────────────────────────────────────────────────────────
+
+    private async Task OnTeamSelectedFromPopoverAsync(int? teamId)
+    {
+        _teamPopoverOpen = false;
+        await OnTeamChangedAsync(teamId);
+    }
+
+    private async Task OnToSprintSelectedFromPopoverAsync(int? sprintId)
+    {
+        _sprintPopoverOpen = false;
+        await OnToSprintChangedAsync(sprintId);
+    }
+
+    private async Task OnTeamChangedAsync(int? teamId)
+    {
+        _selectedTeamId = teamId;
+        _fromSprintId = null;
+        _toSprintId = null;
+        _sprints = new List<SprintDto>();
+        _data = null;
+
+        if (teamId.HasValue)
+        {
+            await LoadSprintsAsync(teamId.Value);
+            ApplyDefaultSprintWindow();
+            await LoadDeliveryDataAsync();
+        }
+    }
+
+    private async Task OnFromSprintChangedAsync(int? sprintId)
+    {
+        _fromSprintId = sprintId;
+        await LoadDeliveryDataAsync();
+    }
+
+    private async Task OnToSprintChangedAsync(int? sprintId)
+    {
+        _toSprintId = sprintId;
+        await LoadDeliveryDataAsync();
+    }
+
+    // ── Navigation ───────────────────────────────────────────────────────────────
+
+    private void NavigateToDelivery() => NavigationManager.NavigateTo(WorkspaceRoutes.DeliveryWorkspace);
+
+    // ── Breadcrumbs ──────────────────────────────────────────────────────────────
+
+    private void UpdateBreadcrumbs()
     {
         _breadcrumbs = new List<BreadcrumbItem>
         {
@@ -72,14 +679,5 @@
             new("Portfolio Delivery", null, disabled: true, icon: Icons.Material.Filled.Inventory2)
         };
     }
-
-    private void NavigateToDelivery()
-    {
-        NavigationManager.NavigateTo(WorkspaceRoutes.DeliveryWorkspace);
-    }
-
-    private void NavigateToHome()
-    {
-        NavigationManager.NavigateTo(WorkspaceRoutes.Home);
-    }
 }
+
