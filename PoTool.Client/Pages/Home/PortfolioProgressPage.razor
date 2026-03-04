@@ -127,7 +127,7 @@
                             </MudSelect>
                             <MudSelect T="int?" Value="_toSprintId" Label="To Sprint"
                                        Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
-                                       ValueChanged="OnToSprintChangedAsync"
+                                       ValueChanged="@(async v => { await OnToSprintChangedAsync(v); _sprintPopoverOpen = false; })"
                                        Style="min-width: 210px;">
                                 @foreach (var sprint in _sprints)
                                 {
@@ -136,7 +136,6 @@
                                     </MudSelectItem>
                                 }
                             </MudSelect>
-                            <MudButton Size="Size.Small" OnClick="@(() => _sprintPopoverOpen = false)">Done</MudButton>
                         </MudStack>
                     </MudPopover>
                 }
