@@ -359,44 +359,27 @@ De Delivery-werkruimte beantwoordt de vraag: *Wat heeft mijn team daadwerkelijk 
 
 > **Voormalige naam:** Sprint Trend. De pagina is verplaatst van de Trends-werkruimte naar Delivery en hernoemd.
 
-De Sprint Delivery-pagina toont sprint-voor-sprint een analyse van geplande versus opgeleverde metrieken: PBI-voltooiing, inspanningsprogressie, bugs per sprint, en de verdeling van het werk per Epic/Feature. In de meersprints-modus toont de pagina ook een **Calibratiepaneel** met velocity- en voorspelbaarheidssignalen.
+De Sprint Delivery-pagina toont voor één geselecteerde sprint een analyse van geplande versus opgeleverde metrieken: PBI-voltooiing, inspanningsprogressie, bugs per sprint, en de verdeling van het werk per Epic/Feature. Gebruik de navigatiepijlen om door sprints te bladeren. Voor meersprint-trendanalyse ga je naar **Delivery Trends** in de Trends-werkruimte.
 
 #### Navigatiepijlen
 
 Gebruik de pijlen links en rechts om door de sprintgeschiedenis te bladeren, één sprint tegelijk.
 
-#### Modus
+#### Wat zie je per sprint
 
-- **Enkelvoudige sprintmodus** (standaard) — focus op één sprint:
-  - Aantal voltooide PBI's, inclusief vergelijking met de vorige sprint (bijv. `5 (+2 vs previous sprint)`).
-  - Opgeleverde inspanning in story points, inclusief vergelijking met de vorige sprint (bijv. `100 pts (-30 pts vs previous sprint)`).
-  - Inspanningsprogressiepercentage, inclusief vergelijking met de vorige sprint (bijv. `58% (+12% vs previous sprint)`).
-  - Bugaantal (aangemaakt / bewerkt / gesloten).
-  - Verdeling van het werk per Epic als horizontale staafgrafiek (rechts van de KPI-blokken).
-- **Geavanceerde modus** (schakelknop) — meerdere sprints in één grafiek:
-  - Progressie over de laatste N sprints (PBI-voltooiing, inspanning, bugaantallen) als afzonderlijke grafieken.
-  - N is instelbaar.
+- Aantal voltooide PBI's, inclusief vergelijking met de vorige sprint (bijv. `5 (+2 vs previous sprint)`).
+- Opgeleverde inspanning in story points, inclusief vergelijking met de vorige sprint (bijv. `100 pts (-30 pts vs previous sprint)`).
+- Inspanningsprogressiepercentage, inclusief vergelijking met de vorige sprint (bijv. `58% (+12% vs previous sprint)`).
+- Bugaantal (aangemaakt / bewerkt / gesloten).
+- Verdeling van het werk per Epic als horizontale staafgrafiek (rechts van de KPI-blokken).
 
 #### Vergelijking met de vorige sprint
 
-In de enkelvoudige sprintmodus worden de drie primaire KPI's (voltooide PBI's, opgeleverde inspanning en progressiepercentage) aangevuld met een vergelijkingsbadge ten opzichte van de direct voorafgaande sprint. Een positieve waarde is groen, een negatieve waarde is rood.
+De drie primaire KPI's (voltooide PBI's, opgeleverde inspanning en progressiepercentage) worden aangevuld met een vergelijkingsbadge ten opzichte van de direct voorafgaande sprint. Een positieve waarde is groen, een negatieve waarde is rood.
 
 #### Verdeling van het werk (horizontale staafgrafiek)
 
 Rechts van de KPI-blokken toont een horizontale staafgrafiek hoe de opgeleverde inspanning verdeeld is over de Epics (of producten bij meerdere producten). De staafjes maken onderlinge vergelijking eenvoudiger en de labels blijven leesbaar.
-
-#### Calibratiepaneel (geavanceerde modus)
-
-In de geavanceerde modus verschijnt het Calibratiepaneel met de volgende signalen voor het geselecteerde sprintbereik:
-
-| Signaal | Omschrijving |
-|---|---|
-| **Mediaan velocity** (P50) | Typische sprintoutput in story points. |
-| **P25–P75 band** | Volatiliteitsband: gebruik P25 als conservatieve planningscapaciteit. |
-| **Mediaan voorspelbaarheid** | Verhouding voltooid/gepland (1,0 = volledig geleverd). |
-| **Veilige plancapaciteit** | P25-velocity — voor plannen met hoge betrouwbaarheid. |
-
-Het paneel werkt bij wanneer het sprintbereik of de productselectie verandert. Uitschieterssprints (beneden P10 of boven P90) worden aangeduid met een waarschuwingspictogram.
 
 #### Doorklikken op epics en features
 
@@ -405,6 +388,8 @@ In de sprint-detailtabel kun je op een Epic- of Feature-ID klikken om de [Werkit
 #### Verouderde gegevens
 
 Als de berekende sprintmetrieken ouder zijn dan de laatste datasync, verschijnt er een waarschuwing. Klik op **Herberekenen** om de analyse te vernieuwen.
+
+> **Historische patronen over meerdere sprints** zijn beschikbaar in de **Delivery Trends**-pagina (`/home/trends/delivery`) in de Trends-werkruimte.
 
 ---
 
