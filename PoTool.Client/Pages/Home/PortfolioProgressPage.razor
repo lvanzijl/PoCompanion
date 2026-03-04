@@ -53,7 +53,7 @@
     }
     else
     {
-        @* Sprint range selector *@
+        @* Filters — product, team, sprint range *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Spacing="2">
                 <MudText Typo="Typo.h6">
@@ -77,15 +77,16 @@
                         }
                     </MudSelect>
 
+                    @* Team selector — used to resolve sprint list for the range selector *@
                     <MudSelect T="int?"
                                Value="_selectedTeamId"
-                               Label="Team"
+                               Label="Team (sprint list)"
                                Variant="Variant.Outlined"
                                Dense="true"
                                Clearable="true"
                                ValueChanged="OnTeamChangedAsync"
                                Style="min-width: 180px;">
-                        <MudSelectItem T="int?" Value="@((int?)null)">Select team…</MudSelectItem>
+                        <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
                         @foreach (var team in _teams)
                         {
                             <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
@@ -137,7 +138,7 @@
 
         @if (_trendData != null)
         {
-            @* Top Summary Block *@
+            @* ── Summary Block ── *@
             <MudPaper Elevation="2" Class="pa-4 mb-4">
                 <MudStack Spacing="2">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
@@ -146,58 +147,68 @@
                             Summary
                         </MudText>
 
-                        @* Trajectory badge *@
+                        @* Classification badge *@
                         @{
-                            var (trajColor, trajIcon, trajLabel) = _trendData.Summary.Trajectory switch
+                            var (classColor, classIcon, classLabel) = _trendData.Summary.Trajectory switch
                             {
-                                PortfolioTrajectory.Improving => (Color.Success, Icons.Material.Filled.TrendingUp, "Improving"),
-                                PortfolioTrajectory.AtRisk    => (Color.Error,   Icons.Material.Filled.Warning,    "At Risk"),
-                                _                             => (Color.Default, Icons.Material.Filled.TrendingFlat, "Stable")
+                                PortfolioTrajectory.Contracting => (Color.Success, Icons.Material.Filled.TrendingDown,  "Contracting"),
+                                PortfolioTrajectory.Expanding   => (Color.Warning, Icons.Material.Filled.TrendingUp,    "Expanding"),
+                                _                               => (Color.Default, Icons.Material.Filled.TrendingFlat,  "Stable")
                             };
                         }
-                        <MudChip T="string" Color="@trajColor" Icon="@trajIcon" Size="Size.Medium">
-                            @trajLabel
+                        <MudChip T="string" Color="@classColor" Icon="@classIcon" Size="Size.Medium">
+                            @classLabel
                         </MudChip>
+
+                        <MudTooltip Text="Contracting: backlog shrinking (Net Flow > 0). Expanding: backlog growing (Net Flow < 0). Stable: within tolerance.">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
+                        </MudTooltip>
                     </MudStack>
 
                     <MudGrid Spacing="2">
-                        @* Progress change *@
+                        @* Cumulative Net Flow *@
                         <MudItem xs="12" sm="6" md="3">
                             <MudPaper Outlined="true" Class="pa-3">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Progress</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Net Flow (cumulative)</MudText>
                                 <MudText Typo="Typo.h6">
-                                    @if (_trendData.Summary.FirstPercentDone.HasValue && _trendData.Summary.LastPercentDone.HasValue)
+                                    @if (_trendData.Summary.CumulativeNetFlow.HasValue)
                                     {
-                                        @($"{_trendData.Summary.FirstPercentDone:F1}% → {_trendData.Summary.LastPercentDone:F1}%")
+                                        var net = _trendData.Summary.CumulativeNetFlow.Value;
+                                        var sign = net >= 0 ? "+" : "";
+                                        <span style="color: @(net >= 0 ? "var(--mud-palette-success)" : "var(--mud-palette-warning)")">
+                                            @($"{sign}{net:F0} pts")
+                                        </span>
                                     }
-                                    else
-                                    {
-                                        <span>N/A</span>
-                                    }
+                                    else { <span>N/A</span> }
                                 </MudText>
                             </MudPaper>
                         </MudItem>
 
-                        @* Scope change *@
+                        @* Total scope change *@
                         <MudItem xs="12" sm="6" md="3">
                             <MudPaper Outlined="true" Class="pa-3">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Scope Change</MudText>
-                                    <MudTooltip Text="Historical per-sprint scope tracking is not yet available. Total scope shown is the current backlog snapshot.">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Total Scope Change</MudText>
+                                    <MudTooltip Text="TotalScopeEffort is a current-state snapshot; historical per-sprint scope tracking is not yet implemented. Value will be 0 when scope has not changed since the window was loaded.">
                                         <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
                                     </MudTooltip>
                                 </MudStack>
                                 <MudText Typo="Typo.h6">
-                                    @if (_trendData.Summary.ScopeChangePercent.HasValue)
+                                    @if (_trendData.Summary.TotalScopeChangePts.HasValue)
                                     {
-                                        var pct = _trendData.Summary.ScopeChangePercent.Value;
-                                        var sign = pct >= 0 ? "+" : "";
-                                        @($"{sign}{pct:F1}%")
+                                        var pts = _trendData.Summary.TotalScopeChangePts.Value;
+                                        var pct = _trendData.Summary.TotalScopeChangePercent;
+                                        var sign = pts >= 0 ? "+" : "";
+                                        @if (pct.HasValue)
+                                        {
+                                            @($"{sign}{pts:F0} pts ({sign}{pct:F1}%)")
+                                        }
+                                        else
+                                        {
+                                            @($"{sign}{pts:F0} pts")
+                                        }
                                     }
-                                    else
-                                    {
-                                        <span>N/A</span>
-                                    }
+                                    else { <span>N/A</span> }
                                 </MudText>
                             </MudPaper>
                         </MudItem>
@@ -207,16 +218,15 @@
                             <MudPaper Outlined="true" Class="pa-3">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Remaining Effort Change</MudText>
                                 <MudText Typo="Typo.h6">
-                                    @if (_trendData.Summary.RemainingEffortDelta.HasValue)
+                                    @if (_trendData.Summary.RemainingEffortChangePts.HasValue)
                                     {
-                                        var delta = _trendData.Summary.RemainingEffortDelta.Value;
+                                        var delta = _trendData.Summary.RemainingEffortChangePts.Value;
                                         var sign = delta >= 0 ? "+" : "";
-                                        @($"{sign}{delta:F0} pts")
+                                        <span style="color: @(delta <= 0 ? "var(--mud-palette-success)" : "var(--mud-palette-warning)")">
+                                            @($"{sign}{delta:F0} pts")
+                                        </span>
                                     }
-                                    else
-                                    {
-                                        <span>N/A</span>
-                                    }
+                                    else { <span>N/A</span> }
                                 </MudText>
                             </MudPaper>
                         </MudItem>
@@ -232,60 +242,65 @@
                 </MudStack>
             </MudPaper>
 
-            @* 2×2 Chart Grid *@
+            @* ── 2×2 Chart Grid ── *@
             @if (_trendData.Sprints.Any(s => s.HasData))
             {
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;"
                      class="portfolio-trend-grid">
 
-                    @* Graph 1 — % Done Over Time (Primary) *@
-                    <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                    @* Graph 1 — Combined Flow Graph (Primary) *@
+                    <MudPaper Elevation="2" Class="pa-3" Style="min-height: 300px;">
                         <MudStack Spacing="0" Class="mb-2">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudText Typo="Typo.subtitle2">% Done Over Time</MudText>
-                                @* Higher-is-better: slope badge with LowerIsBetter=false *@
-                                <TrendSlopeBadge StartValue="@_pctDoneStart"
-                                                 EndValue="@_pctDoneEnd"
+                                <MudText Typo="Typo.subtitle2">Combined Flow</MudText>
+                                @* Higher-is-better for Net Flow *@
+                                <TrendSlopeBadge StartValue="@_netFlowStart"
+                                                 EndValue="@_netFlowEnd"
                                                  LowerIsBetter="false"
-                                                 MetricLabel="% done" />
+                                                 MetricLabel="net flow" />
                             </MudStack>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                Cumulative done effort / total scope — higher is better
-                            </MudText>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Completed (green) · Added (orange) · Net Flow (blue, dominant) — Net &gt; 0 = backlog shrinking
+                                </MudText>
+                                @* Limitation notice *@
+                                <MudTooltip Text="Added Effort includes both newly created work and estimation changes on existing items. Large re-estimations may distort Net Flow temporarily if creation vs. estimation deltas cannot be distinguished. Current implementation: Added = PlannedEffort (sprint commitment proxy, not true scope inflow).">
+                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
+                                </MudTooltip>
+                            </MudStack>
                         </MudStack>
                         <MudChart ChartType="ChartType.Line"
-                                  ChartSeries="@_pctDoneSeries"
+                                  ChartSeries="@_flowSeries"
                                   XAxisLabels="@_xAxisLabels"
                                   Width="100%"
-                                  Height="180px"
-                                  ChartOptions="@_chartOptions" />
+                                  Height="200px"
+                                  ChartOptions="@_flowChartOptions" />
                     </MudPaper>
 
-                    @* Graph 2 — Total Scope Over Time *@
-                    <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                    @* Graph 2 — Total Scope Trend (Stock) *@
+                    <MudPaper Elevation="2" Class="pa-3" Style="min-height: 300px;">
                         <MudStack Spacing="0" Class="mb-2">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudText Typo="Typo.subtitle2">Total Scope Over Time</MudText>
-                                @* Neutral interpretation: rising late is a risk signal *@
+                                <MudText Typo="Typo.subtitle2">Total Scope Trend</MudText>
                                 <TrendSlopeBadge StartValue="@_scopeStart"
                                                  EndValue="@_scopeEnd"
                                                  LowerIsBetter="true"
                                                  MetricLabel="total scope" />
                             </MudStack>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                Total effort in scope — rising late signals risk
+                                Total effort in scope (pts, excl. Removed) — structural product growth
                             </MudText>
                         </MudStack>
                         <MudChart ChartType="ChartType.Bar"
                                   ChartSeries="@_scopeSeries"
                                   XAxisLabels="@_xAxisLabels"
                                   Width="100%"
-                                  Height="180px"
+                                  Height="200px"
                                   ChartOptions="@_chartOptions" />
                     </MudPaper>
 
-                    @* Graph 3 — Remaining Effort Trend *@
-                    <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                    @* Graph 3 — Remaining Effort Trend (Stock) *@
+                    <MudPaper Elevation="2" Class="pa-3" Style="min-height: 300px;">
                         <MudStack Spacing="0" Class="mb-2">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                 <MudText Typo="Typo.subtitle2">Remaining Effort Trend</MudText>
@@ -296,22 +311,22 @@
                                                  MetricLabel="remaining effort" />
                             </MudStack>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                Remaining effort (pts) — long-horizon burndown
+                                Remaining effort (pts) — digestion pressure; lower is better
                             </MudText>
                         </MudStack>
                         <MudChart ChartType="ChartType.Line"
                                   ChartSeries="@_remainingSeries"
                                   XAxisLabels="@_xAxisLabels"
                                   Width="100%"
-                                  Height="180px"
+                                  Height="200px"
                                   ChartOptions="@_chartOptions" />
                     </MudPaper>
 
-                    @* Graph 4 — Throughput Trend *@
-                    <MudPaper Elevation="2" Class="pa-3" Style="min-height: 260px;">
+                    @* Graph 4 — Throughput Trend (Flow Capacity) *@
+                    <MudPaper Elevation="2" Class="pa-3" Style="min-height: 300px;">
                         <MudStack Spacing="0" Class="mb-2">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudText Typo="Typo.subtitle2">Throughput per Sprint</MudText>
+                                <MudText Typo="Typo.subtitle2">Throughput Trend</MudText>
                                 @* Higher-is-better *@
                                 <TrendSlopeBadge StartValue="@_throughputStart"
                                                  EndValue="@_throughputEnd"
@@ -319,14 +334,14 @@
                                                  MetricLabel="throughput" />
                             </MudStack>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                Effort completed per sprint (pts) — higher is better
+                                Effort completed per sprint (pts) — delivery capacity; higher is better
                             </MudText>
                         </MudStack>
                         <MudChart ChartType="ChartType.Bar"
                                   ChartSeries="@_throughputSeries"
                                   XAxisLabels="@_xAxisLabels"
                                   Width="100%"
-                                  Height="180px"
+                                  Height="200px"
                                   ChartOptions="@_chartOptions" />
                     </MudPaper>
 
@@ -345,16 +360,17 @@
                 </MudAlert>
             }
         }
-        else if (!_trendsLoading && _selectedTeamId.HasValue)
+        else if (!_trendsLoading)
         {
             <MudAlert Severity="Severity.Info" Class="mb-4">
-                Select a sprint range to view portfolio progress data.
-            </MudAlert>
-        }
-        else if (!_selectedTeamId.HasValue)
-        {
-            <MudAlert Severity="Severity.Info" Class="mb-4">
-                Select a team and sprint range to view portfolio progress data.
+                @if (!_selectedTeamId.HasValue)
+                {
+                    <text>Select a team to enable sprint range selection, then data will load automatically.</text>
+                }
+                else
+                {
+                    <text>Select a sprint range to view portfolio progress data.</text>
+                }
             </MudAlert>
         }
     }
@@ -393,16 +409,27 @@
 
     // Chart data
     private string[] _xAxisLabels = Array.Empty<string>();
-    private List<ChartSeries> _pctDoneSeries = new();
+    private List<ChartSeries> _flowSeries = new();
     private List<ChartSeries> _scopeSeries = new();
     private List<ChartSeries> _remainingSeries = new();
     private List<ChartSeries> _throughputSeries = new();
 
     // TrendSlopeBadge start/end values (first and last non-null data point)
-    private double? _pctDoneStart, _pctDoneEnd;
+    private double? _netFlowStart, _netFlowEnd;
     private double? _scopeStart, _scopeEnd;
     private double? _remainingStart, _remainingEnd;
     private double? _throughputStart, _throughputEnd;
+
+    // Palette: index 0 = Completed (green), 1 = Added (orange/red), 2 = Net Flow (blue/primary)
+    // Net Flow is listed last so it renders on top in a line chart and appears dominant.
+    private ChartOptions _flowChartOptions = new()
+    {
+        YAxisTicks = 5,
+        MaxNumYAxisTicks = 8,
+        YAxisLines = true,
+        XAxisLines = true,
+        ChartPalette = new[] { "#4caf50", "#ff9800", "#1976d2" }
+    };
 
     private ChartOptions _chartOptions = new()
     {
@@ -426,16 +453,32 @@
             _profileId = activeProfile.Id;
             ProfileService.SetCachedActiveProfileId(_profileId);
 
-            _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
+            _teams   = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
             _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
 
             ParseQueryParameters();
             UpdateBreadcrumbs();
 
-            // If context passes a teamId, auto-load sprints
+            // Default: auto-select first available team and load the default 5-sprint window.
+            // This ensures the page loads with data without requiring manual filter selection.
+            if (!_selectedTeamId.HasValue && _teams.Count > 0)
+            {
+                _selectedTeamId = _teams[0].Id;
+            }
+
             if (_selectedTeamId.HasValue)
             {
                 await LoadSprintsAsync(_selectedTeamId.Value);
+
+                // Apply default 5-sprint window (current + past 4) if no sprint range was
+                // specified via query parameters.
+                if (!_fromSprintId.HasValue && !_toSprintId.HasValue)
+                {
+                    ApplyDefaultSprintWindow();
+                }
+
+                // Auto-load trend data with defaults
+                await LoadTrendDataAsync();
             }
         }
         catch (Exception ex)
@@ -447,6 +490,39 @@
         {
             _isLoading = false;
         }
+    }
+
+    /// <summary>
+    /// Selects the default sprint window: current sprint + the 4 most recently completed sprints
+    /// (5 sprints total), ordered chronologically.
+    ///
+    /// Selection logic:
+    ///   1. Identify the "current" sprint (TimeFrame == "current", or the sprint whose date range
+    ///      contains today if TimeFrame is absent).
+    ///   2. Take up to 4 past sprints ending before or at the current sprint.
+    ///   3. Set _fromSprintId to the earliest and _toSprintId to the current (latest).
+    /// </summary>
+    private void ApplyDefaultSprintWindow()
+    {
+        if (_sprints.Count == 0) return;
+
+        var ordered = _sprints.OrderBy(s => s.StartUtc ?? DateTimeOffset.MaxValue).ToList();
+        var now     = DateTimeOffset.UtcNow;
+
+        // Find current sprint: prefer TimeFrame == "current", fallback to date range
+        var current = ordered.FirstOrDefault(s => s.TimeFrame == "current")
+            ?? ordered.FirstOrDefault(s => s.StartUtc <= now && (s.EndUtc == null || s.EndUtc >= now))
+            ?? ordered.LastOrDefault(s => s.EndUtc <= now);  // fallback: most recent past sprint
+
+        if (current == null) return;
+
+        var currentIdx = ordered.IndexOf(current);
+
+        // Take up to 4 sprints before current (inclusive = 5 total)
+        var fromIdx = Math.Max(0, currentIdx - 4);
+
+        _fromSprintId = ordered[fromIdx].Id;
+        _toSprintId   = current.Id;
     }
 
     private void ParseQueryParameters()
@@ -468,21 +544,22 @@
     private async Task OnProductChangedAsync(int? productId)
     {
         _selectedProductId = productId;
-        // Re-trigger data load with the new product filter (sprint range unchanged)
         await LoadTrendDataAsync();
     }
 
     private async Task OnTeamChangedAsync(int? teamId)
     {
         _selectedTeamId = teamId;
-        _fromSprintId = null;
-        _toSprintId = null;
+        _fromSprintId   = null;
+        _toSprintId     = null;
         _sprints.Clear();
         _trendData = null;
 
         if (teamId.HasValue)
         {
             await LoadSprintsAsync(teamId.Value);
+            ApplyDefaultSprintWindow();
+            await LoadTrendDataAsync();
         }
     }
 
@@ -514,12 +591,8 @@
 
     private async Task LoadTrendDataAsync()
     {
-        if (!_profileId.HasValue)
-        {
-            return;
-        }
+        if (!_profileId.HasValue) return;
 
-        // Determine the sprint IDs to include in the range
         var sprintIds = GetSelectedSprintIds();
         if (sprintIds.Count == 0)
         {
@@ -532,8 +605,6 @@
 
         try
         {
-            // When a specific product is selected, pass it to the backend.
-            // When "All Products" (null), no product filter is sent — backend uses all owner products.
             int[]? productFilter = _selectedProductId.HasValue
                 ? new[] { _selectedProductId.Value }
                 : null;
@@ -562,15 +633,11 @@
 
     /// <summary>
     /// Returns the IDs of sprints in the selected range (From..To inclusive).
-    /// When only one bound is selected the single sprint is used.
-    /// When neither is selected, returns empty.
     /// </summary>
     private List<int> GetSelectedSprintIds()
     {
         if (!_fromSprintId.HasValue && !_toSprintId.HasValue)
-        {
             return new List<int>();
-        }
 
         var orderedSprints = _sprints.OrderBy(s => s.StartUtc).ToList();
 
@@ -582,7 +649,7 @@
             : orderedSprints.Count - 1;
 
         if (fromIdx < 0) fromIdx = 0;
-        if (toIdx < 0) toIdx = orderedSprints.Count - 1;
+        if (toIdx   < 0) toIdx   = orderedSprints.Count - 1;
         fromIdx = Math.Clamp(fromIdx, 0, orderedSprints.Count - 1);
         toIdx   = Math.Clamp(toIdx,   0, orderedSprints.Count - 1);
         if (fromIdx > toIdx) (fromIdx, toIdx) = (toIdx, fromIdx);
@@ -596,72 +663,59 @@
 
     /// <summary>
     /// Builds chart series and axis labels from the trend DTO.
-    /// Only sprints with actual data are included in chart series to avoid
-    /// misleading zero values for sprints where no projection data exists.
+    /// Only sprints with actual data are included to avoid misleading zero values.
     /// </summary>
     private void BuildChartData(PortfolioProgressTrendDto data)
     {
-        // Use only sprints with data for charts to avoid false zero values
         var dataPoints = data.Sprints.Where(s => s.HasData).ToList();
 
         _xAxisLabels = dataPoints.Select(s => ShortSprintLabel(s.SprintName)).ToArray();
 
-        _pctDoneSeries = new List<ChartSeries>
+        // Graph 1 — Combined Flow: Completed (outflow), Added (inflow), Net Flow
+        // Series order matches ChartPalette: green, orange, blue.
+        // Net Flow is last so it renders on top.
+        _flowSeries = new List<ChartSeries>
         {
-            new ChartSeries
-            {
-                Name = "% Done",
-                Data = dataPoints.Select(s => s.PercentDone ?? 0.0).ToArray()
-            }
+            new() { Name = "Completed",  Data = dataPoints.Select(s => s.ThroughputEffort ?? 0.0).ToArray() },
+            new() { Name = "Added",      Data = dataPoints.Select(s => s.AddedEffort      ?? 0.0).ToArray() },
+            new() { Name = "Net Flow",   Data = dataPoints.Select(s => s.NetFlow           ?? 0.0).ToArray() }
         };
 
+        // Graph 2 — Total Scope (Stock)
         _scopeSeries = new List<ChartSeries>
         {
-            new ChartSeries
-            {
-                Name = "Total Scope (pts)",
-                Data = dataPoints.Select(s => s.TotalScopeEffort ?? 0.0).ToArray()
-            }
+            new() { Name = "Total Scope (pts)", Data = dataPoints.Select(s => s.TotalScopeEffort ?? 0.0).ToArray() }
         };
 
+        // Graph 3 — Remaining Effort (Stock)
         _remainingSeries = new List<ChartSeries>
         {
-            new ChartSeries
-            {
-                Name = "Remaining (pts)",
-                Data = dataPoints.Select(s => s.RemainingEffort ?? 0.0).ToArray()
-            }
+            new() { Name = "Remaining (pts)", Data = dataPoints.Select(s => s.RemainingEffort ?? 0.0).ToArray() }
         };
 
+        // Graph 4 — Throughput (Flow Capacity)
         _throughputSeries = new List<ChartSeries>
         {
-            new ChartSeries
-            {
-                Name = "Throughput (pts)",
-                Data = dataPoints.Select(s => s.ThroughputEffort ?? 0.0).ToArray()
-            }
+            new() { Name = "Throughput (pts)", Data = dataPoints.Select(s => s.ThroughputEffort ?? 0.0).ToArray() }
         };
 
-        // Slope badge values: first and last sprints with actual data
-        _pctDoneStart = dataPoints.FirstOrDefault()?.PercentDone;
-        _pctDoneEnd   = dataPoints.LastOrDefault()?.PercentDone;
-        _scopeStart   = dataPoints.FirstOrDefault()?.TotalScopeEffort;
-        _scopeEnd     = dataPoints.LastOrDefault()?.TotalScopeEffort;
-        _remainingStart = dataPoints.FirstOrDefault()?.RemainingEffort;
-        _remainingEnd   = dataPoints.LastOrDefault()?.RemainingEffort;
-        _throughputStart = dataPoints.FirstOrDefault()?.ThroughputEffort;
-        _throughputEnd   = dataPoints.LastOrDefault()?.ThroughputEffort;
+        // Slope badge values — first and last sprints with actual data
+        _netFlowStart     = dataPoints.FirstOrDefault()?.NetFlow;
+        _netFlowEnd       = dataPoints.LastOrDefault()?.NetFlow;
+        _scopeStart       = dataPoints.FirstOrDefault()?.TotalScopeEffort;
+        _scopeEnd         = dataPoints.LastOrDefault()?.TotalScopeEffort;
+        _remainingStart   = dataPoints.FirstOrDefault()?.RemainingEffort;
+        _remainingEnd     = dataPoints.LastOrDefault()?.RemainingEffort;
+        _throughputStart  = dataPoints.FirstOrDefault()?.ThroughputEffort;
+        _throughputEnd    = dataPoints.LastOrDefault()?.ThroughputEffort;
     }
 
-    /// <summary>
-    /// Returns a short sprint label for chart x-axis (max ~10 chars).
-    /// </summary>
+    /// <summary>Returns a short sprint label for the chart x-axis (max ~10 chars).</summary>
     private static string ShortSprintLabel(string name)
     {
         if (name.Length <= 10) return name;
-        // Try to extract a sprint number e.g. "Sprint 42" → "S42"
         var lower = name.ToLowerInvariant();
-        var idx = lower.IndexOf("sprint ", StringComparison.Ordinal);
+        var idx   = lower.IndexOf("sprint ", StringComparison.Ordinal);
         if (idx >= 0)
         {
             var remainder = name[(idx + 7)..].Trim();
@@ -673,7 +727,7 @@
     private async Task LoadInitialDataAsync()
     {
         _errorMessage = null;
-        _isLoading = true;
+        _isLoading    = true;
         StateHasChanged();
         await OnInitializedAsync();
     }
@@ -693,3 +747,4 @@
         NavigationManager.NavigateTo(WorkspaceRoutes.TrendsWorkspace);
     }
 }
+

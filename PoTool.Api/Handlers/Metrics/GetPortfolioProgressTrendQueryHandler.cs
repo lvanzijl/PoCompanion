@@ -10,24 +10,33 @@ namespace PoTool.Api.Handlers.Metrics;
 /// <summary>
 /// Handler for GetPortfolioProgressTrendQuery.
 ///
-/// Computes portfolio-level progress metrics across a selected sprint range.
+/// Computes portfolio-level stock-and-flow metrics across a selected sprint range.
 ///
-/// Calculation approach:
-///   - TotalScopeEffort:   sum of Effort of all resolved PBIs for the product owner's products,
-///                         excluding items whose current State contains "Removed".
-///                         This is a current-state snapshot; it represents the known baseline scope.
-///   - CumulativeDoneEffort per sprint:
-///                         running sum of CompletedPbiEffort from SprintMetricsProjection entities,
-///                         ordered chronologically. Represents "how much effort has been completed
-///                         through the end of each sprint".
-///   - PercentDone:        CumulativeDoneEffort / TotalScopeEffort * 100.
-///   - RemainingEffort:    TotalScopeEffort - CumulativeDoneEffort.
-///   - ThroughputEffort:   CompletedPbiEffort for that sprint only (per-sprint throughput).
+/// Stock metrics (level at end of each sprint):
+///   - TotalScopeEffort:  sum of Effort of all resolved PBIs, excluding Removed items.
+///                        Uses a current-state snapshot — the same value is applied to all
+///                        sprints in the range. Historical per-sprint scope tracking is not
+///                        implemented.
+///   - RemainingEffort:   TotalScopeEffort − CumulativeDoneEffort.
+///
+/// Flow metrics (per-sprint deltas):
+///   - ThroughputEffort:  CompletedPbiEffort for that sprint (outflow / deliveries).
+///   - AddedEffort:       PlannedEffort for that sprint (inflow proxy — see limitation below).
+///   - NetFlow:           ThroughputEffort − AddedEffort.
+///                        Positive = backlog shrinking; Negative = backlog expanding.
+///
+/// LIMITATION — AddedEffort definition:
+///   AddedEffort is proxied from SprintMetricsProjection.PlannedEffort, which is the effort
+///   of items committed to the sprint backlog. It does NOT represent items newly added to the
+///   product backlog during the sprint. True scope-inflow tracking requires per-event history
+///   (ActivityEventLedger extension) which is not yet available.
+///   Additionally, PlannedEffort includes re-estimated items; large re-estimations may distort
+///   Net Flow temporarily, since creation vs. estimation deltas cannot be distinguished.
 ///
 /// Edge cases:
-///   - If TotalScopeEffort is 0 → PercentDone is null (avoid divide-by-zero).
-///   - If a sprint has no projection rows → HasData = false, all values null.
-///   - Multi-product: projections across all products are summed per sprint.
+///   - TotalScopeEffort = 0 → PercentDone is null (avoid divide-by-zero).
+///   - Sprint with no projection rows → HasData = false, all fields null.
+///   - Multi-product: projections are summed across all products per sprint.
 /// </summary>
 public sealed class GetPortfolioProgressTrendQueryHandler
     : IQueryHandler<GetPortfolioProgressTrendQuery, PortfolioProgressTrendDto>
@@ -124,12 +133,20 @@ public sealed class GetPortfolioProgressTrendQueryHandler
             .Where(p => sprintIdList.Contains(p.SprintId) && productIds.Contains(p.ProductId))
             .ToListAsync(cancellationToken);
 
-        // Group projections by sprint, sum CompletedPbiEffort across all products
+        // Group projections by sprint, sum CompletedPbiEffort and PlannedEffort across all products
         var throughputBySprint = projections
             .GroupBy(p => p.SprintId)
             .ToDictionary(
                 g => g.Key,
                 g => (double)g.Sum(p => p.CompletedPbiEffort));
+
+        // AddedEffort proxy: sum PlannedEffort per sprint.
+        // See class-level limitation comment on the AddedEffort definition.
+        var addedBySprint = projections
+            .GroupBy(p => p.SprintId)
+            .ToDictionary(
+                g => g.Key,
+                g => (double)g.Sum(p => p.PlannedEffort));
 
         // Build per-sprint data points with cumulative done effort
         double cumulativeDone = 0.0;
@@ -138,6 +155,7 @@ public sealed class GetPortfolioProgressTrendQueryHandler
         foreach (var sprint in sprints)
         {
             var hasData = throughputBySprint.TryGetValue(sprint.Id, out var throughput);
+            addedBySprint.TryGetValue(sprint.Id, out var addedEffort);
 
             if (hasData)
             {
@@ -156,6 +174,9 @@ public sealed class GetPortfolioProgressTrendQueryHandler
                 remaining = totalScopeEffort - effectiveDone;
             }
 
+            // NetFlow = Throughput − Added (positive = backlog shrinking, negative = expanding)
+            double? netFlow = hasData ? throughput - addedEffort : null;
+
             sprintPoints.Add(new PortfolioSprintProgressDto
             {
                 SprintId = sprint.Id,
@@ -166,6 +187,8 @@ public sealed class GetPortfolioProgressTrendQueryHandler
                 TotalScopeEffort = hasData ? totalScopeEffort : null,
                 RemainingEffort = hasData ? remaining : null,
                 ThroughputEffort = hasData ? throughput : null,
+                AddedEffort = hasData ? addedEffort : null,
+                NetFlow = netFlow,
                 HasData = hasData
             });
         }
@@ -184,66 +207,66 @@ public sealed class GetPortfolioProgressTrendQueryHandler
     }
 
     /// <summary>
-    /// Computes the top-level summary for the selected sprint range.
+    /// Computes the stock-and-flow summary for the selected sprint range.
     ///
-    /// Classification logic:
-    ///   Improving — % done is rising (by ≥5 pts) AND remaining effort is falling (by ≥5%).
-    ///   AtRisk    — remaining effort is increasing OR % done has dropped.
-    ///   Stable    — all other cases (small movement within tolerance).
+    /// Classification rules:
+    ///   Contracting — cumulative Net Flow &gt; +tolerance (delivering more than adding).
+    ///                 Backlog is shrinking.
+    ///   Expanding   — cumulative Net Flow &lt; −tolerance (adding more than delivering).
+    ///                 Backlog is growing.
+    ///   Stable      — |cumulative Net Flow| ≤ tolerance (small movement within threshold).
+    ///
+    /// Tolerance: 5 story points (absolute), chosen to ignore minor rounding differences.
+    ///
+    /// TotalScopeChangePts: always 0 in the current data model because TotalScopeEffort is a
+    /// current-state snapshot applied uniformly to all sprints in the range. Historical
+    /// per-sprint scope tracking is not yet implemented.
     /// </summary>
     private static PortfolioProgressSummaryDto ComputeSummary(
         IReadOnlyList<PortfolioSprintProgressDto> sprints)
     {
+        const double tolerance = 5.0;
+
         var withData = sprints.Where(s => s.HasData).ToList();
 
-        if (withData.Count < 2)
+        if (withData.Count == 0)
         {
             return new PortfolioProgressSummaryDto
             {
-                FirstPercentDone = withData.FirstOrDefault()?.PercentDone,
-                LastPercentDone = withData.LastOrDefault()?.PercentDone,
-                ScopeChangePercent = null,
-                RemainingEffortDelta = null,
                 Trajectory = PortfolioTrajectory.Stable
             };
         }
 
         var first = withData.First();
-        var last = withData.Last();
+        var last  = withData.Last();
 
-        var firstPct = first.PercentDone;
-        var lastPct = last.PercentDone;
-        var firstRemaining = first.RemainingEffort;
-        var lastRemaining = last.RemainingEffort;
+        // Cumulative Net Flow across the range
+        var cumulativeNet = withData.Sum(s => s.NetFlow ?? 0.0);
 
-        // Scope change: TotalScopeEffort is a current-state snapshot; historical scope changes
-        // are not tracked in the current data model, so this is always null.
-        // TODO: Track scope additions/removals via activity events for true historical scope change.
-        double? scopeChangePct = null;
-
-        double? remainingDelta = firstRemaining.HasValue && lastRemaining.HasValue
-            ? lastRemaining.Value - firstRemaining.Value
-            : null;
-
-        // Classify trajectory using a consistent 5% threshold for both directions:
-        // Improving: % done rose by ≥5 pts AND remaining effort fell.
-        // AtRisk:    % done dropped by ≥5 pts OR remaining effort increased by ≥5%.
-        // Stable:    all other cases (movement within tolerance).
-        PortfolioTrajectory trajectory;
-        var pctDelta = lastPct.HasValue && firstPct.HasValue ? lastPct.Value - firstPct.Value : (double?)null;
-        var remainingPctChange = firstRemaining.HasValue && firstRemaining.Value > 0 && remainingDelta.HasValue
-            ? remainingDelta.Value / firstRemaining.Value * 100.0
+        // Total scope change: snapshot model means first == last, so always 0
+        var totalScopeChangePts = (first.TotalScopeEffort.HasValue && last.TotalScopeEffort.HasValue)
+            ? last.TotalScopeEffort.Value - first.TotalScopeEffort.Value
             : (double?)null;
 
-        if (pctDelta.HasValue && pctDelta >= 5.0
-            && remainingDelta.HasValue && remainingDelta < 0)
+        var totalScopeChangePercent =
+            totalScopeChangePts.HasValue && first.TotalScopeEffort.HasValue && first.TotalScopeEffort.Value > 0
+            ? totalScopeChangePts.Value / first.TotalScopeEffort.Value * 100.0
+            : (double?)null;
+
+        // Remaining effort change (negative = good)
+        var remainingChangePts = (first.RemainingEffort.HasValue && last.RemainingEffort.HasValue)
+            ? last.RemainingEffort.Value - first.RemainingEffort.Value
+            : (double?)null;
+
+        // Classification based on cumulative Net Flow
+        PortfolioTrajectory trajectory;
+        if (cumulativeNet > tolerance)
         {
-            trajectory = PortfolioTrajectory.Improving;
+            trajectory = PortfolioTrajectory.Contracting;
         }
-        else if ((pctDelta.HasValue && pctDelta <= -5.0)
-            || (remainingPctChange.HasValue && remainingPctChange >= 5.0))
+        else if (cumulativeNet < -tolerance)
         {
-            trajectory = PortfolioTrajectory.AtRisk;
+            trajectory = PortfolioTrajectory.Expanding;
         }
         else
         {
@@ -252,10 +275,10 @@ public sealed class GetPortfolioProgressTrendQueryHandler
 
         return new PortfolioProgressSummaryDto
         {
-            FirstPercentDone = firstPct,
-            LastPercentDone = lastPct,
-            ScopeChangePercent = scopeChangePct,
-            RemainingEffortDelta = remainingDelta,
+            CumulativeNetFlow = withData.Any(s => s.NetFlow.HasValue) ? cumulativeNet : null,
+            TotalScopeChangePts = totalScopeChangePts,
+            TotalScopeChangePercent = totalScopeChangePercent,
+            RemainingEffortChangePts = remainingChangePts,
             Trajectory = trajectory
         };
     }
