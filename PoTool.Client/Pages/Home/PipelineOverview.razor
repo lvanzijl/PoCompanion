@@ -7,7 +7,7 @@
 @using System.Web
 @inject IProfileService ProfileService
 @inject PipelineService PipelineService
-@inject PipelineSprintTrendsService PipelineSprintTrendsService
+@inject IPipelinesClient PipelinesClient
 @inject ProductService ProductService
 @inject TeamService TeamService
 @inject SprintService SprintService
@@ -525,11 +525,13 @@
                 ? new[] { _selectedProductId.Value }
                 : null;
 
-            _sprintTrendsResponse = await PipelineSprintTrendsService.GetSprintTrendsAsync(
+            var productIdsString = productFilter != null ? string.Join(",", productFilter) : null;
+            _sprintTrendsResponse = await PipelinesClient.GetSprintTrendsAsync(
                 _profileId.Value,
                 sprintIds,
-                productFilter,
-                teamId: productFilter == null ? _selectedTeamId : null);
+                productIds: productIdsString,
+                teamId: productFilter == null ? _selectedTeamId : null,
+                CancellationToken.None);
 
             if (_sprintTrendsResponse?.Success == true)
             {

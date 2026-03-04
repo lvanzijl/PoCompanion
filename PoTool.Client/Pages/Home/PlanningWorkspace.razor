@@ -405,11 +405,12 @@
                 _selectedProductId = ProductId;
             }
             
+            // Load past sprint IDs first so velocity analysis and the Capacity Confidence panel
+            // can use them for the calibration endpoint.
+            await LoadPastSprintIdsAsync();
+
             // Load velocity data and analyze epics
             await LoadVelocityAnalysisAsync();
-
-            // Load past sprint IDs for the Capacity Confidence panel
-            await LoadPastSprintIdsAsync();
 
             // Detect epics with invalid items
             await LoadEpicInvalidItemsAsync();
@@ -586,12 +587,18 @@
 
     /// <summary>
     /// Load velocity data and analyze epics that exceed historical velocity capacity.
-    /// An epic is considered "at risk" if its remaining effort exceeds 3x average velocity.
+    /// An epic is considered "at risk" if its remaining effort exceeds 3x median velocity.
+    /// Uses GetCapacityCalibrationAsync with past sprint IDs (loaded in LoadPastSprintIdsAsync).
     /// </summary>
     private async Task LoadVelocityAnalysisAsync()
     {
         try
         {
+            if (!_activeProfileId.HasValue || _pastSprintIds.Count == 0)
+            {
+                return;
+            }
+
             // Get product IDs for velocity query
             var productIds = _selectedProductId.HasValue 
                 ? new List<int> { _selectedProductId.Value } 
@@ -599,13 +606,13 @@
             
             if (productIds.Count == 0)
             {
-                // No products to analyze
                 return;
             }
             
-            // Load velocity trend (last 10 sprints)
-            var velocityTrend = await MetricsClient.GetVelocityTrendAsync(productIds, null, 10);
-            _averageVelocity = velocityTrend.AverageVelocity;
+            // Use capacity calibration (median velocity) instead of the removed velocity-trend endpoint
+            var calibration = await MetricsClient.GetCapacityCalibrationAsync(
+                _activeProfileId.Value, _pastSprintIds, productIds);
+            _averageVelocity = calibration.MedianVelocity;
             
             if (_averageVelocity <= 0)
             {

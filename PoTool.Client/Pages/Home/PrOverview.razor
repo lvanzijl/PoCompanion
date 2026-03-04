@@ -6,7 +6,7 @@
 @using System.Web
 @inject IProfileService ProfileService
 @inject PullRequestService PullRequestService
-@inject PrSprintTrendsService PrSprintTrendsService
+@inject IPullRequestsClient PullRequestsClient
 @inject ProductService ProductService
 @inject TeamService TeamService
 @inject SprintService SprintService
@@ -729,10 +729,12 @@
                     productFilter = teamProducts;
             }
 
-            _sprintTrendData = await PrSprintTrendsService.GetSprintTrendsAsync(
+            var productIdsString = productFilter != null ? string.Join(",", productFilter) : null;
+            _sprintTrendData = await PullRequestsClient.GetSprintTrendsAsync(
                 selectedSprintIds,
-                productFilter,
-                teamId: productFilter == null ? _trendTeamId : null);
+                productIds: productIdsString,
+                teamId: productFilter == null ? _trendTeamId : null,
+                CancellationToken.None);
 
             if (_sprintTrendData?.Success == true)
             {

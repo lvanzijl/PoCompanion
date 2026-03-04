@@ -11,7 +11,7 @@
 @inject TeamService TeamService
 @inject SprintService SprintService
 @inject ProductService ProductService
-@inject SprintTrendService SprintTrendService
+@inject IMetricsClient MetricsClient
 @inject TfsConfigService TfsConfigService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -662,10 +662,11 @@
             // Capture sprint IDs for the calibration panel (used in advanced/multi-sprint mode)
             _calibrationSprintIds = _advancedMode ? sprintIds.AsReadOnly() : Array.Empty<int>();
 
-            var response = await SprintTrendService.GetSprintTrendMetricsAsync(
+            var response = await MetricsClient.GetSprintTrendMetricsAsync(
                 _profileId.Value,
                 sprintIds,
-                recompute: true);
+                recompute: true,
+                CancellationToken.None);
 
             if (response == null || !response.Success || response.Metrics == null)
             {
@@ -1036,10 +1037,11 @@
                 sprintIds = new List<int> { _currentSprint.Id };
             }
 
-            var response = await SprintTrendService.GetSprintTrendMetricsAsync(
+            var response = await MetricsClient.GetSprintTrendMetricsAsync(
                 _profileId.Value,
                 sprintIds,
-                recompute: true);
+                recompute: true,
+                CancellationToken.None);
 
             if (response != null && response.Success && response.Metrics != null)
             {

@@ -10,7 +10,7 @@
 @inject StateClassificationService StateClassificationService
 @inject TeamService TeamService
 @inject SprintService SprintService
-@inject PrSprintTrendsService PrSprintTrendsService
+@inject IPullRequestsClient PullRequestsClient
 
 @* 
     Decision #3: Time Horizon Default - Configurable sprint range (defaults to last 6 months if no sprints selected)
@@ -598,9 +598,11 @@
             if (selectedSprintIds.Count == 0)
                 return;
 
-            var response = await PrSprintTrendsService.GetSprintTrendsAsync(
+            var response = await PullRequestsClient.GetSprintTrendsAsync(
                 selectedSprintIds,
-                teamId: _selectedTeamId);
+                productIds: null,
+                teamId: _selectedTeamId,
+                CancellationToken.None);
 
             if (response?.Success == true && response.Sprints.Count > 0)
             {

@@ -1,6 +1,6 @@
-@using PoTool.Client.Services
+@using PoTool.Client.ApiClient
 @using PoTool.Shared.Metrics
-@inject CapacityCalibrationService CapacityCalibrationService
+@inject IMetricsClient MetricsClient
 @inject ISnackbar Snackbar
 
 @* Capacity Calibration Panel — compact velocity/predictability signal block.
@@ -103,10 +103,11 @@ else if (_calibration != null && _calibration.Sprints.Count > 0)
         StateHasChanged();
         try
         {
-            _calibration = await CapacityCalibrationService.GetCapacityCalibrationAsync(
+            _calibration = await MetricsClient.GetCapacityCalibrationAsync(
                 ProfileId,
                 SprintIds,
-                ProductIds);
+                ProductIds,
+                CancellationToken.None);
         }
         catch (Exception ex)
         {
