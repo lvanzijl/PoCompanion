@@ -570,15 +570,17 @@
                 }
                 catch
                 {
-                    // skip teams without sprints
+                    // Per-team sprint load failures are expected for teams without synced sprints;
+                    // simply skip those teams so the remaining ones still contribute.
                 }
             }
 
             _pastSprintIds = pastIds.Distinct().ToList().AsReadOnly();
         }
-        catch
+        catch (Exception ex)
         {
-            // Non-critical — calibration panel simply won't show
+            // Capacity Confidence panel is non-critical; log and continue so the rest of the page loads.
+            Snackbar.Add($"Could not load sprint history for capacity calibration: {ex.Message}", Severity.Warning);
         }
     }
 
