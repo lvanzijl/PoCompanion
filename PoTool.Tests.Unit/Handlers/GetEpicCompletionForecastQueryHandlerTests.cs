@@ -47,6 +47,23 @@ public class GetEpicCompletionForecastQueryHandlerTests
             .ReturnsAsync(new List<ProductDto>());
         _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto>());
+
+        // Default: return sprint metrics with 10 completed story points for any iteration path
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetSprintMetricsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GetSprintMetricsQuery q, CancellationToken ct) =>
+                new SprintMetricsDto(
+                    IterationPath: q.IterationPath,
+                    SprintName: q.IterationPath,
+                    StartDate: DateTimeOffset.UtcNow.AddDays(-28),
+                    EndDate: DateTimeOffset.UtcNow.AddDays(-14),
+                    CompletedStoryPoints: 10,
+                    PlannedStoryPoints: 12,
+                    CompletedWorkItemCount: 5,
+                    TotalWorkItemCount: 8,
+                    CompletedPBIs: 3,
+                    CompletedBugs: 1,
+                    CompletedTasks: 1
+                ));
         
         _handler = new GetEpicCompletionForecastQueryHandler(
             _mockRepository.Object,
@@ -82,10 +99,6 @@ public class GetEpicCompletionForecastQueryHandlerTests
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto> { epic });
 
-        var velocityTrend = CreateVelocityTrend(20.0);
-        _mockMediator.Setup(m => m.Send(It.IsAny<GetVelocityTrendQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(velocityTrend);
-
         var query = new GetEpicCompletionForecastQuery(1);
 
         // Act
@@ -113,10 +126,6 @@ public class GetEpicCompletionForecastQueryHandlerTests
             .ReturnsAsync(epic);
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto> { epic, child1, child2, child3 });
-
-        var velocityTrend = CreateVelocityTrend(10.0);
-        _mockMediator.Setup(m => m.Send(It.IsAny<GetVelocityTrendQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(velocityTrend);
 
         var query = new GetEpicCompletionForecastQuery(1);
 
@@ -147,10 +156,6 @@ public class GetEpicCompletionForecastQueryHandlerTests
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto> { epic, feature, pbi1, pbi2, task });
 
-        var velocityTrend = CreateVelocityTrend(10.0);
-        _mockMediator.Setup(m => m.Send(It.IsAny<GetVelocityTrendQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(velocityTrend);
-
         var query = new GetEpicCompletionForecastQuery(1);
 
         // Act
@@ -175,9 +180,21 @@ public class GetEpicCompletionForecastQueryHandlerTests
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto> { epic, child });
 
-        var velocityTrend = CreateVelocityTrend(0.0);
-        _mockMediator.Setup(m => m.Send(It.IsAny<GetVelocityTrendQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(velocityTrend);
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetSprintMetricsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GetSprintMetricsQuery q, CancellationToken ct) =>
+                new SprintMetricsDto(
+                    IterationPath: q.IterationPath,
+                    SprintName: q.IterationPath,
+                    StartDate: DateTimeOffset.UtcNow.AddDays(-28),
+                    EndDate: DateTimeOffset.UtcNow.AddDays(-14),
+                    CompletedStoryPoints: 0,
+                    PlannedStoryPoints: 12,
+                    CompletedWorkItemCount: 0,
+                    TotalWorkItemCount: 5,
+                    CompletedPBIs: 0,
+                    CompletedBugs: 0,
+                    CompletedTasks: 0
+                ));
 
         var query = new GetEpicCompletionForecastQuery(1);
 
@@ -204,10 +221,6 @@ public class GetEpicCompletionForecastQueryHandlerTests
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto> { epic, child1, child2, child3 });
 
-        var velocityTrend = CreateVelocityTrend(10.0);
-        _mockMediator.Setup(m => m.Send(It.IsAny<GetVelocityTrendQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(velocityTrend);
-
         var query = new GetEpicCompletionForecastQuery(1);
 
         // Act
@@ -232,10 +245,6 @@ public class GetEpicCompletionForecastQueryHandlerTests
             .ReturnsAsync(epic);
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto> { epic, child1, child2 });
-
-        var velocityTrend = CreateVelocityTrend(10.0);
-        _mockMediator.Setup(m => m.Send(It.IsAny<GetVelocityTrendQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(velocityTrend);
 
         var query = new GetEpicCompletionForecastQuery(1);
 
@@ -262,10 +271,6 @@ public class GetEpicCompletionForecastQueryHandlerTests
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto> { epic, child });
 
-        var velocityTrend = CreateVelocityTrend(10.0, sprintCount: 2);
-        _mockMediator.Setup(m => m.Send(It.IsAny<GetVelocityTrendQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(velocityTrend);
-
         var query = new GetEpicCompletionForecastQuery(1);
 
         // Act
@@ -279,18 +284,16 @@ public class GetEpicCompletionForecastQueryHandlerTests
     [TestMethod]
     public async Task Handle_WithMediumHistoricalData_ReturnsMediumConfidence()
     {
-        // Arrange
+        // Arrange: 3 distinct iteration paths → count = 3 → Medium confidence
         var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-        var child = CreateWorkItem(2, "PBI", "New", "TestArea", "Sprint 1", 1, 10);
+        var child1 = CreateWorkItem(2, "PBI", "New", "TestArea", "Sprint 1", 1, 10);
+        var child2 = CreateWorkItem(3, "PBI", "New", "TestArea", "Sprint 2", 1, 10);
+        var child3 = CreateWorkItem(4, "PBI", "New", "TestArea", "Sprint 3", 1, 10);
 
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(epic);
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto> { epic, child });
-
-        var velocityTrend = CreateVelocityTrend(10.0, sprintCount: 4);
-        _mockMediator.Setup(m => m.Send(It.IsAny<GetVelocityTrendQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(velocityTrend);
+            .ReturnsAsync(new List<WorkItemDto> { epic, child1, child2, child3 });
 
         var query = new GetEpicCompletionForecastQuery(1);
 
@@ -305,18 +308,18 @@ public class GetEpicCompletionForecastQueryHandlerTests
     [TestMethod]
     public async Task Handle_WithHighHistoricalData_ReturnsHighConfidence()
     {
-        // Arrange
+        // Arrange: 5 distinct iteration paths → count = 5 → High confidence
         var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-        var child = CreateWorkItem(2, "PBI", "New", "TestArea", "Sprint 1", 1, 10);
+        var child1 = CreateWorkItem(2, "PBI", "New", "TestArea", "Sprint 1", 1, 10);
+        var child2 = CreateWorkItem(3, "PBI", "New", "TestArea", "Sprint 2", 1, 10);
+        var child3 = CreateWorkItem(4, "PBI", "New", "TestArea", "Sprint 3", 1, 10);
+        var child4 = CreateWorkItem(5, "PBI", "New", "TestArea", "Sprint 4", 1, 10);
+        var child5 = CreateWorkItem(6, "PBI", "New", "TestArea", "Sprint 5", 1, 10);
 
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(epic);
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto> { epic, child });
-
-        var velocityTrend = CreateVelocityTrend(10.0, sprintCount: 6);
-        _mockMediator.Setup(m => m.Send(It.IsAny<GetVelocityTrendQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(velocityTrend);
+            .ReturnsAsync(new List<WorkItemDto> { epic, child1, child2, child3, child4, child5 });
 
         var query = new GetEpicCompletionForecastQuery(1);
 
@@ -343,10 +346,6 @@ public class GetEpicCompletionForecastQueryHandlerTests
             .ReturnsAsync(epic);
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto> { epic, child1, child2, child3, child4, child5 });
-
-        var velocityTrend = CreateVelocityTrend(10.0);
-        _mockMediator.Setup(m => m.Send(It.IsAny<GetVelocityTrendQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(velocityTrend);
 
         var query = new GetEpicCompletionForecastQuery(1);
 
@@ -381,36 +380,6 @@ public class GetEpicCompletionForecastQueryHandlerTests
             Effort: effort,
                     Description: null,
                     Tags: null
-        );
-    }
-
-    private static VelocityTrendDto CreateVelocityTrend(double averageVelocity, int sprintCount = 5)
-    {
-        var sprints = new List<SprintMetricsDto>();
-        for (int i = 1; i <= sprintCount; i++)
-        {
-            sprints.Add(new SprintMetricsDto(
-                IterationPath: $"Sprint {i}",
-                SprintName: $"Sprint {i}",
-                StartDate: DateTimeOffset.UtcNow.AddDays(-14 * (sprintCount - i + 1)),
-                EndDate: DateTimeOffset.UtcNow.AddDays(-14 * (sprintCount - i)),
-                CompletedStoryPoints: (int)averageVelocity,
-                PlannedStoryPoints: (int)averageVelocity + 5,
-                CompletedWorkItemCount: 5,
-                TotalWorkItemCount: 8,
-                CompletedPBIs: 3,
-                CompletedBugs: 1,
-                CompletedTasks: 1
-            ));
-        }
-
-        return new VelocityTrendDto(
-            Sprints: sprints,
-            AverageVelocity: averageVelocity,
-            ThreeSprintAverage: averageVelocity,
-            SixSprintAverage: averageVelocity,
-            TotalCompletedStoryPoints: (int)(averageVelocity * sprintCount),
-            TotalSprints: sprintCount
         );
     }
 }
