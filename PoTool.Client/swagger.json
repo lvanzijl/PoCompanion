@@ -4935,6 +4935,53 @@
         }
       }
     },
+    "/api/Metrics/portfolio-delivery": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetPortfolioDelivery",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "sprintIds",
+            "in": "query",
+            "required": true,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioDeliveryDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Metrics/capacity-calibration": {
       "get": {
         "tags": [
@@ -10327,6 +10374,160 @@
           },
           "summary": {
             "$ref": "#/components/schemas/PortfolioProgressSummaryDto"
+          }
+        }
+      },
+      "PortfolioDeliveryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "summary",
+          "products",
+          "topFeatures"
+        ],
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/PortfolioDeliverySummaryDto"
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductDeliveryDto"
+            }
+          },
+          "topFeatures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeatureDeliveryDto"
+            }
+          },
+          "sprintCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasData": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PortfolioDeliverySummaryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "totalCompletedPbis": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalCompletedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "averageProgressPercent": {
+            "type": "number",
+            "format": "double"
+          },
+          "totalBugsCreated": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalBugsWorked": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalBugsClosed": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "ProductDeliveryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "productId",
+          "productName"
+        ],
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "completedPbis": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "effortShare": {
+            "type": "number",
+            "format": "double"
+          },
+          "bugsCreated": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bugsWorked": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bugsClosed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "progressionDelta": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "FeatureDeliveryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "featureId",
+          "featureTitle",
+          "productId",
+          "productName"
+        ],
+        "properties": {
+          "featureId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "featureTitle": {
+            "type": "string"
+          },
+          "epicTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "productId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "sprintCompletedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "effortShare": {
+            "type": "number",
+            "format": "double"
+          },
+          "progressPercent": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },

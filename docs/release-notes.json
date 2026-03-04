@@ -2,6 +2,14 @@
   {
     "date": "2026-03-04",
     "type": "Added",
+    "title": "Portfolio Delivery — implemented aggregated delivery snapshot page",
+    "impact": "Implemented the Portfolio Delivery page at /home/delivery/portfolio (Delivery workspace). The placeholder has been replaced with a fully functional page: sprint range selector (team + From/To sprint popovers with 5-sprint auto-default), portfolio summary metrics (Completed PBIs, Effort Delivered, Avg. Progress %, Bugs Created/Worked/Closed), product contribution horizontal bar chart (effort share per product), feature contribution horizontal bar chart (top 10 features by delivered effort), and bug distribution table (Created/Worked/Closed/Net per product). Works for single sprint or multi-sprint aggregated snapshot. No time-series charts — all visualisations show composition or distribution. Backend: new GET api/Metrics/portfolio-delivery endpoint, GetPortfolioDeliveryQuery, GetPortfolioDeliveryQueryHandler, PortfolioDeliveryDto/PortfolioDeliverySummaryDto/ProductDeliveryDto/FeatureDeliveryDto DTOs. IMetricsClient.GetPortfolioDeliveryAsync added to ApiClient.g.cs. DeliveryWorkspace 'Coming soon' chip removed. NAVIGATION_MAP.md and GEBRUIKERSHANDLEIDING.md updated.",
+    "area": "Delivery / Portfolio Delivery",
+    "link": "/home/delivery/portfolio"
+  },
+  {
+    "date": "2026-03-04",
+    "type": "Added",
     "title": "Delivery Trends — new page for multi-sprint delivery analysis",
     "impact": "Added a dedicated Delivery Trends page at /home/trends/delivery under the Trends workspace. The page provides four sprint-timeline charts: PBI Throughput Trend (completed PBIs per sprint, primary full-width bar chart), Effort Throughput Trend (story points delivered per sprint), Progress Trend (completed effort as % of planned effort per sprint), and Bug Trend (bugs created vs closed per sprint). All charts follow the AnalyticalPageLayout / PrimaryVisualizationSection / SecondaryVisualizationGrid pattern with TrendSlopeBadge slope indicators. A collapsible drill-down table shows per-sprint detail. A signal card for Delivery Trends has been added to the Trends workspace. NAVIGATION_MAP.md and GEBRUIKERSHANDLEIDING.md updated to include the new page.",
     "area": "Trends / Delivery Trends",

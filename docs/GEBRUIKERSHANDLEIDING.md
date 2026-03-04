@@ -349,7 +349,7 @@ De Delivery-werkruimte beantwoordt de vraag: *Wat heeft mijn team daadwerkelijk 
 | Kaart | Omschrijving |
 |---|---|
 | **Sprint Delivery** | Geplande vs. opgeleverde metrieken per sprint |
-| **Portfolio Delivery** | Geaggregeerd leveringsoverzicht over producten (binnenkort beschikbaar) |
+| **Portfolio Delivery** | Geaggregeerd leveringsoverzicht over producten voor geselecteerd sprintbereik |
 
 ---
 
@@ -410,9 +410,30 @@ De Werkitem-activiteitspagina toont de revisiegeschiedenis van één werkitem (F
 
 **Pagina:** `/home/delivery/portfolio`
 
-> **Status:** Binnenkort beschikbaar.
+Het Portfolio Delivery-overzicht biedt een geaggregeerd leveringsoverzicht over alle producten heen voor één of meerdere geselecteerde sprints. Het beantwoordt de vraag: *Wat hebben we als portfolio opgeleverd in de geselecteerde sprint(s)?*
 
-Het Portfolio Delivery-overzicht biedt een geaggregeerd leveringsoverzicht over alle producten heen voor één of meerdere geselecteerde sprints. Het beantwoordt de vraag: *Wat hebben we als portfolio opgeleverd?*
+#### Wat toont Portfolio Delivery?
+
+Portfolio Delivery toont een **momentopname of geaggregeerde momentopname** — geen tijdgebaseerde grafieken. Alle visualisaties tonen samenstelling of verdeling.
+
+| Sectie | Beschrijving |
+|---|---|
+| Sprintbereik-selector | Selecteer een team en een Van sprint / Tot sprint-bereik. Standaard wordt het huidige sprint + 4 afgelopen sprints geladen. |
+| Portfolio-samenvatting | Zes KPI-tegels: Voltooide PBI's, Geleverde inspanning (story points), Gem. voortgangspercentage, Bugs aangemaakt, Bugs bewerkt, Bugs gesloten — geaggregeerd over alle producten. |
+| Productbijdragegrafiek | Horizontale balkgrafiek met het aandeel van geleverde inspanning per product (%). Geordend van hoogste naar laagste bijdrage. |
+| Featurebijdragegrafiek | Top-bijdragende features op basis van geleverde inspanning. Beperkt tot de top 10 voor leesbaarheid. De bijbehorende Epic wordt als subtitel getoond. |
+| Bugverdeling per product | Tabel met Bugs aangemaakt, bewerkt, gesloten en netto (aangemaakt − gesloten) per product. Alleen zichtbaar als er bugactiviteit is in het geselecteerde bereik. |
+
+#### Enkelvoudige versus meervoudige sprints
+
+- **Enkelvoudige sprint geselecteerd** → momentopname van dat specifieke sprint.
+- **Meerdere sprints geselecteerd** → geaggregeerde momentopname over het volledige bereik. Alle metrics zijn opgeteld (gesommeerd) over de sprints.
+
+#### Wat toont Portfolio Delivery NIET?
+
+Portfolio Delivery toont **geen trends**. Er zijn geen grafieken met een tijdas (sprinttijdlijn op de X-as). Tijdgebaseerde analyse is beschikbaar in de **Trends-werkruimte** via:
+- **Delivery Trends** (`/home/trends/delivery`) — PBI-doorvoer, inspanningsdoorvoer, voortgangs- en bugtrends over meerdere sprints.
+- **Portfolio Progress** (`/home/portfolio-progress`) — strategisch backlog-voortgangsoverzicht met stock-and-flow model.
 
 ---
 
