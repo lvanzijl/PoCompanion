@@ -39,6 +39,13 @@
                            Size="Size.Small">
                     Health
                 </MudButton>
+                <MudButton OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.DeliveryWorkspace))"
+                           Variant="Variant.Text"
+                           Color="Color.Secondary"
+                           StartIcon="@Icons.Material.Filled.CheckCircle"
+                           Size="Size.Small">
+                    Delivery
+                </MudButton>
                 <MudButton OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.TrendsWorkspace))"
                            Variant="Variant.Text"
                            Color="Color.Info"

@@ -496,8 +496,8 @@
     
     private void NavigateToVelocityTrend()
     {
-        // Velocity calibration signals are now embedded in Sprint Trend (tactical execution context)
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.SprintTrend}{BuildContextQuery()}");
+        // Velocity calibration signals are now embedded in Sprint Delivery (tactical execution context)
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.SprintDelivery}{BuildContextQuery()}");
     }
     
     private void NavigateToEpicInvalidItems(int? epicId)

@@ -1,0 +1,168 @@
+@page "/home/delivery"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Models
+@inject NavigationManager NavigationManager
+
+<PageTitle>Delivery - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @* Workspace Header *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Secondary" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">
+                        Delivery
+                    </MudText>
+                </MudStack>
+
+                @* Breadcrumb *@
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            </MudStack>
+
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       StartIcon="@Icons.Material.Filled.Home"
+                       OnClick="NavigateToHome">
+                Home
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    @* Delivery Signals Grid *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudText Typo="Typo.h5" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Class="mr-2" />
+            Delivery Views
+        </MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+            Inspect what was delivered — per sprint or aggregated across products
+        </MudText>
+
+        <MudGrid>
+            @* Sprint Delivery *@
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="1"
+                         Style="cursor: pointer; transition: all 0.2s;"
+                         Class="mud-card-hover"
+                         @onclick="NavigateToSprintDelivery">
+                    <MudCardContent Class="d-flex flex-column align-center pa-4">
+                        <MudIcon Icon="@Icons.Material.Filled.RunCircle" Color="Color.Success" Size="Size.Large" />
+                        <MudText Typo="Typo.subtitle1" Class="mt-2">Sprint Delivery</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Planned vs delivered per sprint</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            @* Portfolio Delivery *@
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="1"
+                         Style="cursor: pointer; transition: all 0.2s;"
+                         Class="mud-card-hover"
+                         @onclick="NavigateToPortfolioDelivery">
+                    <MudCardContent Class="d-flex flex-column align-center pa-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Warning" Size="Size.Large" />
+                        <MudText Typo="Typo.subtitle1" Class="mt-2">Portfolio Delivery</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Aggregated delivery across products</MudText>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Coming soon</MudChip>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @* Cross-Workspace Navigation *@
+    <MudPaper Elevation="2" Class="pa-4">
+        <MudText Typo="Typo.h6" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.Explore" Class="mr-2" />
+            Navigate to Other Workspaces
+        </MudText>
+
+        <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Inventory2"
+                       OnClick="NavigateToBacklogOverview">
+                Backlog Overview
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Success"
+                       StartIcon="@Icons.Material.Filled.HealthAndSafety"
+                       OnClick="NavigateToHealth">
+                Health (Now)
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Info"
+                       StartIcon="@Icons.Material.Filled.Timeline"
+                       OnClick="NavigateToTrends">
+                Trends (Past)
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Warning"
+                       StartIcon="@Icons.Material.Filled.CalendarMonth"
+                       OnClick="NavigateToPlanning">
+                Planning (Future)
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+<style>
+    .mud-card-hover {
+        border: 2px solid transparent;
+    }
+    .mud-card-hover:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.2) !important;
+        border-color: var(--mud-palette-primary);
+    }
+</style>
+
+@code {
+    private List<BreadcrumbItem> _breadcrumbs = new();
+
+    protected override void OnInitialized()
+    {
+        _breadcrumbs = new List<BreadcrumbItem>
+        {
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
+            new("Delivery", null, disabled: true, icon: Icons.Material.Filled.CheckCircle)
+        };
+    }
+
+    private void NavigateToSprintDelivery()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.SprintDelivery);
+    }
+
+    private void NavigateToPortfolioDelivery()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.PortfolioDelivery);
+    }
+
+    private void NavigateToHome()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.Home);
+    }
+
+    private void NavigateToHealth()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.HealthWorkspace);
+    }
+
+    private void NavigateToTrends()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.TrendsWorkspace);
+    }
+
+    private void NavigateToPlanning()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.PlanningWorkspace2);
+    }
+
+    private void NavigateToBacklogOverview()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BacklogOverview);
+    }
+}

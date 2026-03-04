@@ -1,4 +1,5 @@
 @page "/home/sprint-trend/activity/{WorkItemId:int}"
+@page "/home/delivery/sprint/activity/{WorkItemId:int}"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
 @using PoTool.Shared.Metrics
@@ -24,7 +25,7 @@
                        Color="Color.Primary"
                        StartIcon="@Icons.Material.Filled.ArrowBack"
                        OnClick="NavigateBack">
-                Back to Sprint Trend
+                Back to Sprint Delivery
             </MudButton>
         </MudStack>
     </MudPaper>
@@ -125,8 +126,8 @@
         _breadcrumbs =
         [
             new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
-            new("Trends (Past)", WorkspaceRoutes.TrendsWorkspace, icon: Icons.Material.Filled.Timeline),
-            new("Sprint Trend", WorkspaceRoutes.SprintTrend, icon: Icons.Material.Filled.RunCircle),
+            new("Delivery", WorkspaceRoutes.DeliveryWorkspace, icon: Icons.Material.Filled.Inventory2),
+            new("Sprint Delivery", WorkspaceRoutes.SprintDelivery, icon: Icons.Material.Filled.RunCircle),
             new($"Activity #{WorkItemId}", null, disabled: true, icon: Icons.Material.Filled.History)
         ];
 
@@ -166,7 +167,7 @@
 
     private void NavigateBack()
     {
-        var url = WorkspaceRoutes.SprintTrend;
+        var url = WorkspaceRoutes.SprintDelivery;
         if (_returnView == "zoom")
         {
             url += "?view=zoom";

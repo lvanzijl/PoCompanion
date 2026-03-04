@@ -1,4 +1,5 @@
 @page "/home/sprint-trend"
+@page "/home/delivery/sprint"
 @using PoTool.Client.Components.Analytical
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.Metrics
@@ -18,7 +19,7 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
-<PageTitle>Sprint Trend - PO Companion</PageTitle>
+<PageTitle>Sprint Delivery - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     @* Workspace Header *@
@@ -28,7 +29,7 @@
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                     <MudIcon Icon="@Icons.Material.Filled.RunCircle" Color="Color.Success" Size="Size.Large" />
                     <MudText Typo="Typo.h4">
-                        Sprint Trend
+                        Sprint Delivery
                     </MudText>
                 </MudStack>
                 
@@ -39,9 +40,9 @@
             <MudStack Row="true" Spacing="2">
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Timeline"
-                           OnClick="NavigateToTrends">
-                    Back to Trends
+                           StartIcon="@Icons.Material.Filled.Inventory2"
+                           OnClick="NavigateToDelivery">
+                    Back to Delivery
                 </MudButton>
                 
                 <MudButton Variant="Variant.Outlined"
@@ -945,8 +946,8 @@
         _breadcrumbs = new List<BreadcrumbItem>
         {
             new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
-            new("Trends (Past)", WorkspaceRoutes.TrendsWorkspace, icon: Icons.Material.Filled.Timeline),
-            new("Sprint Trend", null, disabled: true, icon: Icons.Material.Filled.RunCircle)
+            new("Delivery", WorkspaceRoutes.DeliveryWorkspace, icon: Icons.Material.Filled.Inventory2),
+            new("Sprint Delivery", null, disabled: true, icon: Icons.Material.Filled.RunCircle)
         };
     }
 
@@ -1328,9 +1329,9 @@
         await DialogService.ShowAsync<EpicFeaturesDialog>($"Features — {epic.EpicTitle}", parameters, options);
     }
 
-    private void NavigateToTrends()
+    private void NavigateToDelivery()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.TrendsWorkspace);
+        NavigationManager.NavigateTo(WorkspaceRoutes.DeliveryWorkspace);
     }
 
     private void NavigateToHome()
