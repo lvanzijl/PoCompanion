@@ -455,18 +455,15 @@ Global header (available on every page) ◄────────────�
 
 > **Route alias:** `/home/sprint-trend` (legacy route, kept for backward compatibility)
 
-**Purpose:** Detailed sprint-by-sprint inspection of planned versus delivered metrics. Shows PBI completion, effort progression, bug counts per sprint, and Feature/Epic progress. In multi-sprint mode, also shows a Calibration panel with velocity distribution and predictability signals. Located in the Delivery workspace.
+**Purpose:** Detailed single-sprint inspection of planned versus delivered metrics. Shows PBI completion, effort progression, bug counts, and Feature/Epic progress for the selected sprint. Use navigation arrows to move between sprints. For multi-sprint trend analysis, use Delivery Trends (`/home/trends/delivery`). Located in the Delivery workspace.
 
 | Functionality | Description |
 |---|---|
 | Breadcrumb | `Home › Delivery › Sprint Delivery`. |
 | Sprint navigation arrows | Navigate backwards and forwards one sprint at a time through the sprint history. |
-| Advanced mode toggle | Switches from single-sprint view to a multi-sprint trend graph (last N sprints, configurable). |
 | Product filter | Filters metrics to a specific product. |
 | Team filter | Filters metrics to a specific team. |
-| Sprint Delivery metrics | In single-sprint mode: planned PBI count, completed PBI count, effort progression, bug count, and Feature/Epic-level breakdown with a pie chart. |
-| Multi-sprint trend graphs | In advanced mode: progression over last N sprints (PBI completion, effort, bug counts) as separate charts. |
-| Calibration panel | In advanced mode (multi-sprint): shows median velocity (P50), P25–P75 volatility band, median predictability, and safe planning capacity (P25). Updates when sprint range or product selection changes. |
+| Sprint Delivery metrics | Completed PBI count, effort progression, bug count (created/worked/closed), and Feature/Epic-level breakdown with a work distribution chart. Previous sprint comparison badges are shown for the three primary KPIs. |
 | Epic/Feature drilldown | Clicking an Epic or Feature ID in the sprint detail table navigates to the Work Item Activity page for that item. |
 | Stale data warning | If the calculated sprint metrics are older than the latest data sync, shows a warning with a "Recompute" button to refresh the analysis. |
 | Back to Delivery button | Returns to `/home/delivery`. |
