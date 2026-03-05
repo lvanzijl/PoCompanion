@@ -1,37 +1,31 @@
 @page "/home/pull-requests"
-@using PoTool.Client.Components.Analytical
+@using PoTool.Client.Components.Charts
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Models
 @using PoTool.Client.Services
-@using PoTool.Client.Pages.Home.Components
+@using PoTool.Shared.PullRequests
 @using System.Web
 @inject IProfileService ProfileService
-@inject PullRequestService PullRequestService
 @inject IPullRequestsClient PullRequestsClient
-@inject ProductService ProductService
 @inject TeamService TeamService
-@inject SprintService SprintService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
 <PageTitle>Pull Request Insights - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    @* Workspace Header *@
+
+    @* ── Workspace Header ────────────────────────────────────────────── *@
     <MudPaper Elevation="2" Class="pa-4 mb-4">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudIcon Icon="@Icons.Material.Filled.Insights" Color="Color.Info" Size="Size.Large" />
-                    <MudText Typo="Typo.h4">
-                        Pull Request Insights
-                    </MudText>
+                    <MudIcon Icon="@Icons.Material.Filled.MergeType" Color="Color.Info" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">Pull Request Insights</MudText>
                 </MudStack>
-                
-                @* Breadcrumb *@
                 <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
             </MudStack>
-            
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Default"
                        StartIcon="@Icons.Material.Filled.Home"
@@ -41,777 +35,530 @@
         </MudStack>
     </MudPaper>
 
+    @* ── Context / Filters ───────────────────────────────────────────── *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudText Typo="Typo.h6" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Class="mr-2" />
+            Context
+        </MudText>
+
+        <MudGrid Spacing="2">
+            @* Team selector *@
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="int?"
+                           Value="_selectedTeamId"
+                           Label="Team"
+                           Variant="Variant.Outlined"
+                           Clearable="true"
+                           ValueChanged="OnTeamChanged">
+                    <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
+                    @foreach (var team in _teams)
+                    {
+                        <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            @* Date range: From *@
+            <MudItem xs="12" sm="6" md="3">
+                <MudDatePicker Label="From"
+                               Date="_fromDate"
+                               DateChanged="OnFromDateChanged"
+                               Variant="Variant.Outlined"
+                               DateFormat="yyyy-MM-dd" />
+            </MudItem>
+
+            @* Date range: To *@
+            <MudItem xs="12" sm="6" md="3">
+                <MudDatePicker Label="To"
+                               Date="_toDate"
+                               DateChanged="OnToDateChanged"
+                               Variant="Variant.Outlined"
+                               DateFormat="yyyy-MM-dd" />
+            </MudItem>
+
+            @* Repository filter *@
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="string"
+                           Value="@(_selectedRepository ?? string.Empty)"
+                           Label="Repository (optional)"
+                           Variant="Variant.Outlined"
+                           Clearable="true"
+                           ValueChanged="OnRepositoryStringChanged">
+                    <MudSelectItem T="string" Value="@string.Empty">All Repositories</MudSelectItem>
+                    @foreach (var repo in _availableRepositories)
+                    {
+                        <MudSelectItem T="string" Value="@repo">@repo</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
     @if (_isLoading)
     {
         <LoadingIndicator IsLoading="true" />
     }
     else if (!string.IsNullOrEmpty(_errorMessage))
     {
-        <MudAlert Severity="Severity.Error" Class="mb-4">
-            @_errorMessage
-        </MudAlert>
+        <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
     }
-    else
+    else if (_data != null)
     {
-        @* Team & Product Selectors *@
+        @* ── Section 1: Global Summary chips ─────────────────────────── *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudStack Spacing="3">
-                <MudText Typo="Typo.h6">
-                    <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Class="mr-2" />
-                    Filters
-                </MudText>
-                
-                <MudGrid Spacing="2">
-                    <MudItem xs="12" sm="6">
-                        <MudSelect T="int?"
-                                   Value="_selectedTeamId"
-                                   Label="Team"
-                                   Variant="Variant.Outlined"
-                                   Clearable="true"
-                                   ValueChanged="OnTeamChanged">
-                            <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
-                            @foreach (var team in _teams)
-                            {
-                                <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudItem>
-                    
-                    <MudItem xs="12" sm="6">
-                        <MudSelect T="int?"
-                                   Value="_selectedProductId"
-                                   Label="Product"
-                                   Variant="Variant.Outlined"
-                                   Clearable="true"
-                                   ValueChanged="OnProductChanged">
-                            <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
-                            @foreach (var product in _products)
-                            {
-                                <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudItem>
-                </MudGrid>
-            </MudStack>
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
+                Summary
+                @if (!string.IsNullOrEmpty(_data.TeamName))
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="ml-2">@_data.TeamName</MudChip>
+                }
+            </MudText>
+
+            <MudGrid Spacing="2">
+                <MudItem xs="6" sm="4" md="2">
+                    <MudPaper Elevation="1" Class="pa-3 text-center">
+                        <MudText Typo="Typo.h5" Color="Color.Primary">@_data.Summary.TotalPrs</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Total PRs</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudPaper Elevation="1" Class="pa-3 text-center">
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-success);">@(_data.Summary.MergeRatePct.ToString("F0"))%</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Merge Rate</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudPaper Elevation="1" Class="pa-3 text-center">
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-error);">@(_data.Summary.AbandonRatePct.ToString("F0"))%</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Abandon Rate</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudPaper Elevation="1" Class="pa-3 text-center">
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-warning);">@(_data.Summary.ChangesRequestedRatePct.ToString("F0"))%</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Rework Rate</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudPaper Elevation="1" Class="pa-3 text-center">
+                        <MudText Typo="Typo.h5" Color="Color.Info">@FormatLifetime(_data.Summary.MedianLifetimeHours)</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Median Lifetime</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudPaper Elevation="1" Class="pa-3 text-center">
+                        <MudText Typo="Typo.h5" Color="Color.Warning">@FormatLifetime(_data.Summary.P90LifetimeHours)</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">P90 Lifetime</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
         </MudPaper>
 
-        @* Metrics Grid *@
-        <MudGrid Spacing="3">
-            @* Lead Time to Merge *@
-            <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="Lead Time to Merge"
-                           Result="_leadTimeToMerge"
-                           ValueFormat="MetricValueFormat.Hours"
-                           ItemLabel="PRs"
-                           IsLoading="_metricsLoading" />
-            </MudItem>
-
-            @* Cycle Time *@
-            <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="Cycle Time"
-                           Result="_cycleTime"
-                           ValueFormat="MetricValueFormat.Hours"
-                           ItemLabel="PRs"
-                           IsLoading="_metricsLoading" />
-            </MudItem>
-
-            @* Time to First Review *@
-            <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="Time to First Review"
-                           Result="_timeToFirstReview"
-                           ValueFormat="MetricValueFormat.Hours"
-                           ItemLabel="PRs"
-                           IsLoading="_metricsLoading" />
-            </MudItem>
-
-            @* Review Duration *@
-            <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="Review Duration"
-                           Result="_reviewDuration"
-                           ValueFormat="MetricValueFormat.Hours"
-                           ItemLabel="PRs"
-                           IsLoading="_metricsLoading" />
-            </MudItem>
-
-            @* PR Size - Lines Changed *@
-            <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="PR Size (Lines Changed)"
-                           Result="_prSizeLines"
-                           ValueFormat="MetricValueFormat.Count"
-                           ItemLabel="PRs"
-                           IsLoading="_metricsLoading" />
-            </MudItem>
-
-            @* PR Size - Files Changed *@
-            <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="PR Size (Files Changed)"
-                           Result="_prSizeFiles"
-                           ValueFormat="MetricValueFormat.Count"
-                           ItemLabel="PRs"
-                           IsLoading="_metricsLoading" />
-            </MudItem>
-
-            @* Rework Rate *@
-            <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="Rework Rate (Post-Review Commits)"
-                           Result="_reworkRate"
-                           ValueFormat="MetricValueFormat.Count"
-                           ItemLabel="PRs"
-                           IsLoading="_metricsLoading" />
-            </MudItem>
-        </MudGrid>
-
-        @* Sprint Range Selector for Trend Charts *@
-        <MudPaper Elevation="2" Class="pa-4 mt-4 mb-2">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
-                <MudText Typo="Typo.h6">
-                    <MudIcon Icon="@Icons.Material.Filled.ShowChart" Class="mr-1" />
-                    Sprint Trends
+        @* ── Section 2: Top 3 Problematic PRs ────────────────────────── *@
+        @if (_data.Top3Problematic.Any())
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Class="mr-2" />
+                    Top 3 Friction PRs
+                    <MudTooltip Text="Ranked by composite score: lifetime × review cycles × files changed × comments">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" Class="ml-1" />
+                    </MudTooltip>
                 </MudText>
-                <MudSelect T="int?"
-                           Value="_trendTeamId"
-                           Label="Team (for sprint range)"
-                           Variant="Variant.Outlined"
-                           Dense="true"
-                           Clearable="true"
-                           ValueChanged="OnTrendTeamChanged"
-                           Style="min-width: 180px;">
-                    <MudSelectItem T="int?" Value="@((int?)null)">Select team…</MudSelectItem>
-                    @foreach (var team in _teams)
+
+                <MudGrid Spacing="2">
+                    @foreach (var pr in _data.Top3Problematic)
                     {
-                        <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                        <MudItem xs="12" md="4">
+                            <MudCard Elevation="1"
+                                     Style="@GetCardStyle(pr.Id)"
+                                     @onclick="() => ToggleHighlight(pr.Id)">
+                                <MudCardContent Class="pa-3">
+                                    <MudStack Spacing="1">
+                                        <MudText Typo="Typo.subtitle2" Style="word-break: break-word;">@pr.Title</MudText>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Wrap="Wrap.Wrap">
+                                            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(pr.Status)" Variant="Variant.Text">@pr.Status</MudChip>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@pr.Repository</MudText>
+                                        </MudStack>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                            @pr.Author
+                                        </MudText>
+                                        <MudDivider Class="my-1" />
+                                        <MudGrid Spacing="1">
+                                            <MudItem xs="6">
+                                                <MudText Typo="Typo.caption">
+                                                    <strong>⏱ @FormatLifetime(pr.LifetimeHours)</strong>
+                                                </MudText>
+                                            </MudItem>
+                                            <MudItem xs="6">
+                                                <MudText Typo="Typo.caption">
+                                                    <strong>🔄 @pr.ReviewCycles cycles</strong>
+                                                </MudText>
+                                            </MudItem>
+                                            <MudItem xs="6">
+                                                <MudText Typo="Typo.caption">
+                                                    📁 @pr.FilesChanged files
+                                                </MudText>
+                                            </MudItem>
+                                            <MudItem xs="6">
+                                                <MudText Typo="Typo.caption">
+                                                    💬 @pr.CommentCount comments
+                                                </MudText>
+                                            </MudItem>
+                                        </MudGrid>
+                                    </MudStack>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
                     }
-                </MudSelect>
-                @if (_trendTeamId.HasValue && _trendSprints.Any())
+                </MudGrid>
+                @if (_highlightedPrId.HasValue)
                 {
-                    <MudSelect T="int?"
-                               Value="_fromSprintId"
-                               Label="From Sprint"
-                               Variant="Variant.Outlined"
-                               Dense="true"
-                               Clearable="true"
-                               ValueChanged="OnFromSprintChanged"
-                               Style="min-width: 200px;">
-                        @foreach (var sprint in _trendSprints)
-                        {
-                            <MudSelectItem T="int?" Value="@sprint.Id">
-                                @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
-                            </MudSelectItem>
-                        }
-                    </MudSelect>
-                    <MudSelect T="int?"
-                               Value="_toSprintId"
-                               Label="To Sprint"
-                               Variant="Variant.Outlined"
-                               Dense="true"
-                               Clearable="true"
-                               ValueChanged="OnToSprintChanged"
-                               Style="min-width: 200px;">
-                        @foreach (var sprint in _trendSprints)
-                        {
-                            <MudSelectItem T="int?" Value="@sprint.Id">
-                                @sprint.Name (@(sprint.StartUtc?.ToString("MMM yyyy") ?? "?"))
-                            </MudSelectItem>
-                        }
-                    </MudSelect>
+                    <MudText Typo="Typo.caption" Color="Color.Primary" Class="mt-2">
+                        <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" />
+                        PR highlighted in scatter chart. Click again to clear.
+                    </MudText>
+                }
+            </MudPaper>
+        }
+
+        @* ── Section 3: PR Scatter Chart ─────────────────────────────── *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Filled.ScatterPlot" Class="mr-2" />
+                        PR Scatter — Lifetime vs. Creation Date
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        X: PR creation date &nbsp;|&nbsp; Y: PR lifetime &nbsp;|&nbsp; Color: outcome &nbsp;|&nbsp; Shape: repository
+                    </MudText>
+                </MudStack>
+                @if (_highlightedPrId.HasValue)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => _highlightedPrId = null">
+                        Clear highlight
+                    </MudButton>
                 }
             </MudStack>
+
+            <PullRequestScatterSvg Data="@_data.ScatterPoints"
+                                   Height="380"
+                                   HighlightedPrId="@_highlightedPrId"
+                                   ShowMedianLine="true"
+                                   ShowP90Line="true"
+                                   MedianLifetimeHours="@_data.Summary.MedianLifetimeHours"
+                                   P90LifetimeHours="@_data.Summary.P90LifetimeHours"
+                                   OnPointClick="OnScatterPointClick" />
         </MudPaper>
 
-        @* Chart Layout (Primary Visualization Pattern) *@
-        @if (_trendsLoading)
+        @* ── Section 4: Longest PR Table ─────────────────────────────── *@
+        @if (_data.LongestPrs.Any())
         {
-            <MudProgressLinear Indeterminate="true" Color="Color.Info" Class="mb-2" />
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.TableChart" Class="mr-2" />
+                    Longest Open PRs (top 20)
+                </MudText>
+
+                <MudTable Items="@_data.LongestPrs" Dense="true" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
+                    <HeaderContent>
+                        <MudTh>PR</MudTh>
+                        <MudTh>Repository</MudTh>
+                        <MudTh>Author</MudTh>
+                        <MudTh>Lifetime</MudTh>
+                        <MudTh>Review Cycles</MudTh>
+                        <MudTh>Files Changed</MudTh>
+                        <MudTh>Comments</MudTh>
+                        <MudTh>Status</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="PR">
+                            <MudText Typo="Typo.body2" Style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                @context.Title
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Repository">
+                            <MudText Typo="Typo.body2">@context.Repository</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Author">
+                            <MudText Typo="Typo.body2">@context.Author</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Lifetime">
+                            <MudText Typo="Typo.body2">@FormatLifetime(context.LifetimeHours)</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Review Cycles">
+                            <MudText Typo="Typo.body2">@context.ReviewCycles</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Files Changed">
+                            <MudText Typo="Typo.body2">@context.FilesChanged</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Comments">
+                            <MudText Typo="Typo.body2">@context.CommentCount</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)" Variant="Variant.Text">@context.Status</MudChip>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
         }
 
-        @if (_sprintTrendData != null && _sprintTrendData.Sprints.Count > 0)
+        @* ── Section 5: Repository Breakdown ─────────────────────────── *@
+        @if (_data.RepositoryBreakdown.Any())
         {
-            <AnalyticalPageLayout>
-
-                @* Row 1 — Primary Visualization: Median PR Size per Sprint (full width, dominant) *@
-                <PrimaryVisualizationSection>
-                    <MudStack Spacing="0" Class="mb-2">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                            <MudText Typo="Typo.subtitle2">Median PR Size per Sprint</MudText>
-                            <TrendSlopeBadge StartValue="@_prSizeStart"
-                                             EndValue="@_prSizeEnd"
-                                             LowerIsBetter="true"
-                                             MetricLabel="PR size" />
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudExpansionPanel>
+                    <TitleContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Info" />
+                            <MudText Typo="Typo.h6">Repository Breakdown</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default">@_data.RepositoryBreakdown.Count repo(s)</MudChip>
                         </MudStack>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            @(_sprintTrendData.Sprints.Any(s => s.PrSizeIsLinesChanged)
-                                ? "Lines changed (LinesAdded + LinesDeleted)"
-                                : "Files changed (fallback — lines data unavailable)")
-                        </MudText>
-                    </MudStack>
-                    <MudChart ChartType="ChartType.Bar"
-                              ChartSeries="@_prSizeChartSeries"
-                              XAxisLabels="@_trendXAxisLabels"
-                              Width="100%"
-                              Height="340px"
-                              ChartOptions="@_chartOptions" />
-                </PrimaryVisualizationSection>
-
-                @* Row 2 — Secondary Visualizations: 3 equal columns *@
-                <SecondaryVisualizationGrid Columns="3">
-
-                    @* Cell 1 — Median Time to First Review *@
-                    <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
-                        <MudStack Spacing="0" Class="mb-2">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudText Typo="Typo.subtitle2">Median Time to First Review per Sprint</MudText>
-                                <TrendSlopeBadge StartValue="@_ttfrStart"
-                                                 EndValue="@_ttfrEnd"
-                                                 LowerIsBetter="true"
-                                                 MetricLabel="time to first review" />
-                            </MudStack>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Hours: PR created → first non-author comment</MudText>
-                        </MudStack>
-                        <MudChart ChartType="ChartType.Line"
-                                  ChartSeries="@_ttfrChartSeries"
-                                  XAxisLabels="@_trendXAxisLabels"
-                                  Width="100%"
-                                  Height="260px"
-                                  ChartOptions="@_chartOptions" />
-                    </MudPaper>
-
-                    @* Cell 2 — Median Time to Merge *@
-                    <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
-                        <MudStack Spacing="0" Class="mb-2">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudText Typo="Typo.subtitle2">Median Time to Merge per Sprint</MudText>
-                                <TrendSlopeBadge StartValue="@_ttmMedianStart"
-                                                 EndValue="@_ttmMedianEnd"
-                                                 LowerIsBetter="true"
-                                                 MetricLabel="median time to merge" />
-                            </MudStack>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Hours: PR created → completed (median)</MudText>
-                        </MudStack>
-                        <MudChart ChartType="ChartType.Line"
-                                  ChartSeries="@_ttmMedianChartSeries"
-                                  XAxisLabels="@_trendXAxisLabels"
-                                  Width="100%"
-                                  Height="260px"
-                                  ChartOptions="@_chartOptions" />
-                    </MudPaper>
-
-                    @* Cell 3 — P90 Time to Merge *@
-                    <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
-                        <MudStack Spacing="0" Class="mb-2">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudText Typo="Typo.subtitle2">P90 Time to Merge per Sprint</MudText>
-                                <TrendSlopeBadge StartValue="@_ttmP90Start"
-                                                 EndValue="@_ttmP90End"
-                                                 LowerIsBetter="true"
-                                                 MetricLabel="P90 time to merge" />
-                            </MudStack>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Hours: 90th percentile (gaps = &lt;3 PRs)</MudText>
-                        </MudStack>
-                        <MudChart ChartType="ChartType.Bar"
-                                  ChartSeries="@_ttmP90ChartSeries"
-                                  XAxisLabels="@_trendXAxisLabels"
-                                  Width="100%"
-                                  Height="260px"
-                                  ChartOptions="@_chartOptions" />
-                    </MudPaper>
-
-                </SecondaryVisualizationGrid>
-
-            </AnalyticalPageLayout>
-        }
-        else if (!_trendsLoading && _trendTeamId.HasValue)
-        {
-            <MudAlert Severity="Severity.Info" Class="mb-4">
-                No sprint trend data available. Select a sprint range to view trends.
-            </MudAlert>
+                    </TitleContent>
+                    <ChildContent>
+                        <MudTable Items="@_data.RepositoryBreakdown" Dense="true" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm" Class="mt-2">
+                            <HeaderContent>
+                                <MudTh>Repository</MudTh>
+                                <MudTh>PR Count</MudTh>
+                                <MudTh>Merge %</MudTh>
+                                <MudTh>Abandon %</MudTh>
+                                <MudTh>Median Lifetime</MudTh>
+                                <MudTh>P90 Lifetime</MudTh>
+                                <MudTh>Avg Review Cycles</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Repository">
+                                    <MudText Typo="Typo.body2">@context.Repository</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="PR Count">
+                                    <MudText Typo="Typo.body2">@context.PrCount</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Merge %">
+                                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-success);">@(context.MergePct.ToString("F0"))%</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Abandon %">
+                                    <MudText Typo="Typo.body2" Style="@(context.AbandonPct > 20 ? "color: var(--mud-palette-error);" : "")">@(context.AbandonPct.ToString("F0"))%</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Median Lifetime">
+                                    <MudText Typo="Typo.body2">@FormatLifetime(context.MedianLifetimeHours)</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="P90 Lifetime">
+                                    <MudText Typo="Typo.body2">@FormatLifetime(context.P90LifetimeHours)</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Avg Review Cycles">
+                                    <MudText Typo="Typo.body2">@(context.AvgReviewCycles.HasValue ? context.AvgReviewCycles.Value.ToString("F1") : "—")</MudText>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </ChildContent>
+                </MudExpansionPanel>
+            </MudPaper>
         }
 
-        @if (_pullRequests.Count == 0 && !_metricsLoading)
+        @* ── Empty state ──────────────────────────────────────────────── *@
+        @if (_data.Summary.TotalPrs == 0)
         {
-            <MudPaper Elevation="2" Class="pa-6 mt-4">
+            <MudPaper Elevation="2" Class="pa-6">
                 <MudAlert Severity="Severity.Info">
-                    @if (_products.Count == 0)
-                    {
-                        <text>No products configured. Please configure products in your profile settings to view pull request data.</text>
-                    }
-                    else if (_selectedProductId.HasValue)
-                    {
-                        var selectedProduct = _products.FirstOrDefault(p => p.Id == _selectedProductId.Value);
-                        var productName = selectedProduct?.Name ?? "selected product";
-                        <text>No pull request data found for @productName and the selected time range.</text>
-                    }
-                    else if (_selectedTeamId.HasValue)
-                    {
-                        var selectedTeam = _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value);
-                        var teamName = selectedTeam?.Name ?? "selected team";
-                        <text>No pull request data found for @teamName and the selected time range. The team may not be linked to any products with pull request data.</text>
-                    }
-                    else
-                    {
-                        <text>No pull request data found for the selected filters and time range.</text>
-                    }
+                    No pull request data found for the selected filters and date range.
+                    Try expanding the date range or selecting a different team.
                 </MudAlert>
             </MudPaper>
         }
     }
+
 </MudContainer>
 
-<style>
-    .trend-slope-badge {
-        font-size: 0.7rem;
-    }
-</style>
-
 @code {
+    // ── State ─────────────────────────────────────────────────────────────
     private bool _isLoading = true;
-    private bool _metricsLoading = false;
-    private int? _profileId;
     private string? _errorMessage;
     private List<BreadcrumbItem> _breadcrumbs = new();
-    
-    // Selectors
+
+    // Filters
     private int? _selectedTeamId;
-    private int? _selectedProductId;
-    private List<TeamDto> _teams = new();
-    private List<ProductDto> _products = new();
-    
-    // PR Data
-    private List<PullRequestDto> _pullRequests = new();
-    private List<PullRequestMetricsDto> _metrics = new();
-    private Dictionary<int, List<PullRequestCommentDto>> _prComments = new();
-    private Dictionary<int, List<PullRequestIterationDto>> _prIterations = new();
-    
-    // Calculated Metrics
-    private MetricResult? _leadTimeToMerge;
-    private MetricResult? _cycleTime;
-    private MetricResult? _timeToFirstReview;
-    private MetricResult? _reviewDuration;
-    private MetricResult? _prSizeLines;
-    private MetricResult? _prSizeFiles;
-    private MetricResult? _reworkRate;
-    
-    // Sprint Trend state
-    private int? _trendTeamId;
-    private int? _fromSprintId;
-    private int? _toSprintId;
-    private List<SprintDto> _trendSprints = new();
-    private bool _trendsLoading = false;
-    private PoTool.Shared.PullRequests.GetPrSprintTrendsResponse? _sprintTrendData;
-    private string[] _trendXAxisLabels = Array.Empty<string>();
-    private List<ChartSeries> _prSizeChartSeries = new();
-    private List<ChartSeries> _ttfrChartSeries = new();
-    private List<ChartSeries> _ttmMedianChartSeries = new();
-    private List<ChartSeries> _ttmP90ChartSeries = new();
-    // TrendSlopeBadge endpoint values derived from first/last non-null sprint data points
-    private double? _prSizeStart, _prSizeEnd;
-    private double? _ttfrStart, _ttfrEnd;
-    private double? _ttmMedianStart, _ttmMedianEnd;
-    private double? _ttmP90Start, _ttmP90End;
-    
-    private ChartOptions _chartOptions = new()
-    {
-        YAxisTicks = 5,
-        MaxNumYAxisTicks = 8,
-        YAxisLines = true,
-        XAxisLines = true
-    };
-    
-    // Calculator
-    private readonly PullRequestInsightsCalculator _calculator = new();
-    
+    private DateTime? _fromDate;
+    private DateTime? _toDate;
+    private string? _selectedRepository;
+    private List<PoTool.Client.ApiClient.TeamDto> _teams = new();
+    private List<string> _availableRepositories = new();
+
+    // Data
+    private PullRequestInsightsDto? _data;
+
+    // Interaction
+    private int? _highlightedPrId;
+
+    // ── Init ─────────────────────────────────────────────────────────────
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            var activeProfile = await ProfileService.GetActiveProfileAsync();
-            if (activeProfile == null)
-            {
-                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}");
-                return;
-            }
-            
-            _profileId = activeProfile.Id;
-            ProfileService.SetCachedActiveProfileId(_profileId);
-            
-            // Load teams and products
+            await ProfileService.GetActiveProfileAsync(); // ensure profile guard
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
-            _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
-            
-            // Parse URL parameters
+
+            // Default: last 6 months
+            _fromDate = DateTime.UtcNow.AddMonths(-6).Date;
+            _toDate   = DateTime.UtcNow.Date;
+
             ParseQueryParameters();
-            
-            // Load PR data and calculate metrics
-            await LoadPullRequestDataAsync();
-            
+            await LoadInsightsAsync();
             UpdateBreadcrumbs();
         }
         catch (Exception ex)
         {
             _errorMessage = ex.Message;
-            Snackbar.Add($"Error loading pull request insights: {ex.Message}", Severity.Error);
         }
         finally
         {
             _isLoading = false;
         }
     }
-    
+
     private void ParseQueryParameters()
     {
         var uri = new Uri(NavigationManager.Uri);
-        var queryParams = HttpUtility.ParseQueryString(uri.Query);
-        
-        // Parse teamId
-        var teamIdStr = queryParams["teamId"];
-        if (!string.IsNullOrEmpty(teamIdStr) && int.TryParse(teamIdStr, out var teamId))
-        {
-            _selectedTeamId = teamId;
-        }
-        
-        // Parse productId
-        var productIdStr = queryParams["productId"];
-        if (!string.IsNullOrEmpty(productIdStr) && int.TryParse(productIdStr, out var productId))
-        {
-            _selectedProductId = productId;
-        }
+        var qs  = HttpUtility.ParseQueryString(uri.Query);
+
+        if (int.TryParse(qs["teamId"], out var tid))
+            _selectedTeamId = tid;
     }
-    
-    private async Task LoadPullRequestDataAsync()
+
+    // ── Data loading ─────────────────────────────────────────────────────
+
+    private async Task LoadInsightsAsync()
     {
-        _metricsLoading = true;
-        StateHasChanged();
-        
         try
         {
-            // Determine product IDs to filter by
-            List<int>? productIds = null;
-            
-            if (_selectedProductId.HasValue)
-            {
-                // Specific product selected
-                productIds = new List<int> { _selectedProductId.Value };
-            }
-            else if (_selectedTeamId.HasValue)
-            {
-                // Team selected: find all products linked to this team
-                var selectedTeam = _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value);
-                if (selectedTeam != null)
-                {
-                    // Filter products that have this team in their TeamIds list
-                    productIds = _products
-                        .Where(p => p.TeamIds != null && p.TeamIds.Contains(_selectedTeamId.Value))
-                        .Select(p => p.Id)
-                        .ToList();
-                }
-                else
-                {
-                    // Team not found, show no PRs
-                    productIds = new List<int>();
-                }
-            }
-            else
-            {
-                // Default: Load PRs for all user's products when no specific filter is selected
-                // This ensures the cached read provider returns relevant data
-                productIds = _products.Select(p => p.Id).ToList();
-            }
-            
-            // Build product IDs string
-            var productIdsStr = productIds != null && productIds.Any() ? string.Join(",", productIds) : null;
-            
-            // Load PRs (filtered by product, last 6 months)
-            var fromDate = DateTimeOffset.UtcNow.AddMonths(-6);
-            _pullRequests = (await PullRequestService.GetFilteredAsync(
-                productIds: productIdsStr,
-                fromDate: fromDate
-            )).ToList();
-            
-            // Load metrics
-            _metrics = (await PullRequestService.GetMetricsAsync(
-                productIds: productIdsStr,
-                fromDate: fromDate
-            )).ToList();
-            
-            // Load comments and iterations for each PR in parallel
-            var prIds = _pullRequests.Select(pr => pr.Id).ToList();
-            var commentTasks = prIds.Select(async prId =>
-            {
-                try
-                {
-                    var comments = await PullRequestService.GetCommentsAsync(prId);
-                    return (prId, comments: comments.ToList());
-                }
-                catch (Exception)
-                {
-                    return (prId, comments: new List<PullRequestCommentDto>());
-                }
-            });
-            
-            var iterationTasks = prIds.Select(async prId =>
-            {
-                try
-                {
-                    var iterations = await PullRequestService.GetIterationsAsync(prId);
-                    return (prId, iterations: iterations.ToList());
-                }
-                catch (Exception)
-                {
-                    return (prId, iterations: new List<PullRequestIterationDto>());
-                }
-            });
-            
-            var commentResults = await Task.WhenAll(commentTasks);
-            var iterationResults = await Task.WhenAll(iterationTasks);
-            
-            _prComments.Clear();
-            foreach (var (prId, comments) in commentResults)
-            {
-                _prComments[prId] = comments;
-            }
-            
-            _prIterations.Clear();
-            foreach (var (prId, iterations) in iterationResults)
-            {
-                _prIterations[prId] = iterations;
-            }
-            
-            // Calculate metrics
-            CalculateMetrics();
+            var from = _fromDate.HasValue
+                ? new DateTimeOffset(_fromDate.Value, TimeSpan.Zero)
+                : DateTimeOffset.UtcNow.AddMonths(-6);
+
+            var to = _toDate.HasValue
+                ? new DateTimeOffset(_toDate.Value.AddDays(1).AddSeconds(-1), TimeSpan.Zero)
+                : DateTimeOffset.UtcNow;
+
+            _data = await PullRequestsClient.GetInsightsAsync(
+                teamId:         _selectedTeamId,
+                fromDate:       from,
+                toDate:         to,
+                repositoryName: _selectedRepository,
+                CancellationToken.None);
+
+            // Populate repository filter list from scatter data
+            _availableRepositories = _data?.ScatterPoints
+                .Select(p => p.Repository)
+                .Distinct()
+                .OrderBy(r => r)
+                .ToList() ?? new List<string>();
+        }
+        catch (ApiException ex) when (ex.StatusCode == 404)
+        {
+            _data = null;
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to load pull request data: {ex.Message}";
-            Snackbar.Add(_errorMessage, Severity.Error);
-        }
-        finally
-        {
-            _metricsLoading = false;
-            StateHasChanged();
+            _errorMessage = $"Error loading PR insights: {ex.Message}";
         }
     }
-    
-    private void CalculateMetrics()
-    {
-        _leadTimeToMerge = _calculator.CalculateLeadTimeToMerge(_pullRequests);
-        _cycleTime = _calculator.CalculateCycleTime(_pullRequests);
-        _timeToFirstReview = _calculator.CalculateTimeToFirstReview(_pullRequests, _prComments);
-        _reviewDuration = _calculator.CalculateReviewDuration(_pullRequests, _prComments);
-        
-        var prSize = _calculator.CalculatePRSize(_metrics);
-        _prSizeLines = prSize.LinesChanged;
-        _prSizeFiles = prSize.FilesChanged;
-        
-        _reworkRate = _calculator.CalculateReworkRate(_pullRequests, _prComments, _prIterations);
-    }
-    
+
+    // ── Filter handlers ───────────────────────────────────────────────────
+
     private async Task OnTeamChanged(int? teamId)
     {
         _selectedTeamId = teamId;
-        UpdateUrlParameters();
-        await LoadPullRequestDataAsync();
-    }
-    
-    private async Task OnProductChanged(int? productId)
-    {
-        _selectedProductId = productId;
-        UpdateUrlParameters();
-        await LoadPullRequestDataAsync();
-    }
-    
-    private void UpdateUrlParameters()
-    {
-        var queryParams = new List<string>();
-        
-        if (_selectedTeamId.HasValue)
-        {
-            queryParams.Add($"teamId={_selectedTeamId.Value}");
-        }
-        
-        if (_selectedProductId.HasValue)
-        {
-            queryParams.Add($"productId={_selectedProductId.Value}");
-        }
-        
-        var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
-        var newUrl = $"{WorkspaceRoutes.PrOverview}{queryString}";
-        
-        NavigationManager.NavigateTo(newUrl, forceLoad: false);
+        _highlightedPrId = null;
+        await ReloadAsync();
     }
 
-    // Sprint Trend handlers
-    private async Task OnTrendTeamChanged(int? teamId)
+    private async Task OnFromDateChanged(DateTime? date)
     {
-        _trendTeamId = teamId;
-        _fromSprintId = null;
-        _toSprintId = null;
-        _trendSprints.Clear();
-        _sprintTrendData = null;
-        ClearTrendCharts();
+        _fromDate = date;
+        _highlightedPrId = null;
+        await ReloadAsync();
+    }
 
-        if (teamId.HasValue)
-        {
-            try
-            {
-                var sprints = (await SprintService.GetSprintsForTeamAsync(teamId.Value))
-                    .Where(s => s.StartUtc.HasValue && s.EndUtc.HasValue)
-                    .OrderBy(s => s.StartUtc)
-                    .ToList();
-                _trendSprints = sprints;
-            }
-            catch (Exception ex)
-            {
-                Snackbar.Add($"Error loading sprints: {ex.Message}", Severity.Warning);
-            }
-        }
+    private async Task OnToDateChanged(DateTime? date)
+    {
+        _toDate = date;
+        _highlightedPrId = null;
+        await ReloadAsync();
+    }
 
+    private async Task OnRepositoryChanged(string? repo)
+    {
+        _selectedRepository = repo;
+        _highlightedPrId = null;
+        await ReloadAsync();
+    }
+
+    private async Task OnRepositoryStringChanged(string repo)
+    {
+        await OnRepositoryChanged(string.IsNullOrEmpty(repo) ? null : repo);
+    }
+
+    private async Task ReloadAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        StateHasChanged();
+        await LoadInsightsAsync();
+        _isLoading = false;
         StateHasChanged();
     }
 
-    private async Task OnFromSprintChanged(int? sprintId)
+    // ── Scatter interaction ───────────────────────────────────────────────
+
+    private void OnScatterPointClick(PrScatterPointDto pt)
     {
-        _fromSprintId = sprintId;
-        await LoadSprintTrendsAsync();
+        _highlightedPrId = _highlightedPrId == pt.Id ? null : pt.Id;
     }
 
-    private async Task OnToSprintChanged(int? sprintId)
+    private void ToggleHighlight(int prId)
     {
-        _toSprintId = sprintId;
-        await LoadSprintTrendsAsync();
+        _highlightedPrId = _highlightedPrId == prId ? null : prId;
     }
 
-    private async Task LoadSprintTrendsAsync()
+    private bool IsHighlighted(int prId) => _highlightedPrId == prId;
+
+    private string GetCardStyle(int prId) =>
+        IsHighlighted(prId)
+            ? "cursor: pointer; transition: border 0.2s; border: 2px solid var(--mud-palette-primary);"
+            : "cursor: pointer; transition: border 0.2s; border: 2px solid transparent;";
+
+    // ── Display helpers ───────────────────────────────────────────────────
+
+    private static string FormatLifetime(double? h)
     {
-        if (!_fromSprintId.HasValue || !_toSprintId.HasValue)
-        {
-            _sprintTrendData = null;
-            ClearTrendCharts();
-            StateHasChanged();
-            return;
-        }
-
-        _trendsLoading = true;
-        StateHasChanged();
-
-        try
-        {
-            // Build ordered list of sprint IDs between from and to (inclusive)
-            var fromSprint = _trendSprints.FirstOrDefault(s => s.Id == _fromSprintId.Value);
-            var toSprint = _trendSprints.FirstOrDefault(s => s.Id == _toSprintId.Value);
-
-            if (fromSprint == null || toSprint == null)
-                return;
-
-            // Ensure from <= to (swap if needed)
-            if (fromSprint.StartUtc > toSprint.StartUtc)
-                (fromSprint, toSprint) = (toSprint, fromSprint);
-
-            var selectedSprintIds = _trendSprints
-                .Where(s => s.StartUtc >= fromSprint.StartUtc && s.StartUtc <= toSprint.StartUtc)
-                .Select(s => s.Id)
-                .ToList();
-
-            if (selectedSprintIds.Count == 0)
-                return;
-
-            // Determine product scope (mirror the metrics filter selection)
-            IEnumerable<int>? productFilter = null;
-            if (_selectedProductId.HasValue)
-            {
-                productFilter = new[] { _selectedProductId.Value };
-            }
-            else if (_selectedTeamId.HasValue)
-            {
-                var teamProducts = _products
-                    .Where(p => p.TeamIds != null && p.TeamIds.Contains(_selectedTeamId.Value))
-                    .Select(p => p.Id)
-                    .ToList();
-                if (teamProducts.Count > 0)
-                    productFilter = teamProducts;
-            }
-
-            var productIdsString = productFilter != null ? string.Join(",", productFilter) : null;
-            _sprintTrendData = await PullRequestsClient.GetSprintTrendsAsync(
-                selectedSprintIds,
-                productIds: productIdsString,
-                teamId: productFilter == null ? _trendTeamId : null,
-                CancellationToken.None);
-
-            if (_sprintTrendData?.Success == true)
-            {
-                BuildTrendCharts();
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading sprint trends: {ex.Message}", Severity.Warning);
-        }
-        finally
-        {
-            _trendsLoading = false;
-            StateHasChanged();
-        }
+        if (!h.HasValue || h.Value <= 0) return "—";
+        if (h.Value >= 168) { int w = (int)(h.Value / 168); int d = (int)((h.Value % 168) / 24); return d > 0 ? $"{w}w {d}d" : $"{w}w"; }
+        if (h.Value >= 24)  { int d = (int)(h.Value / 24); int hr = (int)(h.Value % 24); return hr > 0 ? $"{d}d {hr}h" : $"{d}d"; }
+        return $"{h.Value:F0}h";
     }
 
-    private void BuildTrendCharts()
-    {
-        if (_sprintTrendData == null || _sprintTrendData.Sprints.Count == 0)
-            return;
-
-        var sprints = _sprintTrendData.Sprints.OrderBy(s => s.StartUtc ?? DateTimeOffset.MaxValue).ToList();
-        _trendXAxisLabels = sprints.Select(s => s.SprintName).ToArray();
-
-        // Charts use 0 for missing data points (gap indication in caption)
-        _prSizeChartSeries = new List<ChartSeries>
+    private static Color GetStatusColor(string status) =>
+        status.ToLowerInvariant() switch
         {
-            new() { Name = "Median PR Size", Data = sprints.Select(s => s.MedianPrSize ?? 0).ToArray() }
+            "completed" => Color.Success,
+            "abandoned" => Color.Error,
+            _           => Color.Default
         };
-        _ttfrChartSeries = new List<ChartSeries>
-        {
-            new() { Name = "Median TTFR (h)", Data = sprints.Select(s => s.MedianTimeToFirstReviewHours ?? 0).ToArray() }
-        };
-        _ttmMedianChartSeries = new List<ChartSeries>
-        {
-            new() { Name = "Median TTM (h)", Data = sprints.Select(s => s.MedianTimeToMergeHours ?? 0).ToArray() }
-        };
-        _ttmP90ChartSeries = new List<ChartSeries>
-        {
-            new() { Name = "P90 TTM (h)", Data = sprints.Select(s => s.P90TimeToMergeHours ?? 0).ToArray() }
-        };
-
-        // Compute slope badge endpoints from first and last sprint with non-null data
-        _prSizeStart = sprints.FirstOrDefault(s => s.MedianPrSize.HasValue)?.MedianPrSize;
-        _prSizeEnd = sprints.LastOrDefault(s => s.MedianPrSize.HasValue)?.MedianPrSize;
-        _ttfrStart = sprints.FirstOrDefault(s => s.MedianTimeToFirstReviewHours.HasValue)?.MedianTimeToFirstReviewHours;
-        _ttfrEnd = sprints.LastOrDefault(s => s.MedianTimeToFirstReviewHours.HasValue)?.MedianTimeToFirstReviewHours;
-        _ttmMedianStart = sprints.FirstOrDefault(s => s.MedianTimeToMergeHours.HasValue)?.MedianTimeToMergeHours;
-        _ttmMedianEnd = sprints.LastOrDefault(s => s.MedianTimeToMergeHours.HasValue)?.MedianTimeToMergeHours;
-        _ttmP90Start = sprints.FirstOrDefault(s => s.P90TimeToMergeHours.HasValue)?.P90TimeToMergeHours;
-        _ttmP90End = sprints.LastOrDefault(s => s.P90TimeToMergeHours.HasValue)?.P90TimeToMergeHours;
-    }
-
-    private void ClearTrendCharts()
-    {
-        _trendXAxisLabels = Array.Empty<string>();
-        _prSizeChartSeries = new();
-        _ttfrChartSeries = new();
-        _ttmMedianChartSeries = new();
-        _ttmP90ChartSeries = new();
-        _prSizeStart = _prSizeEnd = null;
-        _ttfrStart = _ttfrEnd = null;
-        _ttmMedianStart = _ttmMedianEnd = null;
-        _ttmP90Start = _ttmP90End = null;
-    }
 
     private void UpdateBreadcrumbs()
     {
         _breadcrumbs = new List<BreadcrumbItem>
         {
-            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
-            new("Trends (Past)", WorkspaceRoutes.TrendsWorkspace, icon: Icons.Material.Filled.Timeline),
-            new("PR Insights", null, disabled: true, icon: Icons.Material.Filled.Insights)
+            new("Home",         WorkspaceRoutes.Home,            icon: Icons.Material.Filled.Home),
+            new("Trends (Past)",WorkspaceRoutes.TrendsWorkspace, icon: Icons.Material.Filled.Timeline),
+            new("Pull Request Insights", null, disabled: true,   icon: Icons.Material.Filled.MergeType)
         };
     }
-    
+
     private void NavigateToHome()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.Home);

@@ -107,6 +107,11 @@
         "PipelineSprintMetricsDto",
         "GetPrSprintTrendsResponse",
         "PrSprintMetricsDto",
+        "PullRequestInsightsDto",
+        "PrInsightsSummaryDto",
+        "PrProblematicEntryDto",
+        "PrScatterPointDto",
+        "PrRepositoryBreakdownDto",
         "BugTriageStateDto",
         "UpdateBugTriageStateRequest",
         "UpdateBugTriageStateResponse"

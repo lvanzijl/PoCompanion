@@ -277,6 +277,41 @@ public class PullRequestsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets PR Insights for a team over a date range.
+    /// All data comes from the local cache — no live TFS calls.
+    /// </summary>
+    /// <param name="teamId">Optional team ID. When omitted, all PRs in range are returned.</param>
+    /// <param name="fromDate">Start of the date range. Defaults to 6 months ago.</param>
+    /// <param name="toDate">End of the date range. Defaults to now.</param>
+    /// <param name="repositoryName">Optional repository filter.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    [HttpGet("insights")]
+    public async Task<ActionResult<PullRequestInsightsDto>> GetInsights(
+        [FromQuery] int? teamId = null,
+        [FromQuery] DateTimeOffset? fromDate = null,
+        [FromQuery] DateTimeOffset? toDate = null,
+        [FromQuery] string? repositoryName = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var from = fromDate ?? DateTimeOffset.UtcNow.AddMonths(-6);
+            var to   = toDate   ?? DateTimeOffset.UtcNow;
+
+            var result = await _mediator.Send(
+                new GetPullRequestInsightsQuery(teamId, from, to, repositoryName),
+                cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving PR insights");
+            return StatusCode(500, "Error retrieving PR insights");
+        }
+    }
+
+    /// <summary>
     /// Helper method to parse comma-separated product IDs from query string.
     /// </summary>
     private static List<int>? ParseProductIds(string? productIds, out string? errorMessage)
