@@ -308,6 +308,13 @@ public record FeatureProgressDto
     /// Computed as SprintCompletedEffort / TotalEffort * 100. Zero when not in single-sprint view.
     /// </summary>
     public double SprintProgressionDelta { get; init; }
+
+    /// <summary>
+    /// Absolute effort scope change during the sprint for this feature.
+    /// Computed as effort_end_of_sprint − effort_start_of_sprint for child PBIs.
+    /// Positive = scope added, negative = scope reduced. Zero when not in single-sprint view.
+    /// </summary>
+    public int SprintEffortDelta { get; init; }
 }
 
 /// <summary>
@@ -379,4 +386,11 @@ public record EpicProgressDto
     /// Computed as SprintCompletedEffort / TotalEffort * 100. Zero when not in single-sprint view.
     /// </summary>
     public double SprintProgressionDelta { get; init; }
+
+    /// <summary>
+    /// Absolute effort scope change during the sprint for this epic.
+    /// Aggregated from child Feature SprintEffortDelta values.
+    /// Positive = scope added, negative = scope reduced. Zero when not in single-sprint view.
+    /// </summary>
+    public int SprintEffortDelta { get; init; }
 }

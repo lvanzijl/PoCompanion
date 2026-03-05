@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-05",
+    "type": "Changed",
+    "title": "Sprint Delivery — epic table and feature modal improvements",
+    "impact": "Sprint Delivery page now shows delivery signals clearly: products without activity are hidden; collapsed product sections show a compact summary (Delivered pts, Δ Effort pts, PBIs, Bugs); the epic table has new columns Delivered (pts) and Δ Effort (pts, absolute scope change) replacing Sprint Scored and Sprint Δ%; the feature drill-down modal also uses the same column structure; Sprint Δ% removed everywhere; feature progress bars are thinner and dimmer to reinforce the Epic → Feature → Activity hierarchy.",
+    "area": "Delivery / Sprint Delivery",
+    "link": "/home/delivery/sprint"
+  },
+  {
     "date": "2026-03-04",
     "type": "Added",
     "title": "Portfolio Delivery — implemented aggregated delivery snapshot page",

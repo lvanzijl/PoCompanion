@@ -455,7 +455,15 @@ Global header (available on every page) ◄────────────�
 
 > **Route alias:** `/home/sprint-trend` (legacy route, kept for backward compatibility)
 
-**Purpose:** Detailed single-sprint inspection of planned versus delivered metrics. Shows PBI completion, effort progression, bug counts, and Feature/Epic progress for the selected sprint. Use navigation arrows to move between sprints. For multi-sprint trend analysis, use Delivery Trends (`/home/trends/delivery`). Located in the Delivery workspace.
+**Purpose:** Detailed single-sprint inspection of delivery signals. Shows what was delivered (Delivered pts), how scope changed (Δ Effort pts), PBI completion, and bug counts per product and epic. Use navigation arrows to move between sprints. Drill down from epics into a feature modal, and from features into activity history. For multi-sprint trend analysis, use Delivery Trends (`/home/trends/delivery`). Located in the Delivery workspace.
+
+**Navigation hierarchy:**
+```
+Sprint Delivery
+  → Epic table (where effort landed)
+      → Feature modal (how work distributed within an epic)
+          → Activity history (what exactly changed)
+```
 
 | Functionality | Description |
 |---|---|
@@ -463,11 +471,18 @@ Global header (available on every page) ◄────────────�
 | Sprint navigation arrows | Navigate backwards and forwards one sprint at a time through the sprint history. |
 | Product filter | Filters metrics to a specific product. |
 | Team filter | Filters metrics to a specific team. |
-| Sprint Delivery metrics | Completed PBI count, effort progression, bug count (created/worked/closed), and Feature/Epic-level breakdown with a work distribution chart. Previous sprint comparison badges are shown for the three primary KPIs. |
-| Epic/Feature drilldown | Clicking an Epic or Feature ID in the sprint detail table navigates to the Work Item Activity page for that item. |
+| Product sections | One collapsible panel per product. Products with no delivery signal (Delivered = 0, Δ Effort = 0, no activity) are hidden automatically. |
+| Collapsed product summary | When collapsed, each product shows compact chips: Delivered (pts), Δ Effort (pts), PBIs, and Bugs (Created / Worked / Closed). |
+| Epic table | Visible when a product panel is expanded. Columns: Epic (ID + title), Progress (completed/total effort), Delivered (pts completed this sprint), Δ Effort (pts scope change this sprint), PBIs (completed this sprint), Actions. Epics with Delivered = 0, Δ Effort = 0, and no PBI activity are hidden. |
+| Epic column definitions | **Progress** = completed effort / total effort. **Delivered** = effort of PBIs completed in this sprint. **Δ Effort** = effort_end_of_sprint − effort_start_of_sprint (absolute pts, positive = scope added, negative = scope reduced). **PBIs** = PBI count completed this sprint. |
+| Feature modal | Opened via the list icon on an epic row. Modal columns: Feature (ID + title), Progress, Delivered (pts), Δ Effort (pts), PBIs. Feature progress bars are thinner and slightly dimmer than epic bars. Features with zero activity are hidden. |
+| Activity history link | History icon on each epic row navigates to the Work Item Activity page for that epic. |
+| All Products sprint summary | Panel showing total sprint metrics across all products (Completed PBIs, Effort delivered, Bugs). |
 | Stale data warning | If the calculated sprint metrics are older than the latest data sync, shows a warning with a "Recompute" button to refresh the analysis. |
 | Back to Delivery button | Returns to `/home/delivery`. |
 | Home button | Returns to `/home`. |
+
+**Removed:** Sprint Δ% column (replaced by Δ Effort in absolute pts). Features ✓ and Sprint Scored columns removed from epic table.
 
 **Outgoing navigation:** `/home/delivery/sprint/activity/{id}`, `/home/delivery`, `/home`
 
