@@ -563,7 +563,7 @@ Sprint Delivery
 
 ### 2.18 Pipeline Insights — `/home/pipeline-insights`
 
-**Purpose:** PO-first pipeline stability overview for a single selected sprint, showing aggregated health metrics, a build stability scatter chart, and a per-pipeline breakdown table per product. Phase 1+2+3: ranking by failure rate with delta vs. previous sprint, per-product TimeScatterSvg scatter (X=start time, Y=duration), and a collapsible per-pipeline breakdown table with half-sprint trend indicators. All data sourced from local cache only.
+**Purpose:** PO-first pipeline stability overview for a single selected sprint, showing aggregated health metrics, a build stability scatter chart, and a per-pipeline breakdown table per product. Phase 1–4: ranking by failure rate with delta vs. previous sprint, per-product TimeScatterSvg scatter (X=start time, Y=duration), a collapsible per-pipeline breakdown table with half-sprint trend indicators, and UX navigation polish (auto-sprint selection on team change; scroll-to-product from global top-3 cards). All data sourced from local cache only.
 
 | Functionality | Description |
 |---|---|
@@ -579,6 +579,8 @@ Sprint Delivery
 | Build Summary Drawer | Opens when a scatter dot is clicked. Shows: build number, pipeline name, result, start time, finish time, duration, branch, and an Azure DevOps link (when URL is cached). |
 | Per-pipeline breakdown | Collapsible MudExpansionPanel per product section showing all pipelines (not just top 3) with columns: Pipeline, Runs, Success%, Failure%, Median duration, P90, Δ Failure, Half-Sprint Trend. Ordered by failure rate descending. Scrollable when > 8 pipelines. |
 | Half-Sprint Trend chip | Per-pipeline trend derived from comparing failure rates in first vs. second half of the sprint. Improving (green, ≥ 10 pp drop), Degrading (red, ≥ 10 pp rise), Stable (gray), Insufficient (—, < 2 completed runs in a half). Tooltip shows first-half and second-half failure rates. |
+| Auto-sprint selection | When a team is selected, the current sprint is automatically selected (the sprint whose window covers today; if none, the most recently ended sprint). No extra click required. |
+| Scroll-to-product | Clicking a global top-3 card smoothly scrolls to the corresponding per-product section. |
 | Empty state | When no sprint is selected, a prompt guides the user to select a team and sprint. |
 | Error handling | Network/cache errors show an alert with a Retry button. |
 | Home button | Returns to `/home`. |

@@ -11,6 +11,7 @@
 @inject SprintService SprintService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject IJSRuntime JS
 
 <PageTitle>Pipeline Insights - PO Companion</PageTitle>
 
@@ -227,14 +228,20 @@
                     Top Pipelines In Trouble (Global)
                 </MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
-                    Ranked by failure rate — highest failure rate first.
+                    Ranked by failure rate — highest failure rate first. Click a card to scroll to the product section.
                 </MudText>
 
                 <MudGrid Spacing="2">
                     @foreach (var entry in _insightsData.GlobalTop3InTrouble)
                     {
+                        var capturedEntry = entry;
                         <MudItem xs="12" md="4">
-                            <TroubleEntryCard Entry="@entry" />
+                            <MudTooltip Text="Click to scroll to product section" Placement="Placement.Top" Arrow="true">
+                                <div @onclick="() => ScrollToProductAsync(capturedEntry.ProductId)"
+                                     style="cursor:pointer;">
+                                    <TroubleEntryCard Entry="@capturedEntry" />
+                                </div>
+                            </MudTooltip>
                         </MudItem>
                     }
                 </MudGrid>
@@ -562,10 +569,37 @@
                     .Where(s => s.StartUtc.HasValue)
                     .OrderByDescending(s => s.StartUtc)
                     .ToList();
+
+                // Auto-select the current sprint (or the most recent past sprint)
+                if (_sprints.Count > 0)
+                {
+                    var now = DateTimeOffset.UtcNow;
+
+                    var current = _sprints.FirstOrDefault(s =>
+                        s.StartUtc.HasValue && s.EndUtc.HasValue &&
+                        s.StartUtc.Value <= now && s.EndUtc.Value >= now);
+
+                    if (current is null)
+                    {
+                        var mostRecentPast = _sprints.FirstOrDefault(s =>
+                            s.EndUtc.HasValue && s.EndUtc.Value <= now);
+                        current = mostRecentPast ?? _sprints[0];
+                    }
+
+                    _selectedSprintId = current.Id;
+                }
             }
             catch (Exception ex)
             {
                 Snackbar.Add($"Could not load sprints: {ex.Message}", Severity.Warning);
+            }
+
+            // Load data for the auto-selected sprint (if any)
+            if (_selectedSprintId.HasValue)
+            {
+                StateHasChanged();
+                await LoadInsightsAsync();
+                return;
             }
         }
 
@@ -687,7 +721,19 @@
         StateHasChanged();
     }
 
-    // ── Build Summary Drawer ──────────────────────────────────────────────
+    // ── Navigation / Scroll ───────────────────────────────────────────────
+
+    private async Task ScrollToProductAsync(int productId)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("PoTool.Navigation.scrollToElement", $"product-{productId}");
+        }
+        catch
+        {
+            // JS interop failures (e.g. during pre-render) are non-critical
+        }
+    }
 
     private void OpenBuildDrawer(TimeScatterPoint point)
     {
