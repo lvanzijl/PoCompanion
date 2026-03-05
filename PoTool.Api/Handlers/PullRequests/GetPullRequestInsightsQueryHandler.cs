@@ -243,7 +243,42 @@ public sealed class GetPullRequestInsightsQueryHandler
             .OrderByDescending(r => r.PrCount)
             .ToList();
 
-        // ── 10. Assemble result ────────────────────────────────────────────────
+        // ── 10. Author breakdown ───────────────────────────────────────────────
+        var authorBreakdown = enriched
+            .GroupBy(r => r.Author)
+            .Select(g =>
+            {
+                var authorTotal    = g.Count();
+                var authorMerged   = g.Count(r => IsCompleted(r.Status));
+                var authorAbandoned = g.Count(r => IsAbandoned(r.Status));
+                var authorRework    = g.Count(r => IsCompleted(r.Status) && r.ReviewCycles > 1);
+
+                var allLifetimes = g
+                    .Where(r => r.LifetimeHours > 0)
+                    .Select(r => r.LifetimeHours)
+                    .OrderBy(h => h)
+                    .ToList();
+
+                var allCycles = g
+                    .Where(r => r.ReviewCycles > 0)
+                    .Select(r => (double)r.ReviewCycles)
+                    .ToList();
+
+                return new PrAuthorBreakdownDto
+                {
+                    Author             = g.Key,
+                    PrCount            = authorTotal,
+                    MergePct           = authorTotal > 0 ? Math.Round(100.0 * authorMerged / authorTotal, 1)    : 0,
+                    AbandonPct         = authorTotal > 0 ? Math.Round(100.0 * authorAbandoned / authorTotal, 1) : 0,
+                    ReworkPct          = authorTotal > 0 ? Math.Round(100.0 * authorRework / authorTotal, 1)    : 0,
+                    MedianLifetimeHours = Median(allLifetimes),
+                    AvgReviewCycles    = allCycles.Count > 0 ? Math.Round(allCycles.Average(), 2) : null
+                };
+            })
+            .OrderByDescending(a => a.PrCount)
+            .ToList();
+
+        // ── 11. Assemble result ────────────────────────────────────────────────
         return new PullRequestInsightsDto
         {
             TeamId              = query.TeamId,
@@ -254,7 +289,8 @@ public sealed class GetPullRequestInsightsQueryHandler
             Top3Problematic     = top3,
             ScatterPoints       = scatterPoints,
             LongestPrs          = longestPrs,
-            RepositoryBreakdown = repoBreakdown
+            RepositoryBreakdown = repoBreakdown,
+            AuthorBreakdown     = authorBreakdown
         };
     }
 

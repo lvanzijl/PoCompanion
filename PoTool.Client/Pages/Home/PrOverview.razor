@@ -359,6 +359,61 @@
             </MudPaper>
         }
 
+        @* ── Section 6: Author Breakdown ──────────────────────────────── *@
+        @if (_data.AuthorBreakdown.Any())
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudExpansionPanel>
+                    <TitleContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Secondary" />
+                            <MudText Typo="Typo.h6">Author Breakdown</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default">@_data.AuthorBreakdown.Count author(s)</MudChip>
+                        </MudStack>
+                    </TitleContent>
+                    <ChildContent>
+                        <MudTable Items="@_data.AuthorBreakdown" Dense="true" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm" Class="mt-2">
+                            <HeaderContent>
+                                <MudTh>Author</MudTh>
+                                <MudTh>PR Count</MudTh>
+                                <MudTh>Merge %</MudTh>
+                                <MudTh>Abandon %</MudTh>
+                                <MudTh>Rework %</MudTh>
+                                <MudTh>Median Lifetime</MudTh>
+                                <MudTh>Avg Review Cycles</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Author">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Secondary" />
+                                        <MudText Typo="Typo.body2">@context.Author</MudText>
+                                    </MudStack>
+                                </MudTd>
+                                <MudTd DataLabel="PR Count">
+                                    <MudText Typo="Typo.body2">@context.PrCount</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Merge %">
+                                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-success);">@(context.MergePct.ToString("F0"))%</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Abandon %">
+                                    <MudText Typo="Typo.body2" Style="@(context.AbandonPct > 20 ? "color: var(--mud-palette-error);" : "")">@(context.AbandonPct.ToString("F0"))%</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Rework %">
+                                    <MudText Typo="Typo.body2" Style="@(context.ReworkPct > 30 ? "color: var(--mud-palette-warning);" : "")">@(context.ReworkPct.ToString("F0"))%</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Median Lifetime">
+                                    <MudText Typo="Typo.body2">@FormatLifetime(context.MedianLifetimeHours)</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Avg Review Cycles">
+                                    <MudText Typo="Typo.body2">@(context.AvgReviewCycles.HasValue ? context.AvgReviewCycles.Value.ToString("F1") : "—")</MudText>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </ChildContent>
+                </MudExpansionPanel>
+            </MudPaper>
+        }
+
         @* ── Empty state ──────────────────────────────────────────────── *@
         @if (_data.Summary.TotalPrs == 0)
         {
@@ -372,6 +427,81 @@
     }
 
 </MudContainer>
+
+@* ── PR Detail Drawer ─────────────────────────────────────────────────── *@
+<MudDrawer @bind-Open="_prDrawerOpen"
+           Anchor="Anchor.End"
+           Elevation="4"
+           Width="360px"
+           Variant="DrawerVariant.Temporary">
+    <MudDrawerHeader>
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Style="width:100%">
+            <MudText Typo="Typo.h6">PR Detail</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Close"
+                           OnClick="() => _prDrawerOpen = false"
+                           Size="Size.Small" />
+        </MudStack>
+    </MudDrawerHeader>
+
+    @if (_drawerPr is not null)
+    {
+        <MudContainer Class="px-4 py-2">
+
+            @* Status chip *@
+            <MudChip T="string"
+                     Color="@GetStatusColor(_drawerPr.ColorCategory)"
+                     Size="Size.Medium"
+                     Class="mb-3">
+                @FormatCategoryLabel(_drawerPr.ColorCategory)
+            </MudChip>
+
+            @* Title *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Title</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3" Style="word-break: break-word;">
+                @_drawerPr.Title
+            </MudText>
+
+            @* Author *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Author</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">@_drawerPr.Author</MudText>
+
+            @* Repository *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Repository</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">@_drawerPr.Repository</MudText>
+
+            @* Created *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Created</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                @_drawerPr.CreatedDate.ToLocalTime().ToString("ddd MMM d, yyyy HH:mm")
+            </MudText>
+
+            <MudDivider Class="my-2" />
+
+            @* Lifetime *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Lifetime</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">@FormatLifetime(_drawerPr.LifetimeHours)</MudText>
+
+            @* Review Cycles *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Review Cycles</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                @_drawerPr.ReviewCycles
+                @if (_drawerPr.ReviewCycles > 1)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text" Class="ml-1">rework</MudChip>
+                }
+            </MudText>
+
+            @* Files Changed *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Files Changed</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">@_drawerPr.FilesChanged</MudText>
+
+            @* Comments *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Comments</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">@_drawerPr.CommentCount</MudText>
+
+        </MudContainer>
+    }
+</MudDrawer>
 
 @code {
     // ── State ─────────────────────────────────────────────────────────────
@@ -392,6 +522,10 @@
 
     // Interaction
     private int? _highlightedPrId;
+
+    // Drawer
+    private bool _prDrawerOpen;
+    private PrScatterPointDto? _drawerPr;
 
     // ── Init ─────────────────────────────────────────────────────────────
 
@@ -504,8 +638,9 @@
 
     private async Task ReloadAsync()
     {
-        _isLoading = true;
+        _isLoading    = true;
         _errorMessage = null;
+        _prDrawerOpen = false;
         StateHasChanged();
         await LoadInsightsAsync();
         _isLoading = false;
@@ -516,7 +651,10 @@
 
     private void OnScatterPointClick(PrScatterPointDto pt)
     {
+        // Toggle highlight on scatter, and open the detail drawer for the clicked PR
         _highlightedPrId = _highlightedPrId == pt.Id ? null : pt.Id;
+        _drawerPr   = pt;
+        _prDrawerOpen = true;
     }
 
     private void ToggleHighlight(int prId)
@@ -544,9 +682,20 @@
     private static Color GetStatusColor(string status) =>
         status.ToLowerInvariant() switch
         {
-            "completed" => Color.Success,
-            "abandoned" => Color.Error,
-            _           => Color.Default
+            "completed"      => Color.Success,
+            "abandoned"      => Color.Error,
+            "merged-clean"   => Color.Success,
+            "merged-rework"  => Color.Warning,
+            _                => Color.Default
+        };
+
+    private static string FormatCategoryLabel(string category) =>
+        category.ToLowerInvariant() switch
+        {
+            "merged-clean"  => "Merged (clean)",
+            "merged-rework" => "Merged (rework)",
+            "abandoned"     => "Abandoned",
+            _               => "Active"
         };
 
     private void UpdateBreadcrumbs()

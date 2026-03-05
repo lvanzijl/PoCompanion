@@ -112,6 +112,7 @@
         "PrProblematicEntryDto",
         "PrScatterPointDto",
         "PrRepositoryBreakdownDto",
+        "PrAuthorBreakdownDto",
         "BugTriageStateDto",
         "UpdateBugTriageStateRequest",
         "UpdateBugTriageStateResponse"

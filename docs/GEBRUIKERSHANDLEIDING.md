@@ -583,7 +583,22 @@ Puntkleur:
 | Rood | Afgebroken PR |
 | Grijs | Actieve (nog openstaande) PR |
 
-Pijlers geven de repository aan (cirkel / vierkant / driehoek). Zweef boven een punt voor een tooltip met de PR-titel, auteur, levensduur, revisiecycli, bestanden en commentaren. Klik om die PR te markeren en alle andere te dimmen. Optionele mediaan- en P90-lijnen zijn beschikbaar.
+Pijlers geven de repository aan (cirkel / vierkant / driehoek). Zweef boven een punt voor een tooltip met de PR-titel, auteur, levensduur, revisiecycli, bestanden en commentaren. Klik om die PR te markeren en alle andere te dimmen, en om het **PR-detailpaneel** (zie hieronder) te openen. Optionele mediaan- en P90-lijnen zijn beschikbaar.
+
+**PR-detailpaneel (Drawer)**
+
+Klikken op een punt in het spreidingsdiagram opent een inschuifpaneel aan de rechterkant van de pagina. Het paneel toont:
+
+- Statusindicator (Merged clean / Merged rework / Abandoned / Active)
+- PR-titel en auteur
+- Repository
+- Aanmaakdatum
+- Levensduur
+- Revisiecycli (met "rework"-label bij meer dan één revisie)
+- Gewijzigde bestanden
+- Commentaren
+
+Sluit het paneel via de ×-knop of door de filters te wijzigen.
 
 **Sectie 4 — Langst openstaande PR's**
 
@@ -592,6 +607,12 @@ Tabel met de top 20 langste PR's, gesorteerd op levensduur aflopend. Kolommen: P
 **Sectie 5 — Breakdowntabel per repository**
 
 Inklapbare tabel met workflowstatistieken per repository. Gesorteerd op PR-aantal aflopend. Kolommen: repository, PR-aantal, samenvoeging %, afbreking %, mediane levensduur, P90-levensduur, gemiddelde revisiecycli.
+
+**Sectie 6 — Breakdowntabel per auteur**
+
+Inklapbare tabel met workflowstatistieken per auteur (maker van de PR). Gesorteerd op PR-aantal aflopend. Kolommen: auteur, PR-aantal, samenvoeging %, afbreking %, herwerk %, mediane levensduur, gemiddelde revisiecycli.
+
+> De herwerk %-kolom is gemarkeerd in oranje wanneer meer dan 30 % van de PR's van die auteur werd samengevoegd na herbewerking.
 
 ---
 

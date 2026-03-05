@@ -49,6 +49,13 @@ public sealed class PullRequestInsightsDto
     /// </summary>
     public IReadOnlyList<PrRepositoryBreakdownDto> RepositoryBreakdown { get; set; }
         = Array.Empty<PrRepositoryBreakdownDto>();
+
+    /// <summary>
+    /// Per-author workflow statistics.
+    /// Sorted by PR count descending.
+    /// </summary>
+    public IReadOnlyList<PrAuthorBreakdownDto> AuthorBreakdown { get; set; }
+        = Array.Empty<PrAuthorBreakdownDto>();
 }
 
 /// <summary>
@@ -182,5 +189,36 @@ public sealed class PrRepositoryBreakdownDto
     public double? P90LifetimeHours { get; set; }
 
     /// <summary>Average review cycles (iterations) across all PRs. Null when no iteration data.</summary>
+    public double? AvgReviewCycles { get; set; }
+}
+
+/// <summary>
+/// Per-author PR workflow statistics for the author breakdown table.
+/// Sorted by PR count descending.
+/// </summary>
+public sealed class PrAuthorBreakdownDto
+{
+    /// <summary>Author display name (CreatedBy).</summary>
+    public string Author { get; set; } = string.Empty;
+
+    /// <summary>Total PR count for this author.</summary>
+    public int PrCount { get; set; }
+
+    /// <summary>Percentage of PRs that were merged (status = "completed").</summary>
+    public double MergePct { get; set; }
+
+    /// <summary>Percentage of PRs that were abandoned.</summary>
+    public double AbandonPct { get; set; }
+
+    /// <summary>
+    /// Percentage of merged PRs that had more than one iteration (rework proxy).
+    /// Relative to TotalPrs (not just merged).
+    /// </summary>
+    public double ReworkPct { get; set; }
+
+    /// <summary>Median PR lifetime in hours. Null when no data.</summary>
+    public double? MedianLifetimeHours { get; set; }
+
+    /// <summary>Average review cycles across all PRs. Null when no iteration data.</summary>
     public double? AvgReviewCycles { get; set; }
 }

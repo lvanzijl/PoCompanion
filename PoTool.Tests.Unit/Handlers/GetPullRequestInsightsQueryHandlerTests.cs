@@ -403,4 +403,55 @@ public class GetPullRequestInsightsQueryHandlerTests
         Assert.IsNotNull(result.Summary.P90LifetimeHours, "P90 must be non-null with ≥3 PRs");
         Assert.IsGreaterThan(0.0, result.Summary.P90LifetimeHours!.Value);
     }
+
+    [TestMethod]
+    [Description("Author breakdown contains one entry per distinct author, sorted by PR count descending")]
+    public async Task Handle_AuthorBreakdown_SortedByPrCountDescending()
+    {
+        var d = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
+        // dev1: 3 PRs, dev2: 1 PR
+        await AddPrAsync(1, "completed", d, d.AddDays(1), author: "dev1");
+        await AddPrAsync(2, "completed", d, d.AddDays(2), author: "dev1");
+        await AddPrAsync(3, "abandoned", d, d.AddDays(1), author: "dev1");
+        await AddPrAsync(4, "completed", d, d.AddDays(3), author: "dev2");
+
+        var result = await _handler.Handle(MakeQuery(), CancellationToken.None);
+
+        Assert.HasCount(2, result.AuthorBreakdown);
+        Assert.AreEqual("dev1", result.AuthorBreakdown[0].Author);
+        Assert.AreEqual(3, result.AuthorBreakdown[0].PrCount);
+        Assert.AreEqual("dev2", result.AuthorBreakdown[1].Author);
+        Assert.AreEqual(1, result.AuthorBreakdown[1].PrCount);
+    }
+
+    [TestMethod]
+    [Description("Author breakdown rates (merge%, abandon%, rework%) are computed correctly per author")]
+    public async Task Handle_AuthorBreakdown_RatesAreCorrect()
+    {
+        var d = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
+        // dev1: 2 completed (1 clean, 1 rework), 1 abandoned → merge 66.7%, abandon 33.3%, rework 33.3%
+        await AddPrAsync(1, "completed", d, d.AddDays(2), author: "dev1");   // clean
+        await AddPrAsync(2, "completed", d, d.AddDays(3), author: "dev1");   // rework (2 iterations)
+        await AddPrAsync(3, "abandoned", d, d.AddDays(1), author: "dev1");
+
+        await AddIterationsAsync(2, 2); // PR-2: 2 iterations → rework
+
+        var result = await _handler.Handle(MakeQuery(), CancellationToken.None);
+
+        var author = result.AuthorBreakdown.Single();
+        Assert.AreEqual("dev1", author.Author);
+        Assert.AreEqual(3, author.PrCount);
+        Assert.AreEqual(66.7, author.MergePct,   "merge %");
+        Assert.AreEqual(33.3, author.AbandonPct, "abandon %");
+        Assert.AreEqual(33.3, author.ReworkPct,  "rework %");
+    }
+
+    [TestMethod]
+    [Description("Author breakdown is empty when no PRs exist in range")]
+    public async Task Handle_AuthorBreakdown_EmptyWhenNoPrs()
+    {
+        var result = await _handler.Handle(MakeQuery(), CancellationToken.None);
+
+        Assert.HasCount(0, result.AuthorBreakdown);
+    }
 }
