@@ -120,6 +120,13 @@ public sealed class PrProblematicEntryDto
 
     /// <summary>Composite friction score used for Top 3 ranking.</summary>
     public double RankingScore { get; set; }
+
+    /// <summary>
+    /// Direct link to this PR in Azure DevOps / TFS.
+    /// Constructed from TfsConfig.Url + Project + RepositoryName + Id.
+    /// Null when TFS configuration is unavailable.
+    /// </summary>
+    public string? Url { get; set; }
 }
 
 /// <summary>
@@ -163,6 +170,13 @@ public sealed class PrScatterPointDto
     ///   "active"          → grey   (still open)
     /// </summary>
     public string ColorCategory { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Direct link to this PR in Azure DevOps / TFS.
+    /// Constructed from TfsConfig.Url + Project + RepositoryName + Id.
+    /// Null when TFS configuration is unavailable.
+    /// </summary>
+    public string? Url { get; set; }
 }
 
 /// <summary>

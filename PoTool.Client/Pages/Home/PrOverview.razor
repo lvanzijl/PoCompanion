@@ -9,6 +9,7 @@
 @inject IProfileService ProfileService
 @inject IPullRequestsClient PullRequestsClient
 @inject TeamService TeamService
+@inject SprintService SprintService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -58,6 +59,31 @@
                     }
                 </MudSelect>
             </MudItem>
+
+            @* Sprint quick-select (visible once a team is chosen) *@
+            @if (_sprints.Count > 0)
+            {
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="int?"
+                               Value="_selectedSprintId"
+                               Label="Sprint (optional)"
+                               Variant="Variant.Outlined"
+                               Clearable="true"
+                               ValueChanged="OnSprintChanged">
+                        <MudSelectItem T="int?" Value="@((int?)null)">Custom range</MudSelectItem>
+                        @foreach (var sprint in _sprints)
+                        {
+                            <MudSelectItem T="int?" Value="@sprint.Id">
+                                @sprint.Name
+                                @if (sprint.StartUtc.HasValue)
+                                {
+                                    <text> (@sprint.StartUtc.Value.ToString("MMM yyyy"))</text>
+                                }
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            }
 
             @* Date range: From *@
             <MudItem xs="12" sm="6" md="3">
@@ -224,6 +250,13 @@
                                                 </MudText>
                                             </MudItem>
                                         </MudGrid>
+                                        @if (!string.IsNullOrEmpty(pr.Url))
+                                        {
+                                            <MudLink Href="@pr.Url" Target="_blank" Typo="Typo.caption"
+                                                     Color="Color.Primary" Class="mt-1">
+                                                <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="mr-1" />Open in Azure DevOps
+                                            </MudLink>
+                                        }
                                     </MudStack>
                                 </MudCardContent>
                             </MudCard>
@@ -305,7 +338,14 @@
                     <RowTemplate>
                         <MudTd DataLabel="PR">
                             <MudText Typo="Typo.body2" Style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                @context.Title
+                                @if (!string.IsNullOrEmpty(context.Url))
+                                {
+                                    <MudLink Href="@context.Url" Target="_blank" Color="Color.Default">@context.Title</MudLink>
+                                }
+                                else
+                                {
+                                    @context.Title
+                                }
                             </MudText>
                         </MudTd>
                         <MudTd DataLabel="Repository">
@@ -538,6 +578,21 @@
             <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Comments</MudText>
             <MudText Typo="Typo.body1" Class="mb-3">@_drawerPr.CommentCount</MudText>
 
+            @* Azure DevOps deep-link *@
+            @if (!string.IsNullOrEmpty(_drawerPr.Url))
+            {
+                <MudDivider Class="my-3" />
+                <MudButton Href="@_drawerPr.Url"
+                           Target="_blank"
+                           Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.OpenInNew"
+                           FullWidth="true">
+                    Open in Azure DevOps
+                </MudButton>
+            }
+
         </MudContainer>
     }
 </MudDrawer>
@@ -555,6 +610,10 @@
     private string? _selectedRepository;
     private List<PoTool.Client.ApiClient.TeamDto> _teams = new();
     private List<string> _availableRepositories = new();
+
+    // Sprint quick-select
+    private List<SprintDto> _sprints = new();
+    private int? _selectedSprintId;
 
     // Data
     private PullRequestInsightsDto? _data;
@@ -659,22 +718,62 @@
         _selectedTeamId  = teamId;
         _highlightedPrId = null;
         _filteredAuthor  = null;
+        _selectedSprintId = null;
+        _sprints.Clear();
+
+        if (teamId.HasValue)
+        {
+            try
+            {
+                var sprints = await SprintService.GetSprintsForTeamAsync(teamId.Value);
+                _sprints = sprints
+                    .Where(s => s.StartUtc.HasValue)
+                    .OrderByDescending(s => s.StartUtc)
+                    .ToList();
+            }
+            catch
+            {
+                _sprints.Clear();
+            }
+        }
+
+        await ReloadAsync();
+    }
+
+    private async Task OnSprintChanged(int? sprintId)
+    {
+        _selectedSprintId = sprintId;
+        _highlightedPrId  = null;
+        _filteredAuthor   = null;
+
+        if (sprintId.HasValue)
+        {
+            var sprint = _sprints.FirstOrDefault(s => s.Id == sprintId.Value);
+            if (sprint?.StartUtc.HasValue == true)
+            {
+                _fromDate = sprint.StartUtc.Value.UtcDateTime.Date;
+                _toDate   = sprint.EndUtc?.UtcDateTime.Date ?? _fromDate.Value.AddDays(14);
+            }
+        }
+
         await ReloadAsync();
     }
 
     private async Task OnFromDateChanged(DateTime? date)
     {
-        _fromDate        = date;
-        _highlightedPrId = null;
-        _filteredAuthor  = null;
+        _fromDate         = date;
+        _highlightedPrId  = null;
+        _filteredAuthor   = null;
+        _selectedSprintId = null;
         await ReloadAsync();
     }
 
     private async Task OnToDateChanged(DateTime? date)
     {
-        _toDate          = date;
-        _highlightedPrId = null;
-        _filteredAuthor  = null;
+        _toDate           = date;
+        _highlightedPrId  = null;
+        _filteredAuthor   = null;
+        _selectedSprintId = null;
         await ReloadAsync();
     }
 
@@ -693,11 +792,12 @@
 
     private async Task ApplyDatePreset(int months)
     {
-        var now          = DateTime.UtcNow.Date;
-        _fromDate        = now.AddMonths(-months);
-        _toDate          = now;
-        _highlightedPrId = null;
-        _filteredAuthor  = null;
+        var now           = DateTime.UtcNow.Date;
+        _fromDate         = now.AddMonths(-months);
+        _toDate           = now;
+        _selectedSprintId = null;
+        _highlightedPrId  = null;
+        _filteredAuthor   = null;
         await ReloadAsync();
     }
 

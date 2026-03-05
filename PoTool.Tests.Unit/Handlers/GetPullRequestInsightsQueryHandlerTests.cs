@@ -454,4 +454,97 @@ public class GetPullRequestInsightsQueryHandlerTests
 
         Assert.HasCount(0, result.AuthorBreakdown);
     }
+
+    // ── URL construction tests ────────────────────────────────────────────────
+
+    [TestMethod]
+    [Description("Scatter points contain a URL when TFS config is available")]
+    public async Task Handle_ScatterPoints_ContainUrlWhenTfsConfigAvailable()
+    {
+        // Arrange
+        _context.TfsConfigs.Add(new PoTool.Shared.Settings.TfsConfigEntity
+        {
+            Id      = 1,
+            Url     = "http://tfsserver/DefaultCollection",
+            Project = "MyProject"
+        });
+        await _context.SaveChangesAsync();
+
+        var d = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
+        await AddPrAsync(42, "completed", d, d.AddDays(2), repository: "MyRepo");
+
+        var result = await _handler.Handle(MakeQuery(), CancellationToken.None);
+
+        var point = result.ScatterPoints.Single();
+        Assert.AreEqual(
+            "http://tfsserver/DefaultCollection/MyProject/_git/MyRepo/pullrequest/42",
+            point.Url,
+            "Scatter point URL must be constructed from TfsConfig.Url + Project + RepositoryName + Id");
+    }
+
+    [TestMethod]
+    [Description("Scatter points have no URL when TFS config is unavailable")]
+    public async Task Handle_ScatterPoints_NullUrlWhenNoTfsConfig()
+    {
+        var d = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
+        await AddPrAsync(10, "completed", d, d.AddDays(1), repository: "Repo-A");
+
+        var result = await _handler.Handle(MakeQuery(), CancellationToken.None);
+
+        Assert.IsNull(result.ScatterPoints.Single().Url,
+            "URL must be null when no TFS config is present");
+    }
+
+    [TestMethod]
+    [Description("Top 3 and longest PR entries include URL when TFS config is available")]
+    public async Task Handle_ProblematicEntries_ContainUrlWhenTfsConfigAvailable()
+    {
+        _context.TfsConfigs.Add(new PoTool.Shared.Settings.TfsConfigEntity
+        {
+            Id      = 1,
+            Url     = "https://dev.azure.com/myorg/",
+            Project = "Alpha"
+        });
+        await _context.SaveChangesAsync();
+
+        var d = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
+        await AddPrAsync(7, "completed", d, d.AddDays(5), repository: "Repo-B");
+
+        var result = await _handler.Handle(MakeQuery(), CancellationToken.None);
+
+        // Top 3
+        Assert.AreEqual(
+            "https://dev.azure.com/myorg/Alpha/_git/Repo-B/pullrequest/7",
+            result.Top3Problematic.Single().Url,
+            "Top 3 entry URL must be constructed correctly (trailing slash stripped from base URL)");
+
+        // Longest PR table
+        Assert.AreEqual(
+            "https://dev.azure.com/myorg/Alpha/_git/Repo-B/pullrequest/7",
+            result.LongestPrs.Single().Url,
+            "Longest PR entry URL must match");
+    }
+
+    [TestMethod]
+    [Description("TFS base URL trailing slash is stripped before URL construction")]
+    public async Task Handle_ScatterPoints_UrlStripsTrailingSlashFromBaseUrl()
+    {
+        _context.TfsConfigs.Add(new PoTool.Shared.Settings.TfsConfigEntity
+        {
+            Id      = 1,
+            Url     = "http://tfs/Collection/",   // trailing slash
+            Project = "Proj"
+        });
+        await _context.SaveChangesAsync();
+
+        var d = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
+        await AddPrAsync(5, "abandoned", d, d.AddDays(1), repository: "Svc");
+
+        var result = await _handler.Handle(MakeQuery(), CancellationToken.None);
+
+        Assert.AreEqual(
+            "http://tfs/Collection/Proj/_git/Svc/pullrequest/5",
+            result.ScatterPoints.Single().Url,
+            "Trailing slash on TFS base URL must not produce double-slash");
+    }
 }

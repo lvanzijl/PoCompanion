@@ -43,6 +43,13 @@ public sealed class GetPullRequestInsightsQueryHandler
     {
         var now = DateTimeOffset.UtcNow;
 
+        // ── 0. Load TFS config for URL construction ───────────────────────────
+        var tfsConfig = await _context.TfsConfigs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(cancellationToken);
+
+        string? tfsBaseUrl = BuildTfsBaseUrl(tfsConfig);
+
         // ── 1. Resolve product IDs in scope ───────────────────────────────────
         List<int>? allowedProductIds = null;
         string? teamName = null;
@@ -186,7 +193,8 @@ public sealed class GetPullRequestInsightsQueryHandler
                 ReviewCycles  = r.ReviewCycles,
                 FilesChanged  = r.FilesChanged,
                 CommentCount  = r.CommentCount,
-                ColorCategory = r.ColorCategory
+                ColorCategory = r.ColorCategory,
+                Url           = BuildPrUrl(tfsBaseUrl, tfsConfig?.Project, r.Repository, r.Id)
             })
             .ToList();
 
@@ -197,14 +205,16 @@ public sealed class GetPullRequestInsightsQueryHandler
         var maxComments = enriched.Count > 0 ? (double)enriched.Max(r => r.CommentCount) : 1.0;
 
         var top3 = enriched
-            .Select(r => BuildProblematicEntry(r, maxLifetime, maxCycles, maxFiles, maxComments))
+            .Select(r => BuildProblematicEntry(r, maxLifetime, maxCycles, maxFiles, maxComments,
+                BuildPrUrl(tfsBaseUrl, tfsConfig?.Project, r.Repository, r.Id)))
             .OrderByDescending(e => e.RankingScore)
             .Take(3)
             .ToList();
 
         // ── 8. Longest PRs table (top 20) ─────────────────────────────────────
         var longestPrs = enriched
-            .Select(r => BuildProblematicEntry(r, maxLifetime, maxCycles, maxFiles, maxComments))
+            .Select(r => BuildProblematicEntry(r, maxLifetime, maxCycles, maxFiles, maxComments,
+                BuildPrUrl(tfsBaseUrl, tfsConfig?.Project, r.Repository, r.Id)))
             .OrderByDescending(e => e.LifetimeHours)
             .Take(20)
             .ToList();
@@ -325,7 +335,8 @@ public sealed class GetPullRequestInsightsQueryHandler
         double maxLifetime,
         double maxCycles,
         double maxFiles,
-        double maxComments)
+        double maxComments,
+        string? url = null)
     {
         // Normalise each dimension to [0,1] then compute weighted score
         double normLifetime  = maxLifetime  > 0 ? r.LifetimeHours       / maxLifetime  : 0;
@@ -349,7 +360,8 @@ public sealed class GetPullRequestInsightsQueryHandler
             FilesChanged  = r.FilesChanged,
             CommentCount  = r.CommentCount,
             Status        = r.Status,
-            RankingScore  = Math.Round(score, 4)
+            RankingScore  = Math.Round(score, 4),
+            Url           = url
         };
     }
 
@@ -383,6 +395,35 @@ public sealed class GetPullRequestInsightsQueryHandler
             ToDate   = to,
             Summary  = new PrInsightsSummaryDto()
         };
+
+    /// <summary>
+    /// Returns the base URL used to construct PR deep links, or null if config is unavailable.
+    /// Strips trailing slashes so the URL is ready for concatenation.
+    /// </summary>
+    private static string? BuildTfsBaseUrl(PoTool.Shared.Settings.TfsConfigEntity? config)
+    {
+        if (config == null || string.IsNullOrWhiteSpace(config.Url))
+            return null;
+
+        return config.Url.TrimEnd('/');
+    }
+
+    /// <summary>
+    /// Constructs a direct link to a pull request in Azure DevOps / TFS.
+    /// Format: {baseUrl}/{project}/_git/{repositoryName}/pullrequest/{prId}
+    /// Returns null if baseUrl or project are unavailable.
+    /// </summary>
+    private static string? BuildPrUrl(
+        string? baseUrl,
+        string? project,
+        string repositoryName,
+        int prId)
+    {
+        if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(project))
+            return null;
+
+        return $"{baseUrl}/{project}/_git/{repositoryName}/pullrequest/{prId}";
+    }
 
     // ── Internal projection record ────────────────────────────────────────────
 
