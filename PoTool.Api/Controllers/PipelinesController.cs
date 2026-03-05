@@ -184,4 +184,31 @@ public class PipelinesController : ControllerBase
             return StatusCode(500, "Error retrieving pipeline definitions");
         }
     }
+
+    /// <summary>
+    /// Gets pipeline health insights for a single sprint per product.
+    /// All data comes from the local cache — no TFS calls are made.
+    /// Phase 1: aggregation, top-3 in trouble per product and globally.
+    /// </summary>
+    [HttpGet("insights")]
+    public async Task<ActionResult<PipelineInsightsDto>> GetInsights(
+        [FromQuery] int productOwnerId,
+        [FromQuery] int sprintId,
+        [FromQuery] bool includePartiallySucceeded = true,
+        [FromQuery] bool includeCanceled = false,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _mediator.Send(
+                new GetPipelineInsightsQuery(productOwnerId, sprintId, includePartiallySucceeded, includeCanceled),
+                cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving pipeline insights for sprint {SprintId}", sprintId);
+            return StatusCode(500, "Error retrieving pipeline insights");
+        }
+    }
 }

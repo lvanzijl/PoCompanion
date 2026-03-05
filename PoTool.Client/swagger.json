@@ -5434,6 +5434,66 @@
           }
         }
       }
+    },
+    "/api/Pipelines/insights": {
+      "get": {
+        "tags": [
+          "Pipelines"
+        ],
+        "operationId": "Pipelines_GetInsights",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "sprintId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 2
+          },
+          {
+            "name": "includePartiallySucceeded",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "nullable": true
+            },
+            "x-position": 3
+          },
+          {
+            "name": "includeCanceled",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "nullable": true
+            },
+            "x-position": 4
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineInsightsDto"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -11300,6 +11360,350 @@
           },
           "message": {
             "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "PipelineInsightsDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sprintId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sprintName": {
+            "type": "string"
+          },
+          "previousSprintId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "previousSprintName": {
+            "type": "string",
+            "nullable": true
+          },
+          "totalBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failedBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failureRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "warningBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "warningRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "p90DurationMinutes": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "globalTop3InTrouble": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineTroubleEntryDto"
+            }
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductPipelineInsightsDto"
+            }
+          },
+          "sprintStart": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "sprintEnd": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "ProductPipelineInsightsDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "hasData": {
+            "type": "boolean"
+          },
+          "totalBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failedBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failureRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "warningBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "warningRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "succeededBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "successRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "medianDurationMinutes": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "p90DurationMinutes": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "top3InTrouble": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineTroubleEntryDto"
+            }
+          },
+          "scatterPoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineScatterPointDto"
+            }
+          },
+          "pipelineBreakdown": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineBreakdownEntryDto"
+            }
+          }
+        }
+      },
+      "PipelineTroubleEntryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pipelineDefinitionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pipelineName": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "rank": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failedBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failureRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "warningBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "warningRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "deltaFailureRate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "deltaWarningRate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        }
+      },
+      "PipelineScatterPointDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "tfsRunId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pipelineDefinitionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pipelineName": {
+            "type": "string"
+          },
+          "buildNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "result": {
+            "type": "string",
+            "nullable": true
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "finishTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "durationMinutes": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "branch": {
+            "type": "string",
+            "nullable": true
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "PipelineHalfSprintTrend": {
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "type": "integer",
+        "format": "int32",
+        "x-enumNames": [
+          "Insufficient",
+          "Improving",
+          "Degrading",
+          "Stable"
+        ]
+      },
+      "PipelineBreakdownEntryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pipelineDefinitionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pipelineName": {
+            "type": "string"
+          },
+          "totalRuns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedRuns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "succeededRuns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failedRuns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "warningRuns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "successRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "failureRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "warningRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "medianDurationMinutes": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "p90DurationMinutes": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "deltaFailureRate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "halfSprintTrend": {
+            "$ref": "#/components/schemas/PipelineHalfSprintTrend"
+          },
+          "firstHalfFailureRate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "secondHalfFailureRate": {
+            "type": "number",
+            "format": "double",
             "nullable": true
           }
         }

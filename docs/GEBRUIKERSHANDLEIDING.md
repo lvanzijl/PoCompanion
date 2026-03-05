@@ -24,8 +24,9 @@
    - 8.3 [Portfolio Delivery](#83-portfolio-delivery)
 9. [Trends-werkruimte — Verleden](#9-trends-werkruimte--verleden)
    - 9.1 [Pull Request-inzichten](#91-pull-request-inzichten)
-   - 9.2 [Pipeline-inzichten](#92-pipeline-inzichten)
-   - 9.3 [Delivery Trends](#93-delivery-trends)
+   - 9.2 [Pipeline-trend](#92-pipeline-trend)
+   - 9.3 [Pipeline-inzichten](#93-pipeline-inzichten)
+   - 9.4 [Delivery Trends](#94-delivery-trends)
 10. [Planning-werkruimte — Toekomst](#10-planning-werkruimte--toekomst)
     - 10.1 [Planbord](#101-planbord)
     - 10.2 [Afhankelijkheidsoverzicht](#102-afhankelijkheidsoverzicht)
@@ -513,7 +514,8 @@ De Trends-werkruimte beantwoordt de vraag: *Wat zijn de structurele patronen in 
 |---|---|---|
 | **Bug Trend** | Bugpatronen over tijd | Bug-inzichten |
 | **PR Trend** | Pull request-patronen | PR-inzichten |
-| **Pipeline Trend** | Build- en deployment-gezondheid | Pipeline-inzichten |
+| **Pipeline Trend** | Build- en deployment-betrouwbaarheid over meerdere sprints (trendgrafieken) | Pipeline-trend |
+| **Pipeline Insights** | Sprint-specifieke pipeline stabiliteitsanalyse per product | Pipeline-inzichten |
 | **Portfolio Progress** | Strategische voortgang per product over een sprintbereik | Portfolio Progress |
 | **Delivery Trends** | PBI-doorvoer, inspanningsdoorvoer en bugtrend per sprint | Delivery Trends |
 
@@ -542,24 +544,137 @@ Een alleen-lezen overzicht van pull request-metrieken en -trends.
 
 ---
 
-### 9.2 Pipeline-inzichten
+### 9.2 Pipeline-trend
 
 **Pagina:** `/home/pipelines`
 
-Een alleen-lezen overzicht van CI/CD-pipeline-gezondheidsmetrieken.
+De Pipeline-trend-pagina toont de build- en deployment-gezondheid over meerdere opeenvolgende sprints als trendgrafieken. Gebruik deze pagina om structurele patronen te herkennen in betrouwbaarheid, doorlooptijd en instabiliteit. Alle grafieken tonen een sprinttijdlijn op de X-as.
 
 #### Wat zie je hier?
 
-- **Pipeline-gezondheidstabel** — lijst van pipelines met slagingspercentage en recente runhistorie.
-- **Slagingspercentagegrafiek** — visueel slagingspercentage over tijd.
-- **Duratiegrafiek** — build-duratietrends per pipeline.
-- **Samenvattingspaneel** — geaggregeerde metrieken (totaal slagingspercentage, gemiddelde duur, etc.).
+- **Teamselector** — filter de sprintlijst op een specifiek team. Bij "Alle teams" worden de gegevens niet op teamniveau gefilterd.
+- **Productselector** — optioneel filter op een specifiek product. Standaard worden alle producten getoond.
+- **Eindsprint** — de meest recente sprint die in het bereik wordt getoond.
+- **Aantal sprints** — stel in hoeveel sprints worden weergegeven.
 
-Als gegevens niet geladen kunnen worden, verschijnt een foutmelding met een **Opnieuw proberen**-knop.
+#### Grafieken
+
+| Grafiek | Omschrijving |
+|---|---|
+| **Betrouwbaarheids-trend** | Slagingspercentage van pipelines per sprint. Hogere waarden zijn beter. |
+| **Time-to-Green-trend** | Mediane pipeline-doorlooptijd (uren) per sprint. Lagere waarden zijn beter. |
+| **Staartrisico-trend** | P90-pipeline-doorlooptijd (uren) per sprint. Null/gat weergegeven bij minder dan 3 runs in een sprint. Lagere waarden zijn beter. |
+| **Instabiliteitsrisico-trend** | Percentage pipelines met zowel successen als mislukkingen in dezelfde sprint. Lagere waarden zijn beter. |
+
+Elke grafiek toont een **helling-badge** (Verbeterend / Stabiel / Verslechterend) op basis van het eerste en laatste datapunt in het bereik.
+
+#### Drill-down
+
+Onderaan de pagina bevindt zich een inklapbaar **Drill-down**-paneel met een tabel van per-pipeline details: slagingspercentage, mediane duur, P90-duur, main-branchgegevens en instabiliteitspercentage.
 
 ---
 
-### 9.3 Delivery Trends
+### 9.3 Pipeline-inzichten
+
+**Pagina:** `/home/pipeline-insights`
+
+De Pipeline-inzichten-pagina is een PO-gericht stabiliteitsoverzicht voor één geselecteerde sprint. In tegenstelling tot de Pipeline-trend-pagina (die trendgrafieken toont over meerdere sprints) richt Pipeline-inzichten zich op de huidige of geselecteerde sprint: welke pipelines zijn het meest problematisch, hoe stabiel zijn ze gedurende de sprint, en welke richting gaan ze op?
+
+Alle gegevens zijn afkomstig uit de lokale cache — er worden geen TFS-aanroepen gedaan.
+
+#### Filters en configuratie
+
+- **Teamselector** — selecteer een team. De sprintlijst wordt automatisch geladen; de huidige sprint (of de meest recente afgelopen sprint) wordt automatisch geselecteerd.
+- **Sprints selector** — selecteer de te analyseren sprint. Wordt gevuld zodra een team is gekozen.
+- **Include partial success** (standaard aan) — wanneer ingeschakeld worden gedeeltelijk geslaagde runs (`partiallySucceeded`) meegeteld als voltooid en getoond als waarschuwingen.
+- **Include canceled** (standaard uit) — wanneer ingeschakeld worden geannuleerde runs meegeteld in het totaal.
+- **SLO-duratie (min)** — optioneel: stel een Service Level Objective-grens (in minuten) in. Dit tekent een horizontale SLO-lijn op alle scatter-grafieken.
+
+#### Globale samenvatting
+
+Bovenaan de pagina staan vier samenvattingschips, geaggregeerd over alle producten van de actieve Product Owner:
+
+| Chip | Betekenis |
+|---|---|
+| **Totaal builds** | Aantal gecachte pipeline-runs in de geselecteerde sprint. |
+| **Mislukkingspercentage** | Percentage mislukte runs (met absoluut aantal). |
+| **Waarschuwingspercentage** | Percentage gedeeltelijk geslaagde runs (alleen zichtbaar wanneer Include partial success aan is). |
+| **P90-duratie** | 90ste-percentiel van de build-duur in minuten, over alle runs. |
+
+#### Globale top 3 probleempipelines
+
+De drie meest problematische pipelines wereldwijd (over alle producten), gerangschikt op mislukkingspercentage (hoogste eerst). Per kaart wordt getoond:
+
+- Pipelinenaam en productnaam.
+- Mislukkingspercentage met absoluut aantal mislukte/voltooide runs.
+- Delta (Δ) ten opzichte van de vorige sprint — `n/a` wanneer er geen vorige sprintgegevens zijn.
+
+Klik op een kaart om de pagina soepel naar het betreffende productblok te scrollen.
+
+#### Per-productblokken
+
+De pagina toont één blok per product dat eigendom is van de actieve Product Owner, gesorteerd op productnaam. Elk blok bevat:
+
+1. **Per-product top-3 probleempipelines** — klik op een pipelinenaam om de bijbehorende punten te markeren in de scatter-grafiek (overige punten worden gedimd). Klik opnieuw om de markering te wissen.
+2. **Pipeline-stabiliteits-scatter** (TimeScatterSvg) — zie hieronder.
+3. **Per-product samenvattingschips** — mislukkingspercentage, waarschuwingspercentage, slagingspercentage, mediane duur en P90-duur voor het product.
+4. **Per-pipeline uitsplitsingstabel** — zie hieronder.
+
+Wanneer er geen gecachte runs zijn voor het geselecteerde product in de gekozen sprint, wordt een lege staat weergegeven.
+
+#### Pipeline-stabiliteits-scatter
+
+Per product wordt een SVG-scatter-grafiek weergegeven:
+
+| As / Element | Betekenis |
+|---|---|
+| **X-as** | Starttijd van de build binnen de sprint. |
+| **Y-as** | Build-duur in minuten. |
+| **Kleur van punt** | Groen = geslaagd, geel = gedeeltelijk geslaagd, rood = mislukt, grijs = geannuleerd. |
+| **Mediane lijn** | Gestippelde blauwe lijn op de mediane duur. |
+| **P90-lijn** | Gestippelde oranje lijn op de P90-duur. |
+| **SLO-lijn** | Rode lijn op de ingestelde SLO-duratie (alleen wanneer een SLO is ingesteld). |
+
+Klik op een punt om de **Build-samenvattingslade** te openen (rechts verankerd). De lade toont: buildnummer, pipelinenaam, resultaat, starttijd, eindtijd, duur, branch en een link naar Azure DevOps (wanneer beschikbaar in de cache).
+
+#### Per-pipeline uitsplitsingstabel
+
+Onderaan elk productblok bevindt zich een inklapbare tabel met alle pipelines van het product (niet alleen de top 3), gesorteerd op mislukkingspercentage (hoogste eerst). Kolommen:
+
+| Kolom | Betekenis |
+|---|---|
+| **Pipeline** | Naam van de pipeline. |
+| **Runs** | Aantal runs in de sprint. |
+| **Succes%** | Percentage geslaagde runs. |
+| **Mislukking%** | Percentage mislukte runs. |
+| **Mediane duur** | Mediane build-duur in de sprint. |
+| **P90** | 90ste-percentiel van de build-duur (alleen bij ≥ 3 runs). |
+| **Δ Mislukking** | Verschil in mislukkingspercentage ten opzichte van de vorige sprint (in procentpunten). |
+| **Halvesprint-trend** | Zie hieronder. |
+
+Bij meer dan 8 pipelines wordt de tabel scrollbaar (max. 320 px).
+
+#### Halvesprint-trend-chip
+
+Per pipeline wordt de trend binnen de sprint bepaald door de sprint te halveren en de mislukkingspercentages van de eerste en tweede helft te vergelijken:
+
+| Chip | Kleur | Voorwaarde |
+|---|---|---|
+| **Verbeterend** | Groen | Mislukkingspercentage daalde ≥ 10 procentpunten in de tweede helft. |
+| **Verslechterend** | Rood | Mislukkingspercentage steeg ≥ 10 procentpunten in de tweede helft. |
+| **Stabiel** | Grijs | Minder dan 10 procentpunten verschil. |
+| **—** (Onvoldoende) | — | Minder dan 2 voltooide runs in een van de helften. |
+
+De tooltip toont de exacte mislukkingspercentages van de eerste en tweede helft.
+
+#### Lege staat en foutafhandeling
+
+- Wanneer nog geen sprint is geselecteerd, wordt een instructie getoond die de gebruiker vraagt een team en sprint te kiezen.
+- Bij netwerk- of cachefouten verschijnt een foutmelding met een **Opnieuw proberen**-knop.
+
+---
+
+### 9.4 Delivery Trends
 
 **Pagina:** `/home/trends/delivery`
 

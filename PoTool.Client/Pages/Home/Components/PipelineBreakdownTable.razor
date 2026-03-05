@@ -1,0 +1,195 @@
+@*
+    PipelineBreakdownTable — Compact expandable table showing per-pipeline metrics.
+
+    Rendered inside each per-product section on the Pipeline Insights page.
+    Collapsed by default. Expansion via MudExpansionPanel.
+
+    Columns:
+      Pipeline | Runs | Success% | Failure% | Median | P90 | Δ Failure | Trend
+
+    Half-sprint trend chips:
+      Improving  → green  (failure rate down ≥ 10 pp in second half)
+      Degrading  → red    (failure rate up   ≥ 10 pp in second half)
+      Stable     → gray   (difference < 10 pp)
+      Insufficient → default (fewer than 2 completed runs in a half)
+*@
+
+@namespace PoTool.Client.Pages.Home.Components
+@using PoTool.Client.ApiClient
+
+@if (Entries == null || !Entries.Any())
+{
+    @* Don't render the panel at all when there's no breakdown data *@
+}
+else
+{
+    <MudExpansionPanel Dense="true" Class="mb-2">
+        <TitleContent>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.TableChart" Size="Size.Small" />
+                <MudText Typo="Typo.subtitle2">Pipeline Breakdown (@Entries.Count pipelines)</MudText>
+            </MudStack>
+        </TitleContent>
+        <ChildContent>
+            <MudTable Items="@Entries"
+                      Dense="true"
+                      Hover="true"
+                      FixedHeader="true"
+                      Height="@(Entries.Count > 8 ? "320px" : null)"
+                      Class="pa-0"
+                      Striped="false">
+                <HeaderContent>
+                    <MudTh Style="min-width:180px">Pipeline</MudTh>
+                    <MudTh Style="text-align:right; min-width:52px">Runs</MudTh>
+                    <MudTh Style="text-align:right; min-width:70px">Success%</MudTh>
+                    <MudTh Style="text-align:right; min-width:70px">Failure%</MudTh>
+                    <MudTh Style="text-align:right; min-width:64px">Median</MudTh>
+                    <MudTh Style="text-align:right; min-width:56px">P90</MudTh>
+                    <MudTh Style="text-align:right; min-width:78px">Δ Failure</MudTh>
+                    <MudTh Style="min-width:100px">Trend</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Pipeline">
+                        <MudText Typo="Typo.body2" Style="word-break:break-word;">@context.PipelineName</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Runs" Style="text-align:right;">
+                        <MudText Typo="Typo.body2">@context.TotalRuns</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Success%" Style="text-align:right;">
+                        <MudText Typo="Typo.body2" Color="Color.Success">@context.SuccessRate.ToString("F1")%</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Failure%" Style="text-align:right;">
+                        <MudText Typo="Typo.body2" Color="@(context.FailureRate > 0 ? Color.Error : Color.Default)">
+                            @context.FailureRate.ToString("F1")%
+                        </MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Median" Style="text-align:right;">
+                        <MudText Typo="Typo.body2">
+                            @(context.MedianDurationMinutes.HasValue ? FormatMinutes(context.MedianDurationMinutes.Value) : "—")
+                        </MudText>
+                    </MudTd>
+                    <MudTd DataLabel="P90" Style="text-align:right;">
+                        <MudText Typo="Typo.body2">
+                            @(context.P90DurationMinutes.HasValue ? FormatMinutes(context.P90DurationMinutes.Value) : "—")
+                        </MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Δ Failure" Style="text-align:right;">
+                        @if (context.DeltaFailureRate.HasValue)
+                        {
+                            <MudChip T="string"
+                                     Size="Size.Small"
+                                     Color="@DeltaColor(context.DeltaFailureRate)"
+                                     Icon="@DeltaIcon(context.DeltaFailureRate)">
+                                @FormatDelta(context.DeltaFailureRate)
+                            </MudChip>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Default">n/a</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Trend">
+                        <MudTooltip Text="@BuildTrendTooltip(context)" Arrow="true">
+                            <MudChip T="string"
+                                     Size="Size.Small"
+                                     Color="@TrendColor(context.HalfSprintTrend)"
+                                     Icon="@TrendIcon(context.HalfSprintTrend)">
+                                @TrendLabel(context.HalfSprintTrend)
+                            </MudChip>
+                        </MudTooltip>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </ChildContent>
+    </MudExpansionPanel>
+}
+
+@code {
+    /// <summary>Pipeline breakdown entries for one product, ordered by failure rate descending.</summary>
+    [Parameter, EditorRequired]
+    public ICollection<PipelineBreakdownEntryDto> Entries { get; set; } = Array.Empty<PipelineBreakdownEntryDto>();
+
+    // ── Formatters ────────────────────────────────────────────────────────────
+
+    private static string FormatMinutes(double minutes)
+    {
+        if (minutes >= 60)
+        {
+            int h = (int)(minutes / 60);
+            int m = (int)(minutes % 60);
+            return m > 0 ? $"{h}h {m}m" : $"{h}h";
+        }
+        return $"{minutes:F0}m";
+    }
+
+    private static string FormatDelta(double? delta)
+    {
+        if (!delta.HasValue) return "n/a";
+        if (delta.Value > 0)  return $"+{delta.Value:F1}";
+        if (delta.Value < 0)  return $"{delta.Value:F1}";
+        return "±0";
+    }
+
+    // ── Delta helpers ─────────────────────────────────────────────────────────
+
+    private static Color DeltaColor(double? delta)
+    {
+        if (!delta.HasValue || delta.Value == 0) return Color.Default;
+        return delta.Value < 0 ? Color.Success : Color.Error;
+    }
+
+    private static string DeltaIcon(double? delta)
+    {
+        if (!delta.HasValue || delta.Value == 0) return Icons.Material.Filled.TrendingFlat;
+        return delta.Value < 0
+            ? Icons.Material.Filled.TrendingDown
+            : Icons.Material.Filled.TrendingUp;
+    }
+
+    // ── Half-sprint trend helpers ─────────────────────────────────────────────
+
+    private static Color TrendColor(PipelineHalfSprintTrend trend) =>
+        trend switch
+        {
+            PipelineHalfSprintTrend.Improving => Color.Success,
+            PipelineHalfSprintTrend.Degrading => Color.Error,
+            PipelineHalfSprintTrend.Stable    => Color.Default,
+            _                                 => Color.Default
+        };
+
+    private static string TrendIcon(PipelineHalfSprintTrend trend) =>
+        trend switch
+        {
+            PipelineHalfSprintTrend.Improving    => Icons.Material.Filled.TrendingDown,
+            PipelineHalfSprintTrend.Degrading    => Icons.Material.Filled.TrendingUp,
+            PipelineHalfSprintTrend.Stable       => Icons.Material.Filled.TrendingFlat,
+            PipelineHalfSprintTrend.Insufficient => Icons.Material.Filled.HorizontalRule,
+            _                                    => Icons.Material.Filled.HorizontalRule
+        };
+
+    private static string TrendLabel(PipelineHalfSprintTrend trend) =>
+        trend switch
+        {
+            PipelineHalfSprintTrend.Improving    => "Improving",
+            PipelineHalfSprintTrend.Degrading    => "Degrading",
+            PipelineHalfSprintTrend.Stable       => "Stable",
+            PipelineHalfSprintTrend.Insufficient => "—",
+            _                                    => "—"
+        };
+
+    private static string BuildTrendTooltip(PipelineBreakdownEntryDto entry)
+    {
+        if (entry.HalfSprintTrend == PipelineHalfSprintTrend.Insufficient)
+            return "Fewer than 2 completed runs in one or both sprint halves — trend unavailable.";
+
+        string first  = entry.FirstHalfFailureRate.HasValue  ? $"{entry.FirstHalfFailureRate:F1}%"  : "n/a";
+        string second = entry.SecondHalfFailureRate.HasValue ? $"{entry.SecondHalfFailureRate:F1}%" : "n/a";
+
+        return entry.HalfSprintTrend switch
+        {
+            PipelineHalfSprintTrend.Improving => $"Failure rate dropped {first} → {second} (first half → second half).",
+            PipelineHalfSprintTrend.Degrading => $"Failure rate rose {first} → {second} (first half → second half).",
+            _ => $"First half: {first} / Second half: {second} (< 10 pp difference)."
+        };
+    }
+}

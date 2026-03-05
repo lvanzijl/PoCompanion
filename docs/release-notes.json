@@ -2,6 +2,38 @@
   {
     "date": "2026-03-05",
     "type": "Changed",
+    "title": "Pipeline Insights — Phase 4: Auto-Sprint Selection + Scroll-to-Product Navigation",
+    "impact": "Two UX improvements to the Pipeline Insights page. (1) Auto-sprint selection: when a team is selected, the current sprint (the sprint window covering today, or the most recently ended sprint as fallback) is automatically selected and insights are loaded immediately — no extra click required. (2) Scroll-to-product: clicking a card in the Global Top Pipelines In Trouble section now smoothly scrolls the page to the corresponding per-product section. A tooltip on each card hints at this interaction. Both changes are pure frontend (no backend or DTO changes).",
+    "area": "Trends / Pipeline Insights",
+    "link": "/home/pipeline-insights"
+  },
+  {
+    "date": "2026-03-05",
+    "type": "Added",
+    "title": "Pipeline Insights — Phase 3: Per-Pipeline Breakdown Table + Half-Sprint Trend",
+    "impact": "Per-product pipeline breakdown table added to the Pipeline Insights page. Each product section now renders a collapsible PipelineBreakdownTable component showing all pipelines (not just the top 3) with columns: Pipeline, Runs, Success%, Failure%, Median duration, P90, Δ Failure vs previous sprint, and a Half-Sprint Trend chip. Trend is computed by splitting the sprint at its midpoint and comparing failure rates: Improving (second half ≥ 10 pp better), Degrading (≥ 10 pp worse), Stable (< 10 pp difference), or Insufficient (< 2 completed runs in a half). Tooltips show actual first-half and second-half failure rates. Breakdown is ordered failure rate descending. Backend updated: PipelineBreakdownEntryDto and PipelineHalfSprintTrend enum added to PoTool.Shared.Pipelines; PipelineBreakdown list added to ProductPipelineInsightsDto; handler updated with BuildPipelineBreakdown helper. swagger.json + ApiClient.g.cs updated. 8 new unit tests covering: populated breakdown, correct metrics, failure-rate ordering, and all 4 half-sprint trend states.",
+    "area": "Trends / Pipeline Insights",
+    "link": "/home/pipeline-insights"
+  },
+  {
+    "date": "2026-03-05",
+    "type": "Added",
+    "title": "Pipeline Insights — Phase 2: Pipeline Stability Scatter (TimeScatterSvg) + Build Summary Drawer",
+    "impact": "Per-product pipeline build stability scatter chart added to the Pipeline Insights page. Each product section now renders a TimeScatterSvg component (Components/Charts/): X axis = build start time within the sprint, Y axis = build duration in minutes, dots colored by result (green=Succeeded, yellow=PartiallySucceeded, red=Failed, gray=Canceled). Overlay lines: Median duration (dashed blue), P90 duration (dashed amber), optional SLO line (solid red). Clicking a scatter dot opens a right-side Build Summary Drawer showing build number, pipeline name, result, start/finish time, duration, branch, and Azure DevOps link. Clicking a pipeline in the top-3 trouble list highlights its dots (dims others). A new optional 'SLO duration (min)' input in the context header applies a SLO line to all scatter charts. Backend updated: ProductPipelineInsightsDto now includes ScatterPoints (PipelineScatterPointDto list) and PipelineInsightsDto now includes SprintStart/SprintEnd boundaries. New DTOs, handler updates, swagger.json and ApiClient.g.cs updated. 5 new unit tests for scatter point generation.",
+    "area": "Trends / Pipeline Insights",
+    "link": "/home/pipeline-insights"
+  },
+  {
+    "date": "2026-03-05",
+    "type": "Added",
+    "title": "Pipeline Insights — Phase 1: PO-first sprint stability overview per product",
+    "impact": "New page at /home/pipeline-insights provides a PO-facing pipeline health view for a single sprint, using only cached data (no TFS calls). Delivers: global summary chips (total builds, failure rate, warning rate, P90 duration), global top-3 pipelines in trouble ranked by failure rate, per-product sections each showing a product-level top-3 in trouble and summary chips (failure rate, warning rate, success rate, median/P90 duration). Delta versus the immediately preceding sprint shown per pipeline (n/a when no previous sprint data). Two toggles: Include partial success (default ON) and Include canceled (default OFF). Accessible from the Trends (Past) workspace as a new 'Pipeline Insights' card. Backend: new GET api/Pipelines/insights endpoint, new GetPipelineInsightsQuery/Handler, new DTOs (PipelineInsightsDto, ProductPipelineInsightsDto, PipelineTroubleEntryDto).",
+    "area": "Trends / Pipeline Insights",
+    "link": "/home/pipeline-insights"
+  },
+  {
+    "date": "2026-03-05",
+    "type": "Changed",
     "title": "Sprint Activity — redesigned activity history page",
     "impact": "The Work Item Activity page is renamed to Sprint Activity and now classifies each event by change type (Workflow/Scope/Creation/Metadata/Structure), collapses creation events into a single row, groups events by work item with collapse/expand support, and shows an Activity Summary block with six sprint-level metrics at the top of the page.",
     "area": "Delivery / Sprint Activity",
