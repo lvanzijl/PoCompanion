@@ -99,6 +99,11 @@ public static class WorkspaceRoutes
     public const string PipelineOverview = "/home/pipelines";
 
     /// <summary>
+    /// Pipeline Insights route — PO-first stability overview per product, sprint-scoped (read-only).
+    /// </summary>
+    public const string PipelineInsights = "/home/pipeline-insights";
+
+    /// <summary>
     /// Plan Board route.
     /// </summary>
     public const string PlanBoard = "/home/plan-board";

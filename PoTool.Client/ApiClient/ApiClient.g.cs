@@ -4387,6 +4387,13 @@ namespace PoTool.Client.ApiClient
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<GetPipelineSprintTrendsResponse> GetSprintTrendsAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, string? productIds, int? teamId, System.Threading.CancellationToken cancellationToken);
 
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<PipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, bool? includePartiallySucceeded, bool? includeCanceled);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<PipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, bool? includePartiallySucceeded, bool? includeCanceled, System.Threading.CancellationToken cancellationToken);
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -4918,6 +4925,100 @@ namespace PoTool.Client.ApiClient
                         if (status_ == 200)
                         {
                             var objectResponse_ = await ReadObjectResponseAsync<GetPipelineSprintTrendsResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<PipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, bool? includePartiallySucceeded, bool? includeCanceled)
+        {
+            return GetInsightsAsync(productOwnerId, sprintId, includePartiallySucceeded, includeCanceled, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<PipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, bool? includePartiallySucceeded, bool? includeCanceled, System.Threading.CancellationToken cancellationToken)
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "api/Pipelines/insights"
+                    urlBuilder_.Append("api/Pipelines/insights");
+                    urlBuilder_.Append('?');
+                    if (productOwnerId != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("productOwnerId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(productOwnerId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (sprintId != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("sprintId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(sprintId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (includePartiallySucceeded != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("includePartiallySucceeded")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(includePartiallySucceeded, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (includeCanceled != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("includeCanceled")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(includeCanceled, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<PipelineInsightsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -20548,6 +20649,141 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("effortValue")]
         public int EffortValue { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PipelineInsightsDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintId")]
+        public int SprintId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintName")]
+        public string SprintName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("previousSprintId")]
+        public int? PreviousSprintId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("previousSprintName")]
+        public string? PreviousSprintName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalBuilds")]
+        public int TotalBuilds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("completedBuilds")]
+        public int CompletedBuilds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("failedBuilds")]
+        public int FailedBuilds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("failureRate")]
+        public double FailureRate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("warningBuilds")]
+        public int WarningBuilds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("warningRate")]
+        public double WarningRate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("p90DurationMinutes")]
+        public double? P90DurationMinutes { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("globalTop3InTrouble")]
+        public System.Collections.Generic.ICollection<PipelineTroubleEntryDto> GlobalTop3InTrouble { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("products")]
+        public System.Collections.Generic.ICollection<ProductPipelineInsightsDto> Products { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProductPipelineInsightsDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("productId")]
+        public int ProductId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("productName")]
+        public string ProductName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("hasData")]
+        public bool HasData { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalBuilds")]
+        public int TotalBuilds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("completedBuilds")]
+        public int CompletedBuilds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("failedBuilds")]
+        public int FailedBuilds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("failureRate")]
+        public double FailureRate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("warningBuilds")]
+        public int WarningBuilds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("warningRate")]
+        public double WarningRate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("succeededBuilds")]
+        public int SucceededBuilds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("successRate")]
+        public double SuccessRate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("medianDurationMinutes")]
+        public double? MedianDurationMinutes { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("p90DurationMinutes")]
+        public double? P90DurationMinutes { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("top3InTrouble")]
+        public System.Collections.Generic.ICollection<PipelineTroubleEntryDto> Top3InTrouble { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PipelineTroubleEntryDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("pipelineDefinitionId")]
+        public int PipelineDefinitionId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pipelineName")]
+        public string PipelineName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("productId")]
+        public int ProductId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("productName")]
+        public string ProductName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("rank")]
+        public int Rank { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("completedBuilds")]
+        public int CompletedBuilds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("failedBuilds")]
+        public int FailedBuilds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("failureRate")]
+        public double FailureRate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("warningBuilds")]
+        public int WarningBuilds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("warningRate")]
+        public double WarningRate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("deltaFailureRate")]
+        public double? DeltaFailureRate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("deltaWarningRate")]
+        public double? DeltaWarningRate { get; set; } = default!;
 
     }
 

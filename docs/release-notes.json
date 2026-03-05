@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-05",
+    "type": "Added",
+    "title": "Pipeline Insights — Phase 1: PO-first sprint stability overview per product",
+    "impact": "New page at /home/pipeline-insights provides a PO-facing pipeline health view for a single sprint, using only cached data (no TFS calls). Delivers: global summary chips (total builds, failure rate, warning rate, P90 duration), global top-3 pipelines in trouble ranked by failure rate, per-product sections each showing a product-level top-3 in trouble and summary chips (failure rate, warning rate, success rate, median/P90 duration). Delta versus the immediately preceding sprint shown per pipeline (n/a when no previous sprint data). Two toggles: Include partial success (default ON) and Include canceled (default OFF). Accessible from the Trends (Past) workspace as a new 'Pipeline Insights' card. Backend: new GET api/Pipelines/insights endpoint, new GetPipelineInsightsQuery/Handler, new DTOs (PipelineInsightsDto, ProductPipelineInsightsDto, PipelineTroubleEntryDto). Phase 2 (TimeScatterSvg scatter) and later phases are not included.",
+    "area": "Trends / Pipeline Insights",
+    "link": "/home/pipeline-insights"
+  },
+  {
+    "date": "2026-03-05",
     "type": "Changed",
     "title": "Sprint Activity — redesigned activity history page",
     "impact": "The Work Item Activity page is renamed to Sprint Activity and now classifies each event by change type (Workflow/Scope/Creation/Metadata/Structure), collapses creation events into a single row, groups events by work item with collapse/expand support, and shows an Activity Summary block with six sprint-level metrics at the top of the page.",

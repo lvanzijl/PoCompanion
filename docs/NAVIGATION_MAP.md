@@ -57,6 +57,7 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       ├──► /home/bugs  (bug trend drilldown)                      │
   │       ├──► /home/pull-requests  (read-only insight)               │
   │       ├──► /home/pipelines  (read-only insight)                   │
+  │       ├──► /home/pipeline-insights  (PO-first stability overview) │
   │       ├──► /home/portfolio-progress  (portfolio trend)            │
   │       ├──► /home/trends/delivery  (delivery trends)               │
   │       ├──► /home/backlog-overview  (cross-workspace)               │
@@ -560,6 +561,28 @@ Sprint Delivery
 
 ---
 
+### 2.18 Pipeline Insights — `/home/pipeline-insights`
+
+**Purpose:** PO-first pipeline stability overview for a single selected sprint, showing aggregated health metrics per product. Phase 1: ranking by failure rate with delta vs. previous sprint. No scatter charts. All data sourced from local cache only.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Trends (Past) › Pipeline Insights`. |
+| Team selector | Selects a team whose sprint list is used for the sprint selector. |
+| Sprint selector | Selects the sprint to analyse. Populated once a team is selected. |
+| Include partial success toggle | When enabled (default ON), partiallySucceeded runs are counted as completed and shown as warnings. |
+| Include canceled toggle | When enabled (default OFF), canceled runs are counted in the total and completed build counts. |
+| Global summary chips | Total builds, failure rate % (with count), warning rate % (with count), P90 duration. Aggregated across all PO products. |
+| Global Top 3 in trouble | Three most problematic pipelines globally, ranked by failure rate (descending). Each card shows: pipeline name, product name, failure rate %, failed/completed count, delta vs. previous sprint (n/a when no previous sprint data). |
+| Per-product sections | One section per product owned by the active Product Owner, ordered by product name. Each section shows product name, per-product top-3 in trouble, and product summary chips (failure rate, warning rate, success rate, median duration, P90 duration). Empty state when no cached runs in the selected sprint. |
+| Empty state | When no sprint is selected, a prompt guides the user to select a team and sprint. |
+| Error handling | Network/cache errors show an alert with a Retry button. |
+| Home button | Returns to `/home`. |
+
+**Outgoing navigation:** `/home/trends`, `/home`
+
+---
+
 ### 2.16 Work Item Explorer — `/workitems`
 
 **Purpose:** Hierarchical explorer for all work items in the active profile's products. Primary tool for reviewing and filtering the backlog by validation issues, type, or scope.
@@ -595,7 +618,7 @@ Sprint Delivery
 | Delivery | `/home/delivery` | Home workspace card, global header | Click delivery view | `/home/delivery/sprint`, `/home/delivery/portfolio`, `/home/health`, `/home/trends`, `/home/planning` |
 | Sprint Delivery | `/home/delivery/sprint` | Delivery workspace, Planning workspace | Navigate sprints | `/home/delivery/sprint/activity/{id}`, `/home/delivery`, `/home` |
 | Portfolio Delivery | `/home/delivery/portfolio` | Delivery workspace | Select sprint range, view aggregated delivery snapshot | `/home/delivery` |
-| Trends (Past) | `/home/trends` | Home workspace card | Click trend signal | `/home/portfolio-progress`, `/home/trends/delivery`, `/home/bugs`, `/home/pull-requests`, `/home/pipelines`, `/home/delivery`, `/home/health`, `/home/planning` |
+| Trends (Past) | `/home/trends` | Home workspace card | Click trend signal | `/home/portfolio-progress`, `/home/trends/delivery`, `/home/bugs`, `/home/pull-requests`, `/home/pipelines`, `/home/pipeline-insights`, `/home/delivery`, `/home/health`, `/home/planning` |
 | Delivery Trends | `/home/trends/delivery` | Trends workspace | Select sprint range | `/home/trends`, `/home` |
 | Planning (Future) | `/home/planning` | Home workspace card | Click planning signal | `/home/delivery/sprint`, `/workitems`, `/home/dependencies`, `/release-planning`, `/home/health` |
 | Bug Insights | `/home/bugs` | Health signal, Trends chart click | View/filter bugs | `/bugs-triage`, `/home/bugs/detail/{id}`, `/home` |
@@ -603,6 +626,7 @@ Sprint Delivery
 | Bug Triage | `/bugs-triage` | Home quick action, Bug Insights | Triage tags | (self-contained) |
 | PR Insights | `/home/pull-requests` | Trends workspace | View metrics | `/home` |
 | Pipeline Trend | `/home/pipelines` | Trends workspace | View metrics | `/home/trends`, `/home` |
+| Pipeline Insights | `/home/pipeline-insights` | Trends workspace | Select team/sprint, view per-product health | `/home/trends`, `/home` |
 | Dependency Overview | `/home/dependencies` | Planning workspace | View dependencies | `/home`, `/dependency-graph` |
 | Plan Board | `/home/plan-board` | Home quick action | View/filter board | `/home` |
 | Portfolio Progress Trend | `/home/portfolio-progress` | Trends workspace | Select product, team, sprint range | `/home/trends` |

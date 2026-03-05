@@ -1,0 +1,496 @@
+@page "/home/pipeline-insights"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Services
+@using PoTool.Client.Models
+@using PoTool.Client.Pages.Home.Components
+@inject IProfileService ProfileService
+@inject IPipelinesClient PipelinesClient
+@inject TeamService TeamService
+@inject SprintService SprintService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Pipeline Insights - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+
+    @* ── Workspace Header ────────────────────────────────────────────── *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Color="Color.Warning" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">Pipeline Insights</MudText>
+                </MudStack>
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            </MudStack>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       StartIcon="@Icons.Material.Filled.Home"
+                       OnClick="NavigateToHome">
+                Home
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    @* ── Context Header ──────────────────────────────────────────────── *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudText Typo="Typo.h6" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Class="mr-2" />
+            Context
+        </MudText>
+
+        <MudGrid Spacing="2">
+            @* Team selector — drives sprint list *@
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="int?"
+                           Value="_selectedTeamId"
+                           Label="Team"
+                           Variant="Variant.Outlined"
+                           Clearable="true"
+                           ValueChanged="OnTeamChanged">
+                    <MudSelectItem T="int?" Value="@((int?)null)">Select team…</MudSelectItem>
+                    @foreach (var team in _teams)
+                    {
+                        <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            @* Sprint selector *@
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="int?"
+                           Value="_selectedSprintId"
+                           Label="Sprint"
+                           Variant="Variant.Outlined"
+                           Clearable="true"
+                           Disabled="@(!_sprints.Any())"
+                           ValueChanged="OnSprintChanged">
+                    <MudSelectItem T="int?" Value="@((int?)null)">Select sprint…</MudSelectItem>
+                    @foreach (var sprint in _sprints)
+                    {
+                        <MudSelectItem T="int?" Value="@sprint.Id">
+                            @sprint.Name
+                            @if (sprint.StartUtc.HasValue)
+                            {
+                                <text> (@sprint.StartUtc.Value.ToString("MMM yyyy"))</text>
+                            }
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            @* Include partiallySucceeded toggle *@
+            <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
+                <MudTooltip Text="When enabled, partially succeeded builds are included in calculations and shown as warnings.">
+                    <MudSwitch T="bool"
+                               @bind-Value="_includePartiallySucceeded"
+                               Label="Include partial success"
+                               Color="Color.Warning" />
+                </MudTooltip>
+            </MudItem>
+
+            @* Include canceled toggle *@
+            <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
+                <MudTooltip Text="When enabled, canceled builds are counted in the total.">
+                    <MudSwitch T="bool"
+                               @bind-Value="_includeCanceled"
+                               Label="Include canceled"
+                               Color="Color.Default" />
+                </MudTooltip>
+            </MudItem>
+        </MudGrid>
+
+        @* Reload button shown when toggles change after initial load *@
+        @if (_insightsData is not null && _togglesDirty)
+        {
+            <MudStack Row="true" Class="mt-3">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           OnClick="LoadInsightsAsync">
+                    Apply filters
+                </MudButton>
+            </MudStack>
+        }
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true"
+                  CloseIconClicked="@(() => _errorMessage = null)">
+            @_errorMessage
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="LoadInsightsAsync" Class="ml-2">
+                Retry
+            </MudButton>
+        </MudAlert>
+    }
+    else if (_insightsData is null)
+    {
+        @* No sprint selected yet *@
+        <MudPaper Elevation="1" Class="pa-6 mb-4 d-flex flex-column align-center">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Large" Color="Color.Default" Class="mb-2" />
+            <MudText Typo="Typo.h6">Select a team and sprint to view pipeline health</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Data is read from the local cache — no live TFS calls.
+            </MudText>
+        </MudPaper>
+    }
+    else
+    {
+        @* ── Sprint context banner ───────────────────────────────────── *@
+        <MudPaper Elevation="1" Class="pa-3 mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Color="Color.Info" />
+                <MudText Typo="Typo.subtitle1">
+                    Showing: <strong>@_insightsData.SprintName</strong>
+                </MudText>
+                @if (_insightsData.PreviousSprintId.HasValue)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Delta vs. @_insightsData.PreviousSprintName
+                    </MudText>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default">
+                        No previous sprint — deltas not available
+                    </MudChip>
+                }
+            </MudStack>
+        </MudPaper>
+
+        @* ── Global summary chips ────────────────────────────────────── *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Summarize" Class="mr-2" />
+                Global Summary (All Products)
+            </MudText>
+
+            <MudGrid Spacing="2">
+                <MudItem xs="6" sm="3">
+                    <MudPaper Elevation="0" Class="pa-3 mud-theme-default" Style="text-align:center;">
+                        <MudText Typo="Typo.h5">@_insightsData.TotalBuilds</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Total builds</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudPaper Elevation="0" Class="pa-3" Style="text-align:center; background: var(--mud-palette-error-lighten);">
+                        <MudText Typo="Typo.h5" Color="Color.Error">@_insightsData.FailureRate.ToString("F1")%</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Failure rate (@_insightsData.FailedBuilds failed)</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudPaper Elevation="0" Class="pa-3" Style="text-align:center; background: var(--mud-palette-warning-lighten);">
+                        <MudText Typo="Typo.h5" Color="Color.Warning">@_insightsData.WarningRate.ToString("F1")%</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Warning rate (@_insightsData.WarningBuilds partial)</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudPaper Elevation="0" Class="pa-3 mud-theme-default" Style="text-align:center;">
+                        @if (_insightsData.P90DurationMinutes.HasValue)
+                        {
+                            <MudText Typo="Typo.h5">@FormatMinutes(_insightsData.P90DurationMinutes.Value)</MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.h5" Color="Color.Default">—</MudText>
+                        }
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">P90 duration</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        @* ── Global Top 3 In Trouble ─────────────────────────────────── *@
+        @if (_insightsData.GlobalTop3InTrouble.Any())
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Class="mr-2" />
+                    Top Pipelines In Trouble (Global)
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                    Ranked by failure rate — highest failure rate first.
+                </MudText>
+
+                <MudGrid Spacing="2">
+                    @foreach (var entry in _insightsData.GlobalTop3InTrouble)
+                    {
+                        <MudItem xs="12" md="4">
+                            <TroubleEntryCard Entry="@entry" />
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+        }
+
+        @* ── Per-product sections ────────────────────────────────────── *@
+        @foreach (var product in _insightsData.Products)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4" id="@($"product-{product.ProductId}")">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Info" />
+                    <MudText Typo="Typo.h5">@product.ProductName</MudText>
+                </MudStack>
+
+                @if (!product.HasData)
+                {
+                    <MudAlert Severity="Severity.Info" Class="mb-0">
+                        No cached pipeline runs for this product in the selected sprint.
+                    </MudAlert>
+                }
+                else
+                {
+                    @* Product Top 3 In Trouble *@
+                    @if (product.Top3InTrouble.Any())
+                    {
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="mr-1" />
+                            Pipelines in trouble
+                        </MudText>
+                        <MudGrid Spacing="2" Class="mb-4">
+                            @foreach (var entry in product.Top3InTrouble)
+                            {
+                                <MudItem xs="12" sm="4">
+                                    <TroubleEntryCard Entry="@entry" ShowProductName="false" />
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    }
+
+                    @* Product Summary Chips *@
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Summary — @product.CompletedBuilds completed builds</MudText>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="6" sm="2">
+                            <MudPaper Elevation="0" Class="pa-2" Style="text-align:center; background: var(--mud-palette-error-lighten);">
+                                <MudText Typo="Typo.subtitle1" Color="Color.Error"><strong>@product.FailureRate.ToString("F1")%</strong></MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Failed (@product.FailedBuilds)</MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" sm="2">
+                            <MudPaper Elevation="0" Class="pa-2" Style="text-align:center; background: var(--mud-palette-warning-lighten);">
+                                <MudText Typo="Typo.subtitle1" Color="Color.Warning"><strong>@product.WarningRate.ToString("F1")%</strong></MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Warning (@product.WarningBuilds)</MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" sm="2">
+                            <MudPaper Elevation="0" Class="pa-2" Style="text-align:center; background: var(--mud-palette-success-lighten);">
+                                <MudText Typo="Typo.subtitle1" Color="Color.Success"><strong>@product.SuccessRate.ToString("F1")%</strong></MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Success (@product.SucceededBuilds)</MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" sm="2">
+                            <MudPaper Elevation="0" Class="pa-2 mud-theme-default" Style="text-align:center;">
+                                @if (product.MedianDurationMinutes.HasValue)
+                                {
+                                    <MudText Typo="Typo.subtitle1"><strong>@FormatMinutes(product.MedianDurationMinutes.Value)</strong></MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.subtitle1" Color="Color.Default">—</MudText>
+                                }
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Median duration</MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" sm="2">
+                            <MudPaper Elevation="0" Class="pa-2 mud-theme-default" Style="text-align:center;">
+                                @if (product.P90DurationMinutes.HasValue)
+                                {
+                                    <MudText Typo="Typo.subtitle1"><strong>@FormatMinutes(product.P90DurationMinutes.Value)</strong></MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.subtitle1" Color="Color.Default">—</MudText>
+                                }
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">P90 duration</MudText>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                }
+            </MudPaper>
+        }
+    }
+
+</MudContainer>
+
+@* ── Inline reusable component: TroubleEntryCard ────────────────────── *@
+@* Note: placed here as a private razor component pattern via code-behind *@
+
+@code {
+    // ── State ────────────────────────────────────────────────────────────
+
+    private bool   _isLoading;
+    private string? _errorMessage;
+
+    private int? _activeProfileId;
+    private int? _selectedTeamId;
+    private int? _selectedSprintId;
+
+    private bool _includePartiallySucceeded = true;
+    private bool _includeCanceled = false;
+    private bool _prevIncludePartial = true;
+    private bool _prevIncludeCanceled = false;
+
+    private bool _togglesDirty =>
+        _includePartiallySucceeded != _prevIncludePartial ||
+        _includeCanceled           != _prevIncludeCanceled;
+
+    private List<TeamDto>   _teams   = new();
+    private List<SprintDto> _sprints = new();
+
+    private PipelineInsightsDto? _insightsData;
+
+    private List<BreadcrumbItem> _breadcrumbs = new();
+
+    // ── Lifecycle ────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        UpdateBreadcrumbs();
+
+        _isLoading = true;
+        try
+        {
+            var profile = await ProfileService.GetActiveProfileAsync();
+            _activeProfileId = profile?.Id;
+
+            var teams = await TeamService.GetAllTeamsAsync();
+            _teams = teams.OrderBy(t => t.Name).ToList();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to initialise: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    // ── Event handlers ───────────────────────────────────────────────────
+
+    private async Task OnTeamChanged(int? teamId)
+    {
+        _selectedTeamId  = teamId;
+        _selectedSprintId = null;
+        _insightsData    = null;
+        _sprints.Clear();
+
+        if (teamId.HasValue)
+        {
+            try
+            {
+                var sprints = await SprintService.GetSprintsForTeamAsync(teamId.Value);
+                _sprints = sprints
+                    .Where(s => s.StartUtc.HasValue)
+                    .OrderByDescending(s => s.StartUtc)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Could not load sprints: {ex.Message}", Severity.Warning);
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task OnSprintChanged(int? sprintId)
+    {
+        _selectedSprintId = sprintId;
+        _insightsData = null;
+
+        if (sprintId.HasValue)
+        {
+            await LoadInsightsAsync();
+        }
+        else
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadInsightsAsync()
+    {
+        if (!_activeProfileId.HasValue || !_selectedSprintId.HasValue)
+            return;
+
+        _isLoading    = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            _insightsData = await PipelinesClient.GetInsightsAsync(
+                productOwnerId:              _activeProfileId.Value,
+                sprintId:                    _selectedSprintId.Value,
+                includePartiallySucceeded:   _includePartiallySucceeded,
+                includeCanceled:             _includeCanceled,
+                cancellationToken:           CancellationToken.None);
+
+            _prevIncludePartial   = _includePartiallySucceeded;
+            _prevIncludeCanceled  = _includeCanceled;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading pipeline insights: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    // ── Formatting helpers ───────────────────────────────────────────────
+
+    private static string FormatMinutes(double minutes)
+    {
+        if (minutes >= 60)
+        {
+            int h = (int)(minutes / 60);
+            int m = (int)(minutes % 60);
+            return m > 0 ? $"{h}h {m}m" : $"{h}h";
+        }
+        return $"{minutes:F0}m";
+    }
+
+    private static string FormatDelta(double? delta)
+    {
+        if (!delta.HasValue) return "n/a";
+        if (delta.Value > 0)  return $"+{delta.Value:F1} pp";
+        if (delta.Value < 0)  return $"{delta.Value:F1} pp";
+        return "±0 pp";
+    }
+
+    private static Color DeltaColor(double? delta, bool lowerIsBetter = true)
+    {
+        if (!delta.HasValue) return Color.Default;
+        if (delta.Value == 0) return Color.Default;
+        bool isImprovement = lowerIsBetter ? delta.Value < 0 : delta.Value > 0;
+        return isImprovement ? Color.Success : Color.Error;
+    }
+
+    // ── Navigation / Breadcrumbs ─────────────────────────────────────────
+
+    private void UpdateBreadcrumbs()
+    {
+        _breadcrumbs = new List<BreadcrumbItem>
+        {
+            new("Home",         WorkspaceRoutes.Home,            icon: Icons.Material.Filled.Home),
+            new("Trends (Past)",WorkspaceRoutes.TrendsWorkspace, icon: Icons.Material.Filled.Timeline),
+            new("Pipeline Insights", null, disabled: true,       icon: Icons.Material.Filled.HealthAndSafety)
+        };
+    }
+
+    private void NavigateToHome()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.Home);
+    }
+}
