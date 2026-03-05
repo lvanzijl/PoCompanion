@@ -923,14 +923,17 @@
     }
 
     /// <summary>
-    /// Returns epics for a product that should be visible per issue spec:
-    /// Delivered &gt; 0 OR Δ Effort ≠ 0 OR work item changes occurred (already filtered by service).
+    /// Returns epics for a product that have monitored activity during the sprint.
+    /// Visibility is based solely on the presence of at least one non-noise field change
+    /// (i.e. not System.ChangedBy / System.ChangedDate) on the epic or any of its
+    /// descendants within the sprint window.  The backend already filters the epic list
+    /// to activity-only epics, so no additional delivery-gate is applied here.
+    /// Do NOT filter on Delivered pts, Δ Effort, Features ✓, or PBIs ✓ — those are
+    /// metrics, not visibility rules (see issue: Fix Epic Visibility Using Monitored Activity).
     /// </summary>
     private List<EpicProgressDto> GetVisibleEpicsForProduct(int productId)
     {
-        return GetEpicProgressForProduct(productId)
-            .Where(e => e.SprintCompletedEffort > 0 || e.SprintEffortDelta != 0 || e.SprintCompletedPbiCount > 0)
-            .ToList();
+        return GetEpicProgressForProduct(productId);
     }
 
     /// <summary>
