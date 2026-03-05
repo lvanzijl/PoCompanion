@@ -11504,6 +11504,12 @@
             "items": {
               "$ref": "#/components/schemas/PipelineScatterPointDto"
             }
+          },
+          "pipelineBreakdown": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineBreakdownEntryDto"
+            }
           }
         }
       },
@@ -11609,6 +11615,95 @@
           },
           "url": {
             "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "PipelineHalfSprintTrend": {
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "type": "integer",
+        "format": "int32",
+        "x-enumNames": [
+          "Insufficient",
+          "Improving",
+          "Degrading",
+          "Stable"
+        ]
+      },
+      "PipelineBreakdownEntryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pipelineDefinitionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pipelineName": {
+            "type": "string"
+          },
+          "totalRuns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedRuns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "succeededRuns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failedRuns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "warningRuns": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "successRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "failureRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "warningRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "medianDurationMinutes": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "p90DurationMinutes": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "deltaFailureRate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "halfSprintTrend": {
+            "$ref": "#/components/schemas/PipelineHalfSprintTrend"
+          },
+          "firstHalfFailureRate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "secondHalfFailureRate": {
+            "type": "number",
+            "format": "double",
             "nullable": true
           }
         }

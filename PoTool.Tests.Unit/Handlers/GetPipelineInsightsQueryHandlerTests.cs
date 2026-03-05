@@ -6,6 +6,7 @@ using PoTool.Api.Handlers.Pipelines;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Pipelines.Queries;
+using PoTool.Shared.Pipelines;
 
 namespace PoTool.Tests.Unit.Handlers;
 
@@ -669,5 +670,304 @@ public class GetPipelineInsightsScatterPointTests
             new DateTimeOffset(SprintEnd),
             result.SprintEnd!.Value,
             "SprintEnd must match the sprint entity's EndUtc");
+    }
+}
+
+// ── Phase 3: Per-pipeline breakdown + half-sprint trend tests ─────────────────
+
+[TestClass]
+public class GetPipelineInsightsBreakdownTests
+{
+    private PoToolDbContext _context = null!;
+    private Mock<ILogger<GetPipelineInsightsQueryHandler>> _mockLogger = null!;
+    private GetPipelineInsightsQueryHandler _handler = null!;
+
+    // Sprint: Feb 1 – Feb 15  → midpoint = Feb 8
+    private static readonly DateTime SprintStart = new(2026, 2,  1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime SprintMid   = new(2026, 2,  8, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime SprintEnd   = new(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc);
+
+    [TestInitialize]
+    public void Setup()
+    {
+        var opts = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase($"BreakdownTests_{Guid.NewGuid()}")
+            .Options;
+        _context    = new PoToolDbContext(opts);
+        _mockLogger = new Mock<ILogger<GetPipelineInsightsQueryHandler>>();
+        _handler    = new GetPipelineInsightsQueryHandler(_context, _mockLogger.Object);
+    }
+
+    [TestCleanup]
+    public void Cleanup()
+    {
+        _context.Database.EnsureDeleted();
+        _context.Dispose();
+    }
+
+    private async Task<(int profileId, int pipeDefId, int sprintId)> SeedAsync(int seed)
+    {
+        _context.Profiles.Add(new ProfileEntity { Id = seed, Name = $"PO {seed}" });
+        _context.Teams.Add(new TeamEntity { Id = seed, Name = $"Team {seed}", TeamAreaPath = $"A/{seed}" });
+        _context.Products.Add(new ProductEntity { Id = seed, Name = $"Prod {seed}", ProductOwnerId = seed });
+        _context.Repositories.Add(new RepositoryEntity { Id = seed, ProductId = seed, Name = $"Repo {seed}" });
+        _context.PipelineDefinitions.Add(new PipelineDefinitionEntity
+        {
+            Id = seed, PipelineDefinitionId = seed * 10, ProductId = seed,
+            RepositoryId = seed, RepoId = $"guid-{seed}", RepoName = $"Repo {seed}",
+            Name = $"Pipe {seed}", LastSyncedUtc = DateTimeOffset.UtcNow
+        });
+        _context.Sprints.Add(new SprintEntity
+        {
+            Id = seed, TeamId = seed, Path = $"\\S\\{seed}", Name = $"Spr {seed}",
+            StartUtc = new DateTimeOffset(SprintStart), StartDateUtc = SprintStart,
+            EndUtc   = new DateTimeOffset(SprintEnd),   EndDateUtc   = SprintEnd,
+            LastSyncedDateUtc = DateTime.UtcNow
+        });
+        await _context.SaveChangesAsync();
+        return (seed, seed, seed);
+    }
+
+    private async Task AddRunAsync(int id, int pipeDefId, int profileId,
+        string result, DateTime finishedUtc, DateTime? startedUtc = null)
+    {
+        _context.CachedPipelineRuns.Add(new CachedPipelineRunEntity
+        {
+            Id                   = id,
+            ProductOwnerId       = profileId,
+            PipelineDefinitionId = pipeDefId,
+            TfsRunId             = id * 10,
+            RunName              = $"20260101.{id}",
+            Result               = result,
+            CreatedDateUtc       = startedUtc ?? finishedUtc.AddMinutes(-10),
+            FinishedDateUtc      = finishedUtc,
+            CreatedDate          = new DateTimeOffset(startedUtc ?? finishedUtc.AddMinutes(-10)),
+            FinishedDate         = new DateTimeOffset(finishedUtc),
+            CachedAt             = DateTimeOffset.UtcNow
+        });
+        await _context.SaveChangesAsync();
+    }
+
+    // ── Breakdown populated ───────────────────────────────────────────────────
+
+    [TestMethod]
+    [Description("PipelineBreakdown is populated for a product with runs")]
+    public async Task Handle_WithRuns_BreakdownPopulated()
+    {
+        var (profileId, pipeDefId, sprintId) = await SeedAsync(seed: 300);
+
+        await AddRunAsync(id: 1, pipeDefId, profileId, "Succeeded",
+            finishedUtc: new DateTime(2026, 2, 5, 12, 0, 0, DateTimeKind.Utc));
+        await AddRunAsync(id: 2, pipeDefId, profileId, "Failed",
+            finishedUtc: new DateTime(2026, 2, 6, 12, 0, 0, DateTimeKind.Utc));
+
+        var result = await _handler.Handle(
+            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+
+        Assert.HasCount(1, result.Products[0].PipelineBreakdown, "Breakdown must contain one pipeline");
+    }
+
+    [TestMethod]
+    [Description("Breakdown entry has correct per-pipeline metrics")]
+    public async Task Handle_Breakdown_CorrectMetrics()
+    {
+        var (profileId, pipeDefId, sprintId) = await SeedAsync(seed: 301);
+
+        // 3 succeeded, 1 failed = 75% success, 25% failure
+        await AddRunAsync(id: 1, pipeDefId, profileId, "Succeeded",
+            finishedUtc: new DateTime(2026, 2, 4, 10, 0, 0, DateTimeKind.Utc),
+            startedUtc:  new DateTime(2026, 2, 4,  9, 50, 0, DateTimeKind.Utc)); // 10 min
+        await AddRunAsync(id: 2, pipeDefId, profileId, "Succeeded",
+            finishedUtc: new DateTime(2026, 2, 5, 10, 0, 0, DateTimeKind.Utc),
+            startedUtc:  new DateTime(2026, 2, 5,  9, 50, 0, DateTimeKind.Utc)); // 10 min
+        await AddRunAsync(id: 3, pipeDefId, profileId, "Succeeded",
+            finishedUtc: new DateTime(2026, 2, 6, 10, 0, 0, DateTimeKind.Utc),
+            startedUtc:  new DateTime(2026, 2, 6,  9, 50, 0, DateTimeKind.Utc)); // 10 min
+        await AddRunAsync(id: 4, pipeDefId, profileId, "Failed",
+            finishedUtc: new DateTime(2026, 2, 7, 10, 0, 0, DateTimeKind.Utc),
+            startedUtc:  new DateTime(2026, 2, 7,  9, 40, 0, DateTimeKind.Utc)); // 20 min
+
+        var result = await _handler.Handle(
+            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+
+        var entry = result.Products[0].PipelineBreakdown[0];
+        Assert.AreEqual(4,    entry.TotalRuns,      "TotalRuns must be 4");
+        Assert.AreEqual(4,    entry.CompletedRuns,  "CompletedRuns must be 4");
+        Assert.AreEqual(3,    entry.SucceededRuns,  "SucceededRuns must be 3");
+        Assert.AreEqual(1,    entry.FailedRuns,     "FailedRuns must be 1");
+        Assert.AreEqual(25.0, entry.FailureRate,    delta: 0.1, message: "FailureRate must be 25%");
+        Assert.AreEqual(75.0, entry.SuccessRate,    delta: 0.1, message: "SuccessRate must be 75%");
+        Assert.IsTrue(entry.MedianDurationMinutes.HasValue, "MedianDurationMinutes must be set");
+    }
+
+    [TestMethod]
+    [Description("Breakdown entries are ordered by failure rate descending")]
+    public async Task Handle_Breakdown_OrderedByFailureRateDesc()
+    {
+        // Two pipelines: pipe 400 = 100% failure, pipe 401 = 0% failure
+        var seed1 = 400;
+        var seed2 = 401;
+        _context.Profiles.Add(new ProfileEntity { Id = seed1, Name = $"PO {seed1}" });
+        _context.Teams.Add(new TeamEntity { Id = seed1, Name = $"Team {seed1}", TeamAreaPath = $"A/{seed1}" });
+        _context.Products.Add(new ProductEntity { Id = seed1, Name = $"Prod {seed1}", ProductOwnerId = seed1 });
+        _context.Repositories.Add(new RepositoryEntity { Id = seed1, ProductId = seed1, Name = $"Repo {seed1}" });
+        _context.Repositories.Add(new RepositoryEntity { Id = seed2, ProductId = seed1, Name = $"Repo {seed2}" });
+        _context.PipelineDefinitions.Add(new PipelineDefinitionEntity
+        {
+            Id = seed1, PipelineDefinitionId = seed1 * 10, ProductId = seed1,
+            RepositoryId = seed1, RepoId = $"g-{seed1}", RepoName = $"R{seed1}",
+            Name = "Pipeline A", LastSyncedUtc = DateTimeOffset.UtcNow
+        });
+        _context.PipelineDefinitions.Add(new PipelineDefinitionEntity
+        {
+            Id = seed2, PipelineDefinitionId = seed2 * 10, ProductId = seed1,
+            RepositoryId = seed2, RepoId = $"g-{seed2}", RepoName = $"R{seed2}",
+            Name = "Pipeline B", LastSyncedUtc = DateTimeOffset.UtcNow
+        });
+        _context.Sprints.Add(new SprintEntity
+        {
+            Id = seed1, TeamId = seed1, Path = $"\\S\\{seed1}", Name = $"Spr {seed1}",
+            StartUtc = new DateTimeOffset(SprintStart), StartDateUtc = SprintStart,
+            EndUtc   = new DateTimeOffset(SprintEnd),   EndDateUtc   = SprintEnd,
+            LastSyncedDateUtc = DateTime.UtcNow
+        });
+        await _context.SaveChangesAsync();
+
+        var t = new DateTime(2026, 2, 5, 10, 0, 0, DateTimeKind.Utc);
+        // Pipeline A: all fail
+        _context.CachedPipelineRuns.Add(new CachedPipelineRunEntity { Id = 1, ProductOwnerId = seed1, PipelineDefinitionId = seed1, TfsRunId = 1, Result = "Failed",    FinishedDateUtc = t,              CachedAt = DateTimeOffset.UtcNow });
+        _context.CachedPipelineRuns.Add(new CachedPipelineRunEntity { Id = 2, ProductOwnerId = seed1, PipelineDefinitionId = seed1, TfsRunId = 2, Result = "Failed",    FinishedDateUtc = t.AddHours(1),  CachedAt = DateTimeOffset.UtcNow });
+        // Pipeline B: all succeed
+        _context.CachedPipelineRuns.Add(new CachedPipelineRunEntity { Id = 3, ProductOwnerId = seed1, PipelineDefinitionId = seed2, TfsRunId = 3, Result = "Succeeded", FinishedDateUtc = t.AddHours(2),  CachedAt = DateTimeOffset.UtcNow });
+        _context.CachedPipelineRuns.Add(new CachedPipelineRunEntity { Id = 4, ProductOwnerId = seed1, PipelineDefinitionId = seed2, TfsRunId = 4, Result = "Succeeded", FinishedDateUtc = t.AddHours(3),  CachedAt = DateTimeOffset.UtcNow });
+        await _context.SaveChangesAsync();
+
+        var result = await _handler.Handle(
+            new GetPipelineInsightsQuery(seed1, seed1), CancellationToken.None);
+
+        var breakdown = result.Products[0].PipelineBreakdown;
+        Assert.HasCount(2, breakdown, "Two pipelines must appear in breakdown");
+        Assert.IsGreaterThanOrEqualTo(breakdown[1].FailureRate, breakdown[0].FailureRate,
+            "Breakdown must be ordered failure rate descending");
+        Assert.AreEqual("Pipeline A", breakdown[0].PipelineName, "Worst pipeline must be first");
+    }
+
+    // ── Half-sprint trend ─────────────────────────────────────────────────────
+
+    [TestMethod]
+    [Description("HalfSprintTrend is Improving when second half failure rate is ≥ 10 pp lower")]
+    public async Task Handle_HalfSprintTrend_Improving()
+    {
+        var (profileId, pipeDefId, sprintId) = await SeedAsync(seed: 500);
+
+        // First half (Feb 1–7): 5 runs, all fail  → 100%
+        var fh = new DateTime(2026, 2, 3, 10, 0, 0, DateTimeKind.Utc);
+        for (int i = 0; i < 5; i++)
+            await AddRunAsync(id: i + 1, pipeDefId, profileId, "Failed",
+                finishedUtc: fh.AddHours(i));
+
+        // Second half (Feb 8–14): 5 runs, all succeed → 0%
+        var sh = new DateTime(2026, 2, 9, 10, 0, 0, DateTimeKind.Utc);
+        for (int i = 0; i < 5; i++)
+            await AddRunAsync(id: i + 10, pipeDefId, profileId, "Succeeded",
+                finishedUtc: sh.AddHours(i));
+
+        var result = await _handler.Handle(
+            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+
+        var entry = result.Products[0].PipelineBreakdown[0];
+        Assert.AreEqual(PipelineHalfSprintTrend.Improving, entry.HalfSprintTrend,
+            "Should be Improving (100% → 0%)");
+        Assert.IsNotNull(entry.FirstHalfFailureRate,  "FirstHalfFailureRate must be set");
+        Assert.IsNotNull(entry.SecondHalfFailureRate, "SecondHalfFailureRate must be set");
+        Assert.AreEqual(100.0, entry.FirstHalfFailureRate!.Value,  delta: 0.1);
+        Assert.AreEqual(0.0,   entry.SecondHalfFailureRate!.Value, delta: 0.1);
+    }
+
+    [TestMethod]
+    [Description("HalfSprintTrend is Degrading when second half failure rate is ≥ 10 pp higher")]
+    public async Task Handle_HalfSprintTrend_Degrading()
+    {
+        var (profileId, pipeDefId, sprintId) = await SeedAsync(seed: 501);
+
+        // First half: 5 succeeded → 0%
+        var fh = new DateTime(2026, 2, 3, 10, 0, 0, DateTimeKind.Utc);
+        for (int i = 0; i < 5; i++)
+            await AddRunAsync(id: i + 1, pipeDefId, profileId, "Succeeded",
+                finishedUtc: fh.AddHours(i));
+
+        // Second half: 5 failed → 100%
+        var sh = new DateTime(2026, 2, 9, 10, 0, 0, DateTimeKind.Utc);
+        for (int i = 0; i < 5; i++)
+            await AddRunAsync(id: i + 10, pipeDefId, profileId, "Failed",
+                finishedUtc: sh.AddHours(i));
+
+        var result = await _handler.Handle(
+            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+
+        var entry = result.Products[0].PipelineBreakdown[0];
+        Assert.AreEqual(PipelineHalfSprintTrend.Degrading, entry.HalfSprintTrend,
+            "Should be Degrading (0% → 100%)");
+    }
+
+    [TestMethod]
+    [Description("HalfSprintTrend is Stable when failure rate difference is < 10 pp")]
+    public async Task Handle_HalfSprintTrend_Stable()
+    {
+        var (profileId, pipeDefId, sprintId) = await SeedAsync(seed: 502);
+
+        // First half: 4 runs, 1 failed → 25%
+        var fh = new DateTime(2026, 2, 3, 10, 0, 0, DateTimeKind.Utc);
+        await AddRunAsync(id: 1, pipeDefId, profileId, "Failed",    finishedUtc: fh);
+        await AddRunAsync(id: 2, pipeDefId, profileId, "Succeeded", finishedUtc: fh.AddHours(1));
+        await AddRunAsync(id: 3, pipeDefId, profileId, "Succeeded", finishedUtc: fh.AddHours(2));
+        await AddRunAsync(id: 4, pipeDefId, profileId, "Succeeded", finishedUtc: fh.AddHours(3));
+
+        // Second half: 4 runs, 1 failed → 25%  (diff = 0 pp → stable)
+        var sh = new DateTime(2026, 2, 9, 10, 0, 0, DateTimeKind.Utc);
+        await AddRunAsync(id: 5, pipeDefId, profileId, "Failed",    finishedUtc: sh);
+        await AddRunAsync(id: 6, pipeDefId, profileId, "Succeeded", finishedUtc: sh.AddHours(1));
+        await AddRunAsync(id: 7, pipeDefId, profileId, "Succeeded", finishedUtc: sh.AddHours(2));
+        await AddRunAsync(id: 8, pipeDefId, profileId, "Succeeded", finishedUtc: sh.AddHours(3));
+
+        var result = await _handler.Handle(
+            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+
+        var entry = result.Products[0].PipelineBreakdown[0];
+        Assert.AreEqual(PipelineHalfSprintTrend.Stable, entry.HalfSprintTrend,
+            "Should be Stable (25% → 25%)");
+    }
+
+    [TestMethod]
+    [Description("HalfSprintTrend is Insufficient when either half has fewer than 2 completed runs")]
+    public async Task Handle_HalfSprintTrend_Insufficient()
+    {
+        var (profileId, pipeDefId, sprintId) = await SeedAsync(seed: 503);
+
+        // Only 1 run — goes into first half, second half empty
+        await AddRunAsync(id: 1, pipeDefId, profileId, "Failed",
+            finishedUtc: new DateTime(2026, 2, 4, 10, 0, 0, DateTimeKind.Utc));
+
+        var result = await _handler.Handle(
+            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+
+        var entry = result.Products[0].PipelineBreakdown[0];
+        Assert.AreEqual(PipelineHalfSprintTrend.Insufficient, entry.HalfSprintTrend,
+            "Should be Insufficient with only 1 run");
+        Assert.IsNull(entry.FirstHalfFailureRate,  "FirstHalfFailureRate must be null when insufficient");
+        Assert.IsNull(entry.SecondHalfFailureRate, "SecondHalfFailureRate must be null when insufficient");
+    }
+
+    [TestMethod]
+    [Description("Breakdown is empty for a product with no runs")]
+    public async Task Handle_NoRuns_BreakdownEmpty()
+    {
+        var (profileId, _, sprintId) = await SeedAsync(seed: 504);
+
+        var result = await _handler.Handle(
+            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+
+        Assert.IsFalse(result.Products[0].HasData);
+        Assert.HasCount(0, result.Products[0].PipelineBreakdown);
     }
 }

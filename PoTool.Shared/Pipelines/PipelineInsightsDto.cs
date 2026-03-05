@@ -125,6 +125,16 @@ public sealed class ProductPipelineInsightsDto
     /// </summary>
     public IReadOnlyList<PipelineScatterPointDto> ScatterPoints { get; set; }
         = Array.Empty<PipelineScatterPointDto>();
+
+    // ── Per-pipeline breakdown ────────────────────────────────────────────
+
+    /// <summary>
+    /// Full per-pipeline breakdown for this product, ordered by failure rate descending.
+    /// Each entry covers one distinct pipeline definition active in the selected sprint.
+    /// Only populated when HasData = true.
+    /// </summary>
+    public IReadOnlyList<PipelineBreakdownEntryDto> PipelineBreakdown { get; set; }
+        = Array.Empty<PipelineBreakdownEntryDto>();
 }
 
 /// <summary>
@@ -219,4 +229,104 @@ public sealed class PipelineScatterPointDto
 
     /// <summary>Azure DevOps URL to the pipeline run (optional, for the Build Summary Drawer link).</summary>
     public string? Url { get; set; }
+}
+
+/// <summary>
+/// Direction of pipeline health within the sprint, computed by comparing
+/// failure rates in the first half vs. the second half.
+///
+/// Threshold: difference must be ≥ 10 percentage points to be classified
+/// as Improving or Degrading; otherwise Stable.
+/// Insufficient: fewer than 2 completed runs in either half.
+/// </summary>
+public enum PipelineHalfSprintTrend
+{
+    /// <summary>Not enough runs in one or both halves to determine a trend.</summary>
+    Insufficient = 0,
+
+    /// <summary>Failure rate in the second half is lower by ≥ 10 pp vs. the first half.</summary>
+    Improving = 1,
+
+    /// <summary>Failure rate in the second half is higher by ≥ 10 pp vs. the first half.</summary>
+    Degrading = 2,
+
+    /// <summary>Failure rate difference between halves is < 10 pp.</summary>
+    Stable = 3
+}
+
+/// <summary>
+/// Per-pipeline health breakdown for a single product in a single sprint.
+/// Ordered by failure rate descending (worst first).
+/// </summary>
+public sealed class PipelineBreakdownEntryDto
+{
+    /// <summary>Database PK of the PipelineDefinitionEntity.</summary>
+    public int PipelineDefinitionId { get; set; }
+
+    /// <summary>Pipeline display name.</summary>
+    public string PipelineName { get; set; } = string.Empty;
+
+    // ── Volume ────────────────────────────────────────────────────────────
+
+    /// <summary>Total runs in the sprint (all statuses).</summary>
+    public int TotalRuns { get; set; }
+
+    /// <summary>Completed runs (after applying include-partial / include-canceled toggles).</summary>
+    public int CompletedRuns { get; set; }
+
+    /// <summary>Succeeded runs.</summary>
+    public int SucceededRuns { get; set; }
+
+    /// <summary>Failed runs.</summary>
+    public int FailedRuns { get; set; }
+
+    /// <summary>Warning (partiallySucceeded) runs.</summary>
+    public int WarningRuns { get; set; }
+
+    // ── Rates ─────────────────────────────────────────────────────────────
+
+    /// <summary>Success rate percentage (0–100).</summary>
+    public double SuccessRate { get; set; }
+
+    /// <summary>Failure rate percentage (0–100).</summary>
+    public double FailureRate { get; set; }
+
+    /// <summary>Warning rate percentage (0–100).</summary>
+    public double WarningRate { get; set; }
+
+    // ── Duration ──────────────────────────────────────────────────────────
+
+    /// <summary>Median build duration in minutes. Null when no duration data.</summary>
+    public double? MedianDurationMinutes { get; set; }
+
+    /// <summary>P90 build duration in minutes. Null when fewer than 3 runs with duration data.</summary>
+    public double? P90DurationMinutes { get; set; }
+
+    // ── Delta vs. previous sprint ─────────────────────────────────────────
+
+    /// <summary>
+    /// Change in failure rate vs. the previous sprint (percentage points).
+    /// Positive = worse; negative = improved. Null when no previous sprint data.
+    /// </summary>
+    public double? DeltaFailureRate { get; set; }
+
+    // ── Half-sprint trend ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// Direction of pipeline health within the sprint.
+    /// Computed by comparing failure rates in the first half vs. the second half.
+    /// </summary>
+    public PipelineHalfSprintTrend HalfSprintTrend { get; set; } = PipelineHalfSprintTrend.Insufficient;
+
+    /// <summary>
+    /// Failure rate in the first half of the sprint (0–100).
+    /// Null when insufficient runs.
+    /// </summary>
+    public double? FirstHalfFailureRate { get; set; }
+
+    /// <summary>
+    /// Failure rate in the second half of the sprint (0–100).
+    /// Null when insufficient runs.
+    /// </summary>
+    public double? SecondHalfFailureRate { get; set; }
 }

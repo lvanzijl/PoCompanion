@@ -160,7 +160,9 @@ public sealed class GetPipelineInsightsQueryHandler
                 productByDbId,
                 query.IncludePartiallySucceeded,
                 query.IncludeCanceled,
-                hasPreviousSprint: previousSprint is not null);
+                hasPreviousSprint: previousSprint is not null,
+                sprintStart: sprintStart,
+                sprintEnd:   sprintEnd);
 
             productSections.Add(section);
         }
@@ -251,7 +253,9 @@ public sealed class GetPipelineInsightsQueryHandler
         Dictionary<int, string> productByDbId,
         bool includePartial,
         bool includeCanceled,
-        bool hasPreviousSprint)
+        bool hasPreviousSprint,
+        DateTime sprintStart,
+        DateTime sprintEnd)
     {
         if (currentRuns.Count == 0)
         {
@@ -274,7 +278,7 @@ public sealed class GetPipelineInsightsQueryHandler
         double? median = durations.Count > 0 ? Median(durations) : null;
         double? p90    = durations.Count >= 3 ? Percentile(durations, 90) : null;
 
-        // Group runs by pipeline for top-3
+        // Group runs by pipeline for top-3 and breakdown
         var currentByDef  = currentRuns .GroupBy(r => r.DefId).ToDictionary(g => g.Key, g => g.ToList());
         var previousByDef = previousRuns.GroupBy(r => r.DefId).ToDictionary(g => g.Key, g => g.ToList());
 
@@ -294,6 +298,19 @@ public sealed class GetPipelineInsightsQueryHandler
         // ── Build scatter points (all runs, ordered by start time) ────────────
         var scatterPoints = BuildScatterPoints(currentRuns, defByDbId);
 
+        // ── Build per-pipeline breakdown table ────────────────────────────────
+        var sprintMid = sprintStart + TimeSpan.FromTicks((sprintEnd - sprintStart).Ticks / 2);
+        var breakdown = BuildPipelineBreakdown(
+            filteredCurrent,
+            filteredPrevious,
+            defByDbId,
+            includePartial,
+            includeCanceled,
+            hasPreviousSprint,
+            sprintStart,
+            sprintMid,
+            sprintEnd);
+
         return new ProductPipelineInsightsDto
         {
             ProductId              = productId,
@@ -310,7 +327,8 @@ public sealed class GetPipelineInsightsQueryHandler
             MedianDurationMinutes  = median.HasValue ? Math.Round(median.Value, 1) : null,
             P90DurationMinutes     = p90.HasValue    ? Math.Round(p90.Value,    1) : null,
             Top3InTrouble          = top3,
-            ScatterPoints          = scatterPoints
+            ScatterPoints          = scatterPoints,
+            PipelineBreakdown      = breakdown
         };
     }
 
@@ -422,6 +440,104 @@ public sealed class GetPipelineInsightsQueryHandler
                     Url                  = r.Url
                 };
             })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Builds the per-pipeline breakdown table for a product section.
+    /// Ordered by failure rate descending (worst pipeline first).
+    /// </summary>
+    private static IReadOnlyList<PipelineBreakdownEntryDto> BuildPipelineBreakdown(
+        Dictionary<int, List<RunRecord>> currentByDef,
+        Dictionary<int, List<RunRecord>> previousByDef,
+        Dictionary<int, PipelineDefRecord> defByDbId,
+        bool includePartial,
+        bool includeCanceled,
+        bool hasPreviousSprint,
+        DateTime sprintStart,
+        DateTime sprintMid,
+        DateTime sprintEnd)
+    {
+        var entries = new List<PipelineBreakdownEntryDto>(currentByDef.Count);
+
+        foreach (var (defId, runs) in currentByDef)
+        {
+            defByDbId.TryGetValue(defId, out var def);
+
+            var (completed, failed, warning, succeeded) =
+                ClassifyRuns(runs, includePartial, includeCanceled);
+
+            double failureRate = completed > 0 ? (double)failed    / completed * 100.0 : 0.0;
+            double warningRate = completed > 0 ? (double)warning   / completed * 100.0 : 0.0;
+            double successRate = completed > 0 ? (double)succeeded / completed * 100.0 : 0.0;
+
+            var durations = GetDurationsMinutes(runs);
+
+            // ── Delta vs. previous sprint ──────────────────────────────────
+            double? deltaFailureRate = null;
+            if (hasPreviousSprint && previousByDef.TryGetValue(defId, out var prevRuns) && prevRuns.Count > 0)
+            {
+                var (prevCompleted, prevFailed, _, _) = ClassifyRuns(prevRuns, includePartial, includeCanceled);
+                if (prevCompleted > 0)
+                {
+                    double prevFailureRate = (double)prevFailed / prevCompleted * 100.0;
+                    deltaFailureRate = Math.Round(failureRate - prevFailureRate, 1);
+                }
+            }
+
+            // ── Half-sprint trend ──────────────────────────────────────────
+            // First half:  FinishedDateUtc in [sprintStart, sprintMid)
+            // Second half: FinishedDateUtc in [sprintMid,   sprintEnd)
+            var firstHalf  = runs.Where(r => r.FinishedDateUtc.HasValue
+                                             && r.FinishedDateUtc.Value >= sprintStart
+                                             && r.FinishedDateUtc.Value <  sprintMid).ToList();
+            var secondHalf = runs.Where(r => r.FinishedDateUtc.HasValue
+                                             && r.FinishedDateUtc.Value >= sprintMid
+                                             && r.FinishedDateUtc.Value <  sprintEnd).ToList();
+
+            var (fhCompleted, fhFailed, _, _) = ClassifyRuns(firstHalf,  includePartial, includeCanceled);
+            var (shCompleted, shFailed, _, _) = ClassifyRuns(secondHalf, includePartial, includeCanceled);
+
+            double? firstHalfFailureRate  = null;
+            double? secondHalfFailureRate = null;
+            var trend = PipelineHalfSprintTrend.Insufficient;
+
+            if (fhCompleted >= 2 && shCompleted >= 2)
+            {
+                firstHalfFailureRate  = Math.Round((double)fhFailed / fhCompleted * 100.0, 1);
+                secondHalfFailureRate = Math.Round((double)shFailed / shCompleted * 100.0, 1);
+                double diff = secondHalfFailureRate.Value - firstHalfFailureRate.Value;
+
+                trend = diff <= -10.0 ? PipelineHalfSprintTrend.Improving
+                      : diff >=  10.0 ? PipelineHalfSprintTrend.Degrading
+                      : PipelineHalfSprintTrend.Stable;
+            }
+
+            entries.Add(new PipelineBreakdownEntryDto
+            {
+                PipelineDefinitionId  = defId,
+                PipelineName          = def?.Name ?? $"Pipeline {defId}",
+                TotalRuns             = runs.Count,
+                CompletedRuns         = completed,
+                SucceededRuns         = succeeded,
+                FailedRuns            = failed,
+                WarningRuns           = warning,
+                SuccessRate           = Math.Round(successRate,  1),
+                FailureRate           = Math.Round(failureRate,  1),
+                WarningRate           = Math.Round(warningRate,  1),
+                MedianDurationMinutes = durations.Count > 0    ? Math.Round(Median(durations),              1) : null,
+                P90DurationMinutes    = durations.Count >= 3   ? Math.Round(Percentile(durations, 90),      1) : null,
+                DeltaFailureRate      = deltaFailureRate,
+                HalfSprintTrend       = trend,
+                FirstHalfFailureRate  = firstHalfFailureRate,
+                SecondHalfFailureRate = secondHalfFailureRate
+            });
+        }
+
+        // Order: failure rate descending, then pipeline name ascending
+        return entries
+            .OrderByDescending(e => e.FailureRate)
+            .ThenBy(e => e.PipelineName)
             .ToList();
     }
 

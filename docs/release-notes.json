@@ -2,6 +2,14 @@
   {
     "date": "2026-03-05",
     "type": "Added",
+    "title": "Pipeline Insights — Phase 3: Per-Pipeline Breakdown Table + Half-Sprint Trend",
+    "impact": "Per-product pipeline breakdown table added to the Pipeline Insights page. Each product section now renders a collapsible PipelineBreakdownTable component showing all pipelines (not just the top 3) with columns: Pipeline, Runs, Success%, Failure%, Median duration, P90, Δ Failure vs previous sprint, and a Half-Sprint Trend chip. Trend is computed by splitting the sprint at its midpoint and comparing failure rates: Improving (second half ≥ 10 pp better), Degrading (≥ 10 pp worse), Stable (< 10 pp difference), or Insufficient (< 2 completed runs in a half). Tooltips show actual first-half and second-half failure rates. Breakdown is ordered failure rate descending. Backend updated: PipelineBreakdownEntryDto and PipelineHalfSprintTrend enum added to PoTool.Shared.Pipelines; PipelineBreakdown list added to ProductPipelineInsightsDto; handler updated with BuildPipelineBreakdown helper. swagger.json + ApiClient.g.cs updated. 8 new unit tests covering: populated breakdown, correct metrics, failure-rate ordering, and all 4 half-sprint trend states.",
+    "area": "Trends / Pipeline Insights",
+    "link": "/home/pipeline-insights"
+  },
+  {
+    "date": "2026-03-05",
+    "type": "Added",
     "title": "Pipeline Insights — Phase 2: Pipeline Stability Scatter (TimeScatterSvg) + Build Summary Drawer",
     "impact": "Per-product pipeline build stability scatter chart added to the Pipeline Insights page. Each product section now renders a TimeScatterSvg component (Components/Charts/): X axis = build start time within the sprint, Y axis = build duration in minutes, dots colored by result (green=Succeeded, yellow=PartiallySucceeded, red=Failed, gray=Canceled). Overlay lines: Median duration (dashed blue), P90 duration (dashed amber), optional SLO line (solid red). Clicking a scatter dot opens a right-side Build Summary Drawer showing build number, pipeline name, result, start/finish time, duration, branch, and Azure DevOps link. Clicking a pipeline in the top-3 trouble list highlights its dots (dims others). A new optional 'SLO duration (min)' input in the context header applies a SLO line to all scatter charts. Backend updated: ProductPipelineInsightsDto now includes ScatterPoints (PipelineScatterPointDto list) and PipelineInsightsDto now includes SprintStart/SprintEnd boundaries. New DTOs, handler updates, swagger.json and ApiClient.g.cs updated. 5 new unit tests for scatter point generation.",
     "area": "Trends / Pipeline Insights",

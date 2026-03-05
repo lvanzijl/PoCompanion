@@ -20752,6 +20752,9 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("scatterPoints")]
         public System.Collections.Generic.ICollection<PipelineScatterPointDto> ScatterPoints { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("pipelineBreakdown")]
+        public System.Collections.Generic.ICollection<PipelineBreakdownEntryDto> PipelineBreakdown { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -20832,6 +20835,74 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("url")]
         public string? Url { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum PipelineHalfSprintTrend
+    {
+
+        Insufficient = 0,
+
+        Improving = 1,
+
+        Degrading = 2,
+
+        Stable = 3,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PipelineBreakdownEntryDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("pipelineDefinitionId")]
+        public int PipelineDefinitionId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pipelineName")]
+        public string PipelineName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalRuns")]
+        public int TotalRuns { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("completedRuns")]
+        public int CompletedRuns { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("succeededRuns")]
+        public int SucceededRuns { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("failedRuns")]
+        public int FailedRuns { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("warningRuns")]
+        public int WarningRuns { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("successRate")]
+        public double SuccessRate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("failureRate")]
+        public double FailureRate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("warningRate")]
+        public double WarningRate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("medianDurationMinutes")]
+        public double? MedianDurationMinutes { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("p90DurationMinutes")]
+        public double? P90DurationMinutes { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("deltaFailureRate")]
+        public double? DeltaFailureRate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("halfSprintTrend")]
+        public PipelineHalfSprintTrend HalfSprintTrend { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("firstHalfFailureRate")]
+        public double? FirstHalfFailureRate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("secondHalfFailureRate")]
+        public double? SecondHalfFailureRate { get; set; } = default!;
 
     }
 

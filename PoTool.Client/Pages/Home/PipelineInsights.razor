@@ -370,6 +370,9 @@
                             </MudPaper>
                         </MudItem>
                     </MudGrid>
+
+                    @* ── Per-Pipeline Breakdown ──────────────────────── *@
+                    <PipelineBreakdownTable Entries="@product.PipelineBreakdown" />
                 }
             </MudPaper>
         }
