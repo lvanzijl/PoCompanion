@@ -1,0 +1,390 @@
+@*
+    TimeScatterSvg — Reusable SVG scatter chart for pipeline build stability.
+
+    X axis: build start time within the sprint (requires SprintStart + SprintEnd)
+    Y axis: build duration in minutes (auto-scaled from data)
+
+    Category color mapping (MudBlazor theme-aware CSS variables):
+      Succeeded          → green  (--mud-palette-success)
+      PartiallySucceeded → yellow (--mud-palette-warning)
+      Failed             → red    (--mud-palette-error)
+      Canceled           → gray   (--mud-palette-default)
+
+    Overlay lines:
+      Median: dashed info color
+      P90:    dashed warning color
+      SLO:    solid error color (optional)
+
+    Interactions:
+      Hover a point  → SVG tooltip shown
+      Click a point  → OnPointClick callback fired
+      HighlightedPipelineIds → non-highlighted points are dimmed
+*@
+
+@namespace PoTool.Client.Components.Charts
+
+<div class="time-scatter-container" style="position: relative; width: 100%;">
+    <svg viewBox="0 0 820 260"
+         style="width: 100%; height: auto; max-height: 320px; display: block; overflow: visible;"
+         @onmouseleave="() => _hoveredPoint = null">
+
+        @* ── Y axis grid lines + labels ────────────────────────────── *@
+        @foreach (var tick in GetYTicks())
+        {
+            <line x1="@L" y1="@F(tick.Px)"
+                  x2="@F(PlotRight)" y2="@F(tick.Px)"
+                  stroke="var(--mud-palette-divider)" stroke-width="0.5" />
+            @Txt(LeftPad - 6, tick.Px + 3.5, "end", 9, "var(--mud-palette-text-secondary)", FormatYLabel(tick.Val))
+        }
+
+        @* ── X axis ticks + labels ─────────────────────────────────── *@
+        @foreach (var tick in GetXTicks())
+        {
+            <line x1="@F(tick.Px)" y1="@F(PlotBottom)"
+                  x2="@F(tick.Px)" y2="@F(PlotBottom + 4)"
+                  stroke="var(--mud-palette-divider)" stroke-width="1" />
+            @Txt(tick.Px, PlotBottom + 14, "middle", 9, "var(--mud-palette-text-secondary)", FormatXLabel(tick.Time))
+        }
+
+        @* ── Axis lines ─────────────────────────────────────────────── *@
+        <line x1="@L" y1="@T" x2="@L" y2="@F(PlotBottom)"
+              stroke="var(--mud-palette-divider)" stroke-width="1" />
+        <line x1="@L" y1="@F(PlotBottom)" x2="@F(PlotRight)" y2="@F(PlotBottom)"
+              stroke="var(--mud-palette-divider)" stroke-width="1" />
+
+        @* ── Y axis label ──────────────────────────────────────────── *@
+        @((MarkupString)$"""<text x="11" y="{F(TopPad + PlotHeight / 2)}" text-anchor="middle" font-size="9" fill="var(--mud-palette-text-secondary)" transform="rotate(-90 11 {F(TopPad + PlotHeight / 2)})">Duration (min)</text>""")
+
+        @* ── SLO overlay line ──────────────────────────────────────── *@
+        @if (SloDurationMinutes.HasValue && SloDurationMinutes.Value > 0)
+        {
+            var sloY = ToSvgY(SloDurationMinutes.Value);
+            <line x1="@L" y1="@F(sloY)" x2="@F(PlotRight)" y2="@F(sloY)"
+                  stroke="var(--mud-palette-error)" stroke-width="1.5" opacity="0.75" />
+            @Txt(PlotRight + 3, sloY + 3, "start", 8, "var(--mud-palette-error)", "SLO")
+        }
+
+        @* ── Median overlay line ───────────────────────────────────── *@
+        @if (MedianDurationMinutes.HasValue && MedianDurationMinutes.Value > 0)
+        {
+            var medY = ToSvgY(MedianDurationMinutes.Value);
+            <line x1="@L" y1="@F(medY)" x2="@F(PlotRight)" y2="@F(medY)"
+                  stroke="var(--mud-palette-info)" stroke-width="1"
+                  stroke-dasharray="4,3" opacity="0.80" />
+            @Txt(PlotRight + 3, medY + 3, "start", 8, "var(--mud-palette-info)", "med")
+        }
+
+        @* ── P90 overlay line ──────────────────────────────────────── *@
+        @if (P90DurationMinutes.HasValue && P90DurationMinutes.Value > 0)
+        {
+            var p90Y = ToSvgY(P90DurationMinutes.Value);
+            <line x1="@L" y1="@F(p90Y)" x2="@F(PlotRight)" y2="@F(p90Y)"
+                  stroke="var(--mud-palette-warning)" stroke-width="1"
+                  stroke-dasharray="2,3" opacity="0.80" />
+            @Txt(PlotRight + 3, p90Y + 3, "start", 8, "var(--mud-palette-warning)", "P90")
+        }
+
+        @* ── Data points ───────────────────────────────────────────── *@
+        @foreach (var pt in Points)
+        {
+            if (pt.X != default)
+            {
+                double cx      = ToSvgX(pt.X);
+                double cy      = ToSvgY(pt.Y);
+                bool isHovered = _hoveredPoint?.Id == pt.Id;
+                bool isHl      = HighlightedPipelineIds == null
+                                 || HighlightedPipelineIds.Count == 0
+                                 || HighlightedPipelineIds.Contains(pt.PipelineDefinitionId);
+                double opacity = isHl ? (isHovered ? 1.0 : 0.82) : 0.22;
+                double r       = isHovered ? 7.5 : 5.5;
+                var stroke     = isHovered ? "var(--mud-palette-primary)" : "transparent";
+
+                <circle cx="@F(cx)" cy="@F(cy)" r="@F(r)"
+                        fill="@GetCategoryColor(pt.Category)"
+                        opacity="@F(opacity)"
+                        stroke="@stroke"
+                        stroke-width="@(isHovered ? "1.5" : "0")"
+                        style="cursor: pointer;"
+                        @onmouseenter="() => _hoveredPoint = pt"
+                        @onmouseleave="() => _hoveredPoint = null"
+                        @onclick="() => HandlePointClick(pt)" />
+            }
+        }
+
+        @* ── SVG tooltip (shown on hover) ──────────────────────────── *@
+        @if (_hoveredPoint != null)
+        {
+            const double ttW = 192;
+            const double ttH = 82;
+            double htX = ToSvgX(_hoveredPoint.X);
+            double htY = ToSvgY(_hoveredPoint.Y);
+            double ttX = Math.Min(htX + 10, 820 - ttW - 5);
+            double ttY = Math.Max(htY - ttH - 8, TopPad + 2);
+            var cat = _hoveredPoint.Category;
+
+            <g pointer-events="none">
+                @* shadow *@
+                <rect x="@F(ttX + 2)" y="@F(ttY + 2)" width="@ttW" height="@ttH"
+                      rx="4" fill="rgba(0,0,0,0.14)" />
+                @* background *@
+                <rect x="@F(ttX)" y="@F(ttY)" width="@ttW" height="@ttH"
+                      rx="4"
+                      fill="var(--mud-palette-surface)"
+                      stroke="var(--mud-palette-divider)"
+                      stroke-width="0.8" />
+                @* build number *@
+                @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+16)}" font-size="11" font-weight="600" fill="var(--mud-palette-text-primary)">{He("#" + _hoveredPoint.Label)}</text>""")
+                @* pipeline name *@
+                @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+30)}" font-size="9.5" fill="var(--mud-palette-text-secondary)">{He(Trunc(_hoveredPoint.PipelineName, 26))}</text>""")
+                @* time + duration *@
+                @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+46)}" font-size="9.5" fill="var(--mud-palette-text-secondary)">{He(FormatDuration(_hoveredPoint.Y))} • {He(_hoveredPoint.X.ToLocalTime().ToString("MMM d, HH:mm"))}</text>""")
+                @* result chip background *@
+                <rect x="@F(ttX+8)" y="@F(ttY+55)"
+                      width="@GetResultChipW(cat)" height="16" rx="8"
+                      fill="@GetCategoryColor(cat)" opacity="0.18" />
+                @* result label *@
+                @((MarkupString)$"""<text x="{F(ttX+16)}" y="{F(ttY+67)}" font-size="9" font-weight="600" fill="{GetCategoryColor(cat)}">{He(FmtResult(cat))}</text>""")
+            </g>
+        }
+
+        @* ── Empty state label ─────────────────────────────────────── *@
+        @if (!Points.Any())
+        {
+            @((MarkupString)$"""<text x="{F(LeftPad + PlotWidth / 2)}" y="{F(TopPad + PlotHeight / 2)}" text-anchor="middle" font-size="12" fill="var(--mud-palette-text-disabled)">No data for selected sprint</text>""")
+        }
+    </svg>
+
+    @* ── Legend ─────────────────────────────────────────────────────── *@
+    <div class="time-scatter-legend">
+        <span class="legend-item legend-succeeded">Succeeded</span>
+        <span class="legend-item legend-partial">Partial</span>
+        <span class="legend-item legend-failed">Failed</span>
+        @if (Points.Any(p => string.Equals(p.Category, "Canceled", StringComparison.OrdinalIgnoreCase)))
+        {
+            <span class="legend-item legend-canceled">Canceled</span>
+        }
+        @if (MedianDurationMinutes.HasValue)
+        {
+            <span class="legend-item legend-median">— med</span>
+        }
+        @if (P90DurationMinutes.HasValue)
+        {
+            <span class="legend-item legend-p90">- - P90</span>
+        }
+        @if (SloDurationMinutes.HasValue)
+        {
+            <span class="legend-item legend-slo">── SLO</span>
+        }
+    </div>
+</div>
+
+@code {
+    // ── Chart geometry constants ────────────────────────────────────────
+
+    private const double LeftPad   = 56;
+    private const double RightPad  = 36;
+    private const double TopPad    = 14;
+    private const double BottomPad = 38;
+    private const double PlotRight  = 820 - RightPad;
+    private const double PlotBottom = 260 - BottomPad;
+    private const double PlotWidth  = PlotRight - LeftPad;
+    private const double PlotHeight = PlotBottom - TopPad;
+
+    // Shorthand aliases for axis boundary strings used in SVG attributes
+    private static string L => F(LeftPad);
+    private static string T => F(TopPad);
+
+    // ── Parameters ───────────────────────────────────────────────────────
+
+    /// <summary>Data points to render.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<TimeScatterPoint> Points { get; set; } = Array.Empty<TimeScatterPoint>();
+
+    /// <summary>Sprint start — left X boundary.</summary>
+    [Parameter, EditorRequired]
+    public DateTimeOffset SprintStart { get; set; }
+
+    /// <summary>Sprint end — right X boundary.</summary>
+    [Parameter, EditorRequired]
+    public DateTimeOffset SprintEnd { get; set; }
+
+    /// <summary>Median duration overlay (minutes). Null = hidden.</summary>
+    [Parameter]
+    public double? MedianDurationMinutes { get; set; }
+
+    /// <summary>P90 duration overlay (minutes). Null = hidden.</summary>
+    [Parameter]
+    public double? P90DurationMinutes { get; set; }
+
+    /// <summary>SLO duration overlay (minutes). Null = hidden.</summary>
+    [Parameter]
+    public double? SloDurationMinutes { get; set; }
+
+    /// <summary>
+    /// When non-null and non-empty, only these pipeline IDs render at full opacity.
+    /// Null/empty = all full opacity.
+    /// </summary>
+    [Parameter]
+    public IReadOnlySet<int>? HighlightedPipelineIds { get; set; }
+
+    /// <summary>Fired when a data point is clicked.</summary>
+    [Parameter]
+    public EventCallback<TimeScatterPoint> OnPointClick { get; set; }
+
+    // ── Internal state ────────────────────────────────────────────────────
+
+    private TimeScatterPoint? _hoveredPoint;
+
+    // ── Coordinate mapping ────────────────────────────────────────────────
+
+    private double ToSvgX(DateTimeOffset t)
+    {
+        var total = (SprintEnd - SprintStart).TotalSeconds;
+        if (total <= 0) return LeftPad;
+        // The ratio is clamped to [0,1]: runs starting before sprint start map to the left edge,
+        // and runs starting after sprint end map to the right edge.
+        // In practice the backend only returns runs with FinishedDateUtc within the sprint window,
+        // so a run's start time may slightly precede SprintStart for long-running builds;
+        // this edge-clamping is intentional and acceptable.
+        var ratio = Math.Clamp((t - SprintStart).TotalSeconds / total, 0.0, 1.0);
+        return LeftPad + ratio * PlotWidth;
+    }
+
+    private double ToSvgY(double minutes)
+    {
+        var yMax = GetYMax();
+        if (yMax <= 0) return PlotBottom;
+        var ratio = Math.Clamp(minutes / yMax, 0.0, 1.0);
+        return PlotBottom - ratio * PlotHeight;
+    }
+
+    // ── Axis helpers ──────────────────────────────────────────────────────
+
+    private double GetYMax()
+    {
+        double dataMax = Points.Any(p => p.Y > 0) ? Points.Max(p => p.Y) : 10.0;
+        double overlayMax = new[] {
+            MedianDurationMinutes ?? 0,
+            P90DurationMinutes    ?? 0,
+            SloDurationMinutes    ?? 0
+        }.Max();
+        return RoundUpNice(Math.Max(dataMax, overlayMax) * 1.15);
+    }
+
+    private static double RoundUpNice(double v)
+    {
+        if (v <= 0)   return 10;
+        if (v <= 5)   return 5;
+        if (v <= 10)  return 10;
+        if (v <= 20)  return 20;
+        if (v <= 30)  return 30;
+        if (v <= 60)  return 60;
+        if (v <= 120) return 120;
+        if (v <= 240) return 240;
+        if (v <= 480) return 480;
+        return Math.Ceiling(v / 60.0) * 60;
+    }
+
+    private record YTick(double Val, double Px);
+    private record XTick(DateTimeOffset Time, double Px);
+
+    private IEnumerable<YTick> GetYTicks()
+    {
+        var yMax = GetYMax();
+        var step = GetYStep(yMax);
+        for (double y = 0; y <= yMax; y += step)
+            yield return new YTick(y, ToSvgY(y));
+    }
+
+    private static double GetYStep(double yMax) =>
+        yMax <= 10  ? 2  :
+        yMax <= 30  ? 5  :
+        yMax <= 60  ? 10 :
+        yMax <= 120 ? 20 :
+        yMax <= 240 ? 30 :
+        yMax <= 480 ? 60 : 120;
+
+    private IEnumerable<XTick> GetXTicks()
+    {
+        int every = (SprintEnd - SprintStart).TotalDays <= 7 ? 1 : 2;
+        var day = SprintStart.Date.AddDays(1);
+        while (day < SprintEnd.Date)
+        {
+            var dto = new DateTimeOffset(day, SprintStart.Offset);
+            yield return new XTick(dto, ToSvgX(dto));
+            day = day.AddDays(every);
+        }
+    }
+
+    private static string FormatYLabel(double m) =>
+        m >= 60 ? $"{(int)(m/60)}h" : $"{(int)m}m";
+
+    private static string FormatXLabel(DateTimeOffset t) => t.ToString("MMM d");
+
+    // ── Color helpers ─────────────────────────────────────────────────────
+
+    private static string GetCategoryColor(string cat) =>
+        cat.ToUpperInvariant() switch
+        {
+            "SUCCEEDED"          => "var(--mud-palette-success)",
+            "FAILED"             => "var(--mud-palette-error)",
+            "PARTIALLYSUCCEEDED" => "var(--mud-palette-warning)",
+            _                    => "var(--mud-palette-default)"
+        };
+
+    // ── Tooltip helpers ───────────────────────────────────────────────────
+
+    private static string FormatDuration(double m)
+    {
+        if (m <= 0) return "n/a";
+        if (m >= 60) { int h = (int)(m/60); int mn = (int)(m%60); return mn > 0 ? $"{h}h {mn}m" : $"{h}h"; }
+        return $"{m:F0}m";
+    }
+
+    private static string FmtResult(string cat) =>
+        cat.ToUpperInvariant() switch
+        {
+            "SUCCEEDED"          => "Succeeded",
+            "FAILED"             => "Failed",
+            "PARTIALLYSUCCEEDED" => "Partial",
+            "CANCELED"           => "Canceled",
+            _                    => cat
+        };
+
+    private static double GetResultChipW(string cat) =>
+        cat.ToUpperInvariant() switch
+        {
+            "SUCCEEDED"          => 68,
+            "FAILED"             => 52,
+            "PARTIALLYSUCCEEDED" => 52,
+            _                    => 60
+        };
+
+    private static string Trunc(string s, int max) =>
+        s.Length <= max ? s : s[..max] + "…";
+
+    // ── SVG rendering utilities ───────────────────────────────────────────
+
+    /// <summary>Formats a double as a compact SVG coordinate string.</summary>
+    private static string F(double v) => v.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Renders an SVG text element as MarkupString.
+    /// Blazor Razor does not allow attributes on its special &lt;text&gt; tag,
+    /// so all SVG text nodes must be emitted this way.
+    /// </summary>
+    private static MarkupString Txt(double x, double y, string anchor, int size, string fill, string content)
+        => (MarkupString)$"<text x=\"{F(x)}\" y=\"{F(y)}\" text-anchor=\"{anchor}\" font-size=\"{size}\" fill=\"{fill}\">{He(content)}</text>";
+
+    /// <summary>HTML-encodes a string for safe embedding in SVG text nodes.</summary>
+    private static string He(string s)
+        => System.Net.WebUtility.HtmlEncode(s);
+
+    // ── Event handlers ────────────────────────────────────────────────────
+
+    private async Task HandlePointClick(TimeScatterPoint pt)
+    {
+        if (OnPointClick.HasDelegate)
+            await OnPointClick.InvokeAsync(pt);
+    }
+}

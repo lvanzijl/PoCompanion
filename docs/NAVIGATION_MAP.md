@@ -563,7 +563,7 @@ Sprint Delivery
 
 ### 2.18 Pipeline Insights — `/home/pipeline-insights`
 
-**Purpose:** PO-first pipeline stability overview for a single selected sprint, showing aggregated health metrics per product. Phase 1: ranking by failure rate with delta vs. previous sprint. No scatter charts. All data sourced from local cache only.
+**Purpose:** PO-first pipeline stability overview for a single selected sprint, showing aggregated health metrics and a build stability scatter chart per product. Phase 1+2: ranking by failure rate with delta vs. previous sprint, and per-product TimeScatterSvg scatter (X=start time, Y=duration). All data sourced from local cache only.
 
 | Functionality | Description |
 |---|---|
@@ -574,7 +574,10 @@ Sprint Delivery
 | Include canceled toggle | When enabled (default OFF), canceled runs are counted in the total and completed build counts. |
 | Global summary chips | Total builds, failure rate % (with count), warning rate % (with count), P90 duration. Aggregated across all PO products. |
 | Global Top 3 in trouble | Three most problematic pipelines globally, ranked by failure rate (descending). Each card shows: pipeline name, product name, failure rate %, failed/completed count, delta vs. previous sprint (n/a when no previous sprint data). |
-| Per-product sections | One section per product owned by the active Product Owner, ordered by product name. Each section shows product name, per-product top-3 in trouble, and product summary chips (failure rate, warning rate, success rate, median duration, P90 duration). Empty state when no cached runs in the selected sprint. |
+| Per-product sections | One section per product owned by the active Product Owner, ordered by product name. Each section shows product name, per-product top-3 in trouble (click to highlight pipeline on scatter), pipeline stability scatter (TimeScatterSvg, X=build start time, Y=duration minutes), and product summary chips (failure rate, warning rate, success rate, median duration, P90 duration). Empty state when no cached runs in the selected sprint. |
+| Pipeline Stability Scatter | Per-product SVG scatter chart (TimeScatterSvg). Dots colored by result (green=succeeded, yellow=partial, red=failed). Median and P90 duration overlay lines. Optional SLO duration input. Highlight a pipeline by clicking its top-3 entry; non-highlighted points dim. |
+| Build Summary Drawer | Opens when a scatter dot is clicked. Shows: build number, pipeline name, result, start time, finish time, duration, branch, and an Azure DevOps link (when URL is cached). |
+| SLO duration input | Optional minutes input; renders a horizontal SLO line on all scatter charts. |
 | Empty state | When no sprint is selected, a prompt guides the user to select a team and sprint. |
 | Error handling | Network/cache errors show an alert with a Retry button. |
 | Home button | Returns to `/home`. |

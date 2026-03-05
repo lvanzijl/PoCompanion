@@ -20695,6 +20695,12 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("products")]
         public System.Collections.Generic.ICollection<ProductPipelineInsightsDto> Products { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("sprintStart")]
+        public System.DateTimeOffset? SprintStart { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sprintEnd")]
+        public System.DateTimeOffset? SprintEnd { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -20743,6 +20749,9 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("top3InTrouble")]
         public System.Collections.Generic.ICollection<PipelineTroubleEntryDto> Top3InTrouble { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("scatterPoints")]
+        public System.Collections.Generic.ICollection<PipelineScatterPointDto> ScatterPoints { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -20784,6 +20793,45 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("deltaWarningRate")]
         public double? DeltaWarningRate { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PipelineScatterPointDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public int Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tfsRunId")]
+        public int TfsRunId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pipelineDefinitionId")]
+        public int PipelineDefinitionId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pipelineName")]
+        public string PipelineName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("buildNumber")]
+        public string? BuildNumber { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("result")]
+        public string? Result { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("startTime")]
+        public System.DateTimeOffset? StartTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("finishTime")]
+        public System.DateTimeOffset? FinishTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("durationMinutes")]
+        public double? DurationMinutes { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("branch")]
+        public string? Branch { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("url")]
+        public string? Url { get; set; } = default!;
 
     }
 

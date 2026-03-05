@@ -489,3 +489,185 @@ public class GetPipelineInsightsQueryHandlerTests
         await _context.SaveChangesAsync();
     }
 }
+
+// ── Phase 2: Scatter point tests ───────────────────────────────────────────────
+
+[TestClass]
+public class GetPipelineInsightsScatterPointTests
+{
+    private PoToolDbContext _context = null!;
+    private Mock<ILogger<GetPipelineInsightsQueryHandler>> _mockLogger = null!;
+    private GetPipelineInsightsQueryHandler _handler = null!;
+
+    private static readonly DateTime SprintStart = new(2026, 2,  1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime SprintEnd   = new(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc);
+
+    [TestInitialize]
+    public void Setup()
+    {
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase($"ScatterTests_{Guid.NewGuid()}")
+            .Options;
+        _context    = new PoToolDbContext(options);
+        _mockLogger = new Mock<ILogger<GetPipelineInsightsQueryHandler>>();
+        _handler    = new GetPipelineInsightsQueryHandler(_context, _mockLogger.Object);
+    }
+
+    [TestCleanup]
+    public void Cleanup()
+    {
+        _context.Database.EnsureDeleted();
+        _context.Dispose();
+    }
+
+    private async Task<(int profileId, int pipeDefId, int sprintId)> SeedAsync(int seed)
+    {
+        _context.Profiles.Add(new ProfileEntity { Id = seed, Name = $"PO {seed}" });
+        _context.Teams.Add(new TeamEntity { Id = seed, Name = $"Team {seed}", TeamAreaPath = $"A/{seed}" });
+        _context.Products.Add(new ProductEntity { Id = seed, Name = $"Prod {seed}", ProductOwnerId = seed });
+        _context.Repositories.Add(new RepositoryEntity { Id = seed, ProductId = seed, Name = $"Repo {seed}" });
+        _context.PipelineDefinitions.Add(new PipelineDefinitionEntity
+        {
+            Id = seed, PipelineDefinitionId = seed * 10, ProductId = seed,
+            RepositoryId = seed, RepoId = $"guid-{seed}", RepoName = $"Repo {seed}",
+            Name = $"Pipe {seed}", LastSyncedUtc = DateTimeOffset.UtcNow
+        });
+        _context.Sprints.Add(new SprintEntity
+        {
+            Id = seed, TeamId = seed, Path = $"\\S\\{seed}", Name = $"Spr {seed}",
+            StartUtc = new DateTimeOffset(SprintStart), StartDateUtc = SprintStart,
+            EndUtc   = new DateTimeOffset(SprintEnd),   EndDateUtc   = SprintEnd,
+            LastSyncedDateUtc = DateTime.UtcNow
+        });
+        await _context.SaveChangesAsync();
+        return (seed, seed, seed);
+    }
+
+    private async Task AddRunAsync(int id, int pipeDefId, int profileId,
+        string result, DateTime createdUtc, DateTime finishedUtc,
+        string? runName = null, string? branch = null, string? url = null)
+    {
+        _context.CachedPipelineRuns.Add(new CachedPipelineRunEntity
+        {
+            Id                   = id,
+            ProductOwnerId       = profileId,
+            PipelineDefinitionId = pipeDefId,
+            TfsRunId             = id * 10,
+            RunName              = runName ?? $"20260101.{id}",
+            Result               = result,
+            CreatedDateUtc       = createdUtc,
+            FinishedDateUtc      = finishedUtc,
+            CreatedDate          = new DateTimeOffset(createdUtc),
+            FinishedDate         = new DateTimeOffset(finishedUtc),
+            SourceBranch         = branch ?? "refs/heads/main",
+            Url                  = url ?? $"https://dev.azure.com/test/{id}",
+            CachedAt             = DateTimeOffset.UtcNow
+        });
+        await _context.SaveChangesAsync();
+    }
+
+    [TestMethod]
+    [Description("ScatterPoints are populated for a product with runs")]
+    public async Task Handle_WithRuns_ScatterPointsPopulated()
+    {
+        var (profileId, pipeDefId, sprintId) = await SeedAsync(seed: 200);
+        var start = new DateTime(2026, 2, 5, 10, 0, 0, DateTimeKind.Utc);
+
+        await AddRunAsync(id: 1, pipeDefId, profileId, "Succeeded",
+            createdUtc: start, finishedUtc: start.AddMinutes(12));
+        await AddRunAsync(id: 2, pipeDefId, profileId, "Failed",
+            createdUtc: start.AddHours(2), finishedUtc: start.AddHours(2).AddMinutes(5));
+
+        var result = await _handler.Handle(
+            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+
+        Assert.HasCount(1, result.Products);
+        var scatter = result.Products[0].ScatterPoints;
+        Assert.HasCount(2, scatter, "Both runs must appear as scatter points");
+    }
+
+    [TestMethod]
+    [Description("ScatterPoints carry correct result, duration, and pipeline name")]
+    public async Task Handle_ScatterPoints_HaveCorrectFields()
+    {
+        var (profileId, pipeDefId, sprintId) = await SeedAsync(seed: 201);
+        var created  = new DateTime(2026, 2, 6, 9, 0, 0, DateTimeKind.Utc);
+        var finished = created.AddMinutes(20);
+
+        await AddRunAsync(id: 1, pipeDefId, profileId, "Succeeded",
+            createdUtc: created, finishedUtc: finished,
+            runName: "20260206.1", branch: "refs/heads/main",
+            url: "https://dev.azure.com/test/1");
+
+        var result = await _handler.Handle(
+            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+
+        var pt = result.Products[0].ScatterPoints[0];
+        Assert.AreEqual("Succeeded", pt.Result);
+        Assert.AreEqual("20260206.1", pt.BuildNumber);
+        Assert.AreEqual("Pipe 201", pt.PipelineName);
+        Assert.IsNotNull(pt.StartTime, "StartTime must be set");
+        Assert.IsTrue(pt.DurationMinutes.HasValue, "DurationMinutes must be set");
+        Assert.AreEqual(20.0, pt.DurationMinutes!.Value, delta: 0.05);
+        Assert.AreEqual("refs/heads/main", pt.Branch);
+        Assert.AreEqual("https://dev.azure.com/test/1", pt.Url);
+    }
+
+    [TestMethod]
+    [Description("ScatterPoints are empty for a product with no runs")]
+    public async Task Handle_NoRuns_ScatterPointsEmpty()
+    {
+        var (profileId, _, sprintId) = await SeedAsync(seed: 202);
+
+        var result = await _handler.Handle(
+            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+
+        Assert.IsFalse(result.Products[0].HasData);
+        Assert.HasCount(0, result.Products[0].ScatterPoints);
+    }
+
+    [TestMethod]
+    [Description("ScatterPoints are ordered by start time ascending")]
+    public async Task Handle_ScatterPoints_OrderedByStartTimeAscending()
+    {
+        var (profileId, pipeDefId, sprintId) = await SeedAsync(seed: 203);
+
+        // Add runs out of order
+        var t1 = new DateTime(2026, 2, 10, 9, 0, 0, DateTimeKind.Utc);
+        var t2 = new DateTime(2026, 2,  5, 9, 0, 0, DateTimeKind.Utc);
+        var t3 = new DateTime(2026, 2,  8, 9, 0, 0, DateTimeKind.Utc);
+
+        await AddRunAsync(id: 1, pipeDefId, profileId, "Succeeded", t1, t1.AddMinutes(10));
+        await AddRunAsync(id: 2, pipeDefId, profileId, "Failed",    t2, t2.AddMinutes(8));
+        await AddRunAsync(id: 3, pipeDefId, profileId, "Succeeded", t3, t3.AddMinutes(12));
+
+        var result = await _handler.Handle(
+            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+
+        var scatter = result.Products[0].ScatterPoints;
+        Assert.HasCount(3, scatter);
+        Assert.IsTrue(scatter[0].StartTime!.Value <= scatter[1].StartTime!.Value, "Points must be sorted by start time");
+        Assert.IsTrue(scatter[1].StartTime!.Value <= scatter[2].StartTime!.Value, "Points must be sorted by start time");
+    }
+
+    [TestMethod]
+    [Description("Sprint start/end boundaries are returned in PipelineInsightsDto")]
+    public async Task Handle_ReturnsSprintBoundaries()
+    {
+        var (profileId, _, sprintId) = await SeedAsync(seed: 204);
+
+        var result = await _handler.Handle(
+            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+
+        Assert.IsNotNull(result.SprintStart, "SprintStart must be set");
+        Assert.IsNotNull(result.SprintEnd,   "SprintEnd must be set");
+        Assert.AreEqual(
+            new DateTimeOffset(SprintStart),
+            result.SprintStart!.Value,
+            "SprintStart must match the sprint entity's StartUtc");
+        Assert.AreEqual(
+            new DateTimeOffset(SprintEnd),
+            result.SprintEnd!.Value,
+            "SprintEnd must match the sprint entity's EndUtc");
+    }
+}

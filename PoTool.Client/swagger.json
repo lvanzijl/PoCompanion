@@ -11424,6 +11424,16 @@
             "items": {
               "$ref": "#/components/schemas/ProductPipelineInsightsDto"
             }
+          },
+          "sprintStart": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "sprintEnd": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         }
       },
@@ -11488,6 +11498,12 @@
             "items": {
               "$ref": "#/components/schemas/PipelineTroubleEntryDto"
             }
+          },
+          "scatterPoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineScatterPointDto"
+            }
           }
         }
       },
@@ -11541,6 +11557,58 @@
           "deltaWarningRate": {
             "type": "number",
             "format": "double",
+            "nullable": true
+          }
+        }
+      },
+      "PipelineScatterPointDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "tfsRunId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pipelineDefinitionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pipelineName": {
+            "type": "string"
+          },
+          "buildNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "result": {
+            "type": "string",
+            "nullable": true
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "finishTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "durationMinutes": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "branch": {
+            "type": "string",
+            "nullable": true
+          },
+          "url": {
+            "type": "string",
             "nullable": true
           }
         }

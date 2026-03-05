@@ -194,6 +194,8 @@ public sealed class GetPipelineInsightsQueryHandler
         {
             SprintId              = sprint.Id,
             SprintName            = sprint.Name,
+            SprintStart           = sprint.StartUtc,
+            SprintEnd             = sprint.EndUtc,
             PreviousSprintId      = previousSprint?.Id,
             PreviousSprintName    = previousSprint?.Name,
             TotalBuilds           = currentRuns.Count,
@@ -225,10 +227,17 @@ public sealed class GetPipelineInsightsQueryHandler
                         && r.FinishedDateUtc.Value >= rangeStart
                         && r.FinishedDateUtc.Value < rangeEnd)
             .Select(r => new RunRecord(
+                r.Id,
+                r.TfsRunId,
                 r.PipelineDefinitionId,
                 r.Result,
+                r.RunName,
                 r.CreatedDateUtc,
-                r.FinishedDateUtc))
+                r.FinishedDateUtc,
+                r.CreatedDate,
+                r.FinishedDate,
+                r.SourceBranch,
+                r.Url))
             .ToListAsync(cancellationToken);
     }
 
@@ -282,6 +291,9 @@ public sealed class GetPipelineInsightsQueryHandler
             includeCanceled,
             hasPreviousSprint);
 
+        // ── Build scatter points (all runs, ordered by start time) ────────────
+        var scatterPoints = BuildScatterPoints(currentRuns, defByDbId);
+
         return new ProductPipelineInsightsDto
         {
             ProductId              = productId,
@@ -297,7 +309,8 @@ public sealed class GetPipelineInsightsQueryHandler
             SuccessRate            = Math.Round(successRate, 1),
             MedianDurationMinutes  = median.HasValue ? Math.Round(median.Value, 1) : null,
             P90DurationMinutes     = p90.HasValue    ? Math.Round(p90.Value,    1) : null,
-            Top3InTrouble          = top3
+            Top3InTrouble          = top3,
+            ScatterPoints          = scatterPoints
         };
     }
 
@@ -371,6 +384,45 @@ public sealed class GetPipelineInsightsQueryHandler
                     : null
             };
         }).ToList();
+    }
+
+    private static IReadOnlyList<PipelineScatterPointDto> BuildScatterPoints(
+        IEnumerable<RunRecord> runs,
+        Dictionary<int, PipelineDefRecord> defByDbId)
+    {
+        // Filter: only runs that have a start time (CreatedDateOffset) for X-axis positioning.
+        // DurationMinutes is computed from the UTC fields and is nullable:
+        //   null = run has no start or finish UTC → rendered at Y=0 in scatter (no duration data).
+        return runs
+            .Where(r => r.CreatedDateOffset.HasValue)
+            .OrderBy(r => r.CreatedDateOffset)
+            .Select(r =>
+            {
+                defByDbId.TryGetValue(r.DefId, out var def);
+                double? durationMinutes = null;
+                if (r.CreatedDateUtc.HasValue && r.FinishedDateUtc.HasValue
+                    && r.FinishedDateUtc.Value > r.CreatedDateUtc.Value)
+                {
+                    durationMinutes = Math.Round(
+                        (r.FinishedDateUtc.Value - r.CreatedDateUtc.Value).TotalMinutes, 2);
+                }
+
+                return new PipelineScatterPointDto
+                {
+                    Id                   = r.DbId,
+                    TfsRunId             = r.TfsRunId,
+                    PipelineDefinitionId = r.DefId,
+                    PipelineName         = def?.Name ?? $"Pipeline {r.DefId}",
+                    BuildNumber          = r.RunName,
+                    Result               = r.Result,
+                    StartTime            = r.CreatedDateOffset,
+                    FinishTime           = r.FinishedDateOffset,
+                    DurationMinutes      = durationMinutes,
+                    Branch               = r.SourceBranch,
+                    Url                  = r.Url
+                };
+            })
+            .ToList();
     }
 
     /// <summary>
@@ -481,10 +533,17 @@ public sealed class GetPipelineInsightsQueryHandler
 
     // ── Projection record (avoids materialising full entity) ─────────────
     private sealed record RunRecord(
-        int      DefId,
-        string?  Result,
+        int       DbId,
+        int       TfsRunId,
+        int       DefId,
+        string?   Result,
+        string?   RunName,
         DateTime? CreatedDateUtc,
-        DateTime? FinishedDateUtc);
+        DateTime? FinishedDateUtc,
+        DateTimeOffset? CreatedDateOffset,
+        DateTimeOffset? FinishedDateOffset,
+        string?   SourceBranch,
+        string?   Url);
 
     private sealed record PipelineDefRecord(int Id, int ProductId, string Name);
 }

@@ -1,0 +1,56 @@
+/* TimeScatterSvg component styles */
+
+.time-scatter-container {
+    width: 100%;
+}
+
+/* ── Legend ──────────────────────────────────────────────────────────────── */
+
+.time-scatter-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.5rem 0 0.25rem 3.5rem; /* align with left pad of SVG chart */
+    font-size: 0.72rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.legend-item::before {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.legend-succeeded::before { background: var(--mud-palette-success); }
+.legend-partial::before   { background: var(--mud-palette-warning); }
+.legend-failed::before    { background: var(--mud-palette-error);   }
+.legend-canceled::before  { background: var(--mud-palette-default); }
+
+.legend-median {
+    color: var(--mud-palette-info);
+    letter-spacing: 0.05em;
+}
+
+.legend-median::before { display: none; }
+
+.legend-p90 {
+    color: var(--mud-palette-warning);
+    letter-spacing: 0.05em;
+}
+
+.legend-p90::before { display: none; }
+
+.legend-slo {
+    color: var(--mud-palette-error);
+    letter-spacing: 0.05em;
+}
+
+.legend-slo::before { display: none; }

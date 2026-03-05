@@ -3,7 +3,7 @@ namespace PoTool.Shared.Pipelines;
 /// <summary>
 /// Response for the Pipeline Insights endpoint.
 /// Contains aggregated pipeline health metrics for the active PO, per sprint.
-/// Phase 1: aggregation only (no scatter data).
+/// Phase 1: aggregation. Phase 2: scatter data added per product.
 /// </summary>
 public sealed class PipelineInsightsDto
 {
@@ -12,6 +12,12 @@ public sealed class PipelineInsightsDto
 
     /// <summary>Selected sprint display name.</summary>
     public string SprintName { get; set; } = string.Empty;
+
+    /// <summary>Sprint start time (UTC). Used by the scatter component for X-axis boundaries.</summary>
+    public DateTimeOffset? SprintStart { get; set; }
+
+    /// <summary>Sprint end time (UTC). Used by the scatter component for X-axis boundaries.</summary>
+    public DateTimeOffset? SprintEnd { get; set; }
 
     /// <summary>Previous sprint ID (for delta computation). Null when no predecessor exists in cache.</summary>
     public int? PreviousSprintId { get; set; }
@@ -109,6 +115,16 @@ public sealed class ProductPipelineInsightsDto
     /// <summary>Top 3 most troubled pipelines for this product, ranked by failure rate.</summary>
     public IReadOnlyList<PipelineTroubleEntryDto> Top3InTrouble { get; set; }
         = Array.Empty<PipelineTroubleEntryDto>();
+
+    // ── Scatter data ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// All cached pipeline run points for this product in the selected sprint.
+    /// Used to render the TimeScatterSvg.
+    /// Only populated when the product has data (HasData = true).
+    /// </summary>
+    public IReadOnlyList<PipelineScatterPointDto> ScatterPoints { get; set; }
+        = Array.Empty<PipelineScatterPointDto>();
 }
 
 /// <summary>
@@ -163,4 +179,44 @@ public sealed class PipelineTroubleEntryDto
     /// Null when no previous sprint data is available (n/a).
     /// </summary>
     public double? DeltaWarningRate { get; set; }
+}
+
+/// <summary>
+/// A single pipeline run data point for the scatter visualization.
+/// X = start time, Y = duration in minutes.
+/// </summary>
+public sealed class PipelineScatterPointDto
+{
+    /// <summary>Database PK of CachedPipelineRunEntity.</summary>
+    public int Id { get; set; }
+
+    /// <summary>TFS run ID (used in Azure DevOps URL).</summary>
+    public int TfsRunId { get; set; }
+
+    /// <summary>Pipeline definition database PK (for highlight filtering).</summary>
+    public int PipelineDefinitionId { get; set; }
+
+    /// <summary>Pipeline display name.</summary>
+    public string PipelineName { get; set; } = string.Empty;
+
+    /// <summary>Build number / run name (e.g., "20260101.5").</summary>
+    public string? BuildNumber { get; set; }
+
+    /// <summary>Run result (Succeeded, Failed, PartiallySucceeded, Canceled).</summary>
+    public string? Result { get; set; }
+
+    /// <summary>Build start time (when the run was created).</summary>
+    public DateTimeOffset? StartTime { get; set; }
+
+    /// <summary>Build finish time.</summary>
+    public DateTimeOffset? FinishTime { get; set; }
+
+    /// <summary>Build duration in minutes. Null when start or finish time is missing.</summary>
+    public double? DurationMinutes { get; set; }
+
+    /// <summary>Source branch (optional).</summary>
+    public string? Branch { get; set; }
+
+    /// <summary>Azure DevOps URL to the pipeline run (optional, for the Build Summary Drawer link).</summary>
+    public string? Url { get; set; }
 }
