@@ -96,26 +96,37 @@ public sealed class GetPullRequestInsightsQueryHandler
         var prIds = prs.Select(pr => pr.Id).ToList();
 
         // ── 3. Batch-load related data ─────────────────────────────────────────
-        var iterationsByPr = await _context.PullRequestIterations
+        // Fetch to memory first, then group — required for EF InMemory compatibility
+        // and avoids GroupBy translation limitations in EF Core.
+        var iterationRows = await _context.PullRequestIterations
             .AsNoTracking()
             .Where(i => prIds.Contains(i.PullRequestId))
-            .GroupBy(i => i.PullRequestId)
-            .ToDictionaryAsync(g => g.Key, g => g.Count(), cancellationToken);
+            .Select(i => i.PullRequestId)
+            .ToListAsync(cancellationToken);
 
-        var commentsByPr = await _context.PullRequestComments
+        var iterationsByPr = iterationRows
+            .GroupBy(id => id)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var commentRows = await _context.PullRequestComments
             .AsNoTracking()
             .Where(c => prIds.Contains(c.PullRequestId))
-            .GroupBy(c => c.PullRequestId)
-            .ToDictionaryAsync(g => g.Key, g => g.Count(), cancellationToken);
+            .Select(c => c.PullRequestId)
+            .ToListAsync(cancellationToken);
 
-        var filesByPr = await _context.PullRequestFileChanges
+        var commentsByPr = commentRows
+            .GroupBy(id => id)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var fileRows = await _context.PullRequestFileChanges
             .AsNoTracking()
             .Where(f => prIds.Contains(f.PullRequestId))
+            .Select(f => new { f.PullRequestId, f.FilePath })
+            .ToListAsync(cancellationToken);
+
+        var filesByPr = fileRows
             .GroupBy(f => f.PullRequestId)
-            .ToDictionaryAsync(
-                g => g.Key,
-                g => g.Select(fc => fc.FilePath).Distinct().Count(),
-                cancellationToken);
+            .ToDictionary(g => g.Key, g => g.Select(f => f.FilePath).Distinct().Count());
 
         // ── 4. Build enriched records ──────────────────────────────────────────
         var enriched = prs.Select(pr =>

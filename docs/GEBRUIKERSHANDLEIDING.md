@@ -531,16 +531,67 @@ Onderaan de pagina zie je een drieseriengrafiek (Totaal bugs, Opgeloste bugs, To
 
 **Pagina:** `/home/pull-requests`
 
-Een alleen-lezen overzicht van pull request-metrieken en -trends.
+Een teamgericht, alleen-lezen overzicht van pull request-wrijving, gericht op de vraag: *"Welke pull requests duiden op leveringswrijving binnen het team?"*
+
+Alle gegevens komen uitsluitend uit de lokale cache — er worden geen live Azure DevOps-aanroepen gedaan.
+
+#### Filters
+
+- **Teamselector** — beperkt de PR-gegevens tot alle producten die aan het geselecteerde team zijn gekoppeld.
+- **Datumbereikfilter** — standaard de afgelopen 6 maanden.
+- **Repository (optioneel)** — filter op één specifieke repository.
 
 #### Wat zie je hier?
 
-- **Product-/Teamfilter** — filter PR-metrieken op product of team.
-- **PR-statusgrafiek** — PR's gesplitst op status (actief, voltooid, afgebroken).
-- **PR-openstaanduratie-grafiek** — hoe lang PR's openstaan voor ze worden opgelost.
-- **PR-gebruikersgrafiek** — PR-activiteit per teamlid.
-- **Samenvattingspaneel** — geaggregeerde totalen en gemiddelden voor de geselecteerde context.
-- **Datumbereikfilter** — beperk de weergave tot een specifiek tijdvenster.
+**Sectie 1 — Samenvatting**
+
+Zes chips bovenaan de pagina tonen de teamgezondheid van PR's in één oogopslag:
+
+| Chip | Omschrijving |
+|---|---|
+| Totaal PR's | Totaal aantal PR's in het geselecteerde bereik |
+| Samenvoegpercentage | Percentage afgesloten PR's ten opzichte van het totaal |
+| Afbreekpercentage | Percentage afgebroken PR's |
+| Herwerk-percentage | Percentage samengevoegde PR's na herbewerking (proxy: meer dan één iteratie) |
+| Mediane levensduur | Mediane levensduur van alle PR's in het bereik |
+| P90-levensduur | 90e percentiel van de levensduur (alleen beschikbaar bij ≥ 3 PR's) |
+
+**Sectie 2 — Top 3 problematische PR's**
+
+Drie kaarten tonen de PR's die het meest bijdragen aan wrijving in de workflow, gerangschikt op een samengesteld score:
+
+- Levensduur: 40 %
+- Revisiecycli: 30 %
+- Gewijzigde bestanden: 20 %
+- Commentaren: 10 %
+
+Klik op een kaart om de bijbehorende punt in het spreidingsdiagram te markeren.
+
+**Sectie 3 — PR-spreidingsdiagram**
+
+Een SVG-spreidingsdiagram (`PullRequestScatterSvg`) met:
+
+- **X-as** — aanmaakdatum van de PR
+- **Y-as** — levensduur in uren
+
+Puntkleur:
+
+| Kleur | Betekenis |
+|---|---|
+| Groen | Samengevoegd zonder herbewerking |
+| Geel | Samengevoegd na herbewerking |
+| Rood | Afgebroken PR |
+| Grijs | Actieve (nog openstaande) PR |
+
+Pijlers geven de repository aan (cirkel / vierkant / driehoek). Zweef boven een punt voor een tooltip met de PR-titel, auteur, levensduur, revisiecycli, bestanden en commentaren. Klik om die PR te markeren en alle andere te dimmen. Optionele mediaan- en P90-lijnen zijn beschikbaar.
+
+**Sectie 4 — Langst openstaande PR's**
+
+Tabel met de top 20 langste PR's, gesorteerd op levensduur aflopend. Kolommen: PR-titel, repository, auteur, levensduur, revisiecycli, gewijzigde bestanden, commentaren, status.
+
+**Sectie 5 — Breakdowntabel per repository**
+
+Inklapbare tabel met workflowstatistieken per repository. Gesorteerd op PR-aantal aflopend. Kolommen: repository, PR-aantal, samenvoeging %, afbreking %, mediane levensduur, P90-levensduur, gemiddelde revisiecycli.
 
 ---
 
