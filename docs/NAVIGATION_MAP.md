@@ -3,7 +3,7 @@
 **Audience:** Product Owners and stakeholders  
 **Scope:** All non-legacy, non-settings pages  
 **Purpose:** Human-readable reference of available navigation and functionality; basis for improvement analysis  
-**Last Updated:** 2026-03-04 (Portfolio Delivery page implemented; placeholder replaced with full sprint range selector, summary metrics, product/feature contribution charts, and bug distribution summary)
+**Last Updated:** 2026-03-05 (Sprint Activity page improvements: renamed from "Work Item Activity", added Change Type classification, creation event collapsing, grouped activity view, and Activity Summary block)
 
 ---
 
@@ -507,18 +507,33 @@ Sprint Delivery
 
 ---
 
-### 2.15 Work Item Activity — `/home/delivery/sprint/activity/{workItemId}`
+### 2.15 Sprint Activity — `/home/delivery/sprint/activity/{workItemId}`
 
 > **Route alias:** `/home/sprint-trend/activity/{workItemId}` (legacy route, kept for backward compatibility)
 
-**Purpose:** Shows the activity history (revision events) for a single work item (Feature or Epic) within the context of Sprint Delivery analysis.
+**Purpose:** Shows the sprint activity history for a work item (Feature or Epic) and its descendants within the context of Sprint Delivery analysis. The page focuses on readability: creation events are collapsed, changes are classified by type, and events are grouped by work item.
 
 | Functionality | Description |
 |---|---|
-| Breadcrumb | `Home › Delivery › Sprint Delivery › Work Item Activity`. |
-| Work item metadata | Displays type, ID, title, and relevant time period. |
-| Activity timeline | Lists revision events (state changes, effort updates, assignment changes) in chronological order. |
+| Breadcrumb | `Home › Delivery › Sprint Delivery › Activity #ID`. |
+| Work item metadata | Displays type, ID, title, and the sprint period in use. |
+| Activity Summary block | Six KPI tiles derived from the loaded events: Work items created, Work items completed, State transitions, Effort changes, Scope increases, Scope decreases. |
+| Grouped activity view | Events are grouped by work item into collapsible sections (MudExpansionPanel). Each section shows the work item type, ID, title, and an event count. Expand-all / Collapse-all controls are provided. |
+| Change Type column | Derived column classifying each event as one of: `Workflow`, `Scope`, `Creation`, `Metadata`, or `Structure`. High-importance types (Workflow, Scope, Creation) are shown at full opacity; low-importance types (Metadata, Structure) are visually dimmed. |
+| Creation event collapsing | When multiple events for the same work item share the same timestamp and all fields belong to the creation-indicator set (System.Id, System.WorkItemType, System.State, System.Reason, System.CreatedDate, System.AreaPath, System.IterationPath), they are collapsed into a single `(created)` row. |
+| Table columns | Timestamp, Change Type, Work Item, Source, Field, Old Value, New Value. |
 | Back to Sprint Delivery button | Returns to the Sprint Delivery page. |
+
+**Change Type classification rules**
+
+| Field pattern | Change Type |
+|---|---|
+| `System.State`, `Microsoft.VSTS.Common.ClosedDate` | Workflow |
+| `Microsoft.VSTS.Scheduling.*` | Scope |
+| `System.Title` | Metadata |
+| `System.AreaPath`, `System.IterationPath` | Structure |
+| `System.CreatedDate`, `System.WorkItemType`, `System.Id`, `System.Reason` | Creation |
+| All other fields | Metadata |
 
 **Outgoing navigation:** `/home/delivery/sprint`
 

@@ -9,7 +9,7 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
-<PageTitle>Work Item Activity - PO Companion</PageTitle>
+<PageTitle>Sprint Activity - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     <MudPaper Elevation="2" Class="pa-4 mb-4">
@@ -17,7 +17,7 @@
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                     <MudIcon Icon="@Icons.Material.Filled.History" Color="Color.Info" Size="Size.Large" />
-                    <MudText Typo="Typo.h4">Work Item Activity</MudText>
+                    <MudText Typo="Typo.h4">Sprint Activity</MudText>
                 </MudStack>
                 <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
             </MudStack>
@@ -44,6 +44,7 @@
     }
     else
     {
+        @* Work item metadata *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Spacing="1">
                 <MudText Typo="Typo.h6">@_details.WorkItemType #@_details.WorkItemId</MudText>
@@ -53,15 +54,62 @@
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
                         Period:
                         @(_details.PeriodStartUtc?.ToString("u") ?? "Start unbounded")
-                        -
+                        –
                         @(_details.PeriodEndUtc?.ToString("u") ?? "End unbounded")
                     </MudText>
                 }
             </MudStack>
         </MudPaper>
 
+        @* Activity Summary Block *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Analytics" Color="Color.Info" />
+                <MudText Typo="Typo.h6">Activity Summary</MudText>
+            </MudStack>
+            <MudGrid>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.h5">@_summary.ItemsCreated</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Work items created</MudText>
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.h5">@_summary.ItemsCompleted</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Work items completed</MudText>
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.h5">@_summary.StateTransitions</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">State transitions</MudText>
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.h5">@_summary.EffortChanges</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Effort changes</MudText>
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.h5" Color="Color.Success">@_summary.ScopeIncreases</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Scope increases</MudText>
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.h5" Color="Color.Error">@_summary.ScopeDecreases</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Scope decreases</MudText>
+                    </MudStack>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        @* Grouped Activity *@
         <MudPaper Elevation="2" Class="pa-4">
-            @if (_details.Activities.Count == 0)
+            @if (_processedGroups.Count == 0)
             {
                 <MudAlert Severity="Severity.Info" Dense="true">
                     No activity events found in the selected period.
@@ -69,40 +117,78 @@
             }
             else
             {
-                <MudSimpleTable Dense="true" Striped="true" Hover="true">
-                    <thead>
-                        <tr>
-                            <th style="width: 170px;">Timestamp (UTC)</th>
-                            <th style="width: 140px;">Work Item</th>
-                            <th style="width: 120px;">Source</th>
-                            <th style="width: 220px;">Field</th>
-                            <th>Old Value</th>
-                            <th>New Value</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var activity in _details.Activities)
-                        {
-                            <tr>
-                                <td>
-                                    <MudText Typo="Typo.body2">@activity.EventTimestampUtc.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
-                                </td>
-                                <td>
-                                    <MudText Typo="Typo.body2">#@activity.WorkItemId (@activity.WorkItemType)</MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@activity.WorkItemTitle</MudText>
-                                </td>
-                                <td>
-                                    <MudChip T="string" Size="Size.Small" Color="@(activity.IsSelectedWorkItem ? Color.Primary : Color.Default)">
-                                        @(activity.IsSelectedWorkItem ? "Selected" : "Child")
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @_processedGroups.Count work item group(s) — @_processedGroups.Sum(g => g.Items.Count) event(s)
+                    </MudText>
+                    <MudStack Row="true" Spacing="1">
+                        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="ExpandAll">Expand all</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="CollapseAll">Collapse all</MudButton>
+                    </MudStack>
+                </MudStack>
+
+                <MudExpansionPanels MultiExpansion="true">
+                    @foreach (var group in _processedGroups)
+                    {
+                        <MudExpansionPanel @bind-Expanded="group.IsExpanded">
+                            <TitleContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="flex-wrap: wrap;">
+                                    <MudChip T="string" Size="Size.Small"
+                                             Color="@(group.IsSelectedWorkItem ? Color.Primary : Color.Default)">
+                                        @group.WorkItemType
                                     </MudChip>
-                                </td>
-                                <td><MudText Typo="Typo.body2">@activity.FieldRefName</MudText></td>
-                                <td><MudText Typo="Typo.body2">@activity.OldValue</MudText></td>
-                                <td><MudText Typo="Typo.body2">@activity.NewValue</MudText></td>
-                            </tr>
-                        }
-                    </tbody>
-                </MudSimpleTable>
+                                    <MudText Typo="Typo.body1"><strong>#@group.WorkItemId</strong></MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@group.WorkItemTitle</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-left: auto;">
+                                        @group.Items.Count event(s)
+                                    </MudText>
+                                </MudStack>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudSimpleTable Dense="true" Hover="true">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 170px;">Timestamp (UTC)</th>
+                                            <th style="width: 110px;">Change Type</th>
+                                            <th style="width: 140px;">Work Item</th>
+                                            <th style="width: 100px;">Source</th>
+                                            <th style="width: 200px;">Field</th>
+                                            <th>Old Value</th>
+                                            <th>New Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in group.Items)
+                                        {
+                                            <tr style="@(IsLowImportance(item.ChangeType) ? "opacity: 0.55;" : "")">
+                                                <td>
+                                                    <MudText Typo="Typo.body2">@item.Timestamp.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                                </td>
+                                                <td>
+                                                    <MudChip T="string" Size="Size.Small" Color="@GetChangeTypeColor(item.ChangeType)">
+                                                        @item.ChangeType
+                                                    </MudChip>
+                                                </td>
+                                                <td>
+                                                    <MudText Typo="Typo.body2">#@item.WorkItemId</MudText>
+                                                </td>
+                                                <td>
+                                                    <MudChip T="string" Size="Size.Small"
+                                                             Color="@(item.IsSelectedWorkItem ? Color.Primary : Color.Default)">
+                                                        @(item.IsSelectedWorkItem ? "Selected" : "Child")
+                                                    </MudChip>
+                                                </td>
+                                                <td><MudText Typo="Typo.body2">@item.Field</MudText></td>
+                                                <td><MudText Typo="Typo.body2">@item.OldValue</MudText></td>
+                                                <td><MudText Typo="Typo.body2">@item.NewValue</MudText></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </MudSimpleTable>
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    }
+                </MudExpansionPanels>
             }
         </MudPaper>
     }
@@ -120,6 +206,26 @@
     private DateTimeOffset? _periodStartUtc;
     private DateTimeOffset? _periodEndUtc;
     private string? _returnView;
+    private List<WorkItemActivityGroup> _processedGroups = new();
+    private ActivitySummary _summary = new();
+
+    // Fields that, when appearing together at the same timestamp, indicate a creation event.
+    private static readonly HashSet<string> CreationIndicatorFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "System.Id",
+        "System.WorkItemType",
+        "System.State",
+        "System.Reason",
+        "System.CreatedDate",
+        "System.AreaPath",
+        "System.IterationPath"
+    };
+
+    // Work item states that indicate completion.
+    private static readonly HashSet<string> CompletedStates = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Done", "Closed", "Resolved"
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -153,6 +259,13 @@
                 productOwnerId.Value,
                 _periodStartUtc,
                 _periodEndUtc);
+
+            if (_details != null)
+            {
+                var processed = ProcessActivities(_details.Activities);
+                _processedGroups = GroupByWorkItem(processed);
+                _summary = BuildSummary(processed);
+            }
         }
         catch (Exception ex)
         {
@@ -164,6 +277,188 @@
             _isLoading = false;
         }
     }
+
+    // ── Processing ───────────────────────────────────────────────────────────────
+
+    private static string DeriveChangeType(string? fieldRefName)
+    {
+        var field = (fieldRefName ?? "").ToUpperInvariant();
+        if (field == "SYSTEM.STATE" || field == "MICROSOFT.VSTS.COMMON.CLOSEDDATE")
+            return "Workflow";
+        if (field.StartsWith("MICROSOFT.VSTS.SCHEDULING."))
+            return "Scope";
+        if (field == "SYSTEM.TITLE")
+            return "Metadata";
+        if (field == "SYSTEM.AREAPATH" || field == "SYSTEM.ITERATIONPATH")
+            return "Structure";
+        if (field == "SYSTEM.CREATEDDATE" || field == "SYSTEM.WORKITEMTYPE"
+            || field == "SYSTEM.ID" || field == "SYSTEM.REASON")
+            return "Creation";
+        return "Metadata";
+    }
+
+    private static bool IsLowImportance(string changeType) =>
+        changeType is "Metadata" or "Structure";
+
+    private static Color GetChangeTypeColor(string changeType) => changeType switch
+    {
+        "Workflow"  => Color.Warning,
+        "Scope"     => Color.Success,
+        "Creation"  => Color.Primary,
+        "Deletion"  => Color.Error,
+        _           => Color.Default
+    };
+
+    private static List<ProcessedActivityItem> ProcessActivities(
+        IReadOnlyList<WorkItemActivityEntryDto> activities)
+    {
+        var result = new List<ProcessedActivityItem>();
+
+        // Group events by (WorkItemId, Timestamp) to detect creation bundles.
+        var groups = activities
+            .GroupBy(a => (a.WorkItemId, a.EventTimestampUtc))
+            .OrderByDescending(g => g.Key.EventTimestampUtc);
+
+        foreach (var group in groups)
+        {
+            var entries = group.ToList();
+            var allCreation = entries.All(e => CreationIndicatorFields.Contains(e.FieldRefName ?? ""));
+
+            if (allCreation)
+            {
+                // Collapse the entire creation bundle into one synthetic row.
+                var first = entries.First();
+                result.Add(new ProcessedActivityItem
+                {
+                    WorkItemId = first.WorkItemId,
+                    WorkItemTitle = first.WorkItemTitle,
+                    WorkItemType = first.WorkItemType,
+                    IsSelectedWorkItem = first.IsSelectedWorkItem,
+                    Timestamp = first.EventTimestampUtc,
+                    ChangeType = "Creation",
+                    Field = "(created)",
+                    OldValue = null,
+                    NewValue = null
+                });
+            }
+            else
+            {
+                // Keep non-creation-classified fields; hide individual creation-type rows.
+                foreach (var e in entries)
+                {
+                    var changeType = DeriveChangeType(e.FieldRefName);
+                    if (changeType != "Creation")
+                    {
+                        result.Add(new ProcessedActivityItem
+                        {
+                            WorkItemId = e.WorkItemId,
+                            WorkItemTitle = e.WorkItemTitle,
+                            WorkItemType = e.WorkItemType,
+                            IsSelectedWorkItem = e.IsSelectedWorkItem,
+                            Timestamp = e.EventTimestampUtc,
+                            ChangeType = changeType,
+                            Field = e.FieldRefName ?? "",
+                            OldValue = e.OldValue,
+                            NewValue = e.NewValue
+                        });
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static List<WorkItemActivityGroup> GroupByWorkItem(List<ProcessedActivityItem> items)
+    {
+        var groups = new List<WorkItemActivityGroup>();
+        WorkItemActivityGroup? current = null;
+
+        foreach (var item in items)
+        {
+            if (current == null || current.WorkItemId != item.WorkItemId)
+            {
+                current = new WorkItemActivityGroup
+                {
+                    WorkItemId = item.WorkItemId,
+                    WorkItemTitle = item.WorkItemTitle,
+                    WorkItemType = item.WorkItemType,
+                    IsSelectedWorkItem = item.IsSelectedWorkItem,
+                    IsExpanded = true,
+                    Items = new List<ProcessedActivityItem>()
+                };
+                groups.Add(current);
+            }
+            current.Items.Add(item);
+        }
+
+        return groups;
+    }
+
+    private static ActivitySummary BuildSummary(List<ProcessedActivityItem> items)
+    {
+        var itemsCreated = items
+            .Where(i => i.ChangeType == "Creation")
+            .Select(i => i.WorkItemId)
+            .Distinct()
+            .Count();
+
+        var itemsCompleted = items
+            .Where(i => i.ChangeType == "Workflow"
+                && i.Field.Equals("System.State", StringComparison.OrdinalIgnoreCase)
+                && CompletedStates.Contains(i.NewValue ?? ""))
+            .Select(i => i.WorkItemId)
+            .Distinct()
+            .Count();
+
+        var stateTransitions = items.Count(
+            i => i.ChangeType == "Workflow"
+                 && i.Field.Equals("System.State", StringComparison.OrdinalIgnoreCase));
+
+        var effortChanges = items.Count(i => i.ChangeType == "Scope");
+
+        int scopeIncreases = 0;
+        int scopeDecreases = 0;
+        foreach (var i in items.Where(x => x.ChangeType == "Scope"))
+        {
+            if (double.TryParse(i.OldValue,
+                    System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out var ov)
+                && double.TryParse(i.NewValue,
+                    System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out var nv))
+            {
+                if (nv > ov) scopeIncreases++;
+                else if (nv < ov) scopeDecreases++;
+            }
+        }
+
+        return new ActivitySummary
+        {
+            ItemsCreated = itemsCreated,
+            ItemsCompleted = itemsCompleted,
+            StateTransitions = stateTransitions,
+            EffortChanges = effortChanges,
+            ScopeIncreases = scopeIncreases,
+            ScopeDecreases = scopeDecreases
+        };
+    }
+
+    // ── Expand / Collapse ────────────────────────────────────────────────────────
+
+    private void ExpandAll()
+    {
+        foreach (var g in _processedGroups) g.IsExpanded = true;
+    }
+
+    private void CollapseAll()
+    {
+        foreach (var g in _processedGroups) g.IsExpanded = false;
+    }
+
+    // ── Navigation ───────────────────────────────────────────────────────────────
 
     private void NavigateBack()
     {
@@ -196,5 +491,40 @@
         }
 
         _returnView = queryParams["view"];
+    }
+
+    // ── View Models ──────────────────────────────────────────────────────────────
+
+    private sealed class ProcessedActivityItem
+    {
+        public required int WorkItemId { get; init; }
+        public required string WorkItemTitle { get; init; }
+        public required string WorkItemType { get; init; }
+        public required bool IsSelectedWorkItem { get; init; }
+        public required DateTimeOffset Timestamp { get; init; }
+        public required string ChangeType { get; init; }
+        public required string Field { get; init; }
+        public string? OldValue { get; init; }
+        public string? NewValue { get; init; }
+    }
+
+    private sealed class WorkItemActivityGroup
+    {
+        public required int WorkItemId { get; init; }
+        public required string WorkItemTitle { get; init; }
+        public required string WorkItemType { get; init; }
+        public required bool IsSelectedWorkItem { get; init; }
+        public bool IsExpanded { get; set; }
+        public required List<ProcessedActivityItem> Items { get; init; }
+    }
+
+    private sealed class ActivitySummary
+    {
+        public int ItemsCreated { get; init; }
+        public int ItemsCompleted { get; init; }
+        public int StateTransitions { get; init; }
+        public int EffortChanges { get; init; }
+        public int ScopeIncreases { get; init; }
+        public int ScopeDecreases { get; init; }
     }
 }
