@@ -68,7 +68,6 @@
                                Value="_selectedSprintId"
                                Label="Sprint (optional)"
                                Variant="Variant.Outlined"
-                               Clearable="true"
                                ValueChanged="OnSprintChanged">
                         <MudSelectItem T="int?" Value="@((int?)null)">Custom range</MudSelectItem>
                         @foreach (var sprint in _sprints)
@@ -637,6 +636,12 @@
         new("2Y",  24),
     };
 
+    /// <summary>
+    /// Fallback sprint duration (days) used when the selected sprint has no EndUtc set.
+    /// Most teams use 2-week sprints; this is applied only as a last resort.
+    /// </summary>
+    private const int DefaultSprintDurationDays = 14;
+
     // ── Init ─────────────────────────────────────────────────────────────
 
     protected override async Task OnInitializedAsync()
@@ -731,9 +736,10 @@
                     .OrderByDescending(s => s.StartUtc)
                     .ToList();
             }
-            catch
+            catch (Exception ex)
             {
                 _sprints.Clear();
+                Snackbar.Add($"Could not load sprints: {ex.Message}", Severity.Warning);
             }
         }
 
@@ -752,7 +758,7 @@
             if (sprint?.StartUtc.HasValue == true)
             {
                 _fromDate = sprint.StartUtc.Value.UtcDateTime.Date;
-                _toDate   = sprint.EndUtc?.UtcDateTime.Date ?? _fromDate.Value.AddDays(14);
+                _toDate   = sprint.EndUtc?.UtcDateTime.Date ?? _fromDate.Value.AddDays(DefaultSprintDurationDays);
             }
         }
 
