@@ -359,31 +359,60 @@ De Delivery-werkruimte beantwoordt de vraag: *Wat heeft mijn team daadwerkelijk 
 
 > **Voormalige naam:** Sprint Trend. De pagina is verplaatst van de Trends-werkruimte naar Delivery en hernoemd.
 
-De Sprint Delivery-pagina toont voor één geselecteerde sprint een analyse van geplande versus opgeleverde metrieken: PBI-voltooiing, inspanningsprogressie, bugs per sprint, en de verdeling van het werk per Epic/Feature. Gebruik de navigatiepijlen om door sprints te bladeren. Voor meersprint-trendanalyse ga je naar **Delivery Trends** in de Trends-werkruimte.
+De Sprint Delivery-pagina toont voor één geselecteerde sprint de leveringssignalen: wat er opgeleverd is, hoe de scope is gewijzigd, en hoeveel PBI's en bugs verwerkt zijn. Gebruik de navigatiepijlen om door sprints te bladeren. Voor meersprint-trendanalyse ga je naar **Delivery Trends** in de Trends-werkruimte.
+
+**Navigatiehiërarchie:**
+```
+Sprint Delivery
+  → Epic-tabel (waar de inspanning terechtkwam)
+      → Feature-modal (hoe het werk verdeeld was binnen een epic)
+          → Activiteitsgeschiedenis (wat er precies veranderde)
+```
 
 #### Navigatiepijlen
 
 Gebruik de pijlen links en rechts om door de sprintgeschiedenis te bladeren, één sprint tegelijk.
 
-#### Wat zie je per sprint
+#### Productblokken
 
-- Aantal voltooide PBI's, inclusief vergelijking met de vorige sprint (bijv. `5 (+2 vs previous sprint)`).
-- Opgeleverde inspanning in story points, inclusief vergelijking met de vorige sprint (bijv. `100 pts (-30 pts vs previous sprint)`).
-- Inspanningsprogressiepercentage, inclusief vergelijking met de vorige sprint (bijv. `58% (+12% vs previous sprint)`).
-- Bugaantal (aangemaakt / bewerkt / gesloten).
-- Verdeling van het werk per Epic als horizontale staafgrafiek (rechts van de KPI-blokken).
+De pagina toont per product een inklapbaar blok. Producten zonder leveringssignaal in de geselecteerde sprint (Delivered = 0, Δ Inspanning = 0, geen werkitemactiviteit) worden automatisch verborgen.
 
-#### Vergelijking met de vorige sprint
+Wanneer een productblok **ingeklapt** is, zie je een compacte samenvatting:
+- **Delivered**: opgeleverde inspanning in story points.
+- **Δ Effort**: netto scopewijziging in story points (positief = scope toegevoegd, negatief = scope gereduceerd).
+- **PBI's**: aantal voltooide PBI's.
+- **Bugs**: aangemaakt / bewerkt / gesloten.
 
-De drie primaire KPI's (voltooide PBI's, opgeleverde inspanning en progressiepercentage) worden aangevuld met een vergelijkingsbadge ten opzichte van de direct voorafgaande sprint. Een positieve waarde is groen, een negatieve waarde is rood.
+Wanneer een productblok **uitgeklapt** is, zie je de Epic-tabel.
 
-#### Verdeling van het werk (horizontale staafgrafiek)
+#### Epic-tabel
 
-Rechts van de KPI-blokken toont een horizontale staafgrafiek hoe de opgeleverde inspanning verdeeld is over de Epics (of producten bij meerdere producten). De staafjes maken onderlinge vergelijking eenvoudiger en de labels blijven leesbaar.
+De Epic-tabel toont één rij per epic met leveringssignaal in de sprint. Epics zonder activiteit (Delivered = 0, Δ Effort = 0, geen PBI's) worden niet getoond.
 
-#### Doorklikken op epics en features
+| Kolom | Betekenis |
+|---|---|
+| **Epic** | Epic-ID (klikbaar naar TFS) en titel, met kleurmarkering. |
+| **Progress** | Voltooide inspanning / totale inspanning van de epic. |
+| **Delivered (pts)** | Inspanning van PBI's die in deze sprint naar Done zijn gegaan. |
+| **Δ Effort (pts)** | Scopewijziging in story points: inspanning_einde_sprint − inspanning_begin_sprint. Positief = scopegroei. Negatief = scopeafname. |
+| **PBIs** | Aantal PBI's dat in deze sprint naar Done is gegaan. |
+| **Actions** | 🕐 Activiteitsgeschiedenis voor de epic openen. 📋 Feature-modal openen. |
 
-In de sprint-detailtabel kun je op een Epic- of Feature-ID klikken om de [Werkitem-activiteit](#82-werkitem-activiteit) voor dat item te openen.
+> **Verwijderd:** De kolom *Sprint Δ%* is verwijderd. Scopewijziging wordt nu uitgedrukt in absolute story points (Δ Effort).
+
+#### Feature-modal
+
+Klik op het lijst-icoon (📋) bij een epic om de feature-modal te openen. De modal toont de verdeling van de leveringssignalen over de onderliggende features.
+
+| Kolom | Betekenis |
+|---|---|
+| **Feature** | Feature-ID (klikbaar naar TFS) en titel. |
+| **Progress** | Voltooide inspanning / totale inspanning van de feature. |
+| **Delivered (pts)** | Inspanning van PBI's die in deze sprint naar Done zijn gegaan. |
+| **Δ Effort (pts)** | Scopewijziging in story points voor deze feature in de sprint. |
+| **PBIs** | Aantal PBI's dat in deze sprint naar Done is gegaan. |
+
+Features zonder activiteit (Delivered = 0, Δ Effort = 0, geen PBI's) worden niet getoond. Feature-voortgangsbalken zijn dunner en iets minder verzadigd dan epic-balken om de hiërarchie visueel te verduidelijken.
 
 #### Verouderde gegevens
 

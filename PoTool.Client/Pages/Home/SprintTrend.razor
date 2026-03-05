@@ -207,10 +207,11 @@
             <MudExpansionPanels MultiExpansion="true" Class="mb-4">
                 @foreach (var product in _filteredProducts)
                 {
-                    var productEpics = GetEpicProgressForProduct(product.Id);
+                    @if (!IsProductActive(product.Id)) { continue; }
+                    var productEpics = GetVisibleEpicsForProduct(product.Id);
                     <MudExpansionPanel Expanded="@(_filteredProducts.Count == 1)">
                         <TitleContent>
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
                                 <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" />
                                 <MudText Typo="Typo.h6">@product.Name</MudText>
                                 @if (IsProductApproximate(product.Id))
@@ -219,81 +220,35 @@
                                         <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
                                     </MudTooltip>
                                 }
+                                @* Compact summary — visible when panel is collapsed *@
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.CheckCircle">
+                                    Delivered: @GetProductCompletedEffort(product.Id) pts
+                                </MudChip>
+                                @{
+                                    var productEffortDelta = GetProductSprintEffortDelta(product.Id);
+                                }
+                                <MudChip T="string" Size="Size.Small"
+                                         Color="@(productEffortDelta > 0 ? Color.Warning : productEffortDelta < 0 ? Color.Info : Color.Default)"
+                                         Variant="Variant.Outlined" Icon="@Icons.Material.Filled.SwapVert">
+                                    Δ Effort: @FormatSignedInt(productEffortDelta) pts
+                                </MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                                    PBIs: @GetProductCompletedPbis(product.Id)
+                                </MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.BugReport">
+                                    Bugs: @GetProductBugsCreated(product.Id) / @GetProductBugsWorked(product.Id) / @GetProductBugsClosed(product.Id)
+                                </MudChip>
                             </MudStack>
                         </TitleContent>
                         <ChildContent>
                             <MudText Typo="Typo.subtitle1" Class="mb-2">
-                                <MudIcon Icon="@Icons.Material.Filled.BarChart" Class="mr-1" />
-                                Progression by Product
-                            </MudText>
-                            <MudGrid Spacing="2" Class="mb-4">
-                                <MudItem xs="12" md="@(HasEpicBarChart(product.Id) ? 5 : 12)">
-                                    <MudGrid Spacing="2">
-                                        <MudItem xs="12">
-                                            <MudPaper Elevation="1" Class="pa-3">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Completed PBIs</MudText>
-                                                <MudText Typo="Typo.h5" Color="Color.Success">@GetProductCompletedPbis(product.Id)</MudText>
-                                            </MudPaper>
-                                        </MudItem>
-                                        <MudItem xs="12">
-                                            <MudPaper Elevation="1" Class="pa-3">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Effort</MudText>
-                                                <MudText Typo="Typo.h5" Color="Color.Info">@GetProductCompletedEffort(product.Id) pts</MudText>
-                                            </MudPaper>
-                                        </MudItem>
-                                        <MudItem xs="12">
-                                            <MudPaper Elevation="1" Class="pa-3">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Progression Δ</MudText>
-                                                <MudText Typo="Typo.h5" Color="Color.Primary">@GetProductProgression(product.Id).ToString("F1")%</MudText>
-                                            </MudPaper>
-                                        </MudItem>
-                                        <MudItem xs="12">
-                                            <MudPaper Elevation="1" Class="pa-3">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs (Created / Worked / Closed)</MudText>
-                                                <MudText Typo="Typo.h6">@GetProductBugsCreated(product.Id) / @GetProductBugsWorked(product.Id) / @GetProductBugsClosed(product.Id)</MudText>
-                                            </MudPaper>
-                                        </MudItem>
-                                    </MudGrid>
-                                </MudItem>
-                                @if (HasEpicBarChart(product.Id))
-                                {
-                                    <MudItem xs="12" md="7">
-                                        <MudPaper Elevation="1" Class="pa-3" Style="height: 100%;">
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">
-                                                <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Small" Class="mr-1" />
-                                                Feature distribution
-                                            </MudText>
-                                            <MudStack Spacing="2">
-                                                @foreach (var item in GetEpicBarChartData(product.Id))
-                                                {
-                                                    <MudGrid Spacing="1" Class="align-center">
-                                                        <MudItem xs="5">
-                                                            <MudTooltip Text="@item.Label">
-                                                                <MudText Typo="Typo.caption" Class="text-truncate d-block">@TruncateBarLabel(item.Label)</MudText>
-                                                            </MudTooltip>
-                                                        </MudItem>
-                                                        <MudItem xs="5">
-                                                            <MudProgressLinear Value="@item.Percent" Max="100" Color="Color.Info" Rounded="true" Size="Size.Medium" />
-                                                        </MudItem>
-                                                        <MudItem xs="2">
-                                                            <MudText Typo="Typo.caption" Align="Align.Right">@item.Percent.ToString("F0")%</MudText>
-                                                        </MudItem>
-                                                    </MudGrid>
-                                                }
-                                            </MudStack>
-                                        </MudPaper>
-                                    </MudItem>
-                                }
-                            </MudGrid>
-
-                            <MudText Typo="Typo.subtitle1" Class="mb-2">
                                 <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="mr-1" />
-                                Epic Progress
+                                Epic Table
                             </MudText>
                             @if (productEpics.Count == 0)
                             {
                                 <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">
-                                    No epic progress data available.
+                                    No epic activity data available for this sprint.
                                 </MudAlert>
                             }
                             else
@@ -301,13 +256,11 @@
                                 <MudSimpleTable Dense="true" Striped="true" Hover="true" Class="mb-4">
                                     <thead>
                                         <tr>
-                                            <th style="width: 100px;">ID</th>
                                             <th>Epic</th>
                                             <th style="width: 200px;">Progress</th>
-                                            <th style="width: 120px; text-align: right;">Sprint Scored</th>
-                                            <th style="width: 100px; text-align: right;">Features ✓</th>
-                                            <th style="width: 100px; text-align: right;">PBIs ✓</th>
-                                            <th style="width: 80px; text-align: center;">Sprint Δ%</th>
+                                            <th style="width: 120px; text-align: right;">Delivered (pts)</th>
+                                            <th style="width: 110px; text-align: right;">Δ Effort (pts)</th>
+                                            <th style="width: 80px; text-align: right;">PBIs</th>
                                             <th style="width: 100px; text-align: center;">Actions</th>
                                         </tr>
                                     </thead>
@@ -316,20 +269,18 @@
                                         {
                                             <tr>
                                                 <td>
-                                                    @if (_tfsConfig != null && !string.IsNullOrEmpty(_tfsConfig.Url) && !string.IsNullOrEmpty(_tfsConfig.Project))
-                                                    {
-                                                        <MudLink Href="@TfsUrlBuilder.BuildWorkItemUrl(_tfsConfig.Url, _tfsConfig.Project, epic.EpicId)"
-                                                                 Target="_blank"
-                                                                 Typo="Typo.body2">#@epic.EpicId</MudLink>
-                                                    }
-                                                    else
-                                                    {
-                                                        <MudText Typo="Typo.body2">#@epic.EpicId</MudText>
-                                                    }
-                                                </td>
-                                                <td>
                                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                                         <span style="@GetEpicColorSquareStyle(product.Id, epic.EpicId)"></span>
+                                                        @if (_tfsConfig != null && !string.IsNullOrEmpty(_tfsConfig.Url) && !string.IsNullOrEmpty(_tfsConfig.Project))
+                                                        {
+                                                            <MudLink Href="@TfsUrlBuilder.BuildWorkItemUrl(_tfsConfig.Url, _tfsConfig.Project, epic.EpicId)"
+                                                                     Target="_blank"
+                                                                     Typo="Typo.body2">#@epic.EpicId</MudLink>
+                                                        }
+                                                        else
+                                                        {
+                                                            <MudText Typo="Typo.body2" Class="mr-1">#@epic.EpicId</MudText>
+                                                        }
                                                         <MudText Typo="Typo.body2"><strong>@epic.EpicTitle</strong></MudText>
                                                     </MudStack>
                                                 </td>
@@ -339,16 +290,16 @@
                                                                       Max="100" />
                                                 </td>
                                                 <td style="text-align: right;">
-                                                    <MudText Typo="Typo.body2">@epic.SprintCompletedEffort pts</MudText>
+                                                    <MudText Typo="Typo.body2">@epic.SprintCompletedEffort</MudText>
                                                 </td>
                                                 <td style="text-align: right;">
-                                                    <MudText Typo="Typo.body2">@epic.DoneFeatureCount</MudText>
+                                                    <MudText Typo="Typo.body2"
+                                                             Color="@(epic.SprintEffortDelta > 0 ? Color.Warning : epic.SprintEffortDelta < 0 ? Color.Info : Color.Default)">
+                                                        @FormatSignedInt(epic.SprintEffortDelta)
+                                                    </MudText>
                                                 </td>
                                                 <td style="text-align: right;">
                                                     <MudText Typo="Typo.body2">@epic.DonePbiCount</MudText>
-                                                </td>
-                                                <td style="text-align: center;">
-                                                    <MudText Typo="Typo.body2" Color="@GetProgressColor((int)epic.SprintProgressionDelta)">@epic.SprintProgressionDelta.ToString("F1")%</MudText>
                                                 </td>
                                                 <td style="text-align: center;">
                                                     <MudIconButton Icon="@Icons.Material.Filled.History"
@@ -937,7 +888,7 @@
 
     private string BuildWorkItemActivityUrl(int workItemId)
     {
-        var path = $"{WorkspaceRoutes.SprintTrendActivity}/{workItemId}";
+        var path = $"{WorkspaceRoutes.SprintDeliveryActivity}/{workItemId}";
         if (!_profileId.HasValue)
         {
             return path;
@@ -965,6 +916,42 @@
         return _epicProgress
             .Where(e => e.ProductId == productId)
             .ToList();
+    }
+
+    /// <summary>
+    /// Returns epics for a product that should be visible per issue spec:
+    /// Delivered &gt; 0 OR Δ Effort ≠ 0 OR work item changes occurred (already filtered by service).
+    /// </summary>
+    private List<EpicProgressDto> GetVisibleEpicsForProduct(int productId)
+    {
+        return GetEpicProgressForProduct(productId)
+            .Where(e => e.SprintCompletedEffort > 0 || e.SprintEffortDelta != 0 || e.DonePbiCount > 0)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Returns true when a product has any delivery signal in the current sprint.
+    /// Products with Delivered=0 AND ΔEffort=0 AND no PBI/bug activity are hidden.
+    /// </summary>
+    private bool IsProductActive(int productId)
+    {
+        if (!_productMetrics.TryGetValue(productId, out var metrics))
+            return false;
+
+        return metrics.CompletedPbis > 0
+            || metrics.CompletedEffort > 0
+            || metrics.BugsCreated > 0
+            || metrics.BugsWorked > 0
+            || metrics.BugsClosed > 0
+            || GetProductSprintEffortDelta(productId) != 0;
+    }
+
+    /// <summary>
+    /// Aggregates SprintEffortDelta from all visible epics for the given product.
+    /// </summary>
+    private int GetProductSprintEffortDelta(int productId)
+    {
+        return GetEpicProgressForProduct(productId).Sum(e => e.SprintEffortDelta);
     }
 
     private string GetEpicColor(int index)

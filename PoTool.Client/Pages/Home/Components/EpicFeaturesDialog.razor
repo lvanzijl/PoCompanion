@@ -7,10 +7,10 @@
             <strong>Features for Epic: @EpicTitle</strong>
         </MudText>
 
-        @if (Features == null || Features.Count == 0)
+        @if (GetVisibleFeatures().Count == 0)
         {
             <MudAlert Severity="Severity.Info" Dense="true">
-                No features found for this epic.
+                No features with sprint activity found for this epic.
             </MudAlert>
         }
         else
@@ -18,18 +18,19 @@
             <MudSimpleTable Dense="true" Striped="true" Hover="true">
                 <thead>
                     <tr>
-                        <th style="width: 100px;">ID</th>
+                        <th style="width: 80px;">ID</th>
                         <th>Feature</th>
-                        <th style="width: 200px;">Progress</th>
-                        <th style="width: 100px; text-align: right;">Sprint Scored</th>
-                        <th style="width: 80px; text-align: center;">Sprint Δ%</th>
+                        <th style="width: 180px;">Progress</th>
+                        <th style="width: 110px; text-align: right;">Delivered (pts)</th>
+                        <th style="width: 110px; text-align: right;">Δ Effort (pts)</th>
+                        <th style="width: 70px; text-align: right;">PBIs</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var feature in Features)
+                    @foreach (var feature in GetVisibleFeatures())
                     {
                         <tr>
-                            <td>
+                            <td style="padding-top: 4px; padding-bottom: 4px;">
                                 @if (!string.IsNullOrEmpty(TfsUrl) && !string.IsNullOrEmpty(TfsProject))
                                 {
                                     <MudLink Href="@TfsUrlBuilder.BuildWorkItemUrl(TfsUrl, TfsProject, feature.FeatureId)"
@@ -41,19 +42,27 @@
                                     <MudText Typo="Typo.body2">#@feature.FeatureId</MudText>
                                 }
                             </td>
-                            <td>
+                            <td style="padding-top: 4px; padding-bottom: 4px;">
                                 <MudText Typo="Typo.body2"><strong>@feature.FeatureTitle</strong></MudText>
                             </td>
-                            <td>
-                                <MudProgressLinear Color="@GetProgressColor(feature.ProgressPercent)"
-                                                  Value="@feature.ProgressPercent"
-                                                  Max="100" />
+                            <td style="padding-top: 4px; padding-bottom: 4px;">
+                                <MudProgressLinear Color="@GetFeatureProgressColor(feature.ProgressPercent)"
+                                                   Value="@feature.ProgressPercent"
+                                                   Max="100"
+                                                   Size="Size.Small"
+                                                   Style="opacity: 0.75;" />
                             </td>
-                            <td style="text-align: right;">
-                                <MudText Typo="Typo.body2">@feature.SprintCompletedEffort pts</MudText>
+                            <td style="text-align: right; padding-top: 4px; padding-bottom: 4px;">
+                                <MudText Typo="Typo.body2">@feature.SprintCompletedEffort</MudText>
                             </td>
-                            <td style="text-align: center;">
-                                <MudText Typo="Typo.body2" Color="@GetProgressColor((int)feature.SprintProgressionDelta)">@feature.SprintProgressionDelta.ToString("F1")%</MudText>
+                            <td style="text-align: right; padding-top: 4px; padding-bottom: 4px;">
+                                <MudText Typo="Typo.body2"
+                                         Color="@(feature.SprintEffortDelta > 0 ? Color.Warning : feature.SprintEffortDelta < 0 ? Color.Info : Color.Default)">
+                                    @FormatSignedInt(feature.SprintEffortDelta)
+                                </MudText>
+                            </td>
+                            <td style="text-align: right; padding-top: 4px; padding-bottom: 4px;">
+                                <MudText Typo="Typo.body2">@feature.DonePbiCount</MudText>
                             </td>
                         </tr>
                     }
@@ -87,6 +96,20 @@
         MudDialog?.Cancel();
     }
 
-    private static Color GetProgressColor(int progress) =>
+    /// <summary>
+    /// Returns features with any delivery signal in the sprint.
+    /// Hides features where Delivered = 0, Δ Effort = 0, and no PBIs completed.
+    /// </summary>
+    private List<FeatureProgressDto> GetVisibleFeatures()
+    {
+        return Features?
+            .Where(f => f.SprintCompletedEffort > 0 || f.SprintEffortDelta != 0 || f.DonePbiCount > 0)
+            .ToList()
+            ?? new List<FeatureProgressDto>();
+    }
+
+    private static string FormatSignedInt(int value) => value >= 0 ? $"+{value}" : $"{value}";
+
+    private static Color GetFeatureProgressColor(int progress) =>
         SprintProgressColorHelper.GetProgressColor(progress);
 }
