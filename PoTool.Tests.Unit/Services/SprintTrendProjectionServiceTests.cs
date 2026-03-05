@@ -1367,6 +1367,209 @@ public class SprintTrendProjectionServiceTests
 
     #endregion
 
+    #region Monitored Activity — Epic Visibility Acceptance Tests
+    // These tests document the acceptance criteria for the "Fix Epic Visibility Using Monitored
+    // Activity" issue: an epic must be visible when any descendant has a non-noise field change
+    // during the sprint, even when Delivered pts = 0 / ΔEffort = 0 / PBIs completed = 0.
+
+    [TestMethod]
+    public void EpicVisibility_AcceptanceCriteria1_EpicAppearsWhenDescendantHasNonNoiseActivity_EvenIfDeliveredIsZero()
+    {
+        // Arrange: Epic E → Feature F → PBI P
+        // PBI P has a System.Title change during the sprint (non-noise) but is NOT Done
+        // → Delivered pts = 0, ΔEffort = 0, PBIs completed = 0
+        // Expected: Epic E MUST appear in ComputeEpicProgress output.
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [10] = CreateWorkItem(10, WorkItemType.Epic, "Epic E", state: "Active"),
+            [20] = CreateWorkItem(20, WorkItemType.Feature, "Feature F", state: "Active"),
+            [30] = CreateWorkItem(30, WorkItemType.Pbi, "PBI P", effort: 50, state: "Active", parentId: 20),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 10, WorkItemType = WorkItemType.Epic, ResolvedProductId = 1 },
+            new() { WorkItemId = 20, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1, ResolvedEpicId = 10 },
+            new() { WorkItemId = 30, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 20 },
+        };
+
+        // PBI P had a non-noise activity event (System.Title change) — no state transition to Done
+        var activeWorkItemIds = new HashSet<int> { 30 };
+
+        var featureProgress = SprintTrendProjectionService.ComputeFeatureProgress(
+            resolved, workItems, new List<int> { 1 },
+            activeWorkItemIds: activeWorkItemIds,
+            sprintCompletedPbiIds: new HashSet<int>());
+
+        var epicProgress = SprintTrendProjectionService.ComputeEpicProgress(
+            featureProgress, resolved, workItems);
+
+        // Verify feature is included (non-noise activity gate passes)
+        Assert.HasCount(1, featureProgress, "Feature F must be included because PBI P had non-noise activity");
+
+        // Verify epic is in the result list (no delivery gate applied at this layer)
+        Assert.HasCount(1, epicProgress, "Epic E must appear in epic progress when descendant PBI has non-noise activity");
+        Assert.AreEqual(10, epicProgress[0].EpicId);
+
+        // Verify all delivery metrics are zero — epic is visible due to activity, not delivery
+        Assert.AreEqual(0, epicProgress[0].SprintCompletedEffort, "Delivered pts must be 0");
+        Assert.AreEqual(0, epicProgress[0].SprintEffortDelta, "Δ Effort must be 0");
+        Assert.AreEqual(0, epicProgress[0].SprintCompletedPbiCount, "PBIs completed must be 0");
+    }
+
+    [TestMethod]
+    [DataRow("System.Title")]
+    [DataRow("Microsoft.VSTS.Scheduling.Effort")]
+    [DataRow("System.State")]
+    [DataRow("System.IterationPath")]
+    [DataRow("System.Reason")]
+    public void EpicVisibility_AcceptanceCriteria1_MonitoredFieldChanges_EpicAppearsEvenWithZeroDelivery(string fieldRefName)
+    {
+        // Each of these fields is non-noise; a revision changing any one of them
+        // must cause Epic E to appear even when Delivered pts = 0.
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [10] = CreateWorkItem(10, WorkItemType.Epic, "Epic E", state: "Active"),
+            [20] = CreateWorkItem(20, WorkItemType.Feature, "Feature F", state: "Active"),
+            [30] = CreateWorkItem(30, WorkItemType.Pbi, "PBI P", effort: 40, state: "Active", parentId: 20),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 10, WorkItemType = WorkItemType.Epic, ResolvedProductId = 1 },
+            new() { WorkItemId = 20, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1, ResolvedEpicId = 10 },
+            new() { WorkItemId = 30, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 20 },
+        };
+
+        // PBI P had an activity event for the given non-noise field
+        var activeWorkItemIds = new HashSet<int> { 30 };
+
+        var featureProgress = SprintTrendProjectionService.ComputeFeatureProgress(
+            resolved, workItems, new List<int> { 1 },
+            activeWorkItemIds: activeWorkItemIds,
+            sprintCompletedPbiIds: new HashSet<int>());
+
+        var epicProgress = SprintTrendProjectionService.ComputeEpicProgress(
+            featureProgress, resolved, workItems);
+
+        Assert.HasCount(1, epicProgress,
+            $"Epic E must appear when PBI has a '{fieldRefName}' change, even if Delivered=0");
+    }
+
+    [TestMethod]
+    public void EpicVisibility_AcceptanceCriteria2_EpicDoesNotAppearWhenOnlyNoiseActivity()
+    {
+        // PBI P has ONLY System.ChangedBy / System.ChangedDate revisions during the sprint.
+        // These are excluded from the active-work-item set before ComputeFeatureProgress is called.
+        // → activeWorkItemIds must NOT contain PBI P → Feature F excluded → Epic E NOT in output.
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [10] = CreateWorkItem(10, WorkItemType.Epic, "Epic E", state: "Active"),
+            [20] = CreateWorkItem(20, WorkItemType.Feature, "Feature F", state: "Active"),
+            [30] = CreateWorkItem(30, WorkItemType.Pbi, "PBI P", effort: 50, state: "Active", parentId: 20),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 10, WorkItemType = WorkItemType.Epic, ResolvedProductId = 1 },
+            new() { WorkItemId = 20, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1, ResolvedEpicId = 10 },
+            new() { WorkItemId = 30, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 20 },
+        };
+
+        // No non-noise activity: PBI P is NOT in activeWorkItemIds
+        // (System.ChangedBy / System.ChangedDate are excluded before the set is built)
+        var activeWorkItemIds = new HashSet<int>();
+
+        var featureProgress = SprintTrendProjectionService.ComputeFeatureProgress(
+            resolved, workItems, new List<int> { 1 },
+            activeWorkItemIds: activeWorkItemIds,
+            sprintAssignedPbiIds: new HashSet<int>());
+
+        var epicProgress = SprintTrendProjectionService.ComputeEpicProgress(
+            featureProgress, resolved, workItems);
+
+        Assert.IsEmpty(featureProgress, "Feature F must be excluded when PBI has only noise-field activity");
+        Assert.IsEmpty(epicProgress, "Epic E must NOT appear when only System.ChangedBy/ChangedDate revisions exist");
+    }
+
+    [TestMethod]
+    public void EpicVisibility_AcceptanceCriteria3_EpicDoesNotAppearWhenNoRevisionsDuringSprint()
+    {
+        // Epic E and all its descendants have no revisions at all in the sprint window.
+        // → activeWorkItemIds is empty and sprintAssignedPbiIds is empty
+        // → Feature F excluded → Epic E NOT in output.
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [10] = CreateWorkItem(10, WorkItemType.Epic, "Epic E", state: "Active"),
+            [20] = CreateWorkItem(20, WorkItemType.Feature, "Feature F", state: "Active"),
+            [30] = CreateWorkItem(30, WorkItemType.Pbi, "PBI P", effort: 50, state: "Active", parentId: 20),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 10, WorkItemType = WorkItemType.Epic, ResolvedProductId = 1 },
+            new() { WorkItemId = 20, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1, ResolvedEpicId = 10 },
+            new() { WorkItemId = 30, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 20 },
+        };
+
+        // No activity whatsoever, PBI is not sprint-assigned
+        var activeWorkItemIds = new HashSet<int>();
+        var sprintAssignedPbiIds = new HashSet<int>();
+
+        var featureProgress = SprintTrendProjectionService.ComputeFeatureProgress(
+            resolved, workItems, new List<int> { 1 },
+            activeWorkItemIds: activeWorkItemIds,
+            sprintAssignedPbiIds: sprintAssignedPbiIds);
+
+        var epicProgress = SprintTrendProjectionService.ComputeEpicProgress(
+            featureProgress, resolved, workItems);
+
+        Assert.IsEmpty(epicProgress, "Epic E must NOT appear when it and all descendants have no revisions during the sprint");
+    }
+
+    [TestMethod]
+    public void EpicVisibility_NoiseExclusion_ChangedByAndChangedDateAreExcludedByProjectionService()
+    {
+        // Verify that ComputeProductSprintProjection correctly excludes System.ChangedBy and
+        // System.ChangedDate from the worked-item set (backs up the acceptance criteria).
+        var sprint = CreateSprint(1, "Sprint 1");
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 10, WorkItemType = WorkItemType.Epic, ResolvedProductId = 1 },
+            new() { WorkItemId = 20, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1, ResolvedSprintId = 1 },
+            new() { WorkItemId = 30, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 20, ResolvedSprintId = 1 },
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [10] = CreateWorkItem(10, WorkItemType.Epic, "Epic E", state: "Active"),
+            [20] = CreateWorkItem(20, WorkItemType.Feature, "Feature F", state: "Active"),
+            [30] = CreateWorkItem(30, WorkItemType.Pbi, "PBI P", effort: 50, state: "Active", parentId: 20),
+        };
+
+        // Only noise-field activity on PBI P
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [30] = new()
+            {
+                CreateActivity(30, sprintStart.AddDays(1), "System.ChangedBy"),
+                CreateActivity(30, sprintStart.AddDays(1), "System.ChangedDate"),
+            }
+        };
+
+        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
+
+        Assert.AreEqual(0, result.WorkedCount,
+            "System.ChangedBy / System.ChangedDate revisions must not count as worked activity");
+        Assert.AreEqual(0, result.CompletedPbiCount, "No PBIs should be completed");
+    }
+
+    #endregion
+
     private static SprintEntity CreateSprint(int id, string name)
     {
         var startDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
