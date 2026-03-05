@@ -315,6 +315,18 @@ public record FeatureProgressDto
     /// Positive = scope added, negative = scope reduced. Zero when not in single-sprint view.
     /// </summary>
     public int SprintEffortDelta { get; init; }
+
+    /// <summary>
+    /// Number of PBIs that transitioned to Done during the selected sprint under this feature.
+    /// Zero when not in single-sprint view.
+    /// </summary>
+    public int SprintCompletedPbiCount { get; init; }
+
+    /// <summary>
+    /// Whether this feature itself transitioned to Done during the selected sprint.
+    /// False when not in single-sprint view.
+    /// </summary>
+    public bool SprintCompletedInSprint { get; init; }
 }
 
 /// <summary>
@@ -393,4 +405,16 @@ public record EpicProgressDto
     /// Positive = scope added, negative = scope reduced. Zero when not in single-sprint view.
     /// </summary>
     public int SprintEffortDelta { get; init; }
+
+    /// <summary>
+    /// Number of PBIs that transitioned to Done during the sprint across this epic's features.
+    /// Zero when not in single-sprint view.
+    /// </summary>
+    public int SprintCompletedPbiCount { get; init; }
+
+    /// <summary>
+    /// Number of features that transitioned to Done during the sprint under this epic.
+    /// Zero when not in single-sprint view.
+    /// </summary>
+    public int SprintCompletedFeatureCount { get; init; }
 }

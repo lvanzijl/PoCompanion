@@ -473,16 +473,16 @@ Sprint Delivery
 | Team filter | Filters metrics to a specific team. |
 | Product sections | One collapsible panel per product. Products with no delivery signal (Delivered = 0, Δ Effort = 0, no activity) are hidden automatically. |
 | Collapsed product summary | When collapsed, each product shows compact chips: Delivered (pts), Δ Effort (pts), PBIs, and Bugs (Created / Worked / Closed). |
-| Epic table | Visible when a product panel is expanded. Columns: Epic (ID + title), Progress (completed/total effort), Delivered (pts completed this sprint), Δ Effort (pts scope change this sprint), PBIs (completed this sprint), Actions. Epics with Delivered = 0, Δ Effort = 0, and no PBI activity are hidden. |
-| Epic column definitions | **Progress** = completed effort / total effort. **Delivered** = effort of PBIs completed in this sprint. **Δ Effort** = effort_end_of_sprint − effort_start_of_sprint (absolute pts, positive = scope added, negative = scope reduced). **PBIs** = PBI count completed this sprint. |
-| Feature modal | Opened via the list icon on an epic row. Modal columns: Feature (ID + title), Progress, Delivered (pts), Δ Effort (pts), PBIs. Feature progress bars are thinner and slightly dimmer than epic bars. Features with zero activity are hidden. |
+| Epic table | Visible when a product panel is expanded. Columns: Epic (ID + title), Progress (completed/total effort), Delivered (pts completed this sprint), Δ Effort (pts scope change this sprint), Features ✓ (features that reached Done during this sprint), PBIs ✓ (PBIs that transitioned to Done during this sprint), Actions. Epics with Delivered = 0, Δ Effort = 0, and no PBI activity are hidden. |
+| Epic column definitions | **Progress** = completed effort / total effort. **Delivered** = effort of PBIs completed in this sprint. **Δ Effort** = effort_end_of_sprint − effort_start_of_sprint (absolute pts, positive = scope added, negative = scope reduced). **Features ✓** = count of features whose state transitioned to Done during this sprint. **PBIs ✓** = count of PBIs that transitioned to Done during this sprint. |
+| Feature modal | Opened via the list icon on an epic row. Modal columns: Feature (ID + title), Progress, Delivered (pts), Δ Effort (pts), PBIs ✓. PBIs ✓ = count of PBIs that transitioned to Done during the sprint under this feature. Feature progress bars are thinner and slightly dimmer than epic bars. Features with zero activity are hidden. |
 | Activity history link | History icon on each epic row navigates to the Work Item Activity page for that epic. |
 | All Products sprint summary | Panel showing total sprint metrics across all products (Completed PBIs, Effort delivered, Bugs). |
 | Stale data warning | If the calculated sprint metrics are older than the latest data sync, shows a warning with a "Recompute" button to refresh the analysis. |
 | Back to Delivery button | Returns to `/home/delivery`. |
 | Home button | Returns to `/home`. |
 
-**Removed:** Sprint Δ% column (replaced by Δ Effort in absolute pts). Features ✓ and Sprint Scored columns removed from epic table.
+**Removed:** Sprint Δ% column (replaced by Δ Effort in absolute pts). The ✓ symbol always means *completed during this sprint*.
 
 **Outgoing navigation:** `/home/delivery/sprint/activity/{id}`, `/home/delivery`, `/home`
 

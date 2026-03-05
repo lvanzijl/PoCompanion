@@ -23,7 +23,7 @@
                         <th style="width: 180px;">Progress</th>
                         <th style="width: 110px; text-align: right;">Delivered (pts)</th>
                         <th style="width: 110px; text-align: right;">Δ Effort (pts)</th>
-                        <th style="width: 70px; text-align: right;">PBIs</th>
+                        <th style="width: 70px; text-align: right;">PBIs ✓</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -62,7 +62,7 @@
                                 </MudText>
                             </td>
                             <td style="text-align: right; padding-top: 4px; padding-bottom: 4px;">
-                                <MudText Typo="Typo.body2">@feature.DonePbiCount</MudText>
+                                <MudText Typo="Typo.body2">@feature.SprintCompletedPbiCount</MudText>
                             </td>
                         </tr>
                     }
@@ -103,7 +103,7 @@
     private List<FeatureProgressDto> GetVisibleFeatures()
     {
         return Features?
-            .Where(f => f.SprintCompletedEffort > 0 || f.SprintEffortDelta != 0 || f.DonePbiCount > 0)
+            .Where(f => f.SprintCompletedEffort > 0 || f.SprintEffortDelta != 0 || f.SprintCompletedPbiCount > 0)
             .ToList()
             ?? new List<FeatureProgressDto>();
     }
