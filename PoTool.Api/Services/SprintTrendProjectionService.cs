@@ -448,12 +448,15 @@ public class SprintTrendProjectionService
     /// Computes feature-level progress from the resolved work item hierarchy.
     /// Returns one FeatureProgressDto per Feature that has child PBIs resolved to the PO's products.
     /// When sprint dates are supplied, only features with functional activity during that sprint are returned.
+    /// When <paramref name="sprintId"/> is supplied, features whose PBIs are assigned to the sprint
+    /// are always included, even when no activity events exist for the sprint period.
     /// </summary>
     public virtual async Task<IReadOnlyList<FeatureProgressDto>> ComputeFeatureProgressAsync(
         int productOwnerId,
         DateTime? sprintStartUtc = null,
         DateTime? sprintEndUtc = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        int? sprintId = null)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
@@ -483,6 +486,7 @@ public class SprintTrendProjectionService
         HashSet<int>? activeWorkItemIds = null;
         HashSet<int>? sprintCompletedPbiIds = null;
         IReadOnlyDictionary<int, int>? sprintEffortDeltaByWorkItem = null;
+        HashSet<int>? sprintAssignedPbiIds = null;
         if (sprintStartUtc.HasValue && sprintEndUtc.HasValue)
         {
             // Callers must supply UTC DateTime values; SpecifyKind guards against unspecified Kind
@@ -537,9 +541,22 @@ public class SprintTrendProjectionService
                         var oldVal = int.TryParse(e.OldValue, out var o) ? o : 0;
                         return newVal - oldVal;
                     }));
+
+            // Load PBI IDs assigned to the sprint (by iteration path), regardless of activity.
+            // These ensure epics/features remain visible when PBIs are in-sprint but not yet active.
+            if (sprintId.HasValue)
+            {
+                sprintAssignedPbiIds = resolvedItems
+                    .Where(r => r.WorkItemType == WorkItemType.Pbi
+                        && r.ResolvedSprintId == sprintId.Value
+                        && r.ResolvedProductId != null
+                        && productIds.Contains(r.ResolvedProductId.Value))
+                    .Select(r => r.WorkItemId)
+                    .ToHashSet();
+            }
         }
 
-        return ComputeFeatureProgress(resolvedItems, workItemsByTfsId, productIds, activeWorkItemIds, sprintCompletedPbiIds, sprintEffortDeltaByWorkItem);
+        return ComputeFeatureProgress(resolvedItems, workItemsByTfsId, productIds, activeWorkItemIds, sprintCompletedPbiIds, sprintEffortDeltaByWorkItem, sprintAssignedPbiIds);
     }
 
     private const string EffortFieldRef = "Microsoft.VSTS.Scheduling.Effort";
@@ -550,7 +567,8 @@ public class SprintTrendProjectionService
         IReadOnlyList<int> productIds,
         IReadOnlyCollection<int>? activeWorkItemIds = null,
         IReadOnlyCollection<int>? sprintCompletedPbiIds = null,
-        IReadOnlyDictionary<int, int>? sprintEffortDeltaByWorkItem = null)
+        IReadOnlyDictionary<int, int>? sprintEffortDeltaByWorkItem = null,
+        IReadOnlyCollection<int>? sprintAssignedPbiIds = null)
     {
         var results = new List<FeatureProgressDto>();
 
@@ -578,12 +596,15 @@ public class SprintTrendProjectionService
                 if (childPbis.Count == 0)
                     continue;
 
-                // When an activity filter is provided, skip features without sprint activity
+                // When an activity filter is provided, skip features that have neither sprint
+                // activity events nor PBIs assigned to the sprint.
                 if (activeWorkItemIds != null)
                 {
                     var hasActivity = activeWorkItemIds.Contains(feature.WorkItemId)
                         || childPbis.Any(pbi => activeWorkItemIds.Contains(pbi!.TfsId));
-                    if (!hasActivity)
+                    var hasSprintPbis = sprintAssignedPbiIds != null
+                        && childPbis.Any(pbi => sprintAssignedPbiIds.Contains(pbi!.TfsId));
+                    if (!hasActivity && !hasSprintPbis)
                         continue;
                 }
 

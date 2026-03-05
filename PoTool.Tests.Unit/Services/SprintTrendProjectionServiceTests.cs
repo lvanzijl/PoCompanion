@@ -491,6 +491,106 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
+    public void ComputeFeatureProgress_WithSprintAssignedPbiIds_IncludesFeatureWithNoActivityButSprintPbis()
+    {
+        // Epic visibility rule: a feature (and its epic) must be shown when any child PBI is
+        // assigned to the sprint, even when Delivered=0 and there are no activity events.
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Active Feature", state: "Active"),
+            [101] = CreateWorkItem(101, WorkItemType.Feature, "Sprint-Only Feature", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1 (active)", effort: 10, state: "Done", parentId: 100),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "PBI 2 (sprint, no activity)", effort: 8, state: "Active", parentId: 101),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 101, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 101 },
+        };
+
+        // Only PBI 201 had activity events; PBI 202 is in the sprint but no events
+        var activeWorkItemIds = new HashSet<int> { 201 };
+        // PBI 202 is assigned to the sprint
+        var sprintAssignedPbiIds = new HashSet<int> { 202 };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+            resolved, workItems, new List<int> { 1 },
+            activeWorkItemIds: activeWorkItemIds,
+            sprintAssignedPbiIds: sprintAssignedPbiIds);
+
+        Assert.HasCount(2, result, "Both features should be returned: one with activity, one with sprint-assigned PBI");
+        CollectionAssert.Contains(result.Select(f => f.FeatureId).ToList(), 100, "Feature 100 (activity) must be included");
+        CollectionAssert.Contains(result.Select(f => f.FeatureId).ToList(), 101, "Feature 101 (sprint PBI, no activity) must be included");
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_WithActivityFilterOnly_ExcludesFeatureWhosePbisAreNotInActivityOrSprint()
+    {
+        // A feature with PBIs that have neither activity events nor sprint assignment must be excluded
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Active Feature", state: "Active"),
+            [101] = CreateWorkItem(101, WorkItemType.Feature, "Excluded Feature", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1 (active)", effort: 10, state: "Done", parentId: 100),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "PBI 2 (no sprint, no activity)", effort: 8, state: "Active", parentId: 101),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 101, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 101 },
+        };
+
+        var activeWorkItemIds = new HashSet<int> { 201 };
+        // PBI 202 is NOT in the sprint
+        var sprintAssignedPbiIds = new HashSet<int>(); // empty
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+            resolved, workItems, new List<int> { 1 },
+            activeWorkItemIds: activeWorkItemIds,
+            sprintAssignedPbiIds: sprintAssignedPbiIds);
+
+        Assert.HasCount(1, result, "Only the feature with activity should be returned");
+        Assert.AreEqual(100, result[0].FeatureId);
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_WithNullSprintAssignedPbiIds_FallsBackToActivityFilterOnly()
+    {
+        // When sprintAssignedPbiIds is null, behaviour is unchanged from before
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Active Feature", state: "Active"),
+            [101] = CreateWorkItem(101, WorkItemType.Feature, "Inactive Feature", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 10, state: "Done", parentId: 100),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "PBI 2", effort: 8, state: "Active", parentId: 101),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 101, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 101 },
+        };
+
+        var activeWorkItemIds = new HashSet<int> { 201 };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+            resolved, workItems, new List<int> { 1 },
+            activeWorkItemIds: activeWorkItemIds,
+            sprintAssignedPbiIds: null);
+
+        Assert.HasCount(1, result, "Without sprintAssignedPbiIds, only activity-based filter applies");
+        Assert.AreEqual(100, result[0].FeatureId);
+    }
+
+    [TestMethod]
     public void ComputeFeatureProgress_MissingEffort_UsesSiblingAverage()
     {
         var workItems = new Dictionary<int, WorkItemEntity>
