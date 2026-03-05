@@ -2,7 +2,7 @@
 
 **Doelgroep:** Product Owners  
 **Taal:** Nederlands  
-**Laatste bijwerking:** 2026-03-04
+**Laatste bijwerking:** 2026-03-05
 
 ---
 
@@ -20,7 +20,7 @@
    - 7.3 [Validatie-fixsessie](#73-validatie-fixsessie)
 8. [Delivery-werkruimte](#8-delivery-werkruimte)
    - 8.1 [Sprint Delivery](#81-sprint-delivery)
-   - 8.2 [Werkitem-activiteit](#82-werkitem-activiteit)
+   - 8.2 [Sprint-activiteit](#82-sprint-activiteit)
    - 8.3 [Portfolio Delivery](#83-portfolio-delivery)
 9. [Trends-werkruimte — Verleden](#9-trends-werkruimte--verleden)
    - 9.1 [Pull Request-inzichten](#91-pull-request-inzichten)
@@ -422,16 +422,42 @@ Als de berekende sprintmetrieken ouder zijn dan de laatste datasync, verschijnt 
 
 ---
 
-### 8.2 Werkitem-activiteit
+### 8.2 Sprint-activiteit
 
 **Pagina:** `/home/delivery/sprint/activity/{werkitemId}`
 
-De Werkitem-activiteitspagina toont de revisiegeschiedenis van één werkitem (Feature of Epic) in de context van de Sprint Delivery-analyse.
+De Sprint-activiteitspagina toont de activiteitsgeschiedenis van één werkitem (Feature of Epic) en zijn onderliggende werkitems, in de context van de Sprint Delivery-analyse. De pagina legt de nadruk op leesbaarheid: aanmaakgebeurtenissen worden samengevouwen, wijzigingen worden geclassificeerd op type, en gebeurtenissen worden gegroepeerd per werkitem.
 
 #### Wat zie je hier?
 
-- Werkitem-metagegevens: type, ID, titel, en relevante periode.
-- Een activiteitstijdlijn: alle revisiegebeurtenissen (statuswijzigingen, inspanningsupdates, toewijzingswijzigingen) in chronologische volgorde.
+- **Werkitem-metagegevens:** type, ID, titel, en de gebruikte sprintperiode.
+- **Activiteitssamenvatting:** zes KPI-tegels afgeleid uit de geladen gebeurtenissen:
+  - *Werkitems aangemaakt* — aantal unieke werkitems met een aanmaakgebeurtenis.
+  - *Werkitems voltooid* — aantal werkitems waarvan de status naar Done, Closed of Resolved is gegaan.
+  - *Statusovergangen* — totaal aantal Workflow-gebeurtenissen (System.State-wijzigingen).
+  - *Inspanningswijzigingen* — totaal aantal Scope-gebeurtenissen (planningsvelden).
+  - *Scopeverhogingen* — aantal gevallen waarbij de inspanning omhoog is gegaan.
+  - *Scopeverlagingen* — aantal gevallen waarbij de inspanning omlaag is gegaan.
+- **Gegroepeerde activiteitsweergave:** gebeurtenissen zijn gegroepeerd per werkitem in inklapbare secties. Elke sectie toont het werkitemtype, ID, titel en het aantal gebeurtenissen. Met de knoppen *Expand all* en *Collapse all* kun je alle secties tegelijk openen of sluiten.
+- **Kolom Wijzigingstype:** een afgeleid veld dat elke gebeurtenis classificeert als:
+  - `Workflow` — statuswijzigingen (hoge prioriteit, volle opmaak).
+  - `Scope` — planningsvelden zoals inspanning (hoge prioriteit, volle opmaak).
+  - `Creation` — aanmaakgebeurtenissen (hoge prioriteit, volle opmaak).
+  - `Metadata` — titels en overige metagegevens (lage prioriteit, visueel gedimd).
+  - `Structure` — area path en iteratiepad (lage prioriteit, visueel gedimd).
+- **Samengevouwen aanmaakgebeurtenissen:** wanneer meerdere systeemvelden (System.Id, System.WorkItemType, System.State, enz.) op hetzelfde tijdstip voor hetzelfde werkitem verschijnen, worden ze samengevouwen tot één regel *(created)* in plaats van aparte rijen.
+
+#### Tabelkolommen
+
+| Kolom | Beschrijving |
+|---|---|
+| Timestamp (UTC) | Tijdstip van de gebeurtenis in UTC. |
+| Change Type | Afgeleide classificatie: Workflow, Scope, Creation, Metadata of Structure. |
+| Work Item | TFS-ID van het werkitem. |
+| Source | *Selected* voor het geselecteerde rootwerkitem, *Child* voor onderliggende werkitems. |
+| Field | Naam van het gewijzigde veld. |
+| Old Value | Waarde vóór de wijziging. |
+| New Value | Waarde na de wijziging. |
 
 ---
 

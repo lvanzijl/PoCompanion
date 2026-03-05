@@ -2,6 +2,14 @@
   {
     "date": "2026-03-05",
     "type": "Changed",
+    "title": "Sprint Activity — redesigned activity history page",
+    "impact": "The Work Item Activity page is renamed to Sprint Activity and now classifies each event by change type (Workflow/Scope/Creation/Metadata/Structure), collapses creation events into a single row, groups events by work item with collapse/expand support, and shows an Activity Summary block with six sprint-level metrics at the top of the page.",
+    "area": "Delivery / Sprint Activity",
+    "link": "/home/delivery/sprint/activity"
+  },
+  {
+    "date": "2026-03-05",
+    "type": "Changed",
     "title": "Sprint Delivery — epic table and feature modal improvements",
     "impact": "Sprint Delivery page now shows delivery signals clearly: products without activity are hidden; collapsed product sections show a compact summary (Delivered pts, Δ Effort pts, PBIs, Bugs); the epic table has new columns Delivered (pts) and Δ Effort (pts, absolute scope change) replacing Sprint Scored and Sprint Δ%; the feature drill-down modal also uses the same column structure; Sprint Δ% removed everywhere; feature progress bars are thinner and dimmer to reinforce the Epic → Feature → Activity hierarchy.",
     "area": "Delivery / Sprint Delivery",
