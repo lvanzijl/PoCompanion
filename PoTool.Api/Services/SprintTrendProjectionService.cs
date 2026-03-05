@@ -623,6 +623,13 @@ public class SprintTrendProjectionService
                         .Where(pbi => sprintCompletedPbiIds.Contains(pbi!.TfsId))
                         .Sum(pbi => pbi!.Effort ?? 0);
 
+                var sprintCompletedPbiCount = sprintCompletedPbiIds == null
+                    ? 0
+                    : childPbis.Count(pbi => sprintCompletedPbiIds.Contains(pbi!.TfsId));
+
+                var featureCompletedInSprint = sprintCompletedPbiIds != null
+                    && sprintCompletedPbiIds.Contains(feature.WorkItemId);
+
                 var sprintProgressionDelta = totalEffort > 0
                     ? Math.Round((double)sprintCompletedEffort / totalEffort * 100, 2)
                     : 0.0;
@@ -654,7 +661,9 @@ public class SprintTrendProjectionService
                     IsDone = featureIsDone,
                     SprintCompletedEffort = sprintCompletedEffort,
                     SprintProgressionDelta = sprintProgressionDelta,
-                    SprintEffortDelta = sprintEffortDelta
+                    SprintEffortDelta = sprintEffortDelta,
+                    SprintCompletedPbiCount = sprintCompletedPbiCount,
+                    SprintCompletedInSprint = featureCompletedInSprint
                 });
             }
         }
@@ -703,6 +712,8 @@ public class SprintTrendProjectionService
                 ? Math.Round((double)epicSprintCompletedEffort / totalEffort * 100, 2)
                 : 0.0;
             var epicSprintEffortDelta = features.Sum(f => f.SprintEffortDelta);
+            var epicSprintCompletedPbiCount = features.Sum(f => f.SprintCompletedPbiCount);
+            var epicSprintCompletedFeatureCount = features.Count(f => f.SprintCompletedInSprint);
 
             // Get the product ID from the first feature (all should share the same product)
             var productId = features.First().ProductId;
@@ -721,7 +732,9 @@ public class SprintTrendProjectionService
                 IsDone = epicIsDone,
                 SprintCompletedEffort = epicSprintCompletedEffort,
                 SprintProgressionDelta = epicSprintProgressionDelta,
-                SprintEffortDelta = epicSprintEffortDelta
+                SprintEffortDelta = epicSprintEffortDelta,
+                SprintCompletedPbiCount = epicSprintCompletedPbiCount,
+                SprintCompletedFeatureCount = epicSprintCompletedFeatureCount
             });
         }
 

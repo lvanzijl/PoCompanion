@@ -395,7 +395,8 @@ De Epic-tabel toont één rij per epic met leveringssignaal in de sprint. Epics 
 | **Progress** | Voltooide inspanning / totale inspanning van de epic. |
 | **Delivered (pts)** | Inspanning van PBI's die in deze sprint naar Done zijn gegaan. |
 | **Δ Effort (pts)** | Scopewijziging in story points: inspanning_einde_sprint − inspanning_begin_sprint. Positief = scopegroei. Negatief = scopeafname. |
-| **PBIs** | Aantal PBI's dat in deze sprint naar Done is gegaan. |
+| **Features ✓** | Aantal features dat in deze sprint naar Done is gegaan (state-overgang naar Done binnen de sprintperiode). |
+| **PBIs ✓** | Aantal PBI's dat in deze sprint naar Done is gegaan. |
 | **Actions** | 🕐 Activiteitsgeschiedenis voor de epic openen. 📋 Feature-modal openen. |
 
 > **Verwijderd:** De kolom *Sprint Δ%* is verwijderd. Scopewijziging wordt nu uitgedrukt in absolute story points (Δ Effort).
@@ -410,7 +411,7 @@ Klik op het lijst-icoon (📋) bij een epic om de feature-modal te openen. De mo
 | **Progress** | Voltooide inspanning / totale inspanning van de feature. |
 | **Delivered (pts)** | Inspanning van PBI's die in deze sprint naar Done zijn gegaan. |
 | **Δ Effort (pts)** | Scopewijziging in story points voor deze feature in de sprint. |
-| **PBIs** | Aantal PBI's dat in deze sprint naar Done is gegaan. |
+| **PBIs ✓** | Aantal PBI's dat in deze sprint naar Done is gegaan onder deze feature. |
 
 Features zonder activiteit (Delivered = 0, Δ Effort = 0, geen PBI's) worden niet getoond. Feature-voortgangsbalken zijn dunner en iets minder verzadigd dan epic-balken om de hiërarchie visueel te verduidelijken.
 

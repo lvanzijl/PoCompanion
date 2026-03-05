@@ -1129,6 +1129,142 @@ public class SprintTrendProjectionServiceTests
         Assert.AreEqual(0.0, result[0].SprintProgressionDelta, "Sprint delta should be 0 when total effort is 0");
     }
 
+    [TestMethod]
+    public void ComputeFeatureProgress_WithSprintCompletedPbiIds_ComputesSprintPbiCount()
+    {
+        // Feature with 3 PBIs; 2 closed in sprint, 1 not
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 10, state: "Done", parentId: 100),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "PBI 2", effort: 20, state: "Done", parentId: 100),
+            [203] = CreateWorkItem(203, WorkItemType.Pbi, "PBI 3", effort: 30, state: "Active", parentId: 100),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 203, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+        };
+
+        var sprintCompletedPbiIds = new HashSet<int> { 201, 202 };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+            resolved, workItems, new List<int> { 1 },
+            activeWorkItemIds: null, sprintCompletedPbiIds: sprintCompletedPbiIds);
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(2, result[0].SprintCompletedPbiCount, "SprintCompletedPbiCount should count only PBIs closed in sprint");
+        Assert.IsFalse(result[0].SprintCompletedInSprint, "Feature itself was not closed in sprint");
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_WhenFeatureClosedInSprint_SetsSprintCompletedInSprint()
+    {
+        // Feature itself (id=100) is in the closedInSprint set
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Done"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 10, state: "Done", parentId: 100),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+        };
+
+        // The closedInSprint set includes both the feature and its PBI
+        var sprintCompletedPbiIds = new HashSet<int> { 100, 201 };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+            resolved, workItems, new List<int> { 1 },
+            activeWorkItemIds: null, sprintCompletedPbiIds: sprintCompletedPbiIds);
+
+        Assert.HasCount(1, result);
+        Assert.IsTrue(result[0].SprintCompletedInSprint, "Feature closed in sprint should be marked SprintCompletedInSprint=true");
+        Assert.AreEqual(1, result[0].SprintCompletedPbiCount, "SprintCompletedPbiCount should count child PBI 201");
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_WithNullSprintFilter_SprintCompletedCountsAreZero()
+    {
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Done"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 10, state: "Done", parentId: 100),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+        };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+            resolved, workItems, new List<int> { 1 },
+            activeWorkItemIds: null, sprintCompletedPbiIds: null);
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(0, result[0].SprintCompletedPbiCount, "SprintCompletedPbiCount should be 0 when no sprint filter");
+        Assert.IsFalse(result[0].SprintCompletedInSprint, "SprintCompletedInSprint should be false when no sprint filter");
+    }
+
+    [TestMethod]
+    public void ComputeEpicProgress_AggregatesSprintCompletedPbiCountAndFeatureCount()
+    {
+        // Two features: Feature A completed in sprint with 2 PBIs done, Feature B not completed but 1 PBI done
+        var featureProgress = new List<FeatureProgressDto>
+        {
+            new()
+            {
+                FeatureId = 200,
+                FeatureTitle = "Feature A",
+                EpicId = 100,
+                EpicTitle = "Epic X",
+                ProductId = 1,
+                ProgressPercent = 100,
+                TotalEffort = 30,
+                DoneEffort = 30,
+                IsDone = true,
+                SprintCompletedEffort = 30,
+                SprintProgressionDelta = 100.0,
+                SprintCompletedPbiCount = 2,
+                SprintCompletedInSprint = true
+            },
+            new()
+            {
+                FeatureId = 201,
+                FeatureTitle = "Feature B",
+                EpicId = 100,
+                EpicTitle = "Epic X",
+                ProductId = 1,
+                ProgressPercent = 50,
+                TotalEffort = 40,
+                DoneEffort = 20,
+                IsDone = false,
+                SprintCompletedEffort = 20,
+                SprintProgressionDelta = 50.0,
+                SprintCompletedPbiCount = 1,
+                SprintCompletedInSprint = false
+            }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Epic, "Epic X", state: "Active"),
+        };
+        var resolvedItems = new List<ResolvedWorkItemEntity>();
+
+        var result = SprintTrendProjectionService.ComputeEpicProgress(featureProgress, resolvedItems, workItems);
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(3, result[0].SprintCompletedPbiCount, "Epic SprintCompletedPbiCount should sum child feature counts (2+1=3)");
+        Assert.AreEqual(1, result[0].SprintCompletedFeatureCount, "Epic SprintCompletedFeatureCount should count features completed in sprint");
+    }
+
     #endregion
 
     private static SprintEntity CreateSprint(int id, string name)
