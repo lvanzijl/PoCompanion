@@ -81,8 +81,13 @@
             double cx      = ToSvgX(pt.CreatedDate);
             double cy      = ToSvgY(pt.LifetimeHours);
             bool isHovered = _hoveredPoint?.Id == pt.Id;
-            bool isHl      = HighlightedPrId == null || HighlightedPrId.Value == pt.Id;
-            double opacity = isHl ? (isHovered ? 1.0 : 0.80) : 0.18;
+
+            // Priority: author filter > PR highlight > default
+            bool authorMatch = FilteredAuthor == null || pt.Author == FilteredAuthor;
+            bool hlMatch     = HighlightedPrId == null || HighlightedPrId.Value == pt.Id;
+            bool isVisible   = authorMatch && hlMatch;
+
+            double opacity = isVisible ? (isHovered ? 1.0 : 0.80) : 0.12;
             double r       = isHovered ? 8.0 : 5.5;
             var stroke     = isHovered ? "var(--mud-palette-primary)" : "transparent";
             var shape      = GetShape(pt.Repository);
@@ -231,6 +236,13 @@
     /// <summary>Highlighted PR ID. When set, all other points are dimmed.</summary>
     [Parameter]
     public int? HighlightedPrId { get; set; }
+
+    /// <summary>
+    /// When set, only points matching this author are fully visible; all others are heavily dimmed.
+    /// Takes effect in combination with HighlightedPrId (both must match for full opacity).
+    /// </summary>
+    [Parameter]
+    public string? FilteredAuthor { get; set; }
 
     /// <summary>Show the median lifetime overlay line.</summary>
     [Parameter]

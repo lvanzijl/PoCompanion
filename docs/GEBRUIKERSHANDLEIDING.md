@@ -539,6 +539,7 @@ Alle gegevens komen uitsluitend uit de lokale cache — er worden geen live Azur
 
 - **Teamselector** — beperkt de PR-gegevens tot alle producten die aan het geselecteerde team zijn gekoppeld.
 - **Datumbereikfilter** — standaard de afgelopen 6 maanden.
+- **Snel-datumbereik-chips** — klik op 1M, 3M, 6M, 1J of 2J om het datumbereik direct in te stellen. Het actieve bereik is gemarkeerd.
 - **Repository (optioneel)** — filter op één specifieke repository.
 
 #### Wat zie je hier?
@@ -613,6 +614,14 @@ Inklapbare tabel met workflowstatistieken per repository. Gesorteerd op PR-aanta
 Inklapbare tabel met workflowstatistieken per auteur (maker van de PR). Gesorteerd op PR-aantal aflopend. Kolommen: auteur, PR-aantal, samenvoeging %, afbreking %, herwerk %, mediane levensduur, gemiddelde revisiecycli.
 
 > De herwerk %-kolom is gemarkeerd in oranje wanneer meer dan 30 % van de PR's van die auteur werd samengevoegd na herbewerking.
+
+**Auteur-filter (drill-down)**
+
+Klik op een rij in de auteurstabel om het spreidingsdiagram te filteren op de PR's van die auteur. Alleen de punten van de geselecteerde auteur blijven volledig zichtbaar; alle andere punten worden gedimd. Dit maakt het eenvoudig om te zien welke PR's van een specifieke auteur uitschieters zijn.
+
+- Een filterchip verschijnt bovenin het spreidingsdiagram met de naam van de gefilterde auteur.
+- Klik op de chip of opnieuw op de rij om het filter te wissen.
+- Het filter wordt automatisch gewist bij elke team-, datumbereik- of repository-wijziging.
 
 ---
 

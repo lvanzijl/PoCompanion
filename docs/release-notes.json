@@ -2,6 +2,14 @@
   {
     "date": "2026-03-05",
     "type": "Added",
+    "title": "Pull Request Insights — Phase 3: Author Drill-Down Filter + Date Quick-Presets",
+    "impact": "Two UX improvements to the Pull Request Insights page (/home/pull-requests). (1) Author drill-down filter: clicking any row in the Author Breakdown table (Section 6) now filters the PR scatter chart (Section 3) to show only that author's PRs. Non-matching points are heavily dimmed (opacity 0.12), providing immediate visual focus on the author's workflow pattern. An author-filter chip appears in the scatter chart header with a × close button. Clicking the same row again, the chip, or changing any server-side filter all clear the author filter. The active row in the Author Breakdown table is highlighted for clarity. PullRequestScatterSvg gains a new FilteredAuthor parameter that works independently of the existing HighlightedPrId parameter (both can be active at once: a point must match both to be fully opaque). (2) Date quick-presets: five chip buttons (1M / 3M / 6M / 1Y / 2Y) appear beneath the date pickers. Clicking a chip sets the From/To dates accordingly and triggers a reload. The active preset chip is highlighted in primary color. All changes are pure frontend — no backend or DTO changes.",
+    "area": "Trends / Pull Request Insights",
+    "link": "/home/pull-requests"
+  },
+  {
+    "date": "2026-03-05",
+    "type": "Added",
     "title": "Pull Request Insights — Phase 2: PR Detail Drawer + Per-Author Breakdown",
     "impact": "Two additions to the Pull Request Insights page (/home/pull-requests). (1) PR Detail Drawer: clicking a scatter point now opens a right-anchored MudDrawer showing full PR details — status chip (Merged clean / Merged rework / Abandoned / Active), PR title, author, repository, creation date, lifetime, review cycles (with 'rework' badge when > 1), files changed, and comment count. The drawer closes via the × button or automatically when filters change. This replaces the previous highlight-only click behaviour (highlight still works in parallel). (2) Author Breakdown: a new collapsible Section 6 shows per-author PR workflow statistics — PR count, merge %, abandon %, rework % (highlighted in orange > 30%), median lifetime, and average review cycles. Sorted by PR count descending. Answers the question: 'Which author's PRs show the most friction patterns?' Backend: new PrAuthorBreakdownDto added to PoTool.Shared.PullRequests; AuthorBreakdown list added to PullRequestInsightsDto; handler updated with author grouping (step 10). 3 new unit tests covering: breakdown sort order, rate computation, and empty state.",
     "area": "Trends / Pull Request Insights",

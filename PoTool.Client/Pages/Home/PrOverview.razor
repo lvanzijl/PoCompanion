@@ -93,6 +93,21 @@
                 </MudSelect>
             </MudItem>
         </MudGrid>
+
+        @* Date quick-presets *@
+        <MudStack Row="true" Spacing="1" Class="mt-3" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mr-1">Quick range:</MudText>
+            @foreach (var preset in _datePresets)
+            {
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="@(IsActivePreset(preset.Months) ? Color.Primary : Color.Default)"
+                         Variant="@(IsActivePreset(preset.Months) ? Variant.Filled : Variant.Outlined)"
+                         OnClick="() => ApplyDatePreset(preset.Months)">
+                    @preset.Label
+                </MudChip>
+            }
+        </MudStack>
     </MudPaper>
 
     @if (_isLoading)
@@ -237,17 +252,29 @@
                         X: PR creation date &nbsp;|&nbsp; Y: PR lifetime &nbsp;|&nbsp; Color: outcome &nbsp;|&nbsp; Shape: repository
                     </MudText>
                 </MudStack>
-                @if (_highlightedPrId.HasValue)
-                {
-                    <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => _highlightedPrId = null">
-                        Clear highlight
-                    </MudButton>
-                }
+                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                    @if (!string.IsNullOrEmpty(_filteredAuthor))
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Filled"
+                                 Icon="@Icons.Material.Filled.Person"
+                                 OnClose="ClearAuthorFilter"
+                                 CloseIcon="@Icons.Material.Filled.Close">
+                            @_filteredAuthor
+                        </MudChip>
+                    }
+                    @if (_highlightedPrId.HasValue)
+                    {
+                        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => _highlightedPrId = null">
+                            Clear highlight
+                        </MudButton>
+                    }
+                </MudStack>
             </MudStack>
 
             <PullRequestScatterSvg Data="@_data.ScatterPoints"
                                    Height="380"
                                    HighlightedPrId="@_highlightedPrId"
+                                   FilteredAuthor="@_filteredAuthor"
                                    ShowMedianLine="true"
                                    ShowP90Line="true"
                                    MedianLifetimeHours="@_data.Summary.MedianLifetimeHours"
@@ -369,10 +396,18 @@
                             <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Secondary" />
                             <MudText Typo="Typo.h6">Author Breakdown</MudText>
                             <MudChip T="string" Size="Size.Small" Color="Color.Default">@_data.AuthorBreakdown.Count author(s)</MudChip>
+                            @if (!string.IsNullOrEmpty(_filteredAuthor))
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Filled">Filtered: @_filteredAuthor</MudChip>
+                            }
                         </MudStack>
                     </TitleContent>
                     <ChildContent>
-                        <MudTable Items="@_data.AuthorBreakdown" Dense="true" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm" Class="mt-2">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 mt-1">
+                            <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" /> Click a row to filter the scatter chart to that author.
+                        </MudText>
+                        <MudTable Items="@_data.AuthorBreakdown" Dense="true" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm" Class="mt-1"
+                                  RowStyleFunc="@((r, _) => r.Author == _filteredAuthor ? "cursor: pointer; background: var(--mud-palette-action-hover-bg);" : "cursor: pointer;")">
                             <HeaderContent>
                                 <MudTh>Author</MudTh>
                                 <MudTh>PR Count</MudTh>
@@ -383,28 +418,32 @@
                                 <MudTh>Avg Review Cycles</MudTh>
                             </HeaderContent>
                             <RowTemplate>
-                                <MudTd DataLabel="Author">
+                                <MudTd DataLabel="Author" @onclick="() => ToggleAuthorFilter(context.Author)">
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                         <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Secondary" />
                                         <MudText Typo="Typo.body2">@context.Author</MudText>
+                                        @if (context.Author == _filteredAuthor)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" Color="Color.Secondary" />
+                                        }
                                     </MudStack>
                                 </MudTd>
-                                <MudTd DataLabel="PR Count">
+                                <MudTd DataLabel="PR Count" @onclick="() => ToggleAuthorFilter(context.Author)">
                                     <MudText Typo="Typo.body2">@context.PrCount</MudText>
                                 </MudTd>
-                                <MudTd DataLabel="Merge %">
+                                <MudTd DataLabel="Merge %" @onclick="() => ToggleAuthorFilter(context.Author)">
                                     <MudText Typo="Typo.body2" Style="color: var(--mud-palette-success);">@(context.MergePct.ToString("F0"))%</MudText>
                                 </MudTd>
-                                <MudTd DataLabel="Abandon %">
+                                <MudTd DataLabel="Abandon %" @onclick="() => ToggleAuthorFilter(context.Author)">
                                     <MudText Typo="Typo.body2" Style="@(context.AbandonPct > 20 ? "color: var(--mud-palette-error);" : "")">@(context.AbandonPct.ToString("F0"))%</MudText>
                                 </MudTd>
-                                <MudTd DataLabel="Rework %">
+                                <MudTd DataLabel="Rework %" @onclick="() => ToggleAuthorFilter(context.Author)">
                                     <MudText Typo="Typo.body2" Style="@(context.ReworkPct > 30 ? "color: var(--mud-palette-warning);" : "")">@(context.ReworkPct.ToString("F0"))%</MudText>
                                 </MudTd>
-                                <MudTd DataLabel="Median Lifetime">
+                                <MudTd DataLabel="Median Lifetime" @onclick="() => ToggleAuthorFilter(context.Author)">
                                     <MudText Typo="Typo.body2">@FormatLifetime(context.MedianLifetimeHours)</MudText>
                                 </MudTd>
-                                <MudTd DataLabel="Avg Review Cycles">
+                                <MudTd DataLabel="Avg Review Cycles" @onclick="() => ToggleAuthorFilter(context.Author)">
                                     <MudText Typo="Typo.body2">@(context.AvgReviewCycles.HasValue ? context.AvgReviewCycles.Value.ToString("F1") : "—")</MudText>
                                 </MudTd>
                             </RowTemplate>
@@ -522,10 +561,22 @@
 
     // Interaction
     private int? _highlightedPrId;
+    private string? _filteredAuthor;
 
     // Drawer
     private bool _prDrawerOpen;
     private PrScatterPointDto? _drawerPr;
+
+    // Date presets (months back from today)
+    private record DatePreset(string Label, int Months);
+    private static readonly DatePreset[] _datePresets =
+    {
+        new("1M",   1),
+        new("3M",   3),
+        new("6M",   6),
+        new("1Y",  12),
+        new("2Y",  24),
+    };
 
     // ── Init ─────────────────────────────────────────────────────────────
 
@@ -605,35 +656,57 @@
 
     private async Task OnTeamChanged(int? teamId)
     {
-        _selectedTeamId = teamId;
+        _selectedTeamId  = teamId;
         _highlightedPrId = null;
+        _filteredAuthor  = null;
         await ReloadAsync();
     }
 
     private async Task OnFromDateChanged(DateTime? date)
     {
-        _fromDate = date;
+        _fromDate        = date;
         _highlightedPrId = null;
+        _filteredAuthor  = null;
         await ReloadAsync();
     }
 
     private async Task OnToDateChanged(DateTime? date)
     {
-        _toDate = date;
+        _toDate          = date;
         _highlightedPrId = null;
+        _filteredAuthor  = null;
         await ReloadAsync();
     }
 
     private async Task OnRepositoryChanged(string? repo)
     {
         _selectedRepository = repo;
-        _highlightedPrId = null;
+        _highlightedPrId    = null;
+        _filteredAuthor     = null;
         await ReloadAsync();
     }
 
     private async Task OnRepositoryStringChanged(string repo)
     {
         await OnRepositoryChanged(string.IsNullOrEmpty(repo) ? null : repo);
+    }
+
+    private async Task ApplyDatePreset(int months)
+    {
+        var now          = DateTime.UtcNow.Date;
+        _fromDate        = now.AddMonths(-months);
+        _toDate          = now;
+        _highlightedPrId = null;
+        _filteredAuthor  = null;
+        await ReloadAsync();
+    }
+
+    private bool IsActivePreset(int months)
+    {
+        if (_fromDate == null || _toDate == null) return false;
+        var now          = DateTime.UtcNow.Date;
+        var expectedFrom = now.AddMonths(-months);
+        return _fromDate.Value.Date == expectedFrom && _toDate.Value.Date == now;
     }
 
     private async Task ReloadAsync()
@@ -668,6 +741,18 @@
         IsHighlighted(prId)
             ? "cursor: pointer; transition: border 0.2s; border: 2px solid var(--mud-palette-primary);"
             : "cursor: pointer; transition: border 0.2s; border: 2px solid transparent;";
+
+    // ── Author filter interaction ─────────────────────────────────────────
+
+    private void ToggleAuthorFilter(string author)
+    {
+        _filteredAuthor = _filteredAuthor == author ? null : author;
+    }
+
+    private void ClearAuthorFilter()
+    {
+        _filteredAuthor = null;
+    }
 
     // ── Display helpers ───────────────────────────────────────────────────
 
