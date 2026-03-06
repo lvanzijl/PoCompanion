@@ -1,0 +1,359 @@
+@page "/planning/product-roadmaps"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
+@using PoTool.Shared.WorkItems
+@inject IProfileService ProfileService
+@inject ProductService ProductService
+@inject WorkItemService WorkItemService
+@inject TfsConfigService TfsConfigService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Product Roadmaps - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @* Workspace Header *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Map" Color="Color.Primary" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">
+                        Product Roadmaps
+                    </MudText>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.VisibilityOff">Read-only</MudChip>
+                </MudStack>
+
+                @* Breadcrumb *@
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            </MudStack>
+
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Home"
+                           OnClick="NavigateToHome">
+                    Home
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else
+    {
+        @* Horizontal Scrollable Product Lanes *@
+        <div style="overflow-x: auto; padding-bottom: 16px;">
+            <div style="display: flex; gap: 16px; min-width: max-content;">
+                @foreach (var lane in _productLanes)
+                {
+                    var laneIndex = _productLanes.IndexOf(lane);
+                    <MudPaper Elevation="2" Style="min-width: 320px; max-width: 360px; flex-shrink: 0;">
+                        @* Sticky Product Lane Header *@
+                        <div style="position: sticky; top: 0; z-index: 1; background: var(--mud-palette-surface); border-bottom: 2px solid var(--mud-palette-primary);">
+                            <MudStack Class="pa-3" Spacing="1">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <MudText Typo="Typo.h6" Style="font-weight: 600;">@lane.ProductName</MudText>
+                                    <MudStack Row="true" Spacing="0">
+                                        <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                                                       Size="Size.Small"
+                                                       Color="Color.Primary"
+                                                       Disabled="@(laneIndex == 0)"
+                                                       OnClick="@(() => MoveProductEarlier(laneIndex))"
+                                                       aria-label="Move Earlier" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                                                       Size="Size.Small"
+                                                       Color="Color.Primary"
+                                                       Disabled="@(laneIndex == _productLanes.Count - 1)"
+                                                       OnClick="@(() => MoveProductLater(laneIndex))"
+                                                       aria-label="Move Later" />
+                                    </MudStack>
+                                </MudStack>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @lane.Epics.Count roadmap epic@(lane.Epics.Count == 1 ? "" : "s")
+                                </MudText>
+                            </MudStack>
+                        </div>
+
+                        @* Epic Cards *@
+                        <MudStack Class="pa-3" Spacing="2">
+                            @if (lane.Epics.Count == 0)
+                            {
+                                <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
+                                    No roadmap epics found for this product.
+                                </MudAlert>
+                            }
+                            else
+                            {
+                                @foreach (var epic in lane.Epics)
+                                {
+                                    <MudCard Elevation="1" Class="roadmap-epic-card">
+                                        <MudCardContent Class="pa-3">
+                                            <MudStack Spacing="1">
+                                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Style="font-weight: 700;">
+                                                        #@epic.OrderNumber
+                                                    </MudChip>
+                                                    @if (!string.IsNullOrEmpty(epic.TfsUrl))
+                                                    {
+                                                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
+                                                                       Size="Size.Small"
+                                                                       Color="Color.Info"
+                                                                       Href="@epic.TfsUrl"
+                                                                       Target="_blank"
+                                                                       aria-label="Open in TFS" />
+                                                    }
+                                                </MudStack>
+                                                <MudText Typo="Typo.body2" Style="font-weight: 500;">
+                                                    @epic.Title
+                                                </MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    TFS ID: @epic.TfsId
+                                                </MudText>
+                                            </MudStack>
+                                        </MudCardContent>
+                                    </MudCard>
+                                }
+                            }
+                        </MudStack>
+                    </MudPaper>
+                }
+
+                @if (_productLanes.Count == 0)
+                {
+                    <MudPaper Elevation="2" Class="pa-6" Style="min-width: 400px;">
+                        <MudAlert Severity="Severity.Info">
+                            No products found. Configure products in Settings to see roadmap lanes.
+                        </MudAlert>
+                    </MudPaper>
+                }
+            </div>
+        </div>
+
+        @* Navigation Options *@
+        <MudPaper Elevation="2" Class="pa-4 mt-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Explore" Class="mr-2" />
+                Navigation
+            </MudText>
+
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.CalendarMonth"
+                           OnClick="NavigateToPlanning">
+                    Planning (Future)
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Success"
+                           StartIcon="@Icons.Material.Filled.HealthAndSafety"
+                           OnClick="NavigateToHealth">
+                    Health (Now)
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    }
+</MudContainer>
+
+<style>
+    .roadmap-epic-card {
+        border-left: 3px solid var(--mud-palette-primary);
+        transition: box-shadow 0.2s ease;
+    }
+    .roadmap-epic-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    }
+</style>
+
+@code {
+    private bool _isLoading = true;
+    private int? _profileId;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+    private List<ProductLane> _productLanes = new();
+    private List<ProductDto> _products = new();
+    private TfsConfigDto? _tfsConfig;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}");
+                return;
+            }
+
+            _profileId = activeProfile.Id;
+            ProfileService.SetCachedActiveProfileId(_profileId);
+
+            _tfsConfig = await TfsConfigService.GetConfigAsync();
+
+            // Load products sorted by Order (proxy for Objective BacklogPriority)
+            _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id))
+                .OrderBy(p => p.Order)
+                .ThenBy(p => p.Name)
+                .ToList();
+
+            // Build lanes with roadmap epics
+            await BuildProductLanesAsync();
+
+            UpdateBreadcrumbs();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading roadmap data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task BuildProductLanesAsync()
+    {
+        _productLanes.Clear();
+
+        foreach (var product in _products)
+        {
+            var lane = new ProductLane
+            {
+                ProductId = product.Id,
+                ProductName = product.Name,
+                Epics = new List<RoadmapEpic>()
+            };
+
+            if (product.BacklogRootWorkItemIds.Count > 0)
+            {
+                try
+                {
+                    var workItems = await WorkItemService.GetByRootIdsAsync(product.BacklogRootWorkItemIds.ToArray());
+
+                    // Filter to epics with "roadmap" tag
+                    var roadmapEpics = workItems
+                        .Where(wi => wi.Type == "Epic" && HasRoadmapTag(wi.Tags))
+                        .OrderBy(wi => wi.TfsId) // Stable ordering by TFS ID
+                        .ToList();
+
+                    var orderNumber = 1;
+                    foreach (var epic in roadmapEpics)
+                    {
+                        lane.Epics.Add(new RoadmapEpic
+                        {
+                            TfsId = epic.TfsId,
+                            Title = epic.Title,
+                            OrderNumber = orderNumber++,
+                            TfsUrl = BuildTfsUrl(epic.TfsId)
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Snackbar.Add($"Error loading epics for {product.Name}: {ex.Message}", Severity.Warning);
+                }
+            }
+
+            _productLanes.Add(lane);
+        }
+    }
+
+    private static bool HasRoadmapTag(string? tags)
+    {
+        if (string.IsNullOrWhiteSpace(tags))
+            return false;
+
+        return tags.Split(';')
+            .Select(t => t.Trim())
+            .Any(t => t.Equals("roadmap", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string? BuildTfsUrl(int workItemId)
+    {
+        if (_tfsConfig?.Url == null || _tfsConfig.Project == null)
+            return null;
+
+        return TfsUrlBuilder.BuildWorkItemUrl(_tfsConfig.Url, _tfsConfig.Project, workItemId);
+    }
+
+    private async Task MoveProductEarlier(int laneIndex)
+    {
+        if (laneIndex <= 0 || _profileId == null) return;
+        await SwapProductOrder(laneIndex, laneIndex - 1);
+    }
+
+    private async Task MoveProductLater(int laneIndex)
+    {
+        if (laneIndex >= _productLanes.Count - 1 || _profileId == null) return;
+        await SwapProductOrder(laneIndex, laneIndex + 1);
+    }
+
+    private async Task SwapProductOrder(int indexA, int indexB)
+    {
+        try
+        {
+            // Swap lanes in the visual list
+            (_productLanes[indexA], _productLanes[indexB]) = (_productLanes[indexB], _productLanes[indexA]);
+
+            // Build new product ID order and persist
+            var productIds = _productLanes.Select(l => l.ProductId).ToList();
+            await ProductService.ReorderProductsAsync(_profileId!.Value, productIds);
+
+            Snackbar.Add("Product order updated.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            // Revert on failure
+            (_productLanes[indexA], _productLanes[indexB]) = (_productLanes[indexB], _productLanes[indexA]);
+            Snackbar.Add($"Error reordering products: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void UpdateBreadcrumbs()
+    {
+        _breadcrumbs = new List<BreadcrumbItem>
+        {
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
+            new("Planning (Future)", WorkspaceRoutes.PlanningWorkspace2, icon: Icons.Material.Filled.CalendarMonth),
+            new("Product Roadmaps", null, disabled: true, icon: Icons.Material.Filled.Map)
+        };
+    }
+
+    private void NavigateToHome()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.Home);
+    }
+
+    private void NavigateToPlanning()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.PlanningWorkspace2);
+    }
+
+    private void NavigateToHealth()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.HealthWorkspace);
+    }
+
+    /// <summary>
+    /// Represents a single product lane with its roadmap epics.
+    /// </summary>
+    private sealed class ProductLane
+    {
+        public int ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public List<RoadmapEpic> Epics { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Represents a single roadmap epic card.
+    /// </summary>
+    private sealed class RoadmapEpic
+    {
+        public int TfsId { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public int OrderNumber { get; set; }
+        public string? TfsUrl { get; set; }
+    }
+}
