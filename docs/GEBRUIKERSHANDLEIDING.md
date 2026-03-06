@@ -943,12 +943,12 @@ Deze pagina beantwoordt de vraag: *Wat zijn de geplande epics per product op de 
 
 - **Roadmap-epics** worden bepaald door de tag **"roadmap"** (kleine letters). Alleen epics met deze tag verschijnen op de pagina.
 - De **productvolgorde** wordt bepaald door de geconfigureerde productvolgorde (Objective BacklogPriority). Je kunt de volgorde aanpassen met de **Eerder/Later**-knoppen in de kop van elke productbaan.
-- De **epicvolgorde** binnen een product volgt de Epic BacklogPriority.
+- De **epicvolgorde** binnen een product volgt een stabiele volgorde (op basis van TFS-ID).
 - Elke epickaart toont: volgnummer, epictitel, TFS-ID en een link om de epic in TFS te openen.
 
 #### Productbanen herschikken
 
-Met de pijlknoppen (◀ ▶) in de kop van elke baan kun je een product eerder of later plaatsen. De eerste en laatste baan hebben de bijbehorende knop uitgeschakeld.
+Met de pijlknoppen in de kop van elke baan kun je een product eerder of later plaatsen. De eerste en laatste baan hebben de bijbehorende knop uitgeschakeld.
 
 > **Let op:** Epics bewerken doe je op de **Product Roadmap-editorpagina**, niet op deze overzichtspagina.
 

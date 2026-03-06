@@ -235,7 +235,7 @@
                     // Filter to epics with "roadmap" tag
                     var roadmapEpics = workItems
                         .Where(wi => wi.Type == "Epic" && HasRoadmapTag(wi.Tags))
-                        .OrderBy(wi => wi.TfsId) // Stable ordering by TFS ID
+                        .OrderBy(wi => wi.TfsId) // Stable ordering by TFS ID (BacklogPriority not available in DTO)
                         .ToList();
 
                     var orderNumber = 1;
