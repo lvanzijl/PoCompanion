@@ -1,0 +1,840 @@
+@page "/home/pr-delivery-insights"
+@using PoTool.Client.Components.Charts
+@using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
+@using PoTool.Client.Models
+@using PoTool.Client.Services
+@using PoTool.Shared.PullRequests
+@using System.Web
+@inject IProfileService ProfileService
+@inject IPullRequestsClient PullRequestsClient
+@inject TeamService TeamService
+@inject SprintService SprintService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>PR Delivery Insights - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+
+    @* ── Workspace Header ────────────────────────────────────────────── *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.LocalShipping" Color="Color.Success" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">PR Delivery Insights</MudText>
+                </MudStack>
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            </MudStack>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       StartIcon="@Icons.Material.Filled.Home"
+                       OnClick="NavigateToHome">
+                Home
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    @* ── Context / Filters (collapsible) ───────────────────────────────── *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center"
+                  Style="cursor:pointer;" @onclick="() => _filterExpanded = !_filterExpanded">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.FilterAlt" />
+                <MudText Typo="Typo.h6">Context</MudText>
+                @if (!_filterExpanded && (_selectedTeamId.HasValue || _selectedSprintId.HasValue))
+                {
+                    @* Summary chips shown when collapsed *@
+                    @if (_selectedTeamId.HasValue)
+                    {
+                        var teamName = _teams.FirstOrDefault(t => t.Id == _selectedTeamId)?.Name;
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Group">@teamName</MudChip>
+                    }
+                    @if (_selectedSprintId.HasValue)
+                    {
+                        var sprintName = _sprints.FirstOrDefault(s => s.Id == _selectedSprintId)?.Name;
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Icon="@Icons.Material.Filled.CalendarMonth">@sprintName</MudChip>
+                    }
+                }
+            </MudStack>
+            <MudIconButton Icon="@(_filterExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                           Size="Size.Small"
+                           Color="Color.Default"
+                           OnClick="() => _filterExpanded = !_filterExpanded" />
+        </MudStack>
+
+        <MudCollapse Expanded="_filterExpanded">
+            <MudDivider Class="my-3" />
+            <MudGrid Spacing="2">
+                @* Team selector *@
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="int?"
+                               Value="_selectedTeamId"
+                               Label="Team"
+                               Variant="Variant.Outlined"
+                               Clearable="true"
+                               ValueChanged="OnTeamChanged">
+                        <MudSelectItem T="int?" Value="@((int?)null)">Select team…</MudSelectItem>
+                        @foreach (var team in _teams)
+                        {
+                            <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                @* Sprint selector (visible once a team is chosen) *@
+                @if (_sprints.Count > 0)
+                {
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudSelect T="int?"
+                                   Value="_selectedSprintId"
+                                   Label="Sprint (optional)"
+                                   Variant="Variant.Outlined"
+                                   ValueChanged="OnSprintChanged">
+                            <MudSelectItem T="int?" Value="@((int?)null)">Select sprint…</MudSelectItem>
+                            @foreach (var sprint in _sprints)
+                            {
+                                <MudSelectItem T="int?" Value="@sprint.Id">
+                                    @sprint.Name
+                                    @if (sprint.StartUtc.HasValue)
+                                    {
+                                        <text> (@sprint.StartUtc.Value.ToString("MMM yyyy"))</text>
+                                    }
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudCollapse>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
+    }
+    else if (_data != null)
+    {
+        @* ── Section 1: Category Summary Chips ──────────────────────────── *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Category" Class="mr-2" />
+                PR Classification Summary
+                @if (!string.IsNullOrEmpty(_data.TeamName))
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="ml-2">@_data.TeamName</MudChip>
+                }
+                @if (!string.IsNullOrEmpty(_data.SprintName))
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ml-1">@_data.SprintName</MudChip>
+                }
+            </MudText>
+
+            <MudGrid Spacing="2">
+                @* Delivery PRs *@
+                <MudItem xs="6" sm="3">
+                    <MudPaper Elevation="1" Class="pa-3 text-center">
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-success);">@_data.CategorySummary.DeliveryMappedCount</MudText>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Delivery PRs</MudText>
+                        <MudText Typo="Typo.caption" Style="color: var(--mud-palette-success);">@(_data.CategorySummary.DeliveryMappedPct.ToString("F0"))%</MudText>
+                    </MudPaper>
+                </MudItem>
+
+                @* Bug PRs *@
+                <MudItem xs="6" sm="3">
+                    <MudPaper Elevation="1" Class="pa-3 text-center">
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-error);">@_data.CategorySummary.BugCount</MudText>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Bug PRs</MudText>
+                        <MudText Typo="Typo.caption" Style="color: var(--mud-palette-error);">@(_data.CategorySummary.BugPct.ToString("F0"))%</MudText>
+                    </MudPaper>
+                </MudItem>
+
+                @* Disturbance PRs *@
+                <MudItem xs="6" sm="3">
+                    <MudPaper Elevation="1" Class="pa-3 text-center">
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-warning);">@_data.CategorySummary.DisturbanceCount</MudText>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Disturbance PRs</MudText>
+                        <MudText Typo="Typo.caption" Style="color: var(--mud-palette-warning);">@(_data.CategorySummary.DisturbancePct.ToString("F0"))%</MudText>
+                    </MudPaper>
+                </MudItem>
+
+                @* Unmapped PRs *@
+                <MudItem xs="6" sm="3">
+                    <MudPaper Elevation="1" Class="pa-3 text-center">
+                        <MudText Typo="Typo.h5" Color="Color.Default">@_data.CategorySummary.UnmappedCount</MudText>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Unmapped PRs</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@(_data.CategorySummary.UnmappedPct.ToString("F0"))%</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            @* Total *@
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+                Total: @_data.CategorySummary.TotalPrs PRs in scope
+            </MudText>
+        </MudPaper>
+
+        @* ── Section 2: Epic Friction Overview ──────────────────────────── *@
+        @if (_data.EpicBreakdown.Any())
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.TableChart" Class="mr-2" />
+                    Epic Friction Overview
+                    <MudTooltip Text="Sorted by PR count descending. Lifetime and abandonment indicate delivery friction per epic.">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" Class="ml-1" />
+                    </MudTooltip>
+                </MudText>
+
+                <MudTable Items="@_data.EpicBreakdown"
+                          Dense="true"
+                          Hover="true"
+                          Striped="true"
+                          Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Epic</MudTh>
+                        <MudTh Style="text-align:right;">PRs</MudTh>
+                        <MudTh Style="text-align:right;">Median Lifetime</MudTh>
+                        <MudTh Style="text-align:right;">P90 Lifetime</MudTh>
+                        <MudTh Style="text-align:right;">Abandoned %</MudTh>
+                        <MudTh Style="text-align:right;">Avg Review Cycles</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Epic">
+                            <MudText Typo="Typo.body2" Style="font-weight:500;">@context.EpicName</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">#@context.EpicId</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="PRs" Style="text-align:right;">
+                            <MudText Typo="Typo.body2">@context.PrCount</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Median Lifetime" Style="text-align:right;">
+                            @if (context.MedianLifetimeHours.HasValue)
+                            {
+                                <MudText Typo="Typo.body2" Style="@GetLifetimeColor(context.MedianLifetimeHours.Value)">
+                                    @PrFormatHelpers.FormatLifetime(context.MedianLifetimeHours.Value)
+                                </MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="P90 Lifetime" Style="text-align:right;">
+                            @if (context.P90LifetimeHours.HasValue)
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Warning">
+                                    @PrFormatHelpers.FormatLifetime(context.P90LifetimeHours.Value)
+                                </MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Abandoned %" Style="text-align:right;">
+                            @if (context.AbandonedPct.HasValue)
+                            {
+                                <MudText Typo="Typo.body2" Style="@GetAbandonColor(context.AbandonedPct.Value)">
+                                    @(context.AbandonedPct.Value.ToString("F0"))%
+                                </MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Avg Review Cycles" Style="text-align:right;">
+                            @if (context.AvgReviewCycles.HasValue)
+                            {
+                                <MudText Typo="Typo.body2">@(context.AvgReviewCycles.Value.ToString("F1"))</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        }
+
+        @* ── Section 2b: Feature Breakdown ──────────────────────────────── *@
+        @if (_data.FeatureBreakdown.Any())
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center"
+                          Style="cursor:pointer;" @onclick="() => _featureBreakdownExpanded = !_featureBreakdownExpanded">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Class="mr-1" />
+                        <MudText Typo="Typo.h6">Feature Breakdown</MudText>
+                        <MudTooltip Text="Per-Feature aggregated PR metrics. PR/PBI ratio indicates how many PRs were needed per backlog item — a high ratio can signal scope creep or complex features.">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" Class="ml-1" />
+                        </MudTooltip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ml-1">@_data.FeatureBreakdown.Count entries</MudChip>
+                    </MudStack>
+                    <MudIconButton Icon="@(_featureBreakdownExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                   Size="Size.Small"
+                                   Color="Color.Default"
+                                   OnClick="() => _featureBreakdownExpanded = !_featureBreakdownExpanded" />
+                </MudStack>
+
+                <MudCollapse Expanded="_featureBreakdownExpanded">
+                    <MudDivider Class="my-2" />
+                    <MudTable Items="@_data.FeatureBreakdown"
+                              Dense="true"
+                              Hover="true"
+                              Striped="true"
+                              Elevation="0">
+                        <HeaderContent>
+                            <MudTh>Feature</MudTh>
+                            <MudTh>Epic</MudTh>
+                            <MudTh Style="text-align:right;">PRs</MudTh>
+                            <MudTh Style="text-align:right;">PR / PBI</MudTh>
+                            <MudTh Style="text-align:right;">Median Lifetime</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Feature">
+                                <MudText Typo="Typo.body2" Style="font-weight:500;">@context.FeatureName</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">#@context.FeatureId</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Epic">
+                                @if (!string.IsNullOrEmpty(context.EpicName))
+                                {
+                                    <MudText Typo="Typo.body2">@context.EpicName</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="PRs" Style="text-align:right;">
+                                <MudText Typo="Typo.body2">@context.PrCount</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="PR / PBI" Style="text-align:right;">
+                                @if (context.PrPerPbiRatio.HasValue)
+                                {
+                                    <MudText Typo="Typo.body2"
+                                             Style="@GetPrPerPbiColor(context.PrPerPbiRatio.Value)">
+                                        @(context.PrPerPbiRatio.Value.ToString("F1"))
+                                    </MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="Median Lifetime" Style="text-align:right;">
+                                @if (context.MedianLifetimeHours.HasValue)
+                                {
+                                    <MudText Typo="Typo.body2" Style="@GetLifetimeColor(context.MedianLifetimeHours.Value)">
+                                        @PrFormatHelpers.FormatLifetime(context.MedianLifetimeHours.Value)
+                                    </MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                                }
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudCollapse>
+            </MudPaper>
+        }
+
+        @* ── Section 3: PR Lifetime Scatter ──────────────────────────────── *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Filled.ScatterPlot" Class="mr-2" />
+                        PR Lifetime Scatter
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        X: PR creation date &nbsp;|&nbsp; Y: PR lifetime &nbsp;|&nbsp; Color: outcome &nbsp;|&nbsp; Shape: Epic
+                    </MudText>
+                </MudStack>
+            </MudStack>
+
+            <PullRequestDeliveryScatterSvg Data="@_data.ScatterPoints"
+                                           Height="380"
+                                           ShowMedianLine="true"
+                                           ShowP90Line="true"
+                                           MedianLifetimeHours="@GetOverallMedian()"
+                                           P90LifetimeHours="@GetOverallP90()"
+                                           OnPointClick="OnScatterPointClick" />
+        </MudPaper>
+
+        @* ── Section 4: Outlier PR List (top 10) ─────────────────────────── *@
+        @if (_data.Outliers.Any())
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.FilterList" Color="Color.Error" Class="mr-2" />
+                    Longest PRs (Outliers)
+                    <MudTooltip Text="Top 10 longest-lived PRs in scope. High lifetime PRs are often symptoms of blocked delivery or review bottlenecks.">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" Class="ml-1" />
+                    </MudTooltip>
+                </MudText>
+
+                <MudTable Items="@_data.Outliers.Take(10)"
+                          Dense="true"
+                          Hover="true"
+                          Striped="true"
+                          Elevation="0">
+                    <HeaderContent>
+                        <MudTh>PR</MudTh>
+                        <MudTh>Epic</MudTh>
+                        <MudTh>Feature</MudTh>
+                        <MudTh Style="text-align:right;">Lifetime</MudTh>
+                        <MudTh Style="text-align:right;">Files Changed</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="PR">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2" Style="font-weight:500;">@TruncateTitle(context.Title, 45)</MudText>
+                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)" Variant="Variant.Text">
+                                        @PrFormatHelpers.FormatStatus(context.Status)
+                                    </MudChip>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Repository</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Epic">
+                            @if (!string.IsNullOrEmpty(context.EpicName))
+                            {
+                                <MudText Typo="Typo.body2">@context.EpicName</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Feature">
+                            @if (!string.IsNullOrEmpty(context.FeatureName))
+                            {
+                                <MudText Typo="Typo.body2">@context.FeatureName</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Lifetime" Style="text-align:right;">
+                            <MudText Typo="Typo.body2" Style="color: var(--mud-palette-error); font-weight: 500;">
+                                @PrFormatHelpers.FormatLifetime(context.LifetimeHours)
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Files Changed" Style="text-align:right;">
+                            <MudText Typo="Typo.body2">@context.FilesChanged</MudText>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        }
+    }
+    else
+    {
+        @* Empty / no data state *@
+        <MudPaper Elevation="2" Class="pa-6 mb-4 text-center">
+            <MudIcon Icon="@Icons.Material.Filled.LocalShipping" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-2">No PR data available</MudText>
+            <MudAlert Severity="Severity.Info" Class="mt-3">
+                Select a team and sprint to load PR delivery data.
+                All data is read from the local cache — no live Azure DevOps calls are made.
+            </MudAlert>
+        </MudPaper>
+    }
+
+</MudContainer>
+
+@* ── PR Delivery Detail Drawer ────────────────────────────────────────── *@
+<MudDrawer @bind-Open="_prDrawerOpen"
+           Anchor="Anchor.End"
+           Elevation="4"
+           Width="360px"
+           Variant="DrawerVariant.Temporary">
+    <MudDrawerHeader>
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Style="width:100%">
+            <MudText Typo="Typo.h6">PR Detail</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Close"
+                           OnClick="() => _prDrawerOpen = false"
+                           Size="Size.Small" />
+        </MudStack>
+    </MudDrawerHeader>
+
+    @if (_drawerPr is not null)
+    {
+        <MudContainer Class="px-4 py-2">
+
+            @* Status chip *@
+            <MudChip T="string"
+                     Color="@GetStatusColor(_drawerPr.Status)"
+                     Size="Size.Medium"
+                     Class="mb-2">
+                @PrFormatHelpers.FormatStatus(_drawerPr.Status)
+            </MudChip>
+
+            @* Category chip *@
+            <MudChip T="string"
+                     Color="@GetCategoryColor(_drawerPr.Category)"
+                     Variant="Variant.Text"
+                     Size="Size.Small"
+                     Class="mb-3">
+                @PrFormatHelpers.FormatCategory(_drawerPr.Category)
+            </MudChip>
+
+            @* Title *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Title</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3" Style="word-break: break-word;">@_drawerPr.Title</MudText>
+
+            @* Epic *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Epic</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">
+                @(_drawerPr.EpicName ?? "—")
+            </MudText>
+
+            @* Feature *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Feature</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">
+                @(_drawerPr.FeatureName ?? "—")
+            </MudText>
+
+            <MudDivider Class="my-2" />
+
+            @* Created *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Created</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">
+                @_drawerPr.CreatedDate.ToLocalTime().ToString("ddd MMM d, yyyy HH:mm")
+            </MudText>
+
+            @* Lifetime *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Lifetime</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">
+                @PrFormatHelpers.FormatLifetime(_drawerPr.LifetimeHours)
+            </MudText>
+
+        </MudContainer>
+    }
+</MudDrawer>
+
+@code {
+    // ── State ─────────────────────────────────────────────────────────────
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+
+    // Filter panel state
+    private bool _filterExpanded = true;
+    private bool _featureBreakdownExpanded = false;
+
+    // Filters
+    private int? _selectedTeamId;
+    private int? _selectedSprintId;
+    private DateTime? _fromDate;
+    private DateTime? _toDate;
+    private List<PoTool.Client.ApiClient.TeamDto> _teams = new();
+    private List<SprintDto> _sprints = new();
+
+    // Data
+    private PrDeliveryInsightsDto? _data;
+
+    // Drawer
+    private bool _prDrawerOpen;
+    private PrDeliveryScatterPointDto? _drawerPr;
+
+    /// <summary>
+    /// Fallback sprint duration (days) used when the selected sprint has no EndUtc set.
+    /// </summary>
+    private const int DefaultSprintDurationDays = 14;
+
+    // ── Init ─────────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await ProfileService.GetActiveProfileAsync();
+            _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
+
+            // Default: last 6 months
+            ResetToDefaultDateRange();
+
+            ParseQueryParameters();
+
+            // Auto-select team if only one is available
+            if (!_selectedTeamId.HasValue && _teams.Count == 1)
+            {
+                _selectedTeamId = _teams[0].Id;
+            }
+
+            if (_selectedTeamId.HasValue)
+            {
+                await LoadSprintsAndAutoSelectAsync(_selectedTeamId.Value);
+            }
+            else
+            {
+                await LoadInsightsAsync();
+            }
+
+            UpdateBreadcrumbs();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void ParseQueryParameters()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var qs  = HttpUtility.ParseQueryString(uri.Query);
+
+        if (int.TryParse(qs["teamId"], out var tid))
+            _selectedTeamId = tid;
+    }
+
+    private void ResetToDefaultDateRange()
+    {
+        _fromDate = DateTime.UtcNow.AddMonths(-6).Date;
+        _toDate   = DateTime.UtcNow.Date;
+    }
+
+    // ── Data loading ─────────────────────────────────────────────────────
+
+    private async Task LoadInsightsAsync()
+    {
+        try
+        {
+            var from = _fromDate.HasValue
+                ? new DateTimeOffset(_fromDate.Value, TimeSpan.Zero)
+                : DateTimeOffset.UtcNow.AddMonths(-6);
+
+            var to = _toDate.HasValue
+                ? new DateTimeOffset(_toDate.Value.AddDays(1).AddSeconds(-1), TimeSpan.Zero)
+                : DateTimeOffset.UtcNow;
+
+            _data = await PullRequestsClient.GetDeliveryInsightsAsync(
+                teamId:   _selectedTeamId,
+                sprintId: _selectedSprintId,
+                fromDate: from,
+                toDate:   to,
+                System.Threading.CancellationToken.None);
+
+            if (_data != null)
+            {
+                _filterExpanded = false;
+            }
+        }
+        catch (ApiException ex) when (ex.StatusCode == 404)
+        {
+            _data = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading PR delivery insights: {ex.Message}";
+        }
+    }
+
+    // ── Filter handlers ───────────────────────────────────────────────────
+
+    private async Task OnTeamChanged(int? teamId)
+    {
+        _selectedTeamId   = teamId;
+        _selectedSprintId = null;
+        _sprints.Clear();
+
+        if (teamId.HasValue)
+        {
+            await ReloadWithSprintAutoSelectAsync(teamId.Value);
+            return;
+        }
+
+        ResetToDefaultDateRange();
+
+        await ReloadAsync();
+    }
+
+    private async Task ReloadWithSprintAutoSelectAsync(int teamId)
+    {
+        _isLoading    = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        await LoadSprintsAndAutoSelectAsync(teamId);
+
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadSprintsAndAutoSelectAsync(int teamId)
+    {
+        try
+        {
+            var sprints = await SprintService.GetSprintsForTeamAsync(teamId);
+            _sprints = sprints
+                .Where(s => s.StartUtc.HasValue)
+                .OrderByDescending(s => s.StartUtc)
+                .ToList();
+
+            if (_sprints.Count > 0)
+            {
+                var now = DateTimeOffset.UtcNow;
+
+                var activeSprint = _sprints.FirstOrDefault(s =>
+                    s.StartUtc.HasValue && s.EndUtc.HasValue &&
+                    s.StartUtc.Value <= now && s.EndUtc.Value >= now);
+
+                if (activeSprint is null)
+                {
+                    var mostRecentPast = _sprints.FirstOrDefault(s =>
+                        s.EndUtc.HasValue && s.EndUtc.Value <= now);
+                    activeSprint = mostRecentPast ?? _sprints[0];
+                }
+
+                _selectedSprintId = activeSprint.Id;
+                if (activeSprint.StartUtc.HasValue)
+                {
+                    _fromDate = activeSprint.StartUtc.Value.UtcDateTime.Date;
+                    _toDate   = activeSprint.EndUtc?.UtcDateTime.Date ?? _fromDate.Value.AddDays(DefaultSprintDurationDays);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _sprints.Clear();
+            Snackbar.Add($"Could not load sprints: {ex.Message}", Severity.Warning);
+        }
+
+        await LoadInsightsAsync();
+    }
+
+    private async Task OnSprintChanged(int? sprintId)
+    {
+        _selectedSprintId = sprintId;
+
+        if (sprintId.HasValue)
+        {
+            var sprint = _sprints.FirstOrDefault(s => s.Id == sprintId.Value);
+            if (sprint?.StartUtc.HasValue == true)
+            {
+                _fromDate = sprint.StartUtc.Value.UtcDateTime.Date;
+                _toDate   = sprint.EndUtc?.UtcDateTime.Date ?? _fromDate.Value.AddDays(DefaultSprintDurationDays);
+            }
+        }
+
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        _isLoading    = true;
+        _errorMessage = null;
+        _prDrawerOpen = false;
+        StateHasChanged();
+
+        await LoadInsightsAsync();
+
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    private void OnScatterPointClick(PrDeliveryScatterPointDto pt)
+    {
+        _drawerPr     = pt;
+        _prDrawerOpen = true;
+        StateHasChanged();
+    }
+
+    // ── Navigation ────────────────────────────────────────────────────────
+
+    private void NavigateToHome()
+        => NavigationManager.NavigateTo(WorkspaceRoutes.Home);
+
+    private void UpdateBreadcrumbs()
+    {
+        _breadcrumbs = new List<BreadcrumbItem>
+        {
+            new("Home", WorkspaceRoutes.Home),
+            new("Trends (Past)", WorkspaceRoutes.TrendsWorkspace),
+            new("PR Delivery Insights", null, disabled: true)
+        };
+    }
+
+    // ── Formatting helpers ────────────────────────────────────────────────
+
+    private static string TruncateTitle(string s, int max) =>
+        s.Length <= max ? s : s[..max] + "…";
+
+    private static Color GetStatusColor(string status) =>
+        status.ToLowerInvariant() switch
+        {
+            "completed" => Color.Success,
+            "abandoned" => Color.Error,
+            _           => Color.Default
+        };
+
+    private static Color GetCategoryColor(string category) =>
+        category switch
+        {
+            "DeliveryMapped" => Color.Success,
+            "Bug"            => Color.Error,
+            "Disturbance"    => Color.Warning,
+            _                => Color.Default
+        };
+
+    private static string GetLifetimeColor(double h) =>
+        h >= 168 ? "color: var(--mud-palette-error);" :
+        h >= 72  ? "color: var(--mud-palette-warning);" :
+                   "";
+
+    private static string GetAbandonColor(double pct) =>
+        pct >= 30 ? "color: var(--mud-palette-error);" :
+        pct >= 15 ? "color: var(--mud-palette-warning);" :
+                    "color: var(--mud-palette-success);";
+
+    private static string GetPrPerPbiColor(double ratio) =>
+        ratio >= 4.0 ? "color: var(--mud-palette-error);" :
+        ratio >= 2.0 ? "color: var(--mud-palette-warning);" :
+                       "";
+
+    private double? GetOverallMedian()
+    {
+        var lifetimes = _data?.ScatterPoints
+            .Where(p => p.LifetimeHours > 0)
+            .Select(p => p.LifetimeHours)
+            .OrderBy(h => h)
+            .ToList();
+
+        if (lifetimes == null || lifetimes.Count == 0) return null;
+
+        int mid = lifetimes.Count / 2;
+        return lifetimes.Count % 2 == 0
+            ? (lifetimes[mid - 1] + lifetimes[mid]) / 2.0
+            : lifetimes[mid];
+    }
+
+    private double? GetOverallP90()
+    {
+        var lifetimes = _data?.ScatterPoints
+            .Where(p => p.LifetimeHours > 0)
+            .Select(p => p.LifetimeHours)
+            .OrderBy(h => h)
+            .ToList();
+
+        if (lifetimes == null || lifetimes.Count < 3) return null;
+
+        int idx = (int)Math.Ceiling(0.9 * lifetimes.Count) - 1;
+        return lifetimes[Math.Clamp(idx, 0, lifetimes.Count - 1)];
+    }
+}

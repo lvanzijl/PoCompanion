@@ -198,6 +198,21 @@
                     </MudCard>
                 </MudItem>
 
+                @* PR Delivery Insights Signal (Read-Only) *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="1"
+                             Style="cursor: pointer; transition: all 0.2s;"
+                             Class="mud-card-hover"
+                             @onclick="NavigateToPrDeliveryInsights">
+                        <MudCardContent Class="d-flex flex-column align-center pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.LocalShipping" Color="Color.Success" Size="Size.Large" />
+                            <MudText Typo="Typo.subtitle1" Class="mt-2">PR Delivery Insights</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">PR classification by Epic/Feature hierarchy</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
                 @* Portfolio Progress Trend Signal *@
                 <MudItem xs="12" sm="6" md="4">
                     <MudCard Elevation="1"
@@ -494,6 +509,11 @@
     private void NavigateToPipelineInsights()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.PipelineInsights);
+    }
+    
+    private void NavigateToPrDeliveryInsights()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.PrDeliveryInsights);
     }
     
     private void NavigateToPortfolioProgress()
