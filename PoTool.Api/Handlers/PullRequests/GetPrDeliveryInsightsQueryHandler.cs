@@ -571,6 +571,8 @@ public sealed class GetPrDeliveryInsightsQueryHandler
         // ── Signal 5: Epic-specific friction ─────────────────────────────────
         // Condition: one Epic has median lifetime > 2× the global median
         // and that Epic has at least 3 PRs (sufficient sample)
+        const int EpicNameMaxLength = 40;
+
         if (globalMedian.HasValue && globalMedian.Value > 0 && epicBreakdown.Count > 1)
         {
             var frictionEpic = epicBreakdown
@@ -581,12 +583,13 @@ public sealed class GetPrDeliveryInsightsQueryHandler
 
             if (frictionEpic != null)
             {
-                var epicDays = Math.Round(frictionEpic.MedianLifetimeHours!.Value / 24.0, 1);
+                var epicDays  = Math.Round(frictionEpic.MedianLifetimeHours!.Value / 24.0, 1);
+                var epicLabel = TruncateForSignal(frictionEpic.EpicName, EpicNameMaxLength);
                 tips.Add(new TeamImprovementTipDto
                 {
-                    Signal         = $"Epic-Specific Friction — \"{TruncateForSignal(frictionEpic.EpicName, 40)}\" (median {epicDays}d)",
+                    Signal         = $"Epic-Specific Friction — \"{epicLabel}\" (median {epicDays}d)",
                     Interpretation = "This Epic's PRs take significantly longer than average, which may indicate architectural complexity or unclear scope.",
-                    PoMessage      = $"Discuss complexity and delivery blockers for \"{TruncateForSignal(frictionEpic.EpicName, 40)}\" with the team. Consider breaking down remaining work further."
+                    PoMessage      = $"Discuss complexity and delivery blockers for \"{epicLabel}\" with the team. Consider breaking down remaining work further."
                 });
             }
         }
@@ -594,8 +597,11 @@ public sealed class GetPrDeliveryInsightsQueryHandler
         return tips;
     }
 
-    private static string TruncateForSignal(string value, int maxLength) =>
-        value.Length <= maxLength ? value : value[..maxLength] + "…";
+    private static string TruncateForSignal(string? value, int maxLength)
+    {
+        if (string.IsNullOrEmpty(value)) return string.Empty;
+        return value.Length <= maxLength ? value : value[..maxLength] + "…";
+    }
 
     private static double ComputeLifetimeHours(
         PoTool.Api.Persistence.Entities.PullRequestEntity pr,

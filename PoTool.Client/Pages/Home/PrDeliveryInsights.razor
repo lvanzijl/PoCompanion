@@ -583,8 +583,8 @@
                             Bug PR Distribution
                         </MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
-                            Bug PRs (@_data.CategorySummary.BugCount total, @(_data.CategorySummary.BugPct.ToString("F0"))%) are not linked to a Feature or Epic.
-                            The table below shows Epic-level lifetime context for comparison.
+                            Bug PRs (@_data.CategorySummary.BugCount total, @(_data.CategorySummary.BugPct.ToString("F0"))%) are linked to Bug work items without a traceable Feature or Epic.
+                            The table below shows Epic-level friction metrics for delivery-mapped PRs as comparison context.
                         </MudText>
                         <MudTable Items="@_data.EpicBreakdown"
                                   Dense="true"
