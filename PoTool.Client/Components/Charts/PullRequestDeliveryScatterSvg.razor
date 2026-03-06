@@ -24,6 +24,7 @@
 *@
 
 @namespace PoTool.Client.Components.Charts
+@using PoTool.Client.Helpers
 @using PoTool.Shared.PullRequests
 
 <div class="pr-scatter-container" style="position: relative; width: 100%;">
@@ -160,14 +161,14 @@
                 @* Epic / Feature *@
                 @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+30)}" font-size="9" fill="var(--mud-palette-text-secondary)">{He(_hoveredPoint.EpicName ?? "No Epic")} · {He(_hoveredPoint.FeatureName ?? "No Feature")}</text>""")
                 @* Lifetime *@
-                @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+46)}" font-size="9" fill="var(--mud-palette-text-secondary)">⏱ {He(FormatLifetime(_hoveredPoint.LifetimeHours))} lifetime</text>""")
+                @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+46)}" font-size="9" fill="var(--mud-palette-text-secondary)">⏱ {He(PrFormatHelpers.FormatLifetime(_hoveredPoint.LifetimeHours))} lifetime</text>""")
                 @* Category *@
                 @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+61)}" font-size="9" fill="var(--mud-palette-text-secondary)">Category: {He(_hoveredPoint.Category)}</text>""")
                 @* Status chip *@
                 <rect x="@F(ttX+8)" y="@F(ttY+72)"
                       width="@GetStatusChipW(_hoveredPoint.Status)" height="16" rx="8"
                       fill="@statusColor" opacity="0.18" />
-                @((MarkupString)$"""<text x="{F(ttX+16)}" y="{F(ttY+84)}" font-size="9" font-weight="600" fill="{statusColor}">{He(FormatStatus(_hoveredPoint.Status))}</text>""")
+                @((MarkupString)$"""<text x="{F(ttX+16)}" y="{F(ttY+84)}" font-size="9" font-weight="600" fill="{statusColor}">{He(PrFormatHelpers.FormatStatus(_hoveredPoint.Status))}</text>""")
             </g>
         }
 
@@ -396,23 +397,6 @@
     private static string GetEpicKey(int? epicId) => epicId?.ToString() ?? "none";
 
     // ── Tooltip helpers ───────────────────────────────────────────────────
-
-    private static string FormatLifetime(double h)
-    {
-        if (h <= 0) return "n/a";
-        if (h >= 168) { int w = (int)(h / 168); int d = (int)((h % 168) / 24); return d > 0 ? $"{w}w {d}d" : $"{w}w"; }
-        if (h >= 24)  { int d = (int)(h / 24); int hr = (int)(h % 24); return hr > 0 ? $"{d}d {hr}h" : $"{d}d"; }
-        return $"{h:F0}h";
-    }
-
-    private static string FormatStatus(string status) =>
-        status.ToLowerInvariant() switch
-        {
-            "completed" => "Merged",
-            "abandoned" => "Abandoned",
-            "active"    => "Active",
-            _           => status
-        };
 
     private static double GetStatusChipW(string status) =>
         status.ToLowerInvariant() switch

@@ -2,6 +2,7 @@
 @using PoTool.Client.Components.Charts
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @using PoTool.Client.Services
 @using PoTool.Shared.PullRequests
@@ -216,7 +217,7 @@
                             @if (context.MedianLifetimeHours.HasValue)
                             {
                                 <MudText Typo="Typo.body2" Style="@GetLifetimeColor(context.MedianLifetimeHours.Value)">
-                                    @FormatLifetime(context.MedianLifetimeHours.Value)
+                                    @PrFormatHelpers.FormatLifetime(context.MedianLifetimeHours.Value)
                                 </MudText>
                             }
                             else
@@ -228,7 +229,7 @@
                             @if (context.P90LifetimeHours.HasValue)
                             {
                                 <MudText Typo="Typo.body2" Color="Color.Warning">
-                                    @FormatLifetime(context.P90LifetimeHours.Value)
+                                    @PrFormatHelpers.FormatLifetime(context.P90LifetimeHours.Value)
                                 </MudText>
                             }
                             else
@@ -260,6 +261,89 @@
                         </MudTd>
                     </RowTemplate>
                 </MudTable>
+            </MudPaper>
+        }
+
+        @* ── Section 2b: Feature Breakdown ──────────────────────────────── *@
+        @if (_data.FeatureBreakdown.Any())
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center"
+                          Style="cursor:pointer;" @onclick="() => _featureBreakdownExpanded = !_featureBreakdownExpanded">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Class="mr-1" />
+                        <MudText Typo="Typo.h6">Feature Breakdown</MudText>
+                        <MudTooltip Text="Per-Feature aggregated PR metrics. PR/PBI ratio indicates how many PRs were needed per backlog item — a high ratio can signal scope creep or complex features.">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" Class="ml-1" />
+                        </MudTooltip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ml-1">@_data.FeatureBreakdown.Count entries</MudChip>
+                    </MudStack>
+                    <MudIconButton Icon="@(_featureBreakdownExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                   Size="Size.Small"
+                                   Color="Color.Default"
+                                   OnClick="() => _featureBreakdownExpanded = !_featureBreakdownExpanded" />
+                </MudStack>
+
+                <MudCollapse Expanded="_featureBreakdownExpanded">
+                    <MudDivider Class="my-2" />
+                    <MudTable Items="@_data.FeatureBreakdown"
+                              Dense="true"
+                              Hover="true"
+                              Striped="true"
+                              Elevation="0">
+                        <HeaderContent>
+                            <MudTh>Feature</MudTh>
+                            <MudTh>Epic</MudTh>
+                            <MudTh Style="text-align:right;">PRs</MudTh>
+                            <MudTh Style="text-align:right;">PR / PBI</MudTh>
+                            <MudTh Style="text-align:right;">Median Lifetime</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Feature">
+                                <MudText Typo="Typo.body2" Style="font-weight:500;">@context.FeatureName</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">#@context.FeatureId</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Epic">
+                                @if (!string.IsNullOrEmpty(context.EpicName))
+                                {
+                                    <MudText Typo="Typo.body2">@context.EpicName</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="PRs" Style="text-align:right;">
+                                <MudText Typo="Typo.body2">@context.PrCount</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="PR / PBI" Style="text-align:right;">
+                                @if (context.PrPerPbiRatio.HasValue)
+                                {
+                                    <MudText Typo="Typo.body2"
+                                             Style="@GetPrPerPbiColor(context.PrPerPbiRatio.Value)">
+                                        @(context.PrPerPbiRatio.Value.ToString("F1"))
+                                    </MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="Median Lifetime" Style="text-align:right;">
+                                @if (context.MedianLifetimeHours.HasValue)
+                                {
+                                    <MudText Typo="Typo.body2" Style="@GetLifetimeColor(context.MedianLifetimeHours.Value)">
+                                        @PrFormatHelpers.FormatLifetime(context.MedianLifetimeHours.Value)
+                                    </MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                                }
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudCollapse>
             </MudPaper>
         }
 
@@ -316,7 +400,7 @@
                                 <MudText Typo="Typo.body2" Style="font-weight:500;">@TruncateTitle(context.Title, 45)</MudText>
                                 <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
                                     <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)" Variant="Variant.Text">
-                                        @FormatStatus(context.Status)
+                                        @PrFormatHelpers.FormatStatus(context.Status)
                                     </MudChip>
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Repository</MudText>
                                 </MudStack>
@@ -344,7 +428,7 @@
                         </MudTd>
                         <MudTd DataLabel="Lifetime" Style="text-align:right;">
                             <MudText Typo="Typo.body2" Style="color: var(--mud-palette-error); font-weight: 500;">
-                                @FormatLifetime(context.LifetimeHours)
+                                @PrFormatHelpers.FormatLifetime(context.LifetimeHours)
                             </MudText>
                         </MudTd>
                         <MudTd DataLabel="Files Changed" Style="text-align:right;">
@@ -370,6 +454,76 @@
 
 </MudContainer>
 
+@* ── PR Delivery Detail Drawer ────────────────────────────────────────── *@
+<MudDrawer @bind-Open="_prDrawerOpen"
+           Anchor="Anchor.End"
+           Elevation="4"
+           Width="360px"
+           Variant="DrawerVariant.Temporary">
+    <MudDrawerHeader>
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Style="width:100%">
+            <MudText Typo="Typo.h6">PR Detail</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Close"
+                           OnClick="() => _prDrawerOpen = false"
+                           Size="Size.Small" />
+        </MudStack>
+    </MudDrawerHeader>
+
+    @if (_drawerPr is not null)
+    {
+        <MudContainer Class="px-4 py-2">
+
+            @* Status chip *@
+            <MudChip T="string"
+                     Color="@GetStatusColor(_drawerPr.Status)"
+                     Size="Size.Medium"
+                     Class="mb-2">
+                @PrFormatHelpers.FormatStatus(_drawerPr.Status)
+            </MudChip>
+
+            @* Category chip *@
+            <MudChip T="string"
+                     Color="@GetCategoryColor(_drawerPr.Category)"
+                     Variant="Variant.Text"
+                     Size="Size.Small"
+                     Class="mb-3">
+                @PrFormatHelpers.FormatCategory(_drawerPr.Category)
+            </MudChip>
+
+            @* Title *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Title</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3" Style="word-break: break-word;">@_drawerPr.Title</MudText>
+
+            @* Epic *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Epic</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">
+                @(_drawerPr.EpicName ?? "—")
+            </MudText>
+
+            @* Feature *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Feature</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">
+                @(_drawerPr.FeatureName ?? "—")
+            </MudText>
+
+            <MudDivider Class="my-2" />
+
+            @* Created *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Created</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">
+                @_drawerPr.CreatedDate.ToLocalTime().ToString("ddd MMM d, yyyy HH:mm")
+            </MudText>
+
+            @* Lifetime *@
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Lifetime</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">
+                @PrFormatHelpers.FormatLifetime(_drawerPr.LifetimeHours)
+            </MudText>
+
+        </MudContainer>
+    }
+</MudDrawer>
+
 @code {
     // ── State ─────────────────────────────────────────────────────────────
     private bool _isLoading = true;
@@ -378,6 +532,7 @@
 
     // Filter panel state
     private bool _filterExpanded = true;
+    private bool _featureBreakdownExpanded = false;
 
     // Filters
     private int? _selectedTeamId;
@@ -389,6 +544,10 @@
 
     // Data
     private PrDeliveryInsightsDto? _data;
+
+    // Drawer
+    private bool _prDrawerOpen;
+    private PrDeliveryScatterPointDto? _drawerPr;
 
     /// <summary>
     /// Fallback sprint duration (days) used when the selected sprint has no EndUtc set.
@@ -581,6 +740,7 @@
     {
         _isLoading    = true;
         _errorMessage = null;
+        _prDrawerOpen = false;
         StateHasChanged();
 
         await LoadInsightsAsync();
@@ -591,8 +751,9 @@
 
     private void OnScatterPointClick(PrDeliveryScatterPointDto pt)
     {
-        // Intentionally left as a no-op for now — the scatter provides visual insight.
-        // A detail drawer can be added in a future phase.
+        _drawerPr     = pt;
+        _prDrawerOpen = true;
+        StateHasChanged();
     }
 
     // ── Navigation ────────────────────────────────────────────────────────
@@ -612,25 +773,8 @@
 
     // ── Formatting helpers ────────────────────────────────────────────────
 
-    private static string FormatLifetime(double h)
-    {
-        if (h <= 0) return "n/a";
-        if (h >= 168) { int w = (int)(h / 168); int d = (int)((h % 168) / 24); return d > 0 ? $"{w}w {d}d" : $"{w}w"; }
-        if (h >= 24)  { int d = (int)(h / 24);  int hr = (int)(h % 24); return hr > 0 ? $"{d}d {hr}h" : $"{d}d"; }
-        return $"{h:F0}h";
-    }
-
     private static string TruncateTitle(string s, int max) =>
         s.Length <= max ? s : s[..max] + "…";
-
-    private static string FormatStatus(string status) =>
-        status.ToLowerInvariant() switch
-        {
-            "completed" => "Merged",
-            "abandoned" => "Abandoned",
-            "active"    => "Active",
-            _           => status
-        };
 
     private static Color GetStatusColor(string status) =>
         status.ToLowerInvariant() switch
@@ -638,6 +782,15 @@
             "completed" => Color.Success,
             "abandoned" => Color.Error,
             _           => Color.Default
+        };
+
+    private static Color GetCategoryColor(string category) =>
+        category switch
+        {
+            "DeliveryMapped" => Color.Success,
+            "Bug"            => Color.Error,
+            "Disturbance"    => Color.Warning,
+            _                => Color.Default
         };
 
     private static string GetLifetimeColor(double h) =>
@@ -649,6 +802,11 @@
         pct >= 30 ? "color: var(--mud-palette-error);" :
         pct >= 15 ? "color: var(--mud-palette-warning);" :
                     "color: var(--mud-palette-success);";
+
+    private static string GetPrPerPbiColor(double ratio) =>
+        ratio >= 4.0 ? "color: var(--mud-palette-error);" :
+        ratio >= 2.0 ? "color: var(--mud-palette-warning);" :
+                       "";
 
     private double? GetOverallMedian()
     {
