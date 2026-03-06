@@ -69,6 +69,7 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       ├──► /home/delivery/sprint  (velocity drilldown)            │
   │       ├──► /workitems?rootWorkItemId={epicId}                     │
   │       ├──► /home/dependencies  (read-only)                        │
+  │       ├──► /planning/product-roadmaps  (Product Roadmaps — read-only) │
   │       ├──► /home/backlog-overview  (cross-workspace)               │
   │       ├──► /home/health  (cross-workspace)                        │
   │       └──► /home/trends  (cross-workspace)                        │
@@ -325,11 +326,12 @@ Global header (available on every page) ◄────────────�
 | Epics with Invalid Items detail table | Shown when epics have validation issues. Columns: ID, Title, State, Invalid Item Count, and link to Work Item Explorer (scoped to that epic). |
 | Capacity Confidence block | Shown when past sprint data is available. Displays median velocity (P50), P25–P75 band, median predictability, and a safe planning capacity (P25). Updates when product selection changes. |
 | Planning Board section | Embeds the PlanningBoard component with product selector. "Full Release Planning" link to `/release-planning`. |
+| Product Roadmaps button | Navigates to the Product Roadmaps overview (`/planning/product-roadmaps`). |
 | Available Actions chips | Lists supported end-station actions: Epic Repositioning and Implicit Reprioritization. |
 | Cross-workspace navigation | Buttons to Backlog Overview, Health (Now), and Trends (Past). |
 | Home button | Returns to `/home`. |
 
-**Outgoing navigation:** `/home/delivery/sprint`, `/workitems` (scoped to epic or all), `/home/dependencies`, `/home/backlog-overview`, `/home/health`, `/home/planning`, `/release-planning`, `/home`
+**Outgoing navigation:** `/home/delivery/sprint`, `/workitems` (scoped to epic or all), `/home/dependencies`, `/planning/product-roadmaps`, `/home/backlog-overview`, `/home/health`, `/home/planning`, `/release-planning`, `/home`
 
 ---
 
@@ -463,6 +465,25 @@ When multiple linked work items resolve to different categories, the highest-pri
 | Home button | Returns to `/home`. |
 
 **Outgoing navigation:** `/home`, `/dependency-graph` (full management, separate page)
+
+---
+
+### 2.12a Product Roadmaps — `/planning/product-roadmaps`
+
+**Purpose:** Read-only overview of product roadmaps across all products. Displays horizontal product lanes with vertically stacked roadmap epics. Products are ordered by their configured order (Objective BacklogPriority). Only epics tagged with **"roadmap"** are shown. Epic cards display order number, title, TFS ID, and a link to open the epic in TFS.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Planning (Future) › Product Roadmaps`. |
+| Read-only chip | Indicates this is a read-only view. Epic editing is done in the Product Roadmap editor page. |
+| Product lanes | Horizontal scrollable container with one lane per product. Each lane shows the product name and epic count. |
+| Move Earlier/Later buttons | Swap product lane order with the neighbouring product. Disabled at boundaries (first/last). Persists new order via product reordering API. |
+| Roadmap epic cards | Each card shows: order number (#1, #2, …), epic title, TFS ID, and an "Open in TFS" icon link. |
+| Empty lane placeholder | When a product has no roadmap epics, an informational message is displayed. |
+| Home button | Returns to `/home`. |
+| Cross-workspace navigation | Buttons to Planning (Future) and Health (Now). |
+
+**Outgoing navigation:** `/home`, `/home/planning`, `/home/health`
 
 ---
 
@@ -656,7 +677,7 @@ Sprint Delivery
 | Portfolio Delivery | `/home/delivery/portfolio` | Delivery workspace | Select sprint range, view aggregated delivery snapshot | `/home/delivery` |
 | Trends (Past) | `/home/trends` | Home workspace card | Click trend signal | `/home/portfolio-progress`, `/home/trends/delivery`, `/home/bugs`, `/home/pull-requests`, `/home/pr-delivery-insights`, `/home/pipelines`, `/home/pipeline-insights`, `/home/delivery`, `/home/health`, `/home/planning` |
 | Delivery Trends | `/home/trends/delivery` | Trends workspace | Select sprint range | `/home/trends`, `/home` |
-| Planning (Future) | `/home/planning` | Home workspace card | Click planning signal | `/home/delivery/sprint`, `/workitems`, `/home/dependencies`, `/release-planning`, `/home/health` |
+| Planning (Future) | `/home/planning` | Home workspace card | Click planning signal | `/home/delivery/sprint`, `/workitems`, `/home/dependencies`, `/planning/product-roadmaps`, `/release-planning`, `/home/health` |
 | Bug Insights | `/home/bugs` | Health signal, Trends chart click | View/filter bugs | `/bugs-triage`, `/home/bugs/detail/{id}`, `/home` |
 | Bug Detail | `/home/bugs/detail/{id}` | Bug Insights | Edit severity/tags | `/home/bugs` |
 | Bug Triage | `/bugs-triage` | Home quick action, Bug Insights | Triage tags | (self-contained) |
@@ -664,6 +685,7 @@ Sprint Delivery
 | PR Delivery Insights | `/home/pr-delivery-insights` | Trends workspace | Select team/sprint, view PR classification | `/home/trends`, `/home` |
 | Pipeline Insights | `/home/pipeline-insights` | Trends workspace | Select team/sprint, view per-product health | `/home/trends`, `/home` |
 | Dependency Overview | `/home/dependencies` | Planning workspace | View dependencies | `/home`, `/dependency-graph` |
+| Product Roadmaps | `/planning/product-roadmaps` | Planning workspace | View roadmap lanes, reorder products | `/home`, `/home/planning`, `/home/health` |
 | Plan Board | `/home/plan-board` | Home quick action | View/filter board | `/home` |
 | Portfolio Progress Trend | `/home/portfolio-progress` | Trends workspace | Select product, team, sprint range | `/home/trends` |
 | Work Item Activity | `/home/delivery/sprint/activity/{id}` | Sprint Delivery drilldown | View activity | `/home/delivery/sprint` |

@@ -30,6 +30,7 @@
 10. [Planning-werkruimte — Toekomst](#10-planning-werkruimte--toekomst)
     - 10.1 [Planbord](#101-planbord)
     - 10.2 [Afhankelijkheidsoverzicht](#102-afhankelijkheidsoverzicht)
+    - 10.3 [Product Roadmaps](#103-product-roadmaps)
 11. [Bugbeheer](#11-bugbeheer)
     - 11.1 [Bug-inzichten](#111-bug-inzichten)
     - 11.2 [Bug-triage](#112-bug-triage)
@@ -925,6 +926,31 @@ Het Planbord toont epics en features georganiseerd per iteratie. Het is toeganke
 Een alleen-lezen visueel overzicht van werkitem-afhankelijkheden tussen epics en teams.
 
 > **Let op:** Dit is een inzichtweergave. Voor het beheren van afhankelijkheden ga je via de link naar het volledige afhankelijkheidsbeheer (`/dependency-graph`).
+
+---
+
+### 10.3 Product Roadmaps
+
+**Pagina:** `/planning/product-roadmaps`
+
+De Product Roadmaps-pagina biedt een alleen-lezen overzicht van de roadmap per product. Producten worden weergegeven als horizontale banen, met per baan de bijbehorende roadmap-epics verticaal gestapeld.
+
+#### Doel
+
+Deze pagina beantwoordt de vraag: *Wat zijn de geplande epics per product op de roadmap?* Gebruik deze pagina om een portfoliobrede blik op roadmaps te krijgen.
+
+#### Hoe werkt het?
+
+- **Roadmap-epics** worden bepaald door de tag **"roadmap"** (kleine letters). Alleen epics met deze tag verschijnen op de pagina.
+- De **productvolgorde** wordt bepaald door de geconfigureerde productvolgorde (Objective BacklogPriority). Je kunt de volgorde aanpassen met de **Eerder/Later**-knoppen in de kop van elke productbaan.
+- De **epicvolgorde** binnen een product volgt de Epic BacklogPriority.
+- Elke epickaart toont: volgnummer, epictitel, TFS-ID en een link om de epic in TFS te openen.
+
+#### Productbanen herschikken
+
+Met de pijlknoppen (◀ ▶) in de kop van elke baan kun je een product eerder of later plaatsen. De eerste en laatste baan hebben de bijbehorende knop uitgeschakeld.
+
+> **Let op:** Epics bewerken doe je op de **Product Roadmap-editorpagina**, niet op deze overzichtspagina.
 
 ---
 
