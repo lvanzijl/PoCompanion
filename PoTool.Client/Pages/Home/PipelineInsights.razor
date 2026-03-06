@@ -321,7 +321,7 @@
                                             P90DurationMinutes="@product.P90DurationMinutes"
                                             SloDurationMinutes="@_sloDurationMinutes"
                                             HighlightedPipelineIds="@highlightSet"
-                                            OnPointClick="@(pt => OpenBuildDrawer(pt))" />
+                                            OnPointClick="@(pt => OpenBuildDrawerAsync(pt, product.ProductId))" />
                         }
                         else
                         {
@@ -545,6 +545,13 @@
 
             var teams = await TeamService.GetAllTeamsAsync();
             _teams = teams.OrderBy(t => t.Name).ToList();
+
+            // Auto-select team if only one is available
+            if (_teams.Count == 1)
+            {
+                await OnTeamChanged(_teams[0].Id);
+                return;
+            }
         }
         catch (Exception ex)
         {
@@ -744,11 +751,14 @@
         }
     }
 
-    private void OpenBuildDrawer(TimeScatterPoint point)
+    private async Task OpenBuildDrawerAsync(TimeScatterPoint point, int productId)
     {
         _drawerPoint = point;
         _drawerOpen  = true;
         StateHasChanged();
+
+        // Scroll the product section into view so the drawer opens next to the scatter chart
+        await ScrollToProductAsync(productId);
     }
 
     // ── Formatting helpers ───────────────────────────────────────────────

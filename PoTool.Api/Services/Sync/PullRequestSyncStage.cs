@@ -15,6 +15,12 @@ public class PullRequestSyncStage : ISyncStage
     private const string PullRequestStatusAll = "all";
     private const string NoToDateFilter = "null";
 
+    /// <summary>
+    /// Maximum number of concurrent TFS API calls when fetching PR detail data
+    /// (iterations, comments, file changes). Kept low to avoid rate-limiting.
+    /// </summary>
+    private const int MaxConcurrentPrDetailFetches = 3;
+
     private readonly ITfsClient _tfsClient;
     private readonly PoToolDbContext _context;
     private readonly ILogger<PullRequestSyncStage> _logger;
@@ -99,6 +105,10 @@ public class PullRequestSyncStage : ISyncStage
             // Upsert pull requests to database
             var maxDate = await UpsertPullRequestsAsync(allPullRequests, progressCallback, cancellationToken);
 
+            // Fetch and save related detail data (iterations, comments, file changes)
+            // that are used by PR Insights to compute review cycles, comment counts, and file change counts.
+            await UpsertPullRequestDetailDataAsync(allPullRequests, cancellationToken);
+
             progressCallback(100);
 
             _logger.LogInformation(
@@ -177,6 +187,226 @@ public class PullRequestSyncStage : ISyncStage
         }
 
         return maxDate;
+    }
+
+    /// <summary>
+    /// Fetches and upserts iterations, comments, and file changes for each PR.
+    /// These are required by PR Insights to compute review cycles, comment counts,
+    /// and files-changed counts. The PullRequestSyncStage previously omitted these,
+    /// causing those metrics to appear as zero in the insights view.
+    ///
+    /// A semaphore limits concurrent TFS API calls to avoid rate-limiting.
+    /// Per-PR failures are logged as warnings and do not abort the stage.
+    /// </summary>
+    private async Task UpsertPullRequestDetailDataAsync(
+        List<PullRequestDto> pullRequests,
+        CancellationToken cancellationToken)
+    {
+        var allIterations  = new System.Collections.Concurrent.ConcurrentBag<PullRequestIterationDto>();
+        var allComments    = new System.Collections.Concurrent.ConcurrentBag<PullRequestCommentDto>();
+        var allFileChanges = new System.Collections.Concurrent.ConcurrentBag<PullRequestFileChangeDto>();
+
+        await Parallel.ForEachAsync(
+            pullRequests,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = MaxConcurrentPrDetailFetches,
+                CancellationToken      = cancellationToken
+            },
+            async (pr, ct) =>
+            {
+                try
+                {
+                    // Fetch iterations (used for review-cycle count)
+                    var iterations = (await _tfsClient.GetPullRequestIterationsAsync(
+                        pr.Id, pr.RepositoryName, ct)).ToList();
+
+                    foreach (var it in iterations)
+                        allIterations.Add(it);
+
+                    // Fetch comments (used for comment count)
+                    var comments = await _tfsClient.GetPullRequestCommentsAsync(
+                        pr.Id, pr.RepositoryName, ct);
+
+                    foreach (var c in comments)
+                        allComments.Add(c);
+
+                    // Fetch file changes for the last iteration only.
+                    // Azure DevOps returns cumulative changes per iteration, so the last
+                    // iteration contains all unique files changed across the whole PR.
+                    if (iterations.Count > 0)
+                    {
+                        var lastIteration = iterations.OrderByDescending(i => i.IterationNumber).First();
+                        var fileChanges = await _tfsClient.GetPullRequestFileChangesAsync(
+                            pr.Id, pr.RepositoryName, lastIteration.IterationNumber, ct);
+
+                        foreach (var fc in fileChanges)
+                            allFileChanges.Add(fc);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "PR_DETAIL_SKIP: Could not fetch detail data for PR {PrId} in repo {Repo}",
+                        pr.Id, pr.RepositoryName);
+                }
+            });
+
+        var iterationsList  = allIterations.ToList();
+        var commentsList    = allComments.ToList();
+        var fileChangesList = allFileChanges.ToList();
+
+        _logger.LogInformation(
+            "PR_DETAIL_INGEST: {IterCount} iterations, {CommentCount} comments, {FileCount} file-change rows fetched",
+            iterationsList.Count, commentsList.Count, fileChangesList.Count);
+
+        if (iterationsList.Count > 0)
+            await UpsertIterationsAsync(iterationsList, cancellationToken);
+
+        if (commentsList.Count > 0)
+            await UpsertCommentsAsync(commentsList, cancellationToken);
+
+        if (fileChangesList.Count > 0)
+            await UpsertFileChangesAsync(fileChangesList, cancellationToken);
+    }
+
+    private async Task UpsertIterationsAsync(
+        List<PullRequestIterationDto> iterations,
+        CancellationToken cancellationToken)
+    {
+        var prIds = iterations.Select(i => i.PullRequestId).Distinct().ToList();
+        var existing = await _context.PullRequestIterations
+            .Where(i => prIds.Contains(i.PullRequestId))
+            .ToListAsync(cancellationToken);
+
+        var existingKeys = existing
+            .Select(i => new { i.PullRequestId, i.IterationNumber })
+            .ToHashSet();
+
+        var toInsert = new List<PullRequestIterationEntity>();
+
+        foreach (var dto in iterations)
+        {
+            var key = new { dto.PullRequestId, dto.IterationNumber };
+            var existingEntity = existing.FirstOrDefault(
+                i => i.PullRequestId == dto.PullRequestId &&
+                     i.IterationNumber == dto.IterationNumber);
+
+            if (existingEntity != null)
+            {
+                existingEntity.UpdatedDate = dto.UpdatedDate;
+                existingEntity.CommitCount = dto.CommitCount;
+                existingEntity.ChangeCount = dto.ChangeCount;
+            }
+            else if (!existingKeys.Contains(key))
+            {
+                toInsert.Add(new PullRequestIterationEntity
+                {
+                    PullRequestId   = dto.PullRequestId,
+                    IterationNumber = dto.IterationNumber,
+                    CreatedDate     = dto.CreatedDate,
+                    UpdatedDate     = dto.UpdatedDate,
+                    CommitCount     = dto.CommitCount,
+                    ChangeCount     = dto.ChangeCount
+                });
+                existingKeys.Add(key);
+            }
+        }
+
+        if (toInsert.Count > 0)
+            await _context.PullRequestIterations.AddRangeAsync(toInsert, cancellationToken);
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task UpsertCommentsAsync(
+        List<PullRequestCommentDto> comments,
+        CancellationToken cancellationToken)
+    {
+        var commentIds = comments.Select(c => c.Id).ToList();
+        var existing = await _context.PullRequestComments
+            .Where(c => commentIds.Contains(c.Id))
+            .ToListAsync(cancellationToken);
+
+        // Build dictionary for O(1) lookups when updating existing comments
+        var commentsByIdLookup = comments.ToDictionary(c => c.Id);
+        var existingIds = existing.Select(c => c.Id).ToHashSet();
+
+        foreach (var existingComment in existing)
+        {
+            var updated = commentsByIdLookup[existingComment.Id];
+            existingComment.Content      = updated.Content;
+            existingComment.UpdatedDate  = updated.UpdatedDate;
+            existingComment.IsResolved   = updated.IsResolved;
+            existingComment.ResolvedDate = updated.ResolvedDate;
+            existingComment.ResolvedBy   = updated.ResolvedBy;
+        }
+
+        var toInsert = comments
+            .Where(c => !existingIds.Contains(c.Id))
+            .Select(c => new PullRequestCommentEntity
+            {
+                Id            = c.Id,
+                PullRequestId = c.PullRequestId,
+                ThreadId      = c.ThreadId,
+                Author        = c.Author,
+                Content       = c.Content,
+                CreatedDate   = c.CreatedDate,
+                CreatedDateUtc = c.CreatedDate.UtcDateTime,
+                UpdatedDate   = c.UpdatedDate,
+                IsResolved    = c.IsResolved,
+                ResolvedDate  = c.ResolvedDate,
+                ResolvedBy    = c.ResolvedBy
+            });
+
+        await _context.PullRequestComments.AddRangeAsync(toInsert, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task UpsertFileChangesAsync(
+        List<PullRequestFileChangeDto> fileChanges,
+        CancellationToken cancellationToken)
+    {
+        // Group by PR + iteration and replace all rows for each group
+        var groups = fileChanges
+            .GroupBy(fc => new { fc.PullRequestId, fc.IterationId })
+            .ToList();
+
+        var prIds        = groups.Select(g => g.Key.PullRequestId).Distinct().ToList();
+        var iterationIds = groups.Select(g => g.Key.IterationId).Distinct().ToList();
+
+        var existing = await _context.PullRequestFileChanges
+            .Where(fc => prIds.Contains(fc.PullRequestId) && iterationIds.Contains(fc.IterationId))
+            .ToListAsync(cancellationToken);
+
+        var groupKeys = groups
+            .Select(g => new { g.Key.PullRequestId, g.Key.IterationId })
+            .ToHashSet();
+
+        var toRemove = existing
+            .Where(fc => groupKeys.Contains(new { fc.PullRequestId, fc.IterationId }))
+            .ToList();
+
+        _context.PullRequestFileChanges.RemoveRange(toRemove);
+
+        var toInsert = groups.SelectMany(g => g.Select(fc => new PullRequestFileChangeEntity
+        {
+            PullRequestId = fc.PullRequestId,
+            IterationId   = fc.IterationId,
+            FilePath      = fc.FilePath,
+            ChangeType    = fc.ChangeType,
+            LinesAdded    = fc.LinesAdded,
+            LinesDeleted  = fc.LinesDeleted,
+            LinesModified = fc.LinesModified
+        }));
+
+        await _context.PullRequestFileChanges.AddRangeAsync(toInsert, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     private static void UpdateEntity(PullRequestEntity entity, PullRequestDto dto)
