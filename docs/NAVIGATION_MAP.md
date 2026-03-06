@@ -3,7 +3,7 @@
 **Audience:** Product Owners and stakeholders  
 **Scope:** All non-legacy, non-settings pages  
 **Purpose:** Human-readable reference of available navigation and functionality; basis for improvement analysis  
-**Last Updated:** 2026-03-06 (PR Delivery Insights page added under Trends: §2.11 /home/pr-delivery-insights)
+**Last Updated:** 2026-03-06 (PR Delivery Insights §2.11: Team Improvement Tips + Diagnostics expander added)
 
 ---
 
@@ -409,7 +409,7 @@ Global header (available on every page) ◄────────────�
 
 ### 2.11 PR Delivery Insights — `/home/pr-delivery-insights`
 
-**Purpose:** PO-focused, read-only view that classifies Pull Requests by their linked work items and aggregates metrics at Epic and Feature level. Answers the question: *"Which Epics and Features are generating the most PR friction?"* All data is read from the local cache — no live Azure DevOps calls.
+**Purpose:** PO-focused, read-only view that classifies Pull Requests by their linked work items and aggregates metrics at Epic and Feature level. Answers the question: *"Which Epics and Features are generating the most PR friction?"* Also provides actionable Team Improvement Tips derived from signal detection on the PR data. All data is read from the local cache — no live Azure DevOps calls.
 
 | Functionality | Description |
 |---|---|
@@ -422,6 +422,8 @@ Global header (available on every page) ◄────────────�
 | Feature breakdown table | Per-Feature metrics: Feature name, Epic name, PR count, PR-per-PBI ratio, median lifetime. Sorted by PR count descending. |
 | Delivery scatter chart | Scatter plot (X = PR creation date, Y = lifetime in hours). Points are coloured by category (DeliveryMapped / Bug / Disturbance / Unmapped) and shaped by Epic. |
 | Outlier PR table | Top 20 longest-lived PRs: PR title, repository, status, lifetime, files changed, review cycles, Epic name, Feature name, category. |
+| Team Improvement Tips | Up to three rule-based tips derived from signal detection. Each tip shows: Signal (detected metric pattern), Interpretation (what the pattern likely indicates), and PO Message (concise message for the team). |
+| Diagnostics expander | Optional, hidden by default. Shows Feature complexity table (PR/PBI ratios) and Bug PR distribution per Epic context. |
 | Home button | Returns to `/home`. |
 
 **PR Classification Rules (priority order):**
@@ -434,6 +436,16 @@ Global header (available on every page) ◄────────────�
 | Unmapped | PR has no usable work item link. |
 
 When multiple linked work items resolve to different categories, the highest-priority category is used.
+
+**Team Improvement Tips — Signal Detection Rules:**
+
+| Signal | Condition | Threshold |
+|---|---|---|
+| Long PR Lifetimes | Global median lifetime of completed PRs exceeds baseline. | median > 24 h |
+| High Review Churn | High percentage of completed PRs required multiple review iterations. | > 30 % of PRs with ReviewCycles > 1 |
+| High Bug PR Share | Large proportion of PRs linked to Bug work items. | BugPct > 20 % |
+| High Disturbance Share | Many PRs linked to PBIs without Feature parents. | DisturbancePct > 20 % |
+| Epic-Specific Friction | Single Epic's median lifetime is more than 2× the global median (minimum 3 PRs). | epicMedian > 2 × globalMedian |
 
 **Outgoing navigation:** `/home`, `/home/trends`
 

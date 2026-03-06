@@ -475,4 +475,172 @@ public class GetPrDeliveryInsightsQueryHandlerTests
                 result.Outliers[i].LifetimeHours);
         }
     }
+
+    // ── Signal detection tests ─────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task Handle_NoPrs_ImprovementTipsEmpty()
+    {
+        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        Assert.HasCount(0, result.ImprovementTips, "No tips should be generated when there are no PRs");
+    }
+
+    [TestMethod]
+    public async Task Handle_LongMedianLifetime_GeneratesLongLifetimeTip()
+    {
+        // All completed PRs have 48-hour lifetime (> 24h threshold)
+        var created = RangeFrom.AddDays(1);
+        for (var i = 1; i <= 5; i++)
+        {
+            await AddPrAsync(
+                i,
+                status: "completed",
+                createdDate: created,
+                completedDate: created.AddHours(48));
+        }
+
+        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        Assert.IsTrue(
+            result.ImprovementTips.Any(t => t.Signal.Contains("Long PR Lifetimes")),
+            "Should detect long PR lifetime signal when median > 24h");
+    }
+
+    [TestMethod]
+    public async Task Handle_ShortMedianLifetime_NoLongLifetimeTip()
+    {
+        // All completed PRs have 8-hour lifetime (< 24h threshold)
+        var created = RangeFrom.AddDays(1);
+        for (var i = 1; i <= 5; i++)
+        {
+            await AddPrAsync(
+                i,
+                status: "completed",
+                createdDate: created,
+                completedDate: created.AddHours(8));
+        }
+
+        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        Assert.IsFalse(
+            result.ImprovementTips.Any(t => t.Signal.Contains("Long PR Lifetimes")),
+            "Should NOT detect long PR lifetime signal when median <= 24h");
+    }
+
+    [TestMethod]
+    public async Task Handle_HighReviewChurn_GeneratesReviewChurnTip()
+    {
+        // 4 of 5 completed PRs have > 1 review cycle (80% > 30% threshold)
+        var created = RangeFrom.AddDays(1);
+
+        // PR 1: 1 review cycle (no churn)
+        await AddPrAsync(1, status: "completed", createdDate: created, completedDate: created.AddHours(8));
+
+        // PRs 2-5: 2 review cycles each (churn) — add iterations to simulate
+        for (var i = 2; i <= 5; i++)
+        {
+            await AddPrAsync(i, status: "completed", createdDate: created, completedDate: created.AddHours(8));
+            // Add two iteration records to simulate multiple review cycles
+            _context.PullRequestIterations.Add(new PoTool.Api.Persistence.Entities.PullRequestIterationEntity
+            {
+                PullRequestId = i, IterationNumber = 1,
+                CreatedDate = created, UpdatedDate = created
+            });
+            _context.PullRequestIterations.Add(new PoTool.Api.Persistence.Entities.PullRequestIterationEntity
+            {
+                PullRequestId = i, IterationNumber = 2,
+                CreatedDate = created.AddHours(1), UpdatedDate = created.AddHours(1)
+            });
+        }
+        await _context.SaveChangesAsync();
+
+        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        Assert.IsTrue(
+            result.ImprovementTips.Any(t => t.Signal.Contains("Review Churn")),
+            "Should detect high review churn signal when > 30% of PRs have multiple review cycles");
+    }
+
+    [TestMethod]
+    public async Task Handle_HighBugShare_GeneratesBugShareTip()
+    {
+        // 2 of 5 PRs linked to Bugs (40% > 20% threshold)
+        var created = RangeFrom.AddDays(1);
+
+        for (var i = 1; i <= 5; i++)
+            await AddPrAsync(i, status: "completed", createdDate: created, completedDate: created.AddHours(8));
+
+        await AddWorkItemAsync(101, WorkItemType.Bug, "Bug 1");
+        await AddWorkItemAsync(102, WorkItemType.Bug, "Bug 2");
+        await AddWorkItemLinkAsync(1, 101);
+        await AddWorkItemLinkAsync(2, 102);
+
+        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        Assert.IsTrue(
+            result.ImprovementTips.Any(t => t.Signal.Contains("Bug PR Share")),
+            "Should detect high bug PR share signal when BugPct > 20%");
+    }
+
+    [TestMethod]
+    public async Task Handle_HighDisturbanceShare_GeneratesDisturbanceTip()
+    {
+        // 2 of 5 PRs linked to orphan PBIs (40% > 20% threshold)
+        var created = RangeFrom.AddDays(1);
+
+        for (var i = 1; i <= 5; i++)
+            await AddPrAsync(i, status: "completed", createdDate: created, completedDate: created.AddHours(8));
+
+        await AddWorkItemAsync(201, WorkItemType.Pbi, "Orphan PBI 1");
+        await AddWorkItemAsync(202, WorkItemType.Pbi, "Orphan PBI 2");
+        await AddWorkItemLinkAsync(1, 201);
+        await AddWorkItemLinkAsync(2, 202);
+
+        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        Assert.IsTrue(
+            result.ImprovementTips.Any(t => t.Signal.Contains("Disturbance Share")),
+            "Should detect high disturbance share signal when DisturbancePct > 20%");
+    }
+
+    [TestMethod]
+    public async Task Handle_ImprovementTips_NeverExceedsThree()
+    {
+        // Setup: long lifetime + high bug share + high disturbance share (3+ signals active)
+        var created = RangeFrom.AddDays(1);
+
+        for (var i = 1; i <= 10; i++)
+        {
+            await AddPrAsync(i, status: "completed", createdDate: created, completedDate: created.AddHours(48));
+        }
+
+        // Add bugs (30% bug share)
+        await AddWorkItemAsync(101, WorkItemType.Bug, "Bug 1");
+        await AddWorkItemAsync(102, WorkItemType.Bug, "Bug 2");
+        await AddWorkItemAsync(103, WorkItemType.Bug, "Bug 3");
+        await AddWorkItemLinkAsync(1, 101);
+        await AddWorkItemLinkAsync(2, 102);
+        await AddWorkItemLinkAsync(3, 103);
+
+        // Add disturbances (30% disturbance share)
+        await AddWorkItemAsync(201, WorkItemType.Pbi, "Orphan PBI 1");
+        await AddWorkItemAsync(202, WorkItemType.Pbi, "Orphan PBI 2");
+        await AddWorkItemAsync(203, WorkItemType.Pbi, "Orphan PBI 3");
+        await AddWorkItemLinkAsync(4, 201);
+        await AddWorkItemLinkAsync(5, 202);
+        await AddWorkItemLinkAsync(6, 203);
+
+        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        Assert.IsLessThanOrEqualTo(result.ImprovementTips.Count, 3,
+            $"Should never return more than 3 tips, got {result.ImprovementTips.Count}");
+    }
 }

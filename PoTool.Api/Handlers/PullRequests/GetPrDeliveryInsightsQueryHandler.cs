@@ -447,7 +447,10 @@ public sealed class GetPrDeliveryInsightsQueryHandler
             })
             .ToList();
 
-        // ── 14. Assemble result ────────────────────────────────────────────────
+        // ── 14. Team improvement tips (signal detection) ─────────────────────────
+        var improvementTips = DetectImprovementTips(classified, categorySummary, epicBreakdown);
+
+        // ── 15. Assemble result ────────────────────────────────────────────────
         return new PrDeliveryInsightsDto
         {
             TeamId          = query.TeamId,
@@ -460,11 +463,139 @@ public sealed class GetPrDeliveryInsightsQueryHandler
             EpicBreakdown   = epicBreakdown,
             FeatureBreakdown = featureBreakdown,
             ScatterPoints   = scatterPoints,
-            Outliers        = outliers
+            Outliers        = outliers,
+            ImprovementTips = improvementTips
         };
     }
 
-    // ── Private helpers ──────────────────────────────────────────────────────
+    // ── Signal detection ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Detects up to three team improvement signals from classified PR data.
+    /// Rules are evaluated in priority order; only the strongest signals are returned.
+    /// </summary>
+    private static IReadOnlyList<TeamImprovementTipDto> DetectImprovementTips(
+        List<ClassifiedPr> classified,
+        PRCategorySummaryDto categorySummary,
+        IReadOnlyList<EpicFrictionSummaryDto> epicBreakdown)
+    {
+        const int MaxTips = 3;
+
+        var tips = new List<TeamImprovementTipDto>();
+
+        if (classified.Count == 0)
+            return tips;
+
+        // ── Signal 1: Long PR lifetimes ───────────────────────────────────────
+        // Threshold: global median > 24 h (1 business day)
+        var completedLifetimes = classified
+            .Where(cp => cp.LifetimeHours > 0 &&
+                   !string.Equals(cp.Status, "active", StringComparison.OrdinalIgnoreCase))
+            .Select(cp => cp.LifetimeHours)
+            .OrderBy(h => h)
+            .ToList();
+
+        var globalMedian = Median(completedLifetimes);
+        const double LongLifetimeThresholdHours = 24.0;
+
+        if (globalMedian.HasValue && globalMedian.Value > LongLifetimeThresholdHours)
+        {
+            var days = Math.Round(globalMedian.Value / 24.0, 1);
+            tips.Add(new TeamImprovementTipDto
+            {
+                Signal         = $"Long PR Lifetimes (median {days}d)",
+                Interpretation = "PRs may contain large changes or mixed refactoring and feature work, slowing review and integration.",
+                PoMessage      = "Consider splitting large PRs into smaller, focused changes. Smaller PRs are easier to review and merge faster."
+            });
+        }
+
+        if (tips.Count >= MaxTips) return tips;
+
+        // ── Signal 2: High review churn ───────────────────────────────────────
+        // Threshold: > 30 % of completed PRs have more than one review cycle
+        if (completedLifetimes.Count > 0)
+        {
+            var completedPrs        = classified.Where(cp =>
+                !string.Equals(cp.Status, "active", StringComparison.OrdinalIgnoreCase)).ToList();
+            var highChurnCount      = completedPrs.Count(cp => cp.ReviewCycles > 1);
+            var highChurnPct        = completedPrs.Count > 0
+                ? 100.0 * highChurnCount / completedPrs.Count : 0;
+            const double ChurnThresholdPct = 30.0;
+
+            if (highChurnPct > ChurnThresholdPct)
+            {
+                var pctLabel = Math.Round(highChurnPct, 0);
+                tips.Add(new TeamImprovementTipDto
+                {
+                    Signal         = $"High Review Churn ({pctLabel}% of PRs required multiple review rounds)",
+                    Interpretation = "Coding standards or early validation may be inconsistent, causing repeated review cycles.",
+                    PoMessage      = "Encourage the team to use Definition of Done checklists and pair-review before submitting PRs to reduce back-and-forth."
+                });
+            }
+        }
+
+        if (tips.Count >= MaxTips) return tips;
+
+        // ── Signal 3: High bug PR share ───────────────────────────────────────
+        // Threshold: BugPct > 20 %
+        const double BugPctThreshold = 20.0;
+        if (categorySummary.BugPct > BugPctThreshold)
+        {
+            var pctLabel = categorySummary.BugPct.ToString("F0");
+            tips.Add(new TeamImprovementTipDto
+            {
+                Signal         = $"High Bug PR Share ({pctLabel}% of PRs linked to Bug work items)",
+                Interpretation = "Team capacity may be spent on corrective work rather than planned delivery.",
+                PoMessage      = "Review defect root causes with the team. Consider a short retrospective focused on reducing recurring bug types."
+            });
+        }
+
+        if (tips.Count >= MaxTips) return tips;
+
+        // ── Signal 4: High disturbance share ─────────────────────────────────
+        // Threshold: DisturbancePct > 20 %
+        const double DisturbancePctThreshold = 20.0;
+        if (categorySummary.DisturbancePct > DisturbancePctThreshold)
+        {
+            var pctLabel = categorySummary.DisturbancePct.ToString("F0");
+            tips.Add(new TeamImprovementTipDto
+            {
+                Signal         = $"High Disturbance Share ({pctLabel}% of PRs linked to unplanned PBIs)",
+                Interpretation = "Unplanned work (verstoringen) may be interrupting planned delivery work.",
+                PoMessage      = "Work with the team to classify unplanned work and track interruption patterns. Consider reserving capacity for unplanned work in sprint planning."
+            });
+        }
+
+        if (tips.Count >= MaxTips) return tips;
+
+        // ── Signal 5: Epic-specific friction ─────────────────────────────────
+        // Condition: one Epic has median lifetime > 2× the global median
+        // and that Epic has at least 3 PRs (sufficient sample)
+        if (globalMedian.HasValue && globalMedian.Value > 0 && epicBreakdown.Count > 1)
+        {
+            var frictionEpic = epicBreakdown
+                .Where(e => e.PrCount >= 3 && e.MedianLifetimeHours.HasValue &&
+                            e.MedianLifetimeHours.Value > 2.0 * globalMedian.Value)
+                .OrderByDescending(e => e.MedianLifetimeHours)
+                .FirstOrDefault();
+
+            if (frictionEpic != null)
+            {
+                var epicDays = Math.Round(frictionEpic.MedianLifetimeHours!.Value / 24.0, 1);
+                tips.Add(new TeamImprovementTipDto
+                {
+                    Signal         = $"Epic-Specific Friction — \"{TruncateForSignal(frictionEpic.EpicName, 40)}\" (median {epicDays}d)",
+                    Interpretation = "This Epic's PRs take significantly longer than average, which may indicate architectural complexity or unclear scope.",
+                    PoMessage      = $"Discuss complexity and delivery blockers for \"{TruncateForSignal(frictionEpic.EpicName, 40)}\" with the team. Consider breaking down remaining work further."
+                });
+            }
+        }
+
+        return tips;
+    }
+
+    private static string TruncateForSignal(string value, int maxLength) =>
+        value.Length <= maxLength ? value : value[..maxLength] + "…";
 
     private static double ComputeLifetimeHours(
         PoTool.Api.Persistence.Entities.PullRequestEntity pr,
