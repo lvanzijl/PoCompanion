@@ -265,6 +265,34 @@ public class WorkItemService
     }
 
     /// <summary>
+    /// Updates the tags of a work item in TFS and refreshes the local cache.
+    /// Returns the updated work item DTO, or null if the update failed.
+    /// </summary>
+    public async Task<SharedWorkItemDto?> UpdateTagsAsync(int tfsId, List<string> tags)
+    {
+        var json = JsonSerializer.Serialize(new { Tags = tags });
+        var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync($"/api/workitems/{tfsId}/tags", content);
+        if (!response.IsSuccessStatusCode)
+            return null;
+        return await response.Content.ReadFromJsonAsync<SharedWorkItemDto>(_jsonOptions);
+    }
+
+    /// <summary>
+    /// Updates the title and/or description of a work item in TFS and refreshes the local cache.
+    /// Returns the updated work item DTO, or null if the update failed.
+    /// </summary>
+    public async Task<SharedWorkItemDto?> UpdateTitleDescriptionAsync(int tfsId, string? title, string? description)
+    {
+        var json = JsonSerializer.Serialize(new { Title = title, Description = description });
+        var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync($"/api/workitems/{tfsId}/title-description", content);
+        if (!response.IsSuccessStatusCode)
+            return null;
+        return await response.Content.ReadFromJsonAsync<SharedWorkItemDto>(_jsonOptions);
+    }
+
+    /// <summary>
     /// Gets all distinct area paths from cached work items.
     /// </summary>
     public async Task<IEnumerable<string>> GetDistinctAreaPathsAsync()

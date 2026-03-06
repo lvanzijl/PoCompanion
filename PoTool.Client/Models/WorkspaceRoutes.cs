@@ -119,6 +119,11 @@ public static class WorkspaceRoutes
     public const string ProductRoadmaps = "/planning/product-roadmaps";
 
     /// <summary>
+    /// Product Roadmap Editor route — per-product roadmap editor with add/remove/reorder/edit capabilities.
+    /// </summary>
+    public const string ProductRoadmapEditor = "/planning/product-roadmaps";
+
+    /// <summary>
     /// Sprint Trend route - shows sprint-based revision metrics.
     /// Legacy route kept for backward compatibility; canonical route is SprintDelivery.
     /// </summary>

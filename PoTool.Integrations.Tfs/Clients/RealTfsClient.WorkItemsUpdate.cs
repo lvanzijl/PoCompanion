@@ -792,4 +792,77 @@ public partial class RealTfsClient
             return false;
         }
     }
+
+    public async Task<WorkItemDto?> UpdateWorkItemTitleDescriptionAsync(int workItemId, string? title, string? description, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Updating work item {WorkItemId} title/description", workItemId);
+
+            var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+            if (entity == null)
+            {
+                _logger.LogWarning("No TFS configuration found for updating work item title/description");
+                return null;
+            }
+
+            var httpClient = GetAuthenticatedHttpClient();
+
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(entity.TimeoutSeconds));
+
+            var patchOperations = new List<object>();
+            if (title != null)
+            {
+                patchOperations.Add(new { op = "replace", path = "/fields/System.Title", value = title });
+            }
+            if (description != null)
+            {
+                patchOperations.Add(new { op = "replace", path = "/fields/System.Description", value = description });
+            }
+
+            if (patchOperations.Count == 0)
+            {
+                _logger.LogWarning("No fields to update for work item {WorkItemId}", workItemId);
+                return null;
+            }
+
+            var updateUrl = CollectionUrl(entity, $"_apis/wit/workitems/{workItemId}");
+            using var content = new StringContent(
+                JsonSerializer.Serialize(patchOperations),
+                System.Text.Encoding.UTF8,
+                "application/json-patch+json");
+
+            _logger.LogInformation("Sending PATCH request to update work item {WorkItemId} title/description", workItemId);
+
+            var response = await httpClient.PatchAsync(updateUrl, content, timeoutCts.Token);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Successfully updated work item {WorkItemId} title/description", workItemId);
+
+                using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var responseDoc = await JsonDocument.ParseAsync(responseStream, cancellationToken: cancellationToken);
+
+                return ParseWorkItemFromPatchResponse(responseDoc.RootElement);
+            }
+            else
+            {
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("Failed to update work item {WorkItemId} title/description. Status: {StatusCode}, Response: {Response}",
+                    workItemId, response.StatusCode, responseBody);
+                return null;
+            }
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError("Update work item {WorkItemId} title/description timed out", workItemId);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating work item {WorkItemId} title/description", workItemId);
+            return null;
+        }
+    }
 }

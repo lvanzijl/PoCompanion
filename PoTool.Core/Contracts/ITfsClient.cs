@@ -253,6 +253,20 @@ public interface ITfsClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Updates the title and/or description of a work item in TFS and returns the updated work item.
+    /// </summary>
+    /// <param name="workItemId">The work item ID.</param>
+    /// <param name="title">The new title (null to leave unchanged).</param>
+    /// <param name="description">The new description (null to leave unchanged).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The updated work item DTO, or null if the update failed.</returns>
+    Task<WorkItemDto?> UpdateWorkItemTitleDescriptionAsync(
+        int workItemId,
+        string? title,
+        string? description,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Verifies TFS API capabilities by running diagnostic checks.
     /// </summary>
     /// <param name="includeWriteChecks">Whether to include write capability checks.</param>

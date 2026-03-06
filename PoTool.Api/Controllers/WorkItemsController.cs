@@ -244,6 +244,46 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
+    /// Updates the tags of a work item in TFS and refreshes the local cache.
+    /// </summary>
+    [HttpPost("{tfsId:int}/tags")]
+    public async Task<ActionResult<WorkItemDto>> UpdateTags(int tfsId, [FromBody] UpdateTagsRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(new UpdateWorkItemTagsCommand(tfsId, request.Tags), cancellationToken);
+            if (result == null)
+                return BadRequest($"Failed to update tags for work item {tfsId}.");
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating tags for work item {TfsId}", tfsId);
+            return StatusCode(500, "Error updating tags");
+        }
+    }
+
+    /// <summary>
+    /// Updates the title and/or description of a work item in TFS and refreshes the local cache.
+    /// </summary>
+    [HttpPost("{tfsId:int}/title-description")]
+    public async Task<ActionResult<WorkItemDto>> UpdateTitleDescription(int tfsId, [FromBody] UpdateTitleDescriptionRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(new UpdateWorkItemTitleDescriptionCommand(tfsId, request.Title, request.Description), cancellationToken);
+            if (result == null)
+                return BadRequest($"Failed to update title/description for work item {tfsId}.");
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating title/description for work item {TfsId}", tfsId);
+            return StatusCode(500, "Error updating title/description");
+        }
+    }
+
+    /// <summary>
     /// Updates the BacklogPriority of a work item in TFS and refreshes the local cache.
     /// Used by Product Roadmaps to reorder product lanes (Objectives).
     /// </summary>
@@ -859,3 +899,13 @@ public class WorkItemsController : ControllerBase
 /// Request body for updating a work item's BacklogPriority.
 /// </summary>
 public sealed record UpdateBacklogPriorityRequest(double Priority);
+
+/// <summary>
+/// Request body for updating a work item's tags.
+/// </summary>
+public sealed record UpdateTagsRequest(List<string> Tags);
+
+/// <summary>
+/// Request body for updating a work item's title and/or description.
+/// </summary>
+public sealed record UpdateTitleDescriptionRequest(string? Title, string? Description);

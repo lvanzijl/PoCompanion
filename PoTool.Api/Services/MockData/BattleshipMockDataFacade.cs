@@ -817,6 +817,28 @@ public class BattleshipMockDataFacade : ITfsClient
         }
     }
 
+    public Task<WorkItemDto?> UpdateWorkItemTitleDescriptionAsync(int workItemId, string? title, string? description, CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemTitleDescriptionAsync called for workItemId={WorkItemId}", workItemId);
+
+        var mockHierarchy = GetMockHierarchy();
+        var workItem = mockHierarchy.FirstOrDefault(w => w.TfsId == workItemId);
+        if (workItem != null)
+        {
+            var updatedWorkItem = workItem with
+            {
+                Title = title ?? workItem.Title,
+                Description = description ?? workItem.Description
+            };
+            _logger.LogInformation("Mock TFS client: Successfully 'updated' work item {WorkItemId} title/description", workItemId);
+            return Task.FromResult<WorkItemDto?>(updatedWorkItem);
+        }
+
+        _logger.LogWarning("Mock TFS client: Work item {WorkItemId} not found in mock data for title/description update", workItemId);
+        return Task.FromResult<WorkItemDto?>(null);
+    }
+
     public Task<WorkItemDto?> UpdateWorkItemSeverityAndReturnAsync(int workItemId, string severity, CancellationToken cancellationToken = default)
     {
         IncrementAndGetApiCallCount();
