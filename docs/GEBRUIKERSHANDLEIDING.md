@@ -631,7 +631,7 @@ Klik op een rij in de auteurstabel om het spreidingsdiagram te filteren op de PR
 
 **Pagina:** `/home/pr-delivery-insights`
 
-De PR Delivery Insights-pagina classificeert pull requests op basis van hun gekoppelde werkitems en aggregeert statistieken op Epic- en Feature-niveau. Doel: inzicht krijgen in welke Epics en Features de meeste PR-wrijving veroorzaken.
+De PR Delivery Insights-pagina classificeert pull requests op basis van hun gekoppelde werkitems en aggregeert statistieken op Epic- en Feature-niveau. Doel: inzicht krijgen in welke Epics en Features de meeste PR-wrijving veroorzaken, en welke verbeteringen het team kan doorvoeren.
 
 Alle gegevens zijn afkomstig uit de lokale cache — er worden geen live Azure DevOps-aanroepen gedaan.
 
@@ -680,6 +680,41 @@ Spreidingsdiagram met X = aanmaakdatum PR en Y = levensduur in uren. Punten zijn
 **Uitschieters-tabel**
 
 De top-20 langstlevende PR's: PR-titel, repository, status, levensduur, gewijzigde bestanden, revisiecycli, Epic, Feature en categorie.
+
+#### Verbeteringstips voor het team
+
+Onderaan de pagina verschijnt de sectie **Team Improvement Tips** wanneer er signalen zijn gedetecteerd. De sectie toont maximaal drie tips, op basis van regels die automatisch worden toegepast op de PR-analysedata.
+
+Elke tip bevat drie onderdelen:
+
+| Onderdeel | Betekenis |
+|---|---|
+| **Signal** | Het waargenomen metrisch patroon dat is gedetecteerd in de gegevens. |
+| **Interpretation** | Uitleg van wat het patroon waarschijnlijk aangeeft. |
+| **PO Message** | Een bondige boodschap die de Product Owner aan het team kan overbrengen. |
+
+**Signaalherkenninsregels:**
+
+| Signaal | Drempelwaarde |
+|---|---|
+| Lange PR-levensduur | Mediane levensduur van voltooide PR's > 24 uur |
+| Hoge revisiewrijving | Meer dan 30% van de voltooide PR's had meerdere revisiecycli |
+| Hoog aandeel Bug-PR's | Meer dan 20% van de PR's is gekoppeld aan Bug-werkitems |
+| Hoog aandeel verstoringen | Meer dan 20% van de PR's is gekoppeld aan PBI's zonder Feature-ouder |
+| Epic-specifieke wrijving | Één Epic heeft een mediane levensduur van meer dan 2× het globale gemiddelde (minimaal 3 PR's) |
+
+Tips verschijnen alleen wanneer een signaal daadwerkelijk is gedetecteerd in de geladen data. Wanneer de data geen signalen bevat, is de sectie niet zichtbaar.
+
+**Hoe communiceer je de tips naar het team?**
+
+De "PO Message" per tip is direct te gebruiken als gespreksopener in een sprint retrospective, dagelijkse standup of teamsessie. Gebruik de tips als *observatie*, niet als verwijt: het doel is verbetering bespreken op basis van meetbare signalen.
+
+#### Diagnostics (optioneel)
+
+Onderaan de pagina bevindt zich een uitvouwbare sectie **Diagnostics** (standaard ingeklapt). Deze sectie bevat:
+
+- **Feature Complexity Table** — per Feature: naam, Epic, aantal PR's, PR/PBI-ratio en mediane levensduur. Nuttig om features te identificeren die veel PR's vereisen per backlog-item.
+- **Bug PR Distribution** — samenvatting van Bug-PR's met Epic-niveau context: gemiddelde revisiecycli en percentage afgebroken PR's per Epic.
 
 ---
 

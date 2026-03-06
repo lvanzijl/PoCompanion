@@ -438,6 +438,201 @@
                 </MudTable>
             </MudPaper>
         }
+
+        @* ── Section 5: Team Improvement Tips ───────────────────────────── *@
+        @if (_data.ImprovementTips.Any())
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4" Style="border-left: 4px solid var(--mud-palette-warning);">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Color="Color.Warning" Class="mr-2" />
+                    Team Improvement Tips
+                    <MudTooltip Text="Rule-based signals detected from the PR data. Each tip shows the observed pattern, its likely meaning, and a suggested message for the team.">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" Class="ml-1" />
+                    </MudTooltip>
+                </MudText>
+
+                <MudGrid Spacing="3">
+                    @foreach (var tip in _data.ImprovementTips)
+                    {
+                        <MudItem xs="12" md="4">
+                            <MudPaper Elevation="1" Class="pa-3" Style="height: 100%; border-top: 3px solid var(--mud-palette-warning-lighten);">
+                                @* Signal *@
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-1">
+                                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" Color="Color.Warning" />
+                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">Signal</MudText>
+                                </MudStack>
+                                <MudText Typo="Typo.body2" Class="mb-2" Style="font-style: italic;">@tip.Signal</MudText>
+
+                                @* Interpretation *@
+                                <MudText Typo="Typo.subtitle2" Style="font-weight: 600;" Class="mb-1">Interpretation</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">@tip.Interpretation</MudText>
+
+                                <MudDivider Class="mb-2" />
+
+                                @* PO Message *@
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-1">
+                                    <MudIcon Icon="@Icons.Material.Filled.Campaign" Size="Size.Small" Color="Color.Info" />
+                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 600; color: var(--mud-palette-info);">PO Message</MudText>
+                                </MudStack>
+                                <MudText Typo="Typo.body2">@tip.PoMessage</MudText>
+                            </MudPaper>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+        }
+
+        @* ── Section 6: Diagnostics (optional, hidden by default) ─────────── *@
+        @if (_data.FeatureBreakdown.Any() || _data.EpicBreakdown.Any())
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center"
+                          Style="cursor:pointer;" @onclick="() => _diagnosticsExpanded = !_diagnosticsExpanded">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.BugReport" Size="Size.Small" Class="mr-1" Color="Color.Secondary" />
+                        <MudText Typo="Typo.h6">Diagnostics</MudText>
+                        <MudTooltip Text="Detailed diagnostics: feature complexity, PR/PBI ratios, and bug PR distribution. Hidden by default.">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" Class="ml-1" />
+                        </MudTooltip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ml-1">Optional</MudChip>
+                    </MudStack>
+                    <MudIconButton Icon="@(_diagnosticsExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                   Size="Size.Small"
+                                   Color="Color.Default"
+                                   OnClick="() => _diagnosticsExpanded = !_diagnosticsExpanded" />
+                </MudStack>
+
+                <MudCollapse Expanded="_diagnosticsExpanded">
+                    <MudDivider Class="my-3" />
+
+                    @* Feature Complexity Table *@
+                    @if (_data.FeatureBreakdown.Any())
+                    {
+                        <MudText Typo="Typo.subtitle1" Class="mb-2" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Class="mr-1" />
+                            Feature Complexity Table
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                            PR/PBI ratio: number of PRs per Product Backlog Item. A high ratio indicates complex features requiring many code changes.
+                        </MudText>
+                        <MudTable Items="@_data.FeatureBreakdown"
+                                  Dense="true"
+                                  Hover="true"
+                                  Striped="true"
+                                  Elevation="0"
+                                  Class="mb-4">
+                            <HeaderContent>
+                                <MudTh>Feature</MudTh>
+                                <MudTh>Epic</MudTh>
+                                <MudTh Style="text-align:right;">PRs</MudTh>
+                                <MudTh Style="text-align:right;">PR / PBI</MudTh>
+                                <MudTh Style="text-align:right;">Median Lifetime</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Feature">
+                                    <MudText Typo="Typo.body2" Style="font-weight:500;">@context.FeatureName</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">#@context.FeatureId</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Epic">
+                                    @if (!string.IsNullOrEmpty(context.EpicName))
+                                    {
+                                        <MudText Typo="Typo.body2">@context.EpicName</MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                                    }
+                                </MudTd>
+                                <MudTd DataLabel="PRs" Style="text-align:right;">
+                                    <MudText Typo="Typo.body2">@context.PrCount</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="PR / PBI" Style="text-align:right;">
+                                    @if (context.PrPerPbiRatio.HasValue)
+                                    {
+                                        <MudText Typo="Typo.body2"
+                                                 Style="@GetPrPerPbiColor(context.PrPerPbiRatio.Value)">
+                                            @(context.PrPerPbiRatio.Value.ToString("F1"))
+                                        </MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                                    }
+                                </MudTd>
+                                <MudTd DataLabel="Median Lifetime" Style="text-align:right;">
+                                    @if (context.MedianLifetimeHours.HasValue)
+                                    {
+                                        <MudText Typo="Typo.body2" Style="@GetLifetimeColor(context.MedianLifetimeHours.Value)">
+                                            @PrFormatHelpers.FormatLifetime(context.MedianLifetimeHours.Value)
+                                        </MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+
+                    @* Bug PR Distribution per Epic *@
+                    @if (_data.EpicBreakdown.Any())
+                    {
+                        <MudText Typo="Typo.subtitle1" Class="mb-2" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.PestControl" Size="Size.Small" Class="mr-1" Color="Color.Error" />
+                            Bug PR Distribution
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                            Bug PRs (@_data.CategorySummary.BugCount total, @(_data.CategorySummary.BugPct.ToString("F0"))%) are linked to Bug work items without a traceable Feature or Epic.
+                            The table below shows Epic-level friction metrics for delivery-mapped PRs as comparison context.
+                        </MudText>
+                        <MudTable Items="@_data.EpicBreakdown"
+                                  Dense="true"
+                                  Hover="true"
+                                  Striped="true"
+                                  Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Epic</MudTh>
+                                <MudTh Style="text-align:right;">PRs</MudTh>
+                                <MudTh Style="text-align:right;">Avg Review Cycles</MudTh>
+                                <MudTh Style="text-align:right;">Abandoned %</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Epic">
+                                    <MudText Typo="Typo.body2" Style="font-weight:500;">@context.EpicName</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">#@context.EpicId</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="PRs" Style="text-align:right;">
+                                    <MudText Typo="Typo.body2">@context.PrCount</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Avg Review Cycles" Style="text-align:right;">
+                                    @if (context.AvgReviewCycles.HasValue)
+                                    {
+                                        <MudText Typo="Typo.body2">@(context.AvgReviewCycles.Value.ToString("F1"))</MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                                    }
+                                </MudTd>
+                                <MudTd DataLabel="Abandoned %" Style="text-align:right;">
+                                    @if (context.AbandonedPct.HasValue)
+                                    {
+                                        <MudText Typo="Typo.body2" Style="@GetAbandonColor(context.AbandonedPct.Value)">
+                                            @(context.AbandonedPct.Value.ToString("F0"))%
+                                        </MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudCollapse>
+            </MudPaper>
+        }
     }
     else
     {
@@ -533,6 +728,7 @@
     // Filter panel state
     private bool _filterExpanded = true;
     private bool _featureBreakdownExpanded = false;
+    private bool _diagnosticsExpanded = false;
 
     // Filters
     private int? _selectedTeamId;

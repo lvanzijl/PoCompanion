@@ -43,6 +43,13 @@ public sealed class PrDeliveryInsightsDto
     /// <summary>Outlier PRs (top 20 by lifetime, filtered to completed/abandoned).</summary>
     public IReadOnlyList<PrOutlierDto> Outliers { get; set; }
         = Array.Empty<PrOutlierDto>();
+
+    /// <summary>
+    /// Rule-based team improvement tips derived from signal detection.
+    /// At most three tips are included, ordered by signal severity.
+    /// </summary>
+    public IReadOnlyList<TeamImprovementTipDto> ImprovementTips { get; set; }
+        = Array.Empty<TeamImprovementTipDto>();
 }
 
 /// <summary>
@@ -214,4 +221,20 @@ public sealed class PrOutlierDto
 
     /// <summary>Primary classification category.</summary>
     public string Category { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// A single actionable team improvement tip derived from signal detection on PR analytics.
+/// Each tip contains a detected signal, its interpretation, and a concise PO message.
+/// </summary>
+public sealed class TeamImprovementTipDto
+{
+    /// <summary>Short label for the detected signal pattern (e.g. "Long PR Lifetimes").</summary>
+    public string Signal { get; set; } = string.Empty;
+
+    /// <summary>Explanation of what the observed metric pattern likely indicates.</summary>
+    public string Interpretation { get; set; } = string.Empty;
+
+    /// <summary>Concise message the Product Owner can communicate to the team.</summary>
+    public string PoMessage { get; set; } = string.Empty;
 }
