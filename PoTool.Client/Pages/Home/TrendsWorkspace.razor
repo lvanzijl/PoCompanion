@@ -183,21 +183,6 @@
                     </MudCard>
                 </MudItem>
 
-                @* Pipeline Trend Signal (Read-Only) *@
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1" 
-                             Style="cursor: pointer; transition: all 0.2s;"
-                             Class="mud-card-hover"
-                             @onclick="NavigateToPipelineOverview">
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Secondary" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Pipeline Trend</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Build & deployment health</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-
                 @* Pipeline Insights Signal (Read-Only) *@
                 <MudItem xs="12" sm="6" md="4">
                     <MudCard Elevation="1"
@@ -506,11 +491,6 @@
         NavigationManager.NavigateTo($"{WorkspaceRoutes.PrOverview}{BuildContextQuery("insightOnly=true")}");
     }
     
-    private void NavigateToPipelineOverview()
-    {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.PipelineOverview}{BuildContextQuery("insightOnly=true")}");
-    }
-
     private void NavigateToPipelineInsights()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.PipelineInsights);

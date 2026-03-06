@@ -557,6 +557,7 @@ public class SyncPipelineRunner : ISyncPipeline
                         existing.Name = def.Name;
                         existing.YamlPath = def.YamlPath;
                         existing.Url = def.Url;
+                        existing.DefaultBranch = def.DefaultBranch;
                         existing.LastSyncedUtc = def.LastSyncedUtc;
                     }
                     else
@@ -572,6 +573,7 @@ public class SyncPipelineRunner : ISyncPipeline
                             YamlPath = def.YamlPath,
                             Folder = def.Folder,
                             Url = def.Url,
+                            DefaultBranch = def.DefaultBranch,
                             LastSyncedUtc = def.LastSyncedUtc
                         };
                         context.PipelineDefinitions.Add(entity);

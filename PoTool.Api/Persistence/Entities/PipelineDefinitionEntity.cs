@@ -74,6 +74,14 @@ public class PipelineDefinitionEntity
     public string? Url { get; set; }
 
     /// <summary>
+    /// Default branch of the repository this pipeline is defined in
+    /// (e.g. "refs/heads/main"). Used to filter cached runs to the production branch.
+    /// Null when not yet populated.
+    /// </summary>
+    [MaxLength(500)]
+    public string? DefaultBranch { get; set; }
+
+    /// <summary>
     /// Timestamp when this pipeline definition was last synced from TFS.
     /// </summary>
     [Required]

@@ -94,11 +94,6 @@ public static class WorkspaceRoutes
     public const string PrOverview = "/home/pull-requests";
 
     /// <summary>
-    /// Pipeline Overview route (read-only).
-    /// </summary>
-    public const string PipelineOverview = "/home/pipelines";
-
-    /// <summary>
     /// Pipeline Insights route — PO-first stability overview per product, sprint-scoped (read-only).
     /// </summary>
     public const string PipelineInsights = "/home/pipeline-insights";

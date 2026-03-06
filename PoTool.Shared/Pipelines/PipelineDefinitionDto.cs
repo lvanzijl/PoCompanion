@@ -53,6 +53,13 @@ public record PipelineDefinitionDto
     public string? Url { get; init; }
 
     /// <summary>
+    /// Default branch of the repository this pipeline is defined in
+    /// (e.g. "refs/heads/main"). Used to filter runs to the production branch only.
+    /// Null when not yet populated (pipelines synced before this field was added).
+    /// </summary>
+    public string? DefaultBranch { get; init; }
+
+    /// <summary>
     /// Timestamp when this definition was last synced.
     /// </summary>
     public required DateTimeOffset LastSyncedUtc { get; init; }

@@ -78,11 +78,11 @@ public sealed class GetPipelineInsightsQueryHandler
         var productIds = products.Select(p => p.Id).ToList();
 
         // ── 4. Load pipeline definitions per product ──────────────────────────
-        // Key: PipelineDefinitionEntity.Id (DB PK) → (ProductId, Name)
+        // Key: PipelineDefinitionEntity.Id (DB PK) → (ProductId, Name, DefaultBranch)
         var pipelineDefs = await _context.PipelineDefinitions
             .AsNoTracking()
             .Where(d => productIds.Contains(d.ProductId))
-            .Select(d => new PipelineDefRecord(d.Id, d.ProductId, d.Name))
+            .Select(d => new PipelineDefRecord(d.Id, d.ProductId, d.Name, d.DefaultBranch))
             .ToListAsync(cancellationToken);
 
         if (pipelineDefs.Count == 0)
@@ -93,11 +93,16 @@ public sealed class GetPipelineInsightsQueryHandler
 
         var allDefIds = pipelineDefs.Select(d => d.Id).ToList();
 
+        // Build default-branch lookup: DB PK → DefaultBranch (for run filtering)
+        var defaultBranchByDefId = pipelineDefs
+            .Where(d => !string.IsNullOrEmpty(d.DefaultBranch))
+            .ToDictionary(d => d.Id, d => d.DefaultBranch);
+
         // ── 5. Load runs in the selected sprint window ────────────────────────
         var sprintStart = sprint.StartDateUtc!.Value;
         var sprintEnd   = sprint.EndDateUtc!.Value;
 
-        var currentRuns = await LoadRunsAsync(allDefIds, sprintStart, sprintEnd, cancellationToken);
+        var currentRuns = await LoadRunsAsync(allDefIds, sprintStart, sprintEnd, cancellationToken, defaultBranchByDefId);
 
         // ── 6. Load runs in the previous sprint window (for delta) ────────────
         List<RunRecord> previousRuns = new();
@@ -107,7 +112,8 @@ public sealed class GetPipelineInsightsQueryHandler
                 allDefIds,
                 previousSprint.StartDateUtc!.Value,
                 previousSprint.EndDateUtc!.Value,
-                cancellationToken);
+                cancellationToken,
+                defaultBranchByDefId);
         }
 
         _logger.LogDebug(
@@ -220,14 +226,17 @@ public sealed class GetPipelineInsightsQueryHandler
         List<int> defIds,
         DateTime rangeStart,
         DateTime rangeEnd,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<int, string?>? defaultBranchByDefId = null)
     {
-        return await _context.CachedPipelineRuns
+        var query = _context.CachedPipelineRuns
             .AsNoTracking()
             .Where(r => defIds.Contains(r.PipelineDefinitionId)
                         && r.FinishedDateUtc.HasValue
                         && r.FinishedDateUtc.Value >= rangeStart
-                        && r.FinishedDateUtc.Value < rangeEnd)
+                        && r.FinishedDateUtc.Value < rangeEnd);
+
+        var runs = await query
             .Select(r => new RunRecord(
                 r.Id,
                 r.TfsRunId,
@@ -241,6 +250,22 @@ public sealed class GetPipelineInsightsQueryHandler
                 r.SourceBranch,
                 r.Url))
             .ToListAsync(cancellationToken);
+
+        // Filter to default branch only, per pipeline definition.
+        // Only applied when a default branch is stored for the definition.
+        if (defaultBranchByDefId is not null && defaultBranchByDefId.Count > 0)
+        {
+            runs = runs.Where(r =>
+            {
+                if (!defaultBranchByDefId.TryGetValue(r.DefId, out var branch)
+                    || string.IsNullOrEmpty(branch))
+                    return true; // no default branch stored → include all runs
+
+                return string.Equals(r.SourceBranch, branch, StringComparison.OrdinalIgnoreCase);
+            }).ToList();
+        }
+
+        return runs;
     }
 
     private static ProductPipelineInsightsDto BuildProductSection(
@@ -661,5 +686,5 @@ public sealed class GetPipelineInsightsQueryHandler
         string?   SourceBranch,
         string?   Url);
 
-    private sealed record PipelineDefRecord(int Id, int ProductId, string Name);
+    private sealed record PipelineDefRecord(int Id, int ProductId, string Name, string? DefaultBranch = null);
 }
