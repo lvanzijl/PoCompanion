@@ -73,7 +73,8 @@ public sealed class GetWorkItemByIdWithValidationQueryHandler
             workItem.Severity,
             workItem.Tags,
             workItem.IsBlocked,
-            workItem.BusinessValue
+            workItem.BusinessValue,
+            workItem.BacklogPriority
         );
     }
 }

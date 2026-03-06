@@ -351,6 +351,9 @@ public partial class RealTfsClient
             // Extract blocked status from TFS (Microsoft.VSTS.CMMI.Blocked)
             bool? isBlocked = ParseBlockedField(fields);
 
+            // Extract backlog priority from TFS (Microsoft.VSTS.Common.BacklogPriority)
+            double? backlogPriority = ParseBacklogPriorityField(fields);
+
             var workItem = new WorkItemDto(
                 TfsId: id,
                 Type: type,
@@ -369,7 +372,8 @@ public partial class RealTfsClient
                 Tags: tags,
                 ChangedDate: changedDate,
                 IsBlocked: isBlocked,
-                Relations: relations // Use relations from Phase 1
+                Relations: relations, // Use relations from Phase 1
+                BacklogPriority: backlogPriority
             );
 
             _logger.LogInformation("Retrieved work item {WorkItemId} from TFS: {Title}", id, title);
@@ -606,6 +610,9 @@ public partial class RealTfsClient
 
                     var changedDate = ParseDateTimeField(fields, "System.ChangedDate");
 
+                    // Extract backlog priority from TFS (Microsoft.VSTS.Common.BacklogPriority)
+                    double? backlogPriority = ParseBacklogPriorityField(fields);
+
                     results.Add(new WorkItemDto(
                         TfsId: id,
                         Type: type,
@@ -622,7 +629,8 @@ public partial class RealTfsClient
                         ClosedDate: closedDate,
                         Severity: severity,
                         Tags: tags,
-                        ChangedDate: changedDate
+                        ChangedDate: changedDate,
+                        BacklogPriority: backlogPriority
                     ));
                 }
 
@@ -701,6 +709,33 @@ public partial class RealTfsClient
 
         if (businessValueField.ValueKind == JsonValueKind.String &&
             int.TryParse(businessValueField.GetString(), out value))
+        {
+            return value;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Parses the backlog priority field from work item fields.
+    /// BacklogPriority is a double in TFS (Microsoft.VSTS.Common.BacklogPriority).
+    /// Returns the value if present, null otherwise.
+    /// </summary>
+    private static double? ParseBacklogPriorityField(JsonElement fields)
+    {
+        if (!fields.TryGetProperty(TfsFieldBacklogPriority, out var priorityField))
+        {
+            return null;
+        }
+
+        if (priorityField.ValueKind == JsonValueKind.Number && priorityField.TryGetDouble(out var value))
+        {
+            return value;
+        }
+
+        if (priorityField.ValueKind == JsonValueKind.String &&
+            double.TryParse(priorityField.GetString(), System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out value))
         {
             return value;
         }

@@ -61,13 +61,13 @@
                                         <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
                                                        Size="Size.Small"
                                                        Color="Color.Primary"
-                                                       Disabled="@(laneIndex == 0)"
+                                                       Disabled="@(laneIndex == 0 || _isReordering)"
                                                        OnClick="@(() => MoveProductEarlier(laneIndex))"
                                                        aria-label="Move Earlier" />
                                         <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
                                                        Size="Size.Small"
                                                        Color="Color.Primary"
-                                                       Disabled="@(laneIndex == _productLanes.Count - 1)"
+                                                       Disabled="@(laneIndex == _productLanes.Count - 1 || _isReordering)"
                                                        OnClick="@(() => MoveProductLater(laneIndex))"
                                                        aria-label="Move Later" />
                                     </MudStack>
@@ -170,6 +170,7 @@
 
 @code {
     private bool _isLoading = true;
+    private bool _isReordering = false;
     private int? _profileId;
     private List<BreadcrumbItem> _breadcrumbs = new();
     private List<ProductLane> _productLanes = new();
@@ -192,13 +193,10 @@
 
             _tfsConfig = await TfsConfigService.GetConfigAsync();
 
-            // Load products sorted by Order (proxy for Objective BacklogPriority)
-            _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id))
-                .OrderBy(p => p.Order)
-                .ThenBy(p => p.Name)
-                .ToList();
+            // Load products (initial ordering will be determined by Objective BacklogPriority)
+            _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
 
-            // Build lanes with roadmap epics
+            // Build lanes with roadmap epics, ordered by Objective BacklogPriority
             await BuildProductLanesAsync();
 
             UpdateBreadcrumbs();
@@ -232,10 +230,17 @@
                 {
                     var workItems = await WorkItemService.GetByRootIdsAsync(product.BacklogRootWorkItemIds.ToArray());
 
-                    // Filter to epics with "roadmap" tag
+                    // Find the root Objective work item to get its BacklogPriority for lane ordering
+                    var objectiveWorkItem = workItems
+                        .FirstOrDefault(wi => wi.Type == "Objective" && product.BacklogRootWorkItemIds.Contains(wi.TfsId));
+                    lane.ObjectiveTfsId = objectiveWorkItem?.TfsId ?? 0;
+                    lane.ObjectiveBacklogPriority = objectiveWorkItem?.BacklogPriority;
+
+                    // Filter to epics with "roadmap" tag, ordered by BacklogPriority (TfsId as tie-breaker)
                     var roadmapEpics = workItems
                         .Where(wi => wi.Type == "Epic" && HasRoadmapTag(wi.Tags))
-                        .OrderBy(wi => wi.TfsId) // Stable ordering by TFS ID (BacklogPriority not available in DTO)
+                        .OrderBy(wi => wi.BacklogPriority ?? double.MaxValue)
+                        .ThenBy(wi => wi.TfsId)
                         .ToList();
 
                     var orderNumber = 1;
@@ -258,6 +263,12 @@
 
             _productLanes.Add(lane);
         }
+
+        // Sort product lanes by Objective BacklogPriority (null = last, TfsId as tie-breaker)
+        _productLanes = _productLanes
+            .OrderBy(l => l.ObjectiveBacklogPriority ?? double.MaxValue)
+            .ThenBy(l => l.ObjectiveTfsId)
+            .ToList();
     }
 
     private static bool HasRoadmapTag(string? tags)
@@ -280,34 +291,71 @@
 
     private async Task MoveProductEarlier(int laneIndex)
     {
-        if (laneIndex <= 0 || _profileId == null) return;
+        if (laneIndex <= 0 || _profileId == null || _isReordering) return;
         await SwapProductOrder(laneIndex, laneIndex - 1);
     }
 
     private async Task MoveProductLater(int laneIndex)
     {
-        if (laneIndex >= _productLanes.Count - 1 || _profileId == null) return;
+        if (laneIndex >= _productLanes.Count - 1 || _profileId == null || _isReordering) return;
         await SwapProductOrder(laneIndex, laneIndex + 1);
     }
 
     private async Task SwapProductOrder(int indexA, int indexB)
     {
+        _isReordering = true;
         try
         {
-            // Swap lanes in the visual list
-            (_productLanes[indexA], _productLanes[indexB]) = (_productLanes[indexB], _productLanes[indexA]);
+            var laneA = _productLanes[indexA];
+            var laneB = _productLanes[indexB];
 
-            // Build new product ID order and persist
-            var productIds = _productLanes.Select(l => l.ProductId).ToList();
-            await ProductService.ReorderProductsAsync(_profileId!.Value, productIds);
+            if (laneA.ObjectiveTfsId == 0 || laneB.ObjectiveTfsId == 0)
+            {
+                Snackbar.Add("Cannot reorder: one or both products have no Objective work item.", Severity.Warning);
+                return;
+            }
 
-            Snackbar.Add("Product order updated.", Severity.Success);
+            // Swap BacklogPriority values between the two Objectives
+            var priorityA = laneA.ObjectiveBacklogPriority ?? (double)(indexA + 1);
+            var priorityB = laneB.ObjectiveBacklogPriority ?? (double)(indexB + 1);
+
+            // If priorities are equal, normalize by assigning sequential values
+            if (Math.Abs(priorityA - priorityB) < 0.001)
+            {
+                priorityA = indexA + 1;
+                priorityB = indexB + 1;
+            }
+
+            // Write swapped priorities to TFS
+            var successA = await WorkItemService.UpdateBacklogPriorityAsync(laneA.ObjectiveTfsId, priorityB);
+            if (!successA)
+            {
+                Snackbar.Add($"Failed to update priority for {laneA.ProductName} in TFS.", Severity.Error);
+                return;
+            }
+
+            var successB = await WorkItemService.UpdateBacklogPriorityAsync(laneB.ObjectiveTfsId, priorityA);
+            if (!successB)
+            {
+                // Attempt to revert A
+                await WorkItemService.UpdateBacklogPriorityAsync(laneA.ObjectiveTfsId, priorityA);
+                Snackbar.Add($"Failed to update priority for {laneB.ProductName} in TFS. Reverted.", Severity.Error);
+                return;
+            }
+
+            // Rebuild lanes from cache (which was refreshed by the API calls)
+            _products = (await ProductService.GetProductsByOwnerAsync(_profileId!.Value)).ToList();
+            await BuildProductLanesAsync();
+
+            Snackbar.Add("Product order updated in TFS.", Severity.Success);
         }
         catch (Exception ex)
         {
-            // Revert on failure
-            (_productLanes[indexA], _productLanes[indexB]) = (_productLanes[indexB], _productLanes[indexA]);
             Snackbar.Add($"Error reordering products: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isReordering = false;
         }
     }
 
@@ -343,6 +391,8 @@
     {
         public int ProductId { get; set; }
         public string ProductName { get; set; } = string.Empty;
+        public int ObjectiveTfsId { get; set; }
+        public double? ObjectiveBacklogPriority { get; set; }
         public List<RoadmapEpic> Epics { get; set; } = new();
     }
 

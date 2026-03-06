@@ -5429,6 +5429,43 @@
           }
         }
       }
+    },
+    "/api/WorkItems/{tfsId}/backlog-priority": {
+      "post": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_UpdateBacklogPriority",
+        "parameters": [
+          {
+            "name": "tfsId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBacklogPriorityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -9482,6 +9519,11 @@
           "tags": {
             "type": "string",
             "nullable": true
+          },
+          "backlogPriority": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
           }
         }
       },
@@ -9556,6 +9598,11 @@
           },
           "tags": {
             "type": "string",
+            "nullable": true
+          },
+          "backlogPriority": {
+            "type": "number",
+            "format": "double",
             "nullable": true
           }
         }
@@ -11613,6 +11660,16 @@
             "type": "number",
             "format": "double",
             "nullable": true
+          }
+        }
+      },
+      "UpdateBacklogPriorityRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "priority": {
+            "type": "number",
+            "format": "double"
           }
         }
       }

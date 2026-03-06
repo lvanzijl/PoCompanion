@@ -219,7 +219,8 @@ public class ValidationComputeStage : ISyncStage
             Tags: entity.Tags,
             IsBlocked: entity.IsBlocked,
             Relations: relations,
-            BusinessValue: entity.BusinessValue
+            BusinessValue: entity.BusinessValue,
+            BacklogPriority: entity.BacklogPriority
         );
     }
 }

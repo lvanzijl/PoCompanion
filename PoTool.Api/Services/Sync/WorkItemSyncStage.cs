@@ -180,6 +180,7 @@ public class WorkItemSyncStage : ISyncStage
         var changedDate = dto.ChangedDate ?? dto.RetrievedAt;
         entity.TfsChangedDate = changedDate;
         entity.TfsChangedDateUtc = changedDate.UtcDateTime;
+        entity.BacklogPriority = dto.BacklogPriority;
     }
 
     private static WorkItemEntity MapToEntity(WorkItemDto dto)
@@ -204,7 +205,8 @@ public class WorkItemSyncStage : ISyncStage
             IsBlocked = dto.IsBlocked,
             Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null,
             TfsChangedDate = dto.ChangedDate ?? dto.RetrievedAt,
-            TfsChangedDateUtc = (dto.ChangedDate ?? dto.RetrievedAt).UtcDateTime
+            TfsChangedDateUtc = (dto.ChangedDate ?? dto.RetrievedAt).UtcDateTime,
+            BacklogPriority = dto.BacklogPriority
         };
     }
 }
