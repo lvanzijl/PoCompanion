@@ -56,7 +56,6 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   ├──► /home/trends  (Trends — Past)                                  │
   │       ├──► /home/bugs  (bug trend drilldown)                      │
   │       ├──► /home/pull-requests  (read-only insight)               │
-  │       ├──► /home/pipelines  (read-only insight)                   │
   │       ├──► /home/pipeline-insights  (PO-first stability overview) │
   │       ├──► /home/portfolio-progress  (portfolio trend)            │
   │       ├──► /home/trends/delivery  (delivery trends)               │
@@ -258,7 +257,7 @@ Global header (available on every page) ◄────────────�
 | "Last 6 Months" chip | Shown when no sprint range is explicitly set. |
 | Bug Trend signal card | Represents bug patterns over time. Click navigates to Bug Insights (Bug Overview). |
 | PR Trend signal card | Read-only insight about pull request patterns. Click navigates to Pull Request Insights. |
-| Pipeline Trend signal card | Read-only insight about build and deployment health. Click navigates to Pipeline Trend. |
+| Pipeline Insights signal card | Read-only insight about pipeline stability per product. Click navigates to Pipeline Insights. |
 | Portfolio Progress signal card | Represents strategic product-level progress over a sprint range. Click navigates to Portfolio Progress Trend. |
 | Bug Trend chart (interactive) | Three-series chart (Total bugs, Fixed bugs, Added bugs) for the selected time range. Clicking a bar navigates to Bug Insights filtered to that period. Hovering highlights the bar. |
 | Cross-workspace navigation | Buttons to Backlog Overview, Health (Now), Delivery, and Planning (Future). |
@@ -266,7 +265,7 @@ Global header (available on every page) ◄────────────�
 
 > **Note:** Sprint Delivery (formerly Sprint Trend) has moved to the Delivery workspace. Velocity and predictability signals (median velocity, P25–P75 band, median predictability) are embedded in Sprint Delivery (calibration panel) and Planning (Capacity Confidence block).
 
-**Outgoing navigation:** `/home/portfolio-progress`, `/home/trends/delivery`, `/home/bugs`, `/home/pull-requests`, `/home/pipelines`, `/home/delivery`, `/home/backlog-overview`, `/home/health`, `/home/planning`, `/home`
+**Outgoing navigation:** `/home/portfolio-progress`, `/home/trends/delivery`, `/home/bugs`, `/home/pull-requests`, `/home/pipeline-insights`, `/home/delivery`, `/home/backlog-overview`, `/home/health`, `/home/planning`, `/home`
 
 ---
 
@@ -404,26 +403,6 @@ Global header (available on every page) ◄────────────�
 | Home button | Returns to `/home`. |
 
 **Outgoing navigation:** `/home`, `/home/trends`, Azure DevOps (external, when TFS configuration is available)
-
----
-
-### 2.11 Pipeline Trend — `/home/pipelines`
-
-**Purpose:** PO-facing trend view of CI/CD pipeline health signals, sprint-bucketed. Insight-only; no editing.
-
-| Functionality | Description |
-|---|---|
-| Breadcrumb | `Home › Trends (Past) › Pipeline Trend`. |
-| Sprint range selector | Team, product, end-sprint, and sprint count selectors. Defaults to last 6 sprints ending at the active/latest sprint. |
-| Reliability Trend chart | Success rate % per sprint (higher-is-better). Slope badge included. |
-| Time-to-Green Trend chart | Median pipeline duration (h) per sprint — fallback metric (no PR/commit association). Lower-is-better. Slope badge included. |
-| Tail Risk Trend chart | P90 pipeline duration (h) per sprint. Null/gap when fewer than 3 runs. Lower-is-better. Slope badge included. |
-| Flakiness Trend chart | % of distinct pipelines with both successes and failures in the same sprint. Lower-is-better. Slope badge included. |
-| Advanced drill-down panel | Collapsed by default. Contains a per-sprint metrics table. |
-| Error/Retry handling | If data cannot be loaded, shows an error message with a Retry button. |
-| Home button | Returns to `/home`. |
-
-**Outgoing navigation:** `/home/trends`, `/home`
 
 ---
 
@@ -637,7 +616,6 @@ Sprint Delivery
 | Bug Detail | `/home/bugs/detail/{id}` | Bug Insights | Edit severity/tags | `/home/bugs` |
 | Bug Triage | `/bugs-triage` | Home quick action, Bug Insights | Triage tags | (self-contained) |
 | PR Insights | `/home/pull-requests` | Trends workspace | View metrics | `/home` |
-| Pipeline Trend | `/home/pipelines` | Trends workspace | View metrics | `/home/trends`, `/home` |
 | Pipeline Insights | `/home/pipeline-insights` | Trends workspace | Select team/sprint, view per-product health | `/home/trends`, `/home` |
 | Dependency Overview | `/home/dependencies` | Planning workspace | View dependencies | `/home`, `/dependency-graph` |
 | Plan Board | `/home/plan-board` | Home quick action | View/filter board | `/home` |

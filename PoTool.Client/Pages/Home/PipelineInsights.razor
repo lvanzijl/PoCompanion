@@ -36,96 +36,120 @@
         </MudStack>
     </MudPaper>
 
-    @* ── Context Header ──────────────────────────────────────────────── *@
+    @* ── Context / Filters (collapsible) ───────────────────────────────── *@
     <MudPaper Elevation="2" Class="pa-4 mb-4">
-        <MudText Typo="Typo.h6" Class="mb-3">
-            <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Class="mr-2" />
-            Context
-        </MudText>
-
-        <MudGrid Spacing="2">
-            @* Team selector — drives sprint list *@
-            <MudItem xs="12" sm="6" md="3">
-                <MudSelect T="int?"
-                           Value="_selectedTeamId"
-                           Label="Team"
-                           Variant="Variant.Outlined"
-                           Clearable="true"
-                           ValueChanged="OnTeamChanged">
-                    <MudSelectItem T="int?" Value="@((int?)null)">Select team…</MudSelectItem>
-                    @foreach (var team in _teams)
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center"
+                  Style="cursor:pointer;" @onclick="() => _filterExpanded = !_filterExpanded">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.FilterAlt" />
+                <MudText Typo="Typo.h6">Filters</MudText>
+                @if (!_filterExpanded && (_selectedTeamId.HasValue || _selectedSprintId.HasValue))
+                {
+                    @* Summary chips shown when collapsed *@
+                    @if (_selectedTeamId.HasValue)
                     {
-                        <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                        var teamName = _teams.FirstOrDefault(t => t.Id == _selectedTeamId)?.Name;
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Group">@teamName</MudChip>
                     }
-                </MudSelect>
-            </MudItem>
-
-            @* Sprint selector *@
-            <MudItem xs="12" sm="6" md="3">
-                <MudSelect T="int?"
-                           Value="_selectedSprintId"
-                           Label="Sprint"
-                           Variant="Variant.Outlined"
-                           Clearable="true"
-                           Disabled="@(!_sprints.Any())"
-                           ValueChanged="OnSprintChanged">
-                    <MudSelectItem T="int?" Value="@((int?)null)">Select sprint…</MudSelectItem>
-                    @foreach (var sprint in _sprints)
+                    @if (_selectedSprintId.HasValue)
                     {
-                        <MudSelectItem T="int?" Value="@sprint.Id">
-                            @sprint.Name
-                            @if (sprint.StartUtc.HasValue)
-                            {
-                                <text> (@sprint.StartUtc.Value.ToString("MMM yyyy"))</text>
-                            }
-                        </MudSelectItem>
+                        var sprintName = _sprints.FirstOrDefault(s => s.Id == _selectedSprintId)?.Name;
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Icon="@Icons.Material.Filled.CalendarMonth">@sprintName</MudChip>
                     }
-                </MudSelect>
-            </MudItem>
-
-            @* Include partiallySucceeded toggle *@
-            <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
-                <MudTooltip Text="When enabled, partially succeeded builds are included in calculations and shown as warnings.">
-                    <MudSwitch T="bool"
-                               @bind-Value="_includePartiallySucceeded"
-                               Label="Include partial success"
-                               Color="Color.Warning" />
-                </MudTooltip>
-            </MudItem>
-
-            @* Include canceled toggle *@
-            <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
-                <MudTooltip Text="When enabled, canceled builds are counted in the total.">
-                    <MudSwitch T="bool"
-                               @bind-Value="_includeCanceled"
-                               Label="Include canceled"
-                               Color="Color.Default" />
-                </MudTooltip>
-            </MudItem>
-
-            @* SLO input *@
-            <MudItem xs="12" sm="6" md="3">
-                <MudNumericField T="double?"
-                                 @bind-Value="_sloDurationMinutes"
-                                 Label="SLO duration (min)"
-                                 Variant="Variant.Outlined"
-                                 Min="1"
-                                 HelperText="Optional horizontal SLO line on scatter" />
-            </MudItem>
-        </MudGrid>
-
-        @* Reload button shown when toggles change after initial load *@
-        @if (_insightsData is not null && _togglesDirty)
-        {
-            <MudStack Row="true" Class="mt-3">
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Refresh"
-                           OnClick="LoadInsightsAsync">
-                    Apply filters
-                </MudButton>
+                }
             </MudStack>
-        }
+            <MudIconButton Icon="@(_filterExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                           Size="Size.Small"
+                           Color="Color.Default"
+                           OnClick="() => _filterExpanded = !_filterExpanded" />
+        </MudStack>
+
+        <MudCollapse Expanded="_filterExpanded">
+            <MudDivider Class="my-3" />
+            <MudGrid Spacing="2">
+                @* Team selector — drives sprint list *@
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="int?"
+                               Value="_selectedTeamId"
+                               Label="Team"
+                               Variant="Variant.Outlined"
+                               Clearable="true"
+                               ValueChanged="OnTeamChanged">
+                        <MudSelectItem T="int?" Value="@((int?)null)">Select team…</MudSelectItem>
+                        @foreach (var team in _teams)
+                        {
+                            <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                @* Sprint selector *@
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="int?"
+                               Value="_selectedSprintId"
+                               Label="Sprint"
+                               Variant="Variant.Outlined"
+                               Clearable="true"
+                               Disabled="@(!_sprints.Any())"
+                               ValueChanged="OnSprintChanged">
+                        <MudSelectItem T="int?" Value="@((int?)null)">Select sprint…</MudSelectItem>
+                        @foreach (var sprint in _sprints)
+                        {
+                            <MudSelectItem T="int?" Value="@sprint.Id">
+                                @sprint.Name
+                                @if (sprint.StartUtc.HasValue)
+                                {
+                                    <text> (@sprint.StartUtc.Value.ToString("MMM yyyy"))</text>
+                                }
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                @* Include partiallySucceeded toggle *@
+                <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
+                    <MudTooltip Text="When enabled, partially succeeded builds are included in calculations and shown as warnings.">
+                        <MudSwitch T="bool"
+                                   @bind-Value="_includePartiallySucceeded"
+                                   Label="Include partial success"
+                                   Color="Color.Warning" />
+                    </MudTooltip>
+                </MudItem>
+
+                @* Include canceled toggle *@
+                <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
+                    <MudTooltip Text="When enabled, canceled builds are counted in the total.">
+                        <MudSwitch T="bool"
+                                   @bind-Value="_includeCanceled"
+                                   Label="Include canceled"
+                                   Color="Color.Default" />
+                    </MudTooltip>
+                </MudItem>
+
+                @* SLO input *@
+                <MudItem xs="12" sm="6" md="3">
+                    <MudNumericField T="double?"
+                                     @bind-Value="_sloDurationMinutes"
+                                     Label="SLO duration (min)"
+                                     Variant="Variant.Outlined"
+                                     Min="1"
+                                     HelperText="Optional horizontal SLO line on scatter" />
+                </MudItem>
+            </MudGrid>
+
+            @* Reload button shown when toggles change after initial load *@
+            @if (_insightsData is not null && _togglesDirty)
+            {
+                <MudStack Row="true" Class="mt-3">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="LoadInsightsAsync">
+                        Apply filters
+                    </MudButton>
+                </MudStack>
+            }
+        </MudCollapse>
     </MudPaper>
 
     @if (_isLoading)
@@ -155,28 +179,6 @@
     }
     else
     {
-        @* ── Sprint context banner ───────────────────────────────────── *@
-        <MudPaper Elevation="1" Class="pa-3 mb-4">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Color="Color.Info" />
-                <MudText Typo="Typo.subtitle1">
-                    Showing: <strong>@_insightsData.SprintName</strong>
-                </MudText>
-                @if (_insightsData.PreviousSprintId.HasValue)
-                {
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        Delta vs. @_insightsData.PreviousSprintName
-                    </MudText>
-                }
-                else
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Default">
-                        No previous sprint — deltas not available
-                    </MudChip>
-                }
-            </MudStack>
-        </MudPaper>
-
         @* ── Global summary chips ────────────────────────────────────── *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudText Typo="Typo.h6" Class="mb-3">
@@ -192,13 +194,13 @@
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="6" sm="3">
-                    <MudPaper Elevation="0" Class="pa-3" Style="text-align:center; background: var(--mud-palette-error-lighten);">
+                    <MudPaper Elevation="0" Class="pa-3 pipeline-stat-error" Style="text-align:center;">
                         <MudText Typo="Typo.h5" Color="Color.Error">@_insightsData.FailureRate.ToString("F1")%</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Failure rate (@_insightsData.FailedBuilds failed)</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="6" sm="3">
-                    <MudPaper Elevation="0" Class="pa-3" Style="text-align:center; background: var(--mud-palette-warning-lighten);">
+                    <MudPaper Elevation="0" Class="pa-3 pipeline-stat-warning" Style="text-align:center;">
                         <MudText Typo="Typo.h5" Color="Color.Warning">@_insightsData.WarningRate.ToString("F1")%</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Warning rate (@_insightsData.WarningBuilds partial)</MudText>
                     </MudPaper>
@@ -333,19 +335,19 @@
                     <MudText Typo="Typo.subtitle2" Class="mb-2">Summary — @product.CompletedBuilds completed builds</MudText>
                     <MudGrid Spacing="2">
                         <MudItem xs="6" sm="2">
-                            <MudPaper Elevation="0" Class="pa-2" Style="text-align:center; background: var(--mud-palette-error-lighten);">
+                            <MudPaper Elevation="0" Class="pa-2 pipeline-stat-error" Style="text-align:center;">
                                 <MudText Typo="Typo.subtitle1" Color="Color.Error"><strong>@product.FailureRate.ToString("F1")%</strong></MudText>
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Failed (@product.FailedBuilds)</MudText>
                             </MudPaper>
                         </MudItem>
                         <MudItem xs="6" sm="2">
-                            <MudPaper Elevation="0" Class="pa-2" Style="text-align:center; background: var(--mud-palette-warning-lighten);">
+                            <MudPaper Elevation="0" Class="pa-2 pipeline-stat-warning" Style="text-align:center;">
                                 <MudText Typo="Typo.subtitle1" Color="Color.Warning"><strong>@product.WarningRate.ToString("F1")%</strong></MudText>
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Warning (@product.WarningBuilds)</MudText>
                             </MudPaper>
                         </MudItem>
                         <MudItem xs="6" sm="2">
-                            <MudPaper Elevation="0" Class="pa-2" Style="text-align:center; background: var(--mud-palette-success-lighten);">
+                            <MudPaper Elevation="0" Class="pa-2 pipeline-stat-success" Style="text-align:center;">
                                 <MudText Typo="Typo.subtitle1" Color="Color.Success"><strong>@product.SuccessRate.ToString("F1")%</strong></MudText>
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Success (@product.SucceededBuilds)</MudText>
                             </MudPaper>
@@ -504,6 +506,9 @@
 
     private double? _sloDurationMinutes;
 
+    // ── Filter panel state ───────────────────────────────────────────────
+    private bool _filterExpanded = true;
+
     private List<TeamDto>   _teams   = new();
     private List<SprintDto> _sprints = new();
 
@@ -647,7 +652,11 @@
 
             // Build scatter point maps for all products
             if (_insightsData != null)
+            {
                 BuildScatterMaps(_insightsData);
+                // Collapse filter panel once data is loaded successfully
+                _filterExpanded = false;
+            }
         }
         catch (Exception ex)
         {
@@ -808,3 +817,10 @@
         NavigationManager.NavigateTo(WorkspaceRoutes.Home);
     }
 }
+
+<style>
+    /* Muted status backgrounds — aligned with Health workspace tile style */
+    .pipeline-stat-error   { background: rgba(244,  67,  54, 0.1); border: 1px solid rgba(244,  67,  54, 0.3); border-radius: 8px; }
+    .pipeline-stat-warning { background: rgba(255, 152,   0, 0.1); border: 1px solid rgba(255, 152,   0, 0.3); border-radius: 8px; }
+    .pipeline-stat-success { background: rgba( 76, 175,  80, 0.1); border: 1px solid rgba( 76, 175,  80, 0.3); border-radius: 8px; }
+</style>

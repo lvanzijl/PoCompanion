@@ -5164,71 +5164,6 @@
         }
       }
     },
-    "/api/Pipelines/sprint-trends": {
-      "get": {
-        "tags": [
-          "Pipelines"
-        ],
-        "operationId": "Pipelines_GetSprintTrends",
-        "parameters": [
-          {
-            "name": "productOwnerId",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            },
-            "x-position": 1
-          },
-          {
-            "name": "sprintIds",
-            "in": "query",
-            "style": "form",
-            "explode": true,
-            "schema": {
-              "type": "array",
-              "nullable": true,
-              "items": {
-                "type": "integer",
-                "format": "int32"
-              }
-            },
-            "x-position": 2
-          },
-          {
-            "name": "productIds",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            },
-            "x-position": 3
-          },
-          {
-            "name": "teamId",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true
-            },
-            "x-position": 4
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetPipelineSprintTrendsResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/WorkItems/backlog-state/{productId}": {
       "get": {
         "tags": [
@@ -11256,33 +11191,6 @@
             "type": "number",
             "format": "double",
             "nullable": true
-          }
-        }
-      },
-      "GetPipelineSprintTrendsResponse": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "success": {
-            "type": "boolean"
-          },
-          "errorMessage": {
-            "type": "string",
-            "nullable": true
-          },
-          "sprints": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PipelineSprintMetricsDto"
-            }
-          },
-          "unmappedRunCount": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "sprintCoveragePercent": {
-            "type": "number",
-            "format": "double"
           }
         }
       },

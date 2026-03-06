@@ -870,6 +870,7 @@ public partial class RealTfsClient
                         YamlPath = yamlPath,
                         Folder = folder,
                         Url = webUrl,
+                        DefaultBranch = repoDefaultBranch,
                         LastSyncedUtc = syncTime
                     };
 

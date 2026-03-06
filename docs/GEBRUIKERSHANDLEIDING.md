@@ -24,9 +24,8 @@
    - 8.3 [Portfolio Delivery](#83-portfolio-delivery)
 9. [Trends-werkruimte — Verleden](#9-trends-werkruimte--verleden)
    - 9.1 [Pull Request-inzichten](#91-pull-request-inzichten)
-   - 9.2 [Pipeline-trend](#92-pipeline-trend)
-   - 9.3 [Pipeline-inzichten](#93-pipeline-inzichten)
-   - 9.4 [Delivery Trends](#94-delivery-trends)
+   - 9.2 [Pipeline-inzichten](#92-pipeline-inzichten)
+   - 9.3 [Delivery Trends](#93-delivery-trends)
 10. [Planning-werkruimte — Toekomst](#10-planning-werkruimte--toekomst)
     - 10.1 [Planbord](#101-planbord)
     - 10.2 [Afhankelijkheidsoverzicht](#102-afhankelijkheidsoverzicht)
@@ -514,8 +513,7 @@ De Trends-werkruimte beantwoordt de vraag: *Wat zijn de structurele patronen in 
 |---|---|---|
 | **Bug Trend** | Bugpatronen over tijd | Bug-inzichten |
 | **PR Trend** | Pull request-patronen | PR-inzichten |
-| **Pipeline Trend** | Build- en deployment-betrouwbaarheid over meerdere sprints (trendgrafieken) | Pipeline-trend |
-| **Pipeline Insights** | Sprint-specifieke pipeline stabiliteitsanalyse per product | Pipeline-inzichten |
+| **Pipeline Insights** | Sprint-specifieke pipeline stabiliteitsanalyse per product (standaardbranch only) | Pipeline-inzichten |
 | **Portfolio Progress** | Strategische voortgang per product over een sprintbereik | Portfolio Progress |
 | **Delivery Trends** | PBI-doorvoer, inspanningsdoorvoer en bugtrend per sprint | Delivery Trends |
 
@@ -627,45 +625,17 @@ Klik op een rij in de auteurstabel om het spreidingsdiagram te filteren op de PR
 
 ---
 
-### 9.2 Pipeline-trend
-
-**Pagina:** `/home/pipelines`
-
-De Pipeline-trend-pagina toont de build- en deployment-gezondheid over meerdere opeenvolgende sprints als trendgrafieken. Gebruik deze pagina om structurele patronen te herkennen in betrouwbaarheid, doorlooptijd en instabiliteit. Alle grafieken tonen een sprinttijdlijn op de X-as.
-
-#### Wat zie je hier?
-
-- **Teamselector** — filter de sprintlijst op een specifiek team. Bij "Alle teams" worden de gegevens niet op teamniveau gefilterd.
-- **Productselector** — optioneel filter op een specifiek product. Standaard worden alle producten getoond.
-- **Eindsprint** — de meest recente sprint die in het bereik wordt getoond.
-- **Aantal sprints** — stel in hoeveel sprints worden weergegeven.
-
-#### Grafieken
-
-| Grafiek | Omschrijving |
-|---|---|
-| **Betrouwbaarheids-trend** | Slagingspercentage van pipelines per sprint. Hogere waarden zijn beter. |
-| **Time-to-Green-trend** | Mediane pipeline-doorlooptijd (uren) per sprint. Lagere waarden zijn beter. |
-| **Staartrisico-trend** | P90-pipeline-doorlooptijd (uren) per sprint. Null/gat weergegeven bij minder dan 3 runs in een sprint. Lagere waarden zijn beter. |
-| **Instabiliteitsrisico-trend** | Percentage pipelines met zowel successen als mislukkingen in dezelfde sprint. Lagere waarden zijn beter. |
-
-Elke grafiek toont een **helling-badge** (Verbeterend / Stabiel / Verslechterend) op basis van het eerste en laatste datapunt in het bereik.
-
-#### Drill-down
-
-Onderaan de pagina bevindt zich een inklapbaar **Drill-down**-paneel met een tabel van per-pipeline details: slagingspercentage, mediane duur, P90-duur, main-branchgegevens en instabiliteitspercentage.
-
----
-
-### 9.3 Pipeline-inzichten
+### 9.2 Pipeline-inzichten
 
 **Pagina:** `/home/pipeline-insights`
 
-De Pipeline-inzichten-pagina is een PO-gericht stabiliteitsoverzicht voor één geselecteerde sprint. In tegenstelling tot de Pipeline-trend-pagina (die trendgrafieken toont over meerdere sprints) richt Pipeline-inzichten zich op de huidige of geselecteerde sprint: welke pipelines zijn het meest problematisch, hoe stabiel zijn ze gedurende de sprint, en welke richting gaan ze op?
+De Pipeline-inzichten-pagina is een PO-gericht stabiliteitsoverzicht voor één geselecteerde sprint. Pipeline-inzichten richt zich op de huidige of geselecteerde sprint: welke pipelines zijn het meest problematisch, hoe stabiel zijn ze gedurende de sprint, en welke richting gaan ze op? Alleen runs op de standaardbranch van het product worden meegerekend.
 
 Alle gegevens zijn afkomstig uit de lokale cache — er worden geen TFS-aanroepen gedaan.
 
 #### Filters en configuratie
+
+Het filterpaneel is **inklapbaar**. Wanneer ingeklapt, toont het samenvatting-chips voor het geselecteerde team en de geselecteerde sprint. Het paneel vouwt automatisch in nadat gegevens succesvol zijn geladen.
 
 - **Teamselector** — selecteer een team. De sprintlijst wordt automatisch geladen; de huidige sprint (of de meest recente afgelopen sprint) wordt automatisch geselecteerd.
 - **Sprints selector** — selecteer de te analyseren sprint. Wordt gevuld zodra een team is gekozen.
@@ -757,7 +727,7 @@ De tooltip toont de exacte mislukkingspercentages van de eerste en tweede helft.
 
 ---
 
-### 9.4 Delivery Trends
+### 9.3 Delivery Trends
 
 **Pagina:** `/home/trends/delivery`
 
