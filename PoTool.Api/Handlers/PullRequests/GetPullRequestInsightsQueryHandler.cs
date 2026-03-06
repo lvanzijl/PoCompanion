@@ -50,8 +50,11 @@ public sealed class GetPullRequestInsightsQueryHandler
 
         string? tfsBaseUrl = BuildTfsBaseUrl(tfsConfig);
 
-        // ── 1. Resolve product IDs in scope ───────────────────────────────────
-        List<int>? allowedProductIds = null;
+        // ── 1. Resolve repository names in scope ──────────────────────────────
+        // PRs are matched to teams via: Team → ProductTeamLinks → Products → Repositories → RepositoryName.
+        // Filtering by RepositoryName is more reliable than by ProductId because PRs may have
+        // been ingested before the repository-to-product mapping was configured (ProductId = null).
+        List<string>? allowedRepositoryNames = null;
         string? teamName = null;
 
         if (query.TeamId.HasValue)
@@ -68,10 +71,23 @@ public sealed class GetPullRequestInsightsQueryHandler
                 .Select(l => l.ProductId)
                 .ToListAsync(cancellationToken);
 
-            allowedProductIds = linkedProductIds;
             _logger.LogDebug(
                 "PR Insights: team {TeamId} linked to {Count} products",
                 query.TeamId.Value, linkedProductIds.Count);
+
+            if (linkedProductIds.Count > 0)
+            {
+                allowedRepositoryNames = await _context.Repositories
+                    .AsNoTracking()
+                    .Where(r => linkedProductIds.Contains(r.ProductId))
+                    .Select(r => r.Name)
+                    .Distinct()
+                    .ToListAsync(cancellationToken);
+
+                _logger.LogDebug(
+                    "PR Insights: team {TeamId} scoped to {Count} repositories",
+                    query.TeamId.Value, allowedRepositoryNames.Count);
+            }
         }
 
         // ── 2. Load PRs in date range ─────────────────────────────────────────
@@ -82,9 +98,20 @@ public sealed class GetPullRequestInsightsQueryHandler
             .AsNoTracking()
             .Where(pr => pr.CreatedDateUtc >= fromUtc && pr.CreatedDateUtc <= toUtc);
 
-        if (allowedProductIds != null && allowedProductIds.Count > 0)
+        if (allowedRepositoryNames != null)
         {
-            prQuery = prQuery.Where(pr => pr.ProductId.HasValue && allowedProductIds.Contains(pr.ProductId.Value));
+            if (allowedRepositoryNames.Count > 0)
+            {
+                prQuery = prQuery.Where(pr => allowedRepositoryNames.Contains(pr.RepositoryName));
+            }
+            else
+            {
+                // Team has products but no repositories configured → no PRs can match
+                _logger.LogDebug(
+                    "PR Insights: team {TeamId} has products but no repository configurations",
+                    query.TeamId);
+                return EmptyResult(query.TeamId, teamName, query.FromDate, query.ToDate);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(query.RepositoryName))
