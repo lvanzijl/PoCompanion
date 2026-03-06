@@ -304,6 +304,23 @@ public class MockTfsClient : ITfsClient
         return Task.FromResult<IEnumerable<PullRequestFileChangeDto>>(result);
     }
 
+    public Task<IEnumerable<int>> GetPullRequestWorkItemLinksAsync(
+        int pullRequestId,
+        string repositoryName,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Mock TFS client: GetPullRequestWorkItemLinksAsync called for PR {PullRequestId}", pullRequestId);
+
+        var allLinks = _mockDataFacade.GetMockPrWorkItemLinks();
+        var workItemIds = allLinks
+            .Where(l => l.PullRequestId == pullRequestId)
+            .Select(l => l.WorkItemId)
+            .ToList();
+
+        _logger.LogInformation("Mock TFS client: Returning {Count} work item links for PR {PullRequestId}", workItemIds.Count, pullRequestId);
+        return Task.FromResult<IEnumerable<int>>(workItemIds);
+    }
+
     public Task<IEnumerable<WorkItemRevisionDto>> GetWorkItemRevisionsAsync(
         int workItemId,
         CancellationToken cancellationToken = default)

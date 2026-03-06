@@ -546,4 +546,18 @@ public partial class RealTfsClient
             return fileChanges;
         }, cancellationToken);
     }
+
+    public Task<IEnumerable<int>> GetPullRequestWorkItemLinksAsync(
+        int pullRequestId,
+        string repositoryName,
+        CancellationToken cancellationToken = default)
+    {
+        // Real implementation would call:
+        // GET {baseUrl}/{project}/_apis/git/repositories/{repositoryName}/pullRequests/{pullRequestId}/workitems?api-version=7.0
+        // For now, return empty until the real ADO integration is wired.
+        _logger.LogDebug(
+            "GetPullRequestWorkItemLinksAsync: real ADO integration not yet implemented for PR {PullRequestId} in repo {Repo}; returning empty",
+            pullRequestId, repositoryName);
+        return Task.FromResult<IEnumerable<int>>(Array.Empty<int>());
+    }
 }
