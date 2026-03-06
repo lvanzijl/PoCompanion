@@ -252,7 +252,11 @@ public sealed class GetPipelineInsightsQueryHandler
             .ToListAsync(cancellationToken);
 
         // Filter to default branch only, per pipeline definition.
-        // Only applied when a default branch is stored for the definition.
+        // Backward compatibility: definitions synced before the DefaultBranch field was added will have
+        // null/empty values and are therefore excluded from the lookup map (defaultBranchByDefId only
+        // contains entries with a non-empty branch). For those definitions all runs are included,
+        // preserving existing behaviour. Newly synced definitions will only count runs on their
+        // repository's default branch, excluding feature-branch and PR builds.
         if (defaultBranchByDefId is not null && defaultBranchByDefId.Count > 0)
         {
             runs = runs.Where(r =>
