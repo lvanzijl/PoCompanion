@@ -384,20 +384,26 @@ Global header (available on every page) ◄────────────�
 
 ### 2.10 Pull Request Insights — `/home/pull-requests`
 
-**Purpose:** Read-only view of pull request metrics and trends. Insight-only; no editing.
+**Purpose:** PO-focused, read-only PR workflow friction analysis for a selected team. Insight-only; no editing.
 
 | Functionality | Description |
 |---|---|
-| Breadcrumb | `Home › Pull Request Insights`. |
-| Product/Team filter | Filters PR metrics by selected product or team. |
-| PR status chart | Shows PRs by status (active, completed, abandoned). |
-| PR time-open chart | Shows how long PRs remain open before resolution. |
-| PR user chart | Shows PR activity per team member. |
-| Summary panel | Aggregated totals and averages for the selected context. |
-| Date range filter | Limits the displayed PRs to a specific date window. |
+| Breadcrumb | `Home › Trends (Past) › Pull Request Insights`. |
+| Team selector | Scopes PR data to all products linked to the selected team. |
+| Sprint selector | Optional. Appears once a team is selected. Choosing a sprint automatically sets the From/To date range to that sprint's boundaries and triggers a reload. Selecting "Custom range" reverts to manual date editing. |
+| Date range selector | Limits displayed PRs to a date window (default: last 6 months). Automatically filled when a sprint is selected. |
+| Date quick-presets | One-click chips for 1M / 3M / 6M / 1Y / 2Y. Active preset is highlighted. Selecting a preset clears the sprint selection. |
+| Repository filter | Optional filter to a single repository. |
+| Global Summary chips | Total PRs, Merge %, Abandon %, Rework %, Median lifetime, P90 lifetime. |
+| Top 3 Friction PRs | Cards ranking PRs by composite score (lifetime 40%, review cycles 30%, files 20%, comments 10%). Clicking highlights the PR in the scatter chart. Each card includes an "Open in Azure DevOps" link when TFS configuration is available. |
+| PR Scatter chart | Pure-SVG `PullRequestScatterSvg` component: X = creation date, Y = lifetime (hours). Color: green (merged clean), yellow (merged after rework), red (abandoned). Shape per repository. Hover tooltip; clicking a point highlights/dims and opens the PR Detail Drawer. Median and P90 overlay lines. Author filter chip shown when an author is selected. |
+| PR Detail Drawer | Right-anchored `MudDrawer` opened by clicking a scatter point. Shows: status chip (with rework badge), PR title, author, repository, creation date, lifetime, review cycles, files changed, comment count, and an "Open in Azure DevOps" button (visible when TFS configuration is available). Closes via ×-button or when filters are changed. |
+| Longest PR table | Top 20 PRs ordered by lifetime descending. Columns: PR title (clickable link to Azure DevOps when TFS configuration is available), repository, author, lifetime, review cycles, files changed, comments, status. |
+| Repository breakdown | Collapsible table showing per-repository workflow behaviour: PR count, merge %, abandon %, median lifetime, P90 lifetime, average review cycles. Sorted by PR count descending. |
+| Author breakdown | Collapsible table showing per-author workflow behaviour: PR count, merge %, abandon %, rework %, median lifetime, average review cycles. Sorted by PR count descending. Clicking a row filters the scatter chart to that author's PRs only (toggle). |
 | Home button | Returns to `/home`. |
 
-**Outgoing navigation:** `/home`
+**Outgoing navigation:** `/home`, `/home/trends`, Azure DevOps (external, when TFS configuration is available)
 
 ---
 

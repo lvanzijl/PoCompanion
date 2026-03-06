@@ -1,6 +1,38 @@
 [
   {
     "date": "2026-03-05",
+    "type": "Added",
+    "title": "Pull Request Insights — Deferred items: Azure DevOps deep-link + Sprint quick-select",
+    "impact": "Two deferred items from the original PR Insights implementation now resolved. (1) Azure DevOps deep-link: every PR scatter point, Top-3 friction card, and Longest-PR table row now includes a direct URL to the corresponding pull request in Azure DevOps/TFS. The URL is constructed server-side from TfsConfig.Url + TfsConfig.Project + RepositoryName + PrId (format: {url}/{project}/_git/{repo}/pullrequest/{id}). The PR Detail Drawer gains an “Open in Azure DevOps” button at the bottom. Top-3 cards show an “Open in Azure DevOps” inline link. Longest-PR table titles become clickable links. All links open in a new tab. The URL is null (and the button/link is hidden) when TFS config is unavailable — no breaking change for offline environments. New PrScatterPointDto.Url and PrProblematicEntryDto.Url properties added. 4 new unit tests covering: URL present with config, null without config, correct format, and trailing slash stripping. (2) Sprint quick-select: when a team is selected, a Sprint (optional) dropdown appears in the filter panel. Choosing a sprint sets the From/To date range to that sprint's boundaries and triggers a reload — equivalent to selecting the sprint as a custom date range. Selecting “Custom range” or manually editing the date pickers clears the sprint selection. The sprint list is loaded from the existing SprintService and sorted newest-first. No backend changes — pure UI enhancement that maps sprint boundaries to the existing date-range filter.",
+    "area": "Trends / Pull Request Insights",
+    "link": "/home/pull-requests"
+  },
+  {
+    "date": "2026-03-05",
+    "type": "Added",
+    "title": "Pull Request Insights — Phase 3: Author Drill-Down Filter + Date Quick-Presets",
+    "impact": "Two UX improvements to the Pull Request Insights page (/home/pull-requests). (1) Author drill-down filter: clicking any row in the Author Breakdown table (Section 6) now filters the PR scatter chart (Section 3) to show only that author's PRs. Non-matching points are heavily dimmed (opacity 0.12), providing immediate visual focus on the author's workflow pattern. An author-filter chip appears in the scatter chart header with a × close button. Clicking the same row again, the chip, or changing any server-side filter all clear the author filter. The active row in the Author Breakdown table is highlighted for clarity. PullRequestScatterSvg gains a new FilteredAuthor parameter that works independently of the existing HighlightedPrId parameter (both can be active at once: a point must match both to be fully opaque). (2) Date quick-presets: five chip buttons (1M / 3M / 6M / 1Y / 2Y) appear beneath the date pickers. Clicking a chip sets the From/To dates accordingly and triggers a reload. The active preset chip is highlighted in primary color. All changes are pure frontend — no backend or DTO changes.",
+    "area": "Trends / Pull Request Insights",
+    "link": "/home/pull-requests"
+  },
+  {
+    "date": "2026-03-05",
+    "type": "Added",
+    "title": "Pull Request Insights — Phase 2: PR Detail Drawer + Per-Author Breakdown",
+    "impact": "Two additions to the Pull Request Insights page (/home/pull-requests). (1) PR Detail Drawer: clicking a scatter point now opens a right-anchored MudDrawer showing full PR details — status chip (Merged clean / Merged rework / Abandoned / Active), PR title, author, repository, creation date, lifetime, review cycles (with 'rework' badge when > 1), files changed, and comment count. The drawer closes via the × button or automatically when filters change. This replaces the previous highlight-only click behaviour (highlight still works in parallel). (2) Author Breakdown: a new collapsible Section 6 shows per-author PR workflow statistics — PR count, merge %, abandon %, rework % (highlighted in orange > 30%), median lifetime, and average review cycles. Sorted by PR count descending. Answers the question: 'Which author's PRs show the most friction patterns?' Backend: new PrAuthorBreakdownDto added to PoTool.Shared.PullRequests; AuthorBreakdown list added to PullRequestInsightsDto; handler updated with author grouping (step 10). 3 new unit tests covering: breakdown sort order, rate computation, and empty state.",
+    "area": "Trends / Pull Request Insights",
+    "link": "/home/pull-requests"
+  },
+  {
+    "date": "2026-03-05",
+    "type": "Changed",
+    "title": "Pull Request Insights — Full overhaul: PO-first friction analysis page",
+    "impact": "The Pull Request Insights page (/home/pull-requests) has been completely overhauled into a team-centric, PO-focused PR workflow friction page. All data comes from the local cache only — no live Azure DevOps calls. The page answers the question: 'Which pull requests indicate delivery friction in the team?' New layout has five sections: (1) Global summary chips — Total PRs, Merge %, Abandon %, Rework %, Median lifetime, P90 lifetime. (2) Top 3 friction PRs — cards ranked by composite score (lifetime 40%, review cycles 30%, files changed 20%, comments 10%); clicking highlights the PR in the scatter chart. (3) PR scatter chart — new PullRequestScatterSvg component (pure SVG, no JavaScript); X = creation date, Y = lifetime in hours; color by outcome (green = merged clean, yellow = merged after rework, red = abandoned); shape by repository; hover tooltip; click to highlight/dim; median and P90 overlay lines. (4) Longest PR table — top 20 by lifetime descending with columns: title, repository, author, lifetime, review cycles, files changed, comments, status. (5) Repository breakdown — collapsible per-repository table with merge %, abandon %, median/P90 lifetime, and average review cycles. Filters: team selector (scopes to team-linked products), date range (default last 6 months), optional repository filter. Backend: new GET api/PullRequests/insights endpoint; new GetPullRequestInsightsQueryHandler with 13 unit tests. 'Changes requested' is a proxy: since reviewer vote history is not stored in the cache, IterationCount > 1 is used as the rework signal.",
+    "area": "Trends / Pull Request Insights",
+    "link": "/home/pull-requests"
+  },
+  {
+    "date": "2026-03-05",
     "type": "Changed",
     "title": "Pipeline Insights — Phase 4: Auto-Sprint Selection + Scroll-to-Product Navigation",
     "impact": "Two UX improvements to the Pipeline Insights page. (1) Auto-sprint selection: when a team is selected, the current sprint (the sprint window covering today, or the most recently ended sprint as fallback) is automatically selected and insights are loaded immediately — no extra click required. (2) Scroll-to-product: clicking a card in the Global Top Pipelines In Trouble section now smoothly scrolls the page to the corresponding per-product section. A tooltip on each card hints at this interaction. Both changes are pure frontend (no backend or DTO changes).",

@@ -1,0 +1,37 @@
+/* PullRequestScatterSvg component styles */
+
+.pr-scatter-container {
+    width: 100%;
+}
+
+/* ── Legend ──────────────────────────────────────────────────────────────── */
+
+.pr-scatter-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.5rem 0 0.25rem 3.5rem;
+    font-size: 0.72rem;
+}
+
+.pr-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.pr-legend-clean    { color: var(--mud-palette-success); }
+.pr-legend-rework   { color: var(--mud-palette-warning); }
+.pr-legend-abandoned { color: var(--mud-palette-error); }
+.pr-legend-active   { color: var(--mud-palette-default); }
+
+.pr-legend-median {
+    color: var(--mud-palette-info);
+    letter-spacing: 0.05em;
+}
+
+.pr-legend-p90 {
+    color: var(--mud-palette-warning);
+    letter-spacing: 0.05em;
+}

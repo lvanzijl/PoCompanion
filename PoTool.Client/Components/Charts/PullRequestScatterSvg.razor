@@ -1,0 +1,445 @@
+@*
+    PullRequestScatterSvg — Reusable SVG scatter chart for PR workflow friction analysis.
+
+    X axis: PR creation time over the selected date range
+    Y axis: PR lifetime in hours (auto-scaled from data)
+
+    Color category mapping:
+      merged-clean   → green  (--mud-palette-success)
+      merged-rework  → yellow (--mud-palette-warning)
+      abandoned      → red    (--mud-palette-error)
+      active         → grey   (--mud-palette-default)
+
+    Overlay lines:
+      Median: dashed info color
+      P90:    dashed warning color
+
+    Interactions:
+      Hover a point       → SVG tooltip shown
+      Click a point       → OnPointClick callback fired
+      HighlightedPrId     → non-highlighted points are dimmed
+*@
+
+@namespace PoTool.Client.Components.Charts
+@using PoTool.Shared.PullRequests
+
+<div class="pr-scatter-container" style="position: relative; width: 100%;">
+    <svg viewBox="0 0 820 300"
+         style="width: 100%; height: auto; max-height: @(Height)px; display: block; overflow: visible;"
+         @onmouseleave="() => _hoveredPoint = null">
+
+        @* ── Y axis grid lines + labels ────────────────────────────── *@
+        @foreach (var tick in GetYTicks())
+        {
+            <line x1="@L" y1="@F(tick.Px)"
+                  x2="@F(PlotRight)" y2="@F(tick.Px)"
+                  stroke="var(--mud-palette-divider)" stroke-width="0.5" />
+            @Txt(LeftPad - 6, tick.Px + 3.5, "end", 9, "var(--mud-palette-text-secondary)", FormatYLabel(tick.Val))
+        }
+
+        @* ── X axis ticks + labels ─────────────────────────────────── *@
+        @foreach (var tick in GetXTicks())
+        {
+            <line x1="@F(tick.Px)" y1="@F(PlotBottom)"
+                  x2="@F(tick.Px)" y2="@F(PlotBottom + 4)"
+                  stroke="var(--mud-palette-divider)" stroke-width="1" />
+            @Txt(tick.Px, PlotBottom + 14, "middle", 9, "var(--mud-palette-text-secondary)", FormatXLabel(tick.Time))
+        }
+
+        @* ── Axis lines ─────────────────────────────────────────────── *@
+        <line x1="@L" y1="@T" x2="@L" y2="@F(PlotBottom)"
+              stroke="var(--mud-palette-divider)" stroke-width="1" />
+        <line x1="@L" y1="@F(PlotBottom)" x2="@F(PlotRight)" y2="@F(PlotBottom)"
+              stroke="var(--mud-palette-divider)" stroke-width="1" />
+
+        @* ── Y axis label ──────────────────────────────────────────── *@
+        @((MarkupString)$"""<text x="11" y="{F(TopPad + PlotHeight / 2)}" text-anchor="middle" font-size="9" fill="var(--mud-palette-text-secondary)" transform="rotate(-90 11 {F(TopPad + PlotHeight / 2)})">Lifetime (h)</text>""")
+
+        @* ── Median overlay line ───────────────────────────────────── *@
+        @if (ShowMedianLine && MedianLifetimeHours.HasValue && MedianLifetimeHours.Value > 0)
+        {
+            var medY = ToSvgY(MedianLifetimeHours.Value);
+            <line x1="@L" y1="@F(medY)" x2="@F(PlotRight)" y2="@F(medY)"
+                  stroke="var(--mud-palette-info)" stroke-width="1"
+                  stroke-dasharray="4,3" opacity="0.80" />
+            @Txt(PlotRight + 3, medY + 3, "start", 8, "var(--mud-palette-info)", "med")
+        }
+
+        @* ── P90 overlay line ──────────────────────────────────────── *@
+        @if (ShowP90Line && P90LifetimeHours.HasValue && P90LifetimeHours.Value > 0)
+        {
+            var p90Y = ToSvgY(P90LifetimeHours.Value);
+            <line x1="@L" y1="@F(p90Y)" x2="@F(PlotRight)" y2="@F(p90Y)"
+                  stroke="var(--mud-palette-warning)" stroke-width="1"
+                  stroke-dasharray="2,3" opacity="0.80" />
+            @Txt(PlotRight + 3, p90Y + 3, "start", 8, "var(--mud-palette-warning)", "P90")
+        }
+
+        @* ── Data points ───────────────────────────────────────────── *@
+        @foreach (var pt in Data)
+        {
+            double cx      = ToSvgX(pt.CreatedDate);
+            double cy      = ToSvgY(pt.LifetimeHours);
+            bool isHovered = _hoveredPoint?.Id == pt.Id;
+
+            // Priority: author filter > PR highlight > default
+            bool authorMatch = FilteredAuthor == null || pt.Author == FilteredAuthor;
+            bool hlMatch     = HighlightedPrId == null || HighlightedPrId.Value == pt.Id;
+            bool isVisible   = authorMatch && hlMatch;
+
+            double opacity = isVisible ? (isHovered ? 1.0 : 0.80) : 0.12;
+            double r       = isHovered ? 8.0 : 5.5;
+            var stroke     = isHovered ? "var(--mud-palette-primary)" : "transparent";
+            var shape      = GetShape(pt.Repository);
+
+            @if (shape == "circle")
+            {
+                <circle cx="@F(cx)" cy="@F(cy)" r="@F(r)"
+                        fill="@GetCategoryColor(pt.ColorCategory)"
+                        opacity="@F(opacity)"
+                        stroke="@stroke"
+                        stroke-width="@(isHovered ? "1.5" : "0")"
+                        style="cursor: pointer;"
+                        @onmouseenter="() => _hoveredPoint = pt"
+                        @onmouseleave="() => _hoveredPoint = null"
+                        @onclick="() => HandlePointClick(pt)" />
+            }
+            else if (shape == "square")
+            {
+                double side = r * 1.6;
+                <rect x="@F(cx - side/2)" y="@F(cy - side/2)"
+                      width="@F(side)" height="@F(side)"
+                      fill="@GetCategoryColor(pt.ColorCategory)"
+                      opacity="@F(opacity)"
+                      stroke="@stroke"
+                      stroke-width="@(isHovered ? "1.5" : "0")"
+                      style="cursor: pointer;"
+                      @onmouseenter="() => _hoveredPoint = pt"
+                      @onmouseleave="() => _hoveredPoint = null"
+                      @onclick="() => HandlePointClick(pt)" />
+            }
+            else
+            {
+                @* triangle *@
+                double th = r * 1.8;
+                string pts = $"{F(cx)},{F(cy - th)} {F(cx - th * 0.87)},{F(cy + th * 0.5)} {F(cx + th * 0.87)},{F(cy + th * 0.5)}";
+                <polygon points="@pts"
+                         fill="@GetCategoryColor(pt.ColorCategory)"
+                         opacity="@F(opacity)"
+                         stroke="@stroke"
+                         stroke-width="@(isHovered ? "1.5" : "0")"
+                         style="cursor: pointer;"
+                         @onmouseenter="() => _hoveredPoint = pt"
+                         @onmouseleave="() => _hoveredPoint = null"
+                         @onclick="() => HandlePointClick(pt)" />
+            }
+        }
+
+        @* ── SVG tooltip (shown on hover) ──────────────────────────── *@
+        @if (_hoveredPoint != null)
+        {
+            const double ttW = 210;
+            const double ttH = 108;
+            double htX = ToSvgX(_hoveredPoint.CreatedDate);
+            double htY = ToSvgY(_hoveredPoint.LifetimeHours);
+            double ttX = Math.Min(htX + 10, 820 - ttW - 5);
+            double ttY = Math.Max(htY - ttH - 8, TopPad + 2);
+            var cat = _hoveredPoint.ColorCategory;
+
+            <g pointer-events="none">
+                @* shadow *@
+                <rect x="@F(ttX + 2)" y="@F(ttY + 2)" width="@ttW" height="@ttH"
+                      rx="4" fill="rgba(0,0,0,0.14)" />
+                @* background *@
+                <rect x="@F(ttX)" y="@F(ttY)" width="@ttW" height="@ttH"
+                      rx="4"
+                      fill="var(--mud-palette-surface)"
+                      stroke="var(--mud-palette-divider)"
+                      stroke-width="0.8" />
+                @* PR title *@
+                @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+16)}" font-size="10.5" font-weight="600" fill="var(--mud-palette-text-primary)">{He(Trunc(_hoveredPoint.Title, 28))}</text>""")
+                @* Repository + Author *@
+                @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+30)}" font-size="9" fill="var(--mud-palette-text-secondary)">{He(_hoveredPoint.Repository)} · {He(_hoveredPoint.Author)}</text>""")
+                @* Lifetime *@
+                @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+46)}" font-size="9" fill="var(--mud-palette-text-secondary)">⏱ {He(FormatLifetime(_hoveredPoint.LifetimeHours))} lifetime</text>""")
+                @* Review cycles + files *@
+                @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+61)}" font-size="9" fill="var(--mud-palette-text-secondary)">{He(_hoveredPoint.ReviewCycles.ToString())} review cycles · {He(_hoveredPoint.FilesChanged.ToString())} files</text>""")
+                @* Comments *@
+                @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+76)}" font-size="9" fill="var(--mud-palette-text-secondary)">{He(_hoveredPoint.CommentCount.ToString())} comments</text>""")
+                @* Status chip *@
+                <rect x="@F(ttX+8)" y="@F(ttY+84)"
+                      width="@GetStatusChipW(cat)" height="16" rx="8"
+                      fill="@GetCategoryColor(cat)" opacity="0.18" />
+                @((MarkupString)$"""<text x="{F(ttX+16)}" y="{F(ttY+96)}" font-size="9" font-weight="600" fill="{GetCategoryColor(cat)}">{He(FormatCategory(cat))}</text>""")
+            </g>
+        }
+
+        @* ── Empty state ───────────────────────────────────────────── *@
+        @if (!Data.Any())
+        {
+            @((MarkupString)$"""<text x="{F(LeftPad + PlotWidth / 2)}" y="{F(TopPad + PlotHeight / 2)}" text-anchor="middle" font-size="12" fill="var(--mud-palette-text-disabled)">No PR data for the selected period</text>""")
+        }
+    </svg>
+
+    @* ── Legend ─────────────────────────────────────────────────────── *@
+    <div class="pr-scatter-legend">
+        <span class="pr-legend-item pr-legend-clean">● Merged (clean)</span>
+        <span class="pr-legend-item pr-legend-rework">● Merged (rework)</span>
+        <span class="pr-legend-item pr-legend-abandoned">● Abandoned</span>
+        @if (Data.Any(p => string.Equals(p.ColorCategory, "active", StringComparison.OrdinalIgnoreCase)))
+        {
+            <span class="pr-legend-item pr-legend-active">● Active</span>
+        }
+        @if (ShowMedianLine && MedianLifetimeHours.HasValue)
+        {
+            <span class="pr-legend-item pr-legend-median">— med</span>
+        }
+        @if (ShowP90Line && P90LifetimeHours.HasValue)
+        {
+            <span class="pr-legend-item pr-legend-p90">- - P90</span>
+        }
+        @if (_repositoryShapeMap.Count > 1)
+        {
+            foreach (var (repo, shape) in _repositoryShapeMap)
+            {
+                var sym = shape switch { "circle" => "●", "square" => "■", _ => "▲" };
+                <span class="pr-legend-item" style="color: var(--mud-palette-text-secondary);">@sym @repo</span>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    // ── Chart geometry constants ────────────────────────────────────────
+    private const double LeftPad   = 56;
+    private const double RightPad  = 40;
+    private const double TopPad    = 14;
+    private const double BottomPad = 42;
+    private const double PlotRight  = 820 - RightPad;
+    private const double PlotBottom = 300 - BottomPad;
+    private const double PlotWidth  = PlotRight - LeftPad;
+    private const double PlotHeight = PlotBottom - TopPad;
+
+    private static string L => F(LeftPad);
+    private static string T => F(TopPad);
+
+    // ── Parameters ───────────────────────────────────────────────────────
+
+    /// <summary>PR scatter data points.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<PrScatterPointDto> Data { get; set; } = Array.Empty<PrScatterPointDto>();
+
+    /// <summary>Component display height in pixels (CSS max-height).</summary>
+    [Parameter]
+    public int Height { get; set; } = 340;
+
+    /// <summary>Highlighted PR ID. When set, all other points are dimmed.</summary>
+    [Parameter]
+    public int? HighlightedPrId { get; set; }
+
+    /// <summary>
+    /// When set, only points matching this author are fully visible; all others are heavily dimmed.
+    /// Takes effect in combination with HighlightedPrId (both must match for full opacity).
+    /// </summary>
+    [Parameter]
+    public string? FilteredAuthor { get; set; }
+
+    /// <summary>Show the median lifetime overlay line.</summary>
+    [Parameter]
+    public bool ShowMedianLine { get; set; } = true;
+
+    /// <summary>Show the P90 lifetime overlay line.</summary>
+    [Parameter]
+    public bool ShowP90Line { get; set; } = true;
+
+    /// <summary>Median lifetime hours for overlay.</summary>
+    [Parameter]
+    public double? MedianLifetimeHours { get; set; }
+
+    /// <summary>P90 lifetime hours for overlay.</summary>
+    [Parameter]
+    public double? P90LifetimeHours { get; set; }
+
+    /// <summary>Fired when a data point is clicked.</summary>
+    [Parameter]
+    public EventCallback<PrScatterPointDto> OnPointClick { get; set; }
+
+    // ── Internal state ────────────────────────────────────────────────────
+    private PrScatterPointDto? _hoveredPoint;
+    private Dictionary<string, string> _repositoryShapeMap = new();
+
+    private static readonly string[] Shapes = { "circle", "square", "triangle" };
+
+    protected override void OnParametersSet()
+    {
+        // Build a stable repo → shape mapping based on first-seen order
+        _repositoryShapeMap = new Dictionary<string, string>();
+        int idx = 0;
+        foreach (var pt in Data)
+        {
+            if (!_repositoryShapeMap.ContainsKey(pt.Repository))
+            {
+                _repositoryShapeMap[pt.Repository] = Shapes[idx % Shapes.Length];
+                idx++;
+            }
+        }
+    }
+
+    // ── Coordinate mapping ────────────────────────────────────────────────
+
+    private double ToSvgX(DateTimeOffset t)
+    {
+        if (!Data.Any()) return LeftPad;
+        var xMin = Data.Min(p => p.CreatedDate);
+        var xMax = Data.Max(p => p.CreatedDate);
+        var total = (xMax - xMin).TotalSeconds;
+        if (total <= 0) return LeftPad + PlotWidth / 2;
+        var ratio = Math.Clamp((t - xMin).TotalSeconds / total, 0.0, 1.0);
+        return LeftPad + ratio * PlotWidth;
+    }
+
+    private double ToSvgY(double hours)
+    {
+        var yMax = GetYMax();
+        if (yMax <= 0) return PlotBottom;
+        var ratio = Math.Clamp(hours / yMax, 0.0, 1.0);
+        return PlotBottom - ratio * PlotHeight;
+    }
+
+    // ── Axis helpers ──────────────────────────────────────────────────────
+
+    private double GetYMax()
+    {
+        double dataMax = Data.Any(p => p.LifetimeHours > 0) ? Data.Max(p => p.LifetimeHours) : 24.0;
+        double overlayMax = Math.Max(MedianLifetimeHours ?? 0, P90LifetimeHours ?? 0);
+        return RoundUpNice(Math.Max(dataMax, overlayMax) * 1.15);
+    }
+
+    private static double RoundUpNice(double v)
+    {
+        if (v <= 0)    return 24;
+        if (v <= 12)   return 12;
+        if (v <= 24)   return 24;
+        if (v <= 48)   return 48;
+        if (v <= 72)   return 72;
+        if (v <= 120)  return 120;
+        if (v <= 168)  return 168;
+        if (v <= 336)  return 336;
+        if (v <= 720)  return 720;
+        return Math.Ceiling(v / 168.0) * 168;
+    }
+
+    private record YTick(double Val, double Px);
+    private record XTick(DateTimeOffset Time, double Px);
+
+    private IEnumerable<YTick> GetYTicks()
+    {
+        var yMax = GetYMax();
+        var step = GetYStep(yMax);
+        for (double y = 0; y <= yMax; y += step)
+            yield return new YTick(y, ToSvgY(y));
+    }
+
+    private static double GetYStep(double yMax) =>
+        yMax <= 24  ? 6   :
+        yMax <= 48  ? 12  :
+        yMax <= 120 ? 24  :
+        yMax <= 168 ? 24  :
+        yMax <= 336 ? 48  :
+        yMax <= 720 ? 120 : 168;
+
+    private IEnumerable<XTick> GetXTicks()
+    {
+        if (!Data.Any()) yield break;
+        var xMin = Data.Min(p => p.CreatedDate);
+        var xMax = Data.Max(p => p.CreatedDate);
+        var span = xMax - xMin;
+
+        // Choose tick interval based on span
+        int everyDays = span.TotalDays <= 14  ? 2  :
+                        span.TotalDays <= 31  ? 7  :
+                        span.TotalDays <= 90  ? 14 :
+                        span.TotalDays <= 182 ? 30 : 60;
+
+        var day = xMin.Date.AddDays(1);
+        while (day <= xMax.Date)
+        {
+            var dto = new DateTimeOffset(day, xMin.Offset);
+            if ((dto - xMin).TotalDays % everyDays < 1.0 || everyDays == 1)
+            {
+                yield return new XTick(dto, ToSvgX(dto));
+            }
+            day = day.AddDays(1);
+        }
+    }
+
+    private static string FormatYLabel(double h) =>
+        h >= 168 ? $"{(int)(h / 168)}w" :
+        h >= 24  ? $"{(int)(h / 24)}d"  :
+                   $"{(int)h}h";
+
+    private static string FormatXLabel(DateTimeOffset t) => t.ToString("MMM d");
+
+    // ── Color + shape helpers ─────────────────────────────────────────────
+
+    private static string GetCategoryColor(string cat) =>
+        cat.ToLowerInvariant() switch
+        {
+            "merged-clean"  => "var(--mud-palette-success)",
+            "merged-rework" => "var(--mud-palette-warning)",
+            "abandoned"     => "var(--mud-palette-error)",
+            _               => "var(--mud-palette-default)"
+        };
+
+    private string GetShape(string repository) =>
+        _repositoryShapeMap.TryGetValue(repository, out var shape) ? shape : "circle";
+
+    // ── Tooltip helpers ───────────────────────────────────────────────────
+
+    private static string FormatLifetime(double h)
+    {
+        if (h <= 0) return "n/a";
+        if (h >= 168) { int w = (int)(h / 168); int d = (int)((h % 168) / 24); return d > 0 ? $"{w}w {d}d" : $"{w}w"; }
+        if (h >= 24)  { int d = (int)(h / 24); int hr = (int)(h % 24); return hr > 0 ? $"{d}d {hr}h" : $"{d}d"; }
+        return $"{h:F0}h";
+    }
+
+    private static string FormatCategory(string cat) =>
+        cat.ToLowerInvariant() switch
+        {
+            "merged-clean"  => "Merged (clean)",
+            "merged-rework" => "Merged (rework)",
+            "abandoned"     => "Abandoned",
+            _               => "Active"
+        };
+
+    private static double GetStatusChipW(string cat) =>
+        cat.ToLowerInvariant() switch
+        {
+            "merged-clean"  => 90,
+            "merged-rework" => 102,
+            "abandoned"     => 72,
+            _               => 52
+        };
+
+    private static string Trunc(string s, int max) =>
+        s.Length <= max ? s : s[..max] + "…";
+
+    // ── SVG rendering utilities ───────────────────────────────────────────
+
+    private static string F(double v) => v.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static MarkupString Txt(double x, double y, string anchor, int size, string fill, string content)
+        => (MarkupString)$"<text x=\"{F(x)}\" y=\"{F(y)}\" text-anchor=\"{anchor}\" font-size=\"{size}\" fill=\"{fill}\">{He(content)}</text>";
+
+    private static string He(string s)
+        => System.Net.WebUtility.HtmlEncode(s);
+
+    // ── Event handlers ────────────────────────────────────────────────────
+
+    private async Task HandlePointClick(PrScatterPointDto pt)
+    {
+        if (OnPointClick.HasDelegate)
+            await OnPointClick.InvokeAsync(pt);
+    }
+}
