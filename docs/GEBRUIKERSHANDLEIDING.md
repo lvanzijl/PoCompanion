@@ -942,13 +942,13 @@ Deze pagina beantwoordt de vraag: *Wat zijn de geplande epics per product op de 
 #### Hoe werkt het?
 
 - **Roadmap-epics** worden bepaald door de tag **"roadmap"** (kleine letters). Alleen epics met deze tag verschijnen op de pagina.
-- De **productvolgorde** wordt bepaald door de geconfigureerde productvolgorde (Objective BacklogPriority). Je kunt de volgorde aanpassen met de **Eerder/Later**-knoppen in de kop van elke productbaan.
-- De **epicvolgorde** binnen een product volgt een stabiele volgorde (op basis van TFS-ID).
+- De **productvolgorde** wordt bepaald door de **BacklogPriority** (`Microsoft.VSTS.Common.BacklogPriority`) van het root Objective-werkitem van elk product in TFS. Producten met een lagere BacklogPriority-waarde staan eerder.
+- De **epicvolgorde** binnen een product wordt bepaald door de **BacklogPriority** van elk Epic-werkitem in TFS. Bij gelijke waarden wordt het TFS-ID als stabiele tiebreaker gebruikt.
 - Elke epickaart toont: volgnummer, epictitel, TFS-ID en een link om de epic in TFS te openen.
 
 #### Productbanen herschikken
 
-Met de pijlknoppen in de kop van elke baan kun je een product eerder of later plaatsen. De eerste en laatste baan hebben de bijbehorende knop uitgeschakeld.
+Met de pijlknoppen in de kop van elke baan kun je een product eerder of later plaatsen. Dit werkt door de BacklogPriority-waarden van de twee naburige Objective-werkitems in TFS om te wisselen (swap). Na het herschikken wordt de wijziging naar TFS geschreven, de cache vernieuwd en worden de gegevens opnieuw geladen vanuit de cache. De eerste en laatste baan hebben de bijbehorende knop uitgeschakeld.
 
 > **Let op:** Epics bewerken doe je op de **Product Roadmap-editorpagina**, niet op deze overzichtspagina.
 

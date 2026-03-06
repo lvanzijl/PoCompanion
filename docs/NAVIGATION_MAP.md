@@ -470,14 +470,16 @@ When multiple linked work items resolve to different categories, the highest-pri
 
 ### 2.12a Product Roadmaps — `/planning/product-roadmaps`
 
-**Purpose:** Read-only overview of product roadmaps across all products. Displays horizontal product lanes with vertically stacked roadmap epics. Products are ordered by their configured order (Objective BacklogPriority). Only epics tagged with **"roadmap"** are shown. Epic cards display order number, title, TFS ID, and a link to open the epic in TFS.
+**Purpose:** Read-only overview of product roadmaps across all products. Displays horizontal product lanes with vertically stacked roadmap epics. Products are ordered by the root **Objective work item's TFS BacklogPriority** (`Microsoft.VSTS.Common.BacklogPriority`). Roadmap epics within each lane are ordered by the **Epic work item's TFS BacklogPriority**. Only epics tagged with **"roadmap"** are shown. Epic cards display order number, title, TFS ID, and a link to open the epic in TFS.
 
 | Functionality | Description |
 |---|---|
 | Breadcrumb | `Home › Planning (Future) › Product Roadmaps`. |
 | Read-only chip | Indicates this is a read-only view. Epic editing is done in the Product Roadmap editor page. |
 | Product lanes | Horizontal scrollable container with one lane per product. Each lane shows the product name and epic count. |
-| Move Earlier/Later buttons | Swap product lane order with the neighbouring product. Disabled at boundaries (first/last). Persists new order via product reordering API. |
+| Product lane ordering | Derived from the product's root Objective work item BacklogPriority in TFS. TfsId used as stable tie-breaker when priorities collide. |
+| Move Earlier/Later buttons | Swap Objective BacklogPriority with the neighbouring product in TFS. Disabled at boundaries (first/last) and during reorder operations. After reorder: writes to TFS → refreshes cache → reloads page from cache. |
+| Roadmap epic ordering | Derived from each Epic work item's BacklogPriority in TFS. TfsId used as stable tie-breaker when priorities collide. |
 | Roadmap epic cards | Each card shows: order number (#1, #2, …), epic title, TFS ID, and an "Open in TFS" icon link. |
 | Empty lane placeholder | When a product has no roadmap epics, an informational message is displayed. |
 | Home button | Returns to `/home`. |
