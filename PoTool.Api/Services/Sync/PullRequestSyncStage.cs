@@ -328,27 +328,40 @@ public class PullRequestSyncStage : ISyncStage
         List<PullRequestCommentDto> comments,
         CancellationToken cancellationToken)
     {
-        var commentIds = comments.Select(c => c.Id).ToList();
+        // TFS comment Id is only unique within a PR; deduplicate by composite key (PullRequestId, Id) first.
+        var deduplicated = comments
+            .GroupBy(c => (c.PullRequestId, c.Id))
+            .Select(g => g.Last())
+            .ToList();
+
+        var prIds      = deduplicated.Select(c => c.PullRequestId).Distinct().ToList();
+        var commentIds = deduplicated.Select(c => c.Id).Distinct().ToList();
+
         var existing = await _context.PullRequestComments
-            .Where(c => commentIds.Contains(c.Id))
+            .Where(c => prIds.Contains(c.PullRequestId) && commentIds.Contains(c.Id))
             .ToListAsync(cancellationToken);
 
         // Build dictionary for O(1) lookups when updating existing comments
-        var commentsByIdLookup = comments.ToDictionary(c => c.Id);
-        var existingIds = existing.Select(c => c.Id).ToHashSet();
+        var commentsByKeyLookup = deduplicated.ToDictionary(c => (c.PullRequestId, c.Id));
+        var existingKeys = existing
+            .Select(c => (c.PullRequestId, c.Id))
+            .ToHashSet();
 
         foreach (var existingComment in existing)
         {
-            var updated = commentsByIdLookup[existingComment.Id];
-            existingComment.Content      = updated.Content;
-            existingComment.UpdatedDate  = updated.UpdatedDate;
-            existingComment.IsResolved   = updated.IsResolved;
-            existingComment.ResolvedDate = updated.ResolvedDate;
-            existingComment.ResolvedBy   = updated.ResolvedBy;
+            var key = (existingComment.PullRequestId, existingComment.Id);
+            if (commentsByKeyLookup.TryGetValue(key, out var updated))
+            {
+                existingComment.Content      = updated.Content;
+                existingComment.UpdatedDate  = updated.UpdatedDate;
+                existingComment.IsResolved   = updated.IsResolved;
+                existingComment.ResolvedDate = updated.ResolvedDate;
+                existingComment.ResolvedBy   = updated.ResolvedBy;
+            }
         }
 
-        var toInsert = comments
-            .Where(c => !existingIds.Contains(c.Id))
+        var toInsert = deduplicated
+            .Where(c => !existingKeys.Contains((c.PullRequestId, c.Id)))
             .Select(c => new PullRequestCommentEntity
             {
                 Id            = c.Id,
