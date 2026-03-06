@@ -2,7 +2,7 @@
 
 **Doelgroep:** Product Owners  
 **Taal:** Nederlands  
-**Laatste bijwerking:** 2026-03-05
+**Laatste bijwerking:** 2026-03-06
 
 ---
 
@@ -24,8 +24,9 @@
    - 8.3 [Portfolio Delivery](#83-portfolio-delivery)
 9. [Trends-werkruimte — Verleden](#9-trends-werkruimte--verleden)
    - 9.1 [Pull Request-inzichten](#91-pull-request-inzichten)
-   - 9.2 [Pipeline-inzichten](#92-pipeline-inzichten)
-   - 9.3 [Delivery Trends](#93-delivery-trends)
+   - 9.2 [PR Delivery Insights](#92-pr-delivery-insights)
+   - 9.3 [Pipeline-inzichten](#93-pipeline-inzichten)
+   - 9.4 [Delivery Trends](#94-delivery-trends)
 10. [Planning-werkruimte — Toekomst](#10-planning-werkruimte--toekomst)
     - 10.1 [Planbord](#101-planbord)
     - 10.2 [Afhankelijkheidsoverzicht](#102-afhankelijkheidsoverzicht)
@@ -513,6 +514,7 @@ De Trends-werkruimte beantwoordt de vraag: *Wat zijn de structurele patronen in 
 |---|---|---|
 | **Bug Trend** | Bugpatronen over tijd | Bug-inzichten |
 | **PR Trend** | Pull request-patronen | PR-inzichten |
+| **PR Delivery Insights** | PR-classificatie op Epic/Feature-niveau; leveringswrijving | PR Delivery Insights |
 | **Pipeline Insights** | Sprint-specifieke pipeline stabiliteitsanalyse per product (standaardbranch only) | Pipeline-inzichten |
 | **Portfolio Progress** | Strategische voortgang per product over een sprintbereik | Portfolio Progress |
 | **Delivery Trends** | PBI-doorvoer, inspanningsdoorvoer en bugtrend per sprint | Delivery Trends |
@@ -625,7 +627,63 @@ Klik op een rij in de auteurstabel om het spreidingsdiagram te filteren op de PR
 
 ---
 
-### 9.2 Pipeline-inzichten
+### 9.2 PR Delivery Insights
+
+**Pagina:** `/home/pr-delivery-insights`
+
+De PR Delivery Insights-pagina classificeert pull requests op basis van hun gekoppelde werkitems en aggregeert statistieken op Epic- en Feature-niveau. Doel: inzicht krijgen in welke Epics en Features de meeste PR-wrijving veroorzaken.
+
+Alle gegevens zijn afkomstig uit de lokale cache — er worden geen live Azure DevOps-aanroepen gedaan.
+
+#### Filters
+
+- **Teamselector** — beperkt de gegevens tot producten die aan het geselecteerde team zijn gekoppeld.
+- **Sprints selector (optioneel)** — het selecteren van een sprint stelt het datumbereik automatisch in op de sprint-begin- en -einddatum.
+- **Datumbereikfilter** — standaard de afgelopen 6 maanden. Wordt automatisch ingesteld wanneer je een sprint kiest.
+
+#### PR-categorieën
+
+Elke PR wordt ingedeeld in precies één categorie (in volgorde van prioriteit):
+
+| Categorie | Voorwaarde |
+|---|---|
+| **DeliveryMapped** | Een gekoppeld werkitem is traceerbaar naar een Feature of Epic via de ouderhiërarchie. |
+| **Bug** | PR is gekoppeld aan een Bug-werkitem, maar er kan geen Feature of Epic worden gevonden. |
+| **Disturbance** | PR is gekoppeld aan een PBI zonder Feature-ouder. |
+| **Unmapped** | PR heeft geen bruikbare werkitemkoppeling. |
+
+Wanneer een PR meerdere gekoppelde werkitems heeft, geldt de hoogste prioriteitscategorie.
+
+#### Wat zie je hier?
+
+**Categorie-samenvatting**
+
+Vier chips tonen per categorie het aantal PR's en het percentage ten opzichte van het totaal:
+
+- **DeliveryMapped** — PR's die zijn gekoppeld aan Feature- of Epic-werkstroom.
+- **Bug** — PR's die uitsluitend aan bugs zijn gekoppeld.
+- **Disturbance** — PR's die aan vrij-zwevende PBI's zijn gekoppeld.
+- **Unmapped** — PR's zonder werkitemkoppeling.
+
+**Epic-overzicht (tabel)**
+
+Per Epic: naam, aantal PR's, mediane levensduur, P90-levensduur, percentage afgebroken PR's, gemiddelde revisiecycli. Gesorteerd op aantal PR's (aflopend).
+
+**Feature-overzicht (tabel)**
+
+Per Feature: naam, Epic-naam, aantal PR's, PR/PBI-ratio (aantal PR's gedeeld door aantal PBI's), mediane levensduur. Gesorteerd op aantal PR's (aflopend).
+
+**Delivery-spreidingsdiagram**
+
+Spreidingsdiagram met X = aanmaakdatum PR en Y = levensduur in uren. Punten zijn ingekleurd op categorie en kunnen gefilterd worden op Epic.
+
+**Uitschieters-tabel**
+
+De top-20 langstlevende PR's: PR-titel, repository, status, levensduur, gewijzigde bestanden, revisiecycli, Epic, Feature en categorie.
+
+---
+
+### 9.3 Pipeline-inzichten
 
 **Pagina:** `/home/pipeline-insights`
 
@@ -727,7 +785,7 @@ De tooltip toont de exacte mislukkingspercentages van de eerste en tweede helft.
 
 ---
 
-### 9.3 Delivery Trends
+### 9.4 Delivery Trends
 
 **Pagina:** `/home/trends/delivery`
 

@@ -611,6 +611,24 @@ public class BattleshipMockDataFacade : ITfsClient
         return Task.FromResult<IEnumerable<PullRequestFileChangeDto>>(result);
     }
 
+    public Task<IEnumerable<int>> GetPullRequestWorkItemLinksAsync(
+        int pullRequestId,
+        string repositoryName,
+        CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client: GetPullRequestWorkItemLinksAsync called for PR {PullRequestId}", pullRequestId);
+
+        var allLinks = GetMockPrWorkItemLinks();
+        var workItemIds = allLinks
+            .Where(l => l.PullRequestId == pullRequestId)
+            .Select(l => l.WorkItemId);
+
+        var result = workItemIds.ToList();
+        _logger.LogInformation("Mock TFS client: Returning {Count} work item links for PR {PullRequestId}", result.Count, pullRequestId);
+        return Task.FromResult<IEnumerable<int>>(result);
+    }
+
     public Task<IEnumerable<WorkItemRevisionDto>> GetWorkItemRevisionsAsync(
         int workItemId,
         CancellationToken cancellationToken = default)

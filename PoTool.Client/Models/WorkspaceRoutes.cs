@@ -94,6 +94,11 @@ public static class WorkspaceRoutes
     public const string PrOverview = "/home/pull-requests";
 
     /// <summary>
+    /// PR Delivery Insights route — PR classification by Feature/Epic hierarchy (Trends workspace).
+    /// </summary>
+    public const string PrDeliveryInsights = "/home/pr-delivery-insights";
+
+    /// <summary>
     /// Pipeline Insights route — PO-first stability overview per product, sprint-scoped (read-only).
     /// </summary>
     public const string PipelineInsights = "/home/pipeline-insights";

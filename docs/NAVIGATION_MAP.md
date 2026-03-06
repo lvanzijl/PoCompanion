@@ -3,7 +3,7 @@
 **Audience:** Product Owners and stakeholders  
 **Scope:** All non-legacy, non-settings pages  
 **Purpose:** Human-readable reference of available navigation and functionality; basis for improvement analysis  
-**Last Updated:** 2026-03-05 (Sprint Activity page improvements: renamed from "Work Item Activity", added Change Type classification, creation event collapsing, grouped activity view, and Activity Summary block)
+**Last Updated:** 2026-03-06 (PR Delivery Insights page added under Trends: §2.11 /home/pr-delivery-insights)
 
 ---
 
@@ -56,6 +56,7 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   ├──► /home/trends  (Trends — Past)                                  │
   │       ├──► /home/bugs  (bug trend drilldown)                      │
   │       ├──► /home/pull-requests  (read-only insight)               │
+  │       ├──► /home/pr-delivery-insights  (PR Delivery Insights)     │
   │       ├──► /home/pipeline-insights  (PO-first stability overview) │
   │       ├──► /home/portfolio-progress  (portfolio trend)            │
   │       ├──► /home/trends/delivery  (delivery trends)               │
@@ -403,6 +404,38 @@ Global header (available on every page) ◄────────────�
 | Home button | Returns to `/home`. |
 
 **Outgoing navigation:** `/home`, `/home/trends`, Azure DevOps (external, when TFS configuration is available)
+
+---
+
+### 2.11 PR Delivery Insights — `/home/pr-delivery-insights`
+
+**Purpose:** PO-focused, read-only view that classifies Pull Requests by their linked work items and aggregates metrics at Epic and Feature level. Answers the question: *"Which Epics and Features are generating the most PR friction?"* All data is read from the local cache — no live Azure DevOps calls.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Trends (Past) › PR Delivery Insights`. |
+| Team selector | Scopes PR data to products linked to the selected team. |
+| Sprint selector | Optional. Choosing a sprint sets the date range to sprint boundaries and triggers a reload. |
+| Date range selector | Limits PRs to a creation-date window (default: last 6 months). Overridden when a sprint is selected. |
+| Category summary chips | Four chips showing: DeliveryMapped (PR traces to Feature/Epic), Bug (PR linked to Bug with no Feature/Epic), Disturbance (PBI without Feature parent), Unmapped (no work item link). Each chip shows count and percentage. |
+| Epic breakdown table | Per-Epic metrics: Epic name, PR count, median lifetime, P90 lifetime, abandoned %, average review cycles. Sorted by PR count descending. |
+| Feature breakdown table | Per-Feature metrics: Feature name, Epic name, PR count, PR-per-PBI ratio, median lifetime. Sorted by PR count descending. |
+| Delivery scatter chart | Scatter plot (X = PR creation date, Y = lifetime in hours). Points are coloured by category (DeliveryMapped / Bug / Disturbance / Unmapped) and shaped by Epic. |
+| Outlier PR table | Top 20 longest-lived PRs: PR title, repository, status, lifetime, files changed, review cycles, Epic name, Feature name, category. |
+| Home button | Returns to `/home`. |
+
+**PR Classification Rules (priority order):**
+
+| Category | Condition |
+|---|---|
+| DeliveryMapped | Any linked work item traces to a Feature or Epic through its parent hierarchy. |
+| Bug | PR linked to a Bug work item where no Feature/Epic ancestor can be resolved. |
+| Disturbance | PR linked to a PBI without a Feature parent. |
+| Unmapped | PR has no usable work item link. |
+
+When multiple linked work items resolve to different categories, the highest-priority category is used.
+
+**Outgoing navigation:** `/home`, `/home/trends`
 
 ---
 

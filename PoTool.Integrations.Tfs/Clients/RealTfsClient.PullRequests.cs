@@ -546,4 +546,71 @@ public partial class RealTfsClient
             return fileChanges;
         }, cancellationToken);
     }
+
+    public async Task<IEnumerable<int>> GetPullRequestWorkItemLinksAsync(
+        int pullRequestId,
+        string repositoryName,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        ValidateTfsConfiguration(entity);
+        var config = entity!;
+
+        var httpClient = GetAuthenticatedHttpClient();
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            // GET {baseUrl}/{project}/_apis/git/repositories/{repo}/pullRequests/{id}/workitems
+            // Returns: { "count": N, "value": [ { "id": 123, "url": "..." }, ... ] }
+            // This endpoint returns all linked work items in a single page — no pagination needed.
+            var encodedRepoName = Uri.EscapeDataString(repositoryName);
+            var url = ProjectUrl(config,
+                $"_apis/git/repositories/{encodedRepoName}/pullrequests/{pullRequestId}/workitems");
+
+            var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
+
+            // Older TFS Server versions (< 2017) may not support this endpoint and return 404.
+            // A 404 is not retryable (IsRetryableStatusCode only handles 5xx/408), so checking
+            // before HandleHttpErrorsAsync is safe: we avoid throwing an exception for a known
+            // "unsupported capability" scenario and fall back to an empty result instead.
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogDebug(
+                    "PR work item links endpoint returned 404 for PR {PullRequestId} in repo {Repo}; " +
+                    "server may not support this endpoint (requires TFS 2017+ or Azure DevOps)",
+                    pullRequestId, repositoryName);
+                return Enumerable.Empty<int>();
+            }
+
+            await HandleHttpErrorsAsync(response, cancellationToken);
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+            var workItemIds = new List<int>();
+
+            if (doc.RootElement.TryGetProperty("value", out var valueArray))
+            {
+                foreach (var item in valueArray.EnumerateArray())
+                {
+                    if (item.TryGetProperty("id", out var idProp) && idProp.TryGetInt32(out var workItemId))
+                    {
+                        workItemIds.Add(workItemId);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "PR work item links response contained an entry without a valid integer 'id' for PR {PullRequestId} in repo {Repo}; skipping entry",
+                            pullRequestId, repositoryName);
+                    }
+                }
+            }
+
+            _logger.LogDebug(
+                "Retrieved {Count} work item link(s) for PR {PullRequestId} in repo {Repo}",
+                workItemIds.Count, pullRequestId, repositoryName);
+
+            return workItemIds;
+        }, cancellationToken);
+    }
 }

@@ -2,7 +2,6 @@ using Mediator;
 using Microsoft.AspNetCore.Mvc;
 using PoTool.Shared.PullRequests;
 using PoTool.Core.PullRequests.Queries;
-
 namespace PoTool.Api.Controllers;
 
 /// <summary>
@@ -308,6 +307,42 @@ public class PullRequestsController : ControllerBase
         {
             _logger.LogError(ex, "Error retrieving PR insights");
             return StatusCode(500, "Error retrieving PR insights");
+        }
+    }
+
+    /// <summary>
+    /// Gets PR Delivery Insights for a team, classifying PRs by linked work items and
+    /// aggregating metrics at Epic and Feature level.
+    /// All data comes from the local cache — no live TFS calls.
+    /// </summary>
+    /// <param name="teamId">Optional team ID. When omitted, PRs across all teams are included.</param>
+    /// <param name="sprintId">Optional sprint ID. When provided, date range is derived from sprint boundaries.</param>
+    /// <param name="fromDate">Start of the date range. Defaults to 6 months ago unless sprintId is supplied.</param>
+    /// <param name="toDate">End of the date range. Defaults to now unless sprintId is supplied.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    [HttpGet("delivery-insights")]
+    public async Task<ActionResult<PrDeliveryInsightsDto>> GetDeliveryInsights(
+        [FromQuery] int? teamId = null,
+        [FromQuery] int? sprintId = null,
+        [FromQuery] DateTimeOffset? fromDate = null,
+        [FromQuery] DateTimeOffset? toDate = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var from = fromDate ?? DateTimeOffset.UtcNow.AddMonths(-6);
+            var to   = toDate   ?? DateTimeOffset.UtcNow;
+
+            var result = await _mediator.Send(
+                new GetPrDeliveryInsightsQuery(teamId, sprintId, from, to),
+                cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving PR delivery insights");
+            return StatusCode(500, "Error retrieving PR delivery insights");
         }
     }
 

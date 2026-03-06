@@ -56,6 +56,12 @@ public class PoToolDbContext : DbContext
     public DbSet<PullRequestFileChangeEntity> PullRequestFileChanges => Set<PullRequestFileChangeEntity>();
 
     /// <summary>
+    /// Links between pull requests and work items.
+    /// Used by PR Delivery Insights for classification and hierarchy traversal.
+    /// </summary>
+    public DbSet<PullRequestWorkItemLinkEntity> PullRequestWorkItemLinks => Set<PullRequestWorkItemLinkEntity>();
+
+    /// <summary>
     /// Effort estimation settings.
     /// </summary>
     public DbSet<EffortEstimationSettingsEntity> EffortEstimationSettings => Set<EffortEstimationSettingsEntity>();
@@ -267,6 +273,13 @@ public class PoToolDbContext : DbContext
         modelBuilder.Entity<PullRequestFileChangeEntity>(entity =>
         {
             entity.HasIndex(e => new { e.PullRequestId, e.IterationId });
+        });
+
+        modelBuilder.Entity<PullRequestWorkItemLinkEntity>(entity =>
+        {
+            entity.HasIndex(e => e.PullRequestId);
+            entity.HasIndex(e => new { e.PullRequestId, e.WorkItemId })
+                .IsUnique();
         });
 
         modelBuilder.Entity<EffortEstimationSettingsEntity>(entity =>

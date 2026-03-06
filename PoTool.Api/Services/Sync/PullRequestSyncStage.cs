@@ -205,6 +205,8 @@ public class PullRequestSyncStage : ISyncStage
         var allIterations  = new System.Collections.Concurrent.ConcurrentBag<PullRequestIterationDto>();
         var allComments    = new System.Collections.Concurrent.ConcurrentBag<PullRequestCommentDto>();
         var allFileChanges = new System.Collections.Concurrent.ConcurrentBag<PullRequestFileChangeDto>();
+        // (PullRequestId, WorkItemId) pairs
+        var allWorkItemLinks = new System.Collections.Concurrent.ConcurrentBag<(int PullRequestId, int WorkItemId)>();
 
         await Parallel.ForEachAsync(
             pullRequests,
@@ -243,6 +245,13 @@ public class PullRequestSyncStage : ISyncStage
                         foreach (var fc in fileChanges)
                             allFileChanges.Add(fc);
                     }
+
+                    // Fetch work item links (used for PR Delivery Insights classification)
+                    var workItemIds = await _tfsClient.GetPullRequestWorkItemLinksAsync(
+                        pr.Id, pr.RepositoryName, ct);
+
+                    foreach (var wiId in workItemIds)
+                        allWorkItemLinks.Add((pr.Id, wiId));
                 }
                 catch (OperationCanceledException)
                 {
@@ -260,10 +269,11 @@ public class PullRequestSyncStage : ISyncStage
         var iterationsList  = allIterations.ToList();
         var commentsList    = allComments.ToList();
         var fileChangesList = allFileChanges.ToList();
+        var workItemLinksList = allWorkItemLinks.ToList();
 
         _logger.LogInformation(
-            "PR_DETAIL_INGEST: {IterCount} iterations, {CommentCount} comments, {FileCount} file-change rows fetched",
-            iterationsList.Count, commentsList.Count, fileChangesList.Count);
+            "PR_DETAIL_INGEST: {IterCount} iterations, {CommentCount} comments, {FileCount} file-change rows, {LinkCount} work-item links fetched",
+            iterationsList.Count, commentsList.Count, fileChangesList.Count, workItemLinksList.Count);
 
         if (iterationsList.Count > 0)
             await UpsertIterationsAsync(iterationsList, cancellationToken);
@@ -273,6 +283,9 @@ public class PullRequestSyncStage : ISyncStage
 
         if (fileChangesList.Count > 0)
             await UpsertFileChangesAsync(fileChangesList, cancellationToken);
+
+        if (workItemLinksList.Count > 0)
+            await UpsertWorkItemLinksAsync(workItemLinksList, cancellationToken);
     }
 
     private async Task UpsertIterationsAsync(
@@ -420,6 +433,37 @@ public class PullRequestSyncStage : ISyncStage
 
         await _context.PullRequestFileChanges.AddRangeAsync(toInsert, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task UpsertWorkItemLinksAsync(
+        List<(int PullRequestId, int WorkItemId)> links,
+        CancellationToken cancellationToken)
+    {
+        var prIds = links.Select(l => l.PullRequestId).Distinct().ToList();
+
+        var existing = await _context.PullRequestWorkItemLinks
+            .Where(l => prIds.Contains(l.PullRequestId))
+            .Select(l => new { l.PullRequestId, l.WorkItemId })
+            .ToListAsync(cancellationToken);
+
+        var existingSet = existing
+            .Select(l => (l.PullRequestId, l.WorkItemId))
+            .ToHashSet();
+
+        var toInsert = links
+            .Where(l => !existingSet.Contains((l.PullRequestId, l.WorkItemId)))
+            .Select(l => new PullRequestWorkItemLinkEntity
+            {
+                PullRequestId = l.PullRequestId,
+                WorkItemId    = l.WorkItemId
+            })
+            .ToList();
+
+        if (toInsert.Count > 0)
+        {
+            await _context.PullRequestWorkItemLinks.AddRangeAsync(toInsert, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
     }
 
     private static void UpdateEntity(PullRequestEntity entity, PullRequestDto dto)

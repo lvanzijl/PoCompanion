@@ -129,6 +129,18 @@ public interface ITfsClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves the TFS work item IDs linked to a specific pull request.
+    /// </summary>
+    /// <param name="pullRequestId">The pull request ID.</param>
+    /// <param name="repositoryName">The repository name.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of linked TFS work item IDs.</returns>
+    Task<IEnumerable<int>> GetPullRequestWorkItemLinksAsync(
+        int pullRequestId,
+        string repositoryName,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves a single work item by ID directly from TFS (bypasses cache).
     /// Used for validation of work item existence.
     /// </summary>
