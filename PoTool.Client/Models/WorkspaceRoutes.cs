@@ -114,6 +114,11 @@ public static class WorkspaceRoutes
     public const string DependencyOverview = "/home/dependencies";
 
     /// <summary>
+    /// Product Roadmaps overview route — read-only roadmap view with horizontal product lanes.
+    /// </summary>
+    public const string ProductRoadmaps = "/planning/product-roadmaps";
+
+    /// <summary>
     /// Sprint Trend route - shows sprint-based revision metrics.
     /// Legacy route kept for backward compatibility; canonical route is SprintDelivery.
     /// </summary>

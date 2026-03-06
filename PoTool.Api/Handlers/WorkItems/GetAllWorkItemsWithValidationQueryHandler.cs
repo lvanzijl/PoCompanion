@@ -133,7 +133,8 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
             wi.Severity,
             wi.Tags,
             wi.IsBlocked,
-            wi.BusinessValue
+            wi.BusinessValue,
+            wi.BacklogPriority
         )).ToList();
     }
 }

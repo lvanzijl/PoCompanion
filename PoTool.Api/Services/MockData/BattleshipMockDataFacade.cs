@@ -783,6 +783,14 @@ public class BattleshipMockDataFacade : ITfsClient
         }
     }
 
+    public Task<bool> UpdateWorkItemBacklogPriorityAsync(int workItemId, double priority, CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemBacklogPriorityAsync called for workItemId={WorkItemId}, priority={Priority}",
+            workItemId, priority);
+        return Task.FromResult(true);
+    }
+
     public Task<WorkItemDto?> UpdateWorkItemTagsAndReturnAsync(int workItemId, List<string> tags, CancellationToken cancellationToken = default)
     {
         IncrementAndGetApiCallCount();

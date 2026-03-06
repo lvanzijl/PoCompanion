@@ -145,4 +145,11 @@ public class WorkItemEntity
     /// Nullable - work items may not have any relations.
     /// </summary>
     public string? Relations { get; set; }
+
+    /// <summary>
+    /// Backlog priority from TFS (Microsoft.VSTS.Common.BacklogPriority).
+    /// Used for ordering work items in the backlog. Lower values = higher priority.
+    /// Nullable - not all work items have a backlog priority set.
+    /// </summary>
+    public double? BacklogPriority { get; set; }
 }

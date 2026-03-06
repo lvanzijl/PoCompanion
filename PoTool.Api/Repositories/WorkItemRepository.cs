@@ -251,7 +251,8 @@ public class WorkItemRepository : IWorkItemRepository
                 IsBlocked: entity.IsBlocked,
                 Relations: relations,
                 ChangedDate: entity.TfsChangedDate,
-                BusinessValue: entity.BusinessValue
+                BusinessValue: entity.BusinessValue,
+                BacklogPriority: entity.BacklogPriority
             );
     }
 
@@ -277,7 +278,8 @@ public class WorkItemRepository : IWorkItemRepository
             IsBlocked = dto.IsBlocked,
             Relations = dto.Relations != null ? System.Text.Json.JsonSerializer.Serialize(dto.Relations) : null,
             TfsChangedDate = dto.ChangedDate ?? dto.RetrievedAt,
-            TfsChangedDateUtc = (dto.ChangedDate ?? dto.RetrievedAt).UtcDateTime
+            TfsChangedDateUtc = (dto.ChangedDate ?? dto.RetrievedAt).UtcDateTime,
+            BacklogPriority = dto.BacklogPriority
         };
     }
 }

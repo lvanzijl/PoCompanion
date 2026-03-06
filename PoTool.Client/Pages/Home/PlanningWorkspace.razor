@@ -61,6 +61,13 @@
                     Plan Board
                 </MudButton>
                 
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Info"
+                           StartIcon="@Icons.Material.Filled.Map"
+                           OnClick="NavigateToProductRoadmaps">
+                    Product Roadmaps
+                </MudButton>
+                
                     <MudButton Variant="Variant.Outlined"
                                Color="Color.Default"
                                StartIcon="@Icons.Material.Filled.Home"
@@ -539,6 +546,11 @@
         NavigationManager.NavigateTo(ProductId.HasValue
             ? $"{WorkspaceRoutes.PlanBoard}{BuildContextQuery()}"
             : $"{WorkspaceRoutes.PlanBoard}?allProducts=true");
+    }
+    
+    private void NavigateToProductRoadmaps()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.ProductRoadmaps);
     }
     
     private void ClearProductFilter()

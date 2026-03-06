@@ -251,6 +251,20 @@ public class WorkItemService
     }
 
     /// <summary>
+    /// Updates the BacklogPriority of a work item in TFS and refreshes the local cache.
+    /// Used by Product Roadmaps to reorder product lanes (Objectives).
+    /// </summary>
+    /// <param name="tfsId">TFS work item ID.</param>
+    /// <param name="priority">New backlog priority value.</param>
+    public async Task<bool> UpdateBacklogPriorityAsync(int tfsId, double priority)
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(new { Priority = priority });
+        var content = new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync($"/api/workitems/{tfsId}/backlog-priority", content);
+        return response.IsSuccessStatusCode;
+    }
+
+    /// <summary>
     /// Gets all distinct area paths from cached work items.
     /// </summary>
     public async Task<IEnumerable<string>> GetDistinctAreaPathsAsync()

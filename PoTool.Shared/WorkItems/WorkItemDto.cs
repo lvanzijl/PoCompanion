@@ -22,5 +22,6 @@ public sealed record WorkItemDto(
     bool? IsBlocked = null,
     List<WorkItemRelation>? Relations = null,
     DateTimeOffset? ChangedDate = null,
-    int? BusinessValue = null
+    int? BusinessValue = null,
+    double? BacklogPriority = null
 );

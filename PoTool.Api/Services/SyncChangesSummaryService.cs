@@ -269,7 +269,8 @@ public sealed class SyncChangesSummaryService
             Tags: entity.Tags,
             IsBlocked: entity.IsBlocked,
             ChangedDate: entity.TfsChangedDate,
-            BusinessValue: entity.BusinessValue
+            BusinessValue: entity.BusinessValue,
+            BacklogPriority: entity.BacklogPriority
         );
     }
 }

@@ -579,6 +579,16 @@ public class MockTfsClient : ITfsClient
     // ============================================
 
     /// <summary>
+    /// Updates backlog priority for a work item. Mock implementation always succeeds.
+    /// </summary>
+    public Task<bool> UpdateWorkItemBacklogPriorityAsync(int workItemId, double priority, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemBacklogPriorityAsync called for workItemId={WorkItemId}, priority={Priority}",
+            workItemId, priority);
+        return Task.FromResult(true);
+    }
+
+    /// <summary>
     /// Returns all PR data in a single call. Delegates to BattleshipMockDataFacade.
     /// </summary>
 

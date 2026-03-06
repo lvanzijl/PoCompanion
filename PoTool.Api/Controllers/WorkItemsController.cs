@@ -244,6 +244,30 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
+    /// Updates the BacklogPriority of a work item in TFS and refreshes the local cache.
+    /// Used by Product Roadmaps to reorder product lanes (Objectives).
+    /// </summary>
+    /// <param name="tfsId">The TFS work item ID.</param>
+    /// <param name="request">The new backlog priority value.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    [HttpPost("{tfsId:int}/backlog-priority")]
+    public async Task<IActionResult> UpdateBacklogPriority(int tfsId, [FromBody] UpdateBacklogPriorityRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var success = await _mediator.Send(new UpdateWorkItemBacklogPriorityCommand(tfsId, request.Priority), cancellationToken);
+            if (!success)
+                return BadRequest($"Failed to update BacklogPriority for work item {tfsId}.");
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating BacklogPriority for work item {TfsId}", tfsId);
+            return StatusCode(500, "Error updating BacklogPriority");
+        }
+    }
+
+    /// <summary>
     /// Gets work items matching a filter.
     /// </summary>
     [HttpGet("filter/{filter}")]
@@ -830,3 +854,8 @@ public class WorkItemsController : ControllerBase
         }
     }
 }
+
+/// <summary>
+/// Request body for updating a work item's BacklogPriority.
+/// </summary>
+public sealed record UpdateBacklogPriorityRequest(double Priority);
