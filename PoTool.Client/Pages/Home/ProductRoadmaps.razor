@@ -315,30 +315,38 @@
                 return;
             }
 
-            // Swap BacklogPriority values between the two Objectives
-            var priorityA = laneA.ObjectiveBacklogPriority ?? (double)(indexA + 1);
-            var priorityB = laneB.ObjectiveBacklogPriority ?? (double)(indexB + 1);
+            // Swap BacklogPriority values between the two Objectives.
+            // If either priority is null (not set in TFS), normalize both using their current
+            // lane positions multiplied by a safe spacing factor to avoid future collisions.
+            var priorityA = laneA.ObjectiveBacklogPriority;
+            var priorityB = laneB.ObjectiveBacklogPriority;
 
-            // If priorities are equal, normalize by assigning sequential values
-            if (Math.Abs(priorityA - priorityB) < 0.001)
+            if (!priorityA.HasValue || !priorityB.HasValue)
             {
-                priorityA = indexA + 1;
-                priorityB = indexB + 1;
+                // Normalize: assign positions based on current lane ordering with spacing
+                priorityA = (indexA + 1) * 1000.0;
+                priorityB = (indexB + 1) * 1000.0;
+            }
+            else if (priorityA.Value == priorityB.Value)
+            {
+                // Collision: assign sequential values with spacing to disambiguate
+                priorityA = (indexA + 1) * 1000.0;
+                priorityB = (indexB + 1) * 1000.0;
             }
 
             // Write swapped priorities to TFS
-            var successA = await WorkItemService.UpdateBacklogPriorityAsync(laneA.ObjectiveTfsId, priorityB);
+            var successA = await WorkItemService.UpdateBacklogPriorityAsync(laneA.ObjectiveTfsId, priorityB.Value);
             if (!successA)
             {
                 Snackbar.Add($"Failed to update priority for {laneA.ProductName} in TFS.", Severity.Error);
                 return;
             }
 
-            var successB = await WorkItemService.UpdateBacklogPriorityAsync(laneB.ObjectiveTfsId, priorityA);
+            var successB = await WorkItemService.UpdateBacklogPriorityAsync(laneB.ObjectiveTfsId, priorityA.Value);
             if (!successB)
             {
                 // Attempt to revert A
-                await WorkItemService.UpdateBacklogPriorityAsync(laneA.ObjectiveTfsId, priorityA);
+                await WorkItemService.UpdateBacklogPriorityAsync(laneA.ObjectiveTfsId, priorityA.Value);
                 Snackbar.Add($"Failed to update priority for {laneB.ProductName} in TFS. Reverted.", Severity.Error);
                 return;
             }
