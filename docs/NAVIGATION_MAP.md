@@ -481,7 +481,7 @@ When multiple linked work items resolve to different categories, the highest-pri
 | Product lane ordering | Derived from the product's root Objective work item BacklogPriority in TFS. TfsId used as stable tie-breaker when priorities collide. |
 | Move Earlier/Later buttons | Swap Objective BacklogPriority with the neighbouring product in TFS. Disabled at boundaries (first/last) and during reorder operations. After reorder: writes to TFS → refreshes cache → reloads page from cache. |
 | Roadmap epic ordering | Derived from each Epic work item's BacklogPriority in TFS. TfsId used as stable tie-breaker when priorities collide. |
-| Roadmap epic cards | Each card shows: order number (#1, #2, …), epic title, TFS ID, and an "Open in TFS" icon link. |
+| Roadmap epic cards | Each card shows: order number (#1, #2, …), epic title, TFS ID, an "Open in TFS" icon link, and compact analytics indicators (effort, PBI count, estimated sprints, velocity warnings, refinement/validation health signals, epic age, last activity, and confidence level). Analytics are informational only and do not change roadmap ordering or membership. |
 | Empty lane placeholder | When a product has no roadmap epics, an informational message is displayed. |
 | Home button | Returns to `/home`. |
 | Cross-workspace navigation | Buttons to Planning (Future) and Health (Now). |
