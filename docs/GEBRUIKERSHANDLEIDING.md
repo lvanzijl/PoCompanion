@@ -2,7 +2,7 @@
 
 **Doelgroep:** Product Owners  
 **Taal:** Nederlands  
-**Laatste bijwerking:** 2026-03-06
+**Laatste bijwerking:** 2026-03-07
 
 ---
 
@@ -945,7 +945,7 @@ Deze pagina beantwoordt de vraag: *Wat zijn de geplande epics per product op de 
 - **Roadmap-epics** worden bepaald door de tag **"roadmap"** (kleine letters). Alleen epics met deze tag verschijnen op de pagina.
 - De **productvolgorde** wordt bepaald door de **BacklogPriority** (`Microsoft.VSTS.Common.BacklogPriority`) van het root Objective-werkitem van elk product in TFS. Producten met een lagere BacklogPriority-waarde staan eerder.
 - De **epicvolgorde** binnen een product wordt bepaald door de **BacklogPriority** van elk Epic-werkitem in TFS. Bij gelijke waarden wordt het TFS-ID als stabiele tiebreaker gebruikt.
-- Elke epickaart toont: volgnummer, epictitel, TFS-ID en een link om de epic in TFS te openen.
+- Elke epickaart toont: volgnummer, epictitel, TFS-ID, een link om de epic in TFS te openen, en **compacte analyticsindicatoren** (inspanningstotaal, aantal PBI's, geschatte sprints, snelheidswaarschuwingen, verfijnings-/validatiegezondheid, epicleeftijd, laatste activiteit en betrouwbaarheidsniveau). De analyticsindicatoren zijn uitsluitend informatief en wijzigen de roadmap-volgorde of het roadmap-lidmaatschap niet.
 
 #### Productbanen herschikken
 
@@ -965,6 +965,38 @@ Beschikbare acties:
   - *Executive Roadmap* — strategisch, geschikt voor boardpresentaties.
   - *Customer-Facing Roadmap* — klantgericht, outcome-georiënteerd.
   - *Milestone Infographic* — mijlpaalgericht, visuele progressie.
+
+#### Roadmap Analytics
+
+Elke epickaart op de overzichtspagina toont compacte analyticsindicatoren die hergebruik maken van bestaande berekeningen uit de Planning-, Health- en Delivery-werkruimten:
+
+- **Inspanningstotaal** — som van het Effort-veld van alle onderliggende PBI's (uit cache).
+- **Aantal PBI's** — totaal aantal Product Backlog Items onder de epic (uit cache).
+- **Geschatte sprints** — voorspelde sprints tot voltooiing, afgeleid van de Planning-werkruimte-forecast.
+- **Snelheidswaarschuwingen** — waarschuwing wanneer een epic de snelheidsdrempel overschrijdt (>3 sprints of 3× velocity), afgeleid van Planning.
+- **Verfijningsgezondheid** — score die aangeeft of PBI's onder de epic voldoende zijn verfijnd, afgeleid van Health-signalen.
+- **Validatiegezondheid** — signaal wanneer PBI's validatieproblemen vertonen, afgeleid van Health-signalen.
+- **Epicleeftijd** — aantal dagen sinds aanmaakdatum van de epic.
+- **Laatste activiteit** — aantal dagen sinds de meest recente wijziging aan onderliggende werkitems.
+- **Betrouwbaarheidsniveau** — confidence-indicator afgeleid van de Planning-werkruimte-forecast.
+
+Alle analyticsindicatoren zijn **alleen-lezen**: ze wijzigen geen TFS-gegevens, roadmap-volgorde of roadmap-lidmaatschap.
+
+#### Snapshots en driftdetectie
+
+Via het **Snapshots**-menu rechtsboven kun je momentopnamen van de huidige roadmap maken en deze later vergelijken met de actuele staat om verschuivingen (drift) te detecteren.
+
+- **Snapshot aanmaken:** Klik op "Create Snapshot" in het Snapshots-menu. Een snapshot legt de volledige roadmap-staat vast: productvolgorde, epicvolgorde, epictitels en TFS-IDs. Voeg optioneel een beschrijving toe. De knop is uitgeschakeld wanneer geen producten geladen zijn.
+- **Snapshots bekijken:** Klik op "View Snapshots" om een dialoogvenster te openen met alle opgeslagen snapshots. Elk snapshot toont datum, beschrijving, aantal producten en aantal epics.
+- **Vergelijken (driftdetectie):** Klik op het vergelijkingsicoon bij een snapshot om het te vergelijken met de actuele roadmap. Het vergelijkingsvenster toont per product de drift: ongewijzigde epics (groen), eerder verplaatste epics (blauw), later verplaatste epics (oranje), nieuw toegevoegde epics (groen-gevuld) en verwijderde epics (rood).
+- **Snapshot verwijderen:** Klik op het prullenbak-icoon om een snapshot permanent te verwijderen.
+
+**Opslag en governance:**
+
+- Snapshots worden opgeslagen in **persistente opslag aan de applicatiezijde** (database), niet in de browser-localStorage.
+- Snapshots overleven herstart van de browser en zijn zichtbaar op andere apparaten en voor andere gebruikers.
+- Snapshots wijzigen **nooit** TFS-gegevens.
+- Het doel van snapshots is governance en veranderingsbeheer: ze bieden een historisch referentiepunt om te beoordelen hoe de roadmap in de loop van de tijd is geëvolueerd.
 
 > **Verschil overzicht / editor / reporting:**
 > - **Product Roadmaps** (overzicht): alleen-lezen weergave van alle productroadmaps.
