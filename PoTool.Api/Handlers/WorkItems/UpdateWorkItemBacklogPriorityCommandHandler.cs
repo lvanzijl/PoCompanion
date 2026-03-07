@@ -38,16 +38,31 @@ public sealed class UpdateWorkItemBacklogPriorityCommandHandler
             return false;
         }
 
-        // Step 2: Refresh from TFS to get the authoritative state back into cache
+        // Step 2: Refresh from TFS to get the authoritative state back into cache.
+        // Always override BacklogPriority with the value we just wrote — TFS may return
+        // stale data briefly after a write, and the mock client never mutates its state.
         var refreshed = await _tfsClient.GetWorkItemByIdAsync(command.TfsId, cancellationToken);
         if (refreshed != null)
         {
-            await _repository.UpsertManyAsync(new[] { refreshed }, cancellationToken);
-            _logger.LogInformation("Work item {TfsId} BacklogPriority updated and cache refreshed", command.TfsId);
+            var updated = refreshed with { BacklogPriority = command.NewBacklogPriority };
+            await _repository.UpsertManyAsync(new[] { updated }, cancellationToken);
+            _logger.LogInformation("Work item {TfsId} BacklogPriority updated to {Priority} and cache refreshed", command.TfsId, command.NewBacklogPriority);
         }
         else
         {
-            _logger.LogWarning("Work item {TfsId} was updated in TFS but could not be re-fetched for cache refresh", command.TfsId);
+            // Fallback: update BacklogPriority from the existing cached entity so the
+            // cache always reflects the value we just wrote to TFS.
+            var existing = await _repository.GetByTfsIdAsync(command.TfsId, cancellationToken);
+            if (existing != null)
+            {
+                var updated = existing with { BacklogPriority = command.NewBacklogPriority };
+                await _repository.UpsertManyAsync(new[] { updated }, cancellationToken);
+                _logger.LogInformation("Work item {TfsId} BacklogPriority updated to {Priority} in cache (TFS re-fetch unavailable)", command.TfsId, command.NewBacklogPriority);
+            }
+            else
+            {
+                _logger.LogWarning("Work item {TfsId} was updated in TFS but could not be refreshed in cache", command.TfsId);
+            }
         }
 
         return true;

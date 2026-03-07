@@ -151,6 +151,7 @@ public class WorkItemRepository : IWorkItemRepository
                     var changedDate = dto.ChangedDate ?? dto.RetrievedAt;
                     existing.TfsChangedDate = changedDate;
                     existing.TfsChangedDateUtc = changedDate.UtcDateTime;
+                    existing.BacklogPriority = dto.BacklogPriority;
                 }
                 else
                 {
@@ -199,6 +200,7 @@ public class WorkItemRepository : IWorkItemRepository
                     var changedDate = dto.ChangedDate ?? dto.RetrievedAt;
                     entity.TfsChangedDate = changedDate;
                     entity.TfsChangedDateUtc = changedDate.UtcDateTime;
+                    entity.BacklogPriority = dto.BacklogPriority;
                 }
 
                 // Insert new items
