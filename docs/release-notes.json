@@ -2,6 +2,14 @@
   {
     "date": "2026-03-07",
     "type": "Changed",
+    "title": "Product Roadmap Editor — UX Enhancements",
+    "impact": "The Product Roadmap Editor now shows save feedback (Saving/Saved/Failed status chip), loading indicators during reload, improved empty roadmap guidance, roadmap size indicator, highlight animation for newly added epics, reserved metadata area on cards, and sticky column headers.",
+    "area": "Planning",
+    "link": "/planning/product-roadmaps"
+  },
+  {
+    "date": "2026-03-07",
+    "type": "Changed",
     "title": "Product Roadmap Editor — Drag-and-Drop Support",
     "impact": "The Product Roadmap Editor now supports drag-and-drop for adding, removing, and reordering roadmap epics using MudBlazor DropContainer. Each epic card has a dedicated drag handle to prevent accidental drags. Drop zones provide visual feedback during drag operations. All existing button-based controls remain fully functional. All drag-and-drop changes are persisted to TFS and refreshed through the cache.",
     "area": "Planning",

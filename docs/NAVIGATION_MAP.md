@@ -506,8 +506,15 @@ When multiple linked work items resolve to different categories, the highest-pri
 | Move Earlier/Later | Swaps Epic BacklogPriority with the neighbouring epic. Normalizes priorities if inconsistent or duplicated — normalized values are persisted to TFS for all roadmap epics. Writes to TFS → refreshes cache → reloads editor. |
 | Add to roadmap | Via button: appends the "roadmap" tag, assigns BacklogPriority (first epic: 1000, subsequent: max + 1000), appends to end. Via drag-and-drop: inserts at drop position with calculated priority. Writes to TFS → refreshes cache → reloads editor. |
 | Remove from roadmap | Removes the "roadmap" tag from the epic's tags. Preserves other tags. Works via button click or by dragging to Available Epics. Writes to TFS → refreshes cache → reloads editor. |
-| Search/filter | Text filter for available epics by title or TFS ID. |
+| Search/filter | Text filter for available epics by title or TFS ID. Search field is part of the sticky header area and remains visible during scrolling. |
 | Right-side drawer | Single drawer for epic preview and editing. Displays TFS ID, "Open in TFS" link, editable Title and Description fields. Save button persists changes via TFS write → cache refresh → reload. |
+| Save feedback | A status chip in the header shows "Saving…" during persistence, "Saved to TFS" on success, or "Failed to update TFS" on failure. Auto-clears after 3 seconds. Does not interrupt editing flow. |
+| Loading feedback | A progress bar appears during roadmap data reload from cache after persistence. |
+| Empty roadmap guidance | When the roadmap contains zero epics, a centered helper message with icon guides the user to add epics via drag-and-drop or button. |
+| Roadmap size indicator | A chip in the Roadmap Epics header shows the current epic count (e.g., "Epics: 8"). Updates dynamically on add/remove. |
+| Epic highlight | Newly added epic cards briefly highlight with a fade animation to indicate where the epic appeared. |
+| Epic metadata area | A reserved area on each epic card for future metadata indicators (PBI count, effort totals, health warnings). |
+| Sticky headers | Both column headers (Roadmap Epics, Available Epics) are sticky and remain visible during vertical scrolling. |
 | Concurrency | Latest-state-wins: after each persistence operation the editor reloads from cache, accepting the newest TFS state. |
 | All Roadmaps button | Returns to the Product Roadmaps overview page (`/planning/product-roadmaps`). |
 | Home button | Returns to `/home`. |
