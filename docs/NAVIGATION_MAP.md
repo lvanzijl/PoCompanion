@@ -70,6 +70,7 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       ├──► /workitems?rootWorkItemId={epicId}                     │
   │       ├──► /home/dependencies  (read-only)                        │
   │       ├──► /planning/product-roadmaps  (Product Roadmaps — read-only) │
+  │       │       └──► /planning/product-roadmaps/{productId}  (Editor) │
   │       ├──► /home/backlog-overview  (cross-workspace)               │
   │       ├──► /home/health  (cross-workspace)                        │
   │       └──► /home/trends  (cross-workspace)                        │
@@ -489,6 +490,30 @@ When multiple linked work items resolve to different categories, the highest-pri
 
 ---
 
+### 2.12b Product Roadmap Editor — `/planning/product-roadmaps/{productId}`
+
+**Purpose:** Per-product roadmap editor that allows a Product Owner to curate roadmap epics. Provides add/remove roadmap membership, reorder epics using move earlier/later controls, and edit epic title and description. The editor operates on a single product roadmap and persists changes immediately to TFS via the TFS write → cache refresh → reload pattern. Roadmap membership is determined by the lowercase **"roadmap"** tag on epics.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Planning (Future) › Product Roadmaps › {ProductName}`. |
+| Two-column layout | Left column: Roadmap Epics (ordered by BacklogPriority). Right column: Available Epics (with search/filter). |
+| Roadmap epics | Epics under the product that contain the lowercase "roadmap" tag, ordered by Epic BacklogPriority. TfsId used as tie-breaker. |
+| Available epics | Epics under the product that do not contain the roadmap tag. Ordered alphabetically by title. |
+| Epic cards (roadmap) | Each card shows: order number (#1, #2, …), epic title, TFS ID, "Open in TFS" link. Actions: Move Earlier, Move Later, Remove from roadmap, Edit. |
+| Epic cards (available) | Each card shows: epic title, TFS ID, "Open in TFS" link. Actions: Add to Roadmap, Edit. |
+| Move Earlier/Later | Swaps Epic BacklogPriority with the neighbouring epic. Normalizes priorities if inconsistent or duplicated. Writes to TFS → refreshes cache → reloads editor. |
+| Add to roadmap | Appends the "roadmap" tag to the epic's tags. Sets BacklogPriority to append at end. Writes to TFS → refreshes cache → reloads editor. |
+| Remove from roadmap | Removes the "roadmap" tag from the epic's tags. Writes to TFS → refreshes cache → reloads editor. |
+| Search/filter | Text filter for available epics by title or TFS ID. |
+| Right-side drawer | Single drawer for epic preview and editing. Displays TFS ID, "Open in TFS" link, editable Title and Description fields. Save button persists changes via TFS write → cache refresh → reload. |
+| All Roadmaps button | Returns to the Product Roadmaps overview page (`/planning/product-roadmaps`). |
+| Home button | Returns to `/home`. |
+
+**Outgoing navigation:** `/home`, `/planning/product-roadmaps`
+
+---
+
 ### 2.13 Plan Board — `/home/plan-board`
 
 **Purpose:** Focused planning board showing epics and features organised by iteration. Accessed as a Quick Action from Home.
@@ -687,7 +712,8 @@ Sprint Delivery
 | PR Delivery Insights | `/home/pr-delivery-insights` | Trends workspace | Select team/sprint, view PR classification | `/home/trends`, `/home` |
 | Pipeline Insights | `/home/pipeline-insights` | Trends workspace | Select team/sprint, view per-product health | `/home/trends`, `/home` |
 | Dependency Overview | `/home/dependencies` | Planning workspace | View dependencies | `/home`, `/dependency-graph` |
-| Product Roadmaps | `/planning/product-roadmaps` | Planning workspace | View roadmap lanes, reorder products | `/home`, `/home/planning`, `/home/health` |
+| Product Roadmaps | `/planning/product-roadmaps` | Planning workspace | View roadmap lanes, reorder products | `/home`, `/home/planning`, `/home/health`, `/planning/product-roadmaps/{productId}` |
+| Product Roadmap Editor | `/planning/product-roadmaps/{productId}` | Product Roadmaps | Add/remove/reorder epics, edit title/description | `/home`, `/planning/product-roadmaps` |
 | Plan Board | `/home/plan-board` | Home quick action | View/filter board | `/home` |
 | Portfolio Progress Trend | `/home/portfolio-progress` | Trends workspace | Select product, team, sprint range | `/home/trends` |
 | Work Item Activity | `/home/delivery/sprint/activity/{id}` | Sprint Delivery drilldown | View activity | `/home/delivery/sprint` |

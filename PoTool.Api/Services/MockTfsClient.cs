@@ -475,6 +475,14 @@ public class MockTfsClient : ITfsClient
         return _mockDataFacade.UpdateWorkItemSeverityAndReturnAsync(workItemId, severity, cancellationToken);
     }
 
+    public Task<WorkItemDto?> UpdateWorkItemTitleDescriptionAsync(int workItemId, string? title, string? description, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemTitleDescriptionAsync called for workItemId={WorkItemId}, title='{Title}'",
+            workItemId, title);
+
+        return _mockDataFacade.UpdateWorkItemTitleDescriptionAsync(workItemId, title, description, cancellationToken);
+    }
+
     public Task<TfsVerificationReport> VerifyCapabilitiesAsync(
         bool includeWriteChecks = false,
         int? workItemIdForWriteCheck = null,
