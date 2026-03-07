@@ -1003,6 +1003,18 @@ Deze pagina beantwoordt de vraag: *Hoe stel ik de roadmap van mijn product samen
 #### Zoeken in beschikbare epics
 
 - Gebruik het zoekveld bovenaan de rechterkolom om epics te filteren op titel of TFS-ID.
+- Het zoekveld blijft zichtbaar bij scrollen (sticky header).
+
+#### UX-verbeteringen
+
+- **Opslaan-feedback:** Tijdens het opslaan toont een statuschip in de koptekst "Saving…". Na succes verschijnt "Saved to TFS", bij een fout "Failed to update TFS". De chip verdwijnt automatisch na 3 seconden en onderbreekt het bewerken niet.
+- **Laadindicator:** Een voortgangsbalk verschijnt tijdens het herladen van roadmapgegevens na een opslagactie.
+- **Lege roadmap:** Als de roadmap geen epics bevat, wordt een duidelijke helptekst getoond met de instructie om epics toe te voegen via drag-and-drop of de knop "Add to Roadmap".
+- **Roadmap-grootte:** Een chip in de koptekst van Roadmap Epics toont het actuele aantal epics (bijv. "Epics: 8").
+- **Highlight bij toevoegen:** Wanneer een epic aan de roadmap wordt toegevoegd, wordt de epic-kaart kort gemarkeerd met een fade-animatie zodat de gebruiker duidelijk ziet waar de epic verscheen.
+- **Volgordenummers:** Elke roadmap-epic toont een duidelijk volgordenummer (#1, #2, …) om te benadrukken dat de roadmap geordend werk vertegenwoordigt.
+- **Metadata-indicatorgebied:** Elke epic-kaart reserveert een compact gebied voor toekomstige metadata-indicatoren (aantal PBI's, inspanningtotalen, gezondheids­waarschuwingen).
+- **Sticky headers:** De kopteksten van beide kolommen (Roadmap Epics, Available Epics) blijven zichtbaar bij verticaal scrollen.
 
 ---
 

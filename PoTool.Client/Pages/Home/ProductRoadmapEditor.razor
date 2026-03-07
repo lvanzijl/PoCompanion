@@ -27,6 +27,17 @@
             </MudStack>
 
             <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                @* Phase 1: Save feedback indicator *@
+                @if (!string.IsNullOrEmpty(_saveStatus))
+                {
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Color="@_saveStatusColor"
+                             Icon="@_saveStatusIcon"
+                             Class="save-status-chip">
+                        @_saveStatus
+                    </MudChip>
+                }
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
                            StartIcon="@Icons.Material.Filled.Map"
@@ -55,6 +66,12 @@
     }
     else
     {
+        @* Phase 1: Loading overlay during reload *@
+        @if (_isReloading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-2" />
+        }
+
         <MudDropContainer T="RoadmapDragItem"
                           @ref="_dropContainer"
                           Items="_allDragItems"
@@ -66,13 +83,20 @@
                 <MudGrid>
                     @* Left column: Roadmap Epics *@
                     <MudItem xs="12" md="6">
-                        <MudPaper Elevation="2" Class="pa-4">
-                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                                <MudText Typo="Typo.h6">
-                                    <MudIcon Icon="@Icons.Material.Filled.Map" Class="mr-1" />
-                                    Roadmap Epics (@_roadmapEpics.Count)
-                                </MudText>
-                            </MudStack>
+                        <MudPaper Elevation="2" Class="pa-4 roadmap-column">
+                            @* Phase 7: Sticky header *@
+                            <div class="sticky-column-header">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                                    <MudText Typo="Typo.h6">
+                                        <MudIcon Icon="@Icons.Material.Filled.Map" Class="mr-1" />
+                                        Roadmap Epics
+                                    </MudText>
+                                    @* Phase 4: Roadmap size indicator *@
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                                        Epics: @_roadmapEpics.Count
+                                    </MudChip>
+                                </MudStack>
+                            </div>
 
                             <MudDropZone T="RoadmapDragItem"
                                          Identifier="@RoadmapZone"
@@ -83,11 +107,20 @@
                                          DraggingClass="drag-item-dragging"
                                          Class="roadmap-drop-zone"
                                          Style="min-height: 100px; overflow-y: auto; max-height: 70vh;">
+                                @* Phase 2: Empty roadmap guidance *@
                                 @if (_roadmapEpics.Count == 0 && !_isBusy)
                                 {
-                                    <MudAlert Severity="Severity.Info" Dense="true">
-                                        No roadmap epics yet. Add epics from the Available Epics list or drag them here.
-                                    </MudAlert>
+                                    <div class="empty-roadmap-guidance">
+                                        <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-6">
+                                            <MudIcon Icon="@Icons.Material.Filled.Map" Size="Size.Large" Color="Color.Secondary" />
+                                            <MudText Typo="Typo.h6" Align="Align.Center" Color="Color.Secondary">
+                                                No roadmap defined.
+                                            </MudText>
+                                            <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                                                Drag epics here or click "Add to Roadmap" to build your product roadmap.
+                                            </MudText>
+                                        </MudStack>
+                                    </div>
                                 }
                             </MudDropZone>
                         </MudPaper>
@@ -95,23 +128,30 @@
 
                     @* Right column: Available Epics *@
                     <MudItem xs="12" md="6">
-                        <MudPaper Elevation="2" Class="pa-4">
-                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                                <MudText Typo="Typo.h6">
-                                    <MudIcon Icon="@Icons.Material.Filled.ListAlt" Class="mr-1" />
-                                    Available Epics (@FilteredAvailableEpics.Count)
-                                </MudText>
-                            </MudStack>
+                        <MudPaper Elevation="2" Class="pa-4 available-column">
+                            @* Phase 7: Sticky header *@
+                            <div class="sticky-column-header">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                                    <MudText Typo="Typo.h6">
+                                        <MudIcon Icon="@Icons.Material.Filled.ListAlt" Class="mr-1" />
+                                        Available Epics
+                                    </MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
+                                        @FilteredAvailableEpics.Count
+                                    </MudChip>
+                                </MudStack>
 
-                            <MudTextField @bind-Value="_searchText"
-                                          @bind-Value:after="OnSearchTextChanged"
-                                          Placeholder="Search available epics…"
-                                          Variant="Variant.Outlined"
-                                          Adornment="Adornment.Start"
-                                          AdornmentIcon="@Icons.Material.Filled.Search"
-                                          Immediate="true"
-                                          Class="mb-3"
-                                          Clearable="true" />
+                                @* Phase 6: Search field in sticky area *@
+                                <MudTextField @bind-Value="_searchText"
+                                              @bind-Value:after="OnSearchTextChanged"
+                                              Placeholder="Search available epics…"
+                                              Variant="Variant.Outlined"
+                                              Adornment="Adornment.Start"
+                                              AdornmentIcon="@Icons.Material.Filled.Search"
+                                              Immediate="true"
+                                              Class="mb-3"
+                                              Clearable="true" />
+                            </div>
 
                             <MudDropZone T="RoadmapDragItem"
                                          Identifier="@AvailableZone"
@@ -135,7 +175,8 @@
             <ItemRenderer>
                 @if (context.Zone == RoadmapZone)
                 {
-                    <MudCard Elevation="1" Class="roadmap-epic-card drag-epic-card">
+                    @* Phase 3: highlight class for newly added epics *@
+                    <MudCard Elevation="1" Class="@GetRoadmapCardClass(context.Epic.TfsId)">
                         <MudCardContent Class="pa-3">
                             <MudStack Spacing="1">
                                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
@@ -166,6 +207,10 @@
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
                                     TFS ID: @context.Epic.TfsId
                                 </MudText>
+                                @* Phase 5: Epic metadata indicator area (placeholder) *@
+                                <div class="epic-metadata-area">
+                                    @* Reserved for future metadata indicators (PBI count, effort, health) *@
+                                </div>
                                 <MudStack Row="true" Spacing="1" Class="mt-1">
                                     @{
                                         var roadmapIndex = GetRoadmapIndex(context);
@@ -241,6 +286,10 @@
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
                                     TFS ID: @context.Epic.TfsId
                                 </MudText>
+                                @* Phase 5: Epic metadata indicator area (placeholder) *@
+                                <div class="epic-metadata-area">
+                                    @* Reserved for future metadata indicators (PBI count, effort, health) *@
+                                </div>
                                 <MudStack Row="true" Spacing="1" Class="mt-1">
                                     <MudButton Variant="Variant.Outlined"
                                                Size="Size.Small"
@@ -401,6 +450,55 @@
     .available-drop-zone .mud-drop-zone-drag-over {
         border-color: var(--mud-palette-primary);
     }
+
+    /* Phase 1: Save status chip animation */
+    .save-status-chip {
+        transition: opacity 0.3s ease;
+    }
+
+    /* Phase 2: Empty roadmap guidance */
+    .empty-roadmap-guidance {
+        border: 2px dashed var(--mud-palette-lines-default);
+        border-radius: 8px;
+        background-color: rgba(var(--mud-palette-primary-rgb), 0.02);
+    }
+
+    /* Phase 3: Epic highlight animation for newly added cards */
+    .roadmap-epic-highlight {
+        animation: epic-highlight-fade 1.5s ease-out;
+    }
+    @@keyframes epic-highlight-fade {
+        0% {
+            background-color: rgba(var(--mud-palette-primary-rgb), 0.15);
+            box-shadow: 0 0 12px rgba(var(--mud-palette-primary-rgb), 0.3);
+        }
+        100% {
+            background-color: transparent;
+            box-shadow: none;
+        }
+    }
+
+    /* Phase 5: Epic metadata indicator area */
+    .epic-metadata-area {
+        min-height: 4px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        align-items: center;
+    }
+
+    /* Phase 7: Sticky column headers */
+    .sticky-column-header {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: inherit;
+        padding-bottom: 4px;
+    }
+    .roadmap-column,
+    .available-column {
+        position: relative;
+    }
 </style>
 
 @code {
@@ -411,6 +509,7 @@
     public int ProductId { get; set; }
 
     private bool _isLoading = true;
+    private bool _isReloading;
     private bool _isBusy;
     private bool _isSaving;
     private ProductDto? _product;
@@ -419,6 +518,15 @@
     private List<ApiWorkItemDto> _roadmapEpics = new();
     private List<ApiWorkItemDto> _availableEpics = new();
     private string _searchText = string.Empty;
+
+    // Phase 1: Save feedback state
+    private string _saveStatus = string.Empty;
+    private Color _saveStatusColor = Color.Default;
+    private string _saveStatusIcon = string.Empty;
+    private CancellationTokenSource? _saveStatusCts;
+
+    // Phase 3: Highlight state for newly added epics
+    private HashSet<int> _highlightedEpicIds = new();
 
     // Drawer state
     private bool _drawerOpen;
@@ -571,6 +679,7 @@
     private async Task AddToRoadmapAtPosition(ApiWorkItemDto epic, int targetIndex)
     {
         _isBusy = true;
+        SetSavingStatus();
         try
         {
             var tagList = GetTagList(epic.Tags);
@@ -583,7 +692,8 @@
             if (updated == null)
             {
                 Snackbar.Add($"Failed to add epic {epic.TfsId} to roadmap.", Severity.Error);
-                await LoadEpicsAsync();
+                await SetFailedStatus();
+                await ReloadEpicsAsync();
                 return;
             }
 
@@ -591,13 +701,16 @@
             var newPriority = CalculateInsertPriority(targetIndex);
             await WorkItemService.UpdateBacklogPriorityAsync(epic.TfsId, newPriority);
 
-            await LoadEpicsAsync();
+            await ReloadEpicsAsync();
+            _ = HighlightEpic(epic.TfsId);
             Snackbar.Add($"Epic \"{epic.Title}\" added to roadmap.", Severity.Success);
+            await SetSavedStatus();
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error adding epic to roadmap: {ex.Message}", Severity.Error);
-            await LoadEpicsAsync();
+            await SetFailedStatus();
+            await ReloadEpicsAsync();
         }
         finally
         {
@@ -608,6 +721,7 @@
     private async Task RemoveFromRoadmapByDrag(ApiWorkItemDto epic)
     {
         _isBusy = true;
+        SetSavingStatus();
         try
         {
             var tagList = GetTagList(epic.Tags);
@@ -617,7 +731,8 @@
             if (updated == null)
             {
                 Snackbar.Add($"Failed to remove epic {epic.TfsId} from roadmap.", Severity.Error);
-                await LoadEpicsAsync();
+                await SetFailedStatus();
+                await ReloadEpicsAsync();
                 return;
             }
 
@@ -626,13 +741,15 @@
                 CloseDrawer();
             }
 
-            await LoadEpicsAsync();
+            await ReloadEpicsAsync();
             Snackbar.Add($"Epic \"{epic.Title}\" removed from roadmap.", Severity.Success);
+            await SetSavedStatus();
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error removing epic from roadmap: {ex.Message}", Severity.Error);
-            await LoadEpicsAsync();
+            await SetFailedStatus();
+            await ReloadEpicsAsync();
         }
         finally
         {
@@ -647,6 +764,7 @@
             return;
 
         _isBusy = true;
+        SetSavingStatus();
         try
         {
             // Build the new order by removing and reinserting
@@ -663,18 +781,21 @@
                 if (!success)
                 {
                     Snackbar.Add($"Failed to update priority for epic {reordered[i].TfsId}. Reloading state.", Severity.Error);
-                    await LoadEpicsAsync();
+                    await SetFailedStatus();
+                    await ReloadEpicsAsync();
                     return;
                 }
             }
 
-            await LoadEpicsAsync();
+            await ReloadEpicsAsync();
             Snackbar.Add("Roadmap order updated.", Severity.Success);
+            await SetSavedStatus();
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error reordering epics: {ex.Message}", Severity.Error);
-            await LoadEpicsAsync();
+            await SetFailedStatus();
+            await ReloadEpicsAsync();
         }
         finally
         {
@@ -722,6 +843,85 @@
         _dropContainer?.Refresh();
     }
 
+    // --- Phase 1: Save status feedback ---
+
+    private async Task ShowSaveStatus(string status, Color color, string icon)
+    {
+        _saveStatusCts?.Cancel();
+        _saveStatusCts = new CancellationTokenSource();
+        var token = _saveStatusCts.Token;
+
+        _saveStatus = status;
+        _saveStatusColor = color;
+        _saveStatusIcon = icon;
+        StateHasChanged();
+
+        try
+        {
+            await Task.Delay(3000, token);
+            _saveStatus = string.Empty;
+            StateHasChanged();
+        }
+        catch (TaskCanceledException)
+        {
+            // Cancelled by next status update — expected
+        }
+    }
+
+    private void SetSavingStatus()
+    {
+        _saveStatusCts?.Cancel();
+        _saveStatus = "Saving…";
+        _saveStatusColor = Color.Warning;
+        _saveStatusIcon = Icons.Material.Filled.Sync;
+    }
+
+    private async Task SetSavedStatus()
+    {
+        await ShowSaveStatus("Saved to TFS", Color.Success, Icons.Material.Filled.CheckCircle);
+    }
+
+    private async Task SetFailedStatus()
+    {
+        await ShowSaveStatus("Failed to update TFS", Color.Error, Icons.Material.Filled.Error);
+    }
+
+    // --- Phase 3: Epic highlight feedback ---
+
+    private string GetRoadmapCardClass(int tfsId)
+    {
+        var baseClass = "roadmap-epic-card drag-epic-card";
+        return _highlightedEpicIds.Contains(tfsId)
+            ? $"{baseClass} roadmap-epic-highlight"
+            : baseClass;
+    }
+
+    private async Task HighlightEpic(int tfsId)
+    {
+        _highlightedEpicIds.Add(tfsId);
+        StateHasChanged();
+
+        await Task.Delay(1500);
+        _highlightedEpicIds.Remove(tfsId);
+        StateHasChanged();
+    }
+
+    // --- Phase 1: Reloading wrapper ---
+
+    private async Task ReloadEpicsAsync()
+    {
+        _isReloading = true;
+        StateHasChanged();
+        try
+        {
+            await LoadEpicsAsync();
+        }
+        finally
+        {
+            _isReloading = false;
+        }
+    }
+
     // --- Tag helpers ---
 
     private static bool HasRoadmapTag(string? tags)
@@ -758,6 +958,7 @@
     private async Task AddToRoadmap(ApiWorkItemDto epic)
     {
         _isBusy = true;
+        SetSavingStatus();
         try
         {
             var tagList = GetTagList(epic.Tags);
@@ -770,6 +971,7 @@
             if (updated == null)
             {
                 Snackbar.Add($"Failed to add epic {epic.TfsId} to roadmap.", Severity.Error);
+                await SetFailedStatus();
                 return;
             }
 
@@ -787,12 +989,15 @@
 
             await WorkItemService.UpdateBacklogPriorityAsync(epic.TfsId, newPriority);
 
-            await LoadEpicsAsync();
+            await ReloadEpicsAsync();
+            _ = HighlightEpic(epic.TfsId);
             Snackbar.Add($"Epic \"{epic.Title}\" added to roadmap.", Severity.Success);
+            await SetSavedStatus();
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error adding epic to roadmap: {ex.Message}", Severity.Error);
+            await SetFailedStatus();
         }
         finally
         {
@@ -803,6 +1008,7 @@
     private async Task RemoveFromRoadmap(ApiWorkItemDto epic)
     {
         _isBusy = true;
+        SetSavingStatus();
         try
         {
             var tagList = GetTagList(epic.Tags);
@@ -812,6 +1018,7 @@
             if (updated == null)
             {
                 Snackbar.Add($"Failed to remove epic {epic.TfsId} from roadmap.", Severity.Error);
+                await SetFailedStatus();
                 return;
             }
 
@@ -821,12 +1028,14 @@
                 CloseDrawer();
             }
 
-            await LoadEpicsAsync();
+            await ReloadEpicsAsync();
             Snackbar.Add($"Epic \"{epic.Title}\" removed from roadmap.", Severity.Success);
+            await SetSavedStatus();
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error removing epic from roadmap: {ex.Message}", Severity.Error);
+            await SetFailedStatus();
         }
         finally
         {
@@ -851,6 +1060,7 @@
     private async Task SwapEpicOrder(int indexA, int indexB)
     {
         _isBusy = true;
+        SetSavingStatus();
         try
         {
             var epicA = _roadmapEpics[indexA];
@@ -872,6 +1082,7 @@
             if (!successA)
             {
                 Snackbar.Add($"Failed to update priority for epic {epicA.TfsId}.", Severity.Error);
+                await SetFailedStatus();
                 return;
             }
 
@@ -881,15 +1092,18 @@
                 // Attempt to revert A
                 await WorkItemService.UpdateBacklogPriorityAsync(epicA.TfsId, priorityA.Value);
                 Snackbar.Add($"Failed to update priority for epic {epicB.TfsId}. Reverted.", Severity.Error);
+                await SetFailedStatus();
                 return;
             }
 
-            await LoadEpicsAsync();
+            await ReloadEpicsAsync();
             Snackbar.Add("Roadmap order updated.", Severity.Success);
+            await SetSavedStatus();
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error reordering epics: {ex.Message}", Severity.Error);
+            await SetFailedStatus();
         }
         finally
         {
@@ -939,6 +1153,7 @@
         if (_drawerEpic == null) return;
 
         _isSaving = true;
+        SetSavingStatus();
         try
         {
             var updated = await WorkItemService.UpdateTitleDescriptionAsync(
@@ -949,10 +1164,11 @@
             if (updated == null)
             {
                 Snackbar.Add($"Failed to save changes for epic {_drawerEpic.TfsId}.", Severity.Error);
+                await SetFailedStatus();
                 return;
             }
 
-            await LoadEpicsAsync();
+            await ReloadEpicsAsync();
 
             // Update drawer with refreshed data
             var refreshed = _roadmapEpics.FirstOrDefault(e => e.TfsId == _drawerEpic.TfsId)
@@ -965,10 +1181,12 @@
             }
 
             Snackbar.Add("Epic updated successfully.", Severity.Success);
+            await SetSavedStatus();
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error saving epic changes: {ex.Message}", Severity.Error);
+            await SetFailedStatus();
         }
         finally
         {
