@@ -959,7 +959,7 @@ Met de pijlknoppen in de kop van elke baan kun je een product eerder of later pl
 
 **Pagina:** `/planning/product-roadmaps/{productId}`
 
-De Product Roadmap Editor is een bewerkingspagina waarmee een Product Owner de roadmap van één product kan beheren. Je kunt epics toevoegen aan of verwijderen van de roadmap, de volgorde wijzigen, en basale epicgegevens (titel en beschrijving) bewerken.
+De Product Roadmap Editor is een bewerkingspagina waarmee een Product Owner de roadmap van één product kan beheren. Je kunt epics toevoegen aan of verwijderen van de roadmap, de volgorde wijzigen, en basale epicgegevens (titel en beschrijving) bewerken. Naast de bestaande knoppen ondersteunt de editor ook **drag-and-drop**: sleep epics tussen de twee kolommen of versleep roadmap-epics om de volgorde te wijzigen.
 
 #### Doel
 
@@ -974,18 +974,20 @@ Deze pagina beantwoordt de vraag: *Hoe stel ik de roadmap van mijn product samen
 
 #### Epics toevoegen en verwijderen
 
-- **Toevoegen aan roadmap:** Klik op "Add to Roadmap" bij een beschikbare epic. De tag "roadmap" wordt toegevoegd aan het werkitem in TFS en de epic verschijnt onderaan de roadmap.
-- **Verwijderen van roadmap:** Klik op "Remove" bij een roadmap-epic. De tag "roadmap" wordt verwijderd uit het werkitem in TFS. Voltooide epics blijven op de roadmap totdat je ze expliciet verwijdert.
+- **Toevoegen aan roadmap:** Klik op "Add to Roadmap" bij een beschikbare epic, of **sleep de epic vanuit Beschikbare Epics naar Roadmap Epics**. De tag "roadmap" wordt toegevoegd aan het werkitem in TFS en de epic verschijnt op de roadmap. Bij slepen wordt de epic ingevoegd op de positie waar je hem loslaat.
+- **Verwijderen van roadmap:** Klik op "Remove" bij een roadmap-epic, of **sleep de epic vanuit Roadmap Epics naar Beschikbare Epics**. De tag "roadmap" wordt verwijderd uit het werkitem in TFS. Voltooide epics blijven op de roadmap totdat je ze expliciet verwijdert.
 
 #### Volgorde wijzigen
 
 - Gebruik de knoppen **"Earlier"** en **"Later"** bij elke roadmap-epic om de volgorde aan te passen.
+- **Drag-and-drop:** Sleep een roadmap-epic naar een andere positie binnen de Roadmap Epics-lijst om de volgorde te wijzigen. De editor toont duidelijke visuele indicatoren waar de epic zal worden geplaatst.
+- Elke epic-kaart heeft een **sleep-handgreep** (⠿ icoon) aan de linkerzijde om onbedoeld slepen te voorkomen.
 - De volgorde wordt bepaald door het **BacklogPriority**-veld van elk epic-werkitem in TFS. Bij het herschikken worden de BacklogPriority-waarden van twee naburige epics omgewisseld (swap-met-buur-strategie).
 - Als prioriteiten inconsistent zijn of duplicaten bevatten, worden ze automatisch genormaliseerd. De genormaliseerde prioriteiten worden voor alle roadmap-epics naar TFS geschreven.
 
 #### Persistentie en cachegedrag
 
-- Alle wijzigingen in de roadmap worden **onmiddellijk naar TFS geschreven**.
+- Alle wijzigingen in de roadmap — via knoppen of drag-and-drop — worden **onmiddellijk naar TFS geschreven**.
 - Na elke schrijfactie wordt het desbetreffende werkitem in de **applicatiecache vernieuwd**.
 - De editor herlaadt vervolgens de roadmapgegevens **vanuit de cache**, zodat de weergave altijd de autoritaire TFS-status weerspiegelt.
 - Dit volgt de reeks: **TFS-schrijfactie → cache vernieuwen → editor herladen**.
