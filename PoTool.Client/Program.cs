@@ -137,6 +137,14 @@ builder.Services.AddScoped<ISprintsClient>(sp =>
     return client;
 });
 
+builder.Services.AddScoped<IRoadmapSnapshotsClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new RoadmapSnapshotsClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
 // Register client services
 builder.Services.AddScoped<WorkItemService>();
 builder.Services.AddScoped<WorkItemLoadCoordinatorService>();
@@ -174,7 +182,6 @@ builder.Services.AddScoped<BugTreeBuilderService>();
 builder.Services.AddScoped<IPreferencesService, BrowserPreferencesService>();
 builder.Services.AddScoped<ISecureStorageService, BrowserSecureStorageService>();
 builder.Services.AddScoped<DraftStorageService>();
-builder.Services.AddScoped<RoadmapSnapshotStorageService>();
 
 // Register business logic services (now using API)
 builder.Services.AddScoped<WorkItemFilteringService>();

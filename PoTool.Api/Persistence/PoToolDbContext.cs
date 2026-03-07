@@ -195,6 +195,17 @@ public class PoToolDbContext : DbContext
     /// </summary>
     public DbSet<SprintMetricsProjectionEntity> SprintMetricsProjections => Set<SprintMetricsProjectionEntity>();
 
+    /// <summary>
+    /// Roadmap snapshots — point-in-time captures of roadmap state.
+    /// Stored application-side. Never modifies TFS.
+    /// </summary>
+    public DbSet<RoadmapSnapshotEntity> RoadmapSnapshots => Set<RoadmapSnapshotEntity>();
+
+    /// <summary>
+    /// Roadmap snapshot items — individual epic entries within a snapshot.
+    /// </summary>
+    public DbSet<RoadmapSnapshotItemEntity> RoadmapSnapshotItems => Set<RoadmapSnapshotItemEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -622,6 +633,22 @@ public class PoToolDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Roadmap snapshots
+        modelBuilder.Entity<RoadmapSnapshotEntity>(entity =>
+        {
+            entity.HasIndex(e => e.CreatedAtUtc);
+
+            entity.HasMany(e => e.Items)
+                .WithOne(i => i.Snapshot)
+                .HasForeignKey(i => i.SnapshotId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RoadmapSnapshotItemEntity>(entity =>
+        {
+            entity.HasIndex(e => e.SnapshotId);
         });
 
         ValidateSqliteDateTimeOffsetGuardrail(modelBuilder.Model);

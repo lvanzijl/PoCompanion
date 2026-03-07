@@ -47,7 +47,8 @@
         "PoTool.Shared.Health",
         "PoTool.Shared.Pipelines",
         "PoTool.Shared.PullRequests",
-        "PoTool.Shared.BugTriage"
+        "PoTool.Shared.BugTriage",
+        "PoTool.Shared.Planning"
       ],
       "additionalContractNamespaceUsages": [],
       "generateOptionalParameters": false,
@@ -115,7 +116,14 @@
         "PrAuthorBreakdownDto",
         "BugTriageStateDto",
         "UpdateBugTriageStateRequest",
-        "UpdateBugTriageStateResponse"
+        "UpdateBugTriageStateResponse",
+        "RoadmapSnapshotDto",
+        "RoadmapSnapshotDetailDto",
+        "RoadmapSnapshotProductDto",
+        "RoadmapSnapshotEpicDto",
+        "CreateRoadmapSnapshotRequest",
+        "CreateRoadmapSnapshotProductRequest",
+        "CreateRoadmapSnapshotEpicRequest"
       ],
       "excludedParameterNames": [],
       "handleReferences": false,

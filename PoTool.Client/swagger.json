@@ -5466,6 +5466,119 @@
           }
         }
       }
+    },
+    "/api/RoadmapSnapshots": {
+      "get": {
+        "tags": [
+          "RoadmapSnapshots"
+        ],
+        "operationId": "RoadmapSnapshots_ListSnapshots",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoadmapSnapshotDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "RoadmapSnapshots"
+        ],
+        "operationId": "RoadmapSnapshots_CreateSnapshot",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoadmapSnapshotRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoadmapSnapshotDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/api/RoadmapSnapshots/{id}": {
+      "get": {
+        "tags": [
+          "RoadmapSnapshots"
+        ],
+        "operationId": "RoadmapSnapshots_GetSnapshot",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoadmapSnapshotDetailDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "RoadmapSnapshots"
+        ],
+        "operationId": "RoadmapSnapshots_DeleteSnapshot",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -11670,6 +11783,136 @@
           "priority": {
             "type": "number",
             "format": "double"
+          }
+        }
+      },
+      "RoadmapSnapshotDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "productCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "epicCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "RoadmapSnapshotDetailDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoadmapSnapshotProductDto"
+            }
+          }
+        }
+      },
+      "RoadmapSnapshotProductDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productName": {
+            "type": "string"
+          },
+          "epics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoadmapSnapshotEpicDto"
+            }
+          }
+        }
+      },
+      "RoadmapSnapshotEpicDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "epicTfsId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "epicTitle": {
+            "type": "string"
+          },
+          "epicOrder": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "CreateRoadmapSnapshotRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateRoadmapSnapshotProductRequest"
+            }
+          }
+        }
+      },
+      "CreateRoadmapSnapshotProductRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productName": {
+            "type": "string"
+          },
+          "epics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateRoadmapSnapshotEpicRequest"
+            }
+          }
+        }
+      },
+      "CreateRoadmapSnapshotEpicRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "epicTfsId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "epicTitle": {
+            "type": "string"
+          },
+          "epicOrder": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       }

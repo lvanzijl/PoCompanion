@@ -1,8 +1,8 @@
 @page "/planning/product-roadmaps"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
-@using PoTool.Client.Storage
 @using PoTool.Shared.Contracts
+@using PoTool.Shared.Planning
 @using PoTool.Shared.WorkItems
 @inject IProfileService ProfileService
 @inject ProductService ProductService
@@ -10,7 +10,7 @@
 @inject TfsConfigService TfsConfigService
 @inject RoadmapReportingService RoadmapReporting
 @inject RoadmapSnapshotService SnapshotService
-@inject RoadmapSnapshotStorageService SnapshotStorage
+@inject IRoadmapSnapshotsClient SnapshotClient
 @inject IClipboardService ClipboardService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -282,8 +282,8 @@
                 <RowTemplate>
                     <MudTd>@context.CreatedAtUtc.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
                     <MudTd>@(context.Description ?? "—")</MudTd>
-                    <MudTd>@context.Products.Count</MudTd>
-                    <MudTd>@context.Products.Sum(p => p.Epics.Count)</MudTd>
+                    <MudTd>@context.ProductCount</MudTd>
+                    <MudTd>@context.EpicCount</MudTd>
                     <MudTd Style="text-align: right;">
                         <MudIconButton Icon="@Icons.Material.Filled.CompareArrows"
                                        Size="Size.Small"
@@ -437,7 +437,7 @@
     private bool _showSnapshotListDialog;
     private bool _showDriftDialog;
     private string? _snapshotDescription;
-    private List<RoadmapSnapshot> _snapshots = new();
+    private List<RoadmapSnapshotDto> _snapshots = new();
     private DriftReport? _driftReport;
 
     protected override async Task OnInitializedAsync()
@@ -732,8 +732,18 @@
         try
         {
             var entries = BuildReportEntries();
-            var snapshot = SnapshotService.CreateSnapshot(entries, _snapshotDescription);
-            await SnapshotStorage.SaveSnapshotAsync(snapshot);
+            var request = new CreateRoadmapSnapshotRequest(
+                _snapshotDescription,
+                entries.Select(p => new CreateRoadmapSnapshotProductRequest(
+                    p.ProductName,
+                    p.Epics.Select(e => new CreateRoadmapSnapshotEpicRequest(
+                        e.TfsId,
+                        e.Title,
+                        e.Order
+                    )).ToList()
+                )).ToList()
+            );
+            await SnapshotClient.CreateSnapshotAsync(request);
             _showCreateSnapshotDialog = false;
             Snackbar.Add("Roadmap snapshot created.", Severity.Success);
         }
@@ -745,7 +755,14 @@
 
     private async Task OpenSnapshotListDialog()
     {
-        _snapshots = (await SnapshotStorage.LoadAllSnapshotsAsync()).ToList();
+        try
+        {
+            _snapshots = (await SnapshotClient.ListSnapshotsAsync()).ToList();
+        }
+        catch
+        {
+            _snapshots = new();
+        }
         _showSnapshotListDialog = true;
     }
 
@@ -754,19 +771,50 @@
         _showSnapshotListDialog = false;
     }
 
-    private void CompareSnapshot(RoadmapSnapshot snapshot)
+    private async Task CompareSnapshot(RoadmapSnapshotDto snapshotSummary)
     {
-        var currentEntries = BuildReportEntries();
-        _driftReport = SnapshotService.Compare(snapshot, currentEntries);
-        _showSnapshotListDialog = false;
-        _showDriftDialog = true;
+        try
+        {
+            var detail = await SnapshotClient.GetSnapshotAsync(snapshotSummary.Id);
+            var snapshot = new RoadmapSnapshot
+            {
+                Id = detail.Id.ToString(),
+                CreatedAtUtc = detail.CreatedAtUtc,
+                Description = detail.Description,
+                Products = detail.Products.Select(p => new SnapshotProductEntry
+                {
+                    ProductName = p.ProductName,
+                    Epics = p.Epics.Select(e => new SnapshotEpicEntry
+                    {
+                        Order = e.EpicOrder,
+                        Title = e.EpicTitle,
+                        TfsId = e.EpicTfsId
+                    }).ToList()
+                }).ToList()
+            };
+            var currentEntries = BuildReportEntries();
+            _driftReport = SnapshotService.Compare(snapshot, currentEntries);
+            _showSnapshotListDialog = false;
+            _showDriftDialog = true;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load snapshot for comparison: {ex.Message}", Severity.Error);
+        }
     }
 
-    private async Task DeleteSnapshot(string id)
+    private async Task DeleteSnapshot(int id)
     {
-        await SnapshotStorage.DeleteSnapshotAsync(id);
-        _snapshots = (await SnapshotStorage.LoadAllSnapshotsAsync()).ToList();
-        Snackbar.Add("Snapshot deleted.", Severity.Info);
+        try
+        {
+            await SnapshotClient.DeleteSnapshotAsync(id);
+            _snapshots = (await SnapshotClient.ListSnapshotsAsync()).ToList();
+            Snackbar.Add("Snapshot deleted.", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to delete snapshot: {ex.Message}", Severity.Error);
+        }
     }
 
     private void CloseDriftDialog()
