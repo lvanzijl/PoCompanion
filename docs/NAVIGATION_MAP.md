@@ -492,7 +492,7 @@ When multiple linked work items resolve to different categories, the highest-pri
 
 ### 2.12b Product Roadmap Editor — `/planning/product-roadmaps/{productId}`
 
-**Purpose:** Per-product roadmap editor that allows a Product Owner to curate roadmap epics. Provides add/remove roadmap membership, reorder epics using move earlier/later controls, and edit epic title and description. The editor operates on a single product roadmap and persists changes immediately to TFS via the TFS write → cache refresh → reload pattern. Roadmap membership is determined by the lowercase **"roadmap"** tag on epics.
+**Purpose:** Per-product roadmap editor that allows a Product Owner to curate roadmap epics. Supports both **drag-and-drop** (via MudBlazor DropContainer/DropZone) and **button-based** controls for adding, removing, and reordering epics. Drag-and-drop allows transferring epics between Available Epics and Roadmap Epics lists, and reordering within the roadmap by dragging to the desired position. Each epic card has a dedicated drag handle to prevent accidental drag starts. The editor operates on a single product roadmap and persists changes immediately to TFS via the TFS write → cache refresh → reload pattern. Roadmap membership is determined by the lowercase **"roadmap"** tag on epics.
 
 | Functionality | Description |
 |---|---|
@@ -500,11 +500,12 @@ When multiple linked work items resolve to different categories, the highest-pri
 | Two-column layout | Left column: Roadmap Epics (ordered by BacklogPriority). Right column: Available Epics (with search/filter). |
 | Roadmap epics | Epics under the product that contain the lowercase "roadmap" tag, ordered by Epic BacklogPriority. TfsId used as tie-breaker. |
 | Available epics | Epics under the product that do not contain the roadmap tag. Ordered alphabetically by title. |
-| Epic cards (roadmap) | Each card shows: order number (#1, #2, …), epic title, TFS ID, "Open in TFS" link. Actions: Move Earlier, Move Later, Remove from roadmap, Edit. |
-| Epic cards (available) | Each card shows: epic title, TFS ID, "Open in TFS" link. Actions: Add to Roadmap, Edit. |
+| Epic cards (roadmap) | Each card shows: drag handle, order number (#1, #2, …), epic title, TFS ID, "Open in TFS" link. Actions: Move Earlier, Move Later, Remove from roadmap, Edit. Draggable to reorder within roadmap or to remove by dragging to Available Epics. |
+| Epic cards (available) | Each card shows: drag handle, epic title, TFS ID, "Open in TFS" link. Actions: Add to Roadmap, Edit. Draggable to add to roadmap by dragging to Roadmap Epics. |
+| Drag-and-drop | MudBlazor DropContainer/DropZone foundation. Drag epics between lists to add/remove from roadmap. Drag within Roadmap Epics to reorder. Dedicated drag handle prevents accidental drags. Drop zone highlighting and placeholder indicators provide clear visual feedback. All drag-and-drop changes follow the same TFS persistence flow as button actions. |
 | Move Earlier/Later | Swaps Epic BacklogPriority with the neighbouring epic. Normalizes priorities if inconsistent or duplicated — normalized values are persisted to TFS for all roadmap epics. Writes to TFS → refreshes cache → reloads editor. |
-| Add to roadmap | Appends the "roadmap" tag to the epic's tags. Always assigns a BacklogPriority value (first epic: 1000, subsequent: max + 1000). Writes to TFS → refreshes cache → reloads editor. |
-| Remove from roadmap | Removes the "roadmap" tag from the epic's tags. Preserves other tags. Writes to TFS → refreshes cache → reloads editor. |
+| Add to roadmap | Via button: appends the "roadmap" tag, assigns BacklogPriority (first epic: 1000, subsequent: max + 1000), appends to end. Via drag-and-drop: inserts at drop position with calculated priority. Writes to TFS → refreshes cache → reloads editor. |
+| Remove from roadmap | Removes the "roadmap" tag from the epic's tags. Preserves other tags. Works via button click or by dragging to Available Epics. Writes to TFS → refreshes cache → reloads editor. |
 | Search/filter | Text filter for available epics by title or TFS ID. |
 | Right-side drawer | Single drawer for epic preview and editing. Displays TFS ID, "Open in TFS" link, editable Title and Description fields. Save button persists changes via TFS write → cache refresh → reload. |
 | Concurrency | Latest-state-wins: after each persistence operation the editor reloads from cache, accepting the newest TFS state. |
@@ -714,7 +715,7 @@ Sprint Delivery
 | Pipeline Insights | `/home/pipeline-insights` | Trends workspace | Select team/sprint, view per-product health | `/home/trends`, `/home` |
 | Dependency Overview | `/home/dependencies` | Planning workspace | View dependencies | `/home`, `/dependency-graph` |
 | Product Roadmaps | `/planning/product-roadmaps` | Planning workspace | View roadmap lanes, reorder products | `/home`, `/home/planning`, `/home/health`, `/planning/product-roadmaps/{productId}` |
-| Product Roadmap Editor | `/planning/product-roadmaps/{productId}` | Product Roadmaps | Add/remove/reorder epics, edit title/description | `/home`, `/planning/product-roadmaps` |
+| Product Roadmap Editor | `/planning/product-roadmaps/{productId}` | Product Roadmaps | Add/remove/reorder epics via drag-and-drop or buttons, edit title/description | `/home`, `/planning/product-roadmaps` |
 | Plan Board | `/home/plan-board` | Home quick action | View/filter board | `/home` |
 | Portfolio Progress Trend | `/home/portfolio-progress` | Trends workspace | Select product, team, sprint range | `/home/trends` |
 | Work Item Activity | `/home/delivery/sprint/activity/{id}` | Sprint Delivery drilldown | View activity | `/home/delivery/sprint` |
