@@ -197,6 +197,7 @@ builder.Services.AddScoped<ExportService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<RoadmapReportingService>();
 builder.Services.AddScoped<RoadmapSnapshotService>();
+builder.Services.AddScoped<RoadmapAnalyticsService>();
 builder.Services.AddScoped<BrowserNavigationService>();
 
 // Home navigation services

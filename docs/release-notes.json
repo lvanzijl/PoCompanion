@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-07",
+    "type": "New",
+    "title": "Roadmap Analytics and Health Signals",
+    "impact": "Roadmap epic cards now display effort totals, PBI counts, sprint estimates, velocity warnings, refinement/validation health signals, epic age, and confidence indicators.",
+    "area": "Planning",
+    "link": "/planning/product-roadmaps"
+  },
+  {
+    "date": "2026-03-07",
     "type": "Changed",
     "title": "Roadmap Snapshots — Persistent Database Storage",
     "impact": "Roadmap snapshots are now stored in the application database instead of browser localStorage, making them durable across sessions and devices.",

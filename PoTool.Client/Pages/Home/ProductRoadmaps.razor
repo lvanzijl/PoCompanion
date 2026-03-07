@@ -11,6 +11,7 @@
 @inject RoadmapReportingService RoadmapReporting
 @inject RoadmapSnapshotService SnapshotService
 @inject IRoadmapSnapshotsClient SnapshotClient
+@inject RoadmapAnalyticsService AnalyticsService
 @inject IClipboardService ClipboardService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -177,6 +178,64 @@
                                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
                                                     TFS ID: @epic.TfsId
                                                 </MudText>
+
+                                                @* Analytics indicators *@
+                                                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mt-1">
+                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
+                                                        Effort: @epic.TotalEffort
+                                                    </MudChip>
+                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
+                                                        PBIs: @epic.PbiCount
+                                                    </MudChip>
+                                                    @if (epic.SprintsRemaining.HasValue)
+                                                    {
+                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@GetSprintChipColor(epic.SprintsRemaining.Value)">
+                                                            ~@epic.SprintsRemaining sprints
+                                                        </MudChip>
+                                                    }
+                                                </MudStack>
+
+                                                @* Warning signals *@
+                                                @if (epic.ExceedsVelocity)
+                                                {
+                                                    <MudText Typo="Typo.caption" Color="Color.Warning">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" />Epic exceeds velocity
+                                                    </MudText>
+                                                }
+                                                @if (epic.HasRefinementBlockers)
+                                                {
+                                                    <MudText Typo="Typo.caption" Color="Color.Warning">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" />Refinement blockers
+                                                    </MudText>
+                                                }
+                                                @if (epic.HasValidationIssues)
+                                                {
+                                                    <MudText Typo="Typo.caption" Color="Color.Warning">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" />Validation issues
+                                                    </MudText>
+                                                }
+
+                                                @* Derived signals *@
+                                                <MudStack Row="true" Spacing="2" Class="mt-1">
+                                                    @if (epic.EpicAgeDays.HasValue)
+                                                    {
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                            Age: @epic.EpicAgeDays days
+                                                        </MudText>
+                                                    }
+                                                    @if (epic.LastActivityDays.HasValue)
+                                                    {
+                                                        <MudText Typo="Typo.caption" Color="@GetLastActivityColor(epic.LastActivityDays.Value)">
+                                                            Last activity: @epic.LastActivityDays days ago
+                                                        </MudText>
+                                                    }
+                                                    @if (epic.Confidence.HasValue)
+                                                    {
+                                                        <MudText Typo="Typo.caption" Color="@GetConfidenceColor(epic.Confidence.Value)">
+                                                            @epic.Confidence.Value confidence
+                                                        </MudText>
+                                                    }
+                                                </MudStack>
                                             </MudStack>
                                         </MudCardContent>
                                     </MudCard>
@@ -492,31 +551,61 @@
                 try
                 {
                     var workItems = await WorkItemService.GetByRootIdsAsync(product.BacklogRootWorkItemIds.ToArray());
+                    var workItemList = workItems.ToList();
 
                     // Find the root Objective work item to get its BacklogPriority for lane ordering
-                    var objectiveWorkItem = workItems
+                    var objectiveWorkItem = workItemList
                         .FirstOrDefault(wi => wi.Type == "Objective" && product.BacklogRootWorkItemIds.Contains(wi.TfsId));
                     lane.ObjectiveTfsId = objectiveWorkItem?.TfsId ?? 0;
                     lane.ObjectiveBacklogPriority = objectiveWorkItem?.BacklogPriority;
 
                     // Filter to epics with "roadmap" tag, ordered by BacklogPriority (TfsId as tie-breaker)
-                    var roadmapEpics = workItems
+                    var roadmapEpics = workItemList
                         .Where(wi => wi.Type == "Epic" && HasRoadmapTag(wi.Tags))
                         .OrderBy(wi => wi.BacklogPriority ?? double.MaxValue)
                         .ThenBy(wi => wi.TfsId)
                         .ToList();
 
+                    // Load backlog health signals for all epics in one call
+                    var healthLookup = await AnalyticsService.LoadBacklogHealthAsync(product.Id);
+
                     var orderNumber = 1;
                     foreach (var epic in roadmapEpics)
                     {
+                        // Compute local analytics from already-loaded work items
+                        var localAnalytics = RoadmapAnalyticsService.ComputeLocalAnalytics(epic.TfsId, workItemList);
+
+                        // Map health signals
+                        healthLookup.TryGetValue(epic.TfsId, out var healthAnalytics);
+
                         lane.Epics.Add(new RoadmapEpic
                         {
                             TfsId = epic.TfsId,
                             Title = epic.Title,
                             OrderNumber = orderNumber++,
-                            TfsUrl = BuildTfsUrl(epic.TfsId)
+                            TfsUrl = BuildTfsUrl(epic.TfsId),
+                            TotalEffort = localAnalytics.TotalEffort,
+                            PbiCount = localAnalytics.PbiCount,
+                            EpicAgeDays = localAnalytics.EpicAgeDays,
+                            LastActivityDays = localAnalytics.LastActivityDays,
+                            HasRefinementBlockers = healthAnalytics?.HasRefinementBlockers ?? false,
+                            HasValidationIssues = healthAnalytics?.HasValidationIssues ?? false
                         });
                     }
+
+                    // Load forecast data in parallel for all roadmap epics
+                    var forecastTasks = lane.Epics
+                        .Select(async epic =>
+                        {
+                            var forecast = await AnalyticsService.LoadForecastAsync(epic.TfsId);
+                            if (forecast != null)
+                            {
+                                epic.SprintsRemaining = forecast.SprintsRemaining;
+                                epic.ExceedsVelocity = forecast.ExceedsVelocity;
+                                epic.Confidence = forecast.Confidence;
+                            }
+                        });
+                    await Task.WhenAll(forecastTasks);
                 }
                 catch (Exception ex)
                 {
@@ -844,5 +933,38 @@
         public string Title { get; set; } = string.Empty;
         public int OrderNumber { get; set; }
         public string? TfsUrl { get; set; }
+
+        // Analytics signals — populated from RoadmapAnalyticsService
+        public int TotalEffort { get; set; }
+        public int PbiCount { get; set; }
+        public int? SprintsRemaining { get; set; }
+        public bool ExceedsVelocity { get; set; }
+        public ForecastConfidence? Confidence { get; set; }
+        public int? EpicAgeDays { get; set; }
+        public int? LastActivityDays { get; set; }
+        public bool HasRefinementBlockers { get; set; }
+        public bool HasValidationIssues { get; set; }
     }
+
+    private static Color GetSprintChipColor(int sprintsRemaining)
+    {
+        if (sprintsRemaining <= 3) return Color.Success;
+        if (sprintsRemaining <= 6) return Color.Warning;
+        return Color.Error;
+    }
+
+    private static Color GetLastActivityColor(int days)
+    {
+        if (days <= 14) return Color.Secondary;
+        if (days <= 30) return Color.Warning;
+        return Color.Error;
+    }
+
+    private static Color GetConfidenceColor(ForecastConfidence confidence) => confidence switch
+    {
+        ForecastConfidence.High => Color.Success,
+        ForecastConfidence.Medium => Color.Warning,
+        ForecastConfidence.Low => Color.Error,
+        _ => Color.Default
+    };
 }
