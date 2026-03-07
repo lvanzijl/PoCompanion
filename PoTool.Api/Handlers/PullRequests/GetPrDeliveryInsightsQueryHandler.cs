@@ -368,7 +368,7 @@ public sealed class GetPrDeliveryInsightsQueryHandler
         // Build PBI count per Feature for the ratio
         var pbiCountByFeatureId = await _context.WorkItems
             .AsNoTracking()
-            .Where(wi => string.Equals(wi.Type, WorkItemType.Pbi, StringComparison.OrdinalIgnoreCase))
+            .Where(wi => wi.Type == WorkItemType.Pbi)
             .Select(wi => new { wi.ParentTfsId })
             .ToListAsync(cancellationToken);
 
