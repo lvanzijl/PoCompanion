@@ -662,7 +662,9 @@
                 var success = await WorkItemService.UpdateBacklogPriorityAsync(reordered[i].TfsId, newPriority);
                 if (!success)
                 {
-                    Snackbar.Add($"Failed to update priority for epic {reordered[i].TfsId}.", Severity.Warning);
+                    Snackbar.Add($"Failed to update priority for epic {reordered[i].TfsId}. Reloading state.", Severity.Error);
+                    await LoadEpicsAsync();
+                    return;
                 }
             }
 
@@ -688,7 +690,7 @@
         if (targetIndex <= 0)
         {
             var firstPriority = _roadmapEpics[0].BacklogPriority ?? 1000.0;
-            return firstPriority / 2.0;
+            return firstPriority - 1000.0;
         }
 
         if (targetIndex >= _roadmapEpics.Count)
@@ -699,7 +701,15 @@
 
         var prev = _roadmapEpics[targetIndex - 1].BacklogPriority ?? (targetIndex * 1000.0);
         var next = _roadmapEpics[targetIndex].BacklogPriority ?? ((targetIndex + 1) * 1000.0);
-        return (prev + next) / 2.0;
+        var midpoint = (prev + next) / 2.0;
+
+        // If gap is too small, normalize all priorities to maintain clean spacing
+        if (Math.Abs(next - prev) < 1.0)
+        {
+            return next - 0.5;
+        }
+
+        return midpoint;
     }
 
     private int GetRoadmapIndex(RoadmapDragItem item)
