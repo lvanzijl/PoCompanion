@@ -1,0 +1,667 @@
+@page "/planning/product-roadmaps/{ProductId:int}"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
+@using PoTool.Shared.WorkItems
+@using ApiWorkItemDto = PoTool.Client.ApiClient.WorkItemDto
+@inject IProfileService ProfileService
+@inject ProductService ProductService
+@inject WorkItemService WorkItemService
+@inject TfsConfigService TfsConfigService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Product Roadmap Editor - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @* Workspace Header *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.EditNote" Color="Color.Primary" />
+                    <MudText Typo="Typo.h4" Style="font-weight: 600;">
+                        Product Roadmap – @(_product?.Name ?? "Loading…")
+                    </MudText>
+                </MudStack>
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            </MudStack>
+
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Map"
+                           OnClick="NavigateToRoadmaps">
+                    All Roadmaps
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Home"
+                           OnClick="NavigateToHome">
+                    Home
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else if (_product == null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mt-4">
+            Product not found.
+        </MudAlert>
+    }
+    else
+    {
+        @* Two-column layout *@
+        <MudGrid>
+            @* Left column: Roadmap Epics *@
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="2" Class="pa-4">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.Map" Class="mr-1" />
+                            Roadmap Epics (@_roadmapEpics.Count)
+                        </MudText>
+                    </MudStack>
+
+                    @if (_roadmapEpics.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            No roadmap epics yet. Add epics from the Available Epics list.
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudStack Spacing="2">
+                            @for (var i = 0; i < _roadmapEpics.Count; i++)
+                            {
+                                var index = i;
+                                var epic = _roadmapEpics[index];
+                                <MudCard Elevation="1" Class="roadmap-epic-card">
+                                    <MudCardContent Class="pa-3">
+                                        <MudStack Spacing="1">
+                                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Style="font-weight: 700;">
+                                                        #@(index + 1)
+                                                    </MudChip>
+                                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">
+                                                        @epic.Title
+                                                    </MudText>
+                                                </MudStack>
+                                                <MudStack Row="true" Spacing="0" AlignItems="AlignItems.Center">
+                                                    @if (!string.IsNullOrEmpty(BuildTfsUrl(epic.TfsId)))
+                                                    {
+                                                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
+                                                                       Size="Size.Small"
+                                                                       Color="Color.Info"
+                                                                       Href="@BuildTfsUrl(epic.TfsId)"
+                                                                       Target="_blank"
+                                                                       aria-label="Open in TFS" />
+                                                    }
+                                                </MudStack>
+                                            </MudStack>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                TFS ID: @epic.TfsId
+                                            </MudText>
+                                            <MudStack Row="true" Spacing="1" Class="mt-1">
+                                                <MudButton Variant="Variant.Outlined"
+                                                           Size="Size.Small"
+                                                           Color="Color.Primary"
+                                                           StartIcon="@Icons.Material.Filled.ArrowUpward"
+                                                           Disabled="@(index == 0 || _isBusy)"
+                                                           OnClick="@(() => MoveEarlier(index))"
+                                                           aria-label="Move Earlier">
+                                                    Earlier
+                                                </MudButton>
+                                                <MudButton Variant="Variant.Outlined"
+                                                           Size="Size.Small"
+                                                           Color="Color.Primary"
+                                                           StartIcon="@Icons.Material.Filled.ArrowDownward"
+                                                           Disabled="@(index == _roadmapEpics.Count - 1 || _isBusy)"
+                                                           OnClick="@(() => MoveLater(index))"
+                                                           aria-label="Move Later">
+                                                    Later
+                                                </MudButton>
+                                                <MudButton Variant="Variant.Outlined"
+                                                           Size="Size.Small"
+                                                           Color="Color.Error"
+                                                           StartIcon="@Icons.Material.Filled.RemoveCircleOutline"
+                                                           Disabled="@_isBusy"
+                                                           OnClick="@(() => RemoveFromRoadmap(epic))"
+                                                           aria-label="Remove from roadmap">
+                                                    Remove
+                                                </MudButton>
+                                                <MudButton Variant="Variant.Outlined"
+                                                           Size="Size.Small"
+                                                           Color="Color.Default"
+                                                           StartIcon="@Icons.Material.Filled.Edit"
+                                                           Disabled="@_isBusy"
+                                                           OnClick="@(() => OpenDrawer(epic))"
+                                                           aria-label="Edit epic">
+                                                    Edit
+                                                </MudButton>
+                                            </MudStack>
+                                        </MudStack>
+                                    </MudCardContent>
+                                </MudCard>
+                            }
+                        </MudStack>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            @* Right column: Available Epics *@
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="2" Class="pa-4">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.ListAlt" Class="mr-1" />
+                            Available Epics (@FilteredAvailableEpics.Count)
+                        </MudText>
+                    </MudStack>
+
+                    <MudTextField @bind-Value="_searchText"
+                                  Placeholder="Search available epics…"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  Immediate="true"
+                                  Class="mb-3"
+                                  Clearable="true" />
+
+                    @if (FilteredAvailableEpics.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            @(_availableEpics.Count == 0 ? "No available epics for this product." : "No epics match your search.")
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudStack Spacing="2">
+                            @foreach (var epic in FilteredAvailableEpics)
+                            {
+                                <MudCard Elevation="1" Class="available-epic-card">
+                                    <MudCardContent Class="pa-3">
+                                        <MudStack Spacing="1">
+                                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                                <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">
+                                                    @epic.Title
+                                                </MudText>
+                                                <MudStack Row="true" Spacing="0" AlignItems="AlignItems.Center">
+                                                    @if (!string.IsNullOrEmpty(BuildTfsUrl(epic.TfsId)))
+                                                    {
+                                                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
+                                                                       Size="Size.Small"
+                                                                       Color="Color.Info"
+                                                                       Href="@BuildTfsUrl(epic.TfsId)"
+                                                                       Target="_blank"
+                                                                       aria-label="Open in TFS" />
+                                                    }
+                                                </MudStack>
+                                            </MudStack>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                TFS ID: @epic.TfsId
+                                            </MudText>
+                                            <MudStack Row="true" Spacing="1" Class="mt-1">
+                                                <MudButton Variant="Variant.Outlined"
+                                                           Size="Size.Small"
+                                                           Color="Color.Success"
+                                                           StartIcon="@Icons.Material.Filled.AddCircleOutline"
+                                                           Disabled="@_isBusy"
+                                                           OnClick="@(() => AddToRoadmap(epic))"
+                                                           aria-label="Add to roadmap">
+                                                    Add to Roadmap
+                                                </MudButton>
+                                                <MudButton Variant="Variant.Outlined"
+                                                           Size="Size.Small"
+                                                           Color="Color.Default"
+                                                           StartIcon="@Icons.Material.Filled.Edit"
+                                                           Disabled="@_isBusy"
+                                                           OnClick="@(() => OpenDrawer(epic))"
+                                                           aria-label="Edit epic">
+                                                    Edit
+                                                </MudButton>
+                                            </MudStack>
+                                        </MudStack>
+                                    </MudCardContent>
+                                </MudCard>
+                            }
+                        </MudStack>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@* Right-side Drawer for epic preview/editing *@
+<MudDrawer @bind-Open="_drawerOpen"
+           Anchor="Anchor.End"
+           Elevation="4"
+           Variant="DrawerVariant.Temporary"
+           Width="450px">
+    @if (_drawerEpic != null)
+    {
+        <MudDrawerHeader>
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Style="width: 100%;">
+                <MudText Typo="Typo.h6">Edit Epic</MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Close"
+                               Size="Size.Small"
+                               OnClick="CloseDrawer"
+                               aria-label="Close drawer" />
+            </MudStack>
+        </MudDrawerHeader>
+        <MudNavMenu>
+            <div class="pa-4">
+                <MudStack Spacing="3">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        TFS ID: @_drawerEpic.TfsId
+                    </MudText>
+                    @if (!string.IsNullOrEmpty(BuildTfsUrl(_drawerEpic.TfsId)))
+                    {
+                        <MudLink Href="@BuildTfsUrl(_drawerEpic.TfsId)" Target="_blank" Color="Color.Info">
+                            <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="mr-1" />
+                            Open in TFS
+                        </MudLink>
+                    }
+
+                    <MudTextField @bind-Value="_drawerTitle"
+                                  Label="Title"
+                                  Variant="Variant.Outlined"
+                                  Lines="2" />
+
+                    <MudTextField @bind-Value="_drawerDescription"
+                                  Label="Description"
+                                  Variant="Variant.Outlined"
+                                  Lines="6" />
+
+                    <MudStack Row="true" Spacing="2">
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Save"
+                                   Disabled="@_isSaving"
+                                   OnClick="SaveDrawerChanges">
+                            @if (_isSaving)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            }
+                            Save
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Default"
+                                   OnClick="CloseDrawer">
+                            Cancel
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
+            </div>
+        </MudNavMenu>
+    }
+</MudDrawer>
+
+<style>
+    .roadmap-epic-card {
+        border-left: 3px solid var(--mud-palette-primary);
+        transition: box-shadow 0.2s ease;
+    }
+    .roadmap-epic-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    }
+    .available-epic-card {
+        border-left: 3px solid var(--mud-palette-text-secondary);
+        transition: box-shadow 0.2s ease;
+    }
+    .available-epic-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int ProductId { get; set; }
+
+    private bool _isLoading = true;
+    private bool _isBusy;
+    private bool _isSaving;
+    private ProductDto? _product;
+    private TfsConfigDto? _tfsConfig;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+    private List<ApiWorkItemDto> _roadmapEpics = new();
+    private List<ApiWorkItemDto> _availableEpics = new();
+    private string _searchText = string.Empty;
+
+    // Drawer state
+    private bool _drawerOpen;
+    private ApiWorkItemDto? _drawerEpic;
+    private string _drawerTitle = string.Empty;
+    private string _drawerDescription = string.Empty;
+
+    private List<ApiWorkItemDto> FilteredAvailableEpics =>
+        string.IsNullOrWhiteSpace(_searchText)
+            ? _availableEpics
+            : _availableEpics
+                .Where(e => e.Title.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+                            || e.TfsId.ToString().Contains(_searchText))
+                .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}");
+                return;
+            }
+
+            ProfileService.SetCachedActiveProfileId(activeProfile.Id);
+            _tfsConfig = await TfsConfigService.GetConfigAsync();
+
+            _product = await ProductService.GetProductByIdAsync(ProductId);
+            if (_product == null)
+            {
+                Snackbar.Add("Product not found.", Severity.Error);
+                _isLoading = false;
+                return;
+            }
+
+            await LoadEpicsAsync();
+            UpdateBreadcrumbs();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading roadmap data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task LoadEpicsAsync()
+    {
+        if (_product == null || _product.BacklogRootWorkItemIds.Count == 0)
+            return;
+
+        var workItems = await WorkItemService.GetByRootIdsAsync(_product.BacklogRootWorkItemIds.ToArray());
+        var epics = workItems.Where(wi => wi.Type == "Epic").ToList();
+
+        _roadmapEpics = epics
+            .Where(e => HasRoadmapTag(e.Tags))
+            .OrderBy(e => e.BacklogPriority ?? double.MaxValue)
+            .ThenBy(e => e.TfsId)
+            .ToList();
+
+        _availableEpics = epics
+            .Where(e => !HasRoadmapTag(e.Tags))
+            .OrderBy(e => e.Title)
+            .ToList();
+    }
+
+    private static bool HasRoadmapTag(string? tags)
+    {
+        if (string.IsNullOrWhiteSpace(tags))
+            return false;
+
+        return tags.Split(';')
+            .Select(t => t.Trim())
+            .Any(t => t.Equals("roadmap", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static List<string> GetTagList(string? tags)
+    {
+        if (string.IsNullOrWhiteSpace(tags))
+            return new List<string>();
+
+        return tags.Split(';')
+            .Select(t => t.Trim())
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .ToList();
+    }
+
+    private string? BuildTfsUrl(int workItemId)
+    {
+        if (_tfsConfig?.Url == null || _tfsConfig.Project == null)
+            return null;
+
+        return TfsUrlBuilder.BuildWorkItemUrl(_tfsConfig.Url, _tfsConfig.Project, workItemId);
+    }
+
+    // --- Add / Remove roadmap membership ---
+
+    private async Task AddToRoadmap(ApiWorkItemDto epic)
+    {
+        _isBusy = true;
+        try
+        {
+            var tagList = GetTagList(epic.Tags);
+            if (!tagList.Any(t => t.Equals("roadmap", StringComparison.OrdinalIgnoreCase)))
+            {
+                tagList.Add("roadmap");
+            }
+
+            var updated = await WorkItemService.UpdateTagsAsync(epic.TfsId, tagList);
+            if (updated == null)
+            {
+                Snackbar.Add($"Failed to add epic {epic.TfsId} to roadmap.", Severity.Error);
+                return;
+            }
+
+            // Append to end: give it a priority higher than all current roadmap epics
+            if (_roadmapEpics.Count > 0)
+            {
+                var maxPriority = _roadmapEpics.Max(e => e.BacklogPriority ?? 0);
+                var newPriority = maxPriority + 1000.0;
+                await WorkItemService.UpdateBacklogPriorityAsync(epic.TfsId, newPriority);
+            }
+
+            await LoadEpicsAsync();
+            Snackbar.Add($"Epic \"{epic.Title}\" added to roadmap.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error adding epic to roadmap: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task RemoveFromRoadmap(ApiWorkItemDto epic)
+    {
+        _isBusy = true;
+        try
+        {
+            var tagList = GetTagList(epic.Tags);
+            tagList.RemoveAll(t => t.Equals("roadmap", StringComparison.OrdinalIgnoreCase));
+
+            var updated = await WorkItemService.UpdateTagsAsync(epic.TfsId, tagList);
+            if (updated == null)
+            {
+                Snackbar.Add($"Failed to remove epic {epic.TfsId} from roadmap.", Severity.Error);
+                return;
+            }
+
+            // Close drawer if the removed epic was being edited
+            if (_drawerEpic?.TfsId == epic.TfsId)
+            {
+                CloseDrawer();
+            }
+
+            await LoadEpicsAsync();
+            Snackbar.Add($"Epic \"{epic.Title}\" removed from roadmap.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error removing epic from roadmap: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    // --- Reordering ---
+
+    private async Task MoveEarlier(int index)
+    {
+        if (index <= 0 || _isBusy) return;
+        await SwapEpicOrder(index, index - 1);
+    }
+
+    private async Task MoveLater(int index)
+    {
+        if (index >= _roadmapEpics.Count - 1 || _isBusy) return;
+        await SwapEpicOrder(index, index + 1);
+    }
+
+    private async Task SwapEpicOrder(int indexA, int indexB)
+    {
+        _isBusy = true;
+        try
+        {
+            var epicA = _roadmapEpics[indexA];
+            var epicB = _roadmapEpics[indexB];
+
+            var priorityA = epicA.BacklogPriority;
+            var priorityB = epicB.BacklogPriority;
+
+            // Normalize if missing or colliding
+            if (!priorityA.HasValue || !priorityB.HasValue || priorityA.Value == priorityB.Value)
+            {
+                NormalizeRoadmapPriorities();
+                priorityA = (indexA + 1) * 1000.0;
+                priorityB = (indexB + 1) * 1000.0;
+            }
+
+            // Swap priorities
+            var successA = await WorkItemService.UpdateBacklogPriorityAsync(epicA.TfsId, priorityB.Value);
+            if (!successA)
+            {
+                Snackbar.Add($"Failed to update priority for epic {epicA.TfsId}.", Severity.Error);
+                return;
+            }
+
+            var successB = await WorkItemService.UpdateBacklogPriorityAsync(epicB.TfsId, priorityA.Value);
+            if (!successB)
+            {
+                // Attempt to revert A
+                await WorkItemService.UpdateBacklogPriorityAsync(epicA.TfsId, priorityA.Value);
+                Snackbar.Add($"Failed to update priority for epic {epicB.TfsId}. Reverted.", Severity.Error);
+                return;
+            }
+
+            await LoadEpicsAsync();
+            Snackbar.Add("Roadmap order updated.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error reordering epics: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    /// <summary>
+    /// Normalizes roadmap epic priorities when they become inconsistent or have duplicates.
+    /// Assigns deterministic priorities based on current position using 1000.0 spacing.
+    /// </summary>
+    private void NormalizeRoadmapPriorities()
+    {
+        for (var i = 0; i < _roadmapEpics.Count; i++)
+        {
+            _roadmapEpics[i].BacklogPriority = (i + 1) * 1000.0;
+        }
+    }
+
+    // --- Drawer ---
+
+    private void OpenDrawer(ApiWorkItemDto epic)
+    {
+        _drawerEpic = epic;
+        _drawerTitle = epic.Title;
+        _drawerDescription = epic.Description ?? string.Empty;
+        _drawerOpen = true;
+    }
+
+    private void CloseDrawer()
+    {
+        _drawerOpen = false;
+        _drawerEpic = null;
+        _drawerTitle = string.Empty;
+        _drawerDescription = string.Empty;
+    }
+
+    private async Task SaveDrawerChanges()
+    {
+        if (_drawerEpic == null) return;
+
+        _isSaving = true;
+        try
+        {
+            var updated = await WorkItemService.UpdateTitleDescriptionAsync(
+                _drawerEpic.TfsId,
+                _drawerTitle,
+                _drawerDescription);
+
+            if (updated == null)
+            {
+                Snackbar.Add($"Failed to save changes for epic {_drawerEpic.TfsId}.", Severity.Error);
+                return;
+            }
+
+            await LoadEpicsAsync();
+
+            // Update drawer with refreshed data
+            var refreshed = _roadmapEpics.FirstOrDefault(e => e.TfsId == _drawerEpic.TfsId)
+                         ?? _availableEpics.FirstOrDefault(e => e.TfsId == _drawerEpic.TfsId);
+            if (refreshed != null)
+            {
+                _drawerEpic = refreshed;
+                _drawerTitle = refreshed.Title;
+                _drawerDescription = refreshed.Description ?? string.Empty;
+            }
+
+            Snackbar.Add("Epic updated successfully.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving epic changes: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    // --- Navigation ---
+
+    private void UpdateBreadcrumbs()
+    {
+        _breadcrumbs = new List<BreadcrumbItem>
+        {
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
+            new("Planning (Future)", WorkspaceRoutes.PlanningWorkspace2, icon: Icons.Material.Filled.CalendarMonth),
+            new("Product Roadmaps", WorkspaceRoutes.ProductRoadmaps, icon: Icons.Material.Filled.Map),
+            new(_product?.Name ?? "Editor", null, disabled: true, icon: Icons.Material.Filled.EditNote)
+        };
+    }
+
+    private void NavigateToHome()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.Home);
+    }
+
+    private void NavigateToRoadmaps()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.ProductRoadmaps);
+    }
+}
