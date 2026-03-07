@@ -119,9 +119,10 @@ public static class WorkspaceRoutes
     public const string ProductRoadmaps = "/planning/product-roadmaps";
 
     /// <summary>
-    /// Product Roadmap Editor route — per-product roadmap editor with add/remove/reorder/edit capabilities.
+    /// Product Roadmap Editor route base — per-product roadmap editor with add/remove/reorder/edit capabilities.
+    /// Append "/{productId}" to navigate to a specific product's editor.
     /// </summary>
-    public const string ProductRoadmapEditor = "/planning/product-roadmaps";
+    public const string ProductRoadmapEditor = "/planning/product-roadmaps/{0}";
 
     /// <summary>
     /// Sprint Trend route - shows sprint-based revision metrics.
