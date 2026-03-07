@@ -187,6 +187,7 @@ builder.Services.AddScoped<PlanningBoardService>();
 builder.Services.AddScoped<IClipboardService, ClipboardService>();
 builder.Services.AddScoped<ExportService>();
 builder.Services.AddScoped<ReportService>();
+builder.Services.AddScoped<RoadmapReportingService>();
 builder.Services.AddScoped<BrowserNavigationService>();
 
 // Home navigation services

@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-07",
+    "type": "New",
+    "title": "Roadmap Reporting and Export",
+    "impact": "Product Roadmaps overview now offers reporting actions: visual Markdown roadmap, structured JSON export, and AI prompt templates for roadmap visualization — all copied to clipboard.",
+    "area": "Planning",
+    "link": "/planning/product-roadmaps"
+  },
+  {
+    "date": "2026-03-07",
     "type": "Changed",
     "title": "Product Roadmap Editor — UX Enhancements",
     "impact": "The Product Roadmap Editor now shows save feedback (Saving/Saved/Failed status chip), loading indicators during reload, improved empty roadmap guidance, roadmap size indicator, highlight animation for newly added epics, reserved metadata area on cards, and sticky column headers.",

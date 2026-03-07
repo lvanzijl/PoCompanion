@@ -953,6 +953,24 @@ Met de pijlknoppen in de kop van elke baan kun je een product eerder of later pl
 
 > **Let op:** Epics bewerken doe je op de **Product Roadmap-editorpagina**, niet op deze overzichtspagina.
 
+#### Roadmap Reporting
+
+Via het **Reporting**-menu rechtsboven op de Product Roadmaps-pagina kun je roadmapgegevens exporteren en rapportages genereren. Alle rapportageacties zijn **alleen-lezen** en wijzigen nooit gegevens in TFS.
+
+Beschikbare acties:
+
+- **Generate Visual Roadmap** — genereert een presentatieklare Markdown-roadmap en kopieert deze naar het klembord. Bevat een portfoliosamenvatting en gedetailleerde epiclijsten per product.
+- **Export Structured Data (JSON)** — genereert gestructureerde JSON met alle roadmapgegevens (producten, epics, volgnummers, TFS-IDs) en kopieert deze naar het klembord. Geschikt voor externe tools of AI-verwerking.
+- **AI Prompt Templates** — genereert een prompt met ingebedde roadmapgegevens, klaar om te plakken in een AI-tool voor visuele roadmap-generatie. Drie sjablonen beschikbaar:
+  - *Executive Roadmap* — strategisch, geschikt voor boardpresentaties.
+  - *Customer-Facing Roadmap* — klantgericht, outcome-georiënteerd.
+  - *Milestone Infographic* — mijlpaalgericht, visuele progressie.
+
+> **Verschil overzicht / editor / reporting:**
+> - **Product Roadmaps** (overzicht): alleen-lezen weergave van alle productroadmaps.
+> - **Product Roadmap Editor**: bewerken van de roadmap van één product (toevoegen, verwijderen, herschikken).
+> - **Reporting**: exporteren en rapporteren van roadmapgegevens voor presentaties, documentatie en AI-visualisatie.
+
 ---
 
 ### 10.4 Product Roadmap Editor
