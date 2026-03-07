@@ -453,12 +453,18 @@
             }
 
             // Append to end: give it a priority higher than all current roadmap epics
+            double newPriority;
             if (_roadmapEpics.Count > 0)
             {
                 var maxPriority = _roadmapEpics.Max(e => e.BacklogPriority ?? 0);
-                var newPriority = maxPriority + 1000.0;
-                await WorkItemService.UpdateBacklogPriorityAsync(epic.TfsId, newPriority);
+                newPriority = maxPriority + 1000.0;
             }
+            else
+            {
+                newPriority = 1000.0;
+            }
+
+            await WorkItemService.UpdateBacklogPriorityAsync(epic.TfsId, newPriority);
 
             await LoadEpicsAsync();
             Snackbar.Add($"Epic \"{epic.Title}\" added to roadmap.", Severity.Success);
@@ -535,7 +541,7 @@
             // Normalize if missing or colliding
             if (!priorityA.HasValue || !priorityB.HasValue || priorityA.Value == priorityB.Value)
             {
-                NormalizeRoadmapPriorities();
+                await NormalizeRoadmapPrioritiesAsync();
                 priorityA = (indexA + 1) * 1000.0;
                 priorityB = (indexB + 1) * 1000.0;
             }
@@ -573,12 +579,19 @@
     /// <summary>
     /// Normalizes roadmap epic priorities when they become inconsistent or have duplicates.
     /// Assigns deterministic priorities based on current position using 1000.0 spacing.
+    /// Persists the corrected priorities to TFS.
     /// </summary>
-    private void NormalizeRoadmapPriorities()
+    private async Task NormalizeRoadmapPrioritiesAsync()
     {
         for (var i = 0; i < _roadmapEpics.Count; i++)
         {
-            _roadmapEpics[i].BacklogPriority = (i + 1) * 1000.0;
+            var newPriority = (i + 1) * 1000.0;
+            _roadmapEpics[i].BacklogPriority = newPriority;
+            var success = await WorkItemService.UpdateBacklogPriorityAsync(_roadmapEpics[i].TfsId, newPriority);
+            if (!success)
+            {
+                Snackbar.Add($"Failed to normalize priority for epic {_roadmapEpics[i].TfsId}.", Severity.Warning);
+            }
         }
     }
 
