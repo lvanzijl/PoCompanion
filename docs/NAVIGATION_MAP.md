@@ -502,11 +502,12 @@ When multiple linked work items resolve to different categories, the highest-pri
 | Available epics | Epics under the product that do not contain the roadmap tag. Ordered alphabetically by title. |
 | Epic cards (roadmap) | Each card shows: order number (#1, #2, …), epic title, TFS ID, "Open in TFS" link. Actions: Move Earlier, Move Later, Remove from roadmap, Edit. |
 | Epic cards (available) | Each card shows: epic title, TFS ID, "Open in TFS" link. Actions: Add to Roadmap, Edit. |
-| Move Earlier/Later | Swaps Epic BacklogPriority with the neighbouring epic. Normalizes priorities if inconsistent or duplicated. Writes to TFS → refreshes cache → reloads editor. |
-| Add to roadmap | Appends the "roadmap" tag to the epic's tags. Sets BacklogPriority to append at end. Writes to TFS → refreshes cache → reloads editor. |
-| Remove from roadmap | Removes the "roadmap" tag from the epic's tags. Writes to TFS → refreshes cache → reloads editor. |
+| Move Earlier/Later | Swaps Epic BacklogPriority with the neighbouring epic. Normalizes priorities if inconsistent or duplicated — normalized values are persisted to TFS for all roadmap epics. Writes to TFS → refreshes cache → reloads editor. |
+| Add to roadmap | Appends the "roadmap" tag to the epic's tags. Always assigns a BacklogPriority value (first epic: 1000, subsequent: max + 1000). Writes to TFS → refreshes cache → reloads editor. |
+| Remove from roadmap | Removes the "roadmap" tag from the epic's tags. Preserves other tags. Writes to TFS → refreshes cache → reloads editor. |
 | Search/filter | Text filter for available epics by title or TFS ID. |
 | Right-side drawer | Single drawer for epic preview and editing. Displays TFS ID, "Open in TFS" link, editable Title and Description fields. Save button persists changes via TFS write → cache refresh → reload. |
+| Concurrency | Latest-state-wins: after each persistence operation the editor reloads from cache, accepting the newest TFS state. |
 | All Roadmaps button | Returns to the Product Roadmaps overview page (`/planning/product-roadmaps`). |
 | Home button | Returns to `/home`. |
 

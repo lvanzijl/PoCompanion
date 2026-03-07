@@ -981,7 +981,15 @@ Deze pagina beantwoordt de vraag: *Hoe stel ik de roadmap van mijn product samen
 
 - Gebruik de knoppen **"Earlier"** en **"Later"** bij elke roadmap-epic om de volgorde aan te passen.
 - De volgorde wordt bepaald door het **BacklogPriority**-veld van elk epic-werkitem in TFS. Bij het herschikken worden de BacklogPriority-waarden van twee naburige epics omgewisseld (swap-met-buur-strategie).
-- Als prioriteiten inconsistent zijn of duplicaten bevatten, worden ze automatisch genormaliseerd.
+- Als prioriteiten inconsistent zijn of duplicaten bevatten, worden ze automatisch genormaliseerd. De genormaliseerde prioriteiten worden voor alle roadmap-epics naar TFS geschreven.
+
+#### Persistentie en cachegedrag
+
+- Alle wijzigingen in de roadmap worden **onmiddellijk naar TFS geschreven**.
+- Na elke schrijfactie wordt het desbetreffende werkitem in de **applicatiecache vernieuwd**.
+- De editor herlaadt vervolgens de roadmapgegevens **vanuit de cache**, zodat de weergave altijd de autoritaire TFS-status weerspiegelt.
+- Dit volgt de reeks: **TFS-schrijfactie → cache vernieuwen → editor herladen**.
+- Bij gelijktijdige bewerkingen geldt de **laatste-staat-wint** benadering: als een andere gebruiker dezelfde epic heeft gewijzigd, wordt de nieuwste TFS-status geaccepteerd en de editor opnieuw geladen vanuit de cache.
 
 #### Epics bewerken
 
