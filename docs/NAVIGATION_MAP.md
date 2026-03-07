@@ -485,6 +485,7 @@ When multiple linked work items resolve to different categories, the highest-pri
 | Empty lane placeholder | When a product has no roadmap epics, an informational message is displayed. |
 | Home button | Returns to `/home`. |
 | Cross-workspace navigation | Buttons to Planning (Future) and Health (Now). |
+| Reporting menu | Dropdown menu (disabled when no products are loaded) with actions: **Generate Visual Roadmap** (copies a Markdown roadmap to clipboard), **Export Structured Data (JSON)** (copies structured JSON to clipboard), and **AI Prompt Templates** (Executive Roadmap, Customer-Facing Roadmap, Milestone Infographic — each copies a ready-to-use AI prompt with embedded roadmap data to clipboard). All reporting actions are read-only and never modify TFS data. |
 
 **Outgoing navigation:** `/home`, `/home/planning`, `/home/health`
 
