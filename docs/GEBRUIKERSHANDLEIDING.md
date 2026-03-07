@@ -945,7 +945,8 @@ Deze pagina beantwoordt de vraag: *Wat zijn de geplande epics per product op de 
 - **Roadmap-epics** worden bepaald door de tag **"roadmap"** (kleine letters). Alleen epics met deze tag verschijnen op de pagina.
 - De **productvolgorde** wordt bepaald door de **BacklogPriority** (`Microsoft.VSTS.Common.BacklogPriority`) van het root Objective-werkitem van elk product in TFS. Producten met een lagere BacklogPriority-waarde staan eerder.
 - De **epicvolgorde** binnen een product wordt bepaald door de **BacklogPriority** van elk Epic-werkitem in TFS. Bij gelijke waarden wordt het TFS-ID als stabiele tiebreaker gebruikt.
-- Elke epickaart toont: volgnummer, epictitel, TFS-ID, een link om de epic in TFS te openen, en **compacte analyticsindicatoren** (inspanningstotaal, aantal PBI's, geschatte sprints, snelheidswaarschuwingen, verfijnings-/validatiegezondheid, epicleeftijd, laatste activiteit en betrouwbaarheidsniveau). De analyticsindicatoren zijn uitsluitend informatief en wijzigen de roadmap-volgorde of het roadmap-lidmaatschap niet.
+- Elke epickaart toont: volgnummer, epictitel, TFS-ID en een link om de epic in TFS te openen.
+- Daarnaast tonen epickaarten **compacte analyticsindicatoren**: inspanningstotaal, aantal PBI's, geschatte sprints, snelheidswaarschuwingen, verfijnings-/validatiegezondheid, epicleeftijd, laatste activiteit en betrouwbaarheidsniveau. Deze indicatoren zijn uitsluitend informatief en wijzigen de roadmap-volgorde of het roadmap-lidmaatschap niet. Zie [Roadmap Analytics](#roadmap-analytics) hieronder voor details.
 
 #### Productbanen herschikken
 
