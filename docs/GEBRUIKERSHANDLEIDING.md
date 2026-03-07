@@ -31,6 +31,7 @@
     - 10.1 [Planbord](#101-planbord)
     - 10.2 [Afhankelijkheidsoverzicht](#102-afhankelijkheidsoverzicht)
     - 10.3 [Product Roadmaps](#103-product-roadmaps)
+    - 10.4 [Product Roadmap Editor](#104-product-roadmap-editor)
 11. [Bugbeheer](#11-bugbeheer)
     - 11.1 [Bug-inzichten](#111-bug-inzichten)
     - 11.2 [Bug-triage](#112-bug-triage)
@@ -951,6 +952,47 @@ Deze pagina beantwoordt de vraag: *Wat zijn de geplande epics per product op de 
 Met de pijlknoppen in de kop van elke baan kun je een product eerder of later plaatsen. Dit werkt door de BacklogPriority-waarden van de twee naburige Objective-werkitems in TFS om te wisselen (swap). Na het herschikken wordt de wijziging naar TFS geschreven, de cache vernieuwd en worden de gegevens opnieuw geladen vanuit de cache. De eerste en laatste baan hebben de bijbehorende knop uitgeschakeld.
 
 > **Let op:** Epics bewerken doe je op de **Product Roadmap-editorpagina**, niet op deze overzichtspagina.
+
+---
+
+### 10.4 Product Roadmap Editor
+
+**Pagina:** `/planning/product-roadmaps/{productId}`
+
+De Product Roadmap Editor is een bewerkingspagina waarmee een Product Owner de roadmap van één product kan beheren. Je kunt epics toevoegen aan of verwijderen van de roadmap, de volgorde wijzigen, en basale epicgegevens (titel en beschrijving) bewerken.
+
+#### Doel
+
+Deze pagina beantwoordt de vraag: *Hoe stel ik de roadmap van mijn product samen en in welke volgorde staan de epics?*
+
+#### Hoe werkt het?
+
+- De pagina toont een **tweekoloms-indeling**:
+  - **Links: Roadmap Epics** — epics met de tag "roadmap", gerangschikt op BacklogPriority.
+  - **Rechts: Beschikbare Epics** — epics zonder de roadmap-tag, met een zoekveld bovenaan.
+- **Roadmap-lidmaatschap** wordt bepaald door de tag **"roadmap"** (kleine letters) op het epic-werkitem. Epics kunnen ook andere tags bevatten naast "roadmap".
+
+#### Epics toevoegen en verwijderen
+
+- **Toevoegen aan roadmap:** Klik op "Add to Roadmap" bij een beschikbare epic. De tag "roadmap" wordt toegevoegd aan het werkitem in TFS en de epic verschijnt onderaan de roadmap.
+- **Verwijderen van roadmap:** Klik op "Remove" bij een roadmap-epic. De tag "roadmap" wordt verwijderd uit het werkitem in TFS. Voltooide epics blijven op de roadmap totdat je ze expliciet verwijdert.
+
+#### Volgorde wijzigen
+
+- Gebruik de knoppen **"Earlier"** en **"Later"** bij elke roadmap-epic om de volgorde aan te passen.
+- De volgorde wordt bepaald door het **BacklogPriority**-veld van elk epic-werkitem in TFS. Bij het herschikken worden de BacklogPriority-waarden van twee naburige epics omgewisseld (swap-met-buur-strategie).
+- Als prioriteiten inconsistent zijn of duplicaten bevatten, worden ze automatisch genormaliseerd.
+
+#### Epics bewerken
+
+- Klik op **"Edit"** bij een epic (roadmap of beschikbaar) om het bewerkingspaneel aan de rechterzijde te openen.
+- In het paneel kun je de **Titel** en **Beschrijving** van de epic wijzigen.
+- Het paneel toont ook het TFS-ID en een link om de epic in TFS te openen.
+- Wijzigingen opslaan volgt het patroon: schrijven naar TFS → cache vernieuwen → editor herladen.
+
+#### Zoeken in beschikbare epics
+
+- Gebruik het zoekveld bovenaan de rechterkolom om epics te filteren op titel of TFS-ID.
 
 ---
 
