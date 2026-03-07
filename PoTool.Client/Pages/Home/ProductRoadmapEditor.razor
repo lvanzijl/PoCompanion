@@ -504,6 +504,8 @@
 @code {
     private const string RoadmapZone = "roadmap";
     private const string AvailableZone = "available";
+    private const int SaveStatusDisplayDurationMs = 3000;
+    private const int HighlightDurationMs = 1500;
 
     [Parameter]
     public int ProductId { get; set; }
@@ -858,7 +860,7 @@
 
         try
         {
-            await Task.Delay(3000, token);
+            await Task.Delay(SaveStatusDisplayDurationMs, token);
             _saveStatus = string.Empty;
             StateHasChanged();
         }
@@ -898,12 +900,19 @@
 
     private async Task HighlightEpic(int tfsId)
     {
-        _highlightedEpicIds.Add(tfsId);
-        StateHasChanged();
+        try
+        {
+            _highlightedEpicIds.Add(tfsId);
+            StateHasChanged();
 
-        await Task.Delay(1500);
-        _highlightedEpicIds.Remove(tfsId);
-        StateHasChanged();
+            await Task.Delay(HighlightDurationMs);
+            _highlightedEpicIds.Remove(tfsId);
+            StateHasChanged();
+        }
+        catch
+        {
+            _highlightedEpicIds.Remove(tfsId);
+        }
     }
 
     // --- Phase 1: Reloading wrapper ---
