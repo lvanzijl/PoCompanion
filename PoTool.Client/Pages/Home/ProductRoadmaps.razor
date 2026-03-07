@@ -668,22 +668,58 @@
             }
 
             // Swap BacklogPriority values between the two Objectives.
-            // If either priority is null (not set in TFS), normalize both using their current
-            // lane positions multiplied by a safe spacing factor to avoid future collisions.
+            // Normal case: both priorities are set and different — use the actual TFS values.
+            // Null case: one or both priorities are missing — normalize all null-priority
+            //   lanes deterministically (by TfsId) extending past any existing priorities.
+            // Equal case: both have the same priority — add a direction-aware offset to
+            //   break the tie without using unrelated fabricated values.
             var priorityA = laneA.ObjectiveBacklogPriority;
             var priorityB = laneB.ObjectiveBacklogPriority;
 
             if (!priorityA.HasValue || !priorityB.HasValue)
             {
-                // Normalize: assign positions based on current lane ordering with spacing
-                priorityA = (indexA + 1) * 1000.0;
-                priorityB = (indexB + 1) * 1000.0;
+                // Normalize all null-priority lanes in-memory with deterministic values that
+                // extend beyond the maximum existing priority, ordered by TfsId.
+                var maxExisting = _productLanes
+                    .Where(l => l.ObjectiveBacklogPriority.HasValue)
+                    .Select(l => l.ObjectiveBacklogPriority!.Value)
+                    .DefaultIfEmpty(0.0)
+                    .Max();
+
+                var nullLanes = _productLanes
+                    .Where(l => !l.ObjectiveBacklogPriority.HasValue)
+                    .OrderBy(l => l.ObjectiveTfsId)
+                    .ToList();
+
+                for (int nullLaneIndex = 0; nullLaneIndex < nullLanes.Count; nullLaneIndex++)
+                    nullLanes[nullLaneIndex].ObjectiveBacklogPriority = maxExisting + (nullLaneIndex + 1) * 1000.0;
+
+                priorityA = laneA.ObjectiveBacklogPriority;
+                priorityB = laneB.ObjectiveBacklogPriority;
             }
             else if (priorityA.Value == priorityB.Value)
             {
-                // Collision: assign sequential values with spacing to disambiguate
-                priorityA = (indexA + 1) * 1000.0;
-                priorityB = (indexB + 1) * 1000.0;
+                // Collision: both have identical priorities — add a small direction-aware
+                // offset (+1.0) to break the tie. TFS BacklogPriority values are typically
+                // in the hundreds-to-thousands range, so a 1.0 delta does not conflict with
+                // any other lane that uses the default 1000-unit spacing.
+                if (indexA > indexB)
+                    // laneA (higher index) is moving earlier: make priorityA slightly higher
+                    // so that after the swap laneA receives the smaller priorityB value.
+                    priorityA = priorityA.Value + 1.0;
+                else
+                    // laneA (lower index) is moving later: make priorityB slightly higher
+                    // so that after the swap laneA receives the larger priorityB value.
+                    priorityB = priorityB.Value + 1.0;
+            }
+
+            // At this point both priorities must be non-null (normalization assigns values
+            // to all null-priority lanes; the collision branch adds an offset to non-null
+            // values). Guard here to satisfy the compiler and catch unexpected edge cases.
+            if (!priorityA.HasValue || !priorityB.HasValue)
+            {
+                Snackbar.Add("Cannot swap priorities: unable to determine backlog priority values.", Severity.Warning);
+                return;
             }
 
             // Write swapped priorities to TFS

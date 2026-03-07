@@ -315,4 +315,73 @@ public sealed class WorkItemRepositoryTests
         Assert.IsNotNull(result);
         Assert.AreEqual(13, result.BusinessValue);
     }
+
+    [TestMethod]
+    public async Task UpsertManyAsync_UpdatesBacklogPriority_ForExistingEntity()
+    {
+        // Arrange
+        using var context = CreateInMemoryContext();
+        var repository = new WorkItemRepository(context);
+
+        var originalWorkItem = new WorkItemDto(
+            TfsId: 400,
+            Type: "Objective",
+            Title: "Objective",
+            ParentTfsId: null,
+            AreaPath: "Project\\Team",
+            IterationPath: "Sprint 1",
+            State: "Active",
+            RetrievedAt: DateTimeOffset.UtcNow,
+            Effort: null,
+            Description: null,
+            BacklogPriority: null
+        );
+
+        // Insert the original item (BacklogPriority = null)
+        await repository.UpsertManyAsync(new[] { originalWorkItem });
+
+        // Act — upsert again with a BacklogPriority value
+        var updatedWorkItem = originalWorkItem with { BacklogPriority = 750.0 };
+        await repository.UpsertManyAsync(new[] { updatedWorkItem });
+
+        var result = await repository.GetByTfsIdAsync(400);
+
+        // Assert — BacklogPriority must be updated for the existing entity
+        Assert.IsNotNull(result);
+        Assert.AreEqual(750.0, result.BacklogPriority, "UpsertManyAsync must update BacklogPriority for existing entities");
+    }
+
+    [TestMethod]
+    public async Task UpsertManyAsync_ClearsBacklogPriority_WhenUpdatedToNull()
+    {
+        // Arrange
+        using var context = CreateInMemoryContext();
+        var repository = new WorkItemRepository(context);
+
+        var original = new WorkItemDto(
+            TfsId: 401,
+            Type: "Objective",
+            Title: "Objective",
+            ParentTfsId: null,
+            AreaPath: "Project\\Team",
+            IterationPath: "Sprint 1",
+            State: "Active",
+            RetrievedAt: DateTimeOffset.UtcNow,
+            Effort: null,
+            Description: null,
+            BacklogPriority: 500.0
+        );
+
+        await repository.UpsertManyAsync(new[] { original });
+
+        // Act — upsert with BacklogPriority = null
+        var cleared = original with { BacklogPriority = null };
+        await repository.UpsertManyAsync(new[] { cleared });
+
+        var result = await repository.GetByTfsIdAsync(401);
+
+        // Assert
+        Assert.IsNotNull(result);
+        Assert.IsNull(result.BacklogPriority, "UpsertManyAsync must clear BacklogPriority when updated to null");
+    }
 }
