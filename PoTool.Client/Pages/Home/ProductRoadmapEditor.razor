@@ -587,7 +587,11 @@
         {
             var newPriority = (i + 1) * 1000.0;
             _roadmapEpics[i].BacklogPriority = newPriority;
-            await WorkItemService.UpdateBacklogPriorityAsync(_roadmapEpics[i].TfsId, newPriority);
+            var success = await WorkItemService.UpdateBacklogPriorityAsync(_roadmapEpics[i].TfsId, newPriority);
+            if (!success)
+            {
+                Snackbar.Add($"Failed to normalize priority for epic {_roadmapEpics[i].TfsId}.", Severity.Warning);
+            }
         }
     }
 
