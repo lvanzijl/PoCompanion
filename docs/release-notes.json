@@ -2,6 +2,14 @@
   {
     "date": "2026-03-07",
     "type": "New",
+    "title": "Roadmap Snapshots and Drift Detection",
+    "impact": "Product Roadmaps overview now supports creating snapshots to capture roadmap state and comparing them with the current roadmap to detect drift (reordered, added, or removed epics).",
+    "area": "Planning",
+    "link": "/planning/product-roadmaps"
+  },
+  {
+    "date": "2026-03-07",
+    "type": "New",
     "title": "Roadmap Reporting and Export",
     "impact": "Product Roadmaps overview now offers reporting actions: visual Markdown roadmap, structured JSON export, and AI prompt templates for roadmap visualization — all copied to clipboard.",
     "area": "Planning",

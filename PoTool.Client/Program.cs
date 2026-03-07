@@ -174,6 +174,7 @@ builder.Services.AddScoped<BugTreeBuilderService>();
 builder.Services.AddScoped<IPreferencesService, BrowserPreferencesService>();
 builder.Services.AddScoped<ISecureStorageService, BrowserSecureStorageService>();
 builder.Services.AddScoped<DraftStorageService>();
+builder.Services.AddScoped<RoadmapSnapshotStorageService>();
 
 // Register business logic services (now using API)
 builder.Services.AddScoped<WorkItemFilteringService>();
@@ -188,6 +189,7 @@ builder.Services.AddScoped<IClipboardService, ClipboardService>();
 builder.Services.AddScoped<ExportService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<RoadmapReportingService>();
+builder.Services.AddScoped<RoadmapSnapshotService>();
 builder.Services.AddScoped<BrowserNavigationService>();
 
 // Home navigation services

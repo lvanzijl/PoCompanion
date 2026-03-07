@@ -486,6 +486,8 @@ When multiple linked work items resolve to different categories, the highest-pri
 | Home button | Returns to `/home`. |
 | Cross-workspace navigation | Buttons to Planning (Future) and Health (Now). |
 | Reporting menu | Dropdown menu (disabled when no products are loaded) with actions: **Generate Visual Roadmap** (copies a Markdown roadmap to clipboard), **Export Structured Data (JSON)** (copies structured JSON to clipboard), and **AI Prompt Templates** (Executive Roadmap, Customer-Facing Roadmap, Milestone Infographic — each copies a ready-to-use AI prompt with embedded roadmap data to clipboard). All reporting actions are read-only and never modify TFS data. |
+| Snapshots menu | Dropdown menu with snapshot actions: **Create Snapshot** (captures the current roadmap state — product order, epic order, titles, TFS IDs — into browser localStorage; disabled when no products are loaded), **View Snapshots** (opens a dialog listing all stored snapshots with timestamp, description, product/epic counts, and actions to compare or delete). Snapshots are stored application-side and never modify TFS data. |
+| Drift detection | From the snapshot list, the PO can compare any snapshot against the current roadmap. The comparison dialog shows per-product drift: unchanged epics, epics moved earlier or later, newly added epics, and removed epics. Visual drift indicators use color-coded chips (green=unchanged, blue=earlier, orange=later, green-filled=added, red=removed). |
 
 **Outgoing navigation:** `/home`, `/home/planning`, `/home/health`
 
