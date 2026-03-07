@@ -137,6 +137,14 @@ builder.Services.AddScoped<ISprintsClient>(sp =>
     return client;
 });
 
+builder.Services.AddScoped<IRoadmapSnapshotsClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new RoadmapSnapshotsClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
 // Register client services
 builder.Services.AddScoped<WorkItemService>();
 builder.Services.AddScoped<WorkItemLoadCoordinatorService>();
@@ -188,6 +196,7 @@ builder.Services.AddScoped<IClipboardService, ClipboardService>();
 builder.Services.AddScoped<ExportService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<RoadmapReportingService>();
+builder.Services.AddScoped<RoadmapSnapshotService>();
 builder.Services.AddScoped<BrowserNavigationService>();
 
 // Home navigation services

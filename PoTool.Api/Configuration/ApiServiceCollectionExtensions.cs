@@ -255,6 +255,9 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<BugTriageStateService>();
         services.AddScoped<Api.Services.TriageTagService>();
 
+        // Register Roadmap Snapshot service
+        services.AddScoped<Api.Services.RoadmapSnapshotService>();
+
         // Register TFS throttling and request services (used by RealTfsClient)
         services.AddSingleton<TfsRequestThrottler>();
         services.AddScoped<TfsRequestSender>();

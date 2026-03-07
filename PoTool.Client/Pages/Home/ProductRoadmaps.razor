@@ -2,12 +2,15 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
 @using PoTool.Shared.Contracts
+@using PoTool.Shared.Planning
 @using PoTool.Shared.WorkItems
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject WorkItemService WorkItemService
 @inject TfsConfigService TfsConfigService
 @inject RoadmapReportingService RoadmapReporting
+@inject RoadmapSnapshotService SnapshotService
+@inject IRoadmapSnapshotsClient SnapshotClient
 @inject IClipboardService ClipboardService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -68,6 +71,27 @@
                             </div>
                         </MudMenuItem>
                     }
+                </MudMenu>
+                <MudMenu StartIcon="@Icons.Material.Filled.CameraAlt"
+                         Label="Snapshots"
+                         Variant="Variant.Outlined"
+                         Color="Color.Secondary"
+                         AnchorOrigin="Origin.BottomLeft"
+                         Dense="true"
+                         Disabled="@(_isLoading)">
+                    <MudMenuItem OnClick="OpenCreateSnapshotDialog"
+                                 Disabled="@(_productLanes.Count == 0)">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.AddAPhoto" Size="Size.Small" />
+                            <span>Create Snapshot</span>
+                        </div>
+                    </MudMenuItem>
+                    <MudMenuItem OnClick="OpenSnapshotListDialog">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.PhotoLibrary" Size="Size.Small" />
+                            <span>View Snapshots</span>
+                        </div>
+                    </MudMenuItem>
                 </MudMenu>
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
@@ -198,6 +222,196 @@
     }
 </MudContainer>
 
+@* --- Create Snapshot Dialog --- *@
+<MudDialog @bind-Visible="_showCreateSnapshotDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true })">
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.AddAPhoto" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Create Roadmap Snapshot</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-3">
+            Capture the current roadmap state. Snapshots are stored locally and never modify TFS.
+        </MudText>
+        <MudTextField @bind-Value="_snapshotDescription"
+                      Label="Description (optional)"
+                      Placeholder="e.g. Q1 planning session, Sprint 12 grooming"
+                      Variant="Variant.Outlined"
+                      Lines="2" />
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+            @_productLanes.Count product@(_productLanes.Count == 1 ? "" : "s"),
+            @_productLanes.Sum(l => l.Epics.Count) roadmap epic@(_productLanes.Sum(l => l.Epics.Count) == 1 ? "" : "s")
+            will be captured.
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCreateSnapshotDialog" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="CreateSnapshot" Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.CameraAlt">
+            Create Snapshot
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* --- Snapshot List Dialog --- *@
+<MudDialog @bind-Visible="_showSnapshotListDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.PhotoLibrary" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Roadmap Snapshots</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (_snapshots.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">
+                No snapshots yet. Create one to capture the current roadmap state.
+            </MudAlert>
+        }
+        else
+        {
+            <MudTable Items="@_snapshots" Dense="true" Hover="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Description</MudTh>
+                    <MudTh>Products</MudTh>
+                    <MudTh>Epics</MudTh>
+                    <MudTh Style="text-align: right;">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.CreatedAtUtc.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudTd>
+                    <MudTd>@(context.Description ?? "—")</MudTd>
+                    <MudTd>@context.ProductCount</MudTd>
+                    <MudTd>@context.EpicCount</MudTd>
+                    <MudTd Style="text-align: right;">
+                        <MudIconButton Icon="@Icons.Material.Filled.CompareArrows"
+                                       Size="Size.Small"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => CompareSnapshot(context))"
+                                       Disabled="@(_productLanes.Count == 0)"
+                                       aria-label="Compare with current" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Size="Size.Small"
+                                       Color="Color.Error"
+                                       OnClick="@(() => DeleteSnapshot(context.Id))"
+                                       aria-label="Delete snapshot" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseSnapshotListDialog" Variant="Variant.Text">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* --- Drift Comparison Dialog --- *@
+<MudDialog @bind-Visible="_showDriftDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true })">
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.CompareArrows" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Drift Detection</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (_driftReport != null)
+        {
+            <MudStack Spacing="2" Class="mb-3">
+                <MudText Typo="Typo.body2">
+                    Comparing snapshot from <strong>@_driftReport.SnapshotCreatedAtUtc.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</strong>
+                    with the current roadmap.
+                </MudText>
+
+                @if (!_driftReport.HasDrift)
+                {
+                    <MudAlert Severity="Severity.Success" Dense="true">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Class="mr-1" Size="Size.Small" />
+                        No drift detected. The roadmap matches the snapshot.
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true">
+                        Drift detected — the roadmap has changed since this snapshot was taken.
+                    </MudAlert>
+                }
+            </MudStack>
+
+            @foreach (var product in _driftReport.Products)
+            {
+                <MudPaper Elevation="1" Class="pa-3 mb-3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
+                        <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">@product.ProductName</MudText>
+                        @if (product.HasDrift)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">Changed</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">No changes</MudChip>
+                        }
+                    </MudStack>
+
+                    @if (product.Epics.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">No epics to compare.</MudText>
+                    }
+                    else
+                    {
+                        <MudTable Items="@product.Epics" Dense="true" Hover="true" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>TFS ID</MudTh>
+                                <MudTh>Epic</MudTh>
+                                <MudTh>Snapshot #</MudTh>
+                                <MudTh>Current #</MudTh>
+                                <MudTh>Change</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd>@context.TfsId</MudTd>
+                                <MudTd>@context.Title</MudTd>
+                                <MudTd>@(context.SnapshotOrder?.ToString() ?? "—")</MudTd>
+                                <MudTd>@(context.CurrentOrder?.ToString() ?? "—")</MudTd>
+                                <MudTd>
+                                    @switch (context.ChangeType)
+                                    {
+                                        case DriftChangeType.Unchanged:
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text">Unchanged</MudChip>
+                                            break;
+                                        case DriftChangeType.MovedEarlier:
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">
+                                                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Class="mr-1" /> Earlier
+                                            </MudChip>
+                                            break;
+                                        case DriftChangeType.MovedLater:
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled">
+                                                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Class="mr-1" /> Later
+                                            </MudChip>
+                                            break;
+                                        case DriftChangeType.Added:
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">
+                                                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Class="mr-1" /> Added
+                                            </MudChip>
+                                            break;
+                                        case DriftChangeType.Removed:
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled">
+                                                <MudIcon Icon="@Icons.Material.Filled.Remove" Size="Size.Small" Class="mr-1" /> Removed
+                                            </MudChip>
+                                            break;
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudPaper>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseDriftDialog" Variant="Variant.Text">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
 <style>
     .roadmap-epic-card {
         border-left: 3px solid var(--mud-palette-primary);
@@ -217,6 +431,14 @@
     private List<ProductDto> _products = new();
     private TfsConfigDto? _tfsConfig;
     private readonly IReadOnlyList<PromptTemplateOption> _promptTemplates = RoadmapReportingService.GetAvailableTemplates();
+
+    // Snapshot state
+    private bool _showCreateSnapshotDialog;
+    private bool _showSnapshotListDialog;
+    private bool _showDriftDialog;
+    private string? _snapshotDescription;
+    private List<RoadmapSnapshotDto> _snapshots = new();
+    private DriftReport? _driftReport;
 
     protected override async Task OnInitializedAsync()
     {
@@ -490,6 +712,115 @@
         {
             Snackbar.Add($"Failed to generate AI prompt: {ex.Message}", Severity.Error);
         }
+    }
+
+    // --- Snapshot methods ---
+
+    private void OpenCreateSnapshotDialog()
+    {
+        _snapshotDescription = null;
+        _showCreateSnapshotDialog = true;
+    }
+
+    private void CloseCreateSnapshotDialog()
+    {
+        _showCreateSnapshotDialog = false;
+    }
+
+    private async Task CreateSnapshot()
+    {
+        try
+        {
+            var entries = BuildReportEntries();
+            var request = new CreateRoadmapSnapshotRequest(
+                _snapshotDescription,
+                entries.Select(p => new CreateRoadmapSnapshotProductRequest(
+                    p.ProductName,
+                    p.Epics.Select(e => new CreateRoadmapSnapshotEpicRequest(
+                        e.TfsId,
+                        e.Title,
+                        e.Order
+                    )).ToList()
+                )).ToList()
+            );
+            await SnapshotClient.CreateSnapshotAsync(request);
+            _showCreateSnapshotDialog = false;
+            Snackbar.Add("Roadmap snapshot created.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to create snapshot: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OpenSnapshotListDialog()
+    {
+        try
+        {
+            _snapshots = (await SnapshotClient.ListSnapshotsAsync()).ToList();
+        }
+        catch
+        {
+            _snapshots = new();
+        }
+        _showSnapshotListDialog = true;
+    }
+
+    private void CloseSnapshotListDialog()
+    {
+        _showSnapshotListDialog = false;
+    }
+
+    private async Task CompareSnapshot(RoadmapSnapshotDto snapshotSummary)
+    {
+        try
+        {
+            var detail = await SnapshotClient.GetSnapshotAsync(snapshotSummary.Id);
+            var snapshot = new RoadmapSnapshot
+            {
+                Id = detail.Id.ToString(),
+                CreatedAtUtc = detail.CreatedAtUtc,
+                Description = detail.Description,
+                Products = detail.Products.Select(p => new SnapshotProductEntry
+                {
+                    ProductName = p.ProductName,
+                    Epics = p.Epics.Select(e => new SnapshotEpicEntry
+                    {
+                        Order = e.EpicOrder,
+                        Title = e.EpicTitle,
+                        TfsId = e.EpicTfsId
+                    }).ToList()
+                }).ToList()
+            };
+            var currentEntries = BuildReportEntries();
+            _driftReport = SnapshotService.Compare(snapshot, currentEntries);
+            _showSnapshotListDialog = false;
+            _showDriftDialog = true;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load snapshot for comparison: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteSnapshot(int id)
+    {
+        try
+        {
+            await SnapshotClient.DeleteSnapshotAsync(id);
+            _snapshots = (await SnapshotClient.ListSnapshotsAsync()).ToList();
+            Snackbar.Add("Snapshot deleted.", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to delete snapshot: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void CloseDriftDialog()
+    {
+        _showDriftDialog = false;
+        _driftReport = null;
     }
 
     /// <summary>
