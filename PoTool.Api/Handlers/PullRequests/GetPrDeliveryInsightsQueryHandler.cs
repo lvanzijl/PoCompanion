@@ -41,6 +41,19 @@ public sealed class GetPrDeliveryInsightsQueryHandler
     private const string CategoryBug            = "Bug";
     private const string CategoryDisturbance    = "Disturbance";
     private const string CategoryUnmapped       = "Unmapped";
+    private const int MaxDiagnosticHierarchyDepth = 50;
+    private const string UnresolvedDiagnosticLogTemplate =
+        "PR work item resolution diagnostics (temporary): outcome={Outcome} reason={Reason} " +
+        "pullRequestId={PullRequestId} repository={Repository} productId={ProductId} " +
+        "relationCount={RelationCount} relationTypes={RelationTypes} relationTargets={RelationTargets} " +
+        "extractedWorkItemIds={ExtractedWorkItemIds} cachePresence={CachePresence} " +
+        "cachedWorkItemTypes={CachedWorkItemTypes} resolutionPath={ResolutionPath} notes={Notes}";
+    private const string ResolutionSummaryLogTemplate =
+        "PR work item resolution diagnostics (temporary): totalPrs={TotalPrs} " +
+        "prsWithExplicitLinks={PrsWithExplicitLinks} prsWithExtractedWorkItemIds={PrsWithExtractedWorkItemIds} " +
+        "prsWithCachedLinkedWorkItems={PrsWithCachedLinkedWorkItems} " +
+        "prsResolvedToCachedWorkItems={PrsResolvedToCachedWorkItems} unresolvedPrs={UnresolvedPrs} " +
+        "unresolvedReasons={UnresolvedReasons}";
 
     public GetPrDeliveryInsightsQueryHandler(
         PoToolDbContext context,
@@ -201,6 +214,7 @@ public sealed class GetPrDeliveryInsightsQueryHandler
         var classified = new List<ClassifiedPr>(prs.Count);
         var unresolvedDiagnostics = new List<UnresolvedPrWorkItemDiagnostic>();
         var prsWithExplicitLinks = 0;
+        var prsWithExtractedWorkItemIds = 0;
         var prsWithCachedLinkedWorkItems = 0;
         var prsResolvedToHierarchy = 0;
 
@@ -228,6 +242,8 @@ public sealed class GetPrDeliveryInsightsQueryHandler
             }
 
             prsWithExplicitLinks++;
+            if (linkedIds.Count > 0)
+                prsWithExtractedWorkItemIds++;
 
             // Resolve hierarchy for all linked work items
             var allEpics    = new List<(int Id, string Name)>();
@@ -237,7 +253,7 @@ public sealed class GetPrDeliveryInsightsQueryHandler
             bool hasCachedLinkedWorkItem = false;
             var linkEvaluations = new List<LinkedWorkItemEvaluation>();
 
-            foreach (var wiId in linkedIds.Distinct())
+            foreach (var wiId in linkedIds)
             {
                 if (!workItemMap.TryGetValue(wiId, out var wi))
                 {
@@ -325,6 +341,7 @@ public sealed class GetPrDeliveryInsightsQueryHandler
         LogResolutionSummary(
             prs.Count,
             prsWithExplicitLinks,
+            prsWithExtractedWorkItemIds,
             prsWithCachedLinkedWorkItems,
             prsResolvedToHierarchy,
             unresolvedDiagnostics);
@@ -756,10 +773,7 @@ public sealed class GetPrDeliveryInsightsQueryHandler
         if (linkEvaluations.All(e => !e.ExistsInCache))
             return "WorkItemNotInCache";
 
-        if (linkEvaluations.Any(e => e.ExistsInCache))
-            return "UnsupportedLinkedWorkItemType";
-
-        return "Unknown";
+        return "UnsupportedLinkedWorkItemType";
     }
 
     private static string BuildResolutionPath(
@@ -774,7 +788,7 @@ public sealed class GetPrDeliveryInsightsQueryHandler
         var currentParentId = current.ParentTfsId;
         var depth = 0;
 
-        while (currentParentId.HasValue && depth < 50)
+        while (currentParentId.HasValue && depth < MaxDiagnosticHierarchyDepth)
         {
             if (!visited.Add(currentParentId.Value))
             {
@@ -804,7 +818,7 @@ public sealed class GetPrDeliveryInsightsQueryHandler
     private void LogUnresolvedDiagnostic(UnresolvedPrWorkItemDiagnostic diagnostic)
     {
         _logger.LogWarning(
-            "PR work item resolution diagnostics (temporary): outcome={Outcome} reason={Reason} pullRequestId={PullRequestId} repository={Repository} productId={ProductId} relationCount={RelationCount} relationTypes={RelationTypes} relationTargets={RelationTargets} extractedWorkItemIds={ExtractedWorkItemIds} cachePresence={CachePresence} cachedWorkItemTypes={CachedWorkItemTypes} resolutionPath={ResolutionPath} notes={Notes}",
+            UnresolvedDiagnosticLogTemplate,
             diagnostic.FinalOutcome,
             diagnostic.RejectionReason,
             diagnostic.PullRequestId,
@@ -823,6 +837,7 @@ public sealed class GetPrDeliveryInsightsQueryHandler
     private void LogResolutionSummary(
         int totalPrs,
         int prsWithExplicitLinks,
+        int prsWithExtractedWorkItemIds,
         int prsWithCachedLinkedWorkItems,
         int prsResolvedToHierarchy,
         IReadOnlyCollection<UnresolvedPrWorkItemDiagnostic> unresolvedDiagnostics)
@@ -835,10 +850,10 @@ public sealed class GetPrDeliveryInsightsQueryHandler
             : "none";
 
         _logger.LogInformation(
-            "PR work item resolution diagnostics (temporary): totalPrs={TotalPrs} prsWithExplicitLinks={PrsWithExplicitLinks} prsWithExtractedWorkItemIds={PrsWithExtractedWorkItemIds} prsWithCachedLinkedWorkItems={PrsWithCachedLinkedWorkItems} prsResolvedToCachedWorkItems={PrsResolvedToCachedWorkItems} unresolvedPrs={UnresolvedPrs} unresolvedReasons={UnresolvedReasons}",
+            ResolutionSummaryLogTemplate,
             totalPrs,
             prsWithExplicitLinks,
-            prsWithExplicitLinks,
+            prsWithExtractedWorkItemIds,
             prsWithCachedLinkedWorkItems,
             prsResolvedToHierarchy,
             unresolvedDiagnostics.Count,
