@@ -55,16 +55,16 @@
                 </MudCard>
             </MudItem>
 
-            @* Plan Board (placeholder) *@
+            @* Plan Board *@
             <MudItem xs="12" sm="6" md="4">
                 <MudCard Elevation="1"
-                         Style="transition: all 0.2s; opacity: 0.7;"
-                         Class="mud-card-hover">
+                         Style="cursor: pointer; transition: all 0.2s;"
+                         Class="mud-card-hover"
+                         @onclick="NavigateToPlanBoard">
                     <MudCardContent Class="d-flex flex-column align-center pa-4">
-                        <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Color="Color.Default" Size="Size.Large" />
+                        <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Color="Color.Info" Size="Size.Large" />
                         <MudText Typo="Typo.subtitle1" Class="mt-2">Plan Board</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Iteration planning board for organizing upcoming sprint work</MudText>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="mt-2">Coming soon</MudChip>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
@@ -133,6 +133,11 @@
     private void NavigateToProductRoadmaps()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.ProductRoadmaps);
+    }
+
+    private void NavigateToPlanBoard()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.PlanBoard);
     }
 
     private void NavigateToHome()

@@ -265,6 +265,20 @@ public class WorkItemService
     }
 
     /// <summary>
+    /// Updates the IterationPath (sprint assignment) of a work item in TFS and refreshes the local cache.
+    /// Used by the Plan Board to move features between sprints.
+    /// </summary>
+    /// <param name="tfsId">TFS work item ID.</param>
+    /// <param name="iterationPath">New iteration path value.</param>
+    public async Task<bool> UpdateIterationPathAsync(int tfsId, string iterationPath)
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(new { IterationPath = iterationPath });
+        var content = new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync($"/api/workitems/{tfsId}/iteration-path", content);
+        return response.IsSuccessStatusCode;
+    }
+
+    /// <summary>
     /// Updates the tags of a work item in TFS and refreshes the local cache.
     /// Returns the updated work item DTO, or null if the update failed.
     /// </summary>

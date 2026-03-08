@@ -597,6 +597,16 @@ public class MockTfsClient : ITfsClient
     }
 
     /// <summary>
+    /// Updates iteration path for a work item. Mock implementation always succeeds.
+    /// </summary>
+    public Task<bool> UpdateWorkItemIterationPathAsync(int workItemId, string iterationPath, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemIterationPathAsync called for workItemId={WorkItemId}, iterationPath={IterationPath}",
+            workItemId, iterationPath);
+        return Task.FromResult(true);
+    }
+
+    /// <summary>
     /// Returns all PR data in a single call. Delegates to BattleshipMockDataFacade.
     /// </summary>
 
