@@ -106,11 +106,6 @@ public static class WorkspaceRoutes
     public const string PipelineInsights = "/home/pipeline-insights";
 
     /// <summary>
-    /// Plan Board route.
-    /// </summary>
-    public const string PlanBoard = "/home/plan-board";
-
-    /// <summary>
     /// Dependency Overview route (read-only).
     /// </summary>
     public const string DependencyOverview = "/home/dependencies";

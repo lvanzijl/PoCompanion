@@ -2,6 +2,14 @@
   {
     "date": "2026-03-08",
     "type": "Changed",
+    "title": "Legacy Plan Board removed from Planning workspace",
+    "impact": "The legacy Plan Board page and its backend have been removed. The Planning workspace now shows a placeholder for a future replacement board.",
+    "area": "Planning",
+    "link": "/home/planning"
+  },
+  {
+    "date": "2026-03-08",
+    "type": "Changed",
     "title": "Planning workspace redesigned as navigation hub",
     "impact": "The Planning landing page now loads instantly as a lightweight navigation hub with cards for Product Roadmaps and Plan Board, replacing the previous heavy analytics page with velocity charts, forecast tables and capacity calculations.",
     "area": "Planning",
