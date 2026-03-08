@@ -1059,19 +1059,36 @@ Beschikbare acties:
 
 #### Roadmap Analytics
 
-Elke epickaart op de overzichtspagina toont compacte analyticsindicatoren die hergebruik maken van bestaande berekeningen uit de Planning-, Health- en Delivery-werkruimten:
+Elke epickaart op de overzichtspagina toont compacte planningssignalen die helpen bij het beoordelen van voortgang en risico's, zonder de roadmap te overladen met dashboards.
 
-- **Inspanningstotaal** — som van het Effort-veld van alle onderliggende PBI's (uit cache).
-- **Aantal PBI's** — totaal aantal Product Backlog Items onder de epic (uit cache).
+**Voortgangssignalen (effort en progressie):**
+
+- **Totale inspanning** — som van het Effort-veld van alle onderliggende PBI's en Bugs (afgerond + resterend).
+- **Geleverde inspanning** — effort van afgeronde PBI's/Bugs (status Closed, Done of Removed).
+- **Resterende inspanning** — effort van actieve PBI's/Bugs die nog niet zijn afgerond.
+- **Voortgangsbalk** — visuele progressie-indicator met percentage (geleverd / totaal × 100%). Kleurcodering: groen (≥75%), blauw (≥25%), oranje (<25%).
+- **Aantal PBI's** — totaal aantal Product Backlog Items en Bugs onder de epic.
+
+**Afhankelijkheidssignaal:**
+
+- **Afhankelijkheidsindicator** — verschijnt wanneer de epic afhankelijkheidsrelaties heeft (DependsOn/Blocks). Dit helpt de Product Owner te beoordelen of het veilig is om afhankelijk werk te plannen.
+
+**Voorspellingssignalen:**
+
 - **Geschatte sprints** — voorspelde sprints tot voltooiing, afgeleid van de Planning-werkruimte-forecast.
 - **Snelheidswaarschuwingen** — waarschuwing wanneer een epic de snelheidsdrempel overschrijdt (>3 sprints of 3× velocity), afgeleid van Planning.
+- **Betrouwbaarheidsniveau** — confidence-indicator afgeleid van de Planning-werkruimte-forecast.
+
+**Gezondheidssignalen:**
+
 - **Verfijningsgezondheid** — score die aangeeft of PBI's onder de epic voldoende zijn verfijnd, afgeleid van Health-signalen.
 - **Validatiegezondheid** — signaal wanneer PBI's validatieproblemen vertonen, afgeleid van Health-signalen.
 - **Epicleeftijd** — aantal dagen sinds aanmaakdatum van de epic.
 - **Laatste activiteit** — aantal dagen sinds de meest recente wijziging aan onderliggende werkitems.
-- **Betrouwbaarheidsniveau** — confidence-indicator afgeleid van de Planning-werkruimte-forecast.
 
-Alle analyticsindicatoren zijn **alleen-lezen**: ze wijzigen geen TFS-gegevens, roadmap-volgorde of roadmap-lidmaatschap.
+> **Let op:** deze signalen zijn planningshulpmiddelen, geen strikte voorspellingen. Ze geven richting aan roadmapbeslissingen maar vervangen geen gedetailleerde analyse.
+
+Alle signalen zijn **alleen-lezen**: ze wijzigen geen TFS-gegevens, roadmap-volgorde of roadmap-lidmaatschap.
 
 #### Snapshots en driftdetectie
 
