@@ -9,6 +9,7 @@
 @inject TfsConfigService TfsConfigService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject ILogger<ProductRoadmapEditor> Logger
 
 <PageTitle>Product Roadmap Editor - PO Companion</PageTitle>
 
@@ -588,19 +589,28 @@
         if (_product == null || _product.BacklogRootWorkItemIds.Count == 0)
             return;
 
-        var workItems = await WorkItemService.GetByRootIdsAsync(_product.BacklogRootWorkItemIds.ToArray());
-        var epics = workItems.Where(wi => wi.Type == "Epic").ToList();
+        var workItemList = (await WorkItemService.GetByRootIdsAsync(_product.BacklogRootWorkItemIds.ToArray())).ToList();
+        var epics = workItemList.Where(wi => RoadmapWorkItemRules.IsEpic(wi.Type)).ToList();
 
         _roadmapEpics = epics
-            .Where(e => HasRoadmapTag(e.Tags))
+            .Where(e => RoadmapWorkItemRules.HasRoadmapTag(e.Tags))
             .OrderBy(e => e.BacklogPriority ?? double.MaxValue)
             .ThenBy(e => e.TfsId)
             .ToList();
 
         _availableEpics = epics
-            .Where(e => !HasRoadmapTag(e.Tags))
+            .Where(e => !RoadmapWorkItemRules.HasRoadmapTag(e.Tags))
             .OrderBy(e => e.Title)
             .ToList();
+
+        Logger.LogInformation(
+            "Roadmap editor product {ProductId} '{ProductName}' retrieved {WorkItemCount} work items; epics before roadmap filter {EpicCountBeforeRoadmapFilter}; roadmap epics after filter {RoadmapEpicCount}; roadmap priorities [{RoadmapPriorities}]",
+            _product.Id,
+            _product.Name,
+            workItemList.Count,
+            epics.Count,
+            _roadmapEpics.Count,
+            string.Join(", ", _roadmapEpics.Select(epic => $"{epic.TfsId}:{epic.BacklogPriority?.ToString() ?? "null"}")));
 
         BuildDragItems();
     }
@@ -684,7 +694,7 @@
         SetSavingStatus();
         try
         {
-            var tagList = GetTagList(epic.Tags);
+            var tagList = RoadmapWorkItemRules.GetTagList(epic.Tags);
             if (!tagList.Any(t => t.Equals("roadmap", StringComparison.OrdinalIgnoreCase)))
             {
                 tagList.Add("roadmap");
@@ -726,7 +736,7 @@
         SetSavingStatus();
         try
         {
-            var tagList = GetTagList(epic.Tags);
+            var tagList = RoadmapWorkItemRules.GetTagList(epic.Tags);
             tagList.RemoveAll(t => t.Equals("roadmap", StringComparison.OrdinalIgnoreCase));
 
             var updated = await WorkItemService.UpdateTagsAsync(epic.TfsId, tagList);
@@ -769,25 +779,9 @@
         SetSavingStatus();
         try
         {
-            // Build the new order by removing and reinserting
-            var reordered = new List<ApiWorkItemDto>(_roadmapEpics);
-            reordered.RemoveAt(currentIndex);
-            var insertAt = Math.Min(targetIndex, reordered.Count);
-            reordered.Insert(insertAt, epic);
-
-            // Normalize all priorities for the new order
-            for (var i = 0; i < reordered.Count; i++)
-            {
-                var newPriority = (i + 1) * 1000.0;
-                var success = await WorkItemService.UpdateBacklogPriorityAsync(reordered[i].TfsId, newPriority);
-                if (!success)
-                {
-                    Snackbar.Add($"Failed to update priority for epic {reordered[i].TfsId}. Reloading state.", Severity.Error);
-                    await SetFailedStatus();
-                    await ReloadEpicsAsync();
-                    return;
-                }
-            }
+            var applied = await ApplyRoadmapReorderAsync(currentIndex, targetIndex);
+            if (!applied)
+                return;
 
             await ReloadEpicsAsync();
             Snackbar.Add("Roadmap order updated.", Severity.Success);
@@ -931,29 +925,6 @@
         }
     }
 
-    // --- Tag helpers ---
-
-    private static bool HasRoadmapTag(string? tags)
-    {
-        if (string.IsNullOrWhiteSpace(tags))
-            return false;
-
-        return tags.Split(';')
-            .Select(t => t.Trim())
-            .Any(t => t.Equals("roadmap", StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static List<string> GetTagList(string? tags)
-    {
-        if (string.IsNullOrWhiteSpace(tags))
-            return new List<string>();
-
-        return tags.Split(';')
-            .Select(t => t.Trim())
-            .Where(t => !string.IsNullOrWhiteSpace(t))
-            .ToList();
-    }
-
     private string? BuildTfsUrl(int workItemId)
     {
         if (_tfsConfig?.Url == null || _tfsConfig.Project == null)
@@ -970,7 +941,7 @@
         SetSavingStatus();
         try
         {
-            var tagList = GetTagList(epic.Tags);
+            var tagList = RoadmapWorkItemRules.GetTagList(epic.Tags);
             if (!tagList.Any(t => t.Equals("roadmap", StringComparison.OrdinalIgnoreCase)))
             {
                 tagList.Add("roadmap");
@@ -1020,7 +991,7 @@
         SetSavingStatus();
         try
         {
-            var tagList = GetTagList(epic.Tags);
+            var tagList = RoadmapWorkItemRules.GetTagList(epic.Tags);
             tagList.RemoveAll(t => t.Equals("roadmap", StringComparison.OrdinalIgnoreCase));
 
             var updated = await WorkItemService.UpdateTagsAsync(epic.TfsId, tagList);
@@ -1075,35 +1046,19 @@
             var epicA = _roadmapEpics[indexA];
             var epicB = _roadmapEpics[indexB];
 
-            var priorityA = epicA.BacklogPriority;
-            var priorityB = epicB.BacklogPriority;
+            Logger.LogInformation(
+                "Roadmap button reorder requested for product {ProductId}: epic {EpicATfsId} at index {IndexA} with priority {PriorityA}, neighbor epic {EpicBTfsId} at index {IndexB} with priority {PriorityB}.",
+                ProductId,
+                epicA.TfsId,
+                indexA,
+                epicA.BacklogPriority,
+                epicB.TfsId,
+                indexB,
+                epicB.BacklogPriority);
 
-            // Normalize if missing or colliding
-            if (!priorityA.HasValue || !priorityB.HasValue || priorityA.Value == priorityB.Value)
-            {
-                await NormalizeRoadmapPrioritiesAsync();
-                priorityA = (indexA + 1) * 1000.0;
-                priorityB = (indexB + 1) * 1000.0;
-            }
-
-            // Swap priorities
-            var successA = await WorkItemService.UpdateBacklogPriorityAsync(epicA.TfsId, priorityB.Value);
-            if (!successA)
-            {
-                Snackbar.Add($"Failed to update priority for epic {epicA.TfsId}.", Severity.Error);
-                await SetFailedStatus();
+            var applied = await ApplyRoadmapReorderAsync(indexA, indexB);
+            if (!applied)
                 return;
-            }
-
-            var successB = await WorkItemService.UpdateBacklogPriorityAsync(epicB.TfsId, priorityA.Value);
-            if (!successB)
-            {
-                // Attempt to revert A
-                await WorkItemService.UpdateBacklogPriorityAsync(epicA.TfsId, priorityA.Value);
-                Snackbar.Add($"Failed to update priority for epic {epicB.TfsId}. Reverted.", Severity.Error);
-                await SetFailedStatus();
-                return;
-            }
 
             await ReloadEpicsAsync();
             Snackbar.Add("Roadmap order updated.", Severity.Success);
@@ -1130,6 +1085,12 @@
         for (var i = 0; i < _roadmapEpics.Count; i++)
         {
             var newPriority = (i + 1) * 1000.0;
+            Logger.LogInformation(
+                "Normalizing roadmap priority for product {ProductId}: epic {EpicTfsId} from {OldPriority} to {NewPriority}.",
+                ProductId,
+                _roadmapEpics[i].TfsId,
+                _roadmapEpics[i].BacklogPriority,
+                newPriority);
             _roadmapEpics[i].BacklogPriority = newPriority;
             var success = await WorkItemService.UpdateBacklogPriorityAsync(_roadmapEpics[i].TfsId, newPriority);
             if (!success)
@@ -1201,6 +1162,80 @@
         {
             _isSaving = false;
         }
+    }
+
+    private async Task<bool> ApplyRoadmapReorderAsync(int currentIndex, int targetIndex)
+    {
+        if (!TryCreateRoadmapReorderPlan(currentIndex, targetIndex, out var writes, out var failureReason))
+        {
+            Logger.LogWarning(
+                "Roadmap reorder requires priority recovery for product {ProductId}. CurrentIndex {CurrentIndex}, TargetIndex {TargetIndex}, reason {FailureReason}.",
+                ProductId,
+                currentIndex,
+                targetIndex,
+                failureReason);
+
+            await NormalizeRoadmapPrioritiesAsync();
+
+            if (!TryCreateRoadmapReorderPlan(currentIndex, targetIndex, out writes, out var retryFailureReason))
+            {
+                Logger.LogWarning(
+                    "Roadmap reorder still unavailable after normalization for product {ProductId}. CurrentIndex {CurrentIndex}, TargetIndex {TargetIndex}, reason {FailureReason}.",
+                    ProductId,
+                    currentIndex,
+                    targetIndex,
+                    retryFailureReason);
+                Snackbar.Add("Cannot reorder because roadmap priorities could not be recovered.", Severity.Warning);
+                await SetFailedStatus();
+                await ReloadEpicsAsync();
+                return false;
+            }
+        }
+
+        Logger.LogInformation(
+            "Applying roadmap reorder for product {ProductId}. CurrentIndex {CurrentIndex}, TargetIndex {TargetIndex}, writes [{PriorityWrites}]",
+            ProductId,
+            currentIndex,
+            targetIndex,
+            string.Join(", ", writes!.Select(write => $"{write.TfsId}:{write.OriginalPriority}->{write.NewPriority}")));
+
+        var appliedWrites = new List<RoadmapEpicPriorityWrite>();
+        foreach (var write in writes!)
+        {
+            var success = await WorkItemService.UpdateBacklogPriorityAsync(write.TfsId, write.NewPriority);
+            if (!success)
+            {
+                foreach (var appliedWrite in Enumerable.Reverse(appliedWrites))
+                {
+                    await WorkItemService.UpdateBacklogPriorityAsync(appliedWrite.TfsId, appliedWrite.OriginalPriority);
+                }
+
+                Snackbar.Add($"Failed to update priority for epic {write.TfsId}. Reloading state.", Severity.Error);
+                await SetFailedStatus();
+                await ReloadEpicsAsync();
+                return false;
+            }
+
+            appliedWrites.Add(write);
+        }
+
+        return true;
+    }
+
+    private bool TryCreateRoadmapReorderPlan(
+        int currentIndex,
+        int targetIndex,
+        out IReadOnlyList<RoadmapEpicPriorityWrite>? writes,
+        out RoadmapEpicPriorityReorderFailureReason? failureReason)
+    {
+        return RoadmapEpicPriorityReorderPlanner.TryCreatePriorityPreservingPlan(
+            _roadmapEpics
+                .Select(epic => new RoadmapEpicPriorityItem(epic.TfsId, epic.BacklogPriority))
+                .ToList(),
+            currentIndex,
+            targetIndex,
+            out writes,
+            out failureReason);
     }
 
     // --- Navigation ---
