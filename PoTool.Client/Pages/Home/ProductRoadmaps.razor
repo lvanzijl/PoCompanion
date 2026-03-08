@@ -138,9 +138,18 @@
                                                        aria-label="Move Later" />
                                     </MudStack>
                                 </MudStack>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    @lane.Epics.Count roadmap epic@(lane.Epics.Count == 1 ? "" : "s")
-                                </MudText>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @lane.Epics.Count roadmap epic@(lane.Epics.Count == 1 ? "" : "s")
+                                    </MudText>
+                                    <MudButton Variant="Variant.Outlined"
+                                               Size="Size.Small"
+                                               Color="Color.Primary"
+                                               StartIcon="@Icons.Material.Filled.Edit"
+                                               OnClick="@(() => NavigateToRoadmapEditor(lane.ProductId))">
+                                        Edit roadmap
+                                    </MudButton>
+                                </MudStack>
                             </MudStack>
                         </div>
 
@@ -752,6 +761,11 @@
     private void NavigateToHealth()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.HealthWorkspace);
+    }
+
+    private void NavigateToRoadmapEditor(int productId)
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.GetProductRoadmapEditor(productId));
     }
 
     private IReadOnlyList<RoadmapProductEntry> BuildReportEntries()

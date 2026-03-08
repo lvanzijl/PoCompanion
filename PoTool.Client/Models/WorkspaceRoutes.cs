@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace PoTool.Client.Models;
 
 /// <summary>
@@ -208,5 +210,15 @@ public static class WorkspaceRoutes
             Intent.Delen => CommunicationWorkspace,
             _ => Legacy
         };
+    }
+
+    /// <summary>
+    /// Gets the per-product roadmap editor route for a specific product.
+    /// </summary>
+    /// <param name="productId">The product identifier.</param>
+    /// <returns>The product roadmap editor route.</returns>
+    public static string GetProductRoadmapEditor(int productId)
+    {
+        return string.Format(CultureInfo.InvariantCulture, ProductRoadmapEditor, productId);
     }
 }
