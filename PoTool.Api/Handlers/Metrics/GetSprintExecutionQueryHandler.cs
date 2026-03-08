@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Handlers.Metrics;
 
@@ -20,6 +21,9 @@ public sealed class GetSprintExecutionQueryHandler
     private const string IterationPathField = "System.IterationPath";
     private const string PbiType = "Product Backlog Item";
     private const string BugType = "Bug";
+
+    /// <summary>Fallback done state names when no state classifications are configured.</summary>
+    private static readonly IReadOnlyList<string> FallbackDoneStates = new[] { "Done", "Closed" };
 
     private readonly PoToolDbContext _context;
     private readonly ILogger<GetSprintExecutionQueryHandler> _logger;
@@ -102,7 +106,7 @@ public sealed class GetSprintExecutionQueryHandler
         // ── Step 6: Get done states for classification ────────────────────────
         var doneStates = await _context.WorkItemStateClassifications
             .AsNoTracking()
-            .Where(c => c.Classification == 2 // StateClassification.Done
+            .Where(c => c.Classification == (int)StateClassification.Done
                         && (c.WorkItemType == PbiType || c.WorkItemType == BugType))
             .Select(c => c.StateName)
             .Distinct()
@@ -111,7 +115,7 @@ public sealed class GetSprintExecutionQueryHandler
         // Fallback: if no state classifications configured, use common defaults
         if (doneStates.Count == 0)
         {
-            doneStates = new List<string> { "Done", "Closed" };
+            doneStates = FallbackDoneStates.ToList();
         }
 
         var doneStateSet = doneStates.ToHashSet(StringComparer.OrdinalIgnoreCase);
