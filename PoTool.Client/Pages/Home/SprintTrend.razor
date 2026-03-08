@@ -521,7 +521,14 @@
 </MudContainer>
 
 @code {
-    // ── Drill-down state ────────────────────────────────────────────────────────
+    // ── State ────────────────────────────────────────────────────────────────────
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private int? _profileId;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+    private TfsConfigDto? _tfsConfig;
+
+    // Drill-down hierarchy
     private enum DrillDownLevel { Portfolio, Product, Epic, Feature }
     private DrillDownLevel _drillDownLevel = DrillDownLevel.Portfolio;
     private int? _selectedProductId;
@@ -532,16 +539,7 @@
     private string? _selectedFeatureName;
     private List<BreadcrumbItem> _drillDownBreadcrumbs = new();
 
-    // ── Core state ──────────────────────────────────────────────────────────────
-    private bool _isLoading = true;
-    private string? _errorMessage;
-    private int? _profileId;
-    private List<BreadcrumbItem> _breadcrumbs = new();
-    
-    // TFS configuration (for work item links)
-    private TfsConfigDto? _tfsConfig;
-    
-    // Selection state
+    // Sprint & product selection
     private List<TeamDto> _teams = new();
     private List<SprintDto> _allSprints = new();
     private List<SprintDto> _filteredSprints = new();
@@ -884,7 +882,7 @@
         UpdateDrillDownBreadcrumbs();
     }
 
-    private void DrillToLevel(DrillDownLevel level)
+    private void DrillUpToLevel(DrillDownLevel level)
     {
         if (level >= _drillDownLevel)
             return;
