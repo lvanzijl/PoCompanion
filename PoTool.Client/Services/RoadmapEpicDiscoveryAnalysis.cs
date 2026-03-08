@@ -4,6 +4,9 @@ namespace PoTool.Client.Services;
 
 public static class RoadmapEpicDiscoveryAnalysis
 {
+    private const int MaxRawItemSamples = 20;
+    private const int MaxFilteredItemSamples = 10;
+
     public static RoadmapEpicDiscoveryReport Analyze(IEnumerable<int> configuredRootIds, IEnumerable<WorkItemDto> workItems)
     {
         var normalizedRootIds = configuredRootIds
@@ -81,10 +84,10 @@ public static class RoadmapEpicDiscoveryAnalysis
             distinctTypes,
             descendantsUnderConfiguredRootsCount,
             epicLikeItemsUnderConfiguredRootsCount,
-            rawItems.Take(20).Select(ToSample).ToList(),
-            epicLikeItems.Take(10).Select(ToSample).ToList(),
-            roadmapTaggedItems.Take(10).Select(ToSample).ToList(),
-            roadmapEpicItems.Take(10).Select(ToSample).ToList());
+            rawItems.Take(MaxRawItemSamples).Select(ToSample).ToList(),
+            epicLikeItems.Take(MaxFilteredItemSamples).Select(ToSample).ToList(),
+            roadmapTaggedItems.Take(MaxFilteredItemSamples).Select(ToSample).ToList(),
+            roadmapEpicItems.Take(MaxFilteredItemSamples).Select(ToSample).ToList());
     }
 
     private static RoadmapWorkItemSample ToSample(WorkItemDto workItem) =>
