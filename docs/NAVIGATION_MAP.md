@@ -3,7 +3,7 @@
 **Audience:** Product Owners and stakeholders  
 **Scope:** All non-legacy, non-settings pages  
 **Purpose:** Human-readable reference of available navigation and functionality; basis for improvement analysis  
-**Last Updated:** 2026-03-06 (PR Delivery Insights §2.11: Team Improvement Tips + Diagnostics expander added)
+**Last Updated:** 2026-03-08 (Roadmap hierarchy ordering and reorder semantics clarified)
 
 ---
 
@@ -506,7 +506,8 @@ When multiple linked work items resolve to different categories, the highest-pri
 | Epic cards (roadmap) | Each card shows: drag handle, order number (#1, #2, …), epic title, TFS ID, "Open in TFS" link. Actions: Move Earlier, Move Later, Remove from roadmap, Edit. Draggable to reorder within roadmap or to remove by dragging to Available Epics. |
 | Epic cards (available) | Each card shows: drag handle, epic title, TFS ID, "Open in TFS" link. Actions: Add to Roadmap, Edit. Draggable to add to roadmap by dragging to Roadmap Epics. |
 | Drag-and-drop | MudBlazor DropContainer/DropZone foundation. Drag epics between lists to add/remove from roadmap. Drag within Roadmap Epics to reorder. Dedicated drag handle prevents accidental drags. Drop zone highlighting and placeholder indicators provide clear visual feedback. All drag-and-drop changes follow the same TFS persistence flow as button actions. |
-| Move Earlier/Later | Swaps Epic BacklogPriority with the neighbouring epic. Normalizes priorities if inconsistent or duplicated — normalized values are persisted to TFS for all roadmap epics. Writes to TFS → refreshes cache → reloads editor. |
+| Move Earlier/Later | Swaps the exact existing Epic BacklogPriority with the neighbouring epic. If priorities are missing, invalid, or duplicated, the editor first normalizes roadmap priorities as a recovery step, then applies the requested reorder. Writes to TFS → refreshes cache → reloads editor. |
+| Reorder persistence semantics | Drag-and-drop reorders reuse the current set of Epic BacklogPriority values from TFS rather than inventing synthetic values during ordinary moves. Synthetic normalized values are only used as fallback recovery when priorities are missing, invalid, or duplicated. |
 | Add to roadmap | Via button: appends the "roadmap" tag, assigns BacklogPriority (first epic: 1000, subsequent: max + 1000), appends to end. Via drag-and-drop: inserts at drop position with calculated priority. Writes to TFS → refreshes cache → reloads editor. |
 | Remove from roadmap | Removes the "roadmap" tag from the epic's tags. Preserves other tags. Works via button click or by dragging to Available Epics. Writes to TFS → refreshes cache → reloads editor. |
 | Search/filter | Text filter for available epics by title or TFS ID. Search field is part of the sticky header area and remains visible during scrolling. |

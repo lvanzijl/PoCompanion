@@ -2,7 +2,7 @@
 
 **Doelgroep:** Product Owners  
 **Taal:** Nederlands  
-**Laatste bijwerking:** 2026-03-07
+**Laatste bijwerking:** 2026-03-08
 
 ---
 
@@ -942,7 +942,7 @@ Deze pagina beantwoordt de vraag: *Wat zijn de geplande epics per product op de 
 
 #### Hoe werkt het?
 
-- **Roadmap-epics** worden bepaald door de tag **"roadmap"** (kleine letters). Alleen epics met deze tag verschijnen op de pagina.
+- **Roadmap-epics** worden bepaald door de tag **"roadmap"** op het epic-werkitem. De vergelijking is niet hoofdlettergevoelig, maar de semantiek blijft tag-gedreven: alleen epics met deze tag verschijnen op de pagina.
 - De **productvolgorde** wordt bepaald door de **BacklogPriority** (`Microsoft.VSTS.Common.BacklogPriority`) van het root Objective-werkitem van elk product in TFS. Producten met een lagere BacklogPriority-waarde staan eerder.
 - De **epicvolgorde** binnen een product wordt bepaald door de **BacklogPriority** van elk Epic-werkitem in TFS. Bij gelijke waarden wordt het TFS-ID als stabiele tiebreaker gebruikt.
 - Elke epickaart toont: volgnummer, epictitel, TFS-ID en een link om de epic in TFS te openen.
@@ -1033,8 +1033,9 @@ Deze pagina beantwoordt de vraag: *Hoe stel ik de roadmap van mijn product samen
 - Gebruik de knoppen **"Earlier"** en **"Later"** bij elke roadmap-epic om de volgorde aan te passen.
 - **Drag-and-drop:** Sleep een roadmap-epic naar een andere positie binnen de Roadmap Epics-lijst om de volgorde te wijzigen. De editor toont duidelijke visuele indicatoren waar de epic zal worden geplaatst.
 - Elke epic-kaart heeft een **sleep-handgreep** (⠿ icoon) aan de linkerzijde om onbedoeld slepen te voorkomen.
-- De volgorde wordt bepaald door het **BacklogPriority**-veld van elk epic-werkitem in TFS. Bij het herschikken worden de BacklogPriority-waarden van twee naburige epics omgewisseld (swap-met-buur-strategie).
-- Als prioriteiten inconsistent zijn of duplicaten bevatten, worden ze automatisch genormaliseerd. De genormaliseerde prioriteiten worden voor alle roadmap-epics naar TFS geschreven.
+- De volgorde wordt bepaald door het **BacklogPriority**-veld van elk epic-werkitem in TFS.
+- Bij herschikken met **Earlier/Later** of **drag-and-drop** worden eerst de **bestaande TFS-prioriteiten hergebruikt** zodat de TFS-volgorde behouden blijft. Een buurwissel gebruikt dus de echte huidige prioriteiten van die epics, en een grotere verplaatsing herverdeelt de bestaande prioriteiten over de nieuwe volgorde.
+- Alleen als prioriteiten ontbreken, ongeldig zijn of duplicaten bevatten, worden ze automatisch genormaliseerd als herstelstap. De genormaliseerde prioriteiten worden dan voor alle roadmap-epics naar TFS geschreven voordat de gevraagde verplaatsing wordt toegepast.
 
 #### Persistentie en cachegedrag
 

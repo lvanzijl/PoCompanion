@@ -287,13 +287,14 @@ public partial class RealTfsClient
             int? effort = ParseEffortField(fields);
             int? businessValue = ParseBusinessValueField(fields);
             DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
-            DateTimeOffset? changedDate = ParseDateTimeField(fields, "System.ChangedDate");
-            DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
-            string? severity = ParseSeverityField(fields);
-            string? tags = ParseTagsField(fields);
+             DateTimeOffset? changedDate = ParseDateTimeField(fields, "System.ChangedDate");
+             DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
+             string? severity = ParseSeverityField(fields);
+             string? tags = ParseTagsField(fields);
+             double? backlogPriority = ParseBacklogPriorityField(fields);
 
-            results.Add(new WorkItemDto(
-                TfsId: id,
+             results.Add(new WorkItemDto(
+                 TfsId: id,
                 Type: type,
                 Title: title,
                 ParentTfsId: parentId,
@@ -304,12 +305,13 @@ public partial class RealTfsClient
                 Effort: effort,
                 BusinessValue: businessValue,
                 Description: description,
-                CreatedDate: createdDate,
-                ClosedDate: closedDate,
-                Severity: severity,
-                Tags: tags,
-                ChangedDate: changedDate
-            ));
+                 CreatedDate: createdDate,
+                 ClosedDate: closedDate,
+                 Severity: severity,
+                 Tags: tags,
+                 ChangedDate: changedDate,
+                 BacklogPriority: backlogPriority
+             ));
          }
 
          var batchElapsed = DateTimeOffset.UtcNow - batchStartTime;

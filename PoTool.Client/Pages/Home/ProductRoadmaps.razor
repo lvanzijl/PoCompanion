@@ -551,21 +551,33 @@
             {
                 try
                 {
-                    var workItems = await WorkItemService.GetByRootIdsAsync(product.BacklogRootWorkItemIds.ToArray());
-                    var workItemList = workItems.ToList();
+                     var workItems = await WorkItemService.GetByRootIdsAsync(product.BacklogRootWorkItemIds.ToArray());
+                     var workItemList = workItems.ToList();
 
-                    // Find the root Objective work item to get its BacklogPriority for lane ordering
-                    var objectiveWorkItem = workItemList
-                        .FirstOrDefault(wi => wi.Type == "Objective" && product.BacklogRootWorkItemIds.Contains(wi.TfsId));
-                    lane.ObjectiveTfsId = objectiveWorkItem?.TfsId ?? 0;
-                    lane.ObjectiveBacklogPriority = objectiveWorkItem?.BacklogPriority;
+                     var epicCountBeforeRoadmapFilter = workItemList.Count(wi => RoadmapWorkItemRules.IsEpic(wi.Type));
 
-                    // Filter to epics with "roadmap" tag, ordered by BacklogPriority (TfsId as tie-breaker)
-                    var roadmapEpics = workItemList
-                        .Where(wi => wi.Type == "Epic" && HasRoadmapTag(wi.Tags))
+                     // Find the root Objective work item to get its BacklogPriority for lane ordering
+                     var objectiveWorkItem = workItemList
+                        .FirstOrDefault(wi => RoadmapWorkItemRules.IsObjective(wi.Type) && product.BacklogRootWorkItemIds.Contains(wi.TfsId));
+                     lane.ObjectiveTfsId = objectiveWorkItem?.TfsId ?? 0;
+                     lane.ObjectiveBacklogPriority = objectiveWorkItem?.BacklogPriority;
+
+                     // Filter to epics with "roadmap" tag, ordered by BacklogPriority (TfsId as tie-breaker)
+                     var roadmapEpics = workItemList
+                        .Where(wi => RoadmapWorkItemRules.IsEpic(wi.Type) && RoadmapWorkItemRules.HasRoadmapTag(wi.Tags))
                         .OrderBy(wi => wi.BacklogPriority ?? double.MaxValue)
                         .ThenBy(wi => wi.TfsId)
                         .ToList();
+
+                     Logger.LogInformation(
+                         "Roadmap overview product {ProductId} '{ProductName}' retrieved {WorkItemCount} work items; epics before roadmap filter {EpicCountBeforeRoadmapFilter}; roadmap epics after filter {RoadmapEpicCount}; objective priority {ObjectivePriority}; roadmap priorities [{RoadmapPriorities}]",
+                         product.Id,
+                         product.Name,
+                         workItemList.Count,
+                         epicCountBeforeRoadmapFilter,
+                         roadmapEpics.Count,
+                         objectiveWorkItem?.BacklogPriority,
+                         string.Join(", ", roadmapEpics.Select(epic => $"{epic.TfsId}:{epic.BacklogPriority?.ToString() ?? "null"}")));
 
                     // Load backlog health signals for all epics in one call
                     var healthLookup = await AnalyticsService.LoadBacklogHealthAsync(product.Id);
@@ -622,16 +634,6 @@
             .OrderBy(l => l.ObjectiveBacklogPriority ?? double.MaxValue)
             .ThenBy(l => l.ObjectiveTfsId)
             .ToList();
-    }
-
-    private static bool HasRoadmapTag(string? tags)
-    {
-        if (string.IsNullOrWhiteSpace(tags))
-            return false;
-
-        return tags.Split(';')
-            .Select(t => t.Trim())
-            .Any(t => t.Equals("roadmap", StringComparison.OrdinalIgnoreCase));
     }
 
     private string? BuildTfsUrl(int workItemId)
