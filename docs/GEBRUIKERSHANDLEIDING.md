@@ -28,10 +28,9 @@
    - 9.3 [Pipeline-inzichten](#93-pipeline-inzichten)
    - 9.4 [Delivery Trends](#94-delivery-trends)
 10. [Planning-werkruimte — Toekomst](#10-planning-werkruimte--toekomst)
-    - 10.1 [Planbord](#101-planbord)
-    - 10.2 [Afhankelijkheidsoverzicht](#102-afhankelijkheidsoverzicht)
-    - 10.3 [Product Roadmaps](#103-product-roadmaps)
-    - 10.4 [Product Roadmap Editor](#104-product-roadmap-editor)
+    - 10.1 [Afhankelijkheidsoverzicht](#101-afhankelijkheidsoverzicht)
+    - 10.2 [Product Roadmaps](#102-product-roadmaps)
+    - 10.3 [Product Roadmap Editor](#103-product-roadmap-editor)
 11. [Bugbeheer](#11-bugbeheer)
     - 11.1 [Bug-inzichten](#111-bug-inzichten)
     - 11.2 [Bug-triage](#112-bug-triage)
@@ -863,24 +862,13 @@ De Planning-werkruimte is het startpunt voor alle planningstools. Vanuit deze li
 | Kaart | Omschrijving |
 |---|---|
 | **Product Roadmaps** | Strategische ordening van epics en productrichting. Klik om de roadmappagina te openen (`/planning/product-roadmaps`). |
-| **Plan Board** | Iteratie-planbord voor het organiseren van aankomend sprintwerk. Dit onderdeel wordt in een toekomstige update geïntroduceerd (placeholder). |
+| **Plan Board** | Iteratie-planbord voor het organiseren van aankomend sprintwerk. Dit onderdeel wordt in een toekomstige update opnieuw ontworpen en geïntroduceerd (placeholder — het oude planbord is verwijderd). |
 
 Onderaan de pagina bevinden zich knoppen om snel naar andere werkruimtes te navigeren: Backlog Overview, Health (Now), Trends (Past) en Delivery.
 
 ---
 
-### 10.1 Planbord
-
-**Pagina:** `/home/plan-board`
-
-Het Planbord toont epics en features georganiseerd per iteratie. Het is toegankelijk via de snelkoppeling op de Startpagina.
-
-- Gebruik de **Productselector** om het bord te beperken tot één product.
-- De chip **Alle producten** is zichtbaar wanneer vanuit de Startpagina wordt geopend zonder productfilter.
-
----
-
-### 10.2 Afhankelijkheidsoverzicht
+### 10.1 Afhankelijkheidsoverzicht
 
 **Pagina:** `/home/dependencies`
 
@@ -890,7 +878,7 @@ Een alleen-lezen visueel overzicht van werkitem-afhankelijkheden tussen epics en
 
 ---
 
-### 10.3 Product Roadmaps
+### 10.2 Product Roadmaps
 
 **Pagina:** `/planning/product-roadmaps`
 
@@ -967,7 +955,7 @@ Via het **Snapshots**-menu rechtsboven kun je momentopnamen van de huidige roadm
 
 ---
 
-### 10.4 Product Roadmap Editor
+### 10.3 Product Roadmap Editor
 
 **Pagina:** `/planning/product-roadmaps/{productId}`
 

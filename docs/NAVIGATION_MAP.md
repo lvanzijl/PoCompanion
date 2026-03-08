@@ -78,7 +78,6 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   ├──► /home/validation-triage  (Validation Triage — Quick Action)    │
   ├──► /bugs-triage  (Bug Triage — Quick Action)                      │
   ├──► /workitems  (Work Item Explorer — Advanced Tools)               │
-  └──► /home/plan-board  (Plan Board — Quick Action)                  │
                                                                        │
 Global header (available on every page) ◄─────────────────────────────┘
   ├──► /home  (Home button)
@@ -314,13 +313,13 @@ Global header (available on every page) ◄────────────�
 
 ### 2.6 Planning Workspace — `/home/planning`
 
-**Purpose:** Lightweight navigation hub for planning tools. Routes the user to Product Roadmaps and, in a future release, to the Plan Board.
+**Purpose:** Lightweight navigation hub for planning tools. Routes the user to Product Roadmaps and, in a future release, to a new Plan Board (the legacy Plan Board has been removed).
 
 | Functionality | Description |
 |---|---|
 | Breadcrumb | `Home › Planning`. |
 | Product Roadmaps card | Strategic ordering of epics and product direction. Click navigates to Product Roadmaps (`/planning/product-roadmaps`). |
-| Plan Board card | Iteration planning board for organizing upcoming sprint work. Placeholder — marked "Coming soon". |
+| Plan Board card | Iteration planning board for organizing upcoming sprint work. Placeholder — marked "Coming soon". Not yet implemented; the legacy board has been removed. |
 | Cross-workspace navigation | Buttons to Backlog Overview, Health (Now), Trends (Past), and Delivery. |
 | Home button | Returns to `/home`. |
 
@@ -520,19 +519,9 @@ When multiple linked work items resolve to different categories, the highest-pri
 
 ---
 
-### 2.13 Plan Board — `/home/plan-board`
+### ~~2.13 Plan Board — `/home/plan-board`~~ (REMOVED)
 
-**Purpose:** Focused planning board showing epics and features organised by iteration. Accessed as a Quick Action from Home.
-
-| Functionality | Description |
-|---|---|
-| Breadcrumb | `Home › Plan Board`. |
-| "All Products" chip | Shown when accessed from the Home quick action (no product filter applied). |
-| Product selector | Allows narrowing the board to a specific product. |
-| Planning board | Embeds the PlanningBoard component with the selected product context. |
-| Home button | Returns to `/home`. |
-
-**Outgoing navigation:** `/home`
+The legacy Plan Board has been removed. A new Plan Board will replace it in a future sprint. The Planning workspace (`/home/planning`) shows a "Coming soon" placeholder for the future board.
 
 ---
 
@@ -700,7 +689,7 @@ Sprint Delivery
 |---|---|---|---|---|
 | Profiles Home | `/profiles` | App start, redirect | Select profile | `/home` |
 | Sync Gate | `/sync-gate` | Post-profile-select | Wait/Retry | `/home`, `/profiles` |
-| Home | `/home` | Global header, direct | Choose workspace, filter, sync | `/home/health`, `/home/delivery`, `/home/trends`, `/home/planning`, `/workitems`, `/bugs-triage`, `/home/plan-board` |
+| Home | `/home` | Global header, direct | Choose workspace, filter, sync | `/home/health`, `/home/delivery`, `/home/trends`, `/home/planning`, `/workitems`, `/bugs-triage` |
 | Health (Now) | `/home/health` | Home workspace card | Click signal card → queue; open Validation Triage | `/home/validation-triage`, `/home/validation-queue?category=SI\|RR\|RC`, `/home/bugs`, `/home/trends`, `/home/planning` |
 | Validation Triage | `/home/validation-triage` | Health workspace Validation Triage button | Open queue per category | `/home/validation-queue?category=SI\|RR\|RC\|EFF`, `/home/health`, `/home` |
 | Validation Queue | `/home/validation-queue` | Validation Triage "Open queue" | Start fix session per rule | `/home/validation-fix?category=...&ruleId=...`, `/home/validation-triage`, `/home` |
@@ -710,7 +699,7 @@ Sprint Delivery
 | Portfolio Delivery | `/home/delivery/portfolio` | Delivery workspace | Select sprint range, view aggregated delivery snapshot | `/home/delivery` |
 | Trends (Past) | `/home/trends` | Home workspace card | Click trend signal | `/home/portfolio-progress`, `/home/trends/delivery`, `/home/bugs`, `/home/pull-requests`, `/home/pr-delivery-insights`, `/home/pipelines`, `/home/pipeline-insights`, `/home/delivery`, `/home/health`, `/home/planning` |
 | Delivery Trends | `/home/trends/delivery` | Trends workspace | Select sprint range | `/home/trends`, `/home` |
-| Planning | `/home/planning` | Home workspace card | Navigation hub: Product Roadmaps, Plan Board (coming soon) | `/planning/product-roadmaps`, `/home/backlog-overview`, `/home/health`, `/home/trends`, `/home/delivery` |
+| Planning | `/home/planning` | Home workspace card | Navigation hub: Product Roadmaps, Plan Board (coming soon — legacy board removed) | `/planning/product-roadmaps`, `/home/backlog-overview`, `/home/health`, `/home/trends`, `/home/delivery` |
 | Bug Insights | `/home/bugs` | Health signal, Trends chart click | View/filter bugs | `/bugs-triage`, `/home/bugs/detail/{id}`, `/home` |
 | Bug Detail | `/home/bugs/detail/{id}` | Bug Insights | Edit severity/tags | `/home/bugs` |
 | Bug Triage | `/bugs-triage` | Home quick action, Bug Insights | Triage tags | (self-contained) |
@@ -720,7 +709,7 @@ Sprint Delivery
 | Dependency Overview | `/home/dependencies` | Planning workspace | View dependencies | `/home`, `/dependency-graph` |
 | Product Roadmaps | `/planning/product-roadmaps` | Planning workspace | View roadmap lanes, reorder products | `/home`, `/home/planning`, `/home/health`, `/planning/product-roadmaps/{productId}` |
 | Product Roadmap Editor | `/planning/product-roadmaps/{productId}` | Product Roadmaps | Add/remove/reorder epics via drag-and-drop or buttons, edit title/description | `/home`, `/planning/product-roadmaps` |
-| Plan Board | `/home/plan-board` | Home quick action | View/filter board | `/home` |
+| ~~Plan Board~~ | ~~`/home/plan-board`~~ | ~~Home quick action~~ | ~~View/filter board~~ | Removed — legacy board removed; new board coming in future sprint |
 | Portfolio Progress Trend | `/home/portfolio-progress` | Trends workspace | Select product, team, sprint range | `/home/trends` |
 | Work Item Activity | `/home/delivery/sprint/activity/{id}` | Sprint Delivery drilldown | View activity | `/home/delivery/sprint` |
 | Work Item Explorer | `/workitems` | Home "Advanced Tools", Planning signals, Fix Session | Filter, explore, validate (advanced inspection) | (self-contained) |
@@ -735,7 +724,7 @@ The following suggestions are derived from analysing the current navigation stru
 
 ### Suggestion 1 — Promote the "Return to workspace" breadcrumb consistently
 
-**Current situation:** Some pages show breadcrumbs (`Home › Health (Now) › ...`), but several leaf pages (Bug Triage, Plan Board, PR Insights, Pipeline Trend) do not. The user must rely on the global "Home" button or the browser back button.
+**Current situation:** Some pages show breadcrumbs (`Home › Health (Now) › ...`), but several leaf pages (Bug Triage, PR Insights, Pipeline Trend) do not. The user must rely on the global "Home" button or the browser back button.
 
 **Suggestion:** Add a consistent breadcrumb trail to every page that reflects the path by which it was reached. This gives the user a mental model of where they are and allows them to step back one level without losing context. Breadcrumbs should carry product/team context forward.
 
@@ -753,9 +742,9 @@ The following suggestions are derived from analysing the current navigation stru
 
 ### Suggestion 3 — Replace "Quick Actions" section on Home with workspace-scoped entry
 
-**Current situation:** Home has two distinct navigation patterns side-by-side: workspace cards (Health/Trends/Planning) and quick-action buttons (Work Item Explorer, Bug Triage, Plan Board). These represent different mental models (temporal vs. task-based) and compete for the user's attention without a clear hierarchy.
+**Current situation:** Home has two distinct navigation patterns side-by-side: workspace cards (Health/Trends/Planning) and quick-action buttons (Work Item Explorer, Bug Triage). These represent different mental models (temporal vs. task-based) and compete for the user's attention without a clear hierarchy.
 
-**Suggestion:** Move the quick-action buttons inside the relevant workspaces instead of displaying them redundantly on Home. For example, "Bug Triage" belongs inside the Health workspace as a primary action, and "Plan Board" belongs inside Planning. This gives every entry point a clear *why*.
+**Suggestion:** Move the quick-action buttons inside the relevant workspaces instead of displaying them redundantly on Home. For example, "Bug Triage" belongs inside the Health workspace as a primary action. This gives every entry point a clear *why*.
 
 ---
 

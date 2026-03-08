@@ -44,11 +44,6 @@ public static class WorkspaceRoutes
     public const string AnalysisWorkspace = "/workspace/analysis";
 
     /// <summary>
-    /// Planning Workspace route.
-    /// </summary>
-    public const string PlanningWorkspace = "/workspace/planning";
-
-    /// <summary>
     /// Communication Workspace route.
     /// </summary>
     public const string CommunicationWorkspace = "/workspace/communication";
@@ -73,7 +68,7 @@ public static class WorkspaceRoutes
     /// <summary>
     /// Planning (Future) workspace route.
     /// </summary>
-    public const string PlanningWorkspace2 = "/home/planning";
+    public const string PlanningWorkspace = "/home/planning";
 
     /// <summary>
     /// Bug Overview route.
@@ -104,11 +99,6 @@ public static class WorkspaceRoutes
     /// Pipeline Insights route — PO-first stability overview per product, sprint-scoped (read-only).
     /// </summary>
     public const string PipelineInsights = "/home/pipeline-insights";
-
-    /// <summary>
-    /// Plan Board route.
-    /// </summary>
-    public const string PlanBoard = "/home/plan-board";
 
     /// <summary>
     /// Dependency Overview route (read-only).
