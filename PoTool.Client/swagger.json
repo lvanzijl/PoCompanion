@@ -5579,6 +5579,43 @@
           }
         }
       }
+    },
+    "/api/WorkItems/{tfsId}/iteration-path": {
+      "post": {
+        "tags": [
+          "WorkItems"
+        ],
+        "operationId": "WorkItems_UpdateIterationPath",
+        "parameters": [
+          {
+            "name": "tfsId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateIterationPathRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -11913,6 +11950,15 @@
           "epicOrder": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "UpdateIterationPathRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "iterationPath": {
+            "type": "string"
           }
         }
       }
