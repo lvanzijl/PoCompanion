@@ -553,34 +553,77 @@
                 {
                      var workItems = await WorkItemService.GetByRootIdsAsync(product.BacklogRootWorkItemIds.ToArray());
                      var workItemList = workItems.ToList();
+                     var discovery = RoadmapEpicDiscoveryAnalysis.Analyze(product.BacklogRootWorkItemIds, workItemList);
 
-                     var epicCountBeforeRoadmapFilter = workItemList.Count(wi => RoadmapWorkItemRules.IsEpic(wi.Type));
-
-                     // Find the root Objective work item to get its BacklogPriority for lane ordering
-                     var objectiveWorkItem = workItemList
+                      // Find the root Objective work item to get its BacklogPriority for lane ordering
+                     var objectiveWorkItem = discovery.RawItems
                         .FirstOrDefault(wi => RoadmapWorkItemRules.IsObjective(wi.Type) && product.BacklogRootWorkItemIds.Contains(wi.TfsId));
-                     lane.ObjectiveTfsId = objectiveWorkItem?.TfsId ?? 0;
-                     lane.ObjectiveBacklogPriority = objectiveWorkItem?.BacklogPriority;
+                      lane.ObjectiveTfsId = objectiveWorkItem?.TfsId ?? 0;
+                      lane.ObjectiveBacklogPriority = objectiveWorkItem?.BacklogPriority;
 
-                     // Filter to epics with "roadmap" tag, ordered by BacklogPriority (TfsId as tie-breaker)
-                     var roadmapEpics = workItemList
-                        .Where(wi => RoadmapWorkItemRules.IsEpic(wi.Type) && RoadmapWorkItemRules.HasRoadmapTag(wi.Tags))
-                        .OrderBy(wi => wi.BacklogPriority ?? double.MaxValue)
-                        .ThenBy(wi => wi.TfsId)
-                        .ToList();
+                      // Filter to epics with "roadmap" tag, ordered by BacklogPriority (TfsId as tie-breaker)
+                      var roadmapEpics = discovery.RoadmapEpicItems;
+
+                      Logger.LogInformation(
+                          "Roadmap overview product {ProductId} '{ProductName}' retrieved {WorkItemCount} work items; epics before roadmap filter {EpicCountBeforeRoadmapFilter}; roadmap epics after filter {RoadmapEpicCount}; objective priority {ObjectivePriority}; roadmap priorities [{RoadmapPriorities}]",
+                          product.Id,
+                          product.Name,
+                          discovery.RawItems.Count,
+                          discovery.EpicLikeItems.Count,
+                          roadmapEpics.Count,
+                          objectiveWorkItem?.BacklogPriority,
+                          string.Join(", ", roadmapEpics.Select(epic => $"{epic.TfsId}:{epic.BacklogPriority?.ToString() ?? "null"}")));
 
                      Logger.LogInformation(
-                         "Roadmap overview product {ProductId} '{ProductName}' retrieved {WorkItemCount} work items; epics before roadmap filter {EpicCountBeforeRoadmapFilter}; roadmap epics after filter {RoadmapEpicCount}; objective priority {ObjectivePriority}; roadmap priorities [{RoadmapPriorities}]",
+                         "Roadmap overview product {ProductId} '{ProductName}' root scope diagnostics: configured roots [{ConfiguredRootIds}]; present roots [{PresentRootIds}]; missing roots [{MissingRootIds}]; objective roots present [{ObjectiveRootIds}]; descendants under configured roots {DescendantCount}; epic-like items under configured roots {EpicScopeCount}",
                          product.Id,
                          product.Name,
-                         workItemList.Count,
-                         epicCountBeforeRoadmapFilter,
-                         roadmapEpics.Count,
-                         objectiveWorkItem?.BacklogPriority,
-                         string.Join(", ", roadmapEpics.Select(epic => $"{epic.TfsId}:{epic.BacklogPriority?.ToString() ?? "null"}")));
+                         string.Join(", ", discovery.ConfiguredRootIds),
+                         string.Join(", ", discovery.PresentRootIds),
+                         string.Join(", ", discovery.MissingRootIds),
+                         string.Join(", ", discovery.ObjectiveRootIds),
+                         discovery.DescendantsUnderConfiguredRootsCount,
+                         discovery.EpicLikeItemsUnderConfiguredRootsCount);
+
+                     Logger.LogInformation(
+                         "Roadmap overview product {ProductId} '{ProductName}' raw dataset diagnostics: type counts [{TypeCounts}]; distinct types [{DistinctTypes}]; roadmap-tagged items {RoadmapTaggedCount}; epic-like items {EpicLikeCount}; roadmap epic intersection {RoadmapEpicCount}; first 20 returned items [{RawSamples}]",
+                         product.Id,
+                         product.Name,
+                         FormatTypeCounts(discovery.CountsByType),
+                         string.Join(", ", discovery.DistinctTypes),
+                         discovery.RoadmapTaggedItems.Count,
+                         discovery.EpicLikeItems.Count,
+                         discovery.RoadmapEpicItems.Count,
+                         FormatSamples(discovery.RawItemSamples));
+
+                     Logger.LogInformation(
+                         "Roadmap overview product {ProductId} '{ProductName}' discovery stages: Stage A raw count {StageARawCount} sample [{StageARawSample}]; Stage B epic-like count {StageBEpicCount} sample [{StageBEpicSample}]; Stage C roadmap-tagged count {StageCRoadmapTagCount} sample [{StageCRoadmapTagSample}]; Stage D roadmap epic count {StageDRoadmapEpicCount} sample [{StageDRoadmapEpicSample}]",
+                         product.Id,
+                         product.Name,
+                         discovery.RawItems.Count,
+                         FormatSamples(discovery.RawItemSamples),
+                         discovery.EpicLikeItems.Count,
+                         FormatSamples(discovery.EpicLikeSamples),
+                         discovery.RoadmapTaggedItems.Count,
+                         FormatSamples(discovery.RoadmapTaggedSamples),
+                         discovery.RoadmapEpicItems.Count,
+                         FormatSamples(discovery.RoadmapEpicSamples));
+
+                     if (discovery.RoadmapEpicItems.Count == 0)
+                     {
+                         Logger.LogWarning(
+                             "Roadmap overview product {ProductId} '{ProductName}' found no roadmap epics after discovery. Epic-like count {EpicLikeCount}; roadmap-tagged count {RoadmapTaggedCount}; configured roots [{ConfiguredRootIds}]; present roots [{PresentRootIds}]; epic-like samples [{EpicLikeSamples}]",
+                             product.Id,
+                             product.Name,
+                             discovery.EpicLikeItems.Count,
+                             discovery.RoadmapTaggedItems.Count,
+                             string.Join(", ", discovery.ConfiguredRootIds),
+                             string.Join(", ", discovery.PresentRootIds),
+                             FormatSamples(discovery.EpicLikeSamples));
+                     }
 
                     // Load backlog health signals for all epics in one call
-                    var healthLookup = await AnalyticsService.LoadBacklogHealthAsync(product.Id);
+                     var healthLookup = await AnalyticsService.LoadBacklogHealthAsync(product.Id);
 
                     var orderNumber = 1;
                     foreach (var epic in roadmapEpics)
@@ -643,6 +686,13 @@
 
         return TfsUrlBuilder.BuildWorkItemUrl(_tfsConfig.Url, _tfsConfig.Project, workItemId);
     }
+
+    private static string FormatTypeCounts(IEnumerable<RoadmapWorkItemTypeCount> counts) =>
+        string.Join(", ", counts.Select(count => $"{count.Type}:{count.Count}"));
+
+    private static string FormatSamples(IEnumerable<RoadmapWorkItemSample> samples) =>
+        string.Join(" | ", samples.Select(sample =>
+            $"#{sample.TfsId} Type='{sample.Type}' Title='{sample.Title}' Tags='{sample.Tags ?? "<null>"}' Parent={sample.ParentTfsId?.ToString() ?? "<null>"} BacklogPriority={sample.BacklogPriority?.ToString() ?? "<null>"}"));
 
     private async Task MoveProductEarlier(int laneIndex)
     {
