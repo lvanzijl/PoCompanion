@@ -577,8 +577,7 @@
             BuildFeatureProgress(response);
             
             // Compute sprint-level delivery outcome metrics from epic progress
-            _sprintEffortDelta = _epicProgress.Sum(e => e.SprintEffortDelta);
-            _completedFeatureCount = _epicProgress.Sum(e => e.SprintCompletedFeatureCount);
+            ComputeDeliveryOutcomeMetrics();
             
             // Extract previous sprint comparison data
             ExtractComparisonMetrics();
@@ -634,6 +633,12 @@
                 ? response.EpicProgress.Where(e => e.ProductId == _selectedProductId.Value).ToList()
                 : response.EpicProgress.ToList();
         }
+    }
+
+    private void ComputeDeliveryOutcomeMetrics()
+    {
+        _sprintEffortDelta = _epicProgress?.Sum(e => e.SprintEffortDelta) ?? 0;
+        _completedFeatureCount = _epicProgress?.Sum(e => e.SprintCompletedFeatureCount) ?? 0;
     }
 
     private void ExtractComparisonMetrics()
@@ -819,8 +824,7 @@
                 BuildFeatureProgress(response);
                 
                 // Compute sprint-level delivery outcome metrics from epic progress
-                _sprintEffortDelta = _epicProgress.Sum(e => e.SprintEffortDelta);
-                _completedFeatureCount = _epicProgress.Sum(e => e.SprintCompletedFeatureCount);
+                ComputeDeliveryOutcomeMetrics();
                 
                 ExtractComparisonMetrics();
 
