@@ -327,6 +327,12 @@ public record FeatureProgressDto
     /// False when not in single-sprint view.
     /// </summary>
     public bool SprintCompletedInSprint { get; init; }
+
+    /// <summary>
+    /// Individual PBIs that were completed during the selected sprint under this feature.
+    /// Empty when not in single-sprint view.
+    /// </summary>
+    public IReadOnlyList<CompletedPbiDto> CompletedPbis { get; init; } = Array.Empty<CompletedPbiDto>();
 }
 
 /// <summary>
@@ -417,4 +423,31 @@ public record EpicProgressDto
     /// Zero when not in single-sprint view.
     /// </summary>
     public int SprintCompletedFeatureCount { get; init; }
+}
+
+/// <summary>
+/// DTO for an individual PBI completed during a sprint.
+/// Used at the lowest level of the Sprint Delivery hierarchy.
+/// </summary>
+public record CompletedPbiDto
+{
+    /// <summary>
+    /// TFS work item ID.
+    /// </summary>
+    public required int TfsId { get; init; }
+
+    /// <summary>
+    /// PBI title.
+    /// </summary>
+    public required string Title { get; init; }
+
+    /// <summary>
+    /// Effort (story points) of this PBI.
+    /// </summary>
+    public int Effort { get; init; }
+
+    /// <summary>
+    /// Date the PBI was closed (transitioned to Done). Null if not available.
+    /// </summary>
+    public DateTimeOffset? ClosedDate { get; init; }
 }

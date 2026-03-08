@@ -89,6 +89,7 @@
         "GetSprintTrendMetricsRequest",
         "FeatureProgressDto",
         "EpicProgressDto",
+        "CompletedPbiDto",
         "WorkItemActivityDetailsDto",
         "WorkItemActivityEntryDto",
         "PortfolioProgressTrendDto",
