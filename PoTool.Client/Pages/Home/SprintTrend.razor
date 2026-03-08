@@ -29,6 +29,9 @@
                         Sprint Delivery
                     </MudText>
                 </MudStack>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Stakeholder sprint delivery report — what was delivered during this sprint
+                </MudText>
                 
                 @* Breadcrumb *@
                 <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
@@ -150,15 +153,17 @@
                             </MudItem>
                             <MudItem xs="12">
                                 <MudPaper Elevation="1" Class="pa-3">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Progression Δ</MudText>
-                                    <MudText Typo="Typo.h5" Color="Color.Primary">@_progressionDelta.ToString("F1")%</MudText>
-                                    @if (_hasPreviousSprint)
-                                    {
-                                        var diff = _progressionDelta - _prevProgressionDelta;
-                                        <MudText Typo="Typo.caption" Color="@(diff >= 0 ? Color.Success : Color.Error)">
-                                            @FormatSignedDouble(diff)% vs previous sprint
-                                        </MudText>
-                                    }
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Scope Change (Δ Effort)</MudText>
+                                    <MudText Typo="Typo.h5"
+                                             Color="@(_sprintEffortDelta > 0 ? Color.Warning : _sprintEffortDelta < 0 ? Color.Info : Color.Default)">
+                                        @FormatSignedInt(_sprintEffortDelta) pts
+                                    </MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudPaper Elevation="1" Class="pa-3">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Completed Features</MudText>
+                                    <MudText Typo="Typo.h5" Color="Color.Primary">@_completedFeatureCount</MudText>
                                 </MudPaper>
                             </MudItem>
                             <MudItem xs="12">
@@ -353,7 +358,8 @@
     // Current sprint metrics
     private int _completedPbiCount;
     private int _completedPbiEffort;
-    private double _progressionDelta;
+    private int _sprintEffortDelta;
+    private int _completedFeatureCount;
     private int _bugsCreatedCount;
     private int _bugsWorkedCount;
     private int _bugsClosedCount;
@@ -365,7 +371,6 @@
     // Previous sprint comparison
     private int _prevCompletedPbiCount;
     private int _prevCompletedPbiEffort;
-    private double _prevProgressionDelta;
     private bool _hasPreviousSprint;
     
     // Feature progress
@@ -544,7 +549,6 @@
 
                 _completedPbiCount = filteredProductMetrics.Sum(m => m.CompletedPbiCount);
                 _completedPbiEffort = filteredProductMetrics.Sum(m => m.CompletedPbiEffort);
-                _progressionDelta = filteredProductMetrics.Sum(m => m.ProgressionDelta);
                 _bugsCreatedCount = filteredProductMetrics.Sum(m => m.BugsCreatedCount);
                 _bugsWorkedCount = filteredProductMetrics.Sum(m => m.BugsWorkedCount);
                 _bugsClosedCount = filteredProductMetrics.Sum(m => m.BugsClosedCount);
@@ -561,7 +565,6 @@
                     _productMetrics[productMetric.ProductId] = new ProductMetrics(
                         productMetric.CompletedPbiCount,
                         productMetric.CompletedPbiEffort,
-                        productMetric.ProgressionDelta,
                         productMetric.MissingEffortCount,
                         productMetric.IsApproximate,
                         productMetric.BugsCreatedCount,
@@ -572,6 +575,9 @@
             
             // Build feature progress from real resolved hierarchy data
             BuildFeatureProgress(response);
+            
+            // Compute sprint-level delivery outcome metrics from epic progress
+            ComputeDeliveryOutcomeMetrics();
             
             // Extract previous sprint comparison data
             ExtractComparisonMetrics();
@@ -586,7 +592,8 @@
     {
         _completedPbiCount = 0;
         _completedPbiEffort = 0;
-        _progressionDelta = 0;
+        _sprintEffortDelta = 0;
+        _completedFeatureCount = 0;
         _bugsCreatedCount = 0;
         _bugsWorkedCount = 0;
         _bugsClosedCount = 0;
@@ -601,7 +608,6 @@
         _trendMetrics.Clear();
         _prevCompletedPbiCount = 0;
         _prevCompletedPbiEffort = 0;
-        _prevProgressionDelta = 0;
         _hasPreviousSprint = false;
     }
 
@@ -629,6 +635,12 @@
         }
     }
 
+    private void ComputeDeliveryOutcomeMetrics()
+    {
+        _sprintEffortDelta = _epicProgress?.Sum(e => e.SprintEffortDelta) ?? 0;
+        _completedFeatureCount = _epicProgress?.Sum(e => e.SprintCompletedFeatureCount) ?? 0;
+    }
+
     private void ExtractComparisonMetrics()
     {
         if (_trendMetrics.Count >= 2)
@@ -639,14 +651,12 @@
                 : prevMetrics.ProductMetrics.ToList();
             _prevCompletedPbiCount = prevFiltered.Sum(m => m.CompletedPbiCount);
             _prevCompletedPbiEffort = prevFiltered.Sum(m => m.CompletedPbiEffort);
-            _prevProgressionDelta = prevFiltered.Sum(m => m.ProgressionDelta);
             _hasPreviousSprint = true;
         }
         else
         {
             _prevCompletedPbiCount = 0;
             _prevCompletedPbiEffort = 0;
-            _prevProgressionDelta = 0;
             _hasPreviousSprint = false;
         }
     }
@@ -688,9 +698,6 @@
     }
 
     private static string FormatSignedInt(int diff) => diff >= 0 ? $"+{diff}" : $"{diff}";
-
-    private static string FormatSignedDouble(double diff) =>
-        diff >= 0 ? $"+{diff:F1}" : $"{diff:F1}";
 
     private void UpdateBreadcrumbs()
     {
@@ -790,7 +797,6 @@
 
                     _completedPbiCount = filteredProductMetrics.Sum(m => m.CompletedPbiCount);
                     _completedPbiEffort = filteredProductMetrics.Sum(m => m.CompletedPbiEffort);
-                    _progressionDelta = filteredProductMetrics.Sum(m => m.ProgressionDelta);
                     _bugsCreatedCount = filteredProductMetrics.Sum(m => m.BugsCreatedCount);
                     _bugsWorkedCount = filteredProductMetrics.Sum(m => m.BugsWorkedCount);
                     _bugsClosedCount = filteredProductMetrics.Sum(m => m.BugsClosedCount);
@@ -807,7 +813,6 @@
                         _productMetrics[productMetric.ProductId] = new ProductMetrics(
                             productMetric.CompletedPbiCount,
                             productMetric.CompletedPbiEffort,
-                            productMetric.ProgressionDelta,
                             productMetric.MissingEffortCount,
                             productMetric.IsApproximate,
                             productMetric.BugsCreatedCount,
@@ -817,6 +822,10 @@
                 }
 
                 BuildFeatureProgress(response);
+                
+                // Compute sprint-level delivery outcome metrics from epic progress
+                ComputeDeliveryOutcomeMetrics();
+                
                 ExtractComparisonMetrics();
 
                 Snackbar.Add("Metrics recomputed successfully.", Severity.Success);
@@ -845,11 +854,6 @@
     private int GetProductCompletedEffort(int productId)
     {
         return _productMetrics.TryGetValue(productId, out var metrics) ? metrics.CompletedEffort : 0;
-    }
-
-    private double GetProductProgression(int productId)
-    {
-        return _productMetrics.TryGetValue(productId, out var metrics) ? metrics.Progression : 0;
     }
 
     private int GetProductMissingEffort(int productId)
@@ -1021,7 +1025,6 @@
     private record ProductMetrics(
         int CompletedPbis,
         int CompletedEffort,
-        double Progression,
         int MissingEffort,
         bool IsApproximate,
         int BugsCreated,
