@@ -30,8 +30,9 @@
    - 9.4 [Delivery Trends](#94-delivery-trends)
 10. [Planning-werkruimte — Toekomst](#10-planning-werkruimte--toekomst)
     - 10.1 [Afhankelijkheidsoverzicht](#101-afhankelijkheidsoverzicht)
-    - 10.2 [Product Roadmaps](#102-product-roadmaps)
-    - 10.3 [Product Roadmap Editor](#103-product-roadmap-editor)
+    - 10.2 [Plan Board](#102-plan-board)
+    - 10.3 [Product Roadmaps](#103-product-roadmaps)
+    - 10.4 [Product Roadmap Editor](#104-product-roadmap-editor)
 11. [Bugbeheer](#11-bugbeheer)
     - 11.1 [Bug-inzichten](#111-bug-inzichten)
     - 11.2 [Bug-triage](#112-bug-triage)
@@ -369,7 +370,7 @@ De Sprint Delivery-pagina is het primaire **stakeholder-sprintleveringsrapport**
 
 De pagina ondersteunt een hiërarchische drill-down structuur waarmee zowel portefeuilleleiders als product owners de sprintlevering op het juiste detailniveau kunnen verkennen. Gebruik de navigatiepijlen om door sprints te bladeren. Voor meersprint-trendanalyse ga je naar **Delivery Trends** in de Trends-werkruimte.
 
-> **Interne sprintdiagnostiek** (scope-churn, voltooiingsvolgorde, mid-sprint-scopeanalyse) verschijnt niet op deze pagina. Deze signalen worden in een toekomstige release beschikbaar via de **Sprint Execution**-pagina.
+> **Interne sprintdiagnostiek** (scope-churn, voltooiingsvolgorde, mid-sprint-scopeanalyse) verschijnt niet op deze pagina. Deze signalen zijn beschikbaar via de **[Sprint Execution](#83-sprint-execution)**-pagina (`/home/delivery/execution`).
 
 **Navigatiehiërarchie (drill-down):**
 ```

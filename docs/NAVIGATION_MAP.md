@@ -52,6 +52,7 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       ├──► /home/delivery/sprint  (Sprint Delivery — drill-down)  │
   │       │       ├──► Product → Epic → Feature → PBIs (in-page)      │
   │       │       └──► /home/delivery/sprint/activity/{id}            │
+  │       ├──► /home/delivery/execution  (Sprint Execution)           │
   │       └──► /home/delivery/portfolio  (Portfolio Delivery)          │
   │                                                                   │
   ├──► /home/trends  (Trends — Past)                                  │
@@ -67,14 +68,14 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       └──► /home/planning  (cross-workspace)                      │
   │                                                                   │
   ├──► /home/planning  (Planning — Future)                            │
-  │       ├──► /home/delivery/sprint  (velocity drilldown)            │
-  │       ├──► /workitems?rootWorkItemId={epicId}                     │
-  │       ├──► /home/dependencies  (read-only)                        │
   │       ├──► /planning/product-roadmaps  (Product Roadmaps — read-only) │
   │       │       └──► /planning/product-roadmaps/{productId}  (Editor) │
+  │       ├──► /planning/plan-board  (Plan Board — sprint planning)   │
+  │       ├──► /home/dependencies  (read-only)                        │
   │       ├──► /home/backlog-overview  (cross-workspace)               │
   │       ├──► /home/health  (cross-workspace)                        │
-  │       └──► /home/trends  (cross-workspace)                        │
+  │       ├──► /home/trends  (cross-workspace)                        │
+  │       └──► /home/delivery  (cross-workspace)                      │
   │                                                                   │
   ├──► /home/validation-triage  (Validation Triage — Quick Action)    │
   ├──► /bugs-triage  (Bug Triage — Quick Action)                      │
@@ -576,7 +577,7 @@ When multiple linked work items resolve to different categories, the highest-pri
 
 **Purpose:** Stakeholder-facing sprint delivery report. Answers the question: *"What did we deliver during this sprint?"* Shows delivered effort, scope change (Δ Effort pts), completed PBIs, completed features, and bug activity. Use navigation arrows to move between sprints. Supports hierarchical drill-down from portfolio level to individual completed PBIs. For multi-sprint trend analysis, use Delivery Trends (`/home/trends/delivery`). Located in the Delivery workspace.
 
-> **Note:** This page focuses exclusively on delivery outcomes. Internal sprint execution diagnostics (scope churn, completion order, starved work) will appear on a separate Sprint Execution page in a future release.
+> **Note:** This page focuses exclusively on delivery outcomes. Internal sprint execution diagnostics (scope churn, completion order, starved work) are available on the separate [Sprint Execution](#25b-sprint-execution--homedeliveryexecution) page.
 
 **Navigation hierarchy (drill-down):**
 ```
@@ -756,7 +757,7 @@ Each level only appears when the user drills into the previous one. Users naviga
 | Dependency Overview | `/home/dependencies` | Planning workspace | View dependencies | `/home`, `/dependency-graph` |
 | Product Roadmaps | `/planning/product-roadmaps` | Planning workspace | View roadmap lanes, reorder products | `/home`, `/home/planning`, `/home/health`, `/planning/product-roadmaps/{productId}` |
 | Product Roadmap Editor | `/planning/product-roadmaps/{productId}` | Product Roadmaps | Add/remove/reorder epics via drag-and-drop or buttons, edit title/description | `/home`, `/planning/product-roadmaps` |
-| ~~Plan Board~~ | ~~`/home/plan-board`~~ | ~~Home quick action~~ | ~~View/filter board~~ | Removed — legacy board removed; new board coming in future sprint |
+| ~~Plan Board~~ | ~~`/home/plan-board`~~ | ~~Home quick action~~ | ~~View/filter board~~ | Removed — replaced by new Plan Board at `/planning/plan-board` |
 | Portfolio Progress Trend | `/home/portfolio-progress` | Trends workspace | Select product, team, sprint range | `/home/trends` |
 | Work Item Activity | `/home/delivery/sprint/activity/{id}` | Sprint Delivery drilldown | View activity | `/home/delivery/sprint` |
 | Work Item Explorer | `/workitems` | Home "Advanced Tools", Planning signals, Fix Session | Filter, explore, validate (advanced inspection) | (self-contained) |
