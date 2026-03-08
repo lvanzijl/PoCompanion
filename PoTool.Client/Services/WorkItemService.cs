@@ -258,10 +258,15 @@ public class WorkItemService
     /// <param name="priority">New backlog priority value.</param>
     public async Task<bool> UpdateBacklogPriorityAsync(int tfsId, double priority)
     {
-        var json = System.Text.Json.JsonSerializer.Serialize(new { Priority = priority });
-        var content = new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json");
-        var response = await _httpClient.PostAsync($"/api/workitems/{tfsId}/backlog-priority", content);
-        return response.IsSuccessStatusCode;
+        try
+        {
+            await _client.UpdateBacklogPriorityAsync(tfsId, new UpdateBacklogPriorityRequest { Priority = priority });
+            return true;
+        }
+        catch (ApiException)
+        {
+            return false;
+        }
     }
 
     /// <summary>
@@ -272,10 +277,15 @@ public class WorkItemService
     /// <param name="iterationPath">New iteration path value.</param>
     public async Task<bool> UpdateIterationPathAsync(int tfsId, string iterationPath)
     {
-        var json = System.Text.Json.JsonSerializer.Serialize(new { IterationPath = iterationPath });
-        var content = new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json");
-        var response = await _httpClient.PostAsync($"/api/workitems/{tfsId}/iteration-path", content);
-        return response.IsSuccessStatusCode;
+        try
+        {
+            await _client.UpdateIterationPathAsync(tfsId, new UpdateIterationPathRequest { IterationPath = iterationPath });
+            return true;
+        }
+        catch (ApiException)
+        {
+            return false;
+        }
     }
 
     /// <summary>
