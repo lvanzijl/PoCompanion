@@ -93,4 +93,53 @@ public class PullRequestSyncStageTests
         Assert.AreEqual(1, pr101Comment.Id);
         Assert.AreEqual("Comment on PR 101", pr101Comment.Content);
     }
+
+    [TestMethod]
+    public async Task ExecuteAsync_WhenCommentFetchFails_StillPersistsWorkItemLinks()
+    {
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase(databaseName: $"PullRequestSyncStageTests_{Guid.NewGuid()}")
+            .Options;
+
+        await using var dbContext = new PoToolDbContext(options);
+
+        var now = DateTimeOffset.UtcNow;
+        var pr = new PullRequestDto(100, "TestRepo", "PR 100", "User1", now, null, "completed", "Sprint/1", "feature/100", "main", now);
+
+        var tfsClient = new Mock<ITfsClient>();
+        tfsClient
+            .Setup(c => c.GetPullRequestsAsync("TestRepo", It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { pr });
+        tfsClient
+            .Setup(c => c.GetPullRequestIterationsAsync(100, "TestRepo", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<PullRequestIterationDto>());
+        tfsClient
+            .Setup(c => c.GetPullRequestCommentsAsync(100, "TestRepo", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("comments failed"));
+        tfsClient
+            .Setup(c => c.GetPullRequestWorkItemLinksAsync(100, "TestRepo", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { 300 });
+
+        var logger = new Mock<ILogger<PullRequestSyncStage>>();
+        var stage = new PullRequestSyncStage(tfsClient.Object, dbContext, logger.Object);
+
+        var context = new SyncContext
+        {
+            ProductOwnerId = 1,
+            RootWorkItemIds = Array.Empty<int>(),
+            RepositoryNames = ["TestRepo"]
+        };
+
+        var result = await stage.ExecuteAsync(context, _ => { }, CancellationToken.None);
+
+        Assert.IsTrue(result.Success, $"Sync should succeed but failed with: {result.ErrorMessage}");
+
+        var savedLinks = await dbContext.PullRequestWorkItemLinks
+            .Select(link => new { link.PullRequestId, link.WorkItemId })
+            .ToListAsync();
+
+        Assert.HasCount(1, savedLinks);
+        Assert.AreEqual(100, savedLinks[0].PullRequestId);
+        Assert.AreEqual(300, savedLinks[0].WorkItemId);
+    }
 }

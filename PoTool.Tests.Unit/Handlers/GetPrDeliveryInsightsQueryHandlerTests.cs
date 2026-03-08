@@ -181,6 +181,23 @@ public class GetPrDeliveryInsightsQueryHandlerTests
     }
 
     [TestMethod]
+    public async Task Handle_PrLinkedToWorkItemMissingFromCache_LogsDiagnosticAndClassifiesAsUnmapped()
+    {
+        await AddPrAsync(1, createdDate: RangeFrom.AddDays(1));
+        await AddWorkItemLinkAsync(1, 999);
+
+        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        Assert.AreEqual(1, result.CategorySummary.TotalPrs);
+        Assert.AreEqual(1, result.CategorySummary.UnmappedCount);
+        Assert.AreEqual("Unmapped", result.ScatterPoints[0].Category);
+
+        VerifyLogContains(LogLevel.Warning, "WorkItemNotInCache");
+        VerifyLogContains(LogLevel.Information, "unresolvedReasons=WorkItemNotInCache=1");
+    }
+
+    [TestMethod]
     public async Task Handle_PrLinkedToFeatureUnderEpic_ClassifiedAsDeliveryMapped()
     {
         // Hierarchy: Epic(100) → Feature(200) → PBI(300)
@@ -206,6 +223,18 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         Assert.AreEqual("My Epic", point.EpicName);
         Assert.AreEqual(200, point.FeatureId);
         Assert.AreEqual("My Feature", point.FeatureName);
+    }
+
+    private void VerifyLogContains(LogLevel logLevel, string expectedText)
+    {
+        _mockLogger.Verify(
+            logger => logger.Log(
+                logLevel,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((value, _) => value.ToString()!.Contains(expectedText, StringComparison.Ordinal)),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
     }
 
     [TestMethod]

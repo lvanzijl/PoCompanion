@@ -190,10 +190,11 @@ public class PullRequestSyncStage : ISyncStage
     }
 
     /// <summary>
-    /// Fetches and upserts iterations, comments, and file changes for each PR.
+    /// Fetches and upserts iterations, comments, file changes, and explicit PR → work item links for each PR.
     /// These are required by PR Insights to compute review cycles, comment counts,
-    /// and files-changed counts. The PullRequestSyncStage previously omitted these,
-    /// causing those metrics to appear as zero in the insights view.
+    /// files-changed counts, and PR Delivery Insights work item classification. The
+    /// stage only ingests direct links returned by the PR work item endpoint; reverse
+    /// or UI-inferred associations are not available in the local cache through this flow.
     ///
     /// A semaphore limits concurrent TFS API calls to avoid rate-limiting.
     /// Per-PR failures are logged as warnings and do not abort the stage.
@@ -245,13 +246,6 @@ public class PullRequestSyncStage : ISyncStage
                         foreach (var fc in fileChanges)
                             allFileChanges.Add(fc);
                     }
-
-                    // Fetch work item links (used for PR Delivery Insights classification)
-                    var workItemIds = await _tfsClient.GetPullRequestWorkItemLinksAsync(
-                        pr.Id, pr.RepositoryName, ct);
-
-                    foreach (var wiId in workItemIds)
-                        allWorkItemLinks.Add((pr.Id, wiId));
                 }
                 catch (OperationCanceledException)
                 {
@@ -261,7 +255,37 @@ public class PullRequestSyncStage : ISyncStage
                 {
                     _logger.LogWarning(
                         ex,
-                        "PR_DETAIL_SKIP: Could not fetch detail data for PR {PrId} in repo {Repo}",
+                        "PR_DETAIL_SKIP: Could not fetch iteration/comment/file detail data for PR {PrId} in repo {Repo}",
+                        pr.Id, pr.RepositoryName);
+                }
+
+                try
+                {
+                    // Keep work item link ingestion isolated from other PR detail fetch failures.
+                    // A failure in comments or file changes must not suppress explicit PR → work item
+                    // links, because PR Delivery Insights depends on those links for classification.
+                    var workItemIds = (await _tfsClient.GetPullRequestWorkItemLinksAsync(
+                        pr.Id, pr.RepositoryName, ct)).Distinct().ToList();
+
+                    foreach (var wiId in workItemIds)
+                        allWorkItemLinks.Add((pr.Id, wiId));
+
+                    _logger.LogDebug(
+                        "PR_WORK_ITEM_LINK_INGEST: PR {PrId} in repo {Repo} fetched {LinkCount} explicit work item link(s) [{WorkItemIds}]",
+                        pr.Id,
+                        pr.RepositoryName,
+                        workItemIds.Count,
+                        workItemIds.Count > 0 ? string.Join(", ", workItemIds) : "none");
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "PR_WORK_ITEM_LINK_SKIP: Could not fetch explicit work item links for PR {PrId} in repo {Repo}",
                         pr.Id, pr.RepositoryName);
                 }
             });
