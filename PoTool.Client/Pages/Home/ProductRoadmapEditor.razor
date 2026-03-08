@@ -590,26 +590,21 @@
             return;
 
         var workItemList = (await WorkItemService.GetByRootIdsAsync(_product.BacklogRootWorkItemIds.ToArray())).ToList();
-        var epics = workItemList.Where(wi => RoadmapWorkItemRules.IsEpic(wi.Type)).ToList();
+        var discovery = RoadmapEpicDiscoveryAnalysis.Analyze(_product.BacklogRootWorkItemIds, workItemList);
 
-        _roadmapEpics = epics
-            .Where(e => RoadmapWorkItemRules.HasRoadmapTag(e.Tags))
-            .OrderBy(e => e.BacklogPriority ?? double.MaxValue)
-            .ThenBy(e => e.TfsId)
-            .ToList();
-
-        _availableEpics = epics
-            .Where(e => !RoadmapWorkItemRules.HasRoadmapTag(e.Tags))
-            .OrderBy(e => e.Title)
-            .ToList();
+        _roadmapEpics = discovery.RoadmapEpicItems.ToList();
+        _availableEpics = discovery.AvailableEpicItems.ToList();
 
         Logger.LogInformation(
-            "Roadmap editor product {ProductId} '{ProductName}' retrieved {WorkItemCount} work items; epics before roadmap filter {EpicCountBeforeRoadmapFilter}; roadmap epics after filter {RoadmapEpicCount}; roadmap priorities [{RoadmapPriorities}]",
+            "Roadmap editor product {ProductId} '{ProductName}' retrieved {WorkItemCount} work items; epics before roadmap filter {EpicCountBeforeRoadmapFilter}; roadmap-tagged items {RoadmapTaggedCount}; roadmap epics after filter {RoadmapEpicCount}; configured roots [{ConfiguredRootIds}]; present roots [{PresentRootIds}]; roadmap priorities [{RoadmapPriorities}]",
             _product.Id,
             _product.Name,
-            workItemList.Count,
-            epics.Count,
+            discovery.RawItems.Count,
+            discovery.EpicLikeItems.Count,
+            discovery.RoadmapTaggedItems.Count,
             _roadmapEpics.Count,
+            string.Join(", ", discovery.ConfiguredRootIds),
+            string.Join(", ", discovery.PresentRootIds),
             string.Join(", ", _roadmapEpics.Select(epic => $"{epic.TfsId}:{epic.BacklogPriority?.ToString() ?? "null"}")));
 
         BuildDragItems();
