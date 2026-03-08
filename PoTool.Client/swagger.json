@@ -5044,6 +5044,58 @@
         }
       }
     },
+    "/api/Metrics/sprint-execution": {
+      "get": {
+        "tags": [
+          "Metrics"
+        ],
+        "operationId": "Metrics_GetSprintExecution",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "sprintId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 2
+          },
+          {
+            "name": "productId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SprintExecutionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Metrics/work-item-activity/{workItemId}": {
       "get": {
         "tags": [
@@ -12002,6 +12054,175 @@
         "properties": {
           "iterationPath": {
             "type": "string"
+          }
+        }
+      },
+      "SprintExecutionDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sprintId",
+          "sprintName",
+          "summary",
+          "completedPbis",
+          "unfinishedPbis",
+          "addedDuringSprint",
+          "removedDuringSprint",
+          "starvedPbis"
+        ],
+        "properties": {
+          "sprintId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sprintName": {
+            "type": "string"
+          },
+          "startUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "summary": {
+            "$ref": "#/components/schemas/SprintExecutionSummaryDto"
+          },
+          "completedPbis": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SprintExecutionPbiDto"
+            }
+          },
+          "unfinishedPbis": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SprintExecutionPbiDto"
+            }
+          },
+          "addedDuringSprint": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SprintExecutionPbiDto"
+            }
+          },
+          "removedDuringSprint": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SprintExecutionPbiDto"
+            }
+          },
+          "starvedPbis": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SprintExecutionPbiDto"
+            }
+          },
+          "hasData": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SprintExecutionSummaryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "initialScopeCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "initialScopeEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "addedDuringSprintCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "addedDuringSprintEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "removedDuringSprintCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "removedDuringSprintEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unfinishedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unfinishedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "starvedCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "SprintExecutionPbiDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tfsId",
+          "title",
+          "state"
+        ],
+        "properties": {
+          "tfsId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "effort": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "state": {
+            "type": "string"
+          },
+          "closedDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "enteredSprintDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "removedFromSprintDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "productName": {
+            "type": "string",
+            "nullable": true
+          },
+          "completionOrder": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           }
         }
       }

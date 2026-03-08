@@ -1,0 +1,656 @@
+@page "/home/delivery/execution"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Services
+@using PoTool.Client.Models
+@using PoTool.Shared.Metrics
+@inject IProfileService ProfileService
+@inject TeamService TeamService
+@inject SprintService SprintService
+@inject ProductService ProductService
+@inject IMetricsClient MetricsClient
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Sprint Execution - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @* Workspace Header *@
+    <MudPaper Elevation="2" Class="pa-2 mb-2">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Analytics" Color="Color.Info" />
+                <MudText Typo="Typo.h5">Sprint Execution</MudText>
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0 d-none d-sm-flex" />
+            </MudStack>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.CheckCircle"
+                       OnClick="NavigateToDelivery">
+                Back to Delivery
+            </MudButton>
+        </MudStack>
+
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
+            Internal sprint diagnostics — scope changes, completion order, and starved work detection
+        </MudText>
+
+        @* Context chips *@
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-2">
+            @* Team chip *@
+            <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Group"
+                     OnClick="ToggleTeamPopover">
+                @ContextTeamLabel
+            </MudChip>
+            <MudPopover Open="@_teamPopoverOpen" AnchorOrigin="Origin.BottomLeft" Paper="true" Elevation="8" Class="pa-3">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.overline">Team</MudText>
+                    <MudSelect T="int?" Value="_selectedTeamId" Label="Team"
+                               Variant="Variant.Outlined" Dense="true" Clearable="false"
+                               ValueChanged="OnTeamSelectedFromPopoverAsync"
+                               Style="min-width: 200px;">
+                        @foreach (var team in _teams)
+                        {
+                            <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudStack>
+            </MudPopover>
+
+            @* Sprint chip *@
+            @if (_sprints.Count > 0)
+            {
+                <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.DateRange"
+                         OnClick="ToggleSprintPopover">
+                    @ContextSprintLabel
+                </MudChip>
+                <MudPopover Open="@_sprintPopoverOpen" AnchorOrigin="Origin.BottomLeft" Paper="true" Elevation="8" Class="pa-3">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.overline">Sprint</MudText>
+                        <MudSelect T="int?" Value="_selectedSprintId" Label="Sprint"
+                                   Variant="Variant.Outlined" Dense="true"
+                                   ValueChanged="OnSprintSelectedFromPopoverAsync"
+                                   Style="min-width: 260px;">
+                            @foreach (var sprint in _sprints)
+                            {
+                                <MudSelectItem T="int?" Value="@sprint.Id">
+                                    @sprint.Name (@(sprint.StartUtc?.ToString("dd MMM yyyy") ?? "?") – @(sprint.EndUtc?.ToString("dd MMM yyyy") ?? "?"))
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudStack>
+                </MudPopover>
+            }
+
+            @* Product filter chip *@
+            @if (_products.Count > 0)
+            {
+                <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.FilterAlt"
+                         OnClick="ToggleProductPopover">
+                    @ContextProductLabel
+                </MudChip>
+                <MudPopover Open="@_productPopoverOpen" AnchorOrigin="Origin.BottomLeft" Paper="true" Elevation="8" Class="pa-3">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.overline">Product Filter</MudText>
+                        <MudSelect T="int?" Value="_selectedProductId" Label="Product"
+                                   Variant="Variant.Outlined" Dense="true" Clearable="true"
+                                   ValueChanged="OnProductSelectedFromPopoverAsync"
+                                   Style="min-width: 200px;">
+                            <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
+                            @foreach (var product in _products)
+                            {
+                                <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudStack>
+                </MudPopover>
+            }
+        </MudStack>
+    </MudPaper>
+
+    @* Loading / Error States *@
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true">
+            @_errorMessage
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@LoadInitialDataAsync">
+                Retry
+            </MudButton>
+        </MudAlert>
+    }
+
+    @if (_executionLoading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Info" Class="mb-2" />
+    }
+
+    @if (_sprints.Count == 0 && !_isLoading)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            No sprints found. Select a team to view sprint execution data.
+        </MudAlert>
+    }
+    else if (_data == null && !_executionLoading && _selectedSprintId.HasValue)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            No execution data found for the selected sprint.
+        </MudAlert>
+    }
+
+    @if (_data != null && _data.HasData)
+    {
+        @* Sprint Execution Summary *@
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Summarize" Class="mr-1" />
+                Sprint Execution Summary
+            </MudText>
+
+            <MudGrid Spacing="2">
+                <MudItem xs="6" sm="4" md="2">
+                    <MudPaper Elevation="1" Class="pa-3 text-center">
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-primary);">@_data.Summary.InitialScopeCount</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Initial Scope</MudText>
+                        @if (_data.Summary.InitialScopeEffort > 0)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Tertiary">@_data.Summary.InitialScopeEffort pts</MudText>
+                        }
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudPaper Elevation="1" Class="pa-3 text-center">
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-warning);">@_data.Summary.AddedDuringSprintCount</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Added During Sprint</MudText>
+                        @if (_data.Summary.AddedDuringSprintEffort > 0)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Tertiary">@_data.Summary.AddedDuringSprintEffort pts</MudText>
+                        }
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudPaper Elevation="1" Class="pa-3 text-center">
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-error);">@_data.Summary.RemovedDuringSprintCount</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Removed</MudText>
+                        @if (_data.Summary.RemovedDuringSprintEffort > 0)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Tertiary">@_data.Summary.RemovedDuringSprintEffort pts</MudText>
+                        }
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudPaper Elevation="1" Class="pa-3 text-center">
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-success);">@_data.Summary.CompletedCount</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Completed</MudText>
+                        @if (_data.Summary.CompletedEffort > 0)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Tertiary">@_data.Summary.CompletedEffort pts</MudText>
+                        }
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudPaper Elevation="1" Class="pa-3 text-center">
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-text-secondary);">@_data.Summary.UnfinishedCount</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Unfinished</MudText>
+                        @if (_data.Summary.UnfinishedEffort > 0)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Tertiary">@_data.Summary.UnfinishedEffort pts</MudText>
+                        }
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="4" md="2">
+                    <MudPaper Elevation="1" Class="pa-3 text-center">
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-warning-darken);">@_data.Summary.StarvedCount</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Starved</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        @* Completion Order *@
+        @if (_data.CompletedPbis.Count > 0)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Class="mr-1" />
+                    Completion Order (@_data.CompletedPbis.Count)
+                </MudText>
+                <MudSimpleTable Dense="true" Striped="true" Hover="true">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Title</th>
+                            <th style="width: 120px;">Product</th>
+                            <th style="width: 80px; text-align: right;">Effort</th>
+                            <th style="width: 160px;">Completed</th>
+                            <th style="width: 100px;">Origin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pbi in _data.CompletedPbis)
+                        {
+                            <tr>
+                                <td>@pbi.CompletionOrder</td>
+                                <td>
+                                    <MudText Typo="Typo.body2">@pbi.Title</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@pbi.TfsId</MudText>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(pbi.ProductName))
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Default">@pbi.ProductName</MudChip>
+                                    }
+                                </td>
+                                <td style="text-align: right;">@(pbi.Effort?.ToString() ?? "–")</td>
+                                <td>@(pbi.ClosedDate?.ToString("dd MMM yyyy HH:mm") ?? "–")</td>
+                                <td>
+                                    @if (pbi.EnteredSprintDate.HasValue)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">Added</MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">Planned</MudChip>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudPaper>
+        }
+
+        @* Starved Work *@
+        @if (_data.StarvedPbis.Count > 0)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Class="mr-1" />
+                    Potential Starvation Signals (@_data.StarvedPbis.Count)
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                    These PBIs were part of the initial sprint scope but remained unfinished,
+                    while work added later during the sprint was completed.
+                </MudText>
+                <MudSimpleTable Dense="true" Striped="true" Hover="true">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th style="width: 120px;">Product</th>
+                            <th style="width: 80px; text-align: right;">Effort</th>
+                            <th style="width: 100px;">State</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pbi in _data.StarvedPbis)
+                        {
+                            <tr>
+                                <td>
+                                    <MudText Typo="Typo.body2">@pbi.Title</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@pbi.TfsId</MudText>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(pbi.ProductName))
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Default">@pbi.ProductName</MudChip>
+                                    }
+                                </td>
+                                <td style="text-align: right;">@(pbi.Effort?.ToString() ?? "–")</td>
+                                <td><MudChip T="string" Size="Size.Small" Color="Color.Warning">@pbi.State</MudChip></td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudPaper>
+        }
+
+        @* Unfinished PBIs *@
+        @if (_data.UnfinishedPbis.Count > 0)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.PendingActions" Color="Color.Default" Class="mr-1" />
+                    Unfinished PBIs (@_data.UnfinishedPbis.Count)
+                </MudText>
+                <MudSimpleTable Dense="true" Striped="true" Hover="true">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th style="width: 120px;">Product</th>
+                            <th style="width: 80px; text-align: right;">Effort</th>
+                            <th style="width: 100px;">State</th>
+                            <th style="width: 100px;">Origin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pbi in _data.UnfinishedPbis)
+                        {
+                            <tr>
+                                <td>
+                                    <MudText Typo="Typo.body2">@pbi.Title</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@pbi.TfsId</MudText>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(pbi.ProductName))
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Default">@pbi.ProductName</MudChip>
+                                    }
+                                </td>
+                                <td style="text-align: right;">@(pbi.Effort?.ToString() ?? "–")</td>
+                                <td><MudChip T="string" Size="Size.Small" Color="Color.Default">@pbi.State</MudChip></td>
+                                <td>
+                                    @if (pbi.EnteredSprintDate.HasValue)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">Added</MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">Planned</MudChip>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudPaper>
+        }
+
+        @* Added During Sprint *@
+        @if (_data.AddedDuringSprint.Count > 0)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.AddCircle" Color="Color.Warning" Class="mr-1" />
+                    Added During Sprint (@_data.AddedDuringSprint.Count)
+                </MudText>
+                <MudSimpleTable Dense="true" Striped="true" Hover="true">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th style="width: 120px;">Product</th>
+                            <th style="width: 80px; text-align: right;">Effort</th>
+                            <th style="width: 100px;">State</th>
+                            <th style="width: 160px;">Entered Sprint</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pbi in _data.AddedDuringSprint)
+                        {
+                            <tr>
+                                <td>
+                                    <MudText Typo="Typo.body2">@pbi.Title</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@pbi.TfsId</MudText>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(pbi.ProductName))
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Default">@pbi.ProductName</MudChip>
+                                    }
+                                </td>
+                                <td style="text-align: right;">@(pbi.Effort?.ToString() ?? "–")</td>
+                                <td><MudChip T="string" Size="Size.Small" Color="Color.Default">@pbi.State</MudChip></td>
+                                <td>@(pbi.EnteredSprintDate?.ToString("dd MMM yyyy HH:mm") ?? "–")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudPaper>
+        }
+
+        @* Removed During Sprint *@
+        @if (_data.RemovedDuringSprint.Count > 0)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.RemoveCircle" Color="Color.Error" Class="mr-1" />
+                    Removed During Sprint (@_data.RemovedDuringSprint.Count)
+                </MudText>
+                <MudSimpleTable Dense="true" Striped="true" Hover="true">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th style="width: 120px;">Product</th>
+                            <th style="width: 80px; text-align: right;">Effort</th>
+                            <th style="width: 100px;">State</th>
+                            <th style="width: 160px;">Removed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pbi in _data.RemovedDuringSprint)
+                        {
+                            <tr>
+                                <td>
+                                    <MudText Typo="Typo.body2">@pbi.Title</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@pbi.TfsId</MudText>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(pbi.ProductName))
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Default">@pbi.ProductName</MudChip>
+                                    }
+                                </td>
+                                <td style="text-align: right;">@(pbi.Effort?.ToString() ?? "–")</td>
+                                <td><MudChip T="string" Size="Size.Small" Color="Color.Default">@pbi.State</MudChip></td>
+                                <td>@(pbi.RemovedFromSprintDate?.ToString("dd MMM yyyy HH:mm") ?? "–")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudPaper>
+        }
+    }
+</MudContainer>
+
+@code {
+    // ── State ────────────────────────────────────────────────────────────────────
+    private int? _profileId;
+    private List<TeamDto> _teams = new();
+    private List<SprintDto> _sprints = new();
+    private List<ProductDto> _products = new();
+    private int? _selectedTeamId;
+    private int? _selectedSprintId;
+    private int? _selectedProductId;
+    private SprintExecutionDto? _data;
+    private bool _isLoading;
+    private bool _executionLoading;
+    private string? _errorMessage;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+
+    // Popovers
+    private bool _teamPopoverOpen;
+    private bool _sprintPopoverOpen;
+    private bool _productPopoverOpen;
+
+    // ── Labels ───────────────────────────────────────────────────────────────────
+    private string ContextTeamLabel => _selectedTeamId.HasValue
+        ? _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value)?.Name ?? "Team"
+        : "Select Team";
+
+    private string ContextSprintLabel => _selectedSprintId.HasValue
+        ? _sprints.FirstOrDefault(s => s.Id == _selectedSprintId.Value)?.Name ?? "Sprint"
+        : "Select Sprint";
+
+    private string ContextProductLabel => _selectedProductId.HasValue
+        ? _products.FirstOrDefault(p => p.Id == _selectedProductId.Value)?.Name ?? "Product"
+        : "All Products";
+
+    // ── Lifecycle ────────────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        UpdateBreadcrumbs();
+        await LoadInitialDataAsync();
+    }
+
+    // ── Data Loading ─────────────────────────────────────────────────────────────
+
+    private async Task LoadInitialDataAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            _errorMessage = null;
+            _data = null;
+
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}");
+                return;
+            }
+
+            _profileId = activeProfile.Id;
+            ProfileService.SetCachedActiveProfileId(_profileId);
+
+            _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
+            _products = (await ProductService.GetProductsByOwnerAsync(_profileId.Value)).ToList();
+
+            UpdateBreadcrumbs();
+
+            // Auto-select first team and load sprints
+            if (!_selectedTeamId.HasValue && _teams.Count > 0)
+            {
+                _selectedTeamId = _teams[0].Id;
+            }
+
+            if (_selectedTeamId.HasValue)
+            {
+                await LoadSprintsAsync(_selectedTeamId.Value);
+                ApplyDefaultSprint();
+                await LoadExecutionDataAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            Snackbar.Add($"Error loading Sprint Execution: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task LoadSprintsAsync(int teamId)
+    {
+        try
+        {
+            _sprints = (await SprintService.GetSprintsForTeamAsync(teamId))
+                .Where(s => s.StartUtc.HasValue && s.EndUtc.HasValue)
+                .OrderBy(s => s.StartUtc)
+                .ToList();
+        }
+        catch
+        {
+            _sprints = new List<SprintDto>();
+        }
+    }
+
+    private void ApplyDefaultSprint()
+    {
+        if (_sprints.Count == 0) return;
+
+        var now = DateTimeOffset.UtcNow;
+        var current = _sprints.FirstOrDefault(s => s.TimeFrame == "current")
+            ?? _sprints.FirstOrDefault(s => s.StartUtc <= now && (s.EndUtc == null || s.EndUtc >= now))
+            ?? _sprints.LastOrDefault(s => s.EndUtc <= now);
+
+        if (current != null)
+        {
+            _selectedSprintId = current.Id;
+        }
+    }
+
+    private async Task LoadExecutionDataAsync()
+    {
+        if (!_profileId.HasValue || !_selectedSprintId.HasValue) return;
+
+        try
+        {
+            _executionLoading = true;
+            _data = null;
+            StateHasChanged();
+
+            var result = await MetricsClient.GetSprintExecutionAsync(
+                _profileId.Value,
+                _selectedSprintId.Value,
+                _selectedProductId);
+
+            _data = result.HasData ? result : null;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading sprint execution data: {ex.Message}", Severity.Error);
+            _data = null;
+        }
+        finally
+        {
+            _executionLoading = false;
+        }
+    }
+
+    // ── Popover Toggles ──────────────────────────────────────────────────────────
+
+    private void CloseAllPopovers() { _teamPopoverOpen = false; _sprintPopoverOpen = false; _productPopoverOpen = false; }
+
+    private void ToggleTeamPopover() { var open = !_teamPopoverOpen; CloseAllPopovers(); _teamPopoverOpen = open; }
+    private void ToggleSprintPopover() { var open = !_sprintPopoverOpen; CloseAllPopovers(); _sprintPopoverOpen = open; }
+    private void ToggleProductPopover() { var open = !_productPopoverOpen; CloseAllPopovers(); _productPopoverOpen = open; }
+
+    // ── Event Handlers ───────────────────────────────────────────────────────────
+
+    private async Task OnTeamSelectedFromPopoverAsync(int? teamId)
+    {
+        _teamPopoverOpen = false;
+        await OnTeamChangedAsync(teamId);
+    }
+
+    private async Task OnSprintSelectedFromPopoverAsync(int? sprintId)
+    {
+        _sprintPopoverOpen = false;
+        _selectedSprintId = sprintId;
+        await LoadExecutionDataAsync();
+    }
+
+    private async Task OnProductSelectedFromPopoverAsync(int? productId)
+    {
+        _productPopoverOpen = false;
+        _selectedProductId = productId;
+        await LoadExecutionDataAsync();
+    }
+
+    private async Task OnTeamChangedAsync(int? teamId)
+    {
+        _selectedTeamId = teamId;
+        _selectedSprintId = null;
+        _sprints = new List<SprintDto>();
+        _data = null;
+
+        if (teamId.HasValue)
+        {
+            await LoadSprintsAsync(teamId.Value);
+            ApplyDefaultSprint();
+            await LoadExecutionDataAsync();
+        }
+    }
+
+    // ── Navigation ───────────────────────────────────────────────────────────────
+
+    private void NavigateToDelivery() => NavigationManager.NavigateTo(WorkspaceRoutes.DeliveryWorkspace);
+
+    // ── Breadcrumbs ──────────────────────────────────────────────────────────────
+
+    private void UpdateBreadcrumbs()
+    {
+        _breadcrumbs = new List<BreadcrumbItem>
+        {
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
+            new("Delivery", WorkspaceRoutes.DeliveryWorkspace, icon: Icons.Material.Filled.CheckCircle),
+            new("Sprint Execution", null, disabled: true, icon: Icons.Material.Filled.Analytics)
+        };
+    }
+}

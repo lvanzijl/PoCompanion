@@ -599,6 +599,39 @@ public class MetricsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets sprint execution analysis for internal diagnostics.
+    /// Reconstructs sprint backlog evolution: initial scope, added/removed items,
+    /// completion order, and starved work detection.
+    /// Delivery workspace: Sprint Execution view.
+    /// </summary>
+    /// <param name="productOwnerId">Product Owner ID</param>
+    /// <param name="sprintId">Sprint ID to analyze</param>
+    /// <param name="productId">Optional product ID to filter results</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Sprint execution analysis DTO</returns>
+    [HttpGet("sprint-execution")]
+    public async Task<ActionResult<SprintExecutionDto>> GetSprintExecution(
+        [FromQuery][Required] int productOwnerId,
+        [FromQuery][Required] int sprintId,
+        [FromQuery] int? productId = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _mediator.Send(
+                new GetSprintExecutionQuery(productOwnerId, sprintId, productId),
+                cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving sprint execution for ProductOwner: {ProductOwnerId}, Sprint: {SprintId}", productOwnerId, sprintId);
+            return StatusCode(500, "Error retrieving sprint execution");
+        }
+    }
+
+    /// <summary>
     /// Gets activity details for a work item and its descendants in the selected sprint period.
     /// </summary>
     [HttpGet("work-item-activity/{workItemId:int}")]

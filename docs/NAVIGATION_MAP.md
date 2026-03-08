@@ -305,6 +305,7 @@ Global header (available on every page) ◄────────────�
 | Breadcrumb | `Home › Delivery`. |
 | Sprint Delivery signal card | Stakeholder sprint delivery report. Click navigates to Sprint Delivery. |
 | Portfolio Delivery signal card | Aggregated delivery view across products. Click navigates to Portfolio Delivery. |
+| Sprint Execution signal card | Internal sprint diagnostics. Click navigates to Sprint Execution. |
 | Cross-workspace navigation | Buttons to Backlog Overview, Health (Now), Trends (Past), and Planning (Future). |
 | Home button | Returns to `/home`. |
 
@@ -313,10 +314,32 @@ Global header (available on every page) ◄────────────�
 | Page | Role |
 |---|---|
 | Sprint Delivery | Stakeholder-facing sprint delivery report — what was delivered during a sprint. |
-| Sprint Execution | Future internal sprint analytics (scope churn, completion order, starved work). Not yet implemented. |
+| Sprint Execution | Internal sprint diagnostics — scope changes, completion order, starved work detection. For POs, scrum masters, and engineering teams. |
 | Portfolio Delivery | Aggregated delivery view across products for a selected sprint range. |
 
-**Outgoing navigation:** `/home/delivery/sprint`, `/home/delivery/portfolio`, `/home/backlog-overview`, `/home/health`, `/home/trends`, `/home/planning`, `/home`
+**Outgoing navigation:** `/home/delivery/sprint`, `/home/delivery/execution`, `/home/delivery/portfolio`, `/home/backlog-overview`, `/home/health`, `/home/trends`, `/home/planning`, `/home`
+
+---
+
+### 2.5b Sprint Execution — `/home/delivery/execution`
+
+**Purpose:** Internal sprint diagnostics page for Product Owners, Scrum Masters, engineering teams, and technical leadership. Answers questions that Sprint Delivery deliberately does not address: Did we finish what we originally planned? Was work added during the sprint? Which planned work never completed? Did later-added work finish before earlier work? Did some work starve in the sprint backlog?
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Delivery › Sprint Execution`. |
+| Team selector | Pick a team. Loads sprints for the selected team. |
+| Sprint selector | Pick a sprint to analyze. Defaults to current sprint. |
+| Product filter | Optional filter by product. |
+| Execution summary | Shows initial scope, added during sprint, removed, completed, unfinished, and starved counts with effort. |
+| Completion order table | Chronological list of PBIs completed during the sprint, with title, product, effort, completion date, and origin (planned or added). |
+| Starvation signals | PBIs from the initial scope that remained unfinished while later-added work was completed. |
+| Unfinished PBIs | PBIs remaining in the sprint that did not complete. |
+| Added during sprint | PBIs that entered the sprint after it started. |
+| Removed during sprint | PBIs that were removed from the sprint after it started. |
+| Back to Delivery button | Returns to `/home/delivery`. |
+
+**Outgoing navigation:** `/home/delivery`, `/home`
 
 ---
 
@@ -716,8 +739,9 @@ Each level only appears when the user drills into the previous one. Users naviga
 | Validation Triage | `/home/validation-triage` | Health workspace Validation Triage button | Open queue per category | `/home/validation-queue?category=SI\|RR\|RC\|EFF`, `/home/health`, `/home` |
 | Validation Queue | `/home/validation-queue` | Validation Triage "Open queue" | Start fix session per rule | `/home/validation-fix?category=...&ruleId=...`, `/home/validation-triage`, `/home` |
 | Validation Fix Session | `/home/validation-fix` | Validation Queue "Start fix session" | Review items one-by-one, dismiss or skip | `/home/validation-queue?category=...`, `/home` |
-| Delivery | `/home/delivery` | Home workspace card, global header | Click delivery view | `/home/delivery/sprint`, `/home/delivery/portfolio`, `/home/health`, `/home/trends`, `/home/planning` |
+| Delivery | `/home/delivery` | Home workspace card, global header | Click delivery view | `/home/delivery/sprint`, `/home/delivery/execution`, `/home/delivery/portfolio`, `/home/health`, `/home/trends`, `/home/planning` |
 | Sprint Delivery | `/home/delivery/sprint` | Delivery workspace, Planning workspace | Stakeholder sprint delivery report; hierarchical drill-down: Portfolio → Product → Epic → Feature → PBIs | `/home/delivery/sprint/activity/{id}`, `/home/delivery`, `/home` |
+| Sprint Execution | `/home/delivery/execution` | Delivery workspace | Internal sprint diagnostics — scope changes, completion order, starved work; team/sprint/product selectors | `/home/delivery`, `/home` |
 | Portfolio Delivery | `/home/delivery/portfolio` | Delivery workspace | Select sprint range, view aggregated delivery snapshot | `/home/delivery` |
 | Trends (Past) | `/home/trends` | Home workspace card | Click trend signal | `/home/portfolio-progress`, `/home/trends/delivery`, `/home/bugs`, `/home/pull-requests`, `/home/pr-delivery-insights`, `/home/pipelines`, `/home/pipeline-insights`, `/home/delivery`, `/home/health`, `/home/planning` |
 | Delivery Trends | `/home/trends/delivery` | Trends workspace | Select sprint range | `/home/trends`, `/home` |

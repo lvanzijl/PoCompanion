@@ -124,7 +124,10 @@
         "RoadmapSnapshotEpicDto",
         "CreateRoadmapSnapshotRequest",
         "CreateRoadmapSnapshotProductRequest",
-        "CreateRoadmapSnapshotEpicRequest"
+        "CreateRoadmapSnapshotEpicRequest",
+        "SprintExecutionDto",
+        "SprintExecutionSummaryDto",
+        "SprintExecutionPbiDto"
       ],
       "excludedParameterNames": [],
       "handleReferences": false,

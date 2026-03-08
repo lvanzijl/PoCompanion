@@ -68,6 +68,20 @@
                     </MudCardContent>
                 </MudCard>
             </MudItem>
+
+            @* Sprint Execution *@
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="1"
+                         Style="cursor: pointer; transition: all 0.2s;"
+                         Class="mud-card-hover"
+                         @onclick="NavigateToSprintExecution">
+                    <MudCardContent Class="d-flex flex-column align-center pa-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Analytics" Color="Color.Info" Size="Size.Large" />
+                        <MudText Typo="Typo.subtitle1" Class="mt-2">Sprint Execution</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Internal sprint diagnostics</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
         </MudGrid>
     </MudPaper>
 
@@ -138,6 +152,11 @@
     private void NavigateToPortfolioDelivery()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.PortfolioDelivery);
+    }
+
+    private void NavigateToSprintExecution()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.SprintExecution);
     }
 
     private void NavigateToHome()

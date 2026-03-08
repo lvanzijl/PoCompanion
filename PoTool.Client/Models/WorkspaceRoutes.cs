@@ -133,6 +133,11 @@ public static class WorkspaceRoutes
     public const string SprintDelivery = "/home/delivery/sprint";
 
     /// <summary>
+    /// Sprint Execution route — internal sprint diagnostics for POs, scrum masters, and engineering teams.
+    /// </summary>
+    public const string SprintExecution = "/home/delivery/execution";
+
+    /// <summary>
     /// Portfolio Delivery route — aggregated delivery view across products (placeholder).
     /// </summary>
     public const string PortfolioDelivery = "/home/delivery/portfolio";
