@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-08",
+    "type": "Fixed",
+    "title": "Product lanes now swap real TFS priorities",
+    "impact": "Moving a product earlier or later now swaps the neighbouring Objective backlog priorities exactly as stored in TFS, preserving the surrounding roadmap order after refresh.",
+    "area": "Planning",
+    "link": "/planning/product-roadmaps"
+  },
+  {
     "date": "2026-03-07",
     "type": "New",
     "title": "Roadmap Analytics and Health Signals",

@@ -15,6 +15,7 @@
 @inject IClipboardService ClipboardService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject ILogger<ProductRoadmaps> Logger
 
 <PageTitle>Product Roadmaps - PO Companion</PageTitle>
 
@@ -667,74 +668,49 @@
                 return;
             }
 
-            // Swap BacklogPriority values between the two Objectives.
-            // Normal case: both priorities are set and different — use the actual TFS values.
-            // Null case: one or both priorities are missing — normalize all null-priority
-            //   lanes deterministically (by TfsId) extending past any existing priorities.
-            // Equal case: both have the same priority — add a direction-aware offset to
-            //   break the tie without using unrelated fabricated values.
-            var priorityA = laneA.ObjectiveBacklogPriority;
-            var priorityB = laneB.ObjectiveBacklogPriority;
-
-            if (!priorityA.HasValue || !priorityB.HasValue)
+            if (!ProductLanePrioritySwapPlanner.TryCreateExactNeighborSwap(
+                    laneA.ObjectiveTfsId,
+                    laneA.ObjectiveBacklogPriority,
+                    laneB.ObjectiveTfsId,
+                    laneB.ObjectiveBacklogPriority,
+                    out var swapPlan,
+                    out var failureReason))
             {
-                // Normalize all null-priority lanes in-memory with deterministic values that
-                // extend beyond the maximum existing priority, ordered by TfsId.
-                var maxExisting = _productLanes
-                    .Where(l => l.ObjectiveBacklogPriority.HasValue)
-                    .Select(l => l.ObjectiveBacklogPriority!.Value)
-                    .DefaultIfEmpty(0.0)
-                    .Max();
-
-                var nullLanes = _productLanes
-                    .Where(l => !l.ObjectiveBacklogPriority.HasValue)
-                    .OrderBy(l => l.ObjectiveTfsId)
-                    .ToList();
-
-                for (int nullLaneIndex = 0; nullLaneIndex < nullLanes.Count; nullLaneIndex++)
-                    nullLanes[nullLaneIndex].ObjectiveBacklogPriority = maxExisting + (nullLaneIndex + 1) * 1000.0;
-
-                priorityA = laneA.ObjectiveBacklogPriority;
-                priorityB = laneB.ObjectiveBacklogPriority;
-            }
-            else if (priorityA.Value == priorityB.Value)
-            {
-                // Collision: both have identical priorities — add a small direction-aware
-                // offset (+1.0) to break the tie. TFS BacklogPriority values are typically
-                // in the hundreds-to-thousands range, so a 1.0 delta does not conflict with
-                // any other lane that uses the default 1000-unit spacing.
-                if (indexA > indexB)
-                    // laneA (higher index) is moving earlier: make priorityA slightly higher
-                    // so that after the swap laneA receives the smaller priorityB value.
-                    priorityA = priorityA.Value + 1.0;
-                else
-                    // laneA (lower index) is moving later: make priorityB slightly higher
-                    // so that after the swap laneA receives the larger priorityB value.
-                    priorityB = priorityB.Value + 1.0;
-            }
-
-            // At this point both priorities must be non-null (normalization assigns values
-            // to all null-priority lanes; the collision branch adds an offset to non-null
-            // values). Guard here to satisfy the compiler and catch unexpected edge cases.
-            if (!priorityA.HasValue || !priorityB.HasValue)
-            {
-                Snackbar.Add("Cannot swap priorities: unable to determine backlog priority values.", Severity.Warning);
+                Logger.LogWarning(
+                    "Product lane reorder requires priority recovery. Selected objective {SelectedObjectiveId} priority {SelectedPriority}; neighbor objective {NeighborObjectiveId} priority {NeighborPriority}; reason {FailureReason}.",
+                    laneA.ObjectiveTfsId,
+                    laneA.ObjectiveBacklogPriority,
+                    laneB.ObjectiveTfsId,
+                    laneB.ObjectiveBacklogPriority,
+                    failureReason);
+                Snackbar.Add("Cannot reorder because one or both neighbouring Objectives do not have distinct usable TFS backlog priorities. Recover the priorities first.", Severity.Warning);
                 return;
             }
 
-            // Write swapped priorities to TFS
-            var successA = await WorkItemService.UpdateBacklogPriorityAsync(laneA.ObjectiveTfsId, priorityB.Value);
+            var swapPlanToApply = swapPlan!;
+
+            Logger.LogInformation(
+                "Swapping product lane priorities. Selected objective {SelectedObjectiveId} old priority {SelectedOldPriority}; neighbor objective {NeighborObjectiveId} old priority {NeighborOldPriority}; writing {SelectedWrittenPriority} to selected and {NeighborWrittenPriority} to neighbor.",
+                swapPlanToApply.SelectedObjectiveTfsId,
+                swapPlanToApply.SelectedOriginalPriority,
+                swapPlanToApply.NeighborObjectiveTfsId,
+                swapPlanToApply.NeighborOriginalPriority,
+                swapPlanToApply.SelectedWrittenPriority,
+                swapPlanToApply.NeighborWrittenPriority);
+
+            // Write swapped priorities to TFS using the exact current values read from cache.
+            var successA = await WorkItemService.UpdateBacklogPriorityAsync(swapPlanToApply.SelectedObjectiveTfsId, swapPlanToApply.SelectedWrittenPriority);
             if (!successA)
             {
                 Snackbar.Add($"Failed to update priority for {laneA.ProductName} in TFS.", Severity.Error);
                 return;
             }
 
-            var successB = await WorkItemService.UpdateBacklogPriorityAsync(laneB.ObjectiveTfsId, priorityA.Value);
+            var successB = await WorkItemService.UpdateBacklogPriorityAsync(swapPlanToApply.NeighborObjectiveTfsId, swapPlanToApply.NeighborWrittenPriority);
             if (!successB)
             {
                 // Attempt to revert A
-                await WorkItemService.UpdateBacklogPriorityAsync(laneA.ObjectiveTfsId, priorityA.Value);
+                await WorkItemService.UpdateBacklogPriorityAsync(swapPlanToApply.SelectedObjectiveTfsId, swapPlanToApply.SelectedOriginalPriority);
                 Snackbar.Add($"Failed to update priority for {laneB.ProductName} in TFS. Reverted.", Severity.Error);
                 return;
             }
