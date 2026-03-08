@@ -141,7 +141,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
     [TestMethod]
     public async Task Handle_NoPrs_ReturnsEmptyResult()
     {
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.AreEqual(0, result.CategorySummary.TotalPrs);
@@ -157,7 +157,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         // PR created well before the range
         await AddPrAsync(1, createdDate: RangeFrom.AddDays(-30));
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.AreEqual(0, result.CategorySummary.TotalPrs);
@@ -168,7 +168,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
     {
         await AddPrAsync(1, createdDate: RangeFrom.AddDays(1));
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.AreEqual(1, result.CategorySummary.TotalPrs);
@@ -178,6 +178,24 @@ public class GetPrDeliveryInsightsQueryHandlerTests
 
         Assert.HasCount(1, result.ScatterPoints);
         Assert.AreEqual("Unmapped", result.ScatterPoints[0].Category);
+    }
+
+    [TestMethod]
+    public async Task Handle_PrLinkedToWorkItemMissingFromCache_LogsDiagnosticAndClassifiesAsUnmapped()
+    {
+        await AddPrAsync(1, createdDate: RangeFrom.AddDays(1));
+        await AddWorkItemLinkAsync(1, 999);
+
+        var query = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        Assert.AreEqual(1, result.CategorySummary.TotalPrs);
+        Assert.AreEqual(1, result.CategorySummary.UnmappedCount);
+        Assert.AreEqual(0, result.CategorySummary.DeliveryMappedCount);
+        Assert.AreEqual("Unmapped", result.ScatterPoints[0].Category);
+
+        VerifyLogContains(LogLevel.Warning, "WorkItemNotInCache");
+        VerifyLogContains(LogLevel.Information, "unresolvedReasons=WorkItemNotInCache=1");
     }
 
     [TestMethod]
@@ -206,6 +224,24 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         Assert.AreEqual("My Epic", point.EpicName);
         Assert.AreEqual(200, point.FeatureId);
         Assert.AreEqual("My Feature", point.FeatureName);
+    }
+
+    private void VerifyLogContains(LogLevel logLevel, string expectedText)
+    {
+        _mockLogger.Verify(
+            logger => logger.Log(
+                logLevel,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((value, _) => LogStateContains(value, expectedText)),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
+    }
+
+    private static bool LogStateContains(object? value, string expectedText)
+    {
+        var text = value?.ToString();
+        return text is not null && text.Contains(expectedText, StringComparison.Ordinal);
     }
 
     [TestMethod]

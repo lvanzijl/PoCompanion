@@ -22,6 +22,14 @@ namespace PoTool.Api.Handlers.PullRequests;
 ///   - When TeamId is supplied, PRs are scoped to products linked to that team via ProductTeamLinks.
 ///   - When SprintId is supplied, FromDate/ToDate override the query parameter date range.
 ///   - Date range filters by PR.CreatedDateUtc.
+///
+/// Supported link source:
+///   - Explicit PR → work item links previously cached in PullRequestWorkItemLinks.
+///   - Reverse work item → PR links and UI-inferred associations are not available from this cache shape.
+///
+/// TEMPORARY diagnostics:
+///   - Unresolved PR → work item resolution paths are logged here to explain why a PR became Unmapped.
+///   - Remove the diagnostic helpers once production cache behavior has been confirmed.
 /// </summary>
 public sealed class GetPrDeliveryInsightsQueryHandler
     : IQueryHandler<GetPrDeliveryInsightsQuery, PrDeliveryInsightsDto>
@@ -33,6 +41,19 @@ public sealed class GetPrDeliveryInsightsQueryHandler
     private const string CategoryBug            = "Bug";
     private const string CategoryDisturbance    = "Disturbance";
     private const string CategoryUnmapped       = "Unmapped";
+    private const int MaxDiagnosticHierarchyDepth = 50;
+    private const string UnresolvedDiagnosticLogTemplate =
+        "PR work item resolution diagnostics (temporary): outcome={Outcome} reason={Reason} " +
+        "pullRequestId={PullRequestId} repository={Repository} productId={ProductId} " +
+        "relationCount={RelationCount} relationTypes={RelationTypes} relationTargets={RelationTargets} " +
+        "extractedWorkItemIds={ExtractedWorkItemIds} cachePresence={CachePresence} " +
+        "cachedWorkItemTypes={CachedWorkItemTypes} resolutionPath={ResolutionPath} notes={Notes}";
+    private const string ResolutionSummaryLogTemplate =
+        "PR work item resolution diagnostics (temporary): totalPrs={TotalPrs} " +
+        "prsWithExplicitLinks={PrsWithExplicitLinks} prsWithExtractedWorkItemIds={PrsWithExtractedWorkItemIds} " +
+        "prsWithCachedLinkedWorkItems={PrsWithCachedLinkedWorkItems} " +
+        "prsResolvedToCachedWorkItems={PrsResolvedToCachedWorkItems} unresolvedPrs={UnresolvedPrs} " +
+        "unresolvedReasons={UnresolvedReasons}";
 
     public GetPrDeliveryInsightsQueryHandler(
         PoToolDbContext context,
@@ -182,8 +203,22 @@ public sealed class GetPrDeliveryInsightsQueryHandler
             .AsNoTracking()
             .ToDictionaryAsync(wi => wi.TfsId, cancellationToken);
 
+        if (allLinkedWorkItemIds.Count > 0 && workItemMap.Count == 0)
+        {
+            _logger.LogWarning(
+                "PR work item resolution diagnostics (temporary): explicit PR work item links exist in cache but WorkItems cache is empty; linkedWorkItemCount={LinkedWorkItemCount}",
+                allLinkedWorkItemIds.Count);
+        }
+
         // ── 8. Classify each PR ────────────────────────────────────────────────
-        var classified = prs.Select(pr =>
+        var classified = new List<ClassifiedPr>(prs.Count);
+        var unresolvedDiagnostics = new List<UnresolvedPrWorkItemDiagnostic>();
+        var prsWithExplicitLinks = 0;
+        var prsWithExtractedWorkItemIds = 0;
+        var prsWithCachedLinkedWorkItems = 0;
+        var prsResolvedToHierarchy = 0;
+
+        foreach (var pr in prs)
         {
             var lifetimeHours = ComputeLifetimeHours(pr, now);
             var reviewCycles  = iterationsByPr.GetValueOrDefault(pr.Id, 0);
@@ -191,29 +226,53 @@ public sealed class GetPrDeliveryInsightsQueryHandler
 
             if (!linkedWorkItemIdsByPr.TryGetValue(pr.Id, out var linkedIds) || linkedIds.Count == 0)
             {
-                return new ClassifiedPr(
+                var diagnostic = CreateNoRelationsDiagnostic(pr);
+                unresolvedDiagnostics.Add(diagnostic);
+                LogUnresolvedDiagnostic(diagnostic);
+
+                classified.Add(new ClassifiedPr(
                     pr.Id, pr.Title, pr.RepositoryName, pr.Status,
                     lifetimeHours, reviewCycles, filesChanged,
                     CategoryUnmapped,
                     EpicId: null, EpicName: null,
                     FeatureId: null, FeatureName: null,
                     AllEpics: Array.Empty<(int, string)>(),
-                    AllFeatures: Array.Empty<(int, string)>());
+                    AllFeatures: Array.Empty<(int, string)>()));
+                continue;
             }
+
+            prsWithExplicitLinks++;
+            if (linkedIds.Count > 0)
+                prsWithExtractedWorkItemIds++;
 
             // Resolve hierarchy for all linked work items
             var allEpics    = new List<(int Id, string Name)>();
             var allFeatures = new List<(int Id, string Name)>();
             bool hasBugLink        = false;
             bool hasPbiWithoutFeature = false;
+            bool hasCachedLinkedWorkItem = false;
+            var linkEvaluations = new List<LinkedWorkItemEvaluation>();
 
             foreach (var wiId in linkedIds)
             {
                 if (!workItemMap.TryGetValue(wiId, out var wi))
+                {
+                    linkEvaluations.Add(LinkedWorkItemEvaluation.MissingFromCache(wiId));
                     continue;
+                }
+
+                hasCachedLinkedWorkItem = true;
 
                 var (epicId, featureId) = PoTool.Api.Services.WorkItemResolutionService.ResolveAncestry(
                     wiId, workItemMap);
+
+                linkEvaluations.Add(new LinkedWorkItemEvaluation(
+                    wiId,
+                    ExistsInCache: true,
+                    WorkItemType: wi.Type,
+                    FeatureId: featureId,
+                    EpicId: epicId,
+                    ResolutionPath: BuildResolutionPath(wiId, workItemMap)));
 
                 if (epicId.HasValue && workItemMap.TryGetValue(epicId.Value, out var epicWi))
                 {
@@ -241,9 +300,15 @@ public sealed class GetPrDeliveryInsightsQueryHandler
                 }
             }
 
+            if (hasCachedLinkedWorkItem)
+                prsWithCachedLinkedWorkItems++;
+
             string category;
             if (allEpics.Count > 0 || allFeatures.Count > 0)
+            {
                 category = CategoryDeliveryMapped;
+                prsResolvedToHierarchy++;
+            }
             else if (hasBugLink)
                 category = CategoryBug;
             else if (hasPbiWithoutFeature)
@@ -251,10 +316,17 @@ public sealed class GetPrDeliveryInsightsQueryHandler
             else
                 category = CategoryUnmapped;
 
+            if (category == CategoryUnmapped)
+            {
+                var diagnostic = CreateUnresolvedDiagnostic(pr, linkedIds, linkEvaluations);
+                unresolvedDiagnostics.Add(diagnostic);
+                LogUnresolvedDiagnostic(diagnostic);
+            }
+
             var primaryEpic    = allEpics.FirstOrDefault();
             var primaryFeature = allFeatures.FirstOrDefault();
 
-            return new ClassifiedPr(
+            classified.Add(new ClassifiedPr(
                 pr.Id, pr.Title, pr.RepositoryName, pr.Status,
                 lifetimeHours, reviewCycles, filesChanged,
                 category,
@@ -263,8 +335,16 @@ public sealed class GetPrDeliveryInsightsQueryHandler
                 FeatureId: primaryFeature.Id != 0 ? primaryFeature.Id : (int?)null,
                 FeatureName: primaryFeature.Name,
                 AllEpics:    allEpics,
-                AllFeatures: allFeatures);
-        }).ToList();
+                AllFeatures: allFeatures));
+        }
+
+        LogResolutionSummary(
+            prs.Count,
+            prsWithExplicitLinks,
+            prsWithExtractedWorkItemIds,
+            prsWithCachedLinkedWorkItems,
+            prsResolvedToHierarchy,
+            unresolvedDiagnostics);
 
         // ── 9. Global category summary ─────────────────────────────────────────
         var total             = classified.Count;
@@ -634,6 +714,152 @@ public sealed class GetPrDeliveryInsightsQueryHandler
         return sorted[idx];
     }
 
+    private UnresolvedPrWorkItemDiagnostic CreateNoRelationsDiagnostic(
+        PoTool.Api.Persistence.Entities.PullRequestEntity pr) =>
+        new(
+            pr.Id,
+            pr.RepositoryName,
+            pr.ProductId,
+            RawRelationCount: 0,
+            RawRelationTypes: "None",
+            RawRelationTargets: "NotCapturedInCache",
+            ExtractedWorkItemIds: Array.Empty<int>(),
+            CachePresence: "none",
+            CachedWorkItemTypes: "none",
+            ResolutionPath: "none",
+            FinalOutcome: CategoryUnmapped,
+            RejectionReason: "NoRelationsOnPr",
+            Notes: "Only explicit PR → work item links cached in PullRequestWorkItemLinks are considered. Azure DevOps UI links may also be inferred from non-cached associations.");
+
+    private UnresolvedPrWorkItemDiagnostic CreateUnresolvedDiagnostic(
+        PoTool.Api.Persistence.Entities.PullRequestEntity pr,
+        IReadOnlyCollection<int> linkedIds,
+        IReadOnlyCollection<LinkedWorkItemEvaluation> linkEvaluations)
+    {
+        var rejectionReason = DetermineRejectionReason(linkEvaluations);
+        var cachedTypes = linkEvaluations
+            .Where(e => e.ExistsInCache && !string.IsNullOrWhiteSpace(e.WorkItemType))
+            .Select(e => $"{e.WorkItemId}:{e.WorkItemType}")
+            .ToList();
+        var resolutionPath = linkEvaluations.Count > 0
+            ? string.Join(" | ", linkEvaluations.Select(FormatResolutionPath))
+            : "none";
+
+        return new UnresolvedPrWorkItemDiagnostic(
+            pr.Id,
+            pr.RepositoryName,
+            pr.ProductId,
+            RawRelationCount: linkedIds.Count,
+            RawRelationTypes: linkedIds.Count > 0 ? "DirectPrWorkItemLinkEndpoint" : "None",
+            RawRelationTargets: "NotCapturedInCache",
+            ExtractedWorkItemIds: linkedIds.OrderBy(id => id).ToArray(),
+            CachePresence: linkEvaluations.Count > 0
+                ? string.Join(", ", linkEvaluations.Select(e => $"{e.WorkItemId}:{(e.ExistsInCache ? "Cached" : "Missing")}"))
+                : "none",
+            CachedWorkItemTypes: cachedTypes.Count > 0 ? string.Join(", ", cachedTypes) : "none",
+            ResolutionPath: resolutionPath,
+            FinalOutcome: CategoryUnmapped,
+            RejectionReason: rejectionReason,
+            Notes: rejectionReason == "WorkItemNotInCache"
+                ? "Linked work item IDs were extracted from the PR cache, but none were present in WorkItems. This usually means stale cache data or scope-filtered work items."
+                : "Linked work items were cached, but none resolved to Feature/Epic ancestry and none matched Bug/PBI fallback categories.");
+    }
+
+    private static string DetermineRejectionReason(IReadOnlyCollection<LinkedWorkItemEvaluation> linkEvaluations)
+    {
+        if (linkEvaluations.Count == 0)
+            return "NoWorkItemIdExtracted";
+
+        if (linkEvaluations.All(e => !e.ExistsInCache))
+            return "WorkItemNotInCache";
+
+        return "UnsupportedLinkedWorkItemType";
+    }
+
+    private static string BuildResolutionPath(
+        int workItemId,
+        IReadOnlyDictionary<int, PoTool.Api.Persistence.Entities.WorkItemEntity> workItemsByTfsId)
+    {
+        if (!workItemsByTfsId.TryGetValue(workItemId, out var current))
+            return $"{workItemId}:missing";
+
+        var segments = new List<string> { $"{current.TfsId}:{current.Type}" };
+        var visited = new HashSet<int> { current.TfsId };
+        var currentParentId = current.ParentTfsId;
+        var depth = 0;
+
+        while (currentParentId.HasValue && depth < MaxDiagnosticHierarchyDepth)
+        {
+            if (!visited.Add(currentParentId.Value))
+            {
+                segments.Add($"{currentParentId.Value}:cycle");
+                break;
+            }
+
+            if (!workItemsByTfsId.TryGetValue(currentParentId.Value, out var parent))
+            {
+                segments.Add($"{currentParentId.Value}:missing-parent");
+                break;
+            }
+
+            segments.Add($"{parent.TfsId}:{parent.Type}");
+            currentParentId = parent.ParentTfsId;
+            depth++;
+        }
+
+        return string.Join(" -> ", segments);
+    }
+
+    private static string FormatResolutionPath(LinkedWorkItemEvaluation evaluation) =>
+        evaluation.ExistsInCache
+            ? $"{evaluation.WorkItemId}:{evaluation.WorkItemType ?? "Unknown"} [{evaluation.ResolutionPath}]"
+            : $"{evaluation.WorkItemId}:MissingFromCache";
+
+    private void LogUnresolvedDiagnostic(UnresolvedPrWorkItemDiagnostic diagnostic)
+    {
+        _logger.LogWarning(
+            UnresolvedDiagnosticLogTemplate,
+            diagnostic.FinalOutcome,
+            diagnostic.RejectionReason,
+            diagnostic.PullRequestId,
+            diagnostic.Repository,
+            diagnostic.ProductId,
+            diagnostic.RawRelationCount,
+            diagnostic.RawRelationTypes,
+            diagnostic.RawRelationTargets,
+            diagnostic.ExtractedWorkItemIds.Count > 0 ? string.Join(", ", diagnostic.ExtractedWorkItemIds) : "none",
+            diagnostic.CachePresence,
+            diagnostic.CachedWorkItemTypes,
+            diagnostic.ResolutionPath,
+            diagnostic.Notes);
+    }
+
+    private void LogResolutionSummary(
+        int totalPrs,
+        int prsWithExplicitLinks,
+        int prsWithExtractedWorkItemIds,
+        int prsWithCachedLinkedWorkItems,
+        int prsResolvedToHierarchy,
+        IReadOnlyCollection<UnresolvedPrWorkItemDiagnostic> unresolvedDiagnostics)
+    {
+        var unresolvedByReason = unresolvedDiagnostics.Count > 0
+            ? string.Join(", ", unresolvedDiagnostics
+                .GroupBy(d => d.RejectionReason)
+                .OrderBy(g => g.Key, StringComparer.Ordinal)
+                .Select(g => $"{g.Key}={g.Count()}"))
+            : "none";
+
+        _logger.LogInformation(
+            ResolutionSummaryLogTemplate,
+            totalPrs,
+            prsWithExplicitLinks,
+            prsWithExtractedWorkItemIds,
+            prsWithCachedLinkedWorkItems,
+            prsResolvedToHierarchy,
+            unresolvedDiagnostics.Count,
+            unresolvedByReason);
+    }
+
     private static PrDeliveryInsightsDto EmptyResult(
         GetPrDeliveryInsightsQuery query,
         string? teamName,
@@ -668,4 +894,31 @@ public sealed class GetPrDeliveryInsightsQueryHandler
         string? FeatureName,
         IReadOnlyList<(int Id, string Name)> AllEpics,
         IReadOnlyList<(int Id, string Name)> AllFeatures);
+
+    private sealed record LinkedWorkItemEvaluation(
+        int WorkItemId,
+        bool ExistsInCache,
+        string? WorkItemType,
+        int? FeatureId,
+        int? EpicId,
+        string ResolutionPath)
+    {
+        public static LinkedWorkItemEvaluation MissingFromCache(int workItemId) =>
+            new(workItemId, ExistsInCache: false, WorkItemType: null, FeatureId: null, EpicId: null, ResolutionPath: "missing-from-cache");
+    }
+
+    private sealed record UnresolvedPrWorkItemDiagnostic(
+        int PullRequestId,
+        string Repository,
+        int? ProductId,
+        int RawRelationCount,
+        string RawRelationTypes,
+        string RawRelationTargets,
+        IReadOnlyList<int> ExtractedWorkItemIds,
+        string CachePresence,
+        string CachedWorkItemTypes,
+        string ResolutionPath,
+        string FinalOutcome,
+        string RejectionReason,
+        string Notes);
 }
