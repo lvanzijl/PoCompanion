@@ -791,6 +791,14 @@ public class BattleshipMockDataFacade : ITfsClient
         return Task.FromResult(true);
     }
 
+    public Task<bool> UpdateWorkItemIterationPathAsync(int workItemId, string iterationPath, CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation("Mock TFS client: UpdateWorkItemIterationPathAsync called for workItemId={WorkItemId}, iterationPath={IterationPath}",
+            workItemId, iterationPath);
+        return Task.FromResult(true);
+    }
+
     public Task<WorkItemDto?> UpdateWorkItemTagsAndReturnAsync(int workItemId, List<string> tags, CancellationToken cancellationToken = default)
     {
         IncrementAndGetApiCallCount();

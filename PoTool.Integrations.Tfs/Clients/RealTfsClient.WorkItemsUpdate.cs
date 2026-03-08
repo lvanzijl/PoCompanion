@@ -793,6 +793,69 @@ public partial class RealTfsClient
         }
     }
 
+    public async Task<bool> UpdateWorkItemIterationPathAsync(int workItemId, string iterationPath, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Updating work item {WorkItemId} iteration path to {IterationPath}", workItemId, iterationPath);
+
+            var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+            if (entity == null)
+            {
+                _logger.LogWarning("No TFS configuration found for updating work item iteration path");
+                return false;
+            }
+
+            var httpClient = GetAuthenticatedHttpClient();
+
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(entity.TimeoutSeconds));
+
+            var patchDocument = new[]
+            {
+                new
+                {
+                    op = "add",
+                    path = "/fields/System.IterationPath",
+                    value = (object)iterationPath
+                }
+            };
+
+            var updateUrl = CollectionUrl(entity, $"_apis/wit/workitems/{workItemId}");
+            using var content = new StringContent(
+                JsonSerializer.Serialize(patchDocument),
+                System.Text.Encoding.UTF8,
+                "application/json-patch+json");
+
+            _logger.LogDebug("Sending PATCH request to update work item {WorkItemId} iteration path", workItemId);
+
+            var response = await httpClient.PatchAsync(updateUrl, content, timeoutCts.Token);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Successfully updated work item {WorkItemId} iteration path to {IterationPath}", workItemId, iterationPath);
+                return true;
+            }
+            else
+            {
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("Failed to update work item {WorkItemId} iteration path. Status: {StatusCode}, Response: {Response}",
+                    workItemId, response.StatusCode, responseBody);
+                return false;
+            }
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError("Update work item {WorkItemId} iteration path timed out", workItemId);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating work item {WorkItemId} iteration path to {IterationPath}", workItemId, iterationPath);
+            return false;
+        }
+    }
+
     public async Task<WorkItemDto?> UpdateWorkItemTitleDescriptionAsync(int workItemId, string? title, string? description, CancellationToken cancellationToken = default)
     {
         try

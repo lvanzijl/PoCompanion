@@ -308,6 +308,30 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
+    /// Updates the IterationPath (sprint assignment) of a work item in TFS and refreshes the local cache.
+    /// Used by the Plan Board to move features between sprints.
+    /// </summary>
+    /// <param name="tfsId">The TFS work item ID.</param>
+    /// <param name="request">The new iteration path.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    [HttpPost("{tfsId:int}/iteration-path")]
+    public async Task<IActionResult> UpdateIterationPath(int tfsId, [FromBody] UpdateIterationPathRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var success = await _mediator.Send(new UpdateWorkItemIterationPathCommand(tfsId, request.IterationPath), cancellationToken);
+            if (!success)
+                return BadRequest($"Failed to update IterationPath for work item {tfsId}.");
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating IterationPath for work item {TfsId}", tfsId);
+            return StatusCode(500, "Error updating IterationPath");
+        }
+    }
+
+    /// <summary>
     /// Gets work items matching a filter.
     /// </summary>
     [HttpGet("filter/{filter}")]
@@ -909,3 +933,8 @@ public sealed record UpdateTagsRequest(List<string> Tags);
 /// Request body for updating a work item's title and/or description.
 /// </summary>
 public sealed record UpdateTitleDescriptionRequest(string? Title, string? Description);
+
+/// <summary>
+/// Request body for updating a work item's iteration path (sprint assignment).
+/// </summary>
+public sealed record UpdateIterationPathRequest(string IterationPath);

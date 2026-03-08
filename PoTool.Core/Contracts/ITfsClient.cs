@@ -253,6 +253,19 @@ public interface ITfsClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Updates the iteration path (sprint assignment) of a work item in TFS.
+    /// Used by the Plan Board to move features between sprints.
+    /// </summary>
+    /// <param name="workItemId">The work item ID.</param>
+    /// <param name="iterationPath">The new iteration path to assign.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if the update was successful, false otherwise.</returns>
+    Task<bool> UpdateWorkItemIterationPathAsync(
+        int workItemId,
+        string iterationPath,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Updates the title and/or description of a work item in TFS and returns the updated work item.
     /// </summary>
     /// <param name="workItemId">The work item ID.</param>
