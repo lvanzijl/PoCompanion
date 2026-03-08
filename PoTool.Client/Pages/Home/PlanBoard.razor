@@ -412,12 +412,12 @@
         {
             var epicName = feature.ParentTfsId.HasValue && epicLookup.TryGetValue(feature.ParentTfsId.Value, out var name) ? name : null;
 
-            // Determine which zone this feature belongs to
+            // Determine which zone this feature belongs to by matching iteration path to sprint path
             var zone = BacklogZone;
             foreach (var sprintCol in _sprintColumns)
             {
                 if (!string.IsNullOrEmpty(feature.IterationPath) &&
-                    feature.IterationPath.EndsWith(sprintCol.Name, StringComparison.OrdinalIgnoreCase))
+                    NormalizeIterationPath(feature.IterationPath) == NormalizeIterationPath(sprintCol.Path))
                 {
                     zone = sprintCol.ZoneId;
                     break;
@@ -504,18 +504,29 @@
         var anyItem = _allWorkItems.FirstOrDefault(w => !string.IsNullOrEmpty(w.IterationPath));
         if (anyItem != null)
         {
-            // Extract root: "Project\Sprint1" → "Project"
-            var parts = anyItem.IterationPath.Split('\\');
-            return parts[0];
+            // Extract root: "Project\Sprint1" or "Project/Sprint1" → "Project"
+            var normalized = NormalizeIterationPath(anyItem.IterationPath);
+            var separatorIndex = normalized.IndexOf('\\');
+            return separatorIndex >= 0 ? normalized[..separatorIndex] : normalized;
         }
 
         if (_sprintColumns.Count > 0)
         {
-            var parts = _sprintColumns[0].Path.Split('\\');
-            return parts[0];
+            var normalized = NormalizeIterationPath(_sprintColumns[0].Path);
+            var separatorIndex = normalized.IndexOf('\\');
+            return separatorIndex >= 0 ? normalized[..separatorIndex] : normalized;
         }
 
         return string.Empty;
+    }
+
+    /// <summary>
+    /// Normalizes iteration paths by replacing forward slashes with backslashes and trimming,
+    /// ensuring consistent comparison regardless of path separator style.
+    /// </summary>
+    private static string NormalizeIterationPath(string path)
+    {
+        return path.Replace('/', '\\').Trim();
     }
 
     private void NavigateToPlanning()
