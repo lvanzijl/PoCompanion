@@ -350,8 +350,10 @@ De Delivery-werkruimte beantwoordt de vraag: *Wat heeft mijn team daadwerkelijk 
 
 | Kaart | Omschrijving |
 |---|---|
-| **Sprint Delivery** | Geplande vs. opgeleverde metrieken per sprint |
+| **Sprint Delivery** | Stakeholder-sprintleveringsrapport — wat er deze sprint is opgeleverd |
 | **Portfolio Delivery** | Geaggregeerd leveringsoverzicht over producten voor geselecteerd sprintbereik |
+
+> **Toekomstige uitbreiding:** Een aparte **Sprint Execution**-pagina voor interne sprintanalyse (scope-churn, voltooiingsvolgorde, onbediend werk) wordt in een toekomstige release toegevoegd.
 
 ---
 
@@ -361,7 +363,11 @@ De Delivery-werkruimte beantwoordt de vraag: *Wat heeft mijn team daadwerkelijk 
 
 > **Voormalige naam:** Sprint Trend. De pagina is verplaatst van de Trends-werkruimte naar Delivery en hernoemd.
 
-De Sprint Delivery-pagina toont voor één geselecteerde sprint de leveringssignalen: wat er opgeleverd is, hoe de scope is gewijzigd, en hoeveel PBI's en bugs verwerkt zijn. Gebruik de navigatiepijlen om door sprints te bladeren. Voor meersprint-trendanalyse ga je naar **Delivery Trends** in de Trends-werkruimte.
+De Sprint Delivery-pagina is het primaire **stakeholder-sprintleveringsrapport**. De pagina beantwoordt de vraag: *Wat hebben we deze sprint opgeleverd?*
+
+De pagina toont voor één geselecteerde sprint de leveringsresultaten: opgeleverde inspanning, scopewijziging, voltooide PBI's, voltooide features en bugactiviteit. Gebruik de navigatiepijlen om door sprints te bladeren. Voor meersprint-trendanalyse ga je naar **Delivery Trends** in de Trends-werkruimte.
+
+> **Interne sprintdiagnostiek** (scope-churn, voltooiingsvolgorde, mid-sprint-scopeanalyse) verschijnt niet op deze pagina. Deze signalen worden in een toekomstige release beschikbaar via de **Sprint Execution**-pagina.
 
 **Navigatiehiërarchie:**
 ```
