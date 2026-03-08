@@ -2,6 +2,14 @@
   {
     "date": "2026-03-08",
     "type": "Changed",
+    "title": "Legacy /workspace/planning redirect removed",
+    "impact": "The legacy Planning workspace route has been removed entirely; Planning is now accessed only via /home/planning.",
+    "area": "Planning",
+    "link": "/home/planning"
+  },
+  {
+    "date": "2026-03-08",
+    "type": "Changed",
     "title": "Legacy Plan Board removed from Planning workspace",
     "impact": "The legacy Plan Board page and its backend have been removed. The Planning workspace now shows a placeholder for a future replacement board.",
     "area": "Planning",

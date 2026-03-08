@@ -743,7 +743,7 @@
         _breadcrumbs = new List<BreadcrumbItem>
         {
             new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
-            new("Planning (Future)", WorkspaceRoutes.PlanningWorkspace2, icon: Icons.Material.Filled.CalendarMonth),
+            new("Planning (Future)", WorkspaceRoutes.PlanningWorkspace, icon: Icons.Material.Filled.CalendarMonth),
             new("Product Roadmaps", null, disabled: true, icon: Icons.Material.Filled.Map)
         };
     }
@@ -755,7 +755,7 @@
 
     private void NavigateToPlanning()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.PlanningWorkspace2);
+        NavigationManager.NavigateTo(WorkspaceRoutes.PlanningWorkspace);
     }
 
     private void NavigateToHealth()
