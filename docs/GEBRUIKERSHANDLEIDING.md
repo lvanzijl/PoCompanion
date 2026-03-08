@@ -21,7 +21,8 @@
 8. [Delivery-werkruimte](#8-delivery-werkruimte)
    - 8.1 [Sprint Delivery](#81-sprint-delivery)
    - 8.2 [Sprint-activiteit](#82-sprint-activiteit)
-   - 8.3 [Portfolio Delivery](#83-portfolio-delivery)
+   - 8.3 [Sprint Execution](#83-sprint-execution)
+   - 8.4 [Portfolio Delivery](#84-portfolio-delivery)
 9. [Trends-werkruimte — Verleden](#9-trends-werkruimte--verleden)
    - 9.1 [Pull Request-inzichten](#91-pull-request-inzichten)
    - 9.2 [PR Delivery Insights](#92-pr-delivery-insights)
@@ -351,9 +352,10 @@ De Delivery-werkruimte beantwoordt de vraag: *Wat heeft mijn team daadwerkelijk 
 | Kaart | Omschrijving |
 |---|---|
 | **Sprint Delivery** | Stakeholder-sprintleveringsrapport — wat er deze sprint is opgeleverd |
+| **Sprint Execution** | Interne sprintdiagnostiek — scopewijzigingen, voltooiingsvolgorde, onbediend werk |
 | **Portfolio Delivery** | Geaggregeerd leveringsoverzicht over producten voor geselecteerd sprintbereik |
 
-> **Toekomstige uitbreiding:** Een aparte **Sprint Execution**-pagina voor interne sprintanalyse (scope-churn, voltooiingsvolgorde, onbediend werk) wordt in een toekomstige release toegevoegd.
+> **Verschil Sprint Delivery vs Sprint Execution:** Sprint Delivery is bedoeld voor stakeholders en rapporteert *wat er is opgeleverd*. Sprint Execution is bedoeld voor het interne team (PO's, scrum masters, engineers) en analyseert *hoe de sprint daadwerkelijk verliep*.
 
 ---
 
@@ -491,7 +493,60 @@ De Sprint-activiteitspagina toont de activiteitsgeschiedenis van één werkitem 
 
 ---
 
-### 8.3 Portfolio Delivery
+### 8.3 Sprint Execution
+
+**Pagina:** `/home/delivery/execution`
+
+De Sprint Execution-pagina biedt interne sprintdiagnostiek. Het is bedoeld voor Product Owners, scrum masters, engineering teams en technisch leiderschap. De pagina beantwoordt vragen die Sprint Delivery bewust niet behandelt:
+
+- Hebben we afgemaakt wat we oorspronkelijk hebben gepland?
+- Is er werk toegevoegd tijdens de sprint?
+- Welk gepland werk is niet afgerond?
+- Heeft later toegevoegd werk eerder afgeronde items ingehaald?
+- Is er werk in de sprint-backlog blijven liggen (starvation)?
+
+#### Filters
+
+| Filter | Beschrijving |
+|---|---|
+| Teamselector | Kies een team. Laadt sprints voor het geselecteerde team. |
+| Sprintselector | Kies de sprint om te analyseren. Standaard de huidige sprint. |
+| Productfilter | Optioneel filteren op product. |
+
+#### Sprint Execution-samenvatting
+
+| Metric | Beschrijving |
+|---|---|
+| Initial Scope | Aantal PBI's dat aan het begin van de sprint was toegewezen. |
+| Added During Sprint | Aantal PBI's dat na de start van de sprint is toegevoegd. |
+| Removed | Aantal PBI's dat tijdens de sprint is verwijderd. |
+| Completed | Aantal PBI's dat tijdens de sprint is voltooid. |
+| Unfinished | Aantal PBI's dat nog niet is afgerond. |
+| Starved | Aantal PBI's dat als potentieel onbediend is gemarkeerd. |
+
+#### Voltooiingsvolgorde
+
+Chronologische lijst van PBI's die tijdens de sprint zijn voltooid. Toont per PBI:
+- Volgordenummer
+- Titel
+- Product
+- Inspanning (story points)
+- Voltooiingstijdstip
+- Oorsprong (Planned / Added)
+
+#### Starvation-signalen
+
+PBI's die deel uitmaakten van de oorspronkelijke sprintscope maar niet zijn afgerond, terwijl later toegevoegd werk wél is voltooid. Dit zijn signalen voor mogelijke prioriteitsinversie of capaciteitsproblemen.
+
+#### Typische gebruiksscenario's
+
+- **Retrospectief:** Beoordeel of de sprint is verlopen zoals gepland.
+- **Sprintanalyse:** Identificeer scope-churn en afronding van gepland versus ongepland werk.
+- **Capaciteitsplanning:** Gebruik starvation-signalen om bottlenecks te detecteren.
+
+---
+
+### 8.4 Portfolio Delivery
 
 **Pagina:** `/home/delivery/portfolio`
 
