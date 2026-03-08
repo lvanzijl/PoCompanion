@@ -28,6 +28,8 @@ public sealed class RoadmapAnalyticsServiceTests
         var result = RoadmapAnalyticsService.ComputeLocalAnalytics(1, Array.Empty<WorkItemDto>());
 
         Assert.AreEqual(0, result.TotalEffort);
+        Assert.AreEqual(0, result.DeliveredEffort);
+        Assert.AreEqual(0, result.RemainingEffort);
         Assert.AreEqual(0, result.PbiCount);
         Assert.IsNull(result.EpicAgeDays);
         Assert.IsNull(result.LastActivityDays);
@@ -46,7 +48,9 @@ public sealed class RoadmapAnalyticsServiceTests
 
         var result = RoadmapAnalyticsService.ComputeLocalAnalytics(100, workItems);
 
-        Assert.AreEqual(13, result.TotalEffort); // 5 + 8, not 3 (Closed)
+        Assert.AreEqual(16, result.TotalEffort); // 5 + 8 + 3 (all PBIs)
+        Assert.AreEqual(13, result.RemainingEffort); // 5 + 8 (active only)
+        Assert.AreEqual(3, result.DeliveredEffort); // 3 (Closed)
         Assert.AreEqual(3, result.PbiCount); // all PBIs including Closed
     }
 
@@ -84,7 +88,7 @@ public sealed class RoadmapAnalyticsServiceTests
     }
 
     [TestMethod]
-    public void ComputeLocalAnalytics_DoneAndRemovedExcludedFromEffort()
+    public void ComputeLocalAnalytics_DoneAndRemovedExcludedFromRemainingEffort()
     {
         var workItems = new List<WorkItemDto>
         {
@@ -96,7 +100,9 @@ public sealed class RoadmapAnalyticsServiceTests
 
         var result = RoadmapAnalyticsService.ComputeLocalAnalytics(100, workItems);
 
-        Assert.AreEqual(10, result.TotalEffort); // only Active
+        Assert.AreEqual(18, result.TotalEffort); // 10 + 5 + 3 (all PBIs)
+        Assert.AreEqual(10, result.RemainingEffort); // only Active
+        Assert.AreEqual(8, result.DeliveredEffort); // Done + Removed: 5 + 3
         Assert.AreEqual(3, result.PbiCount); // all PBIs counted
     }
 
@@ -301,6 +307,56 @@ public sealed class RoadmapAnalyticsServiceTests
             .ThrowsAsync(new Exception("API error"));
 
         var result = await _service.LoadBacklogHealthAsync(1);
+
+        Assert.IsEmpty(result);
+    }
+
+    #endregion
+
+    #region LoadDependencySignalsAsync
+
+    [TestMethod]
+    public async Task LoadDependencySignalsAsync_WithDependencies_ReturnsAffectedIds()
+    {
+        _workItemsClientMock
+            .Setup(m => m.GetDependencyGraphAsync(It.IsAny<string?>(), It.Is<string?>(s => s == "100,200"), It.IsAny<string?>()))
+            .ReturnsAsync(new DependencyGraphDto
+            {
+                Nodes = new List<DependencyNode>
+                {
+                    new() { WorkItemId = 100, DependencyCount = 1, DependentCount = 0 },
+                    new() { WorkItemId = 200, DependencyCount = 0, DependentCount = 0 },
+                },
+                Links = new List<DependencyLink>(),
+                CriticalPaths = new List<DependencyChain>(),
+                BlockedWorkItemIds = new List<int>(),
+                CircularDependencies = new List<CircularDependency>(),
+                AnalysisTimestamp = DateTimeOffset.UtcNow,
+            });
+
+        var result = await _service.LoadDependencySignalsAsync(new[] { 100, 200 });
+
+        Assert.HasCount(1, result);
+        CollectionAssert.Contains(result.ToList(), 100);
+        CollectionAssert.DoesNotContain(result.ToList(), 200);
+    }
+
+    [TestMethod]
+    public async Task LoadDependencySignalsAsync_ApiThrows_ReturnsEmptySet()
+    {
+        _workItemsClientMock
+            .Setup(m => m.GetDependencyGraphAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .ThrowsAsync(new Exception("API error"));
+
+        var result = await _service.LoadDependencySignalsAsync(new[] { 100 });
+
+        Assert.IsEmpty(result);
+    }
+
+    [TestMethod]
+    public async Task LoadDependencySignalsAsync_EmptyIds_ReturnsEmptySet()
+    {
+        var result = await _service.LoadDependencySignalsAsync(Array.Empty<int>());
 
         Assert.IsEmpty(result);
     }

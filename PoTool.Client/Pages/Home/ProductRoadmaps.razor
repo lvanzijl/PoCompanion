@@ -189,11 +189,34 @@
                                                     TFS ID: @epic.TfsId
                                                 </MudText>
 
+                                                @* Progress and effort signals *@
+                                                @if (epic.TotalEffort > 0)
+                                                {
+                                                    <MudStack Spacing="0" Class="mt-1">
+                                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                                @epic.DeliveredEffort / @epic.TotalEffort SP (@epic.ProgressPercent%)
+                                                            </MudText>
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                                Remaining: @epic.RemainingEffort
+                                                            </MudText>
+                                                        </MudStack>
+                                                        <MudProgressLinear Value="@epic.ProgressPercent"
+                                                                           Color="@GetProgressColor(epic.ProgressPercent)"
+                                                                           Size="Size.Small"
+                                                                           Rounded="true"
+                                                                           Class="mt-1" />
+                                                    </MudStack>
+                                                }
+                                                else
+                                                {
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                                        No effort estimated
+                                                    </MudText>
+                                                }
+
                                                 @* Analytics indicators *@
                                                 <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mt-1">
-                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
-                                                        Effort: @epic.TotalEffort
-                                                    </MudChip>
                                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
                                                         PBIs: @epic.PbiCount
                                                     </MudChip>
@@ -206,6 +229,12 @@
                                                 </MudStack>
 
                                                 @* Warning signals *@
+                                                @if (epic.HasDependencies)
+                                                {
+                                                    <MudText Typo="Typo.caption" Color="Color.Info">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Link" Size="Size.Small" Class="mr-1" />Has dependencies
+                                                    </MudText>
+                                                }
                                                 @if (epic.ExceedsVelocity)
                                                 {
                                                     <MudText Typo="Typo.caption" Color="Color.Warning">
@@ -603,6 +632,11 @@
                             OrderNumber = orderNumber++,
                             TfsUrl = BuildTfsUrl(epic.TfsId),
                             TotalEffort = localAnalytics.TotalEffort,
+                            DeliveredEffort = localAnalytics.DeliveredEffort,
+                            RemainingEffort = localAnalytics.RemainingEffort,
+                            ProgressPercent = localAnalytics.TotalEffort > 0
+                                ? (int)Math.Round(100.0 * localAnalytics.DeliveredEffort / localAnalytics.TotalEffort)
+                                : 0,
                             PbiCount = localAnalytics.PbiCount,
                             EpicAgeDays = localAnalytics.EpicAgeDays,
                             LastActivityDays = localAnalytics.LastActivityDays,
@@ -611,7 +645,9 @@
                         });
                     }
 
-                    // Load forecast data in parallel for all roadmap epics
+                    // Load forecast data and dependency signals in parallel for all roadmap epics
+                    var epicTfsIds = lane.Epics.Select(e => e.TfsId).ToList();
+                    var dependencyTask = AnalyticsService.LoadDependencySignalsAsync(epicTfsIds);
                     var forecastTasks = lane.Epics
                         .Select(async epic =>
                         {
@@ -623,7 +659,13 @@
                                 epic.Confidence = forecast.Confidence;
                             }
                         });
-                    await Task.WhenAll(forecastTasks);
+                    await Task.WhenAll(forecastTasks.Append(dependencyTask));
+
+                    var epicIdsWithDependencies = dependencyTask.Result;
+                    foreach (var epic in lane.Epics)
+                    {
+                        epic.HasDependencies = epicIdsWithDependencies.Contains(epic.TfsId);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -960,6 +1002,10 @@
 
         // Analytics signals — populated from RoadmapAnalyticsService
         public int TotalEffort { get; set; }
+        public int DeliveredEffort { get; set; }
+        public int RemainingEffort { get; set; }
+        public int ProgressPercent { get; set; }
+        public bool HasDependencies { get; set; }
         public int PbiCount { get; set; }
         public int? SprintsRemaining { get; set; }
         public bool ExceedsVelocity { get; set; }
@@ -975,6 +1021,13 @@
         if (sprintsRemaining <= 3) return Color.Success;
         if (sprintsRemaining <= 6) return Color.Warning;
         return Color.Error;
+    }
+
+    private static Color GetProgressColor(int progressPercent)
+    {
+        if (progressPercent >= 75) return Color.Success;
+        if (progressPercent >= 25) return Color.Info;
+        return Color.Warning;
     }
 
     private static Color GetLastActivityColor(int days)

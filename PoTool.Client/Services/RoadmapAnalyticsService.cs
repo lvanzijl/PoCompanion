@@ -64,10 +64,17 @@ public class RoadmapAnalyticsService
             .Where(wi => !IsTerminalState(wi.State))
             .ToList();
 
-        // Effort: sum of effort on active PBIs/Bugs (reuses delivery calculation pattern)
-        var totalEffort = activeDescendants
+        // Effort: sum of effort on active PBIs/Bugs (remaining work)
+        var remainingEffort = activeDescendants
             .Where(wi => wi.Type is "Product Backlog Item" or "Bug")
             .Sum(wi => wi.Effort ?? 0);
+
+        // Delivered effort: sum of effort on terminal-state PBIs/Bugs
+        var deliveredEffort = descendants
+            .Where(wi => wi.Type is "Product Backlog Item" or "Bug" && IsTerminalState(wi.State))
+            .Sum(wi => wi.Effort ?? 0);
+
+        var totalEffort = deliveredEffort + remainingEffort;
 
         var pbiCount = pbis.Count;
 
@@ -95,7 +102,40 @@ public class RoadmapAnalyticsService
             lastActivityDays = (int)(DateTimeOffset.UtcNow - mostRecent).TotalDays;
         }
 
-        return new EpicLocalAnalytics(totalEffort, pbiCount, epicAgeDays, lastActivityDays);
+        return new EpicLocalAnalytics(totalEffort, deliveredEffort, remainingEffort, pbiCount, epicAgeDays, lastActivityDays);
+    }
+
+    /// <summary>
+    /// Loads dependency signals for a set of work item IDs using the existing Dependency Graph API.
+    /// Returns a set of work item IDs that have dependency relationships (DependsOn or Blocks).
+    /// </summary>
+    public async Task<HashSet<int>> LoadDependencySignalsAsync(IEnumerable<int> workItemIds)
+    {
+        var result = new HashSet<int>();
+        try
+        {
+            var idsParam = string.Join(",", workItemIds);
+            if (string.IsNullOrEmpty(idsParam))
+                return result;
+
+            var graph = await _workItemsClient.GetDependencyGraphAsync(null, idsParam, null);
+            if (graph?.Nodes == null)
+                return result;
+
+            foreach (var node in graph.Nodes)
+            {
+                if (node.DependencyCount > 0 || node.DependentCount > 0)
+                {
+                    result.Add(node.WorkItemId);
+                }
+            }
+        }
+        catch
+        {
+            // Dependency data unavailable — skip gracefully
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -173,12 +213,16 @@ public class RoadmapAnalyticsService
 /// <summary>
 /// Locally computed analytics for a roadmap epic, derived from cached work item data.
 /// </summary>
-/// <param name="TotalEffort">Total remaining effort (story points) across active PBIs/Bugs.</param>
+/// <param name="TotalEffort">Total effort (story points) across all PBIs/Bugs (delivered + remaining).</param>
+/// <param name="DeliveredEffort">Effort (story points) from completed PBIs/Bugs (Closed/Done/Removed).</param>
+/// <param name="RemainingEffort">Effort (story points) from active PBIs/Bugs (not yet completed).</param>
 /// <param name="PbiCount">Total number of PBIs and Bugs under this epic.</param>
 /// <param name="EpicAgeDays">Days since the epic was created, or null if creation date unavailable.</param>
 /// <param name="LastActivityDays">Days since the most recent activity on the epic or its descendants.</param>
 public sealed record EpicLocalAnalytics(
     int TotalEffort,
+    int DeliveredEffort,
+    int RemainingEffort,
     int PbiCount,
     int? EpicAgeDays,
     int? LastActivityDays);
