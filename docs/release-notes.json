@@ -2,6 +2,14 @@
   {
     "date": "2026-03-08",
     "type": "Fixed",
+    "title": "Roadmap overview now links to product editor",
+    "impact": "Each product lane on Product Roadmaps now shows an Edit roadmap action that opens the correct per-product roadmap editor without making the overview itself editable.",
+    "area": "Planning",
+    "link": "/planning/product-roadmaps"
+  },
+  {
+    "date": "2026-03-08",
+    "type": "Fixed",
     "title": "Roadmap epics now preserve TFS order on refresh",
     "impact": "Roadmap overview and editor now keep using TFS backlog priorities for epic discovery and reordering, so roadmap membership and ordering stay aligned after refresh unless priorities must be recovered.",
     "area": "Planning",

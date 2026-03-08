@@ -478,6 +478,7 @@ When multiple linked work items resolve to different categories, the highest-pri
 | Breadcrumb | `Home › Planning (Future) › Product Roadmaps`. |
 | Read-only chip | Indicates this is a read-only view. Epic editing is done in the Product Roadmap editor page. |
 | Product lanes | Horizontal scrollable container with one lane per product. Each lane shows the product name and epic count. |
+| Edit roadmap button | A visible **Edit roadmap** button in each product lane header opens the Product Roadmap Editor for that specific product. The lane remains read-only for roadmap content on the overview page. |
 | Product lane ordering | Derived from the product's root Objective work item BacklogPriority in TFS. TfsId used as stable tie-breaker when priorities collide. |
 | Move Earlier/Later buttons | Swap the exact current Objective BacklogPriority value with the neighbouring product's Objective in TFS, preserving the surrounding backlog order. Disabled at boundaries (first/last) and during reorder operations. After reorder: writes to TFS → refreshes cache → reloads page from cache. |
 | Roadmap epic ordering | Derived from each Epic work item's BacklogPriority in TFS. TfsId used as stable tie-breaker when priorities collide. |
@@ -489,7 +490,7 @@ When multiple linked work items resolve to different categories, the highest-pri
 | Snapshots menu | Dropdown menu with snapshot actions: **Create Snapshot** (captures the current roadmap state — product order, epic order, titles, TFS IDs — into the application database via API; disabled when no products are loaded), **View Snapshots** (opens a dialog listing all stored snapshots with timestamp, description, product/epic counts, and actions to compare or delete). Snapshots are stored in persistent application-side storage (database) and never modify TFS data. Snapshots persist across browser sessions and are visible across devices/users. |
 | Drift detection | From the snapshot list, the PO can compare any snapshot against the current roadmap. The comparison dialog shows per-product drift: unchanged epics, epics moved earlier or later, newly added epics, and removed epics. Visual drift indicators use color-coded chips (green=unchanged, blue=earlier, orange=later, green-filled=added, red=removed). |
 
-**Outgoing navigation:** `/home`, `/home/planning`, `/home/health`
+**Outgoing navigation:** `/home`, `/home/planning`, `/home/health`, `/planning/product-roadmaps/{productId}`
 
 ---
 

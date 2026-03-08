@@ -947,12 +947,13 @@ Deze pagina beantwoordt de vraag: *Wat zijn de geplande epics per product op de 
 - De **epicvolgorde** binnen een product wordt bepaald door de **BacklogPriority** van elk Epic-werkitem in TFS. Bij gelijke waarden wordt het TFS-ID als stabiele tiebreaker gebruikt.
 - Elke epickaart toont: volgnummer, epictitel, TFS-ID en een link om de epic in TFS te openen.
 - Daarnaast tonen epickaarten **compacte analyticsindicatoren**: inspanningstotaal, aantal PBI's, geschatte sprints, snelheidswaarschuwingen, verfijnings-/validatiegezondheid, epicleeftijd, laatste activiteit en betrouwbaarheidsniveau. Deze indicatoren zijn uitsluitend informatief en wijzigen de roadmap-volgorde of het roadmap-lidmaatschap niet. Zie [Roadmap Analytics](#roadmap-analytics) hieronder voor details.
+- In de kop van elke productbaan staat een zichtbare knop **Edit roadmap**. Daarmee open je direct de roadmap-editor voor dat specifieke product via `/planning/product-roadmaps/{productId}`.
 
 #### Productbanen herschikken
 
 Met de pijlknoppen in de kop van elke baan kun je een product eerder of later plaatsen. Dit werkt door de **huidige, echte BacklogPriority-waarden** van de twee naburige root Objective-werkitems in TFS exact met elkaar om te wisselen (swap). Er worden daarbij geen kunstmatige tussenwaarden gebruikt; de omliggende backlogvolgorde in TFS blijft dus intact. Na het herschikken wordt de wijziging naar TFS geschreven, de cache vernieuwd en worden de gegevens opnieuw geladen vanuit de cache. De eerste en laatste baan hebben de bijbehorende knop uitgeschakeld.
 
-> **Let op:** Epics bewerken doe je op de **Product Roadmap-editorpagina**, niet op deze overzichtspagina.
+> **Let op:** De overzichtspagina blijft alleen-lezen voor roadmapinhoud. Gebruik per product de knop **Edit roadmap** om de **Product Roadmap-editorpagina** te openen.
 
 #### Roadmap Reporting
 
@@ -1009,6 +1010,8 @@ Via het **Snapshots**-menu rechtsboven kun je momentopnamen van de huidige roadm
 ### 10.4 Product Roadmap Editor
 
 **Pagina:** `/planning/product-roadmaps/{productId}`
+
+Je opent deze pagina vanuit **Product Roadmaps** door in de kop van de gewenste productbaan op **Edit roadmap** te klikken.
 
 De Product Roadmap Editor is een bewerkingspagina waarmee een Product Owner de roadmap van één product kan beheren. Je kunt epics toevoegen aan of verwijderen van de roadmap, de volgorde wijzigen, en basale epicgegevens (titel en beschrijving) bewerken. Naast de bestaande knoppen ondersteunt de editor ook **drag-and-drop**: sleep epics tussen de twee kolommen of versleep roadmap-epics om de volgorde te wijzigen.
 
