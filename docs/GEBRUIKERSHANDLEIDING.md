@@ -950,7 +950,7 @@ Deze pagina beantwoordt de vraag: *Wat zijn de geplande epics per product op de 
 
 #### Productbanen herschikken
 
-Met de pijlknoppen in de kop van elke baan kun je een product eerder of later plaatsen. Dit werkt door de BacklogPriority-waarden van de twee naburige Objective-werkitems in TFS om te wisselen (swap). Na het herschikken wordt de wijziging naar TFS geschreven, de cache vernieuwd en worden de gegevens opnieuw geladen vanuit de cache. De eerste en laatste baan hebben de bijbehorende knop uitgeschakeld.
+Met de pijlknoppen in de kop van elke baan kun je een product eerder of later plaatsen. Dit werkt door de **huidige, echte BacklogPriority-waarden** van de twee naburige root Objective-werkitems in TFS exact met elkaar om te wisselen (swap). Er worden daarbij geen kunstmatige tussenwaarden gebruikt; de omliggende backlogvolgorde in TFS blijft dus intact. Na het herschikken wordt de wijziging naar TFS geschreven, de cache vernieuwd en worden de gegevens opnieuw geladen vanuit de cache. De eerste en laatste baan hebben de bijbehorende knop uitgeschakeld.
 
 > **Let op:** Epics bewerken doe je op de **Product Roadmap-editorpagina**, niet op deze overzichtspagina.
 
