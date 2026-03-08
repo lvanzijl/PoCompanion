@@ -668,6 +668,21 @@ public class SprintTrendProjectionService
                     epicTitle = epicWi.Title;
                 }
 
+                // Build individual completed PBI details for drill-down
+                var completedPbis = sprintCompletedPbiIds == null
+                    ? Array.Empty<CompletedPbiDto>()
+                    : childPbis
+                        .Where(pbi => sprintCompletedPbiIds.Contains(pbi!.TfsId))
+                        .Select(pbi => new CompletedPbiDto
+                        {
+                            TfsId = pbi!.TfsId,
+                            Title = pbi.Title,
+                            Effort = pbi.Effort ?? 0,
+                            ClosedDate = pbi.ClosedDate
+                        })
+                        .OrderBy(p => p.Title)
+                        .ToArray();
+
                 results.Add(new FeatureProgressDto
                 {
                     FeatureId = feature.WorkItemId,
@@ -684,7 +699,8 @@ public class SprintTrendProjectionService
                     SprintProgressionDelta = sprintProgressionDelta,
                     SprintEffortDelta = sprintEffortDelta,
                     SprintCompletedPbiCount = sprintCompletedPbiCount,
-                    SprintCompletedInSprint = featureCompletedInSprint
+                    SprintCompletedInSprint = featureCompletedInSprint,
+                    CompletedPbis = completedPbis
                 });
             }
         }

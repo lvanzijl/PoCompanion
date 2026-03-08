@@ -49,7 +49,8 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       └──► /home/planning  (cross-workspace)                       │
   │                                                                   │
   ├──► /home/delivery  (Delivery)                                     │
-  │       ├──► /home/delivery/sprint  (Sprint Delivery)               │
+  │       ├──► /home/delivery/sprint  (Sprint Delivery — drill-down)  │
+  │       │       ├──► Product → Epic → Feature → PBIs (in-page)      │
   │       │       └──► /home/delivery/sprint/activity/{id}            │
   │       └──► /home/delivery/portfolio  (Portfolio Delivery)          │
   │                                                                   │
@@ -550,37 +551,34 @@ When multiple linked work items resolve to different categories, the highest-pri
 
 > **Route alias:** `/home/sprint-trend` (legacy route, kept for backward compatibility)
 
-**Purpose:** Stakeholder-facing sprint delivery report. Answers the question: *"What did we deliver during this sprint?"* Shows delivered effort, scope change (Δ Effort pts), completed PBIs, completed features, and bug activity per product and epic. Use navigation arrows to move between sprints. Drill down from epics into a feature modal, and from features into activity history. For multi-sprint trend analysis, use Delivery Trends (`/home/trends/delivery`). Located in the Delivery workspace.
+**Purpose:** Stakeholder-facing sprint delivery report. Answers the question: *"What did we deliver during this sprint?"* Shows delivered effort, scope change (Δ Effort pts), completed PBIs, completed features, and bug activity. Use navigation arrows to move between sprints. Supports hierarchical drill-down from portfolio level to individual completed PBIs. For multi-sprint trend analysis, use Delivery Trends (`/home/trends/delivery`). Located in the Delivery workspace.
 
 > **Note:** This page focuses exclusively on delivery outcomes. Internal sprint execution diagnostics (scope churn, completion order, starved work) will appear on a separate Sprint Execution page in a future release.
 
-**Navigation hierarchy:**
+**Navigation hierarchy (drill-down):**
 ```
 Sprint Delivery
-  → Epic table (where effort landed)
-      → Feature modal (how work distributed within an epic)
-          → Activity history (what exactly changed)
+  → Portfolio summary (aggregated delivery per product)
+      → Product (epic delivery breakdown)
+          → Epic (feature delivery breakdown)
+              → Feature (completed PBIs)
 ```
+
+Each level only appears when the user drills into the previous one. Users navigate forward by clicking a row and backward via the drill-down breadcrumb bar.
 
 | Functionality | Description |
 |---|---|
 | Breadcrumb | `Home › Delivery › Sprint Delivery`. |
-| Sprint navigation arrows | Navigate backwards and forwards one sprint at a time through the sprint history. |
-| Product filter | Filters metrics to a specific product. |
-| Team filter | Filters metrics to a specific team. |
-| All Products sprint summary | Top-level stakeholder summary showing: Completed PBIs, Effort delivered, Scope Change (Δ Effort), Completed Features, and Bugs (Created / Worked / Closed). Completed PBIs and Effort delivered include comparison badges against the previous sprint. |
-| Effort distribution chart | When multiple products are visible, shows a horizontal bar chart of effort distribution by product. |
-| Product sections | One collapsible panel per product. Products with no delivery signal (Delivered = 0, Δ Effort = 0, no activity) are hidden automatically. |
-| Collapsed product summary | When collapsed, each product shows compact chips: Delivered (pts), Δ Effort (pts), PBIs, and Bugs (Created / Worked / Closed). |
-| Epic table | Visible when a product panel is expanded. Columns: Epic (ID + title), Progress (completed/total effort), Delivered (pts completed this sprint), Δ Effort (pts scope change this sprint), Features ✓ (features that reached Done during this sprint), PBIs ✓ (PBIs that transitioned to Done during this sprint), Actions. Epics with Delivered = 0, Δ Effort = 0, and no PBI activity are hidden. |
-| Epic column definitions | **Progress** = completed effort / total effort. **Delivered** = effort of PBIs completed in this sprint. **Δ Effort** = effort_end_of_sprint − effort_start_of_sprint (absolute pts, positive = scope added, negative = scope reduced). **Features ✓** = count of features whose state transitioned to Done during this sprint. **PBIs ✓** = count of PBIs that transitioned to Done during this sprint. |
-| Feature modal | Opened via the list icon on an epic row. Modal columns: Feature (ID + title), Progress, Delivered (pts), Δ Effort (pts), PBIs ✓. PBIs ✓ = count of PBIs that transitioned to Done during the sprint under this feature. Feature progress bars are thinner and slightly dimmer than epic bars. Features with zero activity are hidden. |
-| Activity history link | History icon on each epic row navigates to the Work Item Activity page for that epic. |
-| Stale data warning | If the calculated sprint metrics are older than the latest data sync, shows a warning with a "Recompute" button to refresh the analysis. |
+| Sprint navigation arrows | Navigate backwards and forwards one sprint at a time through the sprint history. Changing sprint resets drill-down to portfolio level. |
+| Drill-down breadcrumb bar | Shows the current position in the hierarchy (Portfolio › Product › Epic › Feature). Click a breadcrumb or the back arrow to return to a higher level. |
+| Portfolio summary | Top-level stakeholder summary showing: Completed PBIs, Effort delivered, Scope Change (Δ Effort), Completed Features, and Bugs (Created / Worked / Closed). Completed PBIs and Effort delivered include comparison badges against the previous sprint. |
+| Effort distribution chart | When multiple products have delivery, shows a horizontal bar chart of effort distribution by product. |
+| Product delivery table | Table of products with delivery activity. Columns: Product, Delivered (pts), Completed PBIs, Completed Features, Scope Change. Click a product row to drill into its epic breakdown. Products with no delivery signal are hidden. |
+| Epic delivery table | Shown after selecting a product. Columns: Epic (ID + title), Progress, Delivered (pts), Δ Effort (pts), Features ✓, PBIs ✓, History. Click an epic row to drill into its feature breakdown. History icon navigates to the Work Item Activity page. |
+| Feature delivery table | Shown after selecting an epic. Columns: Feature (ID + title), Progress, Delivered (pts), Δ Effort (pts), PBIs ✓. Click a feature row to see completed PBIs. Features with zero activity are hidden. |
+| Completed PBIs table | Shown after selecting a feature. Columns: Work Item (ID, linked to TFS), Title, Completed (date), Effort (pts). Displays total count and effort. |
 | Back to Delivery button | Returns to `/home/delivery`. |
 | Home button | Returns to `/home`. |
-
-**Removed:** Sprint Δ% column (replaced by Δ Effort in absolute pts). Progression Δ tile (replaced by Scope Change and Completed Features). The ✓ symbol always means *completed during this sprint*.
 
 **Outgoing navigation:** `/home/delivery/sprint/activity/{id}`, `/home/delivery`, `/home`
 
@@ -719,7 +717,7 @@ Sprint Delivery
 | Validation Queue | `/home/validation-queue` | Validation Triage "Open queue" | Start fix session per rule | `/home/validation-fix?category=...&ruleId=...`, `/home/validation-triage`, `/home` |
 | Validation Fix Session | `/home/validation-fix` | Validation Queue "Start fix session" | Review items one-by-one, dismiss or skip | `/home/validation-queue?category=...`, `/home` |
 | Delivery | `/home/delivery` | Home workspace card, global header | Click delivery view | `/home/delivery/sprint`, `/home/delivery/portfolio`, `/home/health`, `/home/trends`, `/home/planning` |
-| Sprint Delivery | `/home/delivery/sprint` | Delivery workspace, Planning workspace | Stakeholder sprint delivery report; navigate sprints | `/home/delivery/sprint/activity/{id}`, `/home/delivery`, `/home` |
+| Sprint Delivery | `/home/delivery/sprint` | Delivery workspace, Planning workspace | Stakeholder sprint delivery report; hierarchical drill-down: Portfolio → Product → Epic → Feature → PBIs | `/home/delivery/sprint/activity/{id}`, `/home/delivery`, `/home` |
 | Portfolio Delivery | `/home/delivery/portfolio` | Delivery workspace | Select sprint range, view aggregated delivery snapshot | `/home/delivery` |
 | Trends (Past) | `/home/trends` | Home workspace card | Click trend signal | `/home/portfolio-progress`, `/home/trends/delivery`, `/home/bugs`, `/home/pull-requests`, `/home/pr-delivery-insights`, `/home/pipelines`, `/home/pipeline-insights`, `/home/delivery`, `/home/health`, `/home/planning` |
 | Delivery Trends | `/home/trends/delivery` | Trends workspace | Select sprint range | `/home/trends`, `/home` |
