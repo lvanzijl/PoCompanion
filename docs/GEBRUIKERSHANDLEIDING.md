@@ -882,7 +882,7 @@ Een alleen-lezen visueel overzicht van werkitem-afhankelijkheden tussen epics en
 
 **Pagina:** `/planning/plan-board`
 
-Het Plan Board is het operationele planbord voor sprintplanning. Hiermee worden features visueel in aankomende sprints geplaatst via drag-and-drop.
+Het Plan Board is het operationele planbord voor sprintplanning. Hiermee worden features visueel in aankomende sprints geplaatst via drag-and-drop. Het bord toont daarnaast capaciteitsindicatoren die helpen bij het nemen van weloverwogen planningsbeslissingen.
 
 #### Doel
 
@@ -895,6 +895,23 @@ Het bord bestaat uit kolommen:
 - **Backlog** — Features die nog niet aan een sprint zijn toegewezen.
 - **Sprint 1, 2, 3** — De eerstvolgende drie toekomstige sprints. Elke kolom toont de sprintnaam en datumbereik.
 
+#### Sprintcapaciteitsindicator
+
+Elke sprintkolom toont bovenaan een capaciteitsindicator. Deze is gebaseerd op de **mediaan velocity** (P50) van de laatste afgeronde sprints en geeft een inschatting van hoeveel werk het team historisch gezien per sprint levert.
+
+De indicator toont:
+
+- **Capacity** — De geschatte sprintcapaciteit in punten, afgeleid van historische velocity.
+- **Assigned** — De totale effort van alle features die in de sprint zijn geplaatst (som van effort-schattingen).
+- **Remaining** — Het verschil tussen capaciteit en toegewezen effort.
+- **Voortgangsbalk** — Een visuele weergave van de benutting: groen (normaal), oranje (bijna vol), rood (overschreden).
+
+Wanneer de toegewezen effort de capaciteit overschrijdt, wordt een waarschuwingssignaal getoond:
+
+> ⚠ Exceeds historical capacity
+
+Dit is een **planningshint**, geen harde regel. Het team bepaalt zelf of de planning realistisch is.
+
 #### Feature-kaarten
 
 Elke kaart vertegenwoordigt een **Feature** en toont:
@@ -902,8 +919,9 @@ Elke kaart vertegenwoordigt een **Feature** en toont:
 - **Titel** van de feature
 - **Parent epic** naam (indien beschikbaar)
 - **Effort** schatting (indien ingevuld)
+- **Waarschuwing** wanneer geen effort-schatting is ingevuld (⚠ No estimate)
 
-Kaarten zijn visueel lichtgewicht en goed leesbaar.
+Features zonder schatting worden visueel gemarkeerd met een oranje rand, zodat ze opvallen tijdens het plannen.
 
 #### Drag-and-drop planning
 
@@ -911,7 +929,7 @@ Kaarten zijn visueel lichtgewicht en goed leesbaar.
 - Sleep een feature tussen sprints om de toewijzing te wijzigen.
 - Herorden features binnen een kolom door ze te slepen.
 
-Bij het verplaatsen van een feature naar een andere kolom wordt het iteratiepad in TFS bijgewerkt.
+Bij het verplaatsen van een feature naar een andere kolom wordt het iteratiepad in TFS bijgewerkt. De capaciteitsindicatoren worden direct bijgewerkt na elke verplaatsing.
 
 #### Productselectie
 

@@ -2,10 +2,12 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Models
+@using PoTool.Shared.Metrics
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject WorkItemService WorkItemService
 @inject SprintService SprintService
+@inject IMetricsClient MetricsClient
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject ILogger<PlanBoard> Logger
@@ -140,15 +142,21 @@
                     @* Sprint Columns *@
                     @foreach (var sprint in _sprintColumns)
                     {
+                        var assignedEffort = GetAssignedEffort(sprint.ZoneId);
+                        var isOvercommitted = _sprintCapacity.HasValue && assignedEffort > (int)Math.Round(_sprintCapacity.Value);
+                        var capacityInt = _sprintCapacity.HasValue ? (int)Math.Round(_sprintCapacity.Value) : (int?)null;
+                        var remaining = capacityInt.HasValue ? capacityInt.Value - assignedEffort : (int?)null;
+                        var utilization = _sprintCapacity is > 0 ? Math.Min(100, assignedEffort / _sprintCapacity.Value * 100) : (double?)null;
+
                         <div class="plan-board-column">
-                            <MudPaper Elevation="2" Class="pa-3 plan-column-paper">
+                            <MudPaper Elevation="2" Class="@($"pa-3 plan-column-paper{(isOvercommitted ? " plan-overcommitted" : "")}")">
                                 <div class="plan-column-header">
                                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-1">
                                         <MudText Typo="Typo.subtitle1">
                                             <MudIcon Icon="@Icons.Material.Filled.DateRange" Class="mr-1" Size="Size.Small" />
                                             @sprint.Name
                                         </MudText>
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                                        <MudChip T="string" Size="Size.Small" Color="@(isOvercommitted ? Color.Error : Color.Primary)" Variant="Variant.Outlined">
                                             @(_allDragItems.Count(i => i.Zone == sprint.ZoneId))
                                         </MudChip>
                                     </MudStack>
@@ -157,6 +165,47 @@
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">
                                             @sprint.StartUtc.Value.ToString("dd MMM") – @sprint.EndUtc.Value.ToString("dd MMM yyyy")
                                         </MudText>
+                                    }
+
+                                    @* Sprint Capacity Indicator *@
+                                    @if (_sprintCapacity.HasValue)
+                                    {
+                                        <div class="plan-capacity-indicator mt-2">
+                                            <MudStack Spacing="0">
+                                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                        Capacity: @capacityInt pts
+                                                    </MudText>
+                                                    <MudText Typo="Typo.caption" Color="@(isOvercommitted ? Color.Error : Color.Default)">
+                                                        Assigned: @assignedEffort pts
+                                                    </MudText>
+                                                </MudStack>
+                                                <MudProgressLinear Value="@(utilization ?? 0)"
+                                                                   Color="@GetCapacityColor(utilization ?? 0)"
+                                                                   Rounded="true"
+                                                                   Style="height: 6px;"
+                                                                   Class="my-1" />
+                                                <MudText Typo="Typo.caption" Color="@(isOvercommitted ? Color.Error : Color.Success)">
+                                                    @if (isOvercommitted)
+                                                    {
+                                                        @($"Over by {-remaining!.Value} pts")
+                                                    }
+                                                    else
+                                                    {
+                                                        @($"Remaining: {remaining!.Value} pts")
+                                                    }
+                                                </MudText>
+                                                @if (isOvercommitted)
+                                                {
+                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-1">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                                                        <MudText Typo="Typo.caption" Color="Color.Warning">
+                                                            Exceeds historical capacity
+                                                        </MudText>
+                                                    </MudStack>
+                                                }
+                                            </MudStack>
+                                        </div>
                                     }
                                 </div>
                                 <MudDropZone T="PlanBoardDragItem"
@@ -181,7 +230,7 @@
                 </div>
             </ChildContent>
             <ItemRenderer>
-                <MudCard Elevation="1" Class="plan-feature-card mb-2" Style="cursor: grab;">
+                <MudCard Elevation="1" Class="@($"plan-feature-card mb-2{(!context.Effort.HasValue ? " plan-missing-estimate" : "")}")" Style="cursor: grab;">
                     <MudCardContent Class="pa-3">
                         <MudStack Spacing="1">
                             <MudText Typo="Typo.body2" Style="font-weight: 600; line-height: 1.3;">
@@ -199,6 +248,13 @@
                                 <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined" Class="mt-1">
                                     @context.Effort SP
                                 </MudChip>
+                            }
+                            else
+                            {
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-1">
+                                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                                    <MudText Typo="Typo.caption" Color="Color.Warning">No estimate</MudText>
+                                </MudStack>
                             }
                         </MudStack>
                     </MudCardContent>
@@ -271,6 +327,19 @@
     .plan-feature-card:hover {
         box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
     }
+
+    .plan-feature-card.plan-missing-estimate {
+        border-left-color: var(--mud-palette-warning);
+    }
+
+    .plan-overcommitted {
+        border-top: 2px solid var(--mud-palette-warning);
+    }
+
+    .plan-capacity-indicator {
+        padding-top: 4px;
+        border-top: 1px solid rgba(255,255,255,0.06);
+    }
 </style>
 
 @code {
@@ -289,6 +358,10 @@
 
     // Cached hierarchy data
     private List<WorkItemDto> _allWorkItems = new();
+
+    // Capacity planning data
+    private int? _activeProfileId;
+    private double? _sprintCapacity;
 
     protected override async Task OnInitializedAsync()
     {
@@ -309,6 +382,7 @@
             }
 
             ProfileService.SetCachedActiveProfileId(activeProfile.Id);
+            _activeProfileId = activeProfile.Id;
 
             var products = await ProductService.GetProductsByOwnerAsync(activeProfile.Id);
             _products = products.ToList();
@@ -368,10 +442,11 @@
 
             // Load sprints for the product's first team
             var sprints = new List<SprintDto>();
+            var allTeamSprints = new List<SprintDto>();
             if (product.TeamIds.Count > 0)
             {
-                var teamSprints = await SprintService.GetSprintsForTeamAsync(product.TeamIds.First());
-                sprints = teamSprints
+                allTeamSprints = (await SprintService.GetSprintsForTeamAsync(product.TeamIds.First())).ToList();
+                sprints = allTeamSprints
                     .Where(s => s.EndUtc.HasValue && s.EndUtc.Value > DateTimeOffset.UtcNow)
                     .OrderBy(s => s.StartUtc)
                     .Take(3)
@@ -391,6 +466,9 @@
 
             // Categorize features into columns
             BuildDragItems(features, epicLookup);
+
+            // Load capacity calibration data (non-blocking for board display)
+            await LoadCapacityCalibrationAsync(allTeamSprints, product.Id);
         }
         catch (Exception ex)
         {
@@ -533,6 +611,60 @@
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.PlanningWorkspace);
     }
+
+    /// <summary>
+    /// Loads capacity calibration from recent completed sprints to derive sprint capacity.
+    /// Uses MedianVelocity (P50) as the sprint capacity estimate.
+    /// </summary>
+    private async Task LoadCapacityCalibrationAsync(List<SprintDto> allTeamSprints, int productId)
+    {
+        if (_activeProfileId == null) return;
+
+        // Find completed sprints (ended before now) for historical velocity
+        var completedSprintIds = allTeamSprints
+            .Where(s => s.EndUtc.HasValue && s.EndUtc.Value <= DateTimeOffset.UtcNow)
+            .OrderByDescending(s => s.EndUtc)
+            .Take(6)
+            .Select(s => s.Id)
+            .ToList();
+
+        if (completedSprintIds.Count == 0)
+        {
+            _sprintCapacity = null;
+            return;
+        }
+
+        try
+        {
+            var calibration = await MetricsClient.GetCapacityCalibrationAsync(
+                _activeProfileId.Value,
+                completedSprintIds,
+                new[] { productId });
+
+            _sprintCapacity = calibration.MedianVelocity > 0 ? calibration.MedianVelocity : null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not load capacity calibration data");
+            _sprintCapacity = null;
+        }
+    }
+
+    /// <summary>
+    /// Computes total assigned effort for a sprint zone from feature estimates.
+    /// </summary>
+    private int GetAssignedEffort(string zoneId) =>
+        _allDragItems.Where(i => i.Zone == zoneId).Sum(i => i.Effort ?? 0);
+
+    /// <summary>
+    /// Returns progress bar color based on utilization percentage.
+    /// </summary>
+    private static Color GetCapacityColor(double utilization) => utilization switch
+    {
+        > 100 => Color.Error,
+        >= 85 => Color.Warning,
+        _ => Color.Success
+    };
 
     private sealed class SprintColumn
     {
