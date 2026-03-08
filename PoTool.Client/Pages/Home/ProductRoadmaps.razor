@@ -567,7 +567,7 @@
                      if (discovery.RoadmapEpicItems.Count == 0)
                      {
                          Logger.LogWarning(
-                             "Roadmap overview product {ProductId} '{ProductName}' found no roadmap epics. Only epics with the lowercase 'roadmap' tag are shown. Epic-like count {EpicLikeCount}; configured roots [{ConfiguredRootIds}]; missing roots [{MissingRootIds}]",
+                             "Roadmap overview product {ProductId} '{ProductName}' found no roadmap epics. Only epics with the lowercase 'roadmap' tag are shown; verify that the expected epics carry that tag under the configured roots. Epic-like count {EpicLikeCount}; configured roots [{ConfiguredRootIds}]; missing roots [{MissingRootIds}]",
                              product.Id,
                              product.Name,
                              discovery.EpicLikeItems.Count,
