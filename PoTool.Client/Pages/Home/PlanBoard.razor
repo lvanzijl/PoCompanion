@@ -142,21 +142,17 @@
                     @* Sprint Columns *@
                     @foreach (var sprint in _sprintColumns)
                     {
-                        var assignedEffort = GetAssignedEffort(sprint.ZoneId);
-                        var isOvercommitted = _sprintCapacity.HasValue && assignedEffort > (int)Math.Round(_sprintCapacity.Value);
-                        var capacityInt = _sprintCapacity.HasValue ? (int)Math.Round(_sprintCapacity.Value) : (int?)null;
-                        var remaining = capacityInt.HasValue ? capacityInt.Value - assignedEffort : (int?)null;
-                        var utilization = _sprintCapacity is > 0 ? Math.Min(100, assignedEffort / _sprintCapacity.Value * 100) : (double?)null;
+                        var cap = GetSprintCapacityState(sprint.ZoneId);
 
                         <div class="plan-board-column">
-                            <MudPaper Elevation="2" Class="@($"pa-3 plan-column-paper{(isOvercommitted ? " plan-overcommitted" : "")}")">
+                            <MudPaper Elevation="2" Class="@($"pa-3 plan-column-paper{(cap.IsOvercommitted ? " plan-overcommitted" : "")}")">
                                 <div class="plan-column-header">
                                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-1">
                                         <MudText Typo="Typo.subtitle1">
                                             <MudIcon Icon="@Icons.Material.Filled.DateRange" Class="mr-1" Size="Size.Small" />
                                             @sprint.Name
                                         </MudText>
-                                        <MudChip T="string" Size="Size.Small" Color="@(isOvercommitted ? Color.Error : Color.Primary)" Variant="Variant.Outlined">
+                                        <MudChip T="string" Size="Size.Small" Color="@(cap.IsOvercommitted ? Color.Error : Color.Primary)" Variant="Variant.Outlined">
                                             @(_allDragItems.Count(i => i.Zone == sprint.ZoneId))
                                         </MudChip>
                                     </MudStack>
@@ -168,34 +164,34 @@
                                     }
 
                                     @* Sprint Capacity Indicator *@
-                                    @if (_sprintCapacity.HasValue)
+                                    @if (cap.HasCapacity)
                                     {
                                         <div class="plan-capacity-indicator mt-2">
                                             <MudStack Spacing="0">
                                                 <MudStack Row="true" Justify="Justify.SpaceBetween">
                                                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                        Capacity: @capacityInt pts
+                                                        Capacity: @cap.Capacity pts
                                                     </MudText>
-                                                    <MudText Typo="Typo.caption" Color="@(isOvercommitted ? Color.Error : Color.Default)">
-                                                        Assigned: @assignedEffort pts
+                                                    <MudText Typo="Typo.caption" Color="@(cap.IsOvercommitted ? Color.Error : Color.Default)">
+                                                        Assigned: @cap.Assigned pts
                                                     </MudText>
                                                 </MudStack>
-                                                <MudProgressLinear Value="@(utilization ?? 0)"
-                                                                   Color="@GetCapacityColor(utilization ?? 0)"
+                                                <MudProgressLinear Value="@cap.Utilization"
+                                                                   Color="@GetCapacityColor(cap.Utilization)"
                                                                    Rounded="true"
                                                                    Style="height: 6px;"
                                                                    Class="my-1" />
-                                                <MudText Typo="Typo.caption" Color="@(isOvercommitted ? Color.Error : Color.Success)">
-                                                    @if (isOvercommitted)
+                                                <MudText Typo="Typo.caption" Color="@(cap.IsOvercommitted ? Color.Error : Color.Success)">
+                                                    @if (cap.IsOvercommitted)
                                                     {
-                                                        @($"Over by {-remaining!.Value} pts")
+                                                        @($"Over by {cap.OverAmount} pts")
                                                     }
                                                     else
                                                     {
-                                                        @($"Remaining: {remaining!.Value} pts")
+                                                        @($"Remaining: {cap.Remaining} pts")
                                                     }
                                                 </MudText>
-                                                @if (isOvercommitted)
+                                                @if (cap.IsOvercommitted)
                                                 {
                                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-1">
                                                         <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
@@ -344,6 +340,7 @@
 
 @code {
     private const string BacklogZone = "backlog";
+    private const int HistoricalSprintsForCalibration = 6;
 
     private List<BreadcrumbItem> _breadcrumbs = new();
     private List<ProductDto> _products = new();
@@ -624,7 +621,7 @@
         var completedSprintIds = allTeamSprints
             .Where(s => s.EndUtc.HasValue && s.EndUtc.Value <= DateTimeOffset.UtcNow)
             .OrderByDescending(s => s.EndUtc)
-            .Take(6)
+            .Take(HistoricalSprintsForCalibration)
             .Select(s => s.Id)
             .ToList();
 
@@ -651,10 +648,23 @@
     }
 
     /// <summary>
-    /// Computes total assigned effort for a sprint zone from feature estimates.
+    /// Computes capacity state for a sprint zone including utilization and overcommitment status.
     /// </summary>
-    private int GetAssignedEffort(string zoneId) =>
-        _allDragItems.Where(i => i.Zone == zoneId).Sum(i => i.Effort ?? 0);
+    private SprintCapacityState GetSprintCapacityState(string zoneId)
+    {
+        var assigned = _allDragItems.Where(i => i.Zone == zoneId).Sum(i => i.Effort ?? 0);
+
+        if (!_sprintCapacity.HasValue || _sprintCapacity.Value <= 0)
+            return new SprintCapacityState(0, assigned, 0, 0, 0, false);
+
+        var capacity = (int)Math.Round(_sprintCapacity.Value);
+        var remaining = capacity - assigned;
+        var utilization = Math.Min(100, assigned / _sprintCapacity.Value * 100);
+        var isOvercommitted = assigned > capacity;
+        var overAmount = isOvercommitted ? assigned - capacity : 0;
+
+        return new SprintCapacityState(capacity, assigned, remaining, utilization, overAmount, isOvercommitted);
+    }
 
     /// <summary>
     /// Returns progress bar color based on utilization percentage.
@@ -684,5 +694,16 @@
         public int? Effort { get; init; }
         public string Zone { get; set; } = BacklogZone;
         public string IterationPath { get; set; } = string.Empty;
+    }
+
+    private sealed record SprintCapacityState(
+        int Capacity,
+        int Assigned,
+        int Remaining,
+        double Utilization,
+        int OverAmount,
+        bool IsOvercommitted)
+    {
+        public bool HasCapacity => Capacity > 0;
     }
 }
