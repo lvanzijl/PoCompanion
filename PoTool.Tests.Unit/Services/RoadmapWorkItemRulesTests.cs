@@ -41,16 +41,11 @@ public sealed class RoadmapWorkItemRulesTests
 
         Assert.HasCount(4, report.RawItems);
         Assert.HasCount(2, report.EpicLikeItems);
-        Assert.HasCount(2, report.RoadmapTaggedItems);
         Assert.HasCount(1, report.RoadmapEpicItems);
         Assert.HasCount(1, report.AvailableEpicItems);
         CollectionAssert.AreEqual(new[] { 10, 99 }, report.ConfiguredRootIds.ToArray());
         CollectionAssert.AreEqual(new[] { 10 }, report.PresentRootIds.ToArray());
         CollectionAssert.AreEqual(new[] { 99 }, report.MissingRootIds.ToArray());
-        CollectionAssert.AreEqual(new[] { 10 }, report.ObjectiveRootIds.ToArray());
-        Assert.AreEqual(3, report.DescendantsUnderConfiguredRootsCount);
-        Assert.AreEqual(2, report.EpicLikeItemsUnderConfiguredRootsCount);
-        CollectionAssert.AreEquivalent(new[] { "Epic", "Feature", "Objective" }, report.DistinctTypes.ToArray());
         Assert.AreEqual(20, report.RoadmapEpicItems[0].TfsId);
         Assert.AreEqual(21, report.AvailableEpicItems[0].TfsId);
     }

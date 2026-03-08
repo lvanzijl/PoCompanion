@@ -595,18 +595,6 @@
         _roadmapEpics = discovery.RoadmapEpicItems.ToList();
         _availableEpics = discovery.AvailableEpicItems.ToList();
 
-        Logger.LogInformation(
-            "Roadmap editor product {ProductId} '{ProductName}' retrieved {WorkItemCount} work items; epics before roadmap filter {EpicCountBeforeRoadmapFilter}; roadmap-tagged items {RoadmapTaggedCount}; roadmap epics after filter {RoadmapEpicCount}; configured roots [{ConfiguredRootIds}]; present roots [{PresentRootIds}]; roadmap priorities [{RoadmapPriorities}]",
-            _product.Id,
-            _product.Name,
-            discovery.RawItems.Count,
-            discovery.EpicLikeItems.Count,
-            discovery.RoadmapTaggedItems.Count,
-            _roadmapEpics.Count,
-            string.Join(", ", discovery.ConfiguredRootIds),
-            string.Join(", ", discovery.PresentRootIds),
-            string.Join(", ", _roadmapEpics.Select(epic => $"{epic.TfsId}:{epic.BacklogPriority?.ToString() ?? "null"}")));
-
         BuildDragItems();
     }
 
@@ -1041,7 +1029,7 @@
             var epicA = _roadmapEpics[indexA];
             var epicB = _roadmapEpics[indexB];
 
-            Logger.LogInformation(
+            Logger.LogDebug(
                 "Roadmap button reorder requested for product {ProductId}: epic {EpicATfsId} at index {IndexA} with priority {PriorityA}, neighbor epic {EpicBTfsId} at index {IndexB} with priority {PriorityB}.",
                 ProductId,
                 epicA.TfsId,
@@ -1080,12 +1068,6 @@
         for (var i = 0; i < _roadmapEpics.Count; i++)
         {
             var newPriority = (i + 1) * 1000.0;
-            Logger.LogInformation(
-                "Normalizing roadmap priority for product {ProductId}: epic {EpicTfsId} from {OldPriority} to {NewPriority}.",
-                ProductId,
-                _roadmapEpics[i].TfsId,
-                _roadmapEpics[i].BacklogPriority,
-                newPriority);
             _roadmapEpics[i].BacklogPriority = newPriority;
             var success = await WorkItemService.UpdateBacklogPriorityAsync(_roadmapEpics[i].TfsId, newPriority);
             if (!success)
@@ -1187,7 +1169,7 @@
             }
         }
 
-        Logger.LogInformation(
+        Logger.LogDebug(
             "Applying roadmap reorder for product {ProductId}. CurrentIndex {CurrentIndex}, TargetIndex {TargetIndex}, writes [{PriorityWrites}]",
             ProductId,
             currentIndex,
