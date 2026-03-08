@@ -661,7 +661,7 @@
                         });
                     await Task.WhenAll(forecastTasks.Append(dependencyTask));
 
-                    var epicIdsWithDependencies = await dependencyTask;
+                    var epicIdsWithDependencies = dependencyTask.Result;
                     foreach (var epic in lane.Epics)
                     {
                         epic.HasDependencies = epicIdsWithDependencies.Contains(epic.TfsId);
