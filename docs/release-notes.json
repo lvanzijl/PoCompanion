@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-08",
+    "type": "New",
+    "title": "Plan Board for sprint planning",
+    "impact": "New Plan Board at /planning/plan-board enables drag-and-drop planning of features into upcoming sprints per product.",
+    "area": "Planning",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-03-08",
     "type": "Changed",
     "title": "Legacy /workspace/planning redirect removed",
     "impact": "The legacy Planning workspace route has been removed entirely; Planning is now accessed only via /home/planning.",

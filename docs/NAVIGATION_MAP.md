@@ -313,17 +313,17 @@ Global header (available on every page) ◄────────────�
 
 ### 2.6 Planning Workspace — `/home/planning`
 
-**Purpose:** Lightweight navigation hub for planning tools. Routes the user to Product Roadmaps and, in a future release, to a new Plan Board (the legacy Plan Board has been removed).
+**Purpose:** Lightweight navigation hub for planning tools. Routes the user to Product Roadmaps and the Plan Board.
 
 | Functionality | Description |
 |---|---|
 | Breadcrumb | `Home › Planning`. |
 | Product Roadmaps card | Strategic ordering of epics and product direction. Click navigates to Product Roadmaps (`/planning/product-roadmaps`). |
-| Plan Board card | Iteration planning board for organizing upcoming sprint work. Placeholder — marked "Coming soon". Not yet implemented; the legacy board has been removed. |
+| Plan Board card | Iteration planning board for organizing upcoming sprint work. Click navigates to the Plan Board (`/planning/plan-board`). |
 | Cross-workspace navigation | Buttons to Backlog Overview, Health (Now), Trends (Past), and Delivery. |
 | Home button | Returns to `/home`. |
 
-**Outgoing navigation:** `/planning/product-roadmaps`, `/home/backlog-overview`, `/home/health`, `/home/trends`, `/home/delivery`, `/home`
+**Outgoing navigation:** `/planning/product-roadmaps`, `/planning/plan-board`, `/home/backlog-overview`, `/home/health`, `/home/trends`, `/home/delivery`, `/home`
 
 ---
 
@@ -519,9 +519,21 @@ When multiple linked work items resolve to different categories, the highest-pri
 
 ---
 
-### ~~2.13 Plan Board — `/home/plan-board`~~ (REMOVED)
+### 2.13 Plan Board — `/planning/plan-board`
 
-The legacy Plan Board has been removed. A new Plan Board will replace it in a future sprint. The Planning workspace (`/home/planning`) shows a "Coming soon" placeholder for the future board.
+**Purpose:** Operational sprint planning board. Displays features as cards in columns representing a backlog and upcoming sprints, enabling drag-and-drop to assign features to sprints. Operates per product.
+
+| Functionality | Description |
+|---|---|
+| Breadcrumb | `Home › Planning › Plan Board`. |
+| Product selector | Dropdown to choose the product to plan. Changing product reloads the board. |
+| Backlog column | Shows features not yet assigned to any upcoming sprint. |
+| Sprint columns | Up to three upcoming sprints displayed as columns. Each shows sprint name and date range. |
+| Feature cards | Each card shows: feature title, parent epic name, and effort estimate (if available). |
+| Drag and drop | Drag features between backlog and sprint columns to update their iteration assignment. Reorder features within a column. |
+| Planning button | Returns to `/home/planning`. |
+
+**Outgoing navigation:** `/home/planning`
 
 ---
 
@@ -699,7 +711,8 @@ Sprint Delivery
 | Portfolio Delivery | `/home/delivery/portfolio` | Delivery workspace | Select sprint range, view aggregated delivery snapshot | `/home/delivery` |
 | Trends (Past) | `/home/trends` | Home workspace card | Click trend signal | `/home/portfolio-progress`, `/home/trends/delivery`, `/home/bugs`, `/home/pull-requests`, `/home/pr-delivery-insights`, `/home/pipelines`, `/home/pipeline-insights`, `/home/delivery`, `/home/health`, `/home/planning` |
 | Delivery Trends | `/home/trends/delivery` | Trends workspace | Select sprint range | `/home/trends`, `/home` |
-| Planning | `/home/planning` | Home workspace card | Navigation hub: Product Roadmaps, Plan Board (coming soon — legacy board removed) | `/planning/product-roadmaps`, `/home/backlog-overview`, `/home/health`, `/home/trends`, `/home/delivery` |
+| Planning | `/home/planning` | Home workspace card | Navigation hub: Product Roadmaps, Plan Board | `/planning/product-roadmaps`, `/planning/plan-board`, `/home/backlog-overview`, `/home/health`, `/home/trends`, `/home/delivery` |
+| Plan Board | `/planning/plan-board` | Planning workspace card | Drag-and-drop sprint planning for features | `/home/planning` |
 | Bug Insights | `/home/bugs` | Health signal, Trends chart click | View/filter bugs | `/bugs-triage`, `/home/bugs/detail/{id}`, `/home` |
 | Bug Detail | `/home/bugs/detail/{id}` | Bug Insights | Edit severity/tags | `/home/bugs` |
 | Bug Triage | `/bugs-triage` | Home quick action, Bug Insights | Triage tags | (self-contained) |

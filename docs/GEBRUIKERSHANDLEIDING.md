@@ -862,7 +862,7 @@ De Planning-werkruimte is het startpunt voor alle planningstools. Vanuit deze li
 | Kaart | Omschrijving |
 |---|---|
 | **Product Roadmaps** | Strategische ordening van epics en productrichting. Klik om de roadmappagina te openen (`/planning/product-roadmaps`). |
-| **Plan Board** | Iteratie-planbord voor het organiseren van aankomend sprintwerk. Dit onderdeel wordt in een toekomstige update opnieuw ontworpen en geïntroduceerd (placeholder — het oude planbord is verwijderd). |
+| **Plan Board** | Iteratie-planbord voor het organiseren van aankomend sprintwerk. Klik om het planbord te openen (`/planning/plan-board`). |
 
 Onderaan de pagina bevinden zich knoppen om snel naar andere werkruimtes te navigeren: Backlog Overview, Health (Now), Trends (Past) en Delivery.
 
@@ -878,7 +878,48 @@ Een alleen-lezen visueel overzicht van werkitem-afhankelijkheden tussen epics en
 
 ---
 
-### 10.2 Product Roadmaps
+### 10.2 Plan Board
+
+**Pagina:** `/planning/plan-board`
+
+Het Plan Board is het operationele planbord voor sprintplanning. Hiermee worden features visueel in aankomende sprints geplaatst via drag-and-drop.
+
+#### Doel
+
+Deze pagina beantwoordt de vraag: *Welke features moeten we in de komende sprints oppakken?* Het bord biedt een snel, visueel en interactief planningsoppervlak op feature-niveau.
+
+#### Bordstructuur
+
+Het bord bestaat uit kolommen:
+
+- **Backlog** — Features die nog niet aan een sprint zijn toegewezen.
+- **Sprint 1, 2, 3** — De eerstvolgende drie toekomstige sprints. Elke kolom toont de sprintnaam en datumbereik.
+
+#### Feature-kaarten
+
+Elke kaart vertegenwoordigt een **Feature** en toont:
+
+- **Titel** van de feature
+- **Parent epic** naam (indien beschikbaar)
+- **Effort** schatting (indien ingevuld)
+
+Kaarten zijn visueel lichtgewicht en goed leesbaar.
+
+#### Drag-and-drop planning
+
+- Sleep een feature van de backlog naar een sprintkolom om deze in te plannen.
+- Sleep een feature tussen sprints om de toewijzing te wijzigen.
+- Herorden features binnen een kolom door ze te slepen.
+
+Bij het verplaatsen van een feature naar een andere kolom wordt het iteratiepad in TFS bijgewerkt.
+
+#### Productselectie
+
+Bovenaan het bord staat een productkiezer. Selecteer een product om alleen de features van dat product te laden. Dit zorgt ervoor dat planning binnen een duidelijke eigendomsgrens plaatsvindt.
+
+---
+
+### 10.3 Product Roadmaps
 
 **Pagina:** `/planning/product-roadmaps`
 
@@ -955,7 +996,7 @@ Via het **Snapshots**-menu rechtsboven kun je momentopnamen van de huidige roadm
 
 ---
 
-### 10.3 Product Roadmap Editor
+### 10.4 Product Roadmap Editor
 
 **Pagina:** `/planning/product-roadmaps/{productId}`
 
