@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-08",
+    "type": "Changed",
+    "title": "Planning workspace redesigned as navigation hub",
+    "impact": "The Planning landing page now loads instantly as a lightweight navigation hub with cards for Product Roadmaps and Plan Board, replacing the previous heavy analytics page with velocity charts, forecast tables and capacity calculations.",
+    "area": "Planning",
+    "link": "/home/planning"
+  },
+  {
+    "date": "2026-03-08",
     "type": "Fixed",
     "title": "Roadmap overview now links to product editor",
     "impact": "Each product lane on Product Roadmaps now shows an Edit roadmap action that opens the correct per-product roadmap editor without making the overview itself editable.",

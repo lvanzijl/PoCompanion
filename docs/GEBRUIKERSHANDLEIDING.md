@@ -852,60 +852,20 @@ Onderaan de pagina bevindt zich een ingeklapt **Drill-down**-paneel met een tabe
 
 ---
 
-## 10. Planning-werkruimte — Toekomst
+## 10. Planning-werkruimte
 
 **Pagina:** `/home/planning`
 
-De Planning-werkruimte beantwoordt de vraag: *Wat moet er als volgende komen?* Je ziet beslissingsondersteunende signalen voor aankomend werk, gericht op capaciteitsrisico's en backlogkwaliteit. De weergave beslaat de huidige iteratie plus de volgende 3 iteraties.
+De Planning-werkruimte is het startpunt voor alle planningstools. Vanuit deze lichtgewicht navigatiepagina bereik je de beschikbare planningsfuncties.
 
-### Signaalkaarten
+### Navigatiekaarten
 
-| Signaalkaart | Wat meet het? | Kleuren |
-|---|---|---|
-| **Epic overschrijdt velocity** | Epics waarvan het resterende werk meer dan 3× de gemiddelde teamvelocity is. | Groen (alles goed), Geel (≤ 2 risico's), Rood (> 2 risico's) |
-| **Epic met ongeldige items** | Epics met child-werkitems die validatiefouten hebben. | Informatief |
-| **Epic-afhankelijkheden** | Alleen-lezen overzicht van afhankelijkheden. | Informatief |
-
-### Capaciteitsvertrouwen
-
-Als er voltooide sprintdata beschikbaar is, toont de Planning-werkruimte een **Capaciteitsvertrouwen**-blok met calibratiesignalen:
-
-| Signaal | Omschrijving |
+| Kaart | Omschrijving |
 |---|---|
-| **Mediaan velocity** | Typische sprintcapaciteit in story points (P50). |
-| **P25–P75 band** | Volatiliteitsband — gebruik P25 voor conservatieve plannen. |
-| **Mediaan voorspelbaarheid** | Verhouding voltooid/gepland over de beschikbare sprints. |
-| **Veilige plancapaciteit** | P25-velocity: hoge betrouwbaarheid voor sprintplanning. |
+| **Product Roadmaps** | Strategische ordening van epics en productrichting. Klik om de roadmappagina te openen (`/planning/product-roadmaps`). |
+| **Plan Board** | Iteratie-planbord voor het organiseren van aankomend sprintwerk. Dit onderdeel wordt in een toekomstige update geïntroduceerd (placeholder). |
 
-> **Plan bij ~P25 punten als je hoge betrouwbaarheid wilt.** Gebruik de mediaan als typische output.
-
-Het blok werkt bij als de productselectie verandert.
-
-### Detailtabellen
-
-**Epics die velocity overschrijden** — zichtbaar als er epics in risico zijn:
-
-| Kolom | Omschrijving |
-|---|---|
-| ID | Epic-ID (klikbaar naar Sprint Delivery voor calibratiedetails) |
-| Titel | Epic-naam |
-| Status | Huidige status |
-| Resterende inspanning | Story points die nog open staan |
-| Sprints tot voltooiing | Schatting op basis van gemiddelde velocity |
-| Betrouwbaarheid | Vertrouwensindicator van de schatting |
-
-**Epics met ongeldige items** — zichtbaar als er epics problemen hebben:
-
-| Kolom | Omschrijving |
-|---|---|
-| ID | Epic-ID (klikbaar naar Work Item Explorer voor die epic) |
-| Titel | Epic-naam |
-| Status | Huidige status |
-| Aantal ongeldige items | Hoeveel child-items validatiefouten hebben |
-
-### Planbord-sectie
-
-Onderaan is een ingesloten planbord met een productselector. De link **Volledig release-planningsbord** opent de uitgebreide release-planningspagina.
+Onderaan de pagina bevinden zich knoppen om snel naar andere werkruimtes te navigeren: Backlog Overview, Health (Now), Trends (Past) en Delivery.
 
 ---
 
