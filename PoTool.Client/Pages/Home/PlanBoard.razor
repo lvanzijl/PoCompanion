@@ -132,7 +132,7 @@
                                 @if (!_allDragItems.Any(i => i.Zone == BacklogZone))
                                 {
                                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pa-4" Align="Align.Center">
-                                         No unplanned PBIs or bugs
+                                        No unplanned PBIs or bugs
                                     </MudText>
                                 }
                             </MudDropZone>
@@ -216,7 +216,7 @@
                                     @if (!_allDragItems.Any(i => i.Zone == sprint.ZoneId))
                                     {
                                         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pa-4" Align="Align.Center">
-                                            Drop PBIs or bugs here
+                                        Drop PBIs or bugs here
                                         </MudText>
                                     }
                                 </MudDropZone>
@@ -556,6 +556,11 @@
                 {
                     item.IterationPath = newIterationPath;
                     Snackbar.Add($"Moved \"{item.Title}\" to {(newZone == BacklogZone ? "Backlog" : _sprintColumns.First(s => s.ZoneId == newZone).Name)}.", Severity.Success);
+
+                    if (_selectedProductId.HasValue)
+                    {
+                        await LoadBoardAsync(_selectedProductId.Value);
+                    }
                 }
                 else
                 {
