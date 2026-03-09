@@ -490,14 +490,14 @@
 
         foreach (var workItem in plannedItems)
         {
-            var featureTitle = PlanBoardWorkItemRules.ResolveFeatureTitle(workItem, workItemLookup);
+            var descriptor = PlanBoardWorkItemRules.CreateDescriptor(workItem, workItemLookup);
 
             // Determine which zone this work item belongs to by matching iteration path to sprint path
             var zone = BacklogZone;
             foreach (var sprintCol in _sprintColumns)
             {
-                if (!string.IsNullOrEmpty(workItem.IterationPath) &&
-                    NormalizeIterationPath(workItem.IterationPath) == NormalizeIterationPath(sprintCol.Path))
+                if (!string.IsNullOrEmpty(descriptor.IterationPath) &&
+                    NormalizeIterationPath(descriptor.IterationPath) == NormalizeIterationPath(sprintCol.Path))
                 {
                     zone = sprintCol.ZoneId;
                     break;
@@ -506,13 +506,13 @@
 
             _allDragItems.Add(new PlanBoardDragItem
             {
-                TfsId = workItem.TfsId,
-                Title = workItem.Title,
-                WorkItemType = workItem.Type,
-                FeatureTitle = featureTitle,
-                Effort = workItem.Effort,
+                TfsId = descriptor.TfsId,
+                Title = descriptor.Title,
+                WorkItemType = descriptor.WorkItemType,
+                FeatureTitle = descriptor.FeatureTitle,
+                Effort = descriptor.Effort,
                 Zone = zone,
-                IterationPath = workItem.IterationPath
+                IterationPath = descriptor.IterationPath
             });
         }
     }

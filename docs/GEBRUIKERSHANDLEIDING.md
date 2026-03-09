@@ -1013,7 +1013,7 @@ Werkitems zonder schatting worden visueel gemarkeerd met een oranje rand, zodat 
 - Sleep een PBI of bug tussen sprints om de toewijzing te wijzigen.
 - Herorden werkitems binnen een kolom door ze te slepen.
 
-Bij het verplaatsen van een feature naar een andere kolom wordt het iteratiepad in TFS bijgewerkt. De capaciteitsindicatoren worden direct bijgewerkt na elke verplaatsing.
+Bij het verplaatsen van een PBI of bug naar een andere kolom wordt het iteratiepad in TFS bijgewerkt. De capaciteitsindicatoren worden direct bijgewerkt na elke verplaatsing.
 
 #### Productselectie
 

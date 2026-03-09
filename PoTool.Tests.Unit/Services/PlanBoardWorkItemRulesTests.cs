@@ -38,6 +38,26 @@ public sealed class PlanBoardWorkItemRulesTests
         Assert.AreEqual(WorkItemTypeHelper.Bug, PlanBoardWorkItemRules.GetTypeLabel(WorkItemTypeHelper.Bug));
     }
 
+    [TestMethod]
+    public void CreateDescriptor_CopiesWorkItemTypeAndFeatureContext()
+    {
+        var feature = CreateWorkItem(10, WorkItemTypeHelper.Feature, "Shared Inbox");
+        var pbi = CreateWorkItem(20, WorkItemTypeHelper.Pbi, "As a user I can sort messages", parentId: 10);
+        pbi.Effort = 5;
+        pbi.IterationPath = "Project\\Sprint 1";
+
+        var descriptor = PlanBoardWorkItemRules.CreateDescriptor(
+            pbi,
+            new Dictionary<int, WorkItemDto> { [feature.TfsId] = feature });
+
+        Assert.AreEqual(20, descriptor.TfsId);
+        Assert.AreEqual("As a user I can sort messages", descriptor.Title);
+        Assert.AreEqual(WorkItemTypeHelper.Pbi, descriptor.WorkItemType);
+        Assert.AreEqual("Shared Inbox", descriptor.FeatureTitle);
+        Assert.AreEqual(5, descriptor.Effort);
+        Assert.AreEqual("Project\\Sprint 1", descriptor.IterationPath);
+    }
+
     private static WorkItemDto CreateWorkItem(int tfsId, string type, string title, int? parentId = null)
     {
         return new WorkItemDto
