@@ -81,7 +81,7 @@
                 <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Size="Size.Large" Color="Color.Secondary" />
                 <MudText Typo="Typo.h6" Color="Color.Secondary">Select a product to start planning</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
-                    Choose a product from the selector above to load its features into the planning board.
+                    Choose a product from the selector above to load its PBIs and bugs into the planning board.
                 </MudText>
             </MudStack>
         </MudPaper>
@@ -132,7 +132,7 @@
                                 @if (!_allDragItems.Any(i => i.Zone == BacklogZone))
                                 {
                                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pa-4" Align="Align.Center">
-                                        No unplanned features
+                                        No unplanned PBIs or bugs
                                     </MudText>
                                 }
                             </MudDropZone>
@@ -216,7 +216,7 @@
                                     @if (!_allDragItems.Any(i => i.Zone == sprint.ZoneId))
                                     {
                                         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pa-4" Align="Align.Center">
-                                            Drop features here
+                                        Drop PBIs or bugs here
                                         </MudText>
                                     }
                                 </MudDropZone>
@@ -232,26 +232,34 @@
                             <MudText Typo="Typo.body2" Style="font-weight: 600; line-height: 1.3;">
                                 @context.Title
                             </MudText>
-                            @if (!string.IsNullOrEmpty(context.EpicName))
+                            @if (!string.IsNullOrEmpty(context.FeatureTitle))
                             {
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                     <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Color="Color.Secondary" />
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@context.EpicName</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@context.FeatureTitle</MudText>
                                 </MudStack>
                             }
-                            @if (context.Effort.HasValue)
-                            {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined" Class="mt-1">
-                                    @context.Effort SP
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-1">
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="@GetWorkItemTypeColor(context.WorkItemType)"
+                                         Variant="Variant.Outlined">
+                                    @GetWorkItemTypeLabel(context.WorkItemType)
                                 </MudChip>
-                            }
-                            else
-                            {
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-1">
-                                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
-                                    <MudText Typo="Typo.caption" Color="Color.Warning">No estimate</MudText>
-                                </MudStack>
-                            }
+                                @if (context.Effort.HasValue)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                        @context.Effort SP
+                                    </MudChip>
+                                }
+                                else
+                                {
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                                        <MudText Typo="Typo.caption" Color="Color.Warning">No estimate</MudText>
+                                    </MudStack>
+                                }
+                            </MudStack>
                         </MudStack>
                     </MudCardContent>
                 </MudCard>
@@ -429,13 +437,10 @@
             var workItems = (await WorkItemService.GetByRootIdsAsync(product.BacklogRootWorkItemIds.ToArray())).ToList();
             _allWorkItems = workItems;
 
-            // Extract features (Type == "Feature")
-            var features = workItems.Where(w => string.Equals(w.Type, "Feature", StringComparison.OrdinalIgnoreCase)).ToList();
-
-            // Build epic name lookup (parent of features)
-            var epicLookup = workItems
-                .Where(w => string.Equals(w.Type, "Epic", StringComparison.OrdinalIgnoreCase))
-                .ToDictionary(w => w.TfsId, w => w.Title);
+            var workItemLookup = workItems.ToDictionary(w => w.TfsId);
+            var plannedItems = workItems
+                .Where(w => PlanBoardWorkItemRules.IsPlanBoardItem(w.Type))
+                .ToList();
 
             // Load sprints for the product's first team
             var sprints = new List<SprintDto>();
@@ -461,8 +466,8 @@
                 EndUtc = s.EndUtc
             }).ToList();
 
-            // Categorize features into columns
-            BuildDragItems(features, epicLookup);
+            // Categorize PBIs and bugs into columns
+            BuildDragItems(plannedItems, workItemLookup);
 
             // Load capacity calibration data (non-blocking for board display)
             await LoadCapacityCalibrationAsync(allTeamSprints, product.Id);
@@ -479,20 +484,20 @@
         }
     }
 
-    private void BuildDragItems(List<WorkItemDto> features, Dictionary<int, string> epicLookup)
+    private void BuildDragItems(List<WorkItemDto> plannedItems, IReadOnlyDictionary<int, WorkItemDto> workItemLookup)
     {
         _allDragItems.Clear();
 
-        foreach (var feature in features)
+        foreach (var workItem in plannedItems)
         {
-            var epicName = feature.ParentTfsId.HasValue && epicLookup.TryGetValue(feature.ParentTfsId.Value, out var name) ? name : null;
+            var descriptor = PlanBoardWorkItemRules.CreateDescriptor(workItem, workItemLookup);
 
-            // Determine which zone this feature belongs to by matching iteration path to sprint path
+            // Determine which zone this work item belongs to by matching iteration path to sprint path
             var zone = BacklogZone;
             foreach (var sprintCol in _sprintColumns)
             {
-                if (!string.IsNullOrEmpty(feature.IterationPath) &&
-                    NormalizeIterationPath(feature.IterationPath) == NormalizeIterationPath(sprintCol.Path))
+                if (!string.IsNullOrEmpty(descriptor.IterationPath) &&
+                    NormalizeIterationPath(descriptor.IterationPath) == NormalizeIterationPath(sprintCol.Path))
                 {
                     zone = sprintCol.ZoneId;
                     break;
@@ -501,12 +506,13 @@
 
             _allDragItems.Add(new PlanBoardDragItem
             {
-                TfsId = feature.TfsId,
-                Title = feature.Title,
-                EpicName = epicName,
-                Effort = feature.Effort,
+                TfsId = descriptor.TfsId,
+                Title = descriptor.Title,
+                WorkItemType = descriptor.WorkItemType,
+                FeatureTitle = descriptor.FeatureTitle,
+                Effort = descriptor.Effort,
                 Zone = zone,
-                IterationPath = feature.IterationPath
+                IterationPath = descriptor.IterationPath
             });
         }
     }
@@ -550,6 +556,11 @@
                 {
                     item.IterationPath = newIterationPath;
                     Snackbar.Add($"Moved \"{item.Title}\" to {(newZone == BacklogZone ? "Backlog" : _sprintColumns.First(s => s.ZoneId == newZone).Name)}.", Severity.Success);
+
+                    if (_selectedProductId.HasValue)
+                    {
+                        await LoadBoardAsync(_selectedProductId.Value);
+                    }
                 }
                 else
                 {
@@ -676,6 +687,14 @@
         _ => Color.Success
     };
 
+    private static string GetWorkItemTypeLabel(string workItemType) =>
+        PlanBoardWorkItemRules.GetTypeLabel(workItemType);
+
+    private static Color GetWorkItemTypeColor(string workItemType) =>
+        string.Equals(PlanBoardWorkItemRules.GetTypeLabel(workItemType), WorkItemTypeHelper.Bug, StringComparison.OrdinalIgnoreCase)
+            ? Color.Error
+            : Color.Info;
+
     private sealed class SprintColumn
     {
         public int SprintId { get; init; }
@@ -690,7 +709,8 @@
     {
         public int TfsId { get; init; }
         public required string Title { get; init; }
-        public string? EpicName { get; init; }
+        public required string WorkItemType { get; init; }
+        public string? FeatureTitle { get; init; }
         public int? Effort { get; init; }
         public string Zone { get; set; } = BacklogZone;
         public string IterationPath { get; set; } = string.Empty;

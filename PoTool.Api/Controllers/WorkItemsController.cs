@@ -309,7 +309,7 @@ public class WorkItemsController : ControllerBase
 
     /// <summary>
     /// Updates the IterationPath (sprint assignment) of a work item in TFS and refreshes the local cache.
-    /// Used by the Plan Board to move features between sprints.
+    /// Used by the Plan Board to move PBIs and bugs between sprints.
     /// </summary>
     /// <param name="tfsId">The TFS work item ID.</param>
     /// <param name="request">The new iteration path.</param>
