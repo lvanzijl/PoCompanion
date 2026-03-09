@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-09",
+    "type": "Changed",
+    "title": "Release notes button added to profile selection",
+    "impact": "The profile selection landing page now includes a What's New button so you can read release notes before entering a workspace.",
+    "area": "Home",
+    "link": "/profiles"
+  },
+  {
     "date": "2026-03-08",
     "type": "New",
     "title": "Plan Board for sprint planning",
