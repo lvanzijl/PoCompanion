@@ -207,17 +207,19 @@ public sealed class GetSprintExecutionQueryHandler
         var enteredSprintDates = new Dictionary<int, DateTimeOffset>();
         if (sprintStart.HasValue && sprintEnd.HasValue)
         {
-            var addedItemEventDates = await _context.ActivityEventLedgerEntries
+            // Fetch raw rows first; SQLite cannot apply Min on DateTimeOffset in SQL.
+            var addedItemEvents = await _context.ActivityEventLedgerEntries
                 .AsNoTracking()
                 .Where(e => e.ProductOwnerId == query.ProductOwnerId
                             && e.FieldRefName == IterationPathField
                             && e.NewValue == sprint.Path
                             && addedWorkItemIds.Contains(e.WorkItemId))
-                .GroupBy(e => e.WorkItemId)
-                .Select(g => new { WorkItemId = g.Key, EnteredDate = g.Min(e => e.EventTimestamp) })
+                .Select(e => new { e.WorkItemId, e.EventTimestamp })
                 .ToListAsync(cancellationToken);
 
-            foreach (var entry in addedItemEventDates)
+            foreach (var entry in addedItemEvents
+                         .GroupBy(e => e.WorkItemId)
+                         .Select(g => new { WorkItemId = g.Key, EnteredDate = g.Min(e => e.EventTimestamp) }))
             {
                 enteredSprintDates[entry.WorkItemId] = entry.EnteredDate;
             }
