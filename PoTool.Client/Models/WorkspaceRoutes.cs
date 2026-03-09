@@ -117,7 +117,7 @@ public static class WorkspaceRoutes
     public const string ProductRoadmapEditor = "/planning/product-roadmaps/{0}";
 
     /// <summary>
-    /// Plan Board route — operational sprint planning board for organizing features into upcoming sprints.
+    /// Plan Board route — operational sprint planning board for organizing PBIs and bugs into upcoming sprints.
     /// </summary>
     public const string PlanBoard = "/planning/plan-board";
 

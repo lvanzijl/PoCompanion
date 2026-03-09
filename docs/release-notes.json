@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-09",
+    "type": "Fixed",
+    "title": "Plan Board now plans PBIs and bugs",
+    "impact": "Plan Board drag-and-drop now assigns PBIs and bugs to upcoming sprints and the documentation reflects that TFS iteration changes are applied to those backlog items.",
+    "area": "Planning",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-03-09",
     "type": "Changed",
     "title": "Release notes button added to profile selection",
     "impact": "The profile selection landing page now includes a What's New button so you can read release notes before entering a workspace.",
@@ -11,7 +19,7 @@
     "date": "2026-03-08",
     "type": "New",
     "title": "Plan Board for sprint planning",
-    "impact": "New Plan Board at /planning/plan-board enables drag-and-drop planning of features into upcoming sprints per product.",
+    "impact": "New Plan Board at /planning/plan-board enables drag-and-drop planning of PBIs and bugs into upcoming sprints per product.",
     "area": "Planning",
     "link": "/planning/plan-board"
   },

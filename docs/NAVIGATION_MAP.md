@@ -352,7 +352,7 @@ Global header (available on every page) ◄────────────�
 |---|---|
 | Breadcrumb | `Home › Planning`. |
 | Product Roadmaps card | Strategic ordering of epics and product direction. Click navigates to Product Roadmaps (`/planning/product-roadmaps`). |
-| Plan Board card | Iteration planning board for organizing upcoming sprint work. Click navigates to the Plan Board (`/planning/plan-board`). |
+| Plan Board card | Iteration planning board for organizing PBIs and bugs in upcoming sprints. Click navigates to the Plan Board (`/planning/plan-board`). |
 | Cross-workspace navigation | Buttons to Backlog Overview, Health (Now), Trends (Past), and Delivery. |
 | Home button | Returns to `/home`. |
 
@@ -554,17 +554,17 @@ When multiple linked work items resolve to different categories, the highest-pri
 
 ### 2.13 Plan Board — `/planning/plan-board`
 
-**Purpose:** Operational sprint planning board with capacity indicators. Displays features as cards in columns representing a backlog and upcoming sprints, enabling drag-and-drop to assign features to sprints. Sprint columns show capacity utilization derived from historical velocity. Operates per product.
+**Purpose:** Operational sprint planning board with capacity indicators. Displays PBIs and bugs as cards in columns representing a backlog and upcoming sprints, enabling drag-and-drop to assign those work items to sprints. Sprint columns show capacity utilization derived from historical velocity. Operates per product.
 
 | Functionality | Description |
 |---|---|
 | Breadcrumb | `Home › Planning › Plan Board`. |
 | Product selector | Dropdown to choose the product to plan. Changing product reloads the board. |
-| Backlog column | Shows features not yet assigned to any upcoming sprint. |
+| Backlog column | Shows PBIs and bugs not yet assigned to any upcoming sprint. |
 | Sprint columns | Up to three upcoming sprints displayed as columns. Each shows sprint name, date range, and capacity indicator. |
-| Sprint capacity indicator | Each sprint column header shows: capacity (median historical velocity), assigned effort (sum of feature estimates), remaining capacity, and a progress bar. Displays an overcommitment warning when assigned effort exceeds capacity. |
-| Feature cards | Each card shows: feature title, parent epic name, effort estimate (if available), and a warning signal when the estimate is missing. |
-| Drag and drop | Drag features between backlog and sprint columns to update their iteration assignment. Capacity indicators update immediately after each move. Reorder features within a column. |
+| Sprint capacity indicator | Each sprint column header shows: capacity (median historical velocity), assigned effort (sum of PBI and bug effort estimates), remaining capacity, and a progress bar. Displays an overcommitment warning when assigned effort exceeds capacity. |
+| Work item cards | Each card shows: PBI or bug title, parent feature name (if available), item type, effort estimate (if available), and a warning signal when the estimate is missing. |
+| Drag and drop | Drag PBIs and bugs between backlog and sprint columns to update their iteration assignment. Capacity indicators update immediately after each move. Reorder items within a column. |
 | Planning button | Returns to `/home/planning`. |
 
 **Outgoing navigation:** `/home/planning`
@@ -747,7 +747,7 @@ Each level only appears when the user drills into the previous one. Users naviga
 | Trends (Past) | `/home/trends` | Home workspace card | Click trend signal | `/home/portfolio-progress`, `/home/trends/delivery`, `/home/bugs`, `/home/pull-requests`, `/home/pr-delivery-insights`, `/home/pipelines`, `/home/pipeline-insights`, `/home/delivery`, `/home/health`, `/home/planning` |
 | Delivery Trends | `/home/trends/delivery` | Trends workspace | Select sprint range | `/home/trends`, `/home` |
 | Planning | `/home/planning` | Home workspace card | Navigation hub: Product Roadmaps, Plan Board | `/planning/product-roadmaps`, `/planning/plan-board`, `/home/backlog-overview`, `/home/health`, `/home/trends`, `/home/delivery` |
-| Plan Board | `/planning/plan-board` | Planning workspace card | Drag-and-drop sprint planning for features with capacity indicators | `/home/planning` |
+| Plan Board | `/planning/plan-board` | Planning workspace card | Drag-and-drop sprint planning for PBIs and bugs with capacity indicators | `/home/planning` |
 | Bug Insights | `/home/bugs` | Health signal, Trends chart click | View/filter bugs | `/bugs-triage`, `/home/bugs/detail/{id}`, `/home` |
 | Bug Detail | `/home/bugs/detail/{id}` | Bug Insights | Edit severity/tags | `/home/bugs` |
 | Bug Triage | `/bugs-triage` | Home quick action, Bug Insights | Triage tags | (self-contained) |

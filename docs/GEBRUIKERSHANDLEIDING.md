@@ -965,17 +965,17 @@ Een alleen-lezen visueel overzicht van werkitem-afhankelijkheden tussen epics en
 
 **Pagina:** `/planning/plan-board`
 
-Het Plan Board is het operationele planbord voor sprintplanning. Hiermee worden features visueel in aankomende sprints geplaatst via drag-and-drop. Het bord toont daarnaast capaciteitsindicatoren die helpen bij het nemen van weloverwogen planningsbeslissingen.
+Het Plan Board is het operationele planbord voor sprintplanning. Hiermee worden PBIs en bugs visueel in aankomende sprints geplaatst via drag-and-drop. Het bord toont daarnaast capaciteitsindicatoren die helpen bij het nemen van weloverwogen planningsbeslissingen.
 
 #### Doel
 
-Deze pagina beantwoordt de vraag: *Welke features moeten we in de komende sprints oppakken?* Het bord biedt een snel, visueel en interactief planningsoppervlak op feature-niveau.
+Deze pagina beantwoordt de vraag: *Welke PBIs en bugs moeten we in de komende sprints oppakken?* Het bord biedt een snel, visueel en interactief planningsoppervlak op backlog-itemniveau, met features als context.
 
 #### Bordstructuur
 
 Het bord bestaat uit kolommen:
 
-- **Backlog** — Features die nog niet aan een sprint zijn toegewezen.
+- **Backlog** — PBIs en bugs die nog niet aan een sprint zijn toegewezen.
 - **Sprint 1, 2, 3** — De eerstvolgende drie toekomstige sprints. Elke kolom toont de sprintnaam en datumbereik.
 
 #### Sprintcapaciteitsindicator
@@ -985,7 +985,7 @@ Elke sprintkolom toont bovenaan een capaciteitsindicator. Deze is gebaseerd op d
 De indicator toont:
 
 - **Capacity** — De geschatte sprintcapaciteit in punten, afgeleid van historische velocity.
-- **Assigned** — De totale effort van alle features die in de sprint zijn geplaatst (som van effort-schattingen).
+- **Assigned** — De totale effort van alle PBIs en bugs die in de sprint zijn geplaatst (som van effort-schattingen).
 - **Remaining** — Het verschil tussen capaciteit en toegewezen effort.
 - **Voortgangsbalk** — Een visuele weergave van de benutting: groen (normaal), oranje (bijna vol), rood (overschreden).
 
@@ -995,28 +995,29 @@ Wanneer de toegewezen effort de capaciteit overschrijdt, wordt een waarschuwings
 
 Dit is een **planningshint**, geen harde regel. Het team bepaalt zelf of de planning realistisch is.
 
-#### Feature-kaarten
+#### Werkitem-kaarten
 
-Elke kaart vertegenwoordigt een **Feature** en toont:
+Elke kaart vertegenwoordigt een **PBI** of **Bug** en toont:
 
-- **Titel** van de feature
-- **Parent epic** naam (indien beschikbaar)
+- **Titel** van het werkitem
+- **Parent feature** naam (indien beschikbaar)
+- **Type** — PBI of Bug
 - **Effort** schatting (indien ingevuld)
 - **Waarschuwing** wanneer geen effort-schatting is ingevuld (⚠ No estimate)
 
-Features zonder schatting worden visueel gemarkeerd met een oranje rand, zodat ze opvallen tijdens het plannen.
+Werkitems zonder schatting worden visueel gemarkeerd met een oranje rand, zodat ze opvallen tijdens het plannen.
 
 #### Drag-and-drop planning
 
-- Sleep een feature van de backlog naar een sprintkolom om deze in te plannen.
-- Sleep een feature tussen sprints om de toewijzing te wijzigen.
-- Herorden features binnen een kolom door ze te slepen.
+- Sleep een PBI of bug van de backlog naar een sprintkolom om deze in te plannen.
+- Sleep een PBI of bug tussen sprints om de toewijzing te wijzigen.
+- Herorden werkitems binnen een kolom door ze te slepen.
 
 Bij het verplaatsen van een feature naar een andere kolom wordt het iteratiepad in TFS bijgewerkt. De capaciteitsindicatoren worden direct bijgewerkt na elke verplaatsing.
 
 #### Productselectie
 
-Bovenaan het bord staat een productkiezer. Selecteer een product om alleen de features van dat product te laden. Dit zorgt ervoor dat planning binnen een duidelijke eigendomsgrens plaatsvindt.
+Bovenaan het bord staat een productkiezer. Selecteer een product om alleen de PBIs en bugs van dat product te laden. Dit zorgt ervoor dat planning binnen een duidelijke eigendomsgrens plaatsvindt.
 
 ---
 

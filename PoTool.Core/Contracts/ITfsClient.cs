@@ -254,7 +254,7 @@ public interface ITfsClient
 
     /// <summary>
     /// Updates the iteration path (sprint assignment) of a work item in TFS.
-    /// Used by the Plan Board to move features between sprints.
+    /// Used by the Plan Board to move PBIs and bugs between sprints.
     /// </summary>
     /// <param name="workItemId">The work item ID.</param>
     /// <param name="iterationPath">The new iteration path to assign.</param>
