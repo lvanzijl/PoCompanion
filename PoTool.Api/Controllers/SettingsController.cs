@@ -89,6 +89,17 @@ public class SettingsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets the user-visible release notes from the canonical docs/release-notes.json source.
+    /// </summary>
+    [HttpGet("release-notes")]
+    [ProducesResponseType(typeof(IReadOnlyList<ReleaseNoteDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<ReleaseNoteDto>>> GetReleaseNotes(CancellationToken cancellationToken)
+    {
+        var releaseNotes = await _mediator.Send(new GetReleaseNotesQuery(), cancellationToken);
+        return Ok(releaseNotes);
+    }
+
+    /// <summary>
     /// Saves work item state classifications for the configured TFS project.
     /// </summary>
     [HttpPost("state-classifications")]

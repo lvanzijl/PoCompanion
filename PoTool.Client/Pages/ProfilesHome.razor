@@ -88,6 +88,12 @@
             
             @* Action Buttons *@
             <MudStack Row="true" Spacing="2" Class="mt-4">
+                <CompactButton Variant="Variant.Outlined"
+                               Color="Color.Info"
+                               OnClick="OpenReleaseNotesDialog"
+                               StartIcon="@Icons.Material.Filled.NewReleases">
+                    What's New
+                </CompactButton>
                 <CompactButton Variant="Variant.Outlined" 
                                Color="Color.Default"
                                OnClick="ManageTeams"
@@ -203,6 +209,18 @@
     private void ManageTeams()
     {
         NavigationManager.NavigateTo("/settings/teams");
+    }
+
+    private async Task OpenReleaseNotesDialog()
+    {
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<ReleaseNotesDialog>("What's New", options);
     }
 
     private void ClearError()

@@ -1,0 +1,119 @@
+@inject ReleaseNotesService ReleaseNotesService
+@inject NavigationManager NavigationManager
+@using PoTool.Shared.Settings
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h6">What's New</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Recent product changes and fixes from the canonical release notes.
+                </MudText>
+            </MudStack>
+
+            @if (_isLoading)
+            {
+                <MudStack AlignItems="AlignItems.Center" Class="py-4">
+                    <MudProgressCircular Color="Color.Primary" Size="Size.Medium" Indeterminate="true" />
+                </MudStack>
+            }
+            else if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">
+                    @_errorMessage
+                </MudAlert>
+            }
+            else if (_entries.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    No release notes are available yet.
+                </MudAlert>
+            }
+            else
+            {
+                <MudList T="ReleaseNoteDto" Dense="true" Class="pa-0">
+                    @foreach (var entry in _entries)
+                    {
+                        <MudListItem T="ReleaseNoteDto" Class="px-0">
+                            <div class="w-100">
+                                <MudPaper Elevation="0" Class="pa-3 mb-2">
+                                    <MudStack Spacing="2">
+                                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                                            <MudChip T="string" Size="Size.Small" Color="@GetTypeColor(entry.Type)">@entry.Type</MudChip>
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default">@entry.Area</MudChip>
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">@entry.Date</MudChip>
+                                        </MudStack>
+                                        <MudText Typo="Typo.subtitle2">@entry.Title</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@entry.Impact</MudText>
+                                        @if (!string.IsNullOrWhiteSpace(entry.Link))
+                                        {
+                                            <MudStack Row="true" Justify="Justify.FlexEnd">
+                                                <CompactButton Variant="Variant.Text"
+                                                               Color="Color.Primary"
+                                                               StartIcon="@Icons.Material.Filled.OpenInNew"
+                                                               OnClick="@(() => NavigateTo(entry.Link!))">
+                                                    Open related page
+                                                </CompactButton>
+                                            </MudStack>
+                                        }
+                                    </MudStack>
+                                </MudPaper>
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <CompactButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">
+            Close
+        </CompactButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private IReadOnlyList<ReleaseNoteDto> _entries = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _entries = await ReleaseNotesService.GetReleaseNotesAsync();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Unable to load release notes right now. Please try again shortly.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+
+    private void NavigateTo(string route)
+    {
+        MudDialog.Close();
+        NavigationManager.NavigateTo(route);
+    }
+
+    private static Color GetTypeColor(string type) =>
+        type switch
+        {
+            "New" => Color.Success,
+            "Changed" => Color.Info,
+            "Fixed" => Color.Warning,
+            _ => Color.Default
+        };
+}
