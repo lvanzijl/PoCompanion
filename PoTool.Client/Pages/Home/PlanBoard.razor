@@ -8,6 +8,7 @@
 @inject WorkItemService WorkItemService
 @inject SprintService SprintService
 @inject IMetricsClient MetricsClient
+@inject StateClassificationService StateClassificationService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject ILogger<PlanBoard> Logger
@@ -97,192 +98,190 @@
             <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-2" />
         }
 
-        <MudDropContainer T="PlanBoardDragItem"
-                           @ref="_dropContainer"
-                           Items="_allDragItems"
-                           ItemsSelector="@((item, zone) => item.Zone == zone)"
-                           ItemDropped="OnItemDropped"
-                           ApplyDropClassesOnDragStarted="true"
-                           Class="plan-board-container">
-            <ChildContent>
-                <div class="plan-board-columns">
-                    @* Backlog Column *@
-                    <div class="plan-board-column">
-                        <MudPaper Elevation="2" Class="pa-3 plan-column-paper">
-                            <div class="plan-column-header">
-                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
-                                    <MudText Typo="Typo.subtitle1">
-                                        <MudIcon Icon="@Icons.Material.Filled.Inbox" Class="mr-1" Size="Size.Small" />
-                                        Backlog
-                                    </MudText>
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
-                                        @(_allDragItems.Count(i => i.Zone == BacklogZone))
-                                    </MudChip>
-                                </MudStack>
-                            </div>
-                            <MudDropZone T="PlanBoardDragItem"
-                                         Identifier="@BacklogZone"
-                                         AllowReorder="true"
-                                         CanDrop="@(_ => !_isBusy)"
-                                         CanDropClass="plan-drop-allowed"
-                                         NoDropClass="plan-drop-denied"
-                                         DraggingClass="plan-drag-active"
-                                         Class="plan-drop-zone"
-                                         Style="min-height: 120px; overflow-y: auto; max-height: 70vh;">
-                                @if (!_allDragItems.Any(i => i.Zone == BacklogZone))
-                                {
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pa-4" Align="Align.Center">
-                                        No unplanned PBIs or bugs
-                                    </MudText>
-                                }
-                            </MudDropZone>
-                        </MudPaper>
+        <div class="plan-board-columns">
+            @* Left: Hierarchical Candidate Tree *@
+            <div class="plan-board-column plan-board-candidate-column">
+                <MudPaper Elevation="2" Class="pa-3 plan-column-paper">
+                    <div class="plan-column-header">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                            <MudText Typo="Typo.subtitle1">
+                                <MudIcon Icon="@Icons.Material.Filled.Inbox" Class="mr-1" Size="Size.Small" />
+                                Backlog
+                            </MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
+                                @CountCandidateLeaves(_candidateTree)
+                            </MudChip>
+                        </MudStack>
                     </div>
+                    <div class="plan-candidate-tree" style="overflow-y: auto; max-height: 70vh;">
+                        @if (_candidateTree.Count == 0)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pa-4" Align="Align.Center">
+                                No unplanned PBIs or bugs
+                            </MudText>
+                        }
+                        else
+                        {
+                            @foreach (var node in _candidateTree)
+                            {
+                                @RenderCandidateNode(node, 0)
+                            }
+                        }
+                    </div>
+                </MudPaper>
+            </div>
 
-                    @* Sprint Columns *@
-                    @foreach (var sprint in _sprintColumns)
-                    {
-                        var cap = GetSprintCapacityState(sprint.ZoneId);
+            @* Sprint Columns *@
+            @foreach (var sprint in _sprintColumns)
+            {
+                var cap = GetSprintCapacityState(sprint.ZoneId);
+                var sprintItems = _sprintItems.GetValueOrDefault(sprint.ZoneId) ?? [];
+                var isDropTarget = _draggedNode != null;
 
-                        <div class="plan-board-column">
-                            <MudPaper Elevation="2" Class="@($"pa-3 plan-column-paper{(cap.IsOvercommitted ? " plan-overcommitted" : "")}")">
-                                <div class="plan-column-header">
-                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-1">
-                                        <MudText Typo="Typo.subtitle1">
-                                            <MudIcon Icon="@Icons.Material.Filled.DateRange" Class="mr-1" Size="Size.Small" />
-                                            @sprint.Name
+                <div class="plan-board-column">
+                    <MudPaper Elevation="2" Class="@($"pa-3 plan-column-paper{(cap.IsOvercommitted ? " plan-overcommitted" : "")}")">
+                        <div class="plan-column-header">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-1">
+                                <MudText Typo="Typo.subtitle1">
+                                    <MudIcon Icon="@Icons.Material.Filled.DateRange" Class="mr-1" Size="Size.Small" />
+                                    @sprint.Name
+                                </MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@(cap.IsOvercommitted ? Color.Error : Color.Primary)" Variant="Variant.Outlined">
+                                    @sprintItems.Count
+                                </MudChip>
+                            </MudStack>
+                            @if (sprint.StartUtc.HasValue && sprint.EndUtc.HasValue)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @sprint.StartUtc.Value.ToString("dd MMM") – @sprint.EndUtc.Value.ToString("dd MMM yyyy")
+                                </MudText>
+                            }
+
+                            @* Sprint Capacity Indicator *@
+                            @if (cap.HasCapacity)
+                            {
+                                <div class="plan-capacity-indicator mt-2">
+                                    <MudStack Spacing="0">
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                Capacity: @cap.Capacity pts
+                                            </MudText>
+                                            <MudText Typo="Typo.caption" Color="@(cap.IsOvercommitted ? Color.Error : Color.Default)">
+                                                Assigned: @cap.Assigned pts
+                                            </MudText>
+                                        </MudStack>
+                                        <MudProgressLinear Value="@cap.Utilization"
+                                                           Color="@GetCapacityColor(cap.Utilization)"
+                                                           Rounded="true"
+                                                           Style="height: 6px;"
+                                                           Class="my-1" />
+                                        <MudText Typo="Typo.caption" Color="@(cap.IsOvercommitted ? Color.Error : Color.Success)">
+                                            @if (cap.IsOvercommitted)
+                                            {
+                                                @($"Over by {cap.OverAmount} pts")
+                                            }
+                                            else
+                                            {
+                                                @($"Remaining: {cap.Remaining} pts")
+                                            }
                                         </MudText>
-                                        <MudChip T="string" Size="Size.Small" Color="@(cap.IsOvercommitted ? Color.Error : Color.Primary)" Variant="Variant.Outlined">
-                                            @(_allDragItems.Count(i => i.Zone == sprint.ZoneId))
-                                        </MudChip>
+                                        @if (cap.IsOvercommitted)
+                                        {
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-1">
+                                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                                                <MudText Typo="Typo.caption" Color="Color.Warning">
+                                                    Exceeds historical capacity
+                                                </MudText>
+                                            </MudStack>
+                                        }
                                     </MudStack>
-                                    @if (sprint.StartUtc.HasValue && sprint.EndUtc.HasValue)
-                                    {
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                            @sprint.StartUtc.Value.ToString("dd MMM") – @sprint.EndUtc.Value.ToString("dd MMM yyyy")
-                                        </MudText>
-                                    }
+                                </div>
+                            }
+                        </div>
 
-                                    @* Sprint Capacity Indicator *@
-                                    @if (cap.HasCapacity)
-                                    {
-                                        <div class="plan-capacity-indicator mt-2">
-                                            <MudStack Spacing="0">
-                                                <MudStack Row="true" Justify="Justify.SpaceBetween">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                        Capacity: @cap.Capacity pts
-                                                    </MudText>
-                                                    <MudText Typo="Typo.caption" Color="@(cap.IsOvercommitted ? Color.Error : Color.Default)">
-                                                        Assigned: @cap.Assigned pts
-                                                    </MudText>
-                                                </MudStack>
-                                                <MudProgressLinear Value="@cap.Utilization"
-                                                                   Color="@GetCapacityColor(cap.Utilization)"
-                                                                   Rounded="true"
-                                                                   Style="height: 6px;"
-                                                                   Class="my-1" />
-                                                <MudText Typo="Typo.caption" Color="@(cap.IsOvercommitted ? Color.Error : Color.Success)">
-                                                    @if (cap.IsOvercommitted)
+                        @* Sprint drop zone *@
+                        <div class="plan-sprint-zone @(isDropTarget ? "plan-drop-ready" : "")"
+                             style="min-height: 120px; overflow-y: auto; max-height: 70vh;"
+                             @ondragover:preventDefault="true"
+                             @ondrop="@(() => HandleDropOnSprint(sprint))">
+                            @if (sprintItems.Count == 0)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pa-4" Align="Align.Center">
+                                    Drop PBIs or bugs here
+                                </MudText>
+                            }
+                            else
+                            {
+                                @foreach (var item in sprintItems)
+                                {
+                                    <MudCard Elevation="1"
+                                             Class="@($"plan-feature-card mb-2{(!item.Effort.HasValue ? " plan-missing-estimate" : "")}")"
+                                             draggable="true"
+                                             @ondragstart="@(() => OnSprintItemDragStart(item, sprint))"
+                                             @ondragend="OnDragEnd">
+                                        <MudCardContent Class="pa-3">
+                                            <MudStack Spacing="1">
+                                                <MudText Typo="Typo.body2" Style="font-weight: 600; line-height: 1.3;">
+                                                    @item.Title
+                                                </MudText>
+                                                @if (!string.IsNullOrEmpty(item.FeatureTitle))
+                                                {
+                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Color="Color.Secondary" />
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@item.FeatureTitle</MudText>
+                                                    </MudStack>
+                                                }
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-1">
+                                                    <MudChip T="string"
+                                                             Size="Size.Small"
+                                                             Color="@GetWorkItemTypeColor(item.WorkItemType)"
+                                                             Variant="Variant.Outlined">
+                                                        @GetWorkItemTypeLabel(item.WorkItemType)
+                                                    </MudChip>
+                                                    @if (item.Effort.HasValue)
                                                     {
-                                                        @($"Over by {cap.OverAmount} pts")
+                                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                                            @item.Effort SP
+                                                        </MudChip>
                                                     }
                                                     else
                                                     {
-                                                        @($"Remaining: {cap.Remaining} pts")
+                                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                                                            <MudText Typo="Typo.caption" Color="Color.Warning">No estimate</MudText>
+                                                        </MudStack>
                                                     }
-                                                </MudText>
-                                                @if (cap.IsOvercommitted)
-                                                {
-                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-1">
-                                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
-                                                        <MudText Typo="Typo.caption" Color="Color.Warning">
-                                                            Exceeds historical capacity
-                                                        </MudText>
-                                                    </MudStack>
-                                                }
+                                                </MudStack>
                                             </MudStack>
-                                        </div>
-                                    }
-                                </div>
-                                <MudDropZone T="PlanBoardDragItem"
-                                             Identifier="@sprint.ZoneId"
-                                             AllowReorder="true"
-                                             CanDrop="@(_ => !_isBusy)"
-                                             CanDropClass="plan-drop-allowed"
-                                             NoDropClass="plan-drop-denied"
-                                             DraggingClass="plan-drag-active"
-                                             Class="plan-drop-zone"
-                                             Style="min-height: 120px; overflow-y: auto; max-height: 70vh;">
-                                    @if (!_allDragItems.Any(i => i.Zone == sprint.ZoneId))
-                                    {
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pa-4" Align="Align.Center">
-                                        Drop PBIs or bugs here
-                                        </MudText>
-                                    }
-                                </MudDropZone>
-                            </MudPaper>
-                        </div>
-                    }
-                </div>
-            </ChildContent>
-            <ItemRenderer>
-                <MudCard Elevation="1" Class="@($"plan-feature-card mb-2{(!context.Effort.HasValue ? " plan-missing-estimate" : "")}")" Style="cursor: grab;">
-                    <MudCardContent Class="pa-3">
-                        <MudStack Spacing="1">
-                            <MudText Typo="Typo.body2" Style="font-weight: 600; line-height: 1.3;">
-                                @context.Title
-                            </MudText>
-                            @if (!string.IsNullOrEmpty(context.FeatureTitle))
-                            {
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                    <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Color="Color.Secondary" />
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@context.FeatureTitle</MudText>
-                                </MudStack>
+                                        </MudCardContent>
+                                    </MudCard>
+                                }
                             }
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-1">
-                                <MudChip T="string"
-                                         Size="Size.Small"
-                                         Color="@GetWorkItemTypeColor(context.WorkItemType)"
-                                         Variant="Variant.Outlined">
-                                    @GetWorkItemTypeLabel(context.WorkItemType)
-                                </MudChip>
-                                @if (context.Effort.HasValue)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
-                                        @context.Effort SP
-                                    </MudChip>
-                                }
-                                else
-                                {
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
-                                        <MudText Typo="Typo.caption" Color="Color.Warning">No estimate</MudText>
-                                    </MudStack>
-                                }
-                            </MudStack>
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </ItemRenderer>
-        </MudDropContainer>
+                        </div>
+                    </MudPaper>
+                </div>
+            }
+        </div>
     }
 </MudContainer>
 
 <style>
-    .plan-board-container {
-        width: 100%;
-    }
-
     .plan-board-columns {
         display: flex;
         gap: 16px;
         overflow-x: auto;
         padding-bottom: 8px;
+        align-items: flex-start;
     }
 
     .plan-board-column {
         min-width: 280px;
         flex: 1 1 0;
+    }
+
+    .plan-board-candidate-column {
+        min-width: 320px;
+        flex: 1.2 1 0;
     }
 
     .plan-column-paper {
@@ -300,32 +299,22 @@
         margin-bottom: 8px;
     }
 
-    .plan-drop-zone {
+    .plan-sprint-zone {
         border: 2px dashed transparent;
         border-radius: 4px;
         padding: 4px;
         transition: border-color 0.2s ease, background-color 0.2s ease;
-        flex: 1;
     }
 
-    .plan-drop-allowed {
+    .plan-drop-ready {
         border-color: var(--mud-palette-primary) !important;
         background-color: rgba(var(--mud-palette-primary-rgb), 0.05) !important;
-    }
-
-    .plan-drop-denied {
-        border-color: var(--mud-palette-error) !important;
-        background-color: rgba(var(--mud-palette-error-rgb), 0.05) !important;
-    }
-
-    .plan-drag-active {
-        opacity: 0.5;
-        transform: scale(0.98);
     }
 
     .plan-feature-card {
         border-left: 3px solid var(--mud-palette-primary);
         transition: box-shadow 0.2s ease;
+        cursor: grab;
     }
 
     .plan-feature-card:hover {
@@ -344,6 +333,84 @@
         padding-top: 4px;
         border-top: 1px solid rgba(255,255,255,0.06);
     }
+
+    /* Candidate tree styles */
+    .plan-candidate-tree {
+        padding: 2px;
+    }
+
+    .plan-tree-node {
+        border-radius: 4px;
+        margin-bottom: 4px;
+    }
+
+    .plan-tree-node-row {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 5px 6px;
+        border-radius: 4px;
+        cursor: grab;
+        transition: background-color 0.15s ease, box-shadow 0.15s ease;
+        user-select: none;
+    }
+
+    .plan-tree-node-row:hover {
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .plan-tree-node-row.dragging {
+        opacity: 0.5;
+    }
+
+    .plan-tree-epic {
+        background-color: rgba(255, 152, 0, 0.10);
+        border-left: 3px solid #FF9800;
+    }
+
+    .plan-tree-feature {
+        background-color: rgba(156, 39, 176, 0.08);
+        border-left: 3px solid #9C27B0;
+        margin-left: 12px;
+    }
+
+    .plan-tree-pbi {
+        background-color: rgba(33, 150, 243, 0.06);
+        border-left: 3px solid #2196F3;
+        margin-left: 24px;
+    }
+
+    .plan-tree-bug {
+        background-color: rgba(244, 67, 54, 0.06);
+        border-left: 3px solid #F44336;
+        margin-left: 24px;
+    }
+
+    .plan-tree-children {
+        margin-top: 2px;
+    }
+
+    .plan-tree-expand-btn {
+        min-width: 20px;
+        flex-shrink: 0;
+    }
+
+    .plan-tree-title {
+        flex: 1;
+        font-size: 0.8rem;
+        font-weight: 500;
+        line-height: 1.3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .plan-tree-effort-chip {
+        flex-shrink: 0;
+        font-size: 0.7rem;
+        height: 18px;
+        padding: 0 5px;
+    }
 </style>
 
 @code {
@@ -358,11 +425,19 @@
     private bool _isBusy;
 
     private List<SprintColumn> _sprintColumns = new();
-    private List<PlanBoardDragItem> _allDragItems = new();
-    private MudDropContainer<PlanBoardDragItem>? _dropContainer;
+    // Left side: hierarchical candidate tree
+    private List<PlanBoardCandidateNode> _candidateTree = new();
+    // Right side: items already assigned to sprints, keyed by zone id
+    private Dictionary<string, List<SprintDragItem>> _sprintItems = new();
 
-    // Cached hierarchy data
+    // Cached full hierarchy
     private List<WorkItemDto> _allWorkItems = new();
+    private HashSet<(string type, string state)> _doneOrRemovedStates = new();
+
+    // Drag state
+    private PlanBoardCandidateNode? _draggedNode;
+    private SprintDragItem? _draggedSprintItem;
+    private SprintColumn? _draggedSprintItemSource;
 
     // Capacity planning data
     private int? _activeProfileId;
@@ -425,22 +500,26 @@
                 return;
             }
 
+            // Load state classifications for Done/Removed filtering
+            var classificationsResponse = await StateClassificationService.GetClassificationsAsync();
+            _doneOrRemovedStates = classificationsResponse.Classifications
+                .Where(c => c.Classification == PoTool.Shared.Settings.StateClassification.Done ||
+                            c.Classification == PoTool.Shared.Settings.StateClassification.Removed)
+                .Select(c => (c.WorkItemType.ToLowerInvariant(), c.StateName.ToLowerInvariant()))
+                .ToHashSet();
+
             // Load work items hierarchy for this product
             if (product.BacklogRootWorkItemIds.Count == 0)
             {
                 _allWorkItems = new List<WorkItemDto>();
                 _sprintColumns = new List<SprintColumn>();
-                _allDragItems = new List<PlanBoardDragItem>();
+                _candidateTree = new List<PlanBoardCandidateNode>();
+                _sprintItems = new Dictionary<string, List<SprintDragItem>>();
                 return;
             }
 
             var workItems = (await WorkItemService.GetByRootIdsAsync(product.BacklogRootWorkItemIds.ToArray())).ToList();
             _allWorkItems = workItems;
-
-            var workItemLookup = workItems.ToDictionary(w => w.TfsId);
-            var plannedItems = workItems
-                .Where(w => PlanBoardWorkItemRules.IsPlanBoardItem(w.Type))
-                .ToList();
 
             // Load sprints for the product's first team
             var sprints = new List<SprintDto>();
@@ -466,8 +545,8 @@
                 EndUtc = s.EndUtc
             }).ToList();
 
-            // Categorize PBIs and bugs into columns
-            BuildDragItems(plannedItems, workItemLookup);
+            // Build the board: candidate tree + sprint items
+            BuildBoard();
 
             // Load capacity calibration data (non-blocking for board display)
             await LoadCapacityCalibrationAsync(allTeamSprints, product.Id);
@@ -484,113 +563,319 @@
         }
     }
 
-    private void BuildDragItems(List<WorkItemDto> plannedItems, IReadOnlyDictionary<int, WorkItemDto> workItemLookup)
+    private void BuildBoard()
     {
-        _allDragItems.Clear();
+        var workItemLookup = _allWorkItems.ToDictionary(w => w.TfsId);
 
-        foreach (var workItem in plannedItems)
+        // Build the set of normalized sprint paths for quick lookup
+        var sprintPathSet = _sprintColumns
+            .Select(s => NormalizeIterationPath(s.Path))
+            .ToHashSet();
+
+        // Build the hierarchical candidate tree (left side — unplanned, not Done/Removed)
+        _candidateTree = PlanBoardWorkItemRules.BuildCandidateTree(
+            _allWorkItems,
+            _doneOrRemovedStates,
+            sprintPathSet);
+
+        // Build sprint items (right side — PBIs/Bugs already assigned to a sprint)
+        _sprintItems = new Dictionary<string, List<SprintDragItem>>();
+        foreach (var sprint in _sprintColumns)
+            _sprintItems[sprint.ZoneId] = new List<SprintDragItem>();
+
+        foreach (var workItem in _allWorkItems.Where(w => PlanBoardWorkItemRules.IsPlanBoardItem(w.Type)))
         {
-            var descriptor = PlanBoardWorkItemRules.CreateDescriptor(workItem, workItemLookup);
+            var normalizedPath = NormalizeIterationPath(workItem.IterationPath);
+            var matchedSprint = _sprintColumns.FirstOrDefault(
+                s => NormalizeIterationPath(s.Path) == normalizedPath);
 
-            // Determine which zone this work item belongs to by matching iteration path to sprint path
-            var zone = BacklogZone;
-            foreach (var sprintCol in _sprintColumns)
+            if (matchedSprint != null)
             {
-                if (!string.IsNullOrEmpty(descriptor.IterationPath) &&
-                    NormalizeIterationPath(descriptor.IterationPath) == NormalizeIterationPath(sprintCol.Path))
+                _sprintItems[matchedSprint.ZoneId].Add(new SprintDragItem
                 {
-                    zone = sprintCol.ZoneId;
-                    break;
-                }
+                    TfsId = workItem.TfsId,
+                    Title = workItem.Title,
+                    WorkItemType = workItem.Type,
+                    FeatureTitle = PlanBoardWorkItemRules.ResolveFeatureTitle(workItem, workItemLookup),
+                    Effort = workItem.Effort,
+                    IterationPath = workItem.IterationPath
+                });
             }
-
-            _allDragItems.Add(new PlanBoardDragItem
-            {
-                TfsId = descriptor.TfsId,
-                Title = descriptor.Title,
-                WorkItemType = descriptor.WorkItemType,
-                FeatureTitle = descriptor.FeatureTitle,
-                Effort = descriptor.Effort,
-                Zone = zone,
-                IterationPath = descriptor.IterationPath
-            });
         }
     }
 
-    private async Task OnItemDropped(MudItemDropInfo<PlanBoardDragItem> dropInfo)
+    // ── Candidate tree drag start ──────────────────────────────────────────────
+
+    private void OnCandidateNodeDragStart(PlanBoardCandidateNode node)
     {
-        if (dropInfo.Item == null) return;
+        _draggedNode = node;
+        _draggedSprintItem = null;
+        _draggedSprintItemSource = null;
+    }
 
-        var item = dropInfo.Item;
-        var oldZone = item.Zone;
-        var newZone = dropInfo.DropzoneIdentifier;
+    // ── Sprint item drag start (for moving between sprints) ────────────────────
 
-        // Update item zone
-        item.Zone = newZone;
+    private void OnSprintItemDragStart(SprintDragItem item, SprintColumn source)
+    {
+        _draggedSprintItem = item;
+        _draggedSprintItemSource = source;
+        _draggedNode = null;
+    }
 
-        // Determine if sprint assignment changed
-        if (oldZone != newZone)
+    // ── Common drag end ────────────────────────────────────────────────────────
+
+    private void OnDragEnd()
+    {
+        _draggedNode = null;
+        _draggedSprintItem = null;
+        _draggedSprintItemSource = null;
+    }
+
+    // ── Drop on sprint column ──────────────────────────────────────────────────
+
+    private async Task HandleDropOnSprint(SprintColumn targetSprint)
+    {
+        if (_isBusy) return;
+
+        if (_draggedNode != null)
         {
-            _isBusy = true;
+            await DropCandidateNodeOnSprint(_draggedNode, targetSprint);
+        }
+        else if (_draggedSprintItem != null && _draggedSprintItemSource != null
+                 && _draggedSprintItemSource.ZoneId != targetSprint.ZoneId)
+        {
+            await MoveSprintItemToSprint(_draggedSprintItem, _draggedSprintItemSource, targetSprint);
+        }
+
+        _draggedNode = null;
+        _draggedSprintItem = null;
+        _draggedSprintItemSource = null;
+    }
+
+    /// <summary>
+    /// Plans all eligible PBIs/Bugs from the dropped candidate node into the target sprint.
+    /// Duplicates (already in another sprint) are skipped.
+    /// </summary>
+    private async Task DropCandidateNodeOnSprint(PlanBoardCandidateNode node, SprintColumn targetSprint)
+    {
+        var pbiIds = node.EligiblePbiIds;
+        if (pbiIds.Count == 0) return;
+
+        var newIterationPath = targetSprint.Path;
+        _isBusy = true;
+        StateHasChanged();
+
+        var successCount = 0;
+        var failCount = 0;
+
+        try
+        {
+            foreach (var tfsId in pbiIds)
+            {
+                // Skip if already assigned to any sprint (could have been moved before this batch)
+                var workItem = _allWorkItems.FirstOrDefault(w => w.TfsId == tfsId);
+                if (workItem == null) continue;
+
+                // Allow re-assigning even if in another sprint (explicit drag intent)
+                var success = await WorkItemService.UpdateIterationPathAsync(tfsId, newIterationPath);
+                if (success) successCount++;
+                else failCount++;
+            }
+
+            if (failCount == 0)
+            {
+                var label = pbiIds.Count == 1 ? "1 item" : $"{pbiIds.Count} items";
+                Snackbar.Add($"Planned {label} in {targetSprint.Name}.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Planned {successCount} item(s); {failCount} update(s) failed.", Severity.Warning);
+            }
+
+            if (_selectedProductId.HasValue)
+                await LoadBoardAsync(_selectedProductId.Value);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error planning items from node {TfsId} into sprint {Sprint}", node.TfsId, targetSprint.Name);
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            if (_selectedProductId.HasValue)
+                await LoadBoardAsync(_selectedProductId.Value);
+        }
+        finally
+        {
+            _isBusy = false;
             StateHasChanged();
+        }
+    }
 
-            try
+    /// <summary>
+    /// Moves a PBI/Bug already in a sprint to a different sprint.
+    /// </summary>
+    private async Task MoveSprintItemToSprint(SprintDragItem item, SprintColumn source, SprintColumn target)
+    {
+        _isBusy = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await WorkItemService.UpdateIterationPathAsync(item.TfsId, target.Path);
+            if (success)
             {
-                // Determine the new iteration path
-                string newIterationPath;
-                if (newZone == BacklogZone)
-                {
-                    // Moving to backlog: use the root iteration path (project root)
-                    newIterationPath = GetRootIterationPath();
-                }
-                else
-                {
-                    // Moving to a sprint: use the sprint's iteration path
-                    var sprintCol = _sprintColumns.FirstOrDefault(s => s.ZoneId == newZone);
-                    if (sprintCol == null) return;
-                    newIterationPath = sprintCol.Path;
-                }
-
-                var success = await WorkItemService.UpdateIterationPathAsync(item.TfsId, newIterationPath);
-                if (success)
-                {
-                    item.IterationPath = newIterationPath;
-                    Snackbar.Add($"Moved \"{item.Title}\" to {(newZone == BacklogZone ? "Backlog" : _sprintColumns.First(s => s.ZoneId == newZone).Name)}.", Severity.Success);
-
-                    if (_selectedProductId.HasValue)
-                    {
-                        await LoadBoardAsync(_selectedProductId.Value);
-                    }
-                }
-                else
-                {
-                    // Revert on failure
-                    item.Zone = oldZone;
-                    Snackbar.Add("Failed to update sprint assignment.", Severity.Error);
-                }
+                item.IterationPath = target.Path;
+                Snackbar.Add($"Moved \"{item.Title}\" to {target.Name}.", Severity.Success);
+                if (_selectedProductId.HasValue)
+                    await LoadBoardAsync(_selectedProductId.Value);
             }
-            catch (Exception ex)
+            else
             {
-                Logger.LogError(ex, "Error updating iteration path for work item {TfsId}", item.TfsId);
-                item.Zone = oldZone;
-                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
-            }
-            finally
-            {
-                _isBusy = false;
-                _dropContainer?.Refresh();
-                StateHasChanged();
+                Snackbar.Add("Failed to update sprint assignment.", Severity.Error);
             }
         }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error moving sprint item {TfsId}", item.TfsId);
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isBusy = false;
+            StateHasChanged();
+        }
+    }
+
+    // ── Tree rendering ─────────────────────────────────────────────────────────
+
+    private RenderFragment RenderCandidateNode(PlanBoardCandidateNode node, int depth) => builder =>
+    {
+        var isLeaf = node.Children.Count == 0;
+        var nodeClass = GetNodeRowClass(node.WorkItemType);
+        var isDragging = ReferenceEquals(_draggedNode, node);
+
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "plan-tree-node");
+
+        // Row
+        builder.OpenElement(2, "div");
+        builder.AddAttribute(3, "class", $"plan-tree-node-row {nodeClass}{(isDragging ? " dragging" : "")}");
+        builder.AddAttribute(4, "draggable", "true");
+        builder.AddAttribute(5, "ondragstart", EventCallback.Factory.Create(this, () => OnCandidateNodeDragStart(node)));
+        builder.AddAttribute(6, "ondragend", EventCallback.Factory.Create(this, OnDragEnd));
+
+        // Expand / collapse button for parent nodes
+        if (!isLeaf)
+        {
+            builder.OpenElement(10, "span");
+            builder.AddAttribute(11, "class", "plan-tree-expand-btn");
+            builder.AddAttribute(12, "style", "cursor: pointer; font-size: 0.75rem;");
+            builder.AddAttribute(13, "onclick",
+                EventCallback.Factory.Create(this, () => { node.IsExpanded = !node.IsExpanded; StateHasChanged(); }));
+            builder.AddContent(14, node.IsExpanded ? "▼" : "▶");
+            builder.CloseElement();
+        }
+        else
+        {
+            // Leaf spacer
+            builder.OpenElement(10, "span");
+            builder.AddAttribute(11, "style", "min-width: 20px; flex-shrink: 0;");
+            builder.CloseElement();
+        }
+
+        // Title
+        builder.OpenElement(20, "span");
+        builder.AddAttribute(21, "class", "plan-tree-title");
+        builder.AddAttribute(22, "title", node.Title);
+        builder.AddContent(23, node.Title);
+        builder.CloseElement();
+
+        // Type chip
+        builder.OpenElement(30, "span");
+        builder.AddAttribute(31, "style", "font-size: 0.65rem; flex-shrink: 0; opacity: 0.75;");
+        builder.AddContent(32, GetNodeTypeLabel(node.WorkItemType));
+        builder.CloseElement();
+
+        // Effort chip
+        if (isLeaf)
+        {
+            if (node.OwnEffort.HasValue)
+            {
+                builder.OpenElement(40, "span");
+                builder.AddAttribute(41, "class", "plan-tree-effort-chip mud-chip mud-chip-outlined mud-chip-color-info");
+                builder.AddContent(42, $"{node.OwnEffort} SP");
+                builder.CloseElement();
+            }
+            else
+            {
+                builder.OpenElement(40, "span");
+                builder.AddAttribute(41, "style", "font-size: 0.65rem; color: var(--mud-palette-warning); flex-shrink: 0;");
+                builder.AddContent(42, "⚠");
+                builder.CloseElement();
+            }
+        }
+        else
+        {
+            if (node.AggregatedEffort > 0)
+            {
+                builder.OpenElement(40, "span");
+                builder.AddAttribute(41, "class", "plan-tree-effort-chip mud-chip mud-chip-outlined mud-chip-color-info");
+                builder.AddContent(42, $"{node.AggregatedEffort} SP");
+                builder.CloseElement();
+            }
+        }
+
+        builder.CloseElement(); // row
+
+        // Children (if expanded)
+        if (!isLeaf && node.IsExpanded)
+        {
+            builder.OpenElement(50, "div");
+            builder.AddAttribute(51, "class", "plan-tree-children");
+            foreach (var child in node.Children)
+            {
+                builder.AddContent(52, RenderCandidateNode(child, depth + 1));
+            }
+            builder.CloseElement();
+        }
+
+        builder.CloseElement(); // node
+    };
+
+    // ── Helper methods ─────────────────────────────────────────────────────────
+
+    private static string GetNodeRowClass(string workItemType)
+    {
+        if (PlanBoardWorkItemRules.IsEpic(workItemType)) return "plan-tree-epic";
+        if (PlanBoardWorkItemRules.IsFeature(workItemType)) return "plan-tree-feature";
+        return string.Equals(workItemType, WorkItemTypeHelper.Bug, StringComparison.OrdinalIgnoreCase)
+            ? "plan-tree-bug"
+            : "plan-tree-pbi";
+    }
+
+    private static string GetNodeTypeLabel(string workItemType)
+    {
+        if (PlanBoardWorkItemRules.IsEpic(workItemType)) return "Epic";
+        if (PlanBoardWorkItemRules.IsFeature(workItemType)) return "Feature";
+        return PlanBoardWorkItemRules.GetTypeLabel(workItemType);
+    }
+
+    private static int CountCandidateLeaves(List<PlanBoardCandidateNode> nodes)
+    {
+        var count = 0;
+        foreach (var node in nodes)
+        {
+            if (node.Children.Count == 0)
+                count++;
+            else
+                count += CountCandidateLeaves(node.Children);
+        }
+        return count;
     }
 
     private string GetRootIterationPath()
     {
-        // Use the root iteration path from any existing work item, or fall back to extracting from sprint paths
         var anyItem = _allWorkItems.FirstOrDefault(w => !string.IsNullOrEmpty(w.IterationPath));
         if (anyItem != null)
         {
-            // Extract root: "Project\Sprint1" or "Project/Sprint1" → "Project"
             var normalized = NormalizeIterationPath(anyItem.IterationPath);
             var separatorIndex = normalized.IndexOf('\\');
             return separatorIndex >= 0 ? normalized[..separatorIndex] : normalized;
@@ -606,29 +891,16 @@
         return string.Empty;
     }
 
-    /// <summary>
-    /// Normalizes iteration paths by replacing forward slashes with backslashes and trimming,
-    /// ensuring consistent comparison regardless of path separator style.
-    /// </summary>
-    private static string NormalizeIterationPath(string path)
-    {
-        return path.Replace('/', '\\').Trim();
-    }
+    private static string NormalizeIterationPath(string path) =>
+        path.Replace('/', '\\').Trim();
 
-    private void NavigateToPlanning()
-    {
+    private void NavigateToPlanning() =>
         NavigationManager.NavigateTo(WorkspaceRoutes.PlanningWorkspace);
-    }
 
-    /// <summary>
-    /// Loads capacity calibration from recent completed sprints to derive sprint capacity.
-    /// Uses MedianVelocity (P50) as the sprint capacity estimate.
-    /// </summary>
     private async Task LoadCapacityCalibrationAsync(List<SprintDto> allTeamSprints, int productId)
     {
         if (_activeProfileId == null) return;
 
-        // Find completed sprints (ended before now) for historical velocity
         var completedSprintIds = allTeamSprints
             .Where(s => s.EndUtc.HasValue && s.EndUtc.Value <= DateTimeOffset.UtcNow)
             .OrderByDescending(s => s.EndUtc)
@@ -658,12 +930,10 @@
         }
     }
 
-    /// <summary>
-    /// Computes capacity state for a sprint zone including utilization and overcommitment status.
-    /// </summary>
     private SprintCapacityState GetSprintCapacityState(string zoneId)
     {
-        var assigned = _allDragItems.Where(i => i.Zone == zoneId).Sum(i => i.Effort ?? 0);
+        var items = _sprintItems.GetValueOrDefault(zoneId) ?? [];
+        var assigned = items.Sum(i => i.Effort ?? 0);
 
         if (!_sprintCapacity.HasValue || _sprintCapacity.Value <= 0)
             return new SprintCapacityState(0, assigned, 0, 0, 0, false);
@@ -677,9 +947,6 @@
         return new SprintCapacityState(capacity, assigned, remaining, utilization, overAmount, isOvercommitted);
     }
 
-    /// <summary>
-    /// Returns progress bar color based on utilization percentage.
-    /// </summary>
     private static Color GetCapacityColor(double utilization) => utilization switch
     {
         > 100 => Color.Error,
@@ -695,6 +962,8 @@
             ? Color.Error
             : Color.Info;
 
+    // ── Private types ──────────────────────────────────────────────────────────
+
     private sealed class SprintColumn
     {
         public int SprintId { get; init; }
@@ -705,14 +974,13 @@
         public DateTimeOffset? EndUtc { get; init; }
     }
 
-    private sealed class PlanBoardDragItem
+    private sealed class SprintDragItem
     {
         public int TfsId { get; init; }
         public required string Title { get; init; }
         public required string WorkItemType { get; init; }
         public string? FeatureTitle { get; init; }
         public int? Effort { get; init; }
-        public string Zone { get; set; } = BacklogZone;
         public string IterationPath { get; set; } = string.Empty;
     }
 
