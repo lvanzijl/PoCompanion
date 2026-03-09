@@ -965,18 +965,35 @@ Een alleen-lezen visueel overzicht van werkitem-afhankelijkheden tussen epics en
 
 **Pagina:** `/planning/plan-board`
 
-Het Plan Board is het operationele planbord voor sprintplanning. Hiermee worden PBIs en bugs visueel in aankomende sprints geplaatst via drag-and-drop. Het bord toont daarnaast capaciteitsindicatoren die helpen bij het nemen van weloverwogen planningsbeslissingen.
+Het Plan Board is het operationele planbord voor sprintplanning. Het bord toont aan de linkerkant een hiërarchische planningsboom (Epic → Feature → PBI/Bug) met alle ongeplande, in-aanmerking-komende werkitems. Aan de rechterkant staan de aankomende sprints als kolommen. Werkitems worden via drag-and-drop aan sprints toegewezen. Het bord toont daarnaast capaciteitsindicatoren die helpen bij het nemen van weloverwogen planningsbeslissingen.
 
 #### Doel
 
-Deze pagina beantwoordt de vraag: *Welke PBIs en bugs moeten we in de komende sprints oppakken?* Het bord biedt een snel, visueel en interactief planningsoppervlak op backlog-itemniveau, met features als context.
+Deze pagina beantwoordt de vraag: *Welke PBIs en bugs moeten we in de komende sprints oppakken?* Het bord biedt een snel, visueel en interactief planningsoppervlak met context op Epic- en Feature-niveau.
 
 #### Bordstructuur
 
-Het bord bestaat uit kolommen:
+Het bord bestaat uit twee panelen:
 
-- **Backlog** — PBIs en bugs die nog niet aan een sprint zijn toegewezen.
-- **Sprint 1, 2, 3** — De eerstvolgende drie toekomstige sprints. Elke kolom toont de sprintnaam en datumbereik.
+- **Kandidatenboom (links)** — Hiërarchische boom met alle ongeplande, in-aanmerking-komende PBIs en Bugs, gegroepeerd onder Features en Epics. Done en Removed werkitems worden niet getoond. Werkitems die al aan een sprint zijn toegewezen, worden eveneens niet getoond. Volgorde: BacklogPriority oplopend (nulls als laatste), vervolgens TfsId als tiebreaker — op elk niveau.
+- **Sprintkolommen (rechts)** — De eerstvolgende drie toekomstige sprints. Elke kolom toont de sprintnaam, datumbereik en een capaciteitsindicator.
+
+#### Hiërarchische kandidatenboom
+
+De boom toont drie niveaus:
+
+- **Epic** — Bovenste niveau. Oranje markering. Toont de totale effort van alle in-aanmerking-komende nakomelingen.
+- **Feature** — Tweede niveau, ingesprongen onder de Epic. Paarse markering. Toont de som van de effort van in-aanmerking-komende PBIs/Bugs.
+- **PBI / Bug** — Laagste niveau, ingesprongen onder de Feature. Blauwe (PBI) of rode (Bug) markering. Toont de eigen effort.
+
+Epic- en Feature-rijen kunnen worden uitgevouwen en ingeklapt. Ingeklapte rijen blijven sleepbaar.
+
+#### Effort-weergave
+
+- **PBI/Bug**: toont de eigen effort-schatting. Ontbrekende schatting wordt aangegeven met ⚠.
+- **Feature**: toont de som van de effort van alle in-aanmerking-komende (niet Done/Removed) PBIs en Bugs.
+- **Epic**: toont de som van de effort van alle in-aanmerking-komende PBIs en Bugs in alle onderliggende Features.
+- Done en Removed nakomelingen tellen **nooit** mee in bovenliggende effort-sommen.
 
 #### Sprintcapaciteitsindicator
 
@@ -995,7 +1012,7 @@ Wanneer de toegewezen effort de capaciteit overschrijdt, wordt een waarschuwings
 
 Dit is een **planningshint**, geen harde regel. Het team bepaalt zelf of de planning realistisch is.
 
-#### Werkitem-kaarten
+#### Werkitem-kaarten (in sprintkolommen)
 
 Elke kaart vertegenwoordigt een **PBI** of **Bug** en toont:
 
@@ -1005,15 +1022,16 @@ Elke kaart vertegenwoordigt een **PBI** of **Bug** en toont:
 - **Effort** schatting (indien ingevuld)
 - **Waarschuwing** wanneer geen effort-schatting is ingevuld (⚠ No estimate)
 
-Werkitems zonder schatting worden visueel gemarkeerd met een oranje rand, zodat ze opvallen tijdens het plannen.
+Werkitems zonder schatting worden visueel gemarkeerd met een oranje rand.
 
 #### Drag-and-drop planning
 
-- Sleep een PBI of bug van de backlog naar een sprintkolom om deze in te plannen.
-- Sleep een PBI of bug tussen sprints om de toewijzing te wijzigen.
-- Herorden werkitems binnen een kolom door ze te slepen.
+- Sleep een **PBI of Bug** van de kandidatenboom naar een sprintkolom om dat ene werkitem in te plannen.
+- Sleep een **Feature** van de kandidatenboom naar een sprintkolom om alle in-aanmerking-komende PBIs en Bugs onder die Feature in bulk in te plannen.
+- Sleep een **Epic** van de kandidatenboom naar een sprintkolom om alle in-aanmerking-komende PBIs en Bugs onder die Epic in bulk in te plannen.
+- Sleep een werkitem **tussen sprintkolommen** om de toewijzing te wijzigen.
 
-Bij het verplaatsen van een PBI of bug naar een andere kolom wordt het iteratiepad in TFS bijgewerkt. De capaciteitsindicatoren worden direct bijgewerkt na elke verplaatsing.
+Bij elke verplaatsing wordt het iteratiepad in TFS bijgewerkt. De capaciteitsindicatoren worden direct bijgewerkt na elke verplaatsing.
 
 #### Productselectie
 
