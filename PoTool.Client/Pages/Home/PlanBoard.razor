@@ -33,6 +33,13 @@
                     <MudProgressCircular Size="Size.Small" Indeterminate="true" />
                 }
                 <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           Disabled="@(!_selectedProductId.HasValue || _selectedProductRootIds.Length == 0 || _isBusy || _isLoadingBoard)"
+                           OnClick="RefreshBoardFromTfsAsync">
+                    @(_isRefreshingFromTfs ? "Refreshing…" : "Refresh from TFS")
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
                            StartIcon="@Icons.Material.Filled.CalendarMonth"
                            OnClick="NavigateToPlanning">
@@ -442,6 +449,8 @@
     // Capacity planning data
     private int? _activeProfileId;
     private double? _sprintCapacity;
+    private int[] _selectedProductRootIds = [];
+    private bool _isRefreshingFromTfs;
 
     protected override async Task OnInitializedAsync()
     {
@@ -496,6 +505,7 @@
             var product = await ProductService.GetProductByIdAsync(productId);
             if (product == null)
             {
+                _selectedProductRootIds = [];
                 Snackbar.Add("Product not found.", Severity.Error);
                 return;
             }
@@ -511,6 +521,7 @@
             // Load work items hierarchy for this product
             if (product.BacklogRootWorkItemIds.Count == 0)
             {
+                _selectedProductRootIds = [];
                 _allWorkItems = new List<WorkItemDto>();
                 _sprintColumns = new List<SprintColumn>();
                 _candidateTree = new List<PlanBoardCandidateNode>();
@@ -518,6 +529,7 @@
                 return;
             }
 
+            _selectedProductRootIds = product.BacklogRootWorkItemIds.ToArray();
             var workItems = (await WorkItemService.GetByRootIdsAsync(product.BacklogRootWorkItemIds.ToArray())).ToList();
             _allWorkItems = workItems;
 
@@ -559,6 +571,36 @@
         finally
         {
             _isLoadingBoard = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshBoardFromTfsAsync()
+    {
+        if (!_selectedProductId.HasValue || _selectedProductRootIds.Length == 0 || _isBusy || _isLoadingBoard)
+            return;
+
+        _isBusy = true;
+        _isRefreshingFromTfs = true;
+        StateHasChanged();
+
+        try
+        {
+            var refreshedCount = await WorkItemService.RefreshWorkItemsByRootIdsFromTfsAsync(_selectedProductRootIds);
+            await LoadBoardAsync(_selectedProductId.Value);
+
+            var label = refreshedCount == 1 ? "1 work item" : $"{refreshedCount} work items";
+            Snackbar.Add($"Refreshed {label} from TFS.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error refreshing plan board from TFS for product {ProductId}", _selectedProductId.Value);
+            Snackbar.Add($"Error refreshing board from TFS: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isRefreshingFromTfs = false;
+            _isBusy = false;
             StateHasChanged();
         }
     }

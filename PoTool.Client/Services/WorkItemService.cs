@@ -24,6 +24,7 @@ public class WorkItemService
     private const string AreaPathsFromTfsEndpoint = "/api/workitems/area-paths/from-tfs";
     private const string GoalsFromTfsEndpoint = "/api/workitems/goals/from-tfs";
     private const string ByRootIdsEndpoint = "/api/workitems/by-root-ids";
+    private const string RefreshByRootIdsFromTfsEndpoint = "/api/workitems/by-root-ids/refresh-from-tfs";
     private const string ValidationTriageEndpoint = "/api/workitems/validation-triage";
     private const string ValidationQueueEndpoint = "/api/workitems/validation-queue";
     private const string ValidationFixEndpoint = "/api/workitems/validation-fix";
@@ -248,6 +249,23 @@ public class WorkItemService
             return false;
         response.EnsureSuccessStatusCode();
         return true;
+    }
+
+    /// <summary>
+    /// Re-fetches a product-scoped work item hierarchy from TFS and updates the local DB cache.
+    /// Returns the number of refreshed work items.
+    /// </summary>
+    /// <param name="rootIds">Root work item IDs that define the hierarchy to refresh.</param>
+    public async Task<int> RefreshWorkItemsByRootIdsFromTfsAsync(int[] rootIds)
+    {
+        if (rootIds.Length == 0)
+            return 0;
+
+        var response = await _httpClient.PostAsync(
+            $"{RefreshByRootIdsFromTfsEndpoint}?rootIds={string.Join(",", rootIds)}",
+            null);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<int>(_jsonOptions);
     }
 
     /// <summary>
