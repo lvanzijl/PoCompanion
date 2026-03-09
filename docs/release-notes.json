@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-09",
+    "type": "Changed",
+    "title": "Plan Board can refresh from TFS",
+    "impact": "The Plan Board now includes a Refresh from TFS action that reloads the selected product hierarchy into cache and redraws the board with the latest sprint assignments.",
+    "area": "Planning",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-03-09",
     "type": "Fixed",
     "title": "Plan Board now plans PBIs and bugs",
     "impact": "Plan Board drag-and-drop now assigns PBIs and bugs to upcoming sprints and the documentation reflects that TFS iteration changes are applied to those backlog items.",

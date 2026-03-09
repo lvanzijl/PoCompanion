@@ -244,6 +244,32 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
+    /// Re-fetches a product-scoped work item hierarchy from TFS and updates the local DB cache.
+    /// Used by the Plan Board "Refresh from TFS" feature.
+    /// </summary>
+    /// <param name="rootIds">Comma-separated list of root work item IDs.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    [HttpPost("by-root-ids/refresh-from-tfs")]
+    public async Task<ActionResult<int>> RefreshByRootIdsFromTfs(
+        [FromQuery] string rootIds,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!TryParseRootIds(rootIds, out var ids, out var badRequest))
+                return badRequest!;
+
+            var refreshedCount = await _mediator.Send(new RefreshWorkItemsByRootIdsFromTfsCommand(ids), cancellationToken);
+            return Ok(refreshedCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing work items by root IDs from TFS: {RootIds}", rootIds);
+            return StatusCode(500, "Error refreshing work items from TFS");
+        }
+    }
+
+    /// <summary>
     /// Updates the tags of a work item in TFS and refreshes the local cache.
     /// </summary>
     [HttpPost("{tfsId:int}/tags")]
@@ -799,36 +825,11 @@ public class WorkItemsController : ControllerBase
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(rootIds))
-            {
-                return BadRequest("Root IDs parameter is required");
-            }
-
-            var ids = rootIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(int.Parse)
-                .ToArray();
-
-            if (ids.Length == 0)
-            {
-                return BadRequest("At least one root ID must be provided");
-            }
-
-            // Validate that all IDs are positive
-            if (ids.Any(id => id <= 0))
-            {
-                return BadRequest("All root IDs must be positive integers");
-            }
+            if (!TryParseRootIds(rootIds, out var ids, out var badRequest))
+                return badRequest!;
 
             var workItems = await _mediator.Send(new GetWorkItemsByRootIdsQuery(ids), cancellationToken);
             return Ok(workItems);
-        }
-        catch (FormatException)
-        {
-            return BadRequest("Invalid root ID format");
-        }
-        catch (OverflowException)
-        {
-            return BadRequest("Root ID value is too large");
         }
         catch (Exception ex)
         {
@@ -916,6 +917,53 @@ public class WorkItemsController : ControllerBase
             badRequest = BadRequest("Invalid product ID format. Must be comma-separated integers.");
             return false;
         }
+    }
+
+    /// <summary>
+    /// Parses a comma-separated root ID string into a positive int array.
+    /// Returns a BadRequest result when the format is invalid or no IDs are provided.
+    /// </summary>
+    private bool TryParseRootIds(string? rootIds, out int[] result, out ActionResult? badRequest)
+    {
+        result = [];
+        badRequest = null;
+
+        if (string.IsNullOrWhiteSpace(rootIds))
+        {
+            badRequest = BadRequest("Root IDs parameter is required");
+            return false;
+        }
+
+        try
+        {
+            result = rootIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(int.Parse)
+                .ToArray();
+        }
+        catch (FormatException)
+        {
+            badRequest = BadRequest("Invalid root ID format");
+            return false;
+        }
+        catch (OverflowException)
+        {
+            badRequest = BadRequest("Root ID value is too large");
+            return false;
+        }
+
+        if (result.Length == 0)
+        {
+            badRequest = BadRequest("At least one root ID must be provided");
+            return false;
+        }
+
+        if (result.Any(id => id <= 0))
+        {
+            badRequest = BadRequest("All root IDs must be positive integers");
+            return false;
+        }
+
+        return true;
     }
 }
 
