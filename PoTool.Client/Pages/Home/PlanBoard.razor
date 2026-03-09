@@ -765,19 +765,22 @@
         // Expand / collapse button for parent nodes
         if (!isLeaf)
         {
-            builder.OpenElement(10, "span");
+            builder.OpenElement(10, "button");
             builder.AddAttribute(11, "class", "plan-tree-expand-btn");
-            builder.AddAttribute(12, "style", "cursor: pointer; font-size: 0.75rem;");
-            builder.AddAttribute(13, "onclick",
+            builder.AddAttribute(12, "style", "cursor: pointer; font-size: 0.75rem; background: none; border: none; padding: 0; color: inherit;");
+            builder.AddAttribute(13, "aria-expanded", node.IsExpanded ? "true" : "false");
+            builder.AddAttribute(14, "aria-label", node.IsExpanded ? "Collapse" : "Expand");
+            builder.AddAttribute(15, "onclick",
                 EventCallback.Factory.Create(this, () => { node.IsExpanded = !node.IsExpanded; StateHasChanged(); }));
-            builder.AddContent(14, node.IsExpanded ? "▼" : "▶");
+            builder.AddContent(16, node.IsExpanded ? "▼" : "▶");
             builder.CloseElement();
         }
         else
         {
             // Leaf spacer
             builder.OpenElement(10, "span");
-            builder.AddAttribute(11, "style", "min-width: 20px; flex-shrink: 0;");
+            builder.AddAttribute(11, "aria-hidden", "true");
+            builder.AddAttribute(12, "style", "min-width: 20px; flex-shrink: 0;");
             builder.CloseElement();
         }
 

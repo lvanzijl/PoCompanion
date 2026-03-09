@@ -97,7 +97,7 @@ public static class PlanBoardWorkItemRules
         // Build Epic nodes
         foreach (var epic in epicIdSet
             .Select(id => lookup[id])
-            .OrderBy(e => e.BacklogPriority ?? double.MaxValue).ThenBy(e => e.TfsId))
+            .OrderByBacklogPriority())
         {
             var epicNode = BuildEpicNode(epic, featuresByEpic, leavesByFeature, lookup);
             if (epicNode != null)
@@ -108,7 +108,7 @@ public static class PlanBoardWorkItemRules
         foreach (var feature in featureIdSet
             .Select(id => lookup[id])
             .Where(f => !f.ParentTfsId.HasValue || !epicIdSet.Contains(f.ParentTfsId.Value))
-            .OrderBy(f => f.BacklogPriority ?? double.MaxValue).ThenBy(f => f.TfsId))
+            .OrderByBacklogPriority())
         {
             var featureNode = BuildFeatureNode(feature, leavesByFeature);
             if (featureNode != null)
@@ -116,8 +116,7 @@ public static class PlanBoardWorkItemRules
         }
 
         // Handle orphan PBIs/Bugs (no Feature parent)
-        foreach (var leaf in orphanLeaves
-            .OrderBy(p => p.BacklogPriority ?? double.MaxValue).ThenBy(p => p.TfsId))
+        foreach (var leaf in orphanLeaves.OrderByBacklogPriority())
         {
             result.Add(BuildLeafNode(leaf));
         }
@@ -140,7 +139,7 @@ public static class PlanBoardWorkItemRules
         };
 
         foreach (var feature in (featuresByEpic.GetValueOrDefault(epic.TfsId) ?? new List<WorkItemDto>())
-            .OrderBy(f => f.BacklogPriority ?? double.MaxValue).ThenBy(f => f.TfsId))
+            .OrderByBacklogPriority())
         {
             var featureNode = BuildFeatureNode(feature, leavesByFeature);
             if (featureNode == null) continue;
@@ -169,7 +168,7 @@ public static class PlanBoardWorkItemRules
         };
 
         foreach (var leaf in (leavesByFeature.GetValueOrDefault(feature.TfsId) ?? new List<WorkItemDto>())
-            .OrderBy(p => p.BacklogPriority ?? double.MaxValue).ThenBy(p => p.TfsId))
+            .OrderByBacklogPriority())
         {
             var leafNode = BuildLeafNode(leaf);
             featureNode.Children.Add(leafNode);
@@ -203,6 +202,14 @@ public static class PlanBoardWorkItemRules
         var normalized = iterationPath.Replace('/', '\\').Trim();
         return sprintPaths.Contains(normalized);
     }
+
+    /// <summary>
+    /// Orders a sequence of work items by BacklogPriority ascending (nulls sorted last),
+    /// with TfsId as a stable tie-breaker.
+    /// </summary>
+    private static IOrderedEnumerable<WorkItemDto> OrderByBacklogPriority(
+        this IEnumerable<WorkItemDto> source) =>
+        source.OrderBy(w => w.BacklogPriority ?? double.MaxValue).ThenBy(w => w.TfsId);
 
     public static string? ResolveFeatureTitle(WorkItemDto workItem, IReadOnlyDictionary<int, WorkItemDto> workItemLookup)
     {
@@ -250,9 +257,18 @@ public sealed class PlanBoardCandidateNode
     public required string Title { get; init; }
     public required string WorkItemType { get; init; }
     public double? BacklogPriority { get; init; }
-    /// <summary>For PBI/Bug: the item's own effort. Null if not estimated.</summary>
+    /// <summary>
+    /// The raw effort estimate for this work item as stored in TFS.
+    /// Populated only for PBI/Bug leaf nodes. Null when no estimate exists.
+    /// Use <see cref="AggregatedEffort"/> for display at all levels.
+    /// </summary>
     public int? OwnEffort { get; init; }
-    /// <summary>For PBI/Bug: same as OwnEffort. For Feature/Epic: sum of eligible descendant efforts.</summary>
+    /// <summary>
+    /// The effort value used for display in the tree UI.
+    /// For PBI/Bug: equal to <see cref="OwnEffort"/> (0 when null/unestimated).
+    /// For Feature/Epic: sum of <see cref="OwnEffort"/> values of all eligible descendant PBIs/Bugs.
+    /// Done and Removed descendants are never included in this sum.
+    /// </summary>
     public int AggregatedEffort { get; set; }
     public List<PlanBoardCandidateNode> Children { get; init; } = [];
     /// <summary>Controls expand/collapse in the tree UI. Expanded by default.</summary>
