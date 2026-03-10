@@ -3,7 +3,6 @@
 @using PoTool.Client.Services
 @inject IProfileService ProfileService
 @inject ProductService ProductService
-@inject WorkItemService WorkItemService
 @inject CacheSyncService CacheSyncService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -35,18 +34,51 @@
         }
         else if (!_showNoProfileAlert)
         {
-            <MudPaper Elevation="1" Class="pa-3 dashboard-section">
-                <MudStack Spacing="2">
-                    <MudText Typo="Typo.h6">Products</MudText>
+            <MudStack Spacing="2" Class="dashboard-workspaces">
+                <MudText Typo="Typo.h6">Workspaces</MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6">
+                        <DashboardWorkspaceCard Title="Health"
+                                                SignalText="@WorkspaceSignalPlaceholder"
+                                                Icon="@Icons.Material.Filled.HealthAndSafety"
+                                                IconColor="Color.Success"
+                                                OnClick="NavigateToHealth" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <DashboardWorkspaceCard Title="Delivery"
+                                                SignalText="@WorkspaceSignalPlaceholder"
+                                                Icon="@Icons.Material.Filled.CheckCircle"
+                                                IconColor="Color.Secondary"
+                                                OnClick="NavigateToDelivery" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <DashboardWorkspaceCard Title="Trends"
+                                                SignalText="@WorkspaceSignalPlaceholder"
+                                                Icon="@Icons.Material.Filled.Timeline"
+                                                IconColor="Color.Info"
+                                                OnClick="NavigateToTrends" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <DashboardWorkspaceCard Title="Planning"
+                                                SignalText="@WorkspaceSignalPlaceholder"
+                                                Icon="@Icons.Material.Filled.CalendarMonth"
+                                                IconColor="Color.Warning"
+                                                OnClick="NavigateToPlanning" />
+                    </MudItem>
+                </MudGrid>
+            </MudStack>
 
-                    @if (_products.Count == 0)
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            No products configured for this Product Owner.
-                        </MudText>
-                    }
-                    else
-                    {
+            <MudPaper Elevation="1" Class="pa-3 dashboard-section dashboard-product-bar">
+                @if (_products.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        No products configured for this Product Owner.
+                    </MudText>
+                }
+                else
+                {
+                    <div class="dashboard-product-bar__left">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Products</MudText>
                         <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
                             <MudButton Variant="@GetProductChipVariant(null)"
                                        Color="@GetProductChipColor(null)"
@@ -67,164 +99,61 @@
                                 </MudButton>
                             }
                         </MudStack>
-                    }
-
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        Active: @GetActiveProductLabel()
-                    </MudText>
-                </MudStack>
+                    </div>
+                    <div class="dashboard-product-bar__metrics-placeholder" aria-hidden="true"></div>
+                }
             </MudPaper>
 
             <MudPaper Elevation="1" Class="pa-3 dashboard-section">
                 <MudStack Spacing="2">
-                    <MudText Typo="Typo.h6">Workspaces</MudText>
-
-                    <MudGrid Spacing="2">
-                        <MudItem xs="12" sm="6">
-                            <DashboardWorkspaceCard Title="Health"
-                                                    Description="Backlog maturity and refinement readiness"
-                                                    Icon="@Icons.Material.Filled.HealthAndSafety"
-                                                    IconColor="Color.Success"
-                                                    OnClick="NavigateToHealth" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6">
-                            <DashboardWorkspaceCard Title="Delivery"
-                                                    Description="Delivered work per sprint or period"
-                                                    Icon="@Icons.Material.Filled.CheckCircle"
-                                                    IconColor="Color.Secondary"
-                                                    OnClick="NavigateToDelivery" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6">
-                            <DashboardWorkspaceCard Title="Trends"
-                                                    Description="Structural behaviour across recent sprints"
-                                                    Icon="@Icons.Material.Filled.Timeline"
-                                                    IconColor="Color.Info"
-                                                    OnClick="NavigateToTrends" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6">
-                            <DashboardWorkspaceCard Title="Planning"
-                                                    Description="Decision support for upcoming work"
-                                                    Icon="@Icons.Material.Filled.CalendarMonth"
-                                                    IconColor="Color.Warning"
-                                                    OnClick="NavigateToPlanning" />
-                        </MudItem>
-                    </MudGrid>
-                </MudStack>
-            </MudPaper>
-
-            <MudPaper Elevation="1" Class="pa-3 dashboard-section">
-                <MudStack Spacing="2">
-                    <MudText Typo="Typo.h6">Quick Actions</MudText>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Quick Actions</MudText>
 
                     <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Warning"
-                                   StartIcon="@Icons.Material.Filled.FactCheck"
-                                   OnClick="NavigateToValidationTriage"
-                                   Size="Size.Small">
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Default"
+                                    StartIcon="@Icons.Material.Filled.FactCheck"
+                                    OnClick="NavigateToValidationTriage"
+                                    Size="Size.Small"
+                                    Class="dashboard-quick-action">
                             Validation Triage
                         </MudButton>
                         <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Error"
-                                   StartIcon="@Icons.Material.Filled.BugReport"
-                                   OnClick='() => NavigationManager.NavigateTo(WorkspaceRoutes.BugTriage)'
-                                   Size="Size.Small">
+                                   Color="Color.Default"
+                                    StartIcon="@Icons.Material.Filled.BugReport"
+                                    OnClick='() => NavigationManager.NavigateTo(WorkspaceRoutes.BugTriage)'
+                                    Size="Size.Small"
+                                    Class="dashboard-quick-action">
                             Bug Triage
                         </MudButton>
                     </MudStack>
                 </MudStack>
             </MudPaper>
 
-            <MudPaper Elevation="1" Class="pa-3 dashboard-section">
-                <MudStack Spacing="2">
-                    <MudText Typo="Typo.h6">Quick Status</MudText>
-
-                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="@GetHealthStatusColor()"
-                                   StartIcon="@Icons.Material.Filled.FactCheck"
-                                   OnClick="NavigateToValidationTriage"
-                                   Size="Size.Small">
-                            @_workItemsWithIssues Issues
-                        </MudButton>
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="@GetBugStatusColor()"
-                                   StartIcon="@Icons.Material.Filled.BugReport"
-                                   OnClick='() => NavigationManager.NavigateTo(WorkspaceRoutes.BugTriage)'
-                                   Size="Size.Small">
-                            @_activeBugCount Bugs
-                        </MudButton>
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Default"
-                                   StartIcon="@Icons.Material.Filled.Inventory2"
-                                   OnClick="NavigateToWorkItemExplorer"
-                                   Size="Size.Small">
-                            @_totalWorkItems Work Items
-                        </MudButton>
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Default"
-                                   StartIcon="@Icons.Material.Filled.History"
-                                   OnClick="NavigateToHomeChanges"
-                                   Size="Size.Small">
-                            @GetLastSyncLabel()
-                        </MudButton>
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Primary"
-                                   StartIcon="@Icons.Material.Filled.Sync"
-                                   OnClick="TriggerManualSyncAsync"
-                                   Disabled="@_isSyncing"
-                                   Size="Size.Small">
-                            @(_isSyncing ? "Syncing..." : "Sync")
-                        </MudButton>
-                    </MudStack>
-                </MudStack>
-            </MudPaper>
-
-            <MudPaper Elevation="1" Class="pa-3 dashboard-section">
-                <MudStack Spacing="2">
-                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Advanced Tools</MudText>
-
-                    <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
-                        <MudButton Variant="Variant.Text"
-                                   Color="Color.Default"
-                                   StartIcon="@Icons.Material.Filled.Search"
-                                   OnClick="NavigateToWorkItemExplorer"
-                                   Size="Size.Small">
-                            Work Item Explorer
-                        </MudButton>
-                    </MudStack>
-                </MudStack>
-            </MudPaper>
+            <div class="dashboard-sync-status">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@GetLastSyncLabel()</MudText>
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Sync"
+                           OnClick="TriggerManualSyncAsync"
+                           Disabled="@_isSyncing"
+                           Size="Size.Small">
+                    @(_isSyncing ? "Syncing..." : "Sync")
+                </MudButton>
+            </div>
         }
     </MudStack>
 </MudContainer>
 
-<style>
-    .dashboard-section {
-        width: 100%;
-    }
-
-    .product-context-button {
-        border-radius: 999px;
-        min-width: 0;
-        text-transform: none;
-    }
-</style>
-
 @code {
+    private const string WorkspaceSignalPlaceholder = "(signal placeholder)";
     private bool _isLoading = true;
     private bool _isSyncing = false;
     private bool _showNoProfileAlert = false;
     private int? _profileId;
-    
-    // Health signal data
-    private int _totalWorkItems = 0;
-    private int _workItemsWithIssues = 0;
-    private int _activeBugCount = 0;
-    
+
     // Sync state
     private DateTimeOffset? _lastSyncTime;
-    
+
     // Context propagation - product/team filter
     private int? _selectedProductId;
     private List<PoTool.Client.ApiClient.ProductDto> _products = new();
@@ -253,9 +182,6 @@
             // Load last sync time for "What's New Since Last Sync" display
             var cacheState = await CacheSyncService.GetCacheStatusAsync(_profileId.Value);
             _lastSyncTime = cacheState?.LastSuccessfulSync;
-            
-            // Load health signals
-            await LoadHealthSignalsAsync();
         }
         catch (Exception ex)
         {
@@ -290,13 +216,6 @@
     private void SelectProduct(int? productId)
     {
         _selectedProductId = productId;
-    }
-
-    private string GetActiveProductLabel()
-    {
-        return _selectedProductId.HasValue
-            ? _products.FirstOrDefault(product => product.Id == _selectedProductId.Value)?.Name ?? "Product"
-            : "All Products";
     }
 
     private Color GetProductChipColor(int? productId)
@@ -340,87 +259,11 @@
         NavigationManager.NavigateTo($"{WorkspaceRoutes.DeliveryWorkspace}{BuildContextQuery()}");
     }
 
-    private void NavigateToWorkItemExplorer()
-    {
-        // Task-driven entry always uses all products/teams
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.WorkItems}?allProducts=true&allTeams=true");
-    }
-
     private void NavigateToValidationTriage()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.ValidationTriage}{BuildContextQuery()}");
     }
 
-    private void NavigateToHomeChanges()
-    {
-        NavigationManager.NavigateTo("/home/changes");
-    }
-
-    private async Task LoadHealthSignalsAsync()
-    {
-        try
-        {
-            // Load work items with validation data
-            var workItemsWithValidation = await WorkItemService.GetAllWithValidationAsync();
-            var workItemsList = workItemsWithValidation.ToList();
-            
-            _totalWorkItems = workItemsList.Count;
-            
-            // Count items with validation issues (unique work items)
-            var itemsWithIssues = workItemsList.Where(wi => wi.ValidationIssues?.Count > 0).ToList();
-            _workItemsWithIssues = itemsWithIssues.Count;
-            
-            // Count active bugs from the same dataset (avoid duplicate API call)
-            _activeBugCount = workItemsList.Count(wi => 
-                wi.Type?.Equals("Bug", StringComparison.OrdinalIgnoreCase) == true &&
-                wi.State?.Equals("Closed", StringComparison.OrdinalIgnoreCase) != true &&
-                wi.State?.Equals("Resolved", StringComparison.OrdinalIgnoreCase) != true);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading health signals: {ex.Message}", Severity.Warning);
-            // Keep defaults (0s) if loading fails
-        }
-    }
-    
-    /// <summary>
-    /// Gets the health level based on fixed thresholds.
-    /// Decision #2: Health Signal Thresholds
-    /// - 0 items = Healthy (Green)
-    /// - 1-9 items = Low (Info/Blue)
-    /// - 10-49 items = Warning (Yellow)
-    /// - 50+ items = Error (Red)
-    /// </summary>
-    private int GetHealthLevel(int count) => count switch
-    {
-        0 => 0,       // Healthy
-        < 10 => 1,    // Low
-        < 50 => 2,    // Warning
-        _ => 3        // Error
-    };
-    
-    private Color GetHealthStatusColor()
-    {
-        return GetHealthLevel(_workItemsWithIssues) switch
-        {
-            0 => Color.Success,
-            1 => Color.Info,
-            2 => Color.Warning,
-            _ => Color.Error
-        };
-    }
-    
-    private Color GetBugStatusColor()
-    {
-        return GetHealthLevel(_activeBugCount) switch
-        {
-            0 => Color.Success,
-            1 => Color.Info,
-            2 => Color.Warning,
-            _ => Color.Error
-        };
-    }
-    
     /// <summary>
     /// Triggers a manual cache sync for the current profile.
     /// </summary>
@@ -452,8 +295,6 @@
                      cacheState.SyncStatus == PoTool.Shared.Settings.CacheSyncStatusDto.SuccessWithWarnings ||
                      cacheState.LastSuccessfulSync.HasValue))
                 {
-                    // Reload health signals after successful sync
-                    await LoadHealthSignalsAsync();
                     _lastSyncTime = cacheState.LastSuccessfulSync;
                     var severity = cacheState.SyncStatus == PoTool.Shared.Settings.CacheSyncStatusDto.SuccessWithWarnings
                         ? Severity.Warning

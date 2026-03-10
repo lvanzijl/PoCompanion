@@ -3,7 +3,7 @@
     "date": "2026-03-10",
     "type": "Changed",
     "title": "Home dashboard redesigned for faster navigation",
-    "impact": "The Home page now uses product chips, four standardized workspace cards, and compact quick-status shortcuts so Product Owners can switch context and navigate with less visual noise.",
+    "impact": "The Home page now centers on four dominant workspace tiles, a horizontal product bar, lighter quick actions, and a compact sync footer so Product Owners can navigate by workspace first.",
     "area": "Home",
     "link": "/home"
   },
