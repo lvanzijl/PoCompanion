@@ -39,7 +39,7 @@
         else if (!_showNoProfileAlert)
         {
             <MudStack Spacing="2" Class="dashboard-workspaces">
-                <MudText Typo="Typo.h6">Workspaces</MudText>
+                <MudText Typo="Typo.overline" Color="Color.Secondary">Workspaces</MudText>
                 <MudGrid Spacing="2">
                     <MudItem xs="12" sm="6">
                         <DashboardWorkspaceCard Title="Health"
@@ -81,9 +81,7 @@
                 }
                 else
                 {
-                    <div class="dashboard-product-bar__left">
-                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="dashboard-product-bar__label">Products</MudText>
-                        <div class="dashboard-product-bar__chips" role="group" aria-label="Product selector">
+                    <div class="dashboard-product-bar__chips" role="group" aria-label="Product selector">
                             <MudButton Variant="@GetProductChipVariant(null)"
                                        Color="@GetProductChipColor(null)"
                                        OnClick="@(() => SelectProductAsync(null))"
@@ -103,7 +101,6 @@
                                 </MudButton>
                             }
                         </div>
-                    </div>
                     <div class="dashboard-product-bar__metrics" aria-live="polite">
                         <MudText Typo="Typo.body2" Class="dashboard-product-bar__metrics-text">
                             <span class="dashboard-product-bar__metric">
@@ -125,9 +122,9 @@
                 }
             </MudPaper>
 
-            <MudPaper Elevation="1" Class="pa-3 dashboard-section">
-                <MudStack Spacing="2">
-                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Quick Actions</MudText>
+            <MudPaper Elevation="1" Class="pa-2 dashboard-section">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.overline" Color="Color.Secondary">Quick Actions</MudText>
 
                     <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
                         <MudButton Variant="Variant.Outlined"

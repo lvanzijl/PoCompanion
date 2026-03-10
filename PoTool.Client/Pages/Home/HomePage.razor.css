@@ -14,22 +14,11 @@
     flex-wrap: nowrap;
 }
 
-.dashboard-product-bar__left {
-    display: flex;
-    align-items: center;
-    gap: var(--d3, 12px);
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-.dashboard-product-bar__label {
-    flex: 0 0 auto;
-}
-
 .dashboard-product-bar__chips {
     display: flex;
     align-items: center;
     gap: var(--d2, 8px);
+    flex: 1 1 auto;
     min-width: 0;
     overflow-x: auto;
     overflow-y: hidden;
@@ -45,6 +34,7 @@
     color: var(--mud-palette-text-secondary);
     white-space: nowrap;
     text-align: right;
+    font-size: 0.75rem;
 }
 
 .dashboard-product-bar__metric {
@@ -55,7 +45,7 @@
 
 .dashboard-product-bar__metric-value {
     color: var(--mud-palette-text-primary);
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .dashboard-product-bar__separator {
