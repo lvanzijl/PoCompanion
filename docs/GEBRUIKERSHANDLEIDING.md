@@ -2,7 +2,7 @@
 
 **Doelgroep:** Product Owners  
 **Taal:** Nederlands  
-**Laatste bijwerking:** 2026-03-08
+**Laatste bijwerking:** 2026-03-10
 
 ---
 
@@ -136,40 +136,45 @@ Zodra je een profiel selecteert, controleert de applicatie of de lokale cache up
 
 **Pagina:** `/home`
 
-De Startpagina is het centrale vertrekpunt van de applicatie. Je ziet hier in één oogopslag hoe de backlog ervoor staat en kunt direct doorklikken naar de werkruimte van je keuze.
+De Startpagina is het compacte **Product Owner Dashboard**. Je ziet bovenaan direct voor welke producten je werkt, welke werkruimte je wilt openen, en welke snelle acties of statussnelkoppelingen je nodig hebt.
 
-### Gezondheidsignalen
+### Productcontext
 
-Bovenaan zie je drie live-signaalkaarten:
+Bovenaan staat de sectie **Products** met klikbare chips:
 
-| Signaal | Betekenis | Kleuren |
-|---|---|---|
-| Validatieproblemen | Totaal aantal werkitems met validatiefouten | Groen (0), Blauw (1–9), Geel (10–49), Rood (50+) |
-| Actieve bugs | Totaal aantal open bugs | Groen (0), Blauw (1–9), Geel (10–49), Rood (50+) |
-| Totaal werkitems | Totaal aantal werkitems in de cache | Informatief |
+- **All Products** — laat alle producten in de dashboardcontext staan.
+- **Productchips** — bijvoorbeeld `BDR-ST`, `ADS`, `EIB`; klik op een chip om die productcontext actief te maken.
+- **Active:** onder de chips zie je altijd welk product op dat moment actief is.
 
-### Productcontextfilter
+De actieve context wordt meegenomen naar ondersteunde werkruimten zoals Health, Trends, Planning en Validation Triage.
 
-Onder de signaalkaarten staat een optionele productfilter. Als je een product selecteert, nemen alle werkruimten die context over — zo zie je altijd de juiste gegevens voor dat product.
+### Werkruimten
 
-- Selecteer "Alle producten" (de chip) om de filter te wissen.
-- De productfilter wordt meegegeven als `?productId=` in de URL naar elke werkruimte.
+In de sectie **Workspaces** staan vier gelijke, klikbare kaarten in een 2×2-indeling:
 
-### Werkruimtekaarten
+1. **Health** — backlogvolwassenheid en refinement readiness.
+2. **Delivery** — wat er per sprint of periode is opgeleverd.
+3. **Trends** — structureel gedrag over recente sprints.
+4. **Planning** — beslissingsondersteuning voor aankomend werk.
 
-Er zijn vijf werkruimtekaarten:
+Alle vier kaarten hebben dezelfde vorm, hoogte en hover-feedback. Zo is meteen duidelijk dat elke kaart echt klikbaar is.
 
-1. **Backlog Overzicht** — primaire startpagina voor backlogbeslissingen.
-2. **Health (Nu)** — validatieproblemen en bugs die direct aandacht vragen.
-3. **Trends (Verleden)** — historische analyses van teamprestaties over tijd.
-4. **Planning (Toekomst)** — capaciteitsrisico's en opzet van aankomende sprints.
-5. **Delivery** — overzicht van wat er is opgeleverd per sprint of per periode.
-
-### Snelkoppelingen
+### Quick Actions
 
 - **Validatie Triage** (primaire knop) — ga direct naar de gestructureerde validatieflow.
 - **Bug Triage** — ga direct naar de bug-triage-pagina.
-- **Handmatig synchroniseren** — start een handmatige cache-sync en herlaad de signalen daarna.
+
+Deze knoppen zijn bewust visueel anders dan de werkruimtekaarten, zodat navigatie en acties niet door elkaar lopen.
+
+### Quick Status
+
+De rij **Quick Status** geeft compacte snelkoppelingen:
+
+- **Issues** — opent Validation Triage in de Health-flow.
+- **Bugs** — opent Bug Triage.
+- **Work Items** — opent de Work Item Explorer.
+- **Last Sync** — opent de pagina “What’s New Since Last Sync”.
+- **Sync** — start handmatig een cache-sync en ververst daarna de status.
 
 ### Geavanceerde tools
 
