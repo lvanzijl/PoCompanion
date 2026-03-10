@@ -91,11 +91,16 @@ public sealed class WorkspaceSignalService
 
         await Task.WhenAll(deliveryContextsTask, sprintTrendTask, prTrendTask, capacityCalibrationTask);
 
+        var capacityCalibration = await capacityCalibrationTask;
+        var sprintTrends = await sprintTrendTask;
+
         return new WorkspaceSignalSet(
             SelectHealthSignal(await validationSummaryTask),
             SelectDeliverySignal(await deliveryContextsTask, DateTimeOffset.UtcNow),
-            SelectTrendsSignal(await sprintTrendTask, await prTrendTask),
-            SelectPlanningSignal(await backlogStatesTask, await capacityCalibrationTask));
+            SelectTrendsSignal(sprintTrends, await prTrendTask),
+            SelectPlanningSignal(await backlogStatesTask, capacityCalibration),
+            DeliveryTrend: ExtractDeliveryTrend(capacityCalibration),
+            TrendsTrend: ExtractTrendsTrend(sprintTrends));
     }
 
     public static string SelectHealthSignal(ValidationTriageSummaryDto? summary)
@@ -560,6 +565,44 @@ public sealed class WorkspaceSignalService
             .Sum(group => group.ItemCount);
     }
 
+    private static WorkspaceTrend? ExtractDeliveryTrend(CapacityCalibrationDto? calibration)
+    {
+        if (calibration is null || calibration.Sprints.Count < 3)
+        {
+            return null;
+        }
+
+        // Sprints are loaded most-recent-first; reverse for chronological left-to-right display.
+        var points = calibration.Sprints
+            .Take(7)
+            .Reverse()
+            .Select(s => (double)s.Done)
+            .ToList();
+
+        // Simple first-to-last comparison for sparkline coloring; adequate for the visual indicator purpose.
+        var isDeteriorating = points.Count >= 2 && points[^1] < points[0];
+        return new WorkspaceTrend(points, isDeteriorating);
+    }
+
+    private static WorkspaceTrend? ExtractTrendsTrend(GetSprintTrendMetricsResponse? sprintTrends)
+    {
+        if (sprintTrends?.Metrics is null || sprintTrends.Metrics.Count < 3)
+        {
+            return null;
+        }
+
+        var points = sprintTrends.Metrics
+            .OrderBy(m => m.StartUtc ?? DateTimeOffset.MinValue)
+            .Take(7)
+            .Select(m => (double)m.TotalBugsCreatedCount)
+            .ToList();
+
+        // Simple first-to-last comparison for sparkline coloring; adequate for the visual indicator purpose.
+        var isDeteriorating = points.Count >= 2 && points[^1] > points[0];
+        return new WorkspaceTrend(points, isDeteriorating);
+    }
+
+
     private static bool IsNearSprintEnd(DateTimeOffset? sprintEndUtc, DateTimeOffset nowUtc)
     {
         return sprintEndUtc.HasValue && nowUtc >= sprintEndUtc.Value.AddDays(-3);
@@ -605,11 +648,17 @@ public sealed class WorkspaceSignalService
         int ReadyEffort);
 }
 
+public sealed record WorkspaceTrend(IReadOnlyList<double> Points, bool IsDeteriorating);
+
 public sealed record WorkspaceSignalSet(
     string Health,
     string Delivery,
     string Trends,
-    string Planning)
+    string Planning,
+    WorkspaceTrend? HealthTrend = null,
+    WorkspaceTrend? DeliveryTrend = null,
+    WorkspaceTrend? TrendsTrend = null,
+    WorkspaceTrend? PlanningTrend = null)
 {
     public static WorkspaceSignalSet Neutral { get; } = new(
         "Backlog healthy",

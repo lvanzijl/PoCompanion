@@ -1,6 +1,11 @@
+@using PoTool.Client.Services
+
 <MudCard Elevation="2"
-         Class="dashboard-workspace-card"
+         Class="@_cardClass"
          @onclick="OnClick"
+         @onmousedown="HandleMouseDown"
+         @onmouseup="HandleMouseUp"
+         @onmouseleave="HandleMouseLeave"
          @onkeydown="HandleKeyDown"
          tabindex="0"
          role="button"
@@ -12,6 +17,20 @@
         <div class="dashboard-workspace-card__text-col">
             <MudText Typo="Typo.subtitle1" Class="dashboard-workspace-card__title">@Title</MudText>
             <MudText Typo="Typo.body2" Class="dashboard-workspace-card__signal">@SignalText</MudText>
+            @if (TrendInfo is { Points.Count: >= 2 })
+            {
+                <svg class="dashboard-workspace-card__sparkline"
+                     viewBox="0 0 80 14"
+                     preserveAspectRatio="none"
+                     aria-hidden="true">
+                    <polyline points="@GetSparklinePoints()"
+                              class="@(TrendInfo.IsDeteriorating ? "dashboard-workspace-card__sparkline-line dashboard-workspace-card__sparkline-line--warn" : "dashboard-workspace-card__sparkline-line")"
+                              fill="none"
+                              stroke-width="1.5"
+                              stroke-linecap="round"
+                              stroke-linejoin="round" />
+                </svg>
+            }
         </div>
     </MudCardContent>
 </MudCard>
@@ -30,7 +49,22 @@
     public Color IconColor { get; set; } = Color.Primary;
 
     [Parameter]
+    public WorkspaceTrend? TrendInfo { get; set; }
+
+    [Parameter]
     public EventCallback OnClick { get; set; }
+
+    private bool _pressed;
+
+    private string _cardClass => _pressed
+        ? "dashboard-workspace-card dashboard-workspace-card--pressed"
+        : "dashboard-workspace-card";
+
+    private void HandleMouseDown() => _pressed = true;
+
+    private void HandleMouseUp() => _pressed = false;
+
+    private void HandleMouseLeave() => _pressed = false;
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
@@ -38,5 +72,41 @@
         {
             await OnClick.InvokeAsync();
         }
+    }
+
+    private string GetSparklinePoints()
+    {
+        if (TrendInfo is null || TrendInfo.Points.Count < 2)
+        {
+            return string.Empty;
+        }
+
+        const int width = 80;
+        const int height = 14;
+        const int padding = 1;
+
+        var data = TrendInfo.Points;
+        var min = data.Min();
+        var max = data.Max();
+        var range = max - min;
+
+        var sb = new System.Text.StringBuilder();
+        for (var i = 0; i < data.Count; i++)
+        {
+            var x = (double)i / (data.Count - 1) * width;
+            double y;
+            if (range == 0)
+            {
+                y = height / 2.0;
+            }
+            else
+            {
+                // Invert Y: higher values render lower in SVG coordinates.
+                y = (height - padding) - (data[i] - min) / range * (height - padding * 2);
+            }
+            if (i > 0) sb.Append(' ');
+            sb.Append(FormattableString.Invariant($"{x:F1},{y:F1}"));
+        }
+        return sb.ToString();
     }
 }
