@@ -4,6 +4,7 @@
     user-select: none;
     outline: none;
     height: 100%;
+    background-color: var(--mud-palette-surface) !important;
 }
 
 .dashboard-workspace-card:hover,
@@ -14,13 +15,35 @@
 
 .dashboard-workspace-card__content {
     display: flex !important;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    padding: 16px !important;
+    min-height: 80px;
+}
+
+.dashboard-workspace-card__icon-col {
+    flex: 0 0 auto;
+    display: flex;
     align-items: center;
     justify-content: center;
-    text-align: center;
-    gap: 6px;
-    padding: 20px 16px !important;
-    min-height: 130px;
+    width: 48px;
+    align-self: stretch;
+}
+
+.dashboard-workspace-card__icon {
+    font-size: 2.25rem !important;
+    width: 2.25rem !important;
+    height: 2.25rem !important;
+}
+
+.dashboard-workspace-card__text-col {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
 }
 
 .dashboard-workspace-card__title {
@@ -34,4 +57,5 @@
     text-overflow: ellipsis;
     max-width: 100%;
     color: var(--mud-palette-text-secondary);
+    font-size: 0.8rem;
 }

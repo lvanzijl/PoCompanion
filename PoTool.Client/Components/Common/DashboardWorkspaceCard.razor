@@ -4,11 +4,15 @@
          @onkeydown="HandleKeyDown"
          tabindex="0"
          role="button"
-         aria-label="@($"{Title} workspace")">
+         aria-label="@($"{Title} workspace — {SignalText}")">
     <MudCardContent Class="dashboard-workspace-card__content">
-        <MudIcon Icon="@Icon" Color="@IconColor" Size="Size.Large" />
-        <MudText Typo="Typo.h6" Class="dashboard-workspace-card__title">@Title</MudText>
-        <MudText Typo="Typo.body2" Class="dashboard-workspace-card__signal">@SignalText</MudText>
+        <div class="dashboard-workspace-card__icon-col">
+            <MudIcon Icon="@Icon" Color="@IconColor" Class="dashboard-workspace-card__icon" />
+        </div>
+        <div class="dashboard-workspace-card__text-col">
+            <MudText Typo="Typo.subtitle1" Class="dashboard-workspace-card__title">@Title</MudText>
+            <MudText Typo="Typo.body2" Class="dashboard-workspace-card__signal">@SignalText</MudText>
+        </div>
     </MudCardContent>
 </MudCard>
 

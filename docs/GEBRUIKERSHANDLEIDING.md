@@ -147,11 +147,10 @@ Bovenaan staan vier grote, klikbare tegels in een 2×2-indeling:
 3. **Trends**
 4. **Planning**
 
-Elke tegel bevat:
+Elke tegel bevat, in een horizontale twee-kolom-indeling:
 
-- een icoon;
-- de naam van de werkruimte;
-- één kort signaal dat uitlegt waarom je juist die werkruimte nu zou moeten openen.
+- links: een gekleurde icoon als visueel anker;
+- rechts: de naam van de werkruimte (vet, boven) en één kort signaal (subtiel, eronder).
 
 De Startpagina gebruikt een **signaalgestuurd navigatiemodel**:
 
@@ -160,7 +159,7 @@ De Startpagina gebruikt een **signaalgestuurd navigatiemodel**:
 - als er geen negatief signaal is, zie je een **neutrale bevestiging** zoals `Backlog healthy`, `Sprint progressing normally`, `Metrics stable` of `Planning ready`;
 - de actieve productchip bepaalt ook voor deze signalen welke productcontext wordt meegenomen.
 
-De tegels zijn bewust groter en prominenter gemaakt dan de rest van de pagina. Ze gebruiken een gevulde kaart-stijl met verhoging (schaduw), gecentreerde inhoud (icoon, naam, signaal als verticale eenheid) en een lichte lift bij hover. De Startpagina draait dus eerst om **kiezen naar welke werkruimte je wilt gaan**.
+De tegels zijn bewust groter en prominenter gemaakt dan de rest van de pagina. Ze gebruiken een gevulde kaart-stijl met verhoging (schaduw), een horizontale indeling (icoon links, naam en signaal rechts gestapeld) en een lichte lift bij hover. De Startpagina draait dus eerst om **kiezen naar welke werkruimte je wilt gaan**.
 
 ### Productbalk
 
