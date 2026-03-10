@@ -129,7 +129,7 @@ Global header (available on every page) ◄────────────�
 
 | Functionality | Description |
 |---|---|
-| Workspace tiles | Shows exactly four standardized, clickable tiles in a 2×2 grid: Health, Delivery, Trends, and Planning. The tiles are intentionally large and visually dominant so the Home page reads first as workspace navigation. Each tile currently shows an icon, workspace title, and placeholder signal text. |
+| Workspace tiles | Shows exactly four standardized, clickable tiles in a 2×2 grid: Health, Delivery, Trends, and Planning. The tiles are intentionally large and visually dominant so the Home page reads first as workspace navigation. Each tile now shows exactly one short signal line: the highest-priority workspace signal in the active product context, or a neutral confirmation signal when no negative signal exists. |
 | Product bar | Shows product selector chips in Product Owner profile order on the left side of a single horizontal bar. Selecting a chip highlights the active context and propagates that context to supported workspace links. The right side is intentionally left empty for future contextual metrics. |
 | Quick Actions | Contains Validation Triage and Bug Triage as subdued outlined action buttons so they remain secondary to workspace navigation. |
 | Sync footer | A compact, right-aligned line at the bottom of the page shows the last sync time and a manual Sync action. |

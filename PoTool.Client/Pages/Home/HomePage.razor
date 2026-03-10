@@ -4,6 +4,7 @@
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject CacheSyncService CacheSyncService
+@inject WorkspaceSignalService WorkspaceSignalService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -39,28 +40,28 @@
                 <MudGrid Spacing="2">
                     <MudItem xs="12" sm="6">
                         <DashboardWorkspaceCard Title="Health"
-                                                SignalPlaceholder="@WorkspaceSignalPlaceholder"
+                                                SignalText="@_workspaceSignals.Health"
                                                 Icon="@Icons.Material.Filled.HealthAndSafety"
                                                 IconColor="Color.Success"
                                                 OnClick="NavigateToHealth" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
                         <DashboardWorkspaceCard Title="Delivery"
-                                                SignalPlaceholder="@WorkspaceSignalPlaceholder"
+                                                SignalText="@_workspaceSignals.Delivery"
                                                 Icon="@Icons.Material.Filled.CheckCircle"
                                                 IconColor="Color.Secondary"
                                                 OnClick="NavigateToDelivery" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
                         <DashboardWorkspaceCard Title="Trends"
-                                                SignalPlaceholder="@WorkspaceSignalPlaceholder"
+                                                SignalText="@_workspaceSignals.Trends"
                                                 Icon="@Icons.Material.Filled.Timeline"
                                                 IconColor="Color.Info"
                                                 OnClick="NavigateToTrends" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
                         <DashboardWorkspaceCard Title="Planning"
-                                                SignalPlaceholder="@WorkspaceSignalPlaceholder"
+                                                SignalText="@_workspaceSignals.Planning"
                                                 Icon="@Icons.Material.Filled.CalendarMonth"
                                                 IconColor="Color.Warning"
                                                 OnClick="NavigateToPlanning" />
@@ -82,7 +83,7 @@
                         <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
                             <MudButton Variant="@GetProductChipVariant(null)"
                                        Color="@GetProductChipColor(null)"
-                                       OnClick="@(() => SelectProduct(null))"
+                                       OnClick="@(() => SelectProductAsync(null))"
                                        Size="Size.Small"
                                        Class="product-context-button">
                                 All Products
@@ -92,7 +93,7 @@
                             {
                                 <MudButton Variant="@GetProductChipVariant(product.Id)"
                                            Color="@GetProductChipColor(product.Id)"
-                                           OnClick="@(() => SelectProduct(product.Id))"
+                                           OnClick="@(() => SelectProductAsync(product.Id))"
                                            Size="Size.Small"
                                            Class="product-context-button">
                                     @product.Name
@@ -145,11 +146,11 @@
 </MudContainer>
 
 @code {
-    private const string WorkspaceSignalPlaceholder = "(signal placeholder)";
     private bool _isLoading = true;
     private bool _isSyncing = false;
     private bool _showNoProfileAlert = false;
     private int? _profileId;
+    private WorkspaceSignalSet _workspaceSignals = WorkspaceSignalSet.Neutral;
 
     // Sync state
     private DateTimeOffset? _lastSyncTime;
@@ -182,6 +183,8 @@
             // Load last sync time for "What's New Since Last Sync" display
             var cacheState = await CacheSyncService.GetCacheStatusAsync(_profileId.Value);
             _lastSyncTime = cacheState?.LastSuccessfulSync;
+
+            await LoadWorkspaceSignalsAsync();
         }
         catch (Exception ex)
         {
@@ -213,9 +216,10 @@
         return parameters.Count > 0 ? "?" + string.Join("&", parameters) : "";
     }
 
-    private void SelectProduct(int? productId)
+    private async Task SelectProductAsync(int? productId)
     {
         _selectedProductId = productId;
+        await LoadWorkspaceSignalsAsync();
     }
 
     private Color GetProductChipColor(int? productId)
@@ -237,6 +241,20 @@
         return _lastSyncTime.HasValue
             ? $"Last Sync: {_lastSyncTime.Value.ToLocalTime():HH:mm}"
             : "Last Sync: --";
+    }
+
+    private async Task LoadWorkspaceSignalsAsync()
+    {
+        if (_profileId is null)
+        {
+            _workspaceSignals = WorkspaceSignalSet.Neutral;
+            return;
+        }
+
+        _workspaceSignals = await WorkspaceSignalService.GetSignalsAsync(
+            _profileId.Value,
+            _products,
+            _selectedProductId);
     }
 
     private void NavigateToHealth()

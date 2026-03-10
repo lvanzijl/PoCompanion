@@ -190,6 +190,7 @@ builder.Services.AddScoped<WorkItemSelectionService>();
 builder.Services.AddScoped<PullRequestMetricsService>();
 builder.Services.AddScoped<BacklogHealthCalculationService>();
 builder.Services.AddScoped<ReleasePlanningService>();
+builder.Services.AddScoped<WorkspaceSignalService>();
 
 
 // Register clipboard, export and report services
