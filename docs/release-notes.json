@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-10",
+    "type": "Changed",
+    "title": "Home dashboard redesigned for faster navigation",
+    "impact": "The Home page now uses product chips, four standardized workspace cards, and compact quick-status shortcuts so Product Owners can switch context and navigate with less visual noise.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-03-10",
     "type": "Fixed",
     "title": "Plan Board shows active epic hierarchy",
     "impact": "The Plan Board backlog tree now keeps active Epics and Features visible in TFS backlog order even when they do not yet have plannable PBIs or bugs.",

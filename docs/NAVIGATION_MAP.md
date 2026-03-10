@@ -3,7 +3,7 @@
 **Audience:** Product Owners and stakeholders  
 **Scope:** All non-legacy, non-settings pages  
 **Purpose:** Human-readable reference of available navigation and functionality; basis for improvement analysis  
-**Last Updated:** 2026-03-08 (Sprint Delivery refocused as stakeholder delivery report; Sprint Execution placeholder added)
+**Last Updated:** 2026-03-10 (Home dashboard redesigned with product chips, standardized workspaces, and quick status shortcuts)
 
 ---
 
@@ -25,14 +25,7 @@ After a Product Owner logs in, the application offers a workspace-driven model o
      ▼
 /home  ──────────────────────────────────────────────────────────────┐
   │                                                                   │
-  ├──► /home/backlog-overview  (Backlog Overview — primary workspace) │
-  │       ├──► /workitems?rootWorkItemId={epicId}  (ready/refinement) │
-  │       ├──► /home/validation-queue?category=SI  (integrity)        │
-  │       ├──► /home/health  (cross-workspace)                        │
-  │       ├──► /home/trends  (cross-workspace)                        │
-  │       └──► /home/planning  (cross-workspace)                      │
-  │                                                                   │
-  ├──► /home/health   (Health — Now)                                  │
+  ├──► /home/health   (Health)                                        │
   │       ├──► /home/validation-triage  (Validation Triage — primary)  │
   │       │       ├──► /home/validation-queue?category=SI              │
   │       │       │       └──► /home/validation-fix?category=SI&ruleId=SI-* │
@@ -55,7 +48,7 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       ├──► /home/delivery/execution  (Sprint Execution)           │
   │       └──► /home/delivery/portfolio  (Portfolio Delivery)          │
   │                                                                   │
-  ├──► /home/trends  (Trends — Past)                                  │
+  ├──► /home/trends  (Trends)                                         │
   │       ├──► /home/bugs  (bug trend drilldown)                      │
   │       ├──► /home/pull-requests  (read-only insight)               │
   │       ├──► /home/pr-delivery-insights  (PR Delivery Insights)     │
@@ -67,7 +60,7 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       ├──► /home/delivery  (cross-workspace)                      │
   │       └──► /home/planning  (cross-workspace)                      │
   │                                                                   │
-  ├──► /home/planning  (Planning — Future)                            │
+  ├──► /home/planning  (Planning)                                     │
   │       ├──► /planning/product-roadmaps  (Product Roadmaps — read-only) │
   │       │       └──► /planning/product-roadmaps/{productId}  (Editor) │
   │       ├──► /planning/plan-board  (Plan Board — sprint planning)   │
@@ -77,10 +70,11 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       ├──► /home/trends  (cross-workspace)                        │
   │       └──► /home/delivery  (cross-workspace)                      │
   │                                                                   │
-  ├──► /home/validation-triage  (Validation Triage — Quick Action)    │
-  ├──► /bugs-triage  (Bug Triage — Quick Action)                      │
-  ├──► /workitems  (Work Item Explorer — Advanced Tools)               │
-                                                                       │
+  ├──► /home/validation-triage  (Validation Triage — Quick Action / Issues shortcut) │
+  ├──► /bugs-triage  (Bug Triage — Quick Action / Bugs shortcut)      │
+  ├──► /workitems  (Work Item Explorer — Work Items shortcut / Advanced Tools) │
+  ├──► /home/changes  (Last Sync shortcut)                            │
+                                                                        │
 Global header (available on every page) ◄─────────────────────────────┘
   ├──► /home  (Home button)
   ├──► Health button  (cross-workspace shortcut)
@@ -131,23 +125,17 @@ Global header (available on every page) ◄────────────�
 
 ### 2.3 Home — `/home`
 
-**Purpose:** Central workspace hub. Provides a high-level health overview, a product context filter, workspace entry cards (Backlog Overview, Health, Delivery, Trends, Planning), and quick-action buttons for task-driven navigation.
+**Purpose:** Compact Product Owner Dashboard. Shows the active product context, four standardized workspace entries, quick actions, and a single-row quick status area for common shortcuts.
 
 | Functionality | Description |
 |---|---|
-| Health signal summary | Shows three live signals: validation issue count (color-coded), active bug count (color-coded), and total work item count. Colors follow fixed thresholds (0 = green, 1–9 = blue, 10–49 = yellow, 50+ = red). |
-| Sync Now button | Triggers a manual cache sync for the active profile and reloads health signals on completion. |
-| Product context filter | Optional product selector (dropdown). Selecting a product propagates a `productId` query parameter to all downstream workspaces. Shows "All Products" chip when no filter is active. |
-| Backlog Overview workspace card | **First card.** Click to enter the Backlog Overview workspace. Carries product context. Primary entry point for backlog maturity decisions. |
-| Health (Now) workspace card | Click to enter the Health workspace. Carries product context. |
-| Trends (Past) workspace card | Click to enter the Trends workspace. Carries product context. |
-| Planning (Future) workspace card | Click to enter the Planning workspace. Carries product context. |
-| Delivery workspace card | Click to enter the Delivery workspace. Focuses on what was delivered per sprint or period. |
-| Validation Triage quick action | **Primary** validation quick action (filled button). Opens `/home/validation-triage` for structured validation work. |
-| Bug Triage quick action | Opens the Bug Triage page (`/bugs-triage`). |
-| Work Item Explorer (Advanced Tools) | Secondary action (text button, lower visual weight). Opens Work Item Explorer for all products and all teams. Explorer is now "advanced inspection" only; not the start of the validation workflow. |
+| Products section | Shows all products owned by the active Product Owner as clickable chips. Selecting a chip highlights the active context, updates the dashboard URL with `?productId=`, and propagates that context to supported workspace links. |
+| Workspaces section | Shows exactly four standardized, clickable cards in a 2×2 grid: Health, Delivery, Trends, and Planning. All cards share one card component, hover feedback, and consistent height. |
+| Quick Actions | Contains Validation Triage and Bug Triage as regular action buttons so they remain visually distinct from workspace navigation cards. |
+| Quick Status | Single-row shortcuts for validation issues, bugs, total work items, last sync details, and manual sync. Issues open Validation Triage in the Health flow; Bugs open Bug Triage; Work Items opens Work Item Explorer; Last Sync opens `/home/changes`; Sync triggers a manual cache sync. |
+| Advanced Tools | Secondary area with the Work Item Explorer shortcut retained for power users. |
 
-**Outgoing navigation:** `/home/backlog-overview`, `/home/health`, `/home/delivery`, `/home/trends`, `/home/planning`, `/home/validation-triage`, `/bugs-triage`, `/workitems`, `/profiles` (if no profile)
+**Outgoing navigation:** `/home/health`, `/home/delivery`, `/home/trends`, `/home/planning`, `/home/validation-triage`, `/bugs-triage`, `/workitems`, `/home/changes`, `/profiles` (if no profile)
 
 ---
 

@@ -1,0 +1,29 @@
+<MudButton Variant="Variant.Outlined"
+           Color="Color.Default"
+           Size="Size.Small"
+           FullWidth="true"
+           Class="dashboard-workspace-card"
+           OnClick="OnClick">
+    <MudStack Spacing="1" Class="dashboard-workspace-card__content">
+        <MudIcon Icon="@Icon" Color="@IconColor" Size="Size.Medium" />
+        <MudText Typo="Typo.subtitle1">@Title</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">@Description</MudText>
+    </MudStack>
+</MudButton>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Description { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Icon { get; set; } = Icons.Material.Filled.Dashboard;
+
+    [Parameter]
+    public Color IconColor { get; set; } = Color.Primary;
+
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+}
