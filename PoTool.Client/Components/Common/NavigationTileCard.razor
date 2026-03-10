@@ -1,0 +1,126 @@
+<MudCard Elevation="1"
+         Class="@CardClass"
+         @onclick="OnClick"
+         @onmousedown="HandleMouseDown"
+         @onmouseup="HandleMouseUp"
+         @onmouseleave="HandleMouseLeave"
+         @onkeydown="HandleKeyDownAsync"
+         tabindex="0"
+         role="button"
+         aria-label="@ComputedAriaLabel">
+    <MudCardContent Class="navigation-tile-card__content">
+        @if (HasStructuredContent)
+        {
+            <div class="navigation-tile-card__default-content">
+                @if (LeadingContent is not null)
+                {
+                    @LeadingContent
+                }
+                else if (!string.IsNullOrWhiteSpace(Icon))
+                {
+                    <MudIcon Icon="@Icon" Color="@IconColor" Size="@IconSize" />
+                }
+
+                <div class="navigation-tile-card__body">
+                    @if (!string.IsNullOrWhiteSpace(Title))
+                    {
+                        <MudText Typo="Typo.subtitle1" Class="navigation-tile-card__title">@Title</MudText>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(Subtitle))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="navigation-tile-card__subtitle">@Subtitle</MudText>
+                    }
+
+                    @if (ChildContent is not null)
+                    {
+                        @ChildContent
+                    }
+                </div>
+            </div>
+        }
+        else if (ChildContent is not null)
+        {
+            @ChildContent
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Subtitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Icon { get; set; } = string.Empty;
+
+    [Parameter]
+    public Color IconColor { get; set; } = Color.Primary;
+
+    [Parameter]
+    public Size IconSize { get; set; } = Size.Large;
+
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public RenderFragment? LeadingContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+
+    private bool _pressed;
+
+    private bool HasStructuredContent =>
+        LeadingContent is not null ||
+        !string.IsNullOrWhiteSpace(Icon) ||
+        !string.IsNullOrWhiteSpace(Title) ||
+        !string.IsNullOrWhiteSpace(Subtitle);
+
+    private string CardClass
+    {
+        get
+        {
+            var classNames = new List<string> { "navigation-tile-card" };
+
+            if (_pressed)
+            {
+                classNames.Add("navigation-tile-card--pressed");
+            }
+
+            if (!string.IsNullOrWhiteSpace(Class))
+            {
+                classNames.Add(Class);
+            }
+
+            return string.Join(" ", classNames);
+        }
+    }
+
+    private string ComputedAriaLabel =>
+        !string.IsNullOrWhiteSpace(AriaLabel)
+            ? AriaLabel
+            : string.Join(" — ", new[] { Title, Subtitle }.Where(static value => !string.IsNullOrWhiteSpace(value)));
+
+    private void HandleMouseDown() => _pressed = true;
+
+    private void HandleMouseUp() => _pressed = false;
+
+    private void HandleMouseLeave() => _pressed = false;
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or " " || e.Code == "Space")
+        {
+            await OnClick.InvokeAsync();
+        }
+    }
+}

@@ -149,96 +149,75 @@
             <MudGrid>
                 @* Bug Trend Signal *@
                 <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1" 
-                             Style="cursor: pointer; transition: all 0.2s;"
-                             Class="mud-card-hover"
-                             @onclick="NavigateToBugTrend">
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.BugReport" Color="Color.Error" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Bug Trend</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Bug patterns over time</MudText>
-                        </MudCardContent>
-                    </MudCard>
+                    <NavigationTileCard Title="Bug Trend"
+                                        Subtitle="Bug patterns over time"
+                                        Icon="@Icons.Material.Filled.BugReport"
+                                        IconColor="Color.Error"
+                                        AriaLabel="Bug Trend — Bug patterns over time"
+                                        OnClick="NavigateToBugTrend" />
                 </MudItem>
 
                 @* PR Trend Signal (Read-Only) *@
                 <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1" 
-                             Style="cursor: pointer; transition: all 0.2s;"
-                             Class="mud-card-hover"
-                             @onclick="NavigateToPrOverview">
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.MergeType" Color="Color.Info" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">PR Trend</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Pull request insights</MudText>
-                            @* Slope badge: summarises median time-to-merge over the selected horizon.
-                               Median TTM is chosen as the primary signal because it captures end-to-end
-                               flow efficiency and is the most actionable metric for a PO. *@
-                            <TrendSlopeBadge StartValue="@_prTtmSlopeStart"
-                                             EndValue="@_prTtmSlopeEnd"
-                                             LowerIsBetter="true"
-                                             MetricLabel="median time to merge" />
-                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
-                        </MudCardContent>
-                    </MudCard>
+                    <NavigationTileCard Title="PR Trend"
+                                        Subtitle="Pull request insights"
+                                        Icon="@Icons.Material.Filled.MergeType"
+                                        IconColor="Color.Info"
+                                        AriaLabel="PR Trend — Pull request insights"
+                                        OnClick="NavigateToPrOverview">
+                        @* Slope badge: summarises median time-to-merge over the selected horizon.
+                           Median TTM is chosen as the primary signal because it captures end-to-end
+                           flow efficiency and is the most actionable metric for a PO. *@
+                        <TrendSlopeBadge StartValue="@_prTtmSlopeStart"
+                                         EndValue="@_prTtmSlopeEnd"
+                                         LowerIsBetter="true"
+                                         MetricLabel="median time to merge" />
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
+                    </NavigationTileCard>
                 </MudItem>
 
                 @* Pipeline Insights Signal (Read-Only) *@
                 <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1"
-                             Style="cursor: pointer; transition: all 0.2s;"
-                             Class="mud-card-hover"
-                             @onclick="NavigateToPipelineInsights">
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Color="Color.Warning" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Pipeline Insights</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">PO-first sprint stability per product</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
-                        </MudCardContent>
-                    </MudCard>
+                    <NavigationTileCard Title="Pipeline Insights"
+                                        Subtitle="PO-first sprint stability per product"
+                                        Icon="@Icons.Material.Filled.HealthAndSafety"
+                                        IconColor="Color.Warning"
+                                        AriaLabel="Pipeline Insights — PO-first sprint stability per product"
+                                        OnClick="NavigateToPipelineInsights">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
+                    </NavigationTileCard>
                 </MudItem>
 
                 @* PR Delivery Insights Signal (Read-Only) *@
                 <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1"
-                             Style="cursor: pointer; transition: all 0.2s;"
-                             Class="mud-card-hover"
-                             @onclick="NavigateToPrDeliveryInsights">
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.LocalShipping" Color="Color.Success" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">PR Delivery Insights</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">PR classification by Epic/Feature hierarchy</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
-                        </MudCardContent>
-                    </MudCard>
+                    <NavigationTileCard Title="PR Delivery Insights"
+                                        Subtitle="PR classification by Epic/Feature hierarchy"
+                                        Icon="@Icons.Material.Filled.LocalShipping"
+                                        IconColor="Color.Success"
+                                        AriaLabel="PR Delivery Insights — PR classification by Epic/Feature hierarchy"
+                                        OnClick="NavigateToPrDeliveryInsights">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
+                    </NavigationTileCard>
                 </MudItem>
 
                 @* Portfolio Progress Trend Signal *@
                 <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1"
-                             Style="cursor: pointer; transition: all 0.2s;"
-                             Class="mud-card-hover"
-                             @onclick="NavigateToPortfolioProgress">
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Insights" Color="Color.Warning" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Portfolio Progress</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Strategic progress over sprint range</MudText>
-                        </MudCardContent>
-                    </MudCard>
+                    <NavigationTileCard Title="Portfolio Progress"
+                                        Subtitle="Strategic progress over sprint range"
+                                        Icon="@Icons.Material.Filled.Insights"
+                                        IconColor="Color.Warning"
+                                        AriaLabel="Portfolio Progress — Strategic progress over sprint range"
+                                        OnClick="NavigateToPortfolioProgress" />
                 </MudItem>
 
                 @* Delivery Trends Signal *@
                 <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="1"
-                             Style="cursor: pointer; transition: all 0.2s;"
-                             Class="mud-card-hover"
-                             @onclick="NavigateToDeliveryTrends">
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.LocalShipping" Color="Color.Success" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Delivery Trends</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">PBI & effort throughput over time</MudText>
-                        </MudCardContent>
-                    </MudCard>
+                    <NavigationTileCard Title="Delivery Trends"
+                                        Subtitle="PBI & effort throughput over time"
+                                        Icon="@Icons.Material.Filled.LocalShipping"
+                                        IconColor="Color.Success"
+                                        AriaLabel="Delivery Trends — PBI & effort throughput over time"
+                                        OnClick="NavigateToDeliveryTrends" />
                 </MudItem>
             </MudGrid>
         </MudPaper>
@@ -301,17 +280,6 @@
         </MudPaper>
     }
 </MudContainer>
-
-<style>
-    .mud-card-hover {
-        border: 2px solid transparent;
-    }
-    .mud-card-hover:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.2) !important;
-        border-color: var(--mud-palette-primary);
-    }
-</style>
 
 @code {
     private bool _isLoading = true;
