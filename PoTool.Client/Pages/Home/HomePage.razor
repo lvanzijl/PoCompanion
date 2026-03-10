@@ -1,10 +1,13 @@
 @page "/home"
+@using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
+@using PoTool.Shared.Metrics
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject CacheSyncService CacheSyncService
 @inject WorkspaceSignalService WorkspaceSignalService
+@inject HomeProductBarMetricsService HomeProductBarMetricsService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -79,8 +82,8 @@
                 else
                 {
                     <div class="dashboard-product-bar__left">
-                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Products</MudText>
-                        <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="dashboard-product-bar__label">Products</MudText>
+                        <div class="dashboard-product-bar__chips" role="group" aria-label="Product selector">
                             <MudButton Variant="@GetProductChipVariant(null)"
                                        Color="@GetProductChipColor(null)"
                                        OnClick="@(() => SelectProductAsync(null))"
@@ -99,9 +102,26 @@
                                     @product.Name
                                 </MudButton>
                             }
-                        </MudStack>
+                        </div>
                     </div>
-                    <div class="dashboard-product-bar__metrics-placeholder" aria-hidden="true"></div>
+                    <div class="dashboard-product-bar__metrics" aria-live="polite">
+                        <MudText Typo="Typo.body2" Class="dashboard-product-bar__metrics-text">
+                            <span class="dashboard-product-bar__metric">
+                                <span>@GetSprintMetricLabel()</span>
+                                <span class="dashboard-product-bar__metric-value">@FormatSprintProgress()</span>
+                            </span>
+                            <span class="dashboard-product-bar__separator">&bull;</span>
+                            <span class="dashboard-product-bar__metric">
+                                <span class="dashboard-product-bar__metric-value">@(_productBarMetrics?.BugCount ?? 0)</span>
+                                <span>@GetBugMetricLabel(_productBarMetrics?.BugCount ?? 0)</span>
+                            </span>
+                            <span class="dashboard-product-bar__separator">&bull;</span>
+                            <span class="dashboard-product-bar__metric">
+                                <span class="dashboard-product-bar__metric-value">@(_productBarMetrics?.ChangesTodayCount ?? 0)</span>
+                                <span>@GetChangesTodayLabel(_productBarMetrics?.ChangesTodayCount ?? 0)</span>
+                            </span>
+                        </MudText>
+                    </div>
                 }
             </MudPaper>
 
@@ -157,7 +177,8 @@
 
     // Context propagation - product/team filter
     private int? _selectedProductId;
-    private List<PoTool.Client.ApiClient.ProductDto> _products = new();
+    private List<ProductDto> _products = new();
+    private HomeProductBarMetricsDto? _productBarMetrics;
 
     protected override async Task OnInitializedAsync()
     {
@@ -184,7 +205,7 @@
             var cacheState = await CacheSyncService.GetCacheStatusAsync(_profileId.Value);
             _lastSyncTime = cacheState?.LastSuccessfulSync;
 
-            await LoadWorkspaceSignalsAsync();
+            await LoadDashboardContextAsync();
         }
         catch (Exception ex)
         {
@@ -219,7 +240,7 @@
     private async Task SelectProductAsync(int? productId)
     {
         _selectedProductId = productId;
-        await LoadWorkspaceSignalsAsync();
+        await LoadDashboardContextAsync();
     }
 
     private Color GetProductChipColor(int? productId)
@@ -255,6 +276,66 @@
             _profileId.Value,
             _products,
             _selectedProductId);
+    }
+
+    private async Task LoadDashboardContextAsync()
+    {
+        await LoadWorkspaceSignalsAsync();
+        await LoadProductBarMetricsAsync();
+    }
+
+    private async Task LoadProductBarMetricsAsync()
+    {
+        if (_profileId is null)
+        {
+            _productBarMetrics = null;
+            return;
+        }
+
+        try
+        {
+            var metrics = await HomeProductBarMetricsService.GetAsync(
+                _profileId.Value,
+                _selectedProductId);
+
+            if (metrics == null)
+            {
+                _productBarMetrics = null;
+                Snackbar.Add("Unable to load product metrics. Please try refreshing the page.", Severity.Warning);
+                return;
+            }
+
+            _productBarMetrics = metrics;
+        }
+        catch (Exception ex)
+        {
+            _productBarMetrics = null;
+            Snackbar.Add($"Unable to load product metrics. Please try refreshing the page. ({ex.Message})", Severity.Warning);
+        }
+    }
+
+    private string GetSprintMetricLabel()
+    {
+        return _selectedProductId.HasValue
+            ? "Sprint progress"
+            : "Team Sprint";
+    }
+
+    private string FormatSprintProgress()
+    {
+        return _productBarMetrics?.SprintProgressPercentage is int percentage
+            ? $"{percentage}%"
+            : "—";
+    }
+
+    private static string GetBugMetricLabel(int count)
+    {
+        return count == 1 ? "Bug" : "Bugs";
+    }
+
+    private static string GetChangesTodayLabel(int count)
+    {
+        return count == 1 ? "change today" : "changes today";
     }
 
     private void NavigateToHealth()

@@ -164,14 +164,25 @@ De tegels zijn bewust groter en prominenter gemaakt dan de rest van de pagina. D
 
 ### Productbalk
 
-Onder de werkruimten staat één horizontale balk met de productselector links en lege ruimte rechts voor toekomstige contextmetingen.
+Onder de werkruimten staat één horizontale balk met links de productselector en rechts compacte contextmetingen.
 
 In de productbalk vind je klikbare chips:
 
 - **All Products** — laat alle producten in de dashboardcontext staan.
 - **Productchips** — bijvoorbeeld `BDR-ST`, `ADS`, `EIB`; klik op een chip om die productcontext actief te maken.
 
-De volgorde van de chips blijft gelijk aan de configuratie van het Product Owner-profiel. De actieve context wordt meegenomen naar ondersteunde werkruimten zoals Health, Delivery, Trends, Planning en Validation Triage.
+De volgorde van de chips blijft gelijk aan de configuratie van het Product Owner-profiel. Als er veel producten zijn, blijft de rechterkant vast staan en kan de chiprij horizontaal scrollen. De actieve context wordt meegenomen naar ondersteunde werkruimten zoals Health, Delivery, Trends, Planning en Validation Triage.
+
+Rechts in dezelfde balk zie je maximaal drie subtiele metrics op één regel:
+
+- **Team Sprint 72%** — teambrede sprintvoortgang op basis van de huidige sprintperiode; deze blijft teambreed, ook als je één product selecteert.
+- **12 Bugs** — open bugs in de actieve context.
+- **3 changes today** — aantal verschillende werkitems met activiteit vandaag in de actieve context.
+
+Het verschil tussen team- en productscope is als volgt:
+
+- bij **All Products** zie je de teammetric plus totalen over alle producten van dat Product Owner-profiel;
+- bij een **specifiek product** blijft de sprintmetric teambreed, maar worden bugs en changes today gefilterd op dat product.
 
 ### Quick Actions
 
