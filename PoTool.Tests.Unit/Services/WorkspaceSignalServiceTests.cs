@@ -1,0 +1,334 @@
+using PoTool.Client.Services;
+using PoTool.Shared.Health;
+using PoTool.Shared.Metrics;
+using PoTool.Shared.PullRequests;
+using PoTool.Shared.WorkItems;
+using BacklogHealthDto = PoTool.Client.ApiClient.BacklogHealthDto;
+using SprintDto = PoTool.Client.ApiClient.SprintDto;
+
+namespace PoTool.Tests.Unit.Services;
+
+[TestClass]
+public sealed class WorkspaceSignalServiceTests
+{
+    [TestMethod]
+    public void SelectHealthSignal_PicksHighestPriorityStructuralMismatch()
+    {
+        var summary = new ValidationTriageSummaryDto(
+            new ValidationCategoryTriageDto(
+                "SI",
+                "Structural Integrity",
+                6,
+                [new ValidationRuleGroupDto("SI-1", 4), new ValidationRuleGroupDto("SI-3", 2)]),
+            new ValidationCategoryTriageDto("RR", "Refinement Readiness", 1, []),
+            new ValidationCategoryTriageDto("RC", "Refinement Completeness", 3, []),
+            new ValidationCategoryTriageDto("EFF", "Missing Effort", 5, []));
+
+        var result = WorkspaceSignalService.SelectHealthSignal(summary);
+
+        Assert.AreEqual("4 parent-child state mismatches", result);
+    }
+
+    [TestMethod]
+    public void SelectHealthSignal_WithNoIssues_ReturnsHealthyFallback()
+    {
+        var summary = new ValidationTriageSummaryDto(
+            new ValidationCategoryTriageDto("SI", "Structural Integrity", 0, []),
+            new ValidationCategoryTriageDto("RR", "Refinement Readiness", 0, []),
+            new ValidationCategoryTriageDto("RC", "Refinement Completeness", 0, []),
+            new ValidationCategoryTriageDto("EFF", "Missing Effort", 0, []));
+
+        var result = WorkspaceSignalService.SelectHealthSignal(summary);
+
+        Assert.AreEqual("Backlog healthy", result);
+    }
+
+    [TestMethod]
+    public void SelectDeliverySignal_PicksLargestImpactWhenPriorityMatches()
+    {
+        var nowUtc = new DateTimeOffset(2026, 3, 10, 0, 0, 0, TimeSpan.Zero);
+        var contexts = new[]
+        {
+            CreateDeliveryContext(sprintId: 1, sprintEndUtc: nowUtc.AddDays(7), addedDuringSprintCount: 2, initialScopeCount: 20),
+            CreateDeliveryContext(sprintId: 2, sprintEndUtc: nowUtc.AddDays(7), addedDuringSprintCount: 5, initialScopeCount: 40)
+        };
+
+        var result = WorkspaceSignalService.SelectDeliverySignal(contexts, nowUtc);
+
+        Assert.AreEqual("5 PBIs added mid-sprint", result);
+    }
+
+    [TestMethod]
+    public void SelectDeliverySignal_PrefersUnfinishedWorkNearSprintEnd()
+    {
+        var nowUtc = new DateTimeOffset(2026, 3, 10, 0, 0, 0, TimeSpan.Zero);
+        var contexts = new[]
+        {
+            CreateDeliveryContext(sprintId: 1, sprintEndUtc: nowUtc.AddDays(1), unfinishedCount: 4, addedDuringSprintCount: 6, initialScopeCount: 12)
+        };
+
+        var result = WorkspaceSignalService.SelectDeliverySignal(contexts, nowUtc);
+
+        Assert.AreEqual("4 PBIs unfinished", result);
+    }
+
+    [TestMethod]
+    public void SelectTrendsSignal_PrefersBugRateIncreaseOverLowerPrioritySignals()
+    {
+        var sprintTrends = new GetSprintTrendMetricsResponse
+        {
+            Success = true,
+            Metrics =
+            [
+                CreateSprintTrendMetric(2, new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero), bugsCreated: 13, completedPbis: 8),
+                CreateSprintTrendMetric(1, new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero), bugsCreated: 10, completedPbis: 12)
+            ]
+        };
+        var prTrends = new GetPrSprintTrendsResponse
+        {
+            Success = true,
+            Sprints =
+            [
+                CreatePrTrendMetric(2, new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero), medianTimeToMergeHours: 15),
+                CreatePrTrendMetric(1, new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero), medianTimeToMergeHours: 10)
+            ]
+        };
+
+        var result = WorkspaceSignalService.SelectTrendsSignal(sprintTrends, prTrends);
+
+        Assert.AreEqual("Bug rate increased 30%", result);
+    }
+
+    [TestMethod]
+    public void SelectPlanningSignal_ReportsNoReadyFeaturesBeforeOtherSignals()
+    {
+        var states = new[]
+        {
+            new ProductBacklogStateDto
+            {
+                ProductId = 1,
+                Epics =
+                [
+                    new EpicRefinementDto
+                    {
+                        TfsId = 100,
+                        Title = "Epic",
+                        Score = 50,
+                        HasDescription = true,
+                        Features =
+                        [
+                            new FeatureRefinementDto
+                            {
+                                TfsId = 200,
+                                Title = "Feature",
+                                Score = 75,
+                                OwnerState = FeatureOwnerState.Team,
+                                Pbis =
+                                [
+                                    new PbiReadinessDto { TfsId = 300, Score = 75, Title = "PBI", Effort = 5 }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        };
+
+        var result = WorkspaceSignalService.SelectPlanningSignal(states, capacityCalibration: null);
+
+        Assert.AreEqual("No features ready", result);
+    }
+
+    [TestMethod]
+    public void SelectPlanningSignal_UsesCapacityUnderfillBeforeNeutralFallback()
+    {
+        var states = new[]
+        {
+            CreatePlanningState(
+                featureCount: 2,
+                readyPbiCount: 4,
+                readyEfforts: [3, 3, 3, 3])
+        };
+        var capacity = new CapacityCalibrationDto([], MedianVelocity: 20, P25Velocity: 18, P75Velocity: 22, MedianPredictability: 0.9, OutlierSprintNames: []);
+
+        var result = WorkspaceSignalService.SelectPlanningSignal(states, capacity);
+
+        Assert.AreEqual("Sprint underfilled by 8 pts", result);
+    }
+
+    [TestMethod]
+    public void SelectPlanningSignal_ReturnsPlanningReadyWhenEnoughReadyWorkExists()
+    {
+        var states = new[]
+        {
+            CreatePlanningState(
+                featureCount: 2,
+                readyPbiCount: 5,
+                readyEfforts: [5, 5, 5, 5, 5])
+        };
+        var capacity = new CapacityCalibrationDto([], MedianVelocity: 20, P25Velocity: 18, P75Velocity: 22, MedianPredictability: 0.9, OutlierSprintNames: []);
+
+        var result = WorkspaceSignalService.SelectPlanningSignal(states, capacity);
+
+        Assert.AreEqual("Planning ready", result);
+    }
+
+    private static DeliverySignalContext CreateDeliveryContext(
+        int sprintId,
+        DateTimeOffset sprintEndUtc,
+        int unfinishedCount = 0,
+        int addedDuringSprintCount = 0,
+        int initialScopeCount = 0,
+        int blockedCount = 0,
+        int missingEffortCount = 0)
+    {
+        return new DeliverySignalContext(
+            new SprintDto
+            {
+                Id = sprintId,
+                TeamId = 10 + sprintId,
+                Path = $"Team\\Sprint {sprintId}",
+                Name = $"Sprint {sprintId}",
+                StartUtc = sprintEndUtc.AddDays(-14),
+                EndUtc = sprintEndUtc,
+                TimeFrame = "current",
+                LastSyncedUtc = sprintEndUtc
+            },
+            new SprintExecutionDto
+            {
+                SprintId = sprintId,
+                SprintName = $"Sprint {sprintId}",
+                StartUtc = sprintEndUtc.AddDays(-14),
+                EndUtc = sprintEndUtc,
+                HasData = true,
+                Summary = new SprintExecutionSummaryDto
+                {
+                    InitialScopeCount = initialScopeCount,
+                    AddedDuringSprintCount = addedDuringSprintCount,
+                    UnfinishedCount = unfinishedCount
+                },
+                CompletedPbis = [],
+                UnfinishedPbis = [],
+                AddedDuringSprint = [],
+                RemovedDuringSprint = [],
+                StarvedPbis = []
+            },
+            new BacklogHealthDto
+            {
+                IterationPath = $"Team\\Sprint {sprintId}",
+                SprintName = $"Sprint {sprintId}",
+                TotalWorkItems = initialScopeCount,
+                WorkItemsWithoutEffort = missingEffortCount,
+                WorkItemsInProgressWithoutEffort = 0,
+                ParentProgressIssues = 0,
+                BlockedItems = blockedCount,
+                InProgressAtIterationEnd = unfinishedCount,
+                IterationStart = sprintEndUtc.AddDays(-14),
+                IterationEnd = sprintEndUtc,
+                ValidationIssues = []
+            });
+    }
+
+    private static SprintTrendMetricsDto CreateSprintTrendMetric(
+        int sprintId,
+        DateTimeOffset startUtc,
+        int bugsCreated,
+        int completedPbis)
+    {
+        return new SprintTrendMetricsDto
+        {
+            SprintId = sprintId,
+            SprintName = $"Sprint {sprintId}",
+            StartUtc = startUtc,
+            EndUtc = startUtc.AddDays(14),
+            ProductMetrics = [],
+            TotalPlannedCount = 0,
+            TotalPlannedEffort = 0,
+            TotalWorkedCount = 0,
+            TotalWorkedEffort = 0,
+            TotalBugsPlannedCount = 0,
+            TotalBugsWorkedCount = 0,
+            TotalCompletedPbiCount = completedPbis,
+            TotalCompletedPbiEffort = 0,
+            TotalProgressionDelta = 0,
+            TotalBugsCreatedCount = bugsCreated,
+            TotalBugsClosedCount = 0,
+            TotalMissingEffortCount = 0,
+            IsApproximate = false
+        };
+    }
+
+    private static PrSprintMetricsDto CreatePrTrendMetric(
+        int sprintId,
+        DateTimeOffset startUtc,
+        double medianTimeToMergeHours)
+    {
+        return new PrSprintMetricsDto
+        {
+            SprintId = sprintId,
+            SprintName = $"Sprint {sprintId}",
+            StartUtc = startUtc,
+            EndUtc = startUtc.AddDays(14),
+            TotalPrs = 8,
+            MedianPrSize = 100,
+            PrSizeIsLinesChanged = true,
+            MedianTimeToFirstReviewHours = 2,
+            MedianTimeToMergeHours = medianTimeToMergeHours,
+            P90TimeToMergeHours = medianTimeToMergeHours + 4
+        };
+    }
+
+    private static ProductBacklogStateDto CreatePlanningState(
+        int featureCount,
+        int readyPbiCount,
+        IReadOnlyList<int> readyEfforts)
+    {
+        var features = Enumerable.Range(0, featureCount)
+            .Select(index => new FeatureRefinementDto
+            {
+                TfsId = 200 + index,
+                Title = $"Feature {index + 1}",
+                Score = 100,
+                OwnerState = FeatureOwnerState.Ready,
+                Pbis =
+                [
+                    ..Enumerable.Range(0, readyPbiCount / featureCount + (index < readyPbiCount % featureCount ? 1 : 0))
+                        .Select(offset =>
+                        {
+                            var pbiIndex = featureCount == 1 ? offset : featuresAssignedBefore(index, featureCount, readyPbiCount) + offset;
+                            return new PbiReadinessDto
+                            {
+                                TfsId = 300 + pbiIndex,
+                                Score = 100,
+                                Title = $"PBI {pbiIndex + 1}",
+                                Effort = readyEfforts[pbiIndex]
+                            };
+                        })
+                ]
+            })
+            .ToList();
+
+        return new ProductBacklogStateDto
+        {
+            ProductId = 1,
+            Epics =
+            [
+                new EpicRefinementDto
+                {
+                    TfsId = 100,
+                    Title = "Epic",
+                    Score = 100,
+                    HasDescription = true,
+                    Features = features
+                }
+            ]
+        };
+
+        static int featuresAssignedBefore(int featureIndex, int featureCount, int readyPbiCount)
+        {
+            var baseCount = readyPbiCount / featureCount;
+            var remainder = readyPbiCount % featureCount;
+            return featureIndex * baseCount + Math.Min(featureIndex, remainder);
+        }
+    }
+}

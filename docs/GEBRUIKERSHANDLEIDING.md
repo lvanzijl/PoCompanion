@@ -151,7 +151,14 @@ Elke tegel bevat:
 
 - een icoon;
 - de naam van de werkruimte;
-- tijdelijke placeholdertekst voor het toekomstige signaal.
+- één kort signaal dat uitlegt waarom je juist die werkruimte nu zou moeten openen.
+
+De Startpagina gebruikt een **signaalgestuurd navigatiemodel**:
+
+- per tegel wordt altijd precies **één** signaal getoond;
+- de tegel kiest altijd het **hoogst geprioriteerde** signaal dat op dat moment bestaat;
+- als er geen negatief signaal is, zie je een **neutrale bevestiging** zoals `Backlog healthy`, `Sprint progressing normally`, `Metrics stable` of `Planning ready`;
+- de actieve productchip bepaalt ook voor deze signalen welke productcontext wordt meegenomen.
 
 De tegels zijn bewust groter en prominenter gemaakt dan de rest van de pagina. De Startpagina draait dus eerst om **kiezen naar welke werkruimte je wilt gaan**.
 
