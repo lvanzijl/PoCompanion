@@ -554,18 +554,18 @@ When multiple linked work items resolve to different categories, the highest-pri
 
 ### 2.13 Plan Board — `/planning/plan-board`
 
-**Purpose:** Operational sprint planning board with capacity indicators. Displays unplanned PBIs and bugs as a hierarchical tree (Epic → Feature → PBI/Bug) on the left, and upcoming sprints as columns on the right. Users drag individual items or parent groups onto sprint columns to assign work. Sprint columns show capacity utilization derived from historical velocity. Operates per product.
+**Purpose:** Operational sprint planning board with capacity indicators. Displays active product Epics and Features plus unplanned PBIs and bugs as a hierarchical tree (Epic → Feature → PBI/Bug) on the left, and upcoming sprints as columns on the right. Users drag individual items or parent groups onto sprint columns to assign work. Sprint columns show capacity utilization derived from historical velocity. Operates per product.
 
 | Functionality | Description |
 |---|---|
 | Breadcrumb | `Home › Planning › Plan Board`. |
 | Product selector | Dropdown to choose the product to plan. Changing product reloads the board. |
-| Candidate tree (left panel) | Hierarchical expandable tree showing unplanned, eligible PBIs and Bugs, grouped under Features and Epics. Done and Removed items are excluded. Items already assigned to a sprint are excluded. Ordered by BacklogPriority (ascending, nulls last), then TfsId as tie-breaker at every level. |
+| Candidate tree (left panel) | Hierarchical expandable tree showing all active Epics and Features for the selected product, with unplanned eligible PBIs and Bugs grouped underneath them. Done and Removed items are excluded. PBIs and Bugs already assigned to a sprint are excluded from the left tree. Ordered by BacklogPriority (ascending, nulls last), then TfsId as tie-breaker at every level. |
 | Sprint columns | Up to three upcoming sprints displayed as columns. Each shows sprint name, date range, and capacity indicator. |
 | Sprint capacity indicator | Each sprint column header shows: capacity (median historical velocity), assigned effort (sum of PBI and bug effort estimates), remaining capacity, and a progress bar. Displays an overcommitment warning when assigned effort exceeds capacity. |
 | Work item cards | Each card shows: PBI or bug title, parent feature name (if available), item type, effort estimate (if available), and a warning signal when the estimate is missing. |
 | Effort display | PBI/Bug nodes show their own effort. Feature and Epic rows show the sum of all eligible descendant PBI/Bug effort (excluding Done/Removed items). |
-| Drag and drop | Drag a PBI or Bug to a sprint column to plan that single item. Drag a Feature to plan all its eligible descendant PBIs/Bugs in bulk. Drag an Epic to plan all its eligible descendant PBIs/Bugs in bulk. Drag items between sprint columns to update their assignment. |
+| Drag and drop | Drag a PBI or Bug to a sprint column to plan that single item. Drag a Feature to plan all its eligible descendant PBIs/Bugs in bulk. Drag an Epic to plan all its eligible descendant PBIs/Bugs in bulk. Drag items between sprint columns to update their assignment. Parent rows without eligible descendant PBIs/Bugs are visible for context but are not draggable. |
 | Expand / collapse | Epic and Feature rows in the candidate tree can be expanded or collapsed. Parent rows remain draggable even when collapsed. |
 | Planning button | Returns to `/home/planning`. |
 

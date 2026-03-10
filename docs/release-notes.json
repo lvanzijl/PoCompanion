@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-10",
+    "type": "Fixed",
+    "title": "Plan Board shows active epic hierarchy",
+    "impact": "The Plan Board backlog tree now keeps active Epics and Features visible in TFS backlog order even when they do not yet have plannable PBIs or bugs.",
+    "area": "Planning",
+    "link": "/planning/plan-board"
+  },
+  {
     "date": "2026-03-09",
     "type": "Changed",
     "title": "Plan Board can refresh from TFS",
