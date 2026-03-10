@@ -30,7 +30,7 @@
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key is "Enter" or " ")
+        if (e.Key is "Enter" || e.Code == "Space")
         {
             await OnClick.InvokeAsync();
         }
