@@ -7,11 +7,12 @@
 }
 
 .dashboard-product-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
     gap: var(--d4, 16px);
-    flex-wrap: nowrap;
+    flex-wrap: nowrap !important;
 }
 
 .dashboard-product-bar__chips {
