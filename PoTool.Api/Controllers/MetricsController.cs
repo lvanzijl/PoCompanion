@@ -599,6 +599,30 @@ public class MetricsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets compact contextual metrics for the Home product bar.
+    /// </summary>
+    [HttpGet("home-product-bar")]
+    public async Task<ActionResult<HomeProductBarMetricsDto>> GetHomeProductBarMetrics(
+        [FromQuery][Required] int productOwnerId,
+        [FromQuery] int? productId = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _mediator.Send(
+                new GetHomeProductBarMetricsQuery(productOwnerId, productId),
+                cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving Home product bar metrics for ProductOwner: {ProductOwnerId}", productOwnerId);
+            return StatusCode(500, "Error retrieving Home product bar metrics");
+        }
+    }
+
+    /// <summary>
     /// Gets sprint execution analysis for internal diagnostics.
     /// Reconstructs sprint backlog evolution: initial scope, added/removed items,
     /// completion order, and starved work detection.

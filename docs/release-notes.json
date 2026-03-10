@@ -2,6 +2,14 @@
   {
     "date": "2026-03-10",
     "type": "Changed",
+    "title": "Home product bar now shows context metrics",
+    "impact": "The Home product bar now shows team sprint progress plus bug and changes-today counts, with bug and change totals filtered by the selected product chip.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-03-10",
+    "type": "Changed",
     "title": "Home tiles now show workspace signals",
     "impact": "Each Home workspace tile now shows one highest-priority signal in the active product context so Product Owners can open the right workspace faster.",
     "area": "Home",
