@@ -1,7 +1,6 @@
 @page "/home"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
-@using System.Web
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject WorkItemService WorkItemService
@@ -236,8 +235,6 @@
         
         try
         {
-            ParseDashboardContextQueryParameters();
-
             // Get the active profile - mandatory for Home navigation
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             if (activeProfile == null)
@@ -252,10 +249,6 @@
             
             // Load products for context filter
             _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
-            if (_selectedProductId.HasValue && _products.All(product => product.Id != _selectedProductId.Value))
-            {
-                _selectedProductId = null;
-            }
             
             // Load last sync time for "What's New Since Last Sync" display
             var cacheState = await CacheSyncService.GetCacheStatusAsync(_profileId.Value);
@@ -294,21 +287,9 @@
         return parameters.Count > 0 ? "?" + string.Join("&", parameters) : "";
     }
 
-    private void ParseDashboardContextQueryParameters()
-    {
-        var uri = new Uri(NavigationManager.Uri);
-        var queryParams = HttpUtility.ParseQueryString(uri.Query);
-
-        if (int.TryParse(queryParams["productId"], out var productId))
-        {
-            _selectedProductId = productId;
-        }
-    }
-
     private void SelectProduct(int? productId)
     {
         _selectedProductId = productId;
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.Home}{BuildContextQuery()}", replace: true);
     }
 
     private string GetActiveProductLabel()

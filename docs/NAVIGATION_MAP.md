@@ -129,7 +129,7 @@ Global header (available on every page) ◄────────────�
 
 | Functionality | Description |
 |---|---|
-| Products section | Shows all products owned by the active Product Owner as clickable chips. Selecting a chip highlights the active context, updates the dashboard URL with `?productId=`, and propagates that context to supported workspace links. |
+| Products section | Shows all products owned by the active Product Owner as clickable chips. Selecting a chip highlights the active context and propagates that context to supported workspace links. |
 | Workspaces section | Shows exactly four standardized, clickable cards in a 2×2 grid: Health, Delivery, Trends, and Planning. All cards share one card component, hover feedback, and consistent height. |
 | Quick Actions | Contains Validation Triage and Bug Triage as regular action buttons so they remain visually distinct from workspace navigation cards. |
 | Quick Status | Single-row shortcuts for validation issues, bugs, total work items, last sync details, and manual sync. Issues open Validation Triage in the Health flow; Bugs open Bug Triage; Work Items opens Work Item Explorer; Last Sync opens `/home/changes`; Sync triggers a manual cache sync. |

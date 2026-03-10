@@ -146,7 +146,7 @@ Bovenaan staat de sectie **Products** met klikbare chips:
 - **Productchips** — bijvoorbeeld `BDR-ST`, `ADS`, `EIB`; klik op een chip om die productcontext actief te maken.
 - **Active:** onder de chips zie je altijd welk product op dat moment actief is.
 
-De actieve context wordt in de URL gezet als `?productId=` en wordt meegenomen naar ondersteunde werkruimten zoals Health, Trends, Planning en Validation Triage.
+De actieve context wordt meegenomen naar ondersteunde werkruimten zoals Health, Trends, Planning en Validation Triage.
 
 ### Werkruimten
 
