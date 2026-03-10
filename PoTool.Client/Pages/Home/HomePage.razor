@@ -166,6 +166,7 @@
 </MudContainer>
 
 @code {
+    private const string ProductMetricsUnavailableMessage = "Unable to load product metrics. Please try refreshing the page.";
     private bool _isLoading = true;
     private bool _isSyncing = false;
     private bool _showNoProfileAlert = false;
@@ -301,7 +302,7 @@
             if (metrics == null)
             {
                 _productBarMetrics = null;
-                Snackbar.Add("Unable to load product metrics. Please try refreshing the page.", Severity.Warning);
+                Snackbar.Add(ProductMetricsUnavailableMessage, Severity.Warning);
                 return;
             }
 
@@ -310,7 +311,7 @@
         catch (Exception ex)
         {
             _productBarMetrics = null;
-            Snackbar.Add($"Unable to load product metrics. Please try refreshing the page. ({ex.Message})", Severity.Warning);
+            Snackbar.Add($"{ProductMetricsUnavailableMessage} ({ex.Message})", Severity.Warning);
         }
     }
 

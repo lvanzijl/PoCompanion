@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Client.Services;
@@ -30,7 +31,7 @@ public class HomeProductBarMetricsService
                 $"api/Metrics/home-product-bar{query}",
                 cancellationToken);
         }
-        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException)
+        catch (Exception ex) when (ex is HttpRequestException or JsonException)
         {
             return null;
         }
