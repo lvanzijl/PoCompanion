@@ -160,13 +160,13 @@ De Startpagina gebruikt een **signaalgestuurd navigatiemodel**:
 - als er geen negatief signaal is, zie je een **neutrale bevestiging** zoals `Backlog healthy`, `Sprint progressing normally`, `Metrics stable` of `Planning ready`;
 - de actieve productchip bepaalt ook voor deze signalen welke productcontext wordt meegenomen.
 
-De tegels zijn bewust groter en prominenter gemaakt dan de rest van de pagina. De Startpagina draait dus eerst om **kiezen naar welke werkruimte je wilt gaan**.
+De tegels zijn bewust groter en prominenter gemaakt dan de rest van de pagina. Ze gebruiken een gevulde kaart-stijl met verhoging (schaduw), gecentreerde inhoud (icoon, naam, signaal als verticale eenheid) en een lichte lift bij hover. De Startpagina draait dus eerst om **kiezen naar welke werkruimte je wilt gaan**.
 
 ### Productbalk
 
 Onder de werkruimten staat één horizontale balk met links de productselector en rechts compacte contextmetingen.
 
-In de productbalk vind je klikbare chips:
+In de productbalk vind je klikbare chips direct op de linkerkant — zonder een apart "Products"-label — in de volgorde van het Product Owner-profiel:
 
 - **All Products** — laat alle producten in de dashboardcontext staan.
 - **Productchips** — bijvoorbeeld `BDR-ST`, `ADS`, `EIB`; klik op een chip om die productcontext actief te maken.
