@@ -793,6 +793,7 @@
         var isLeaf = node.Children.Count == 0;
         var nodeClass = GetNodeRowClass(node.WorkItemType);
         var isDragging = ReferenceEquals(_draggedNode, node);
+        var isDraggable = node.EligiblePbiIds.Count > 0;
 
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "class", "plan-tree-node");
@@ -800,9 +801,13 @@
         // Row
         builder.OpenElement(2, "div");
         builder.AddAttribute(3, "class", $"plan-tree-node-row {nodeClass}{(isDragging ? " dragging" : "")}");
-        builder.AddAttribute(4, "draggable", "true");
-        builder.AddAttribute(5, "ondragstart", EventCallback.Factory.Create(this, () => OnCandidateNodeDragStart(node)));
-        builder.AddAttribute(6, "ondragend", EventCallback.Factory.Create(this, OnDragEnd));
+        builder.AddAttribute(4, "draggable", isDraggable ? "true" : "false");
+        builder.AddAttribute(5, "style", isDraggable ? null : "cursor: default;");
+        if (isDraggable)
+        {
+            builder.AddAttribute(6, "ondragstart", EventCallback.Factory.Create(this, () => OnCandidateNodeDragStart(node)));
+            builder.AddAttribute(7, "ondragend", EventCallback.Factory.Create(this, OnDragEnd));
+        }
 
         // Expand / collapse button for parent nodes
         if (!isLeaf)

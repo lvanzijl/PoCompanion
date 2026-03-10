@@ -143,8 +143,13 @@ public sealed class PlanBoardWorkItemRulesTests
             doneOrRemoved,
             new HashSet<string>());
 
-        // Feature has no eligible descendants → excluded; Epic has no features → excluded
-        Assert.HasCount(0, tree);
+        Assert.HasCount(1, tree);
+        Assert.AreEqual(1, tree[0].TfsId);
+        Assert.HasCount(1, tree[0].Children);
+        Assert.AreEqual(2, tree[0].Children[0].TfsId);
+        Assert.HasCount(0, tree[0].Children[0].Children);
+        Assert.AreEqual(0, tree[0].Children[0].AggregatedEffort);
+        Assert.HasCount(0, tree[0].Children[0].EligiblePbiIds);
     }
 
     [TestMethod]
@@ -216,6 +221,26 @@ public sealed class PlanBoardWorkItemRulesTests
     }
 
     [TestMethod]
+    public void BuildCandidateTree_OrdersVisibleParentsByBacklogPriorityThenTfsId()
+    {
+        var epicLow = CreateWorkItem(10, WorkItemTypeHelper.Epic, "Epic Low");
+        epicLow.BacklogPriority = 10;
+        var epicHigh = CreateWorkItem(11, WorkItemTypeHelper.Epic, "Epic High");
+        epicHigh.BacklogPriority = 1;
+        var epicNoPriority = CreateWorkItem(12, WorkItemTypeHelper.Epic, "Epic No Priority");
+
+        var tree = PlanBoardWorkItemRules.BuildCandidateTree(
+            [epicNoPriority, epicLow, epicHigh],
+            new HashSet<(string, string)>(),
+            new HashSet<string>());
+
+        Assert.HasCount(3, tree);
+        Assert.AreEqual(11, tree[0].TfsId);
+        Assert.AreEqual(10, tree[1].TfsId);
+        Assert.AreEqual(12, tree[2].TfsId);
+    }
+
+    [TestMethod]
     public void BuildCandidateTree_SetsEligiblePbiIdsOnParents()
     {
         var epic = CreateWorkItem(1, WorkItemTypeHelper.Epic, "Epic A");
@@ -233,6 +258,33 @@ public sealed class PlanBoardWorkItemRulesTests
 
         var featureNode = epicNode.Children[0];
         CollectionAssert.AreEquivalent(new[] { 3, 4 }, featureNode.EligiblePbiIds);
+    }
+
+    [TestMethod]
+    public void BuildCandidateTree_ExcludesDoneOrRemovedParents()
+    {
+        var doneEpic = CreateWorkItem(1, WorkItemTypeHelper.Epic, "Done Epic");
+        doneEpic.State = "Closed";
+        var activeEpic = CreateWorkItem(2, WorkItemTypeHelper.Epic, "Active Epic");
+        var removedFeature = CreateWorkItem(3, WorkItemTypeHelper.Feature, "Removed Feature", parentId: 2);
+        removedFeature.State = "Removed";
+        var activeFeature = CreateWorkItem(4, WorkItemTypeHelper.Feature, "Active Feature", parentId: 2);
+
+        var doneOrRemoved = new HashSet<(string, string)>
+        {
+            ("epic", "closed"),
+            ("feature", "removed")
+        };
+
+        var tree = PlanBoardWorkItemRules.BuildCandidateTree(
+            [doneEpic, activeEpic, removedFeature, activeFeature],
+            doneOrRemoved,
+            new HashSet<string>());
+
+        Assert.HasCount(1, tree);
+        Assert.AreEqual(2, tree[0].TfsId);
+        Assert.HasCount(1, tree[0].Children);
+        Assert.AreEqual(4, tree[0].Children[0].TfsId);
     }
 
     [TestMethod]

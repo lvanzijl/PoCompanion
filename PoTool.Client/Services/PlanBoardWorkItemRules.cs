@@ -32,11 +32,10 @@ public static class PlanBoardWorkItemRules
 
     /// <summary>
     /// Builds the hierarchical candidate tree (Epic → Feature → PBI/Bug) for the left-side
-    /// planning panel. Only items that are NOT Done/Removed AND NOT yet assigned to any sprint
-    /// column appear in the tree.
+    /// planning panel. Epic and Feature nodes appear when they are not Done/Removed. PBI/Bug leaves
+    /// appear only when they are not Done/Removed and not yet assigned to any sprint column.
     /// Ordering: BacklogPriority ascending (nulls last), then TfsId ascending as tie-breaker.
     /// Effort: PBI/Bug shows own effort; Feature and Epic show sum of eligible descendant efforts.
-    /// Parent nodes with no eligible descendants are excluded.
     /// </summary>
     /// <param name="allWorkItems">Full work item hierarchy for the product.</param>
     /// <param name="doneOrRemovedStates">
@@ -51,27 +50,27 @@ public static class PlanBoardWorkItemRules
     {
         var lookup = allWorkItems.ToDictionary(w => w.TfsId);
 
+        bool IsVisibleParent(WorkItemDto w) =>
+            (IsEpic(w.Type) || IsFeature(w.Type)) &&
+            !IsDoneOrRemoved(w.Type, w.State, doneOrRemovedStates);
+
         bool IsEligibleLeaf(WorkItemDto w) =>
             IsPlanBoardItem(w.Type) &&
             !IsDoneOrRemoved(w.Type, w.State, doneOrRemovedStates) &&
             !IsAssignedToSprint(w.IterationPath, sprintPaths);
 
-        // Step 1: collect eligible PBIs/Bugs
+        // Step 1: collect visible Epics/Features and eligible PBIs/Bugs
+        var visibleParents = allWorkItems.Where(IsVisibleParent).ToList();
         var eligibleLeaves = allWorkItems.Where(IsEligibleLeaf).ToList();
 
-        // Step 2: collect the Feature parents of those leaves
-        var featureIdSet = eligibleLeaves
-            .Where(p => p.ParentTfsId.HasValue &&
-                        lookup.TryGetValue(p.ParentTfsId.Value, out var parent) &&
-                        IsFeature(parent.Type))
-            .Select(p => p.ParentTfsId!.Value)
+        var featureIdSet = visibleParents
+            .Where(w => IsFeature(w.Type))
+            .Select(w => w.TfsId)
             .ToHashSet();
 
-        // Step 3: collect the Epic parents of those features
-        var epicIdSet = featureIdSet
-            .Where(fid => lookup.TryGetValue(fid, out var f) && f.ParentTfsId.HasValue &&
-                          lookup.TryGetValue(f.ParentTfsId!.Value, out var ep) && IsEpic(ep.Type))
-            .Select(fid => lookup[fid].ParentTfsId!.Value)
+        var epicIdSet = visibleParents
+            .Where(w => IsEpic(w.Type))
+            .Select(w => w.TfsId)
             .ToHashSet();
 
         // Group PBIs/Bugs by Feature parent id (only those with a known Feature parent)
@@ -99,9 +98,8 @@ public static class PlanBoardWorkItemRules
             .Select(id => lookup[id])
             .OrderByBacklogPriority())
         {
-            var epicNode = BuildEpicNode(epic, featuresByEpic, leavesByFeature, lookup);
-            if (epicNode != null)
-                result.Add(epicNode);
+            var epicNode = BuildEpicNode(epic, featuresByEpic, leavesByFeature);
+            result.Add(epicNode);
         }
 
         // Handle orphan Features (no Epic parent) — Features whose Epic is not in epicIdSet
@@ -111,8 +109,7 @@ public static class PlanBoardWorkItemRules
             .OrderByBacklogPriority())
         {
             var featureNode = BuildFeatureNode(feature, leavesByFeature);
-            if (featureNode != null)
-                result.Add(featureNode);
+            result.Add(featureNode);
         }
 
         // Handle orphan PBIs/Bugs (no Feature parent)
@@ -124,11 +121,10 @@ public static class PlanBoardWorkItemRules
         return result;
     }
 
-    private static PlanBoardCandidateNode? BuildEpicNode(
+    private static PlanBoardCandidateNode BuildEpicNode(
         WorkItemDto epic,
         IReadOnlyDictionary<int, List<WorkItemDto>> featuresByEpic,
-        IReadOnlyDictionary<int, List<WorkItemDto>> leavesByFeature,
-        IReadOnlyDictionary<int, WorkItemDto> lookup)
+        IReadOnlyDictionary<int, List<WorkItemDto>> leavesByFeature)
     {
         var epicNode = new PlanBoardCandidateNode
         {
@@ -142,20 +138,15 @@ public static class PlanBoardWorkItemRules
             .OrderByBacklogPriority())
         {
             var featureNode = BuildFeatureNode(feature, leavesByFeature);
-            if (featureNode == null) continue;
-
             epicNode.Children.Add(featureNode);
             epicNode.EligiblePbiIds.AddRange(featureNode.EligiblePbiIds);
         }
-
-        if (epicNode.EligiblePbiIds.Count == 0)
-            return null;
 
         epicNode.AggregatedEffort = epicNode.Children.Sum(f => f.AggregatedEffort);
         return epicNode;
     }
 
-    private static PlanBoardCandidateNode? BuildFeatureNode(
+    private static PlanBoardCandidateNode BuildFeatureNode(
         WorkItemDto feature,
         IReadOnlyDictionary<int, List<WorkItemDto>> leavesByFeature)
     {
@@ -174,9 +165,6 @@ public static class PlanBoardWorkItemRules
             featureNode.Children.Add(leafNode);
             featureNode.EligiblePbiIds.Add(leaf.TfsId);
         }
-
-        if (featureNode.EligiblePbiIds.Count == 0)
-            return null;
 
         featureNode.AggregatedEffort = featureNode.Children.Sum(c => c.OwnEffort ?? 0);
         return featureNode;

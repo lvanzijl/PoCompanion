@@ -965,7 +965,7 @@ Een alleen-lezen visueel overzicht van werkitem-afhankelijkheden tussen epics en
 
 **Pagina:** `/planning/plan-board`
 
-Het Plan Board is het operationele planbord voor sprintplanning. Het bord toont aan de linkerkant een hiërarchische planningsboom (Epic → Feature → PBI/Bug) met alle ongeplande, in-aanmerking-komende werkitems. Aan de rechterkant staan de aankomende sprints als kolommen. Werkitems worden via drag-and-drop aan sprints toegewezen. Het bord toont daarnaast capaciteitsindicatoren die helpen bij het nemen van weloverwogen planningsbeslissingen.
+Het Plan Board is het operationele planbord voor sprintplanning. Het bord toont aan de linkerkant een hiërarchische planningsboom (Epic → Feature → PBI/Bug) met alle actieve Epics en Features van het product, plus alle ongeplande, in-aanmerking-komende PBIs en Bugs. Aan de rechterkant staan de aankomende sprints als kolommen. Werkitems worden via drag-and-drop aan sprints toegewezen. Het bord toont daarnaast capaciteitsindicatoren die helpen bij het nemen van weloverwogen planningsbeslissingen.
 
 #### Doel
 
@@ -975,7 +975,7 @@ Deze pagina beantwoordt de vraag: *Welke PBIs en bugs moeten we in de komende sp
 
 Het bord bestaat uit twee panelen:
 
-- **Kandidatenboom (links)** — Hiërarchische boom met alle ongeplande, in-aanmerking-komende PBIs en Bugs, gegroepeerd onder Features en Epics. Done en Removed werkitems worden niet getoond. Werkitems die al aan een sprint zijn toegewezen, worden eveneens niet getoond. Volgorde: BacklogPriority oplopend (nulls als laatste), vervolgens TfsId als tiebreaker — op elk niveau.
+- **Kandidatenboom (links)** — Hiërarchische boom met alle actieve Epics en Features van het product. Daaronder verschijnen alle ongeplande, in-aanmerking-komende PBIs en Bugs. Done en Removed werkitems worden niet getoond. Werkitems die al aan een sprint zijn toegewezen, worden eveneens niet getoond. Volgorde: BacklogPriority oplopend (nulls als laatste), vervolgens TfsId als tiebreaker — op elk niveau.
 - **Sprintkolommen (rechts)** — De eerstvolgende drie toekomstige sprints. Elke kolom toont de sprintnaam, datumbereik en een capaciteitsindicator.
 
 #### Hiërarchische kandidatenboom
@@ -987,6 +987,7 @@ De boom toont drie niveaus:
 - **PBI / Bug** — Laagste niveau, ingesprongen onder de Feature. Blauwe (PBI) of rode (Bug) markering. Toont de eigen effort.
 
 Epic- en Feature-rijen kunnen worden uitgevouwen en ingeklapt. Ingeklapte rijen blijven sleepbaar.
+Epic- en Feature-rijen zonder in-aanmerking-komende PBIs/Bugs blijven zichtbaar voor context, maar zijn niet sleepbaar totdat er planningsbare nakomelingen bestaan.
 
 #### Effort-weergave
 
