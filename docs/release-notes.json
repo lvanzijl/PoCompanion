@@ -2,6 +2,14 @@
   {
     "date": "2026-03-10",
     "type": "Changed",
+    "title": "Home workspace tiles — interaction polish and micro-trend sparklines",
+    "impact": "Workspace tiles now have a smooth hover lift (translateY -2px), a pressed feedback effect (translateY +1px), and a visible focus outline for keyboard navigation. Each tile may also display a small SVG sparkline indicator below the signal text when sufficient historical sprint data is available: the Delivery tile shows velocity trend (Done effort per sprint, up to 7 sprints), and the Trends tile shows bug-rate trend. Sparklines are amber-tinted when a deteriorating trend is detected. No axes, labels, or chart libraries are used.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-03-10",
+    "type": "Changed",
     "title": "Home product bar now shows context metrics",
     "impact": "The Home product bar now shows team sprint progress plus bug and changes-today counts, with bug and change totals filtered by the selected product chip.",
     "area": "Home",

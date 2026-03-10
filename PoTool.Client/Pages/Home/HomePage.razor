@@ -46,6 +46,7 @@
                                                 SignalText="@_workspaceSignals.Health"
                                                 Icon="@Icons.Material.Filled.HealthAndSafety"
                                                 IconColor="Color.Success"
+                                                TrendInfo="@_workspaceSignals.HealthTrend"
                                                 OnClick="NavigateToHealth" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
@@ -53,6 +54,7 @@
                                                 SignalText="@_workspaceSignals.Delivery"
                                                 Icon="@Icons.Material.Filled.CheckCircle"
                                                 IconColor="Color.Secondary"
+                                                TrendInfo="@_workspaceSignals.DeliveryTrend"
                                                 OnClick="NavigateToDelivery" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
@@ -60,6 +62,7 @@
                                                 SignalText="@_workspaceSignals.Trends"
                                                 Icon="@Icons.Material.Filled.Timeline"
                                                 IconColor="Color.Info"
+                                                TrendInfo="@_workspaceSignals.TrendsTrend"
                                                 OnClick="NavigateToTrends" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
@@ -67,6 +70,7 @@
                                                 SignalText="@_workspaceSignals.Planning"
                                                 Icon="@Icons.Material.Filled.CalendarMonth"
                                                 IconColor="Color.Warning"
+                                                TrendInfo="@_workspaceSignals.PlanningTrend"
                                                 OnClick="NavigateToPlanning" />
                     </MudItem>
                 </MudGrid>
