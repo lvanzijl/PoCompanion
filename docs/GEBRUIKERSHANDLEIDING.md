@@ -136,49 +136,49 @@ Zodra je een profiel selecteert, controleert de applicatie of de lokale cache up
 
 **Pagina:** `/home`
 
-De Startpagina is het compacte **Product Owner Dashboard**. Je ziet bovenaan direct voor welke producten je werkt, welke werkruimte je wilt openen, en welke snelle acties of statussnelkoppelingen je nodig hebt.
-
-### Productcontext
-
-Bovenaan staat de sectie **Products** met klikbare chips:
-
-- **All Products** — laat alle producten in de dashboardcontext staan.
-- **Productchips** — bijvoorbeeld `BDR-ST`, `ADS`, `EIB`; klik op een chip om die productcontext actief te maken.
-- **Active:** onder de chips zie je altijd welk product op dat moment actief is.
-
-De actieve context wordt meegenomen naar ondersteunde werkruimten zoals Health, Trends, Planning en Validation Triage.
+De Startpagina is nu vooral een **werkruimtenavigatie voor Product Owners**. De vier werkruimten vormen het visuele startpunt, daaronder kies je de productcontext, daarna volgen alleen nog lichte snelacties en een subtiele sync-regel.
 
 ### Werkruimten
 
-In de sectie **Workspaces** staan vier gelijke, klikbare kaarten in een 2×2-indeling:
+Bovenaan staan vier grote, klikbare tegels in een 2×2-indeling:
 
-1. **Health** — backlogvolwassenheid en refinement readiness.
-2. **Delivery** — wat er per sprint of periode is opgeleverd.
-3. **Trends** — structureel gedrag over recente sprints.
-4. **Planning** — beslissingsondersteuning voor aankomend werk.
+1. **Health**
+2. **Delivery**
+3. **Trends**
+4. **Planning**
 
-Alle vier kaarten hebben dezelfde vorm, hoogte en hover-feedback. Zo is meteen duidelijk dat elke kaart echt klikbaar is.
+Elke tegel bevat:
+
+- een icoon;
+- de naam van de werkruimte;
+- tijdelijke placeholdertekst voor het toekomstige signaal.
+
+De tegels zijn bewust groter en prominenter gemaakt dan de rest van de pagina. De Startpagina draait dus eerst om **kiezen naar welke werkruimte je wilt gaan**.
+
+### Productbalk
+
+Onder de werkruimten staat één horizontale balk met de productselector links en lege ruimte rechts voor toekomstige contextmetingen.
+
+In de productbalk vind je klikbare chips:
+
+- **All Products** — laat alle producten in de dashboardcontext staan.
+- **Productchips** — bijvoorbeeld `BDR-ST`, `ADS`, `EIB`; klik op een chip om die productcontext actief te maken.
+
+De volgorde van de chips blijft gelijk aan de configuratie van het Product Owner-profiel. De actieve context wordt meegenomen naar ondersteunde werkruimten zoals Health, Delivery, Trends, Planning en Validation Triage.
 
 ### Quick Actions
 
-- **Validatie Triage** (primaire knop) — ga direct naar de gestructureerde validatieflow.
+- **Validatie Triage** — ga direct naar de gestructureerde validatieflow.
 - **Bug Triage** — ga direct naar de bug-triage-pagina.
 
-Deze knoppen zijn bewust visueel anders dan de werkruimtekaarten, zodat navigatie en acties niet door elkaar lopen.
+Deze knoppen zijn bewust subtiel gehouden met een outlined-stijl, zodat navigatie en acties niet door elkaar lopen en de werkruimten dominant blijven.
 
-### Quick Status
+### Sync-status
 
-De rij **Quick Status** geeft compacte snelkoppelingen:
+Onderaan staat een compacte, rechts uitgelijnde regel:
 
-- **Issues** — opent Validation Triage in de Health-flow.
-- **Bugs** — opent Bug Triage.
-- **Work Items** — opent de Work Item Explorer.
-- **Last Sync** — opent de pagina “What’s New Since Last Sync”.
-- **Sync** — start handmatig een cache-sync en ververst daarna de status.
-
-### Geavanceerde tools
-
-- **Work Item Explorer** (tekstknop, lagere visuele prioriteit) — open de volledige hiërarchische explorer voor inspectie. Dit is een gereedschap voor gevorderd gebruik, niet het startpunt voor validatiewerk.
+- **Last Sync** — toont het tijdstip van de laatste succesvolle synchronisatie.
+- **Sync** — start handmatig een cache-sync en ververst daarna de tijdsaanduiding wanneer de sync gereed is.
 
 ---
 

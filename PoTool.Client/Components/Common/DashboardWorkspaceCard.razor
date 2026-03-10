@@ -4,10 +4,10 @@
            FullWidth="true"
            Class="dashboard-workspace-card"
            OnClick="OnClick">
-    <MudStack Spacing="1" Class="dashboard-workspace-card__content">
-        <MudIcon Icon="@Icon" Color="@IconColor" Size="Size.Medium" />
-        <MudText Typo="Typo.subtitle1">@Title</MudText>
-        <MudText Typo="Typo.caption" Color="Color.Secondary">@Description</MudText>
+    <MudStack Spacing="2" Class="dashboard-workspace-card__content">
+        <MudIcon Icon="@Icon" Color="@IconColor" Size="Size.Large" />
+        <MudText Typo="Typo.h6" Class="dashboard-workspace-card__title">@Title</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">@SignalPlaceholder</MudText>
     </MudStack>
 </MudButton>
 
@@ -16,7 +16,7 @@
     public string Title { get; set; } = string.Empty;
 
     [Parameter, EditorRequired]
-    public string Description { get; set; } = string.Empty;
+    public string SignalPlaceholder { get; set; } = string.Empty;
 
     [Parameter]
     public string Icon { get; set; } = Icons.Material.Filled.Dashboard;
