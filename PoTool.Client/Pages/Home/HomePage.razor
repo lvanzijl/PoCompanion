@@ -1,6 +1,7 @@
 @page "/home"
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Pages.Home.Components
 @using PoTool.Client.Services
 @using PoTool.Shared.Metrics
 @inject IProfileService ProfileService
@@ -42,123 +43,43 @@
                  <MudText Typo="Typo.overline" Color="Color.Secondary">Workspaces</MudText>
                  <MudGrid Spacing="2">
                      <MudItem xs="12" sm="6">
-                        <NavigationTileCard AriaLabel="@(GetWorkspaceAriaLabel("Health", _workspaceSignals.Health))"
+                        <NavigationTileCard Title="Health"
+                                            Subtitle="@_workspaceSignals.Health"
+                                            Icon="@Icons.Material.Filled.HealthAndSafety"
+                                            IconColor="Color.Success"
+                                            AriaLabel="@(GetWorkspaceAriaLabel("Health", _workspaceSignals.Health))"
                                             OnClick="NavigateToHealth">
-                            <div class="home-workspace-card">
-                                <div class="home-workspace-card__icon-col">
-                                    <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety"
-                                             Color="Color.Success"
-                                             Class="home-workspace-card__icon" />
-                                </div>
-                                <div class="home-workspace-card__text-col">
-                                    <MudText Typo="Typo.subtitle1" Class="home-workspace-card__title">Health</MudText>
-                                    <MudText Typo="Typo.body2" Class="home-workspace-card__signal">@_workspaceSignals.Health</MudText>
-                                    @if (_workspaceSignals.HealthTrend is { Points.Count: >= 2 })
-                                    {
-                                        <svg class="home-workspace-card__sparkline"
-                                             viewBox="0 0 80 14"
-                                             preserveAspectRatio="none"
-                                             aria-hidden="true">
-                                            <polyline points="@GetSparklinePoints(_workspaceSignals.HealthTrend)"
-                                                      class="@(GetSparklineClass(_workspaceSignals.HealthTrend))"
-                                                      fill="none"
-                                                      stroke-width="1.5"
-                                                      stroke-linecap="round"
-                                                      stroke-linejoin="round" />
-                                        </svg>
-                                    }
-                                </div>
-                            </div>
+                            <WorkspaceTrendSparkline Trend="@_workspaceSignals.HealthTrend" />
                         </NavigationTileCard>
                      </MudItem>
                      <MudItem xs="12" sm="6">
-                        <NavigationTileCard AriaLabel="@(GetWorkspaceAriaLabel("Delivery", _workspaceSignals.Delivery))"
+                        <NavigationTileCard Title="Delivery"
+                                            Subtitle="@_workspaceSignals.Delivery"
+                                            Icon="@Icons.Material.Filled.CheckCircle"
+                                            IconColor="Color.Secondary"
+                                            AriaLabel="@(GetWorkspaceAriaLabel("Delivery", _workspaceSignals.Delivery))"
                                             OnClick="NavigateToDelivery">
-                            <div class="home-workspace-card">
-                                <div class="home-workspace-card__icon-col">
-                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
-                                             Color="Color.Secondary"
-                                             Class="home-workspace-card__icon" />
-                                </div>
-                                <div class="home-workspace-card__text-col">
-                                    <MudText Typo="Typo.subtitle1" Class="home-workspace-card__title">Delivery</MudText>
-                                    <MudText Typo="Typo.body2" Class="home-workspace-card__signal">@_workspaceSignals.Delivery</MudText>
-                                    @if (_workspaceSignals.DeliveryTrend is { Points.Count: >= 2 })
-                                    {
-                                        <svg class="home-workspace-card__sparkline"
-                                             viewBox="0 0 80 14"
-                                             preserveAspectRatio="none"
-                                             aria-hidden="true">
-                                            <polyline points="@GetSparklinePoints(_workspaceSignals.DeliveryTrend)"
-                                                      class="@(GetSparklineClass(_workspaceSignals.DeliveryTrend))"
-                                                      fill="none"
-                                                      stroke-width="1.5"
-                                                      stroke-linecap="round"
-                                                      stroke-linejoin="round" />
-                                        </svg>
-                                    }
-                                </div>
-                            </div>
+                            <WorkspaceTrendSparkline Trend="@_workspaceSignals.DeliveryTrend" />
                         </NavigationTileCard>
                      </MudItem>
                      <MudItem xs="12" sm="6">
-                        <NavigationTileCard AriaLabel="@(GetWorkspaceAriaLabel("Trends", _workspaceSignals.Trends))"
+                        <NavigationTileCard Title="Trends"
+                                            Subtitle="@_workspaceSignals.Trends"
+                                            Icon="@Icons.Material.Filled.Timeline"
+                                            IconColor="Color.Info"
+                                            AriaLabel="@(GetWorkspaceAriaLabel("Trends", _workspaceSignals.Trends))"
                                             OnClick="NavigateToTrends">
-                            <div class="home-workspace-card">
-                                <div class="home-workspace-card__icon-col">
-                                    <MudIcon Icon="@Icons.Material.Filled.Timeline"
-                                             Color="Color.Info"
-                                             Class="home-workspace-card__icon" />
-                                </div>
-                                <div class="home-workspace-card__text-col">
-                                    <MudText Typo="Typo.subtitle1" Class="home-workspace-card__title">Trends</MudText>
-                                    <MudText Typo="Typo.body2" Class="home-workspace-card__signal">@_workspaceSignals.Trends</MudText>
-                                    @if (_workspaceSignals.TrendsTrend is { Points.Count: >= 2 })
-                                    {
-                                        <svg class="home-workspace-card__sparkline"
-                                             viewBox="0 0 80 14"
-                                             preserveAspectRatio="none"
-                                             aria-hidden="true">
-                                            <polyline points="@GetSparklinePoints(_workspaceSignals.TrendsTrend)"
-                                                      class="@(GetSparklineClass(_workspaceSignals.TrendsTrend))"
-                                                      fill="none"
-                                                      stroke-width="1.5"
-                                                      stroke-linecap="round"
-                                                      stroke-linejoin="round" />
-                                        </svg>
-                                    }
-                                </div>
-                            </div>
+                            <WorkspaceTrendSparkline Trend="@_workspaceSignals.TrendsTrend" />
                         </NavigationTileCard>
                      </MudItem>
                      <MudItem xs="12" sm="6">
-                        <NavigationTileCard AriaLabel="@(GetWorkspaceAriaLabel("Planning", _workspaceSignals.Planning))"
+                        <NavigationTileCard Title="Planning"
+                                            Subtitle="@_workspaceSignals.Planning"
+                                            Icon="@Icons.Material.Filled.CalendarMonth"
+                                            IconColor="Color.Warning"
+                                            AriaLabel="@(GetWorkspaceAriaLabel("Planning", _workspaceSignals.Planning))"
                                             OnClick="NavigateToPlanning">
-                            <div class="home-workspace-card">
-                                <div class="home-workspace-card__icon-col">
-                                    <MudIcon Icon="@Icons.Material.Filled.CalendarMonth"
-                                             Color="Color.Warning"
-                                             Class="home-workspace-card__icon" />
-                                </div>
-                                <div class="home-workspace-card__text-col">
-                                    <MudText Typo="Typo.subtitle1" Class="home-workspace-card__title">Planning</MudText>
-                                    <MudText Typo="Typo.body2" Class="home-workspace-card__signal">@_workspaceSignals.Planning</MudText>
-                                    @if (_workspaceSignals.PlanningTrend is { Points.Count: >= 2 })
-                                    {
-                                        <svg class="home-workspace-card__sparkline"
-                                             viewBox="0 0 80 14"
-                                             preserveAspectRatio="none"
-                                             aria-hidden="true">
-                                            <polyline points="@GetSparklinePoints(_workspaceSignals.PlanningTrend)"
-                                                      class="@(GetSparklineClass(_workspaceSignals.PlanningTrend))"
-                                                      fill="none"
-                                                      stroke-width="1.5"
-                                                      stroke-linecap="round"
-                                                      stroke-linejoin="round" />
-                                        </svg>
-                                    }
-                                </div>
-                            </div>
+                            <WorkspaceTrendSparkline Trend="@_workspaceSignals.PlanningTrend" />
                         </NavigationTileCard>
                      </MudItem>
                  </MudGrid>
@@ -431,54 +352,6 @@
     private static string GetWorkspaceAriaLabel(string title, string signalText)
     {
         return $"{title} workspace — {signalText}";
-    }
-
-    private static string GetSparklineClass(WorkspaceTrend trendInfo)
-    {
-        return trendInfo.IsDeteriorating
-            ? "home-workspace-card__sparkline-line home-workspace-card__sparkline-line--warn"
-            : "home-workspace-card__sparkline-line";
-    }
-
-    private static string GetSparklinePoints(WorkspaceTrend? trendInfo)
-    {
-        if (trendInfo is null || trendInfo.Points.Count < 2)
-        {
-            return string.Empty;
-        }
-
-        const int width = 80;
-        const int height = 14;
-        const int padding = 1;
-
-        var data = trendInfo.Points;
-        var min = data.Min();
-        var max = data.Max();
-        var range = max - min;
-
-        var sb = new System.Text.StringBuilder();
-        for (var i = 0; i < data.Count; i++)
-        {
-            var x = (double)i / (data.Count - 1) * width;
-            double y;
-            if (range == 0)
-            {
-                y = height / 2.0;
-            }
-            else
-            {
-                y = (height - padding) - (data[i] - min) / range * (height - padding * 2);
-            }
-
-            if (i > 0)
-            {
-                sb.Append(' ');
-            }
-
-            sb.Append(FormattableString.Invariant($"{x:F1},{y:F1}"));
-        }
-
-        return sb.ToString();
     }
 
     private void NavigateToHealth()

@@ -1,0 +1,16 @@
+.workspace-trend-sparkline {
+    width: 80px;
+    height: 13px;
+    display: block;
+    overflow: visible;
+    margin-top: var(--d1, 4px);
+    flex-shrink: 0;
+}
+
+.workspace-trend-sparkline__line {
+    stroke: var(--mud-palette-text-disabled);
+}
+
+.workspace-trend-sparkline__line--warn {
+    stroke: var(--mud-palette-warning);
+}
