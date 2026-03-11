@@ -134,7 +134,7 @@ public sealed class WorkspaceSignalService
         if (refinementCount > 0)
         {
             candidates.Add(new WorkspaceSignalCandidate(
-                $"Investigate {refinementCount} {Pluralize(refinementCount, "item", "items")} needing refinement",
+                $"Investigate {refinementCount} {Pluralize(refinementCount, "item", "items")} need refinement",
                 Priority: 3,
                 Impact: refinementCount,
                 Count: refinementCount));
