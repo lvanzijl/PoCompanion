@@ -26,7 +26,7 @@ public sealed class WorkspaceSignalServiceTests
 
         var result = WorkspaceSignalService.SelectHealthSignal(summary);
 
-        Assert.AreEqual("4 parent-child state mismatches", result);
+        Assert.AreEqual("Investigate 4 parent-child state mismatches", result);
     }
 
     [TestMethod]
@@ -40,7 +40,7 @@ public sealed class WorkspaceSignalServiceTests
 
         var result = WorkspaceSignalService.SelectHealthSignal(summary);
 
-        Assert.AreEqual("Backlog healthy", result);
+        Assert.AreEqual("Confirm backlog is healthy", result);
     }
 
     [TestMethod]
@@ -69,7 +69,15 @@ public sealed class WorkspaceSignalServiceTests
 
         var result = WorkspaceSignalService.SelectDeliverySignal(contexts, nowUtc);
 
-        Assert.AreEqual("4 PBIs unfinished", result);
+        Assert.AreEqual("4 PBIs may spill over this sprint", result);
+    }
+
+    [TestMethod]
+    public void SelectDeliverySignal_WithNoSignals_ReturnsNeutralInvestigationCue()
+    {
+        var result = WorkspaceSignalService.SelectDeliverySignal(contexts: [], new DateTimeOffset(2026, 3, 10, 0, 0, 0, TimeSpan.Zero));
+
+        Assert.AreEqual("Confirm delivery is on track", result);
     }
 
     [TestMethod]
@@ -96,7 +104,15 @@ public sealed class WorkspaceSignalServiceTests
 
         var result = WorkspaceSignalService.SelectTrendsSignal(sprintTrends, prTrends);
 
-        Assert.AreEqual("Bug rate increased 30%", result);
+        Assert.AreEqual("Bug spike detected (+30%)", result);
+    }
+
+    [TestMethod]
+    public void SelectTrendsSignal_WithNoTrendChanges_ReturnsNeutralInvestigationCue()
+    {
+        var result = WorkspaceSignalService.SelectTrendsSignal(sprintTrends: null, pullRequestTrends: null);
+
+        Assert.AreEqual("Confirm trends are stable", result);
     }
 
     [TestMethod]
@@ -136,7 +152,7 @@ public sealed class WorkspaceSignalServiceTests
 
         var result = WorkspaceSignalService.SelectPlanningSignal(states, capacityCalibration: null);
 
-        Assert.AreEqual("No features ready", result);
+        Assert.AreEqual("No features are ready for sprint", result);
     }
 
     [TestMethod]
@@ -153,7 +169,7 @@ public sealed class WorkspaceSignalServiceTests
 
         var result = WorkspaceSignalService.SelectPlanningSignal(states, capacity);
 
-        Assert.AreEqual("Sprint underfilled by 8 pts", result);
+        Assert.AreEqual("Ready work is short by 8 pts", result);
     }
 
     [TestMethod]
@@ -170,7 +186,7 @@ public sealed class WorkspaceSignalServiceTests
 
         var result = WorkspaceSignalService.SelectPlanningSignal(states, capacity);
 
-        Assert.AreEqual("Planning ready", result);
+        Assert.AreEqual("Confirm planning is healthy", result);
     }
 
     private static DeliverySignalContext CreateDeliveryContext(
