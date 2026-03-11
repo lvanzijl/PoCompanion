@@ -2,6 +2,14 @@
   {
     "date": "2026-03-11",
     "type": "Changed",
+    "title": "Home tiles now focus on investigation cues",
+    "impact": "Home workspace tiles now show one short investigation-focused reason to navigate and no longer embed mini trend sparklines, so the workspace hub reads as navigation instead of a status dashboard.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-03-11",
+    "type": "Changed",
     "title": "Home shows sync status above workspaces",
     "impact": "The Home dashboard now places a compact last-sync row with Sync and What's new since sync actions above the workspace tiles so Product Owners can refresh data and review recent changes without pushing navigation below the fold.",
     "area": "Home",

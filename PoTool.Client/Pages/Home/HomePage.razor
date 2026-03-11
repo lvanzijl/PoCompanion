@@ -1,7 +1,6 @@
 @page "/home"
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
-@using PoTool.Client.Pages.Home.Components
 @using PoTool.Client.Services
 @using PoTool.Shared.Metrics
 @inject IProfileService ProfileService
@@ -119,41 +118,33 @@
                                             Icon="@Icons.Material.Filled.HealthAndSafety"
                                             IconColor="Color.Success"
                                             AriaLabel="@(GetWorkspaceAriaLabel("Health", _workspaceSignals.Health))"
-                                            OnClick="NavigateToHealth">
-                            <WorkspaceTrendSparkline Trend="@_workspaceSignals.HealthTrend" />
-                        </NavigationTileCard>
-                     </MudItem>
-                     <MudItem xs="12" sm="6">
+                                            OnClick="NavigateToHealth" />
+                      </MudItem>
+                      <MudItem xs="12" sm="6">
                         <NavigationTileCard Title="Delivery"
                                             Subtitle="@_workspaceSignals.Delivery"
                                             Icon="@Icons.Material.Filled.CheckCircle"
                                             IconColor="Color.Secondary"
                                             AriaLabel="@(GetWorkspaceAriaLabel("Delivery", _workspaceSignals.Delivery))"
-                                            OnClick="NavigateToDelivery">
-                            <WorkspaceTrendSparkline Trend="@_workspaceSignals.DeliveryTrend" />
-                        </NavigationTileCard>
-                     </MudItem>
-                     <MudItem xs="12" sm="6">
+                                            OnClick="NavigateToDelivery" />
+                      </MudItem>
+                      <MudItem xs="12" sm="6">
                         <NavigationTileCard Title="Trends"
                                             Subtitle="@_workspaceSignals.Trends"
                                             Icon="@Icons.Material.Filled.Timeline"
                                             IconColor="Color.Info"
                                             AriaLabel="@(GetWorkspaceAriaLabel("Trends", _workspaceSignals.Trends))"
-                                            OnClick="NavigateToTrends">
-                            <WorkspaceTrendSparkline Trend="@_workspaceSignals.TrendsTrend" />
-                        </NavigationTileCard>
-                     </MudItem>
-                     <MudItem xs="12" sm="6">
+                                            OnClick="NavigateToTrends" />
+                      </MudItem>
+                      <MudItem xs="12" sm="6">
                         <NavigationTileCard Title="Planning"
                                             Subtitle="@_workspaceSignals.Planning"
                                             Icon="@Icons.Material.Filled.CalendarMonth"
                                             IconColor="Color.Warning"
                                             AriaLabel="@(GetWorkspaceAriaLabel("Planning", _workspaceSignals.Planning))"
-                                            OnClick="NavigateToPlanning">
-                            <WorkspaceTrendSparkline Trend="@_workspaceSignals.PlanningTrend" />
-                        </NavigationTileCard>
-                     </MudItem>
-                 </MudGrid>
+                                            OnClick="NavigateToPlanning" />
+                      </MudItem>
+                  </MudGrid>
              </MudStack>
 
             <MudPaper Elevation="1" Class="pa-2 dashboard-section">

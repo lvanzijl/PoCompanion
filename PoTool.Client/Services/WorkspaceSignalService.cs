@@ -15,10 +15,10 @@ public sealed class WorkspaceSignalService
     private const int CapacitySprintCount = 6;
     private const int PlanningReadyPbiThreshold = 3;
     private static readonly WorkspaceSignalSet NeutralSignals = new(
-        "Backlog healthy",
-        "Sprint progressing normally",
-        "Metrics stable",
-        "Planning ready");
+        "Confirm backlog is healthy",
+        "Confirm delivery is on track",
+        "Confirm trends are stable",
+        "Confirm planning is healthy");
 
     private readonly IMetricsClient _metricsClient;
     private readonly IPullRequestsClient _pullRequestsClient;
@@ -116,7 +116,7 @@ public sealed class WorkspaceSignalService
         if (parentChildMismatchCount > 0)
         {
             candidates.Add(new WorkspaceSignalCandidate(
-                $"{parentChildMismatchCount} parent-child state {Pluralize(parentChildMismatchCount, "mismatch", "mismatches")}",
+                $"Investigate {parentChildMismatchCount} parent-child state {Pluralize(parentChildMismatchCount, "mismatch", "mismatches")}",
                 Priority: 1,
                 Impact: parentChildMismatchCount,
                 Count: parentChildMismatchCount));
@@ -126,7 +126,7 @@ public sealed class WorkspaceSignalService
         if (missingEffortCount > 0)
         {
             candidates.Add(new WorkspaceSignalCandidate(
-                $"{missingEffortCount} {Pluralize(missingEffortCount, "item", "items")} missing effort",
+                $"Investigate {missingEffortCount} {Pluralize(missingEffortCount, "item", "items")} missing effort",
                 Priority: 2,
                 Impact: missingEffortCount,
                 Count: missingEffortCount));
@@ -136,7 +136,7 @@ public sealed class WorkspaceSignalService
         if (refinementCount > 0)
         {
             candidates.Add(new WorkspaceSignalCandidate(
-                $"{refinementCount} {Pluralize(refinementCount, "item", "items")} need refinement",
+                $"Investigate {refinementCount} {Pluralize(refinementCount, "item", "items")} needing refinement",
                 Priority: 3,
                 Impact: refinementCount,
                 Count: refinementCount));
@@ -146,7 +146,7 @@ public sealed class WorkspaceSignalService
         if (inconsistentStateCount > 0)
         {
             candidates.Add(new WorkspaceSignalCandidate(
-                $"{inconsistentStateCount} inconsistent state {Pluralize(inconsistentStateCount, "transition", "transitions")}",
+                $"Investigate {inconsistentStateCount} inconsistent state {Pluralize(inconsistentStateCount, "transition", "transitions")}",
                 Priority: 4,
                 Impact: inconsistentStateCount,
                 Count: inconsistentStateCount));
@@ -163,7 +163,7 @@ public sealed class WorkspaceSignalService
             if (totalIssues > 0)
             {
                 candidates.Add(new WorkspaceSignalCandidate(
-                    $"{totalIssues} backlog {Pluralize(totalIssues, "issue", "issues")}",
+                    $"Investigate {totalIssues} backlog {Pluralize(totalIssues, "issue", "issues")}",
                     Priority: 5,
                     Impact: totalIssues,
                     Count: totalIssues));
@@ -197,7 +197,7 @@ public sealed class WorkspaceSignalService
             if (bugRateChange.IsIncrease)
             {
                 candidates.Add(new WorkspaceSignalCandidate(
-                    bugRateChange.FormatIncrease("Bug rate increased"),
+                    $"Bug spike detected (+{Math.Round(bugRateChange.Impact):F0}%)",
                     Priority: 1,
                     Impact: bugRateChange.Impact,
                     Count: currentSprint.TotalBugsCreatedCount));
@@ -207,7 +207,7 @@ public sealed class WorkspaceSignalService
             if (deliveryChange.IsDecrease)
             {
                 candidates.Add(new WorkspaceSignalCandidate(
-                    deliveryChange.FormatDecrease("Delivery slowed"),
+                    $"Delivery throughput dropped {Math.Round(deliveryChange.Impact):F0}%",
                     Priority: 3,
                     Impact: deliveryChange.Impact,
                     Count: currentSprint.TotalCompletedPbiCount));
@@ -225,7 +225,7 @@ public sealed class WorkspaceSignalService
                 if (cycleTimeChange.IsIncrease)
                 {
                     candidates.Add(new WorkspaceSignalCandidate(
-                        cycleTimeChange.FormatIncrease("Cycle time spiked"),
+                        $"PR merge time increased {Math.Round(cycleTimeChange.Impact):F0}%",
                         Priority: 2,
                         Impact: cycleTimeChange.Impact,
                         Count: currentPrSprint.TotalPrs));
@@ -233,7 +233,7 @@ public sealed class WorkspaceSignalService
                 else if (cycleTimeChange.IsDecrease)
                 {
                     candidates.Add(new WorkspaceSignalCandidate(
-                        "Cycle time improving",
+                        "PR merge time improving",
                         Priority: 4,
                         Impact: cycleTimeChange.Impact,
                         Count: currentPrSprint.TotalPrs));
@@ -252,18 +252,18 @@ public sealed class WorkspaceSignalService
 
         if (stats.ReadyFeatureCount == 0)
         {
-            return "No features ready";
+            return "No features are ready for sprint";
         }
 
         if (stats.ReadyPbiCount <= PlanningReadyPbiThreshold)
         {
-            return $"Only {stats.ReadyPbiCount} {Pluralize(stats.ReadyPbiCount, "PBI", "PBIs")} ready";
+            return $"Only {stats.ReadyPbiCount} {Pluralize(stats.ReadyPbiCount, "PBI", "PBIs")} ready for sprint";
         }
 
         if (capacityCalibration is not null && capacityCalibration.MedianVelocity > 0 && stats.ReadyEffort < capacityCalibration.MedianVelocity)
         {
             var remainingPoints = Math.Max(1, (int)Math.Ceiling(capacityCalibration.MedianVelocity - stats.ReadyEffort));
-            return $"Sprint underfilled by {remainingPoints} pts";
+            return $"Ready work is short by {remainingPoints} pts";
         }
 
         return NeutralSignals.Planning;
@@ -417,7 +417,7 @@ public sealed class WorkspaceSignalService
         if (unfinishedCount > 0 && IsNearSprintEnd(context.Sprint.EndUtc ?? execution?.EndUtc, nowUtc))
         {
             yield return new WorkspaceSignalCandidate(
-                $"{unfinishedCount} {Pluralize(unfinishedCount, "PBI", "PBIs")} unfinished",
+                $"{unfinishedCount} {Pluralize(unfinishedCount, "PBI", "PBIs")} may spill over this sprint",
                 Priority: 1,
                 Impact: unfinishedCount,
                 Count: unfinishedCount);
@@ -432,7 +432,7 @@ public sealed class WorkspaceSignalService
         if (addedDuringSprintCount > 0 && scopeIncreasePct >= 25d)
         {
             yield return new WorkspaceSignalCandidate(
-                $"Scope increased {Math.Round(scopeIncreasePct):F0}%",
+                $"{Math.Round(scopeIncreasePct):F0}% scope added mid-sprint",
                 Priority: 2,
                 Impact: scopeIncreasePct,
                 Count: addedDuringSprintCount);
@@ -451,7 +451,7 @@ public sealed class WorkspaceSignalService
         if (blockedItemCount > 0)
         {
             yield return new WorkspaceSignalCandidate(
-                $"{blockedItemCount} blocked {Pluralize(blockedItemCount, "PBI", "PBIs")}",
+                $"{blockedItemCount} blocked {Pluralize(blockedItemCount, "PBI", "PBIs")} in sprint",
                 Priority: 4,
                 Impact: blockedItemCount,
                 Count: blockedItemCount);
@@ -461,7 +461,7 @@ public sealed class WorkspaceSignalService
         if (missingEffortCount > 0)
         {
             yield return new WorkspaceSignalCandidate(
-                $"{missingEffortCount} {Pluralize(missingEffortCount, "PBI", "PBIs")} missing effort",
+                $"{missingEffortCount} {Pluralize(missingEffortCount, "PBI", "PBIs")} missing effort in sprint",
                 Priority: 5,
                 Impact: missingEffortCount,
                 Count: missingEffortCount);
@@ -661,10 +661,10 @@ public sealed record WorkspaceSignalSet(
     WorkspaceTrend? PlanningTrend = null)
 {
     public static WorkspaceSignalSet Neutral { get; } = new(
-        "Backlog healthy",
-        "Sprint progressing normally",
-        "Metrics stable",
-        "Planning ready");
+        "Confirm backlog is healthy",
+        "Confirm delivery is on track",
+        "Confirm trends are stable",
+        "Confirm planning is healthy");
 }
 
 public sealed record DeliverySignalContext(
