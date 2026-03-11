@@ -98,9 +98,7 @@ public sealed class WorkspaceSignalService
             SelectHealthSignal(await validationSummaryTask),
             SelectDeliverySignal(await deliveryContextsTask, DateTimeOffset.UtcNow),
             SelectTrendsSignal(sprintTrends, await prTrendTask),
-            SelectPlanningSignal(await backlogStatesTask, capacityCalibration),
-            DeliveryTrend: ExtractDeliveryTrend(capacityCalibration),
-            TrendsTrend: ExtractTrendsTrend(sprintTrends));
+            SelectPlanningSignal(await backlogStatesTask, capacityCalibration));
     }
 
     public static string SelectHealthSignal(ValidationTriageSummaryDto? summary)
@@ -197,7 +195,7 @@ public sealed class WorkspaceSignalService
             if (bugRateChange.IsIncrease)
             {
                 candidates.Add(new WorkspaceSignalCandidate(
-                    $"Bug spike detected (+{Math.Round(bugRateChange.Impact):F0}%)",
+                    $"Bug spike detected (+{Math.Round(bugRateChange.Impact)}%)",
                     Priority: 1,
                     Impact: bugRateChange.Impact,
                     Count: currentSprint.TotalBugsCreatedCount));
@@ -207,7 +205,7 @@ public sealed class WorkspaceSignalService
             if (deliveryChange.IsDecrease)
             {
                 candidates.Add(new WorkspaceSignalCandidate(
-                    $"Delivery throughput dropped {Math.Round(deliveryChange.Impact):F0}%",
+                    $"Delivery throughput dropped {Math.Round(deliveryChange.Impact)}%",
                     Priority: 3,
                     Impact: deliveryChange.Impact,
                     Count: currentSprint.TotalCompletedPbiCount));
@@ -225,7 +223,7 @@ public sealed class WorkspaceSignalService
                 if (cycleTimeChange.IsIncrease)
                 {
                     candidates.Add(new WorkspaceSignalCandidate(
-                        $"PR merge time increased {Math.Round(cycleTimeChange.Impact):F0}%",
+                        $"PR merge time increased {Math.Round(cycleTimeChange.Impact)}%",
                         Priority: 2,
                         Impact: cycleTimeChange.Impact,
                         Count: currentPrSprint.TotalPrs));
@@ -432,7 +430,7 @@ public sealed class WorkspaceSignalService
         if (addedDuringSprintCount > 0 && scopeIncreasePct >= 25d)
         {
             yield return new WorkspaceSignalCandidate(
-                $"{Math.Round(scopeIncreasePct):F0}% scope added mid-sprint",
+                $"{Math.Round(scopeIncreasePct)}% scope added mid-sprint",
                 Priority: 2,
                 Impact: scopeIncreasePct,
                 Count: addedDuringSprintCount);
@@ -565,44 +563,6 @@ public sealed class WorkspaceSignalService
             .Sum(group => group.ItemCount);
     }
 
-    private static WorkspaceTrend? ExtractDeliveryTrend(CapacityCalibrationDto? calibration)
-    {
-        if (calibration is null || calibration.Sprints.Count < 3)
-        {
-            return null;
-        }
-
-        // Sprints are loaded most-recent-first; reverse for chronological left-to-right display.
-        var points = calibration.Sprints
-            .Take(7)
-            .Reverse()
-            .Select(s => (double)s.Done)
-            .ToList();
-
-        // Simple first-to-last comparison for sparkline coloring; adequate for the visual indicator purpose.
-        var isDeteriorating = points.Count >= 2 && points[^1] < points[0];
-        return new WorkspaceTrend(points, isDeteriorating);
-    }
-
-    private static WorkspaceTrend? ExtractTrendsTrend(GetSprintTrendMetricsResponse? sprintTrends)
-    {
-        if (sprintTrends?.Metrics is null || sprintTrends.Metrics.Count < 3)
-        {
-            return null;
-        }
-
-        var points = sprintTrends.Metrics
-            .OrderBy(m => m.StartUtc ?? DateTimeOffset.MinValue)
-            .Take(7)
-            .Select(m => (double)m.TotalBugsCreatedCount)
-            .ToList();
-
-        // Simple first-to-last comparison for sparkline coloring; adequate for the visual indicator purpose.
-        var isDeteriorating = points.Count >= 2 && points[^1] > points[0];
-        return new WorkspaceTrend(points, isDeteriorating);
-    }
-
-
     private static bool IsNearSprintEnd(DateTimeOffset? sprintEndUtc, DateTimeOffset nowUtc)
     {
         return sprintEndUtc.HasValue && nowUtc >= sprintEndUtc.Value.AddDays(-3);
@@ -648,17 +608,11 @@ public sealed class WorkspaceSignalService
         int ReadyEffort);
 }
 
-public sealed record WorkspaceTrend(IReadOnlyList<double> Points, bool IsDeteriorating);
-
 public sealed record WorkspaceSignalSet(
     string Health,
     string Delivery,
     string Trends,
-    string Planning,
-    WorkspaceTrend? HealthTrend = null,
-    WorkspaceTrend? DeliveryTrend = null,
-    WorkspaceTrend? TrendsTrend = null,
-    WorkspaceTrend? PlanningTrend = null)
+    string Planning)
 {
     public static WorkspaceSignalSet Neutral { get; } = new(
         "Confirm backlog is healthy",
