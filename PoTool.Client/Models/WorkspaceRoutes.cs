@@ -71,6 +71,11 @@ public static class WorkspaceRoutes
     public const string PlanningWorkspace = "/home/planning";
 
     /// <summary>
+    /// Home change overview route — pull request, pipeline, and work item changes since the last sync.
+    /// </summary>
+    public const string HomeChanges = "/home/changes";
+
+    /// <summary>
     /// Bug Overview route.
     /// </summary>
     public const string BugOverview = "/home/bugs";

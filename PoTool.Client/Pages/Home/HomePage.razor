@@ -40,6 +40,77 @@
         else if (!_showNoProfileAlert)
         {
             <MudStack Spacing="2" Class="dashboard-workspaces">
+                <MudPaper Elevation="1" Class="pa-3 dashboard-section dashboard-product-bar">
+                    @if (_products.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            No products configured for this Product Owner.
+                        </MudText>
+                    }
+                    else
+                    {
+                        <div class="dashboard-product-bar__chips" role="group" aria-label="Product selector">
+                                <MudButton Variant="@GetProductChipVariant(null)"
+                                           Color="@GetProductChipColor(null)"
+                                           OnClick="@(() => SelectProductAsync(null))"
+                                           Size="Size.Small"
+                                           Class="product-context-button">
+                                    All Products
+                                </MudButton>
+
+                                @foreach (var product in _products)
+                                {
+                                    <MudButton Variant="@GetProductChipVariant(product.Id)"
+                                               Color="@GetProductChipColor(product.Id)"
+                                               OnClick="@(() => SelectProductAsync(product.Id))"
+                                               Size="Size.Small"
+                                               Class="product-context-button">
+                                        @product.Name
+                                    </MudButton>
+                                }
+                            </div>
+                        <div class="dashboard-product-bar__metrics" aria-live="polite">
+                            <MudText Typo="Typo.body2" Class="dashboard-product-bar__metrics-text">
+                                <span class="dashboard-product-bar__metric">
+                                    <span>@GetSprintMetricLabel()</span>
+                                    <span class="dashboard-product-bar__metric-value">@FormatSprintProgress()</span>
+                                </span>
+                                <span class="dashboard-product-bar__separator">&bull;</span>
+                                <span class="dashboard-product-bar__metric">
+                                    <span class="dashboard-product-bar__metric-value">@(_productBarMetrics?.BugCount ?? 0)</span>
+                                    <span>@GetBugMetricLabel(_productBarMetrics?.BugCount ?? 0)</span>
+                                </span>
+                                <span class="dashboard-product-bar__separator">&bull;</span>
+                                <span class="dashboard-product-bar__metric">
+                                    <span class="dashboard-product-bar__metric-value">@(_productBarMetrics?.ChangesTodayCount ?? 0)</span>
+                                    <span>@GetChangesTodayLabel(_productBarMetrics?.ChangesTodayCount ?? 0)</span>
+                                </span>
+                            </MudText>
+                        </div>
+                    }
+                </MudPaper>
+
+                <div class="dashboard-sync-status dashboard-section" role="status" aria-live="polite">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@GetLastSyncLabel()</MudText>
+
+                    <div class="dashboard-sync-status__actions">
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Default"
+                                   StartIcon="@Icons.Material.Filled.Sync"
+                                   OnClick="TriggerManualSyncAsync"
+                                   Disabled="@_isSyncing"
+                                   Size="Size.Small">
+                            @(_isSyncing ? "Syncing..." : "Sync")
+                        </MudButton>
+                        <MudLink Href="@WorkspaceRoutes.HomeChanges"
+                                 Color="Color.Primary"
+                                 Underline="Underline.Always"
+                                 Typo="Typo.body2">
+                            What's new since sync
+                        </MudLink>
+                    </div>
+                </div>
+
                  <MudText Typo="Typo.overline" Color="Color.Secondary">Workspaces</MudText>
                  <MudGrid Spacing="2">
                      <MudItem xs="12" sm="6">
@@ -85,56 +156,6 @@
                  </MudGrid>
              </MudStack>
 
-            <MudPaper Elevation="1" Class="pa-3 dashboard-section dashboard-product-bar">
-                @if (_products.Count == 0)
-                {
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        No products configured for this Product Owner.
-                    </MudText>
-                }
-                else
-                {
-                    <div class="dashboard-product-bar__chips" role="group" aria-label="Product selector">
-                            <MudButton Variant="@GetProductChipVariant(null)"
-                                       Color="@GetProductChipColor(null)"
-                                       OnClick="@(() => SelectProductAsync(null))"
-                                       Size="Size.Small"
-                                       Class="product-context-button">
-                                All Products
-                            </MudButton>
-
-                            @foreach (var product in _products)
-                            {
-                                <MudButton Variant="@GetProductChipVariant(product.Id)"
-                                           Color="@GetProductChipColor(product.Id)"
-                                           OnClick="@(() => SelectProductAsync(product.Id))"
-                                           Size="Size.Small"
-                                           Class="product-context-button">
-                                    @product.Name
-                                </MudButton>
-                            }
-                        </div>
-                    <div class="dashboard-product-bar__metrics" aria-live="polite">
-                        <MudText Typo="Typo.body2" Class="dashboard-product-bar__metrics-text">
-                            <span class="dashboard-product-bar__metric">
-                                <span>@GetSprintMetricLabel()</span>
-                                <span class="dashboard-product-bar__metric-value">@FormatSprintProgress()</span>
-                            </span>
-                            <span class="dashboard-product-bar__separator">&bull;</span>
-                            <span class="dashboard-product-bar__metric">
-                                <span class="dashboard-product-bar__metric-value">@(_productBarMetrics?.BugCount ?? 0)</span>
-                                <span>@GetBugMetricLabel(_productBarMetrics?.BugCount ?? 0)</span>
-                            </span>
-                            <span class="dashboard-product-bar__separator">&bull;</span>
-                            <span class="dashboard-product-bar__metric">
-                                <span class="dashboard-product-bar__metric-value">@(_productBarMetrics?.ChangesTodayCount ?? 0)</span>
-                                <span>@GetChangesTodayLabel(_productBarMetrics?.ChangesTodayCount ?? 0)</span>
-                            </span>
-                        </MudText>
-                    </div>
-                }
-            </MudPaper>
-
             <MudPaper Elevation="1" Class="pa-2 dashboard-section">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.overline" Color="Color.Secondary">Quick Actions</MudText>
@@ -159,18 +180,6 @@
                     </MudStack>
                 </MudStack>
             </MudPaper>
-
-            <div class="dashboard-sync-status">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@GetLastSyncLabel()</MudText>
-                <MudButton Variant="Variant.Text"
-                           Color="Color.Default"
-                           StartIcon="@Icons.Material.Filled.Sync"
-                           OnClick="TriggerManualSyncAsync"
-                           Disabled="@_isSyncing"
-                           Size="Size.Small">
-                    @(_isSyncing ? "Syncing..." : "Sync")
-                </MudButton>
-            </div>
         }
     </MudStack>
 </MudContainer>
@@ -271,8 +280,8 @@
     private string GetLastSyncLabel()
     {
         return _lastSyncTime.HasValue
-            ? $"Last Sync: {_lastSyncTime.Value.ToLocalTime():HH:mm}"
-            : "Last Sync: --";
+            ? $"Last sync: {_lastSyncTime.Value.ToLocalTime().ToString("g")}"
+            : "Last sync: --";
     }
 
     private async Task LoadWorkspaceSignalsAsync()
