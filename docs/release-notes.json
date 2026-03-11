@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-11",
+    "type": "Changed",
+    "title": "Home shows sync status above workspaces",
+    "impact": "The Home dashboard now places a compact last-sync row with Sync and What's new since sync actions above the workspace tiles so Product Owners can refresh data and review recent changes without pushing navigation below the fold.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-03-11",
     "type": "Fixed",
     "title": "Home workspace tiles use the standard layout",
     "impact": "Home workspace tiles now use the same centered NavigationTileCard layout as Trends, so the four workspace entry points read consistently while keeping their signal text and optional sparklines.",

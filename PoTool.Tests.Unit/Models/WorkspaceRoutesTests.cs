@@ -7,6 +7,16 @@ namespace PoTool.Tests.Unit.Models;
 public class WorkspaceRoutesTests
 {
     [TestMethod]
+    public void HomeChanges_ReturnsExpectedRoute()
+    {
+        var route = typeof(WorkspaceRoutes)
+            .GetField(nameof(WorkspaceRoutes.HomeChanges))?
+            .GetRawConstantValue() as string;
+
+        Assert.AreEqual("/home/changes", route);
+    }
+
+    [TestMethod]
     public void GetProductRoadmapEditor_ReturnsProductSpecificRoute()
     {
         var result = WorkspaceRoutes.GetProductRoadmapEditor(42);
