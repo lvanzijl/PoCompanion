@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-11",
+    "type": "Fixed",
+    "title": "Home workspace tiles use the standard layout",
+    "impact": "Home workspace tiles now use the same centered NavigationTileCard layout as Trends, so the four workspace entry points read consistently while keeping their signal text and optional sparklines.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
     "date": "2026-03-10",
     "type": "Changed",
     "title": "Home and Trends cards now share one shell",
