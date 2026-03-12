@@ -128,6 +128,45 @@ Wrappers:
 
 Raw MudBlazor components require justification.
 
+### Button compatibility with UI hierarchy
+
+Button density rules defined in this document must not override the UI hierarchy defined in UI_RULES.md.
+
+Fluent compatibility rules control physical rendering only:
+- spacing
+- density
+- height
+- padding
+- typography
+
+They must not change button emphasis or semantic role.
+
+Button roles are defined in UI_RULES.md and must remain intact:
+
+Utility buttons  
+Action buttons  
+Critical buttons
+
+Compact wrappers such as CompactButton must support these roles without forcing all buttons into a single visual style.
+
+Examples of allowed adjustments:
+- reduced padding
+- smaller height
+- compact icon spacing
+
+Examples of forbidden adjustments:
+- increasing border strength of utility buttons
+- forcing all buttons to use the same variant
+- visually promoting buttons above cards or navigation tiles
+
+Compact design must preserve the hierarchy:
+
+Navigation tiles  
+Cards and dashboards  
+Buttons
+
+If a compact wrapper increases the visual prominence of buttons beyond cards or tiles, the wrapper implementation is incorrect.
+
 ---
 
 ## Layout & Composition Rules
