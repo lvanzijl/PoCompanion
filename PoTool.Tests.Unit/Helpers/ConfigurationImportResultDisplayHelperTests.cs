@@ -18,6 +18,16 @@ public sealed class ConfigurationImportResultDisplayHelperTests
     }
 
     [TestMethod]
+    public void ShouldShowDetailedResult_ReturnsTrue_WhenCleanSuccessDetailsAreExplicitlyRequested()
+    {
+        var result = CreateResult(
+            importExecuted: true,
+            profilesImported: ["Lesley"]);
+
+        Assert.IsTrue(ConfigurationImportResultDisplayHelper.ShouldShowDetailedResult(result, showCleanSuccessDetails: true));
+    }
+
+    [TestMethod]
     public void ShouldShowDetailedResult_ReturnsTrue_WhenRemovedItemsExist()
     {
         var result = CreateResult(

@@ -16,11 +16,16 @@ public static class ConfigurationImportResultDisplayHelper
         };
     }
 
-    public static bool ShouldShowDetailedResult(ConfigurationImportResultDto? result)
+    public static bool ShouldShowDetailedResult(ConfigurationImportResultDto? result, bool showCleanSuccessDetails = false)
     {
         if (result == null)
         {
             return false;
+        }
+
+        if (IsCleanSingleProfileSuccess(result))
+        {
+            return showCleanSuccessDetails;
         }
 
         if (!result.ImportExecuted)
@@ -30,6 +35,6 @@ public static class ConfigurationImportResultDisplayHelper
                 || result.ExistingConfigurationSummary.Count > 0;
         }
 
-        return !IsCleanSingleProfileSuccess(result);
+        return true;
     }
 }
