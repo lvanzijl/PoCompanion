@@ -1,0 +1,50 @@
+@using Microsoft.AspNetCore.Components.Routing
+@implements IDisposable
+@inject NavigationManager NavigationManager
+
+<nav class="@BarClass" aria-label="Workspace navigation">
+    @foreach (var item in WorkspaceNavigationCatalog.Items)
+    {
+        <WorkspaceNavItem Item="item"
+                          IsActive="item.IsActive(_currentRelativePath)"
+                          OnNavigate="OnNavigate" />
+    }
+</nav>
+
+@code {
+    [Parameter] public EventCallback<string> OnNavigate { get; set; }
+    [Parameter] public string? Class { get; set; }
+
+    private string _currentRelativePath = string.Empty;
+
+    private string BarClass => string.Join(
+        " ",
+        new[]
+        {
+            "workspace-navigation-bar",
+            Class
+        }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+    protected override void OnInitialized()
+    {
+        UpdateCurrentRelativePath();
+        NavigationManager.LocationChanged += HandleLocationChanged;
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= HandleLocationChanged;
+    }
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        UpdateCurrentRelativePath();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateCurrentRelativePath()
+    {
+        _currentRelativePath = WorkspaceNavigationCatalog.NormalizePath(
+            NavigationManager.ToBaseRelativePath(NavigationManager.Uri));
+    }
+}

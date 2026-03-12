@@ -22,9 +22,26 @@ main {
     background-color: var(--color-surface);
     border-bottom: 1px solid var(--color-border);
     justify-content: flex-end;
-    height: 3.5rem;
+    min-height: 3.5rem;
     display: flex;
     align-items: center;
+    gap: var(--d2);
+    padding-top: var(--d1);
+    padding-bottom: var(--d1);
+}
+
+.top-row__left,
+.top-row__right {
+    flex: 0 0 auto;
+    gap: var(--d1);
+}
+
+.top-row__workspace-nav {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
     .top-row ::deep a, .top-row ::deep .btn-link {
@@ -45,6 +62,13 @@ main {
 @media (max-width: 640.98px) {
     .top-row {
         justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .top-row__workspace-nav {
+        order: 3;
+        width: 100%;
+        justify-content: flex-start;
     }
 
     .top-row ::deep a, .top-row ::deep .btn-link {

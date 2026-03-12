@@ -58,6 +58,7 @@
 - A workspace MAY be entered from multiple paths and MUST adapt its defaults based on context.
 - Navigation beyond the Landing page MUST be **contextual and progressive**, exposed through explicit next-step actions within the current view.
 - Global navigation is limited to **meta-level actions only** (e.g. Settings, Profile management, Return to Landing).
+- The top workspace navigation uses `WorkspaceNavigationBar` and `WorkspaceNavItem` and must not be implemented using buttons.
 - Navigation MUST remain explicit, reversible, and allow users to exit a flow without side effects.
 
 ## 7. UX Authority

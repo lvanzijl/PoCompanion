@@ -1,0 +1,38 @@
+<a class="@CssClass"
+   href="@Item.Route"
+   style="--workspace-nav-accent: @Item.AccentColor;"
+   aria-current="@(IsActive ? "page" : null)"
+   @onclick="HandleClickAsync"
+   @onclick:preventDefault="@PreventDefaultNavigation">
+    <MudIcon Icon="@Item.Icon"
+             Size="Size.Small"
+             Class="workspace-nav-item__icon"
+             aria-hidden="true" />
+    <span class="workspace-nav-item__label">@Item.Label</span>
+</a>
+
+@code {
+    [Parameter, EditorRequired] public WorkspaceNavigationItemDefinition Item { get; set; } = default!;
+    [Parameter] public bool IsActive { get; set; }
+    [Parameter] public EventCallback<string> OnNavigate { get; set; }
+
+    private bool PreventDefaultNavigation => OnNavigate.HasDelegate;
+
+    private string CssClass => string.Join(
+        " ",
+        new[]
+        {
+            "workspace-nav-item",
+            IsActive ? "workspace-nav-item--active" : null
+        }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+    private Task HandleClickAsync()
+    {
+        if (!OnNavigate.HasDelegate)
+        {
+            return Task.CompletedTask;
+        }
+
+        return OnNavigate.InvokeAsync(Item.Route);
+    }
+}

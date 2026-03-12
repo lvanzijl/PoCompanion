@@ -1,0 +1,49 @@
+.workspace-nav-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--d1);
+    padding: var(--d1) var(--d2);
+    min-height: 28px;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    transition:
+        color var(--transition-fast),
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        box-shadow var(--transition-fast);
+}
+
+.workspace-nav-item:hover {
+    color: var(--color-text-primary);
+    background-color: rgba(255, 255, 255, 0.04);
+    text-decoration: none;
+}
+
+.workspace-nav-item:focus-visible {
+    outline: 2px solid var(--workspace-nav-accent, var(--color-primary));
+    outline-offset: 2px;
+    color: var(--color-text-primary);
+}
+
+.workspace-nav-item__icon,
+.workspace-nav-item__label {
+    color: inherit;
+}
+
+.workspace-nav-item__label {
+    font-size: 0.875rem;
+    line-height: 1.2;
+}
+
+.workspace-nav-item--active {
+    color: var(--workspace-nav-accent, var(--color-primary));
+    border-bottom-color: var(--workspace-nav-accent, var(--color-primary));
+    box-shadow: inset 0 -1px 0 var(--workspace-nav-accent, var(--color-primary));
+    font-weight: 600;
+}
+
+.workspace-nav-item--active:hover {
+    color: var(--workspace-nav-accent, var(--color-primary));
+}
