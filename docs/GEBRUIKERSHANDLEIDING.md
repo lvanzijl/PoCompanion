@@ -428,6 +428,8 @@ Elk niveau verschijnt pas wanneer je doordrukt vanuit het vorige niveau. Navigee
 
 Gebruik de pijlen links en rechts om door de sprintgeschiedenis te bladeren, één sprint tegelijk. Bij het wisselen van sprint wordt de drill-down-positie automatisch teruggezet naar het portfolioniveau.
 
+De pagina rendert nu direct de titel, sprintnavigatie en kaartindeling. Samenvattingskaarten vullen zich daarna stapsgewijs; drill-downtabellen laden pas wanneer je ze opent.
+
 #### Niveau 1: Portfolio-overzicht
 
 Het standaardniveau toont een samenvatting over alle producten:
@@ -451,7 +453,7 @@ Onder de samenvatting staat de **producttabel**. Klik op een product om naar het
 
 #### Niveau 2: Product — Epic-levering
 
-Na het selecteren van een product verschijnt de epic-leveringstabel. Klik op een epic om naar het featureniveau te navigeren.
+Na het selecteren van een product verschijnt de epic-leveringstabel. Deze drill-down laadt pas wanneer je het product opent. Klik op een epic om naar het featureniveau te navigeren.
 
 | Kolom | Betekenis |
 |---|---|
@@ -465,7 +467,7 @@ Na het selecteren van een product verschijnt de epic-leveringstabel. Klik op een
 
 #### Niveau 3: Epic — Feature-levering
 
-Na het selecteren van een epic verschijnt de feature-leveringstabel. Features zonder activiteit (Delivered = 0, Δ Effort = 0, geen PBI's) worden niet getoond. Klik op een feature om de voltooide PBI's te zien.
+Na het selecteren van een epic verschijnt de feature-leveringstabel. Deze drill-down laadt pas wanneer je het epic opent. Features zonder activiteit (Delivered = 0, Δ Effort = 0, geen PBI's) worden niet getoond. Klik op een feature om de voltooide PBI's te zien.
 
 | Kolom | Betekenis |
 |---|---|

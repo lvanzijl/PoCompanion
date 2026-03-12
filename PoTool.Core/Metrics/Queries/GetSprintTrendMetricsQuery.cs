@@ -9,5 +9,6 @@ namespace PoTool.Core.Metrics.Queries;
 public record GetSprintTrendMetricsQuery(
     int ProductOwnerId,
     IReadOnlyList<int> SprintIds,
-    bool Recompute = false
+    bool Recompute = false,
+    bool IncludeDetails = true
 ) : IQuery<GetSprintTrendMetricsResponse>;

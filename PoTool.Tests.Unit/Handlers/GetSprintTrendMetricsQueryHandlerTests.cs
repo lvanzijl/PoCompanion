@@ -42,6 +42,22 @@ public class GetSprintTrendMetricsQueryHandlerTests
             _context,
             _mockProjectionService.Object,
             _mockLogger.Object);
+
+        _mockProjectionService
+            .Setup(p => p.ComputeFeatureProgressAsync(
+                It.IsAny<int>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<int?>()))
+            .ReturnsAsync(Array.Empty<FeatureProgressDto>());
+
+        _mockProjectionService
+            .Setup(p => p.ComputeEpicProgressAsync(
+                It.IsAny<int>(),
+                It.IsAny<IReadOnlyList<FeatureProgressDto>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<EpicProgressDto>());
     }
 
     [TestCleanup]
@@ -399,5 +415,185 @@ public class GetSprintTrendMetricsQueryHandlerTests
         // Verify ordering by start date (sprint1 should come first)
         Assert.AreEqual(sprint1.Id, result.Metrics[0].SprintId, "Sprint 1 should be first (earlier start date)");
         Assert.AreEqual(sprint2.Id, result.Metrics[1].SprintId, "Sprint 2 should be second (later start date)");
+    }
+
+    [TestMethod]
+    [Description("Should populate summary delivery rollups without returning drilldown detail when includeDetails is false")]
+    public async Task Handle_IncludeDetailsFalse_ReturnsSummaryRollupsOnly()
+    {
+        var team = new TeamEntity { Name = "Test Team", TeamAreaPath = "Project\\Team" };
+        _context.Teams.Add(team);
+        await _context.SaveChangesAsync();
+
+        var sprint = new SprintEntity
+        {
+            Name = "Sprint 1",
+            Path = "Project\\Sprint 1",
+            TeamId = team.Id,
+            StartUtc = DateTimeOffset.UtcNow.AddDays(-14),
+            StartDateUtc = DateTime.UtcNow.AddDays(-14),
+            EndUtc = DateTimeOffset.UtcNow,
+            EndDateUtc = DateTime.UtcNow
+        };
+        _context.Sprints.Add(sprint);
+
+        var product = new ProductEntity
+        {
+            Name = "Product A",
+            BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 100 } },
+            ProductOwnerId = 1
+        };
+        _context.Products.Add(product);
+        await _context.SaveChangesAsync();
+
+        _mockProjectionService
+            .Setup(p => p.GetProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SprintMetricsProjectionEntity>
+            {
+                new()
+                {
+                    SprintId = sprint.Id,
+                    ProductId = product.Id,
+                    LastComputedAt = DateTimeOffset.UtcNow,
+                    IncludedUpToRevisionId = 1
+                }
+            });
+
+        _mockProjectionService
+            .Setup(p => p.ComputeFeatureProgressAsync(
+                1,
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<CancellationToken>(),
+                sprint.Id))
+            .ReturnsAsync(new List<FeatureProgressDto>
+            {
+                new()
+                {
+                    FeatureId = 200,
+                    FeatureTitle = "Feature A",
+                    ProductId = product.Id
+                }
+            });
+
+        _mockProjectionService
+            .Setup(p => p.ComputeEpicProgressAsync(
+                1,
+                It.IsAny<IReadOnlyList<FeatureProgressDto>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<EpicProgressDto>
+            {
+                new()
+                {
+                    EpicId = 300,
+                    EpicTitle = "Epic A",
+                    ProductId = product.Id,
+                    SprintEffortDelta = 8,
+                    SprintCompletedFeatureCount = 2
+                }
+            });
+
+        var query = new GetSprintTrendMetricsQuery(1, new[] { sprint.Id }, false, false);
+
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.IsNotNull(result.Metrics);
+        Assert.HasCount(1, result.Metrics);
+        Assert.IsNotNull(result.FeatureProgress);
+        Assert.IsNotNull(result.EpicProgress);
+        Assert.IsEmpty(result.FeatureProgress);
+        Assert.IsEmpty(result.EpicProgress);
+        Assert.AreEqual(8, result.Metrics[0].ProductMetrics[0].ScopeChangeEffort);
+        Assert.AreEqual(2, result.Metrics[0].ProductMetrics[0].CompletedFeatureCount);
+    }
+
+    [TestMethod]
+    [Description("Should return drilldown detail when includeDetails is true")]
+    public async Task Handle_IncludeDetailsTrue_ReturnsDrilldownDetail()
+    {
+        var team = new TeamEntity { Name = "Test Team", TeamAreaPath = "Project\\Team" };
+        _context.Teams.Add(team);
+        await _context.SaveChangesAsync();
+
+        var sprint = new SprintEntity
+        {
+            Name = "Sprint 1",
+            Path = "Project\\Sprint 1",
+            TeamId = team.Id,
+            StartUtc = DateTimeOffset.UtcNow.AddDays(-14),
+            StartDateUtc = DateTime.UtcNow.AddDays(-14),
+            EndUtc = DateTimeOffset.UtcNow,
+            EndDateUtc = DateTime.UtcNow
+        };
+        _context.Sprints.Add(sprint);
+
+        var product = new ProductEntity
+        {
+            Name = "Product A",
+            BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 100 } },
+            ProductOwnerId = 1
+        };
+        _context.Products.Add(product);
+        await _context.SaveChangesAsync();
+
+        var featureProgress = new List<FeatureProgressDto>
+        {
+            new()
+            {
+                FeatureId = 200,
+                FeatureTitle = "Feature A",
+                ProductId = product.Id
+            }
+        };
+
+        var epicProgress = new List<EpicProgressDto>
+        {
+            new()
+            {
+                EpicId = 300,
+                EpicTitle = "Epic A",
+                ProductId = product.Id
+            }
+        };
+
+        _mockProjectionService
+            .Setup(p => p.GetProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SprintMetricsProjectionEntity>
+            {
+                new()
+                {
+                    SprintId = sprint.Id,
+                    ProductId = product.Id,
+                    LastComputedAt = DateTimeOffset.UtcNow,
+                    IncludedUpToRevisionId = 1
+                }
+            });
+
+        _mockProjectionService
+            .Setup(p => p.ComputeFeatureProgressAsync(
+                1,
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<CancellationToken>(),
+                sprint.Id))
+            .ReturnsAsync(featureProgress);
+
+        _mockProjectionService
+            .Setup(p => p.ComputeEpicProgressAsync(
+                1,
+                It.IsAny<IReadOnlyList<FeatureProgressDto>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(epicProgress);
+
+        var query = new GetSprintTrendMetricsQuery(1, new[] { sprint.Id }, false, true);
+
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.IsNotNull(result.FeatureProgress);
+        Assert.IsNotNull(result.EpicProgress);
+        Assert.HasCount(1, result.FeatureProgress);
+        Assert.HasCount(1, result.EpicProgress);
     }
 }

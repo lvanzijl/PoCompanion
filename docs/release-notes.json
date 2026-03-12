@@ -2,6 +2,14 @@
   {
     "date": "2026-03-12",
     "type": "Changed",
+    "title": "Sprint Delivery now fills progressively",
+    "impact": "Sprint Delivery now shows its shell immediately, loads portfolio metrics first, and only loads deeper drilldown tables when you open them.",
+    "area": "Delivery / Sprint Delivery",
+    "link": "/home/delivery/sprint"
+  },
+  {
+    "date": "2026-03-12",
+    "type": "Changed",
     "title": "Health workspace now fills cards progressively",
     "impact": "The Health workspace now shows its page shell immediately and lets validation signals plus each product card load independently with local placeholders instead of waiting for the whole dashboard.",
     "area": "Health",

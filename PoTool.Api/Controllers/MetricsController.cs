@@ -464,6 +464,7 @@ public class MetricsController : ControllerBase
         [FromQuery][Required] int productOwnerId,
         [FromQuery][Required] int[] sprintIds,
         [FromQuery] bool recompute = false,
+        [FromQuery] bool includeDetails = true,
         CancellationToken cancellationToken = default)
     {
         try
@@ -474,7 +475,7 @@ public class MetricsController : ControllerBase
             }
 
             var response = await _mediator.Send(
-                new GetSprintTrendMetricsQuery(productOwnerId, sprintIds, recompute),
+                new GetSprintTrendMetricsQuery(productOwnerId, sprintIds, recompute, includeDetails),
                 cancellationToken);
 
             if (!response.Success)
