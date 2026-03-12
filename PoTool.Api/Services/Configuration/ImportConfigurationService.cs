@@ -15,6 +15,12 @@ public sealed class ImportConfigurationService
         PropertyNameCaseInsensitive = true
     };
 
+    private const string ProfileEntityType = "Profile";
+    private const string ProductEntityType = "Product";
+    private const string TeamEntityType = "Team";
+    private const string RepositoryEntityType = "Repository";
+    private const string GlobalSettingsEntityType = "GlobalSettings";
+
     private readonly PoToolDbContext _dbContext;
     private readonly ITfsClient _tfsClient;
     private readonly ILogger<ImportConfigurationService> _logger;
@@ -66,6 +72,11 @@ public sealed class ImportConfigurationService
         var importedProfiles = new List<string>();
         var warnings = new List<string>(validation.Warnings);
         var errors = new List<string>(validation.Errors);
+        var structuredProfilesImported = new List<ConfigurationImportEntityResultDto>(validation.StructuredProfilesImported);
+        var productsImported = new List<ConfigurationImportEntityResultDto>(validation.ProductsImported);
+        var teamsImported = new List<ConfigurationImportEntityResultDto>(validation.TeamsImported);
+        var repositoriesLinked = new List<ConfigurationImportEntityResultDto>(validation.RepositoriesLinked);
+        var globalSettingsApplied = new List<ConfigurationImportEntityResultDto>(validation.GlobalSettingsApplied);
         var profileIdMap = new Dictionary<int, int>();
         var teamIdMap = new Dictionary<int, int>();
 
@@ -93,12 +104,18 @@ public sealed class ImportConfigurationService
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 profileIdMap[profile.Id] = entity.Id;
                 importedProfiles.Add(profile.Name);
+                structuredProfilesImported.Add(CreateEntityResult(ProfileEntityType, profile.Name, ConfigurationImportEntityStatus.Success));
 
                 _logger.LogInformation("Imported profile {ProfileName} from configuration file", profile.Name);
             }
             catch (Exception ex)
             {
                 errors.Add($"Profile '{profile.Name}' could not be imported.");
+                structuredProfilesImported.Add(CreateEntityResult(
+                    ProfileEntityType,
+                    DescribeName(profile.Name, "Unnamed profile"),
+                    ConfigurationImportEntityStatus.Error,
+                    "The profile could not be imported."));
                 _logger.LogError(ex, "Failed to import profile {ProfileName}", profile.Name);
             }
         }
@@ -115,6 +132,11 @@ public sealed class ImportConfigurationService
             {
                 teamIdMap[team.Id] = existingTeam.Id;
                 warnings.Add($"Team '{team.Name}' already existed and was reused.");
+                teamsImported.Add(CreateEntityResult(
+                    TeamEntityType,
+                    team.Name,
+                    ConfigurationImportEntityStatus.Warning,
+                    "The team already existed and was reused."));
                 continue;
             }
 
@@ -139,12 +161,18 @@ public sealed class ImportConfigurationService
                 _dbContext.Teams.Add(entity);
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 teamIdMap[team.Id] = entity.Id;
+                teamsImported.Add(CreateEntityResult(TeamEntityType, team.Name, ConfigurationImportEntityStatus.Success));
 
                 _logger.LogInformation("Imported team {TeamName} from configuration file", team.Name);
             }
             catch (Exception ex)
             {
                 errors.Add($"Team '{team.Name}' could not be imported.");
+                teamsImported.Add(CreateEntityResult(
+                    TeamEntityType,
+                    DescribeName(team.Name, "Unnamed team"),
+                    ConfigurationImportEntityStatus.Error,
+                    "The team could not be imported."));
                 _logger.LogError(ex, "Failed to import team {TeamName}", team.Name);
             }
         }
@@ -160,6 +188,11 @@ public sealed class ImportConfigurationService
                 if (!profileIdMap.TryGetValue(product.ProductOwnerId.Value, out var mappedOwnerId))
                 {
                     errors.Add($"Product '{product.Name}' was skipped because its profile was not imported.");
+                    productsImported.Add(CreateEntityResult(
+                        ProductEntityType,
+                        DescribeName(product.Name, "Unnamed product"),
+                        ConfigurationImportEntityStatus.Skipped,
+                        "Product owner profile was not imported."));
                     continue;
                 }
 
@@ -170,6 +203,11 @@ public sealed class ImportConfigurationService
                 || validBacklogRoots.Count == 0)
             {
                 errors.Add($"Product '{product.Name}' was skipped because no valid backlog root work items were available.");
+                productsImported.Add(CreateEntityResult(
+                    ProductEntityType,
+                    DescribeName(product.Name, "Unnamed product"),
+                    ConfigurationImportEntityStatus.Skipped,
+                    "No valid backlog root work items were available."));
                 continue;
             }
 
@@ -233,22 +271,33 @@ public sealed class ImportConfigurationService
                         Name = repositoryName,
                         CreatedAt = product.CreatedAt
                     });
+                    repositoriesLinked.Add(CreateEntityResult(
+                        RepositoryEntityType,
+                        DescribeRepositoryName(repositoryName, product.Name),
+                        ConfigurationImportEntityStatus.Success,
+                        $"Linked to product '{product.Name}'."));
                 }
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
+                productsImported.Add(CreateEntityResult(ProductEntityType, product.Name, ConfigurationImportEntityStatus.Success));
                 _logger.LogInformation("Imported product {ProductName} from configuration file", product.Name);
             }
             catch (Exception ex)
             {
                 errors.Add($"Product '{product.Name}' could not be imported.");
+                productsImported.Add(CreateEntityResult(
+                    ProductEntityType,
+                    DescribeName(product.Name, "Unnamed product"),
+                    ConfigurationImportEntityStatus.Error,
+                    "The product could not be imported."));
                 _logger.LogError(ex, "Failed to import product {ProductName}", product.Name);
             }
         }
 
-        await ApplyApplicationSettingsAsync(validation.Configuration, profileIdMap, warnings, cancellationToken);
-        await ApplyEffortSettingsAsync(validation.Configuration, cancellationToken);
-        await ApplyStateClassificationsAsync(validation.Configuration, cancellationToken);
-        await ApplyTriageTagsAsync(validation.Configuration, cancellationToken);
+        globalSettingsApplied.Add(await ApplyApplicationSettingsAsync(validation.Configuration, profileIdMap, warnings, cancellationToken));
+        globalSettingsApplied.Add(await ApplyEffortSettingsAsync(validation.Configuration, cancellationToken));
+        globalSettingsApplied.Add(await ApplyStateClassificationsAsync(validation.Configuration, cancellationToken));
+        globalSettingsApplied.Add(await ApplyTriageTagsAsync(validation.Configuration, cancellationToken));
 
         return new ConfigurationImportResultDto(
             CanImport: true,
@@ -260,7 +309,12 @@ public sealed class ImportConfigurationService
             ExistingConfigurationSummary: validation.ExistingConfigurationSummary,
             RemovedItems: removedItems,
             Warnings: warnings,
-            Errors: errors);
+            Errors: errors,
+            StructuredProfilesImported: structuredProfilesImported,
+            ProductsImported: productsImported,
+            TeamsImported: teamsImported,
+            RepositoriesLinked: repositoriesLinked,
+            GlobalSettingsApplied: globalSettingsApplied);
     }
 
     private async Task<ValidationContext> ValidateAsync(string jsonContent, CancellationToken cancellationToken)
@@ -274,6 +328,11 @@ public sealed class ImportConfigurationService
         var validRepositoryNamesByProduct = new Dictionary<int, List<string>>();
         var validTeamIdsByProduct = new Dictionary<int, List<int>>();
         var existingConfigurationSummary = await GetExistingConfigurationSummaryAsync(cancellationToken);
+        var structuredProfilesImported = new List<ConfigurationImportEntityResultDto>();
+        var productsImported = new List<ConfigurationImportEntityResultDto>();
+        var teamsImported = new List<ConfigurationImportEntityResultDto>();
+        var repositoriesLinked = new List<ConfigurationImportEntityResultDto>();
+        var globalSettingsApplied = new List<ConfigurationImportEntityResultDto>();
 
         if (string.IsNullOrWhiteSpace(jsonContent))
         {
@@ -313,9 +372,9 @@ public sealed class ImportConfigurationService
             return ValidationContext.Invalid(errors, warnings, configuration);
         }
 
-        ValidateProfileSchema(configuration, validatedProfiles, importableProfileIds, errors);
-        ValidateProductSchema(configuration, warnings, errors);
-        ValidateTeamSchema(configuration, importableTeamIds, errors);
+        ValidateProfileSchema(configuration, validatedProfiles, importableProfileIds, errors, structuredProfilesImported);
+        ValidateProductSchema(configuration, warnings, errors, repositoriesLinked);
+        ValidateTeamSchema(configuration, importableTeamIds, errors, teamsImported);
 
         var backupConfiguration = await ApplyImportedTfsConfigurationAsync(configuration.TfsConfiguration, cancellationToken);
 
@@ -329,14 +388,32 @@ public sealed class ImportConfigurationService
             if (!await _tfsClient.ValidateConnectionAsync(cancellationToken))
             {
                 errors.Add("TFS connection validation failed.");
-                return ValidationContext.Invalid(errors, warnings, configuration, backupConfiguration);
+                return ValidationContext.Invalid(
+                    errors,
+                    warnings,
+                    configuration,
+                    backupConfiguration,
+                    structuredProfilesImported,
+                    productsImported,
+                    teamsImported,
+                    repositoriesLinked,
+                    globalSettingsApplied);
             }
 
             var projects = (await _tfsClient.GetTfsProjectsAsync(configuration.TfsConfiguration.Url, cancellationToken)).ToList();
             if (!projects.Any(project => string.Equals(project.Name, configuration.TfsConfiguration.Project, StringComparison.OrdinalIgnoreCase)))
             {
                 errors.Add($"Project '{configuration.TfsConfiguration.Project}' was not found in TFS.");
-                return ValidationContext.Invalid(errors, warnings, configuration, backupConfiguration);
+                return ValidationContext.Invalid(
+                    errors,
+                    warnings,
+                    configuration,
+                    backupConfiguration,
+                    structuredProfilesImported,
+                    productsImported,
+                    teamsImported,
+                    repositoriesLinked,
+                    globalSettingsApplied);
             }
 
             var availableTeams = (await _tfsClient.GetTfsTeamsAsync(cancellationToken)).ToList();
@@ -372,6 +449,11 @@ public sealed class ImportConfigurationService
                 {
                     warnings.Add($"Team '{team.Name}' was not found in TFS and its links will be skipped.");
                     importableTeamIds.Remove(team.Id);
+                    teamsImported.Add(CreateEntityResult(
+                        TeamEntityType,
+                        team.Name,
+                        ConfigurationImportEntityStatus.Warning,
+                        "The team was not found in TFS and its links will be skipped."));
                 }
             }
 
@@ -419,19 +501,37 @@ public sealed class ImportConfigurationService
 
                         if (repositoriesByName.Count > 1)
                         {
-                            warnings.Add(
-                                $"Repository '{repository.Name}' for product '{product.Name}' matched multiple repositories by name and could not be uniquely identified.");
+                            var warningMessage =
+                                $"Repository '{repository.Name}' for product '{product.Name}' matched multiple repositories by name and could not be uniquely identified.";
+                            warnings.Add(warningMessage);
+                            repositoriesLinked.Add(CreateEntityResult(
+                                RepositoryEntityType,
+                                DescribeRepositoryName(repository.Name, product.Name),
+                                ConfigurationImportEntityStatus.Warning,
+                                warningMessage));
                         }
                         else if (!string.IsNullOrWhiteSpace(repository.RepositoryId))
                         {
-                            warnings.Add(
-                                $"Repository '{repository.Name}' for product '{product.Name}' was found by name, but repository ID '{repository.RepositoryId}' was not accessible.");
+                            var warningMessage =
+                                $"Repository '{repository.Name}' for product '{product.Name}' was found by name, but repository ID '{repository.RepositoryId}' was not accessible.";
+                            warnings.Add(warningMessage);
+                            repositoriesLinked.Add(CreateEntityResult(
+                                RepositoryEntityType,
+                                DescribeRepositoryName(repository.Name, product.Name),
+                                ConfigurationImportEntityStatus.Warning,
+                                warningMessage));
                         }
 
                         continue;
                     }
 
-                    errors.Add($"Repository '{repository.Name}' for product '{product.Name}' was not found.");
+                    var errorMessage = $"Repository '{repository.Name}' for product '{product.Name}' was not found.";
+                    errors.Add(errorMessage);
+                    repositoriesLinked.Add(CreateEntityResult(
+                        RepositoryEntityType,
+                        DescribeRepositoryName(repository.Name, product.Name),
+                        ConfigurationImportEntityStatus.Error,
+                        errorMessage));
                 }
 
                 validRepositoryNamesByProduct[product.Id] = validRepositoryNames.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -453,13 +553,27 @@ public sealed class ImportConfigurationService
                 validTeamIdsByProduct,
                 existingConfigurationSummary,
                 warnings,
-                errors);
+                errors,
+                structuredProfilesImported,
+                productsImported,
+                teamsImported,
+                repositoriesLinked,
+                globalSettingsApplied);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Configuration import validation failed unexpectedly");
             errors.Add("TFS validation failed unexpectedly.");
-            return ValidationContext.Invalid(errors, warnings, configuration, backupConfiguration);
+            return ValidationContext.Invalid(
+                errors,
+                warnings,
+                configuration,
+                backupConfiguration,
+                structuredProfilesImported,
+                productsImported,
+                teamsImported,
+                repositoriesLinked,
+                globalSettingsApplied);
         }
     }
 
@@ -475,7 +589,7 @@ public sealed class ImportConfigurationService
             || string.Equals(existingTeam.Name, team.Name, StringComparison.OrdinalIgnoreCase));
     }
 
-    private async Task ApplyApplicationSettingsAsync(
+    private async Task<ConfigurationImportEntityResultDto> ApplyApplicationSettingsAsync(
         ConfigurationExportDto configuration,
         IReadOnlyDictionary<int, int> profileIdMap,
         List<string> warnings,
@@ -510,13 +624,26 @@ public sealed class ImportConfigurationService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        return CreateEntityResult(
+            GlobalSettingsEntityType,
+            "Application settings",
+            settingsEntity.ActiveProfileId.HasValue || configuration.Settings?.ActiveProfileId is not int
+                ? ConfigurationImportEntityStatus.Success
+                : ConfigurationImportEntityStatus.Warning,
+            settingsEntity.ActiveProfileId.HasValue || configuration.Settings?.ActiveProfileId is not int
+                ? "Application settings were applied."
+                : "The imported active profile could not be restored.");
     }
 
-    private async Task ApplyEffortSettingsAsync(ConfigurationExportDto configuration, CancellationToken cancellationToken)
+    private async Task<ConfigurationImportEntityResultDto> ApplyEffortSettingsAsync(ConfigurationExportDto configuration, CancellationToken cancellationToken)
     {
         if (configuration.EffortEstimationSettings == null)
         {
-            return;
+            return CreateEntityResult(
+                GlobalSettingsEntityType,
+                "Effort estimation settings",
+                ConfigurationImportEntityStatus.Skipped,
+                "No effort estimation settings were present in the import file.");
         }
 
         var entity = await _dbContext.EffortEstimationSettings
@@ -540,9 +667,14 @@ public sealed class ImportConfigurationService
         entity.LastModified = DateTimeOffset.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        return CreateEntityResult(
+            GlobalSettingsEntityType,
+            "Effort estimation settings",
+            ConfigurationImportEntityStatus.Success,
+            "Effort estimation settings were applied.");
     }
 
-    private async Task ApplyStateClassificationsAsync(ConfigurationExportDto configuration, CancellationToken cancellationToken)
+    private async Task<ConfigurationImportEntityResultDto> ApplyStateClassificationsAsync(ConfigurationExportDto configuration, CancellationToken cancellationToken)
     {
         var projectNames = configuration.StateClassifications
             .Select(classification => classification.ProjectName)
@@ -570,9 +702,14 @@ public sealed class ImportConfigurationService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        return CreateEntityResult(
+            GlobalSettingsEntityType,
+            "State classifications",
+            ConfigurationImportEntityStatus.Success,
+            $"Applied {configuration.StateClassifications.Count} state classification(s).");
     }
 
-    private async Task ApplyTriageTagsAsync(ConfigurationExportDto configuration, CancellationToken cancellationToken)
+    private async Task<ConfigurationImportEntityResultDto> ApplyTriageTagsAsync(ConfigurationExportDto configuration, CancellationToken cancellationToken)
     {
         var existingTags = await _dbContext.TriageTags.ToListAsync(cancellationToken);
         _dbContext.TriageTags.RemoveRange(existingTags);
@@ -589,6 +726,11 @@ public sealed class ImportConfigurationService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        return CreateEntityResult(
+            GlobalSettingsEntityType,
+            "Triage tags",
+            ConfigurationImportEntityStatus.Success,
+            $"Applied {configuration.TriageTags.Count} triage tag(s).");
     }
 
     private async Task<TfsConfigEntity?> ApplyImportedTfsConfigurationAsync(
@@ -685,7 +827,8 @@ public sealed class ImportConfigurationService
         ConfigurationExportDto configuration,
         ICollection<string> validatedProfiles,
         ISet<int> importableProfileIds,
-        ICollection<string> errors)
+        ICollection<string> errors,
+        ICollection<ConfigurationImportEntityResultDto> structuredProfilesImported)
     {
         var duplicateNames = configuration.Profiles
             .GroupBy(profile => profile.Name, StringComparer.OrdinalIgnoreCase)
@@ -698,12 +841,22 @@ public sealed class ImportConfigurationService
             if (string.IsNullOrWhiteSpace(profile.Name))
             {
                 errors.Add("A profile in the import file is missing its name.");
+                structuredProfilesImported.Add(CreateEntityResult(
+                    ProfileEntityType,
+                    "Unnamed profile",
+                    ConfigurationImportEntityStatus.Error,
+                    "A profile in the import file is missing its name."));
                 continue;
             }
 
             if (duplicateNames.Contains(profile.Name))
             {
                 errors.Add($"Profile '{profile.Name}' appears multiple times in the import file.");
+                structuredProfilesImported.Add(CreateEntityResult(
+                    ProfileEntityType,
+                    profile.Name,
+                    ConfigurationImportEntityStatus.Error,
+                    "The profile appears multiple times in the import file."));
                 continue;
             }
 
@@ -715,7 +868,8 @@ public sealed class ImportConfigurationService
     private static void ValidateProductSchema(
         ConfigurationExportDto configuration,
         ICollection<string> warnings,
-        ICollection<string> errors)
+        ICollection<string> errors,
+        ICollection<ConfigurationImportEntityResultDto> repositoriesLinked)
     {
         var availableProfileIds = configuration.Profiles.Select(profile => profile.Id).ToHashSet();
         var availableTeamIds = configuration.Teams.Select(team => team.Id).ToHashSet();
@@ -750,6 +904,11 @@ public sealed class ImportConfigurationService
                 if (string.IsNullOrWhiteSpace(repository.Name))
                 {
                     errors.Add($"Product '{product.Name}' contains a repository entry without a name.");
+                    repositoriesLinked.Add(CreateEntityResult(
+                        RepositoryEntityType,
+                        DescribeRepositoryName("Unnamed repository", product.Name),
+                        ConfigurationImportEntityStatus.Error,
+                        $"Product '{product.Name}' contains a repository entry without a name."));
                 }
             }
         }
@@ -910,7 +1069,8 @@ public sealed class ImportConfigurationService
     private static void ValidateTeamSchema(
         ConfigurationExportDto configuration,
         ISet<int> importableTeamIds,
-        ICollection<string> errors)
+        ICollection<string> errors,
+        ICollection<ConfigurationImportEntityResultDto> teamsImported)
     {
         var duplicateNames = configuration.Teams
             .GroupBy(team => team.Name, StringComparer.OrdinalIgnoreCase)
@@ -923,12 +1083,22 @@ public sealed class ImportConfigurationService
             if (string.IsNullOrWhiteSpace(team.Name))
             {
                 errors.Add("A team in the import file is missing its name.");
+                teamsImported.Add(CreateEntityResult(
+                    TeamEntityType,
+                    "Unnamed team",
+                    ConfigurationImportEntityStatus.Error,
+                    "A team in the import file is missing its name."));
                 continue;
             }
 
             if (duplicateNames.Contains(team.Name))
             {
                 errors.Add($"Team '{team.Name}' appears multiple times in the import file.");
+                teamsImported.Add(CreateEntityResult(
+                    TeamEntityType,
+                    team.Name,
+                    ConfigurationImportEntityStatus.Error,
+                    "The team appears multiple times in the import file."));
                 continue;
             }
 
@@ -950,6 +1120,11 @@ public sealed class ImportConfigurationService
         public required IReadOnlyList<string> ExistingConfigurationSummary { get; init; }
         public required IReadOnlyList<string> Warnings { get; init; }
         public required IReadOnlyList<string> Errors { get; init; }
+        public required IReadOnlyList<ConfigurationImportEntityResultDto> StructuredProfilesImported { get; init; }
+        public required IReadOnlyList<ConfigurationImportEntityResultDto> ProductsImported { get; init; }
+        public required IReadOnlyList<ConfigurationImportEntityResultDto> TeamsImported { get; init; }
+        public required IReadOnlyList<ConfigurationImportEntityResultDto> RepositoriesLinked { get; init; }
+        public required IReadOnlyList<ConfigurationImportEntityResultDto> GlobalSettingsApplied { get; init; }
         public bool ExistingConfigurationDetected => ExistingConfigurationSummary.Count > 0;
 
         public static ValidationContext Create(
@@ -964,7 +1139,12 @@ public sealed class ImportConfigurationService
             IReadOnlyDictionary<int, List<int>> validTeamIdsByProduct,
             IReadOnlyList<string> existingConfigurationSummary,
             IReadOnlyList<string> warnings,
-            IReadOnlyList<string> errors)
+            IReadOnlyList<string> errors,
+            IReadOnlyList<ConfigurationImportEntityResultDto> structuredProfilesImported,
+            IReadOnlyList<ConfigurationImportEntityResultDto> productsImported,
+            IReadOnlyList<ConfigurationImportEntityResultDto> teamsImported,
+            IReadOnlyList<ConfigurationImportEntityResultDto> repositoriesLinked,
+            IReadOnlyList<ConfigurationImportEntityResultDto> globalSettingsApplied)
         {
             return new ValidationContext
             {
@@ -979,7 +1159,12 @@ public sealed class ImportConfigurationService
                 ValidTeamIdsByProduct = validTeamIdsByProduct,
                 ExistingConfigurationSummary = existingConfigurationSummary,
                 Warnings = warnings,
-                Errors = errors
+                Errors = errors,
+                StructuredProfilesImported = structuredProfilesImported,
+                ProductsImported = productsImported,
+                TeamsImported = teamsImported,
+                RepositoriesLinked = repositoriesLinked,
+                GlobalSettingsApplied = globalSettingsApplied
             };
         }
 
@@ -987,7 +1172,12 @@ public sealed class ImportConfigurationService
             IReadOnlyList<string> errors,
             IReadOnlyList<string> warnings,
             ConfigurationExportDto? configuration = null,
-            TfsConfigEntity? backupConfiguration = null)
+            TfsConfigEntity? backupConfiguration = null,
+            IReadOnlyList<ConfigurationImportEntityResultDto>? structuredProfilesImported = null,
+            IReadOnlyList<ConfigurationImportEntityResultDto>? productsImported = null,
+            IReadOnlyList<ConfigurationImportEntityResultDto>? teamsImported = null,
+            IReadOnlyList<ConfigurationImportEntityResultDto>? repositoriesLinked = null,
+            IReadOnlyList<ConfigurationImportEntityResultDto>? globalSettingsApplied = null)
         {
             return Create(
                 configuration ?? new ConfigurationExportDto(
@@ -1011,7 +1201,12 @@ public sealed class ImportConfigurationService
                 new Dictionary<int, List<int>>(),
                 [],
                 warnings,
-                errors);
+                errors,
+                structuredProfilesImported ?? [],
+                productsImported ?? [],
+                teamsImported ?? [],
+                repositoriesLinked ?? [],
+                globalSettingsApplied ?? []);
         }
 
         public ConfigurationImportResultDto ToResult(bool importExecuted, bool requiresDestructiveConfirmation = false)
@@ -1026,7 +1221,35 @@ public sealed class ImportConfigurationService
                 ExistingConfigurationSummary.ToList(),
                 [],
                 Warnings.ToList(),
-                Errors.ToList());
+                Errors.ToList(),
+                StructuredProfilesImported.ToList(),
+                ProductsImported.ToList(),
+                TeamsImported.ToList(),
+                RepositoriesLinked.ToList(),
+                GlobalSettingsApplied.ToList());
         }
+    }
+
+    private static string DescribeName(string? name, string fallbackName)
+    {
+        return string.IsNullOrWhiteSpace(name)
+            ? fallbackName
+            : name;
+    }
+
+    private static string DescribeRepositoryName(string? repositoryName, string? productName)
+    {
+        var resolvedRepositoryName = DescribeName(repositoryName, "Unnamed repository");
+        var resolvedProductName = DescribeName(productName, "Unnamed product");
+        return $"{resolvedRepositoryName} ({resolvedProductName})";
+    }
+
+    private static ConfigurationImportEntityResultDto CreateEntityResult(
+        string entityType,
+        string name,
+        ConfigurationImportEntityStatus status,
+        string? message = null)
+    {
+        return new ConfigurationImportEntityResultDto(entityType, name, status, message);
     }
 }

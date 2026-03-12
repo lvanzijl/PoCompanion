@@ -53,6 +53,24 @@ public sealed class ImportConfigurationServiceTests
         Assert.IsFalse(result.ExistingConfigurationDetected);
         Assert.IsFalse(result.RequiresDestructiveConfirmation);
         CollectionAssert.AreEquivalent(new[] { "Lesley" }, result.ProfilesImported.ToArray());
+        Assert.HasCount(1, result.StructuredProfilesImported);
+        Assert.AreEqual("Lesley", result.StructuredProfilesImported[0].Name);
+        Assert.AreEqual(ConfigurationImportEntityStatus.Success, result.StructuredProfilesImported[0].Status);
+        Assert.HasCount(1, result.ProductsImported);
+        Assert.AreEqual("Import Product", result.ProductsImported[0].Name);
+        Assert.AreEqual(ConfigurationImportEntityStatus.Success, result.ProductsImported[0].Status);
+        Assert.HasCount(1, result.TeamsImported);
+        Assert.AreEqual("Delivery Team", result.TeamsImported[0].Name);
+        Assert.AreEqual(ConfigurationImportEntityStatus.Success, result.TeamsImported[0].Status);
+        Assert.HasCount(1, result.RepositoriesLinked);
+        Assert.AreEqual("Repo-A (Import Product)", result.RepositoriesLinked[0].Name);
+        Assert.AreEqual(ConfigurationImportEntityStatus.Success, result.RepositoriesLinked[0].Status);
+        Assert.AreEqual("Linked to product 'Import Product'.", result.RepositoriesLinked[0].Message);
+        Assert.HasCount(4, result.GlobalSettingsApplied);
+        Assert.IsTrue(result.GlobalSettingsApplied.All(entry => entry.Status == ConfigurationImportEntityStatus.Success));
+        CollectionAssert.AreEquivalent(
+            new[] { "Application settings", "Effort estimation settings", "State classifications", "Triage tags" },
+            result.GlobalSettingsApplied.Select(entry => entry.Name).ToArray());
 
         var importedProfile = await _dbContext.Profiles.SingleAsync();
         var importedTeam = await _dbContext.Teams.SingleAsync();
@@ -126,6 +144,10 @@ public sealed class ImportConfigurationServiceTests
         Assert.IsFalse(result.ImportExecuted);
         Assert.IsFalse(result.RequiresDestructiveConfirmation);
         Assert.IsTrue(result.Errors.Any(error => error.Contains("Repository 'Repo-A' for product 'Import Product' was not found.", StringComparison.Ordinal)));
+        Assert.HasCount(1, result.RepositoriesLinked);
+        Assert.AreEqual("Repo-A (Import Product)", result.RepositoriesLinked[0].Name);
+        Assert.AreEqual(ConfigurationImportEntityStatus.Error, result.RepositoriesLinked[0].Status);
+        Assert.AreEqual("Repository", result.RepositoriesLinked[0].EntityType);
         Assert.AreEqual(0, await _dbContext.Profiles.CountAsync());
         Assert.AreEqual(0, await _dbContext.Products.CountAsync());
         Assert.AreEqual(0, await _dbContext.Teams.CountAsync());

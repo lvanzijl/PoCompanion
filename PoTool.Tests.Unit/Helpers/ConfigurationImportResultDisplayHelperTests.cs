@@ -79,6 +79,11 @@ public sealed class ConfigurationImportResultDisplayHelperTests
             ExistingConfigurationSummary: [],
             RemovedItems: removedItems ?? [],
             Warnings: warnings ?? [],
-            Errors: errors ?? []);
+            Errors: errors ?? [],
+            StructuredProfilesImported: [],
+            ProductsImported: [],
+            TeamsImported: [],
+            RepositoriesLinked: [],
+            GlobalSettingsApplied: []);
     }
 }
