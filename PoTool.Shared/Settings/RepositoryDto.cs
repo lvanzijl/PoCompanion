@@ -8,5 +8,6 @@ public sealed record RepositoryDto(
     int Id,
     int ProductId,
     string Name,
-    DateTimeOffset CreatedAt
+    DateTimeOffset CreatedAt,
+    string? RepositoryId = null
 );

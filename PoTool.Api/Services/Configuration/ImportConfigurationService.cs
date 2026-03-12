@@ -341,8 +341,17 @@ public sealed class ImportConfigurationService
 
             var availableTeams = (await _tfsClient.GetTfsTeamsAsync(cancellationToken)).ToList();
             var availableRepositories = (await _tfsClient.GetGitRepositoriesAsync(cancellationToken))
-                .Select(repository => repository.Name)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                .Where(repository => !string.IsNullOrWhiteSpace(repository.Name))
+                .ToList();
+            var availableRepositoriesById = availableRepositories
+                .Where(repository => !string.IsNullOrWhiteSpace(repository.Id))
+                .ToDictionary(
+                    repository => repository.Id,
+                    repository => repository,
+                    StringComparer.OrdinalIgnoreCase);
+            var availableRepositoryGroupsByName = availableRepositories
+                .GroupBy(repository => repository.Name, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
             var workItemTypes = (await _tfsClient.GetWorkItemTypeDefinitionsAsync(cancellationToken))
                 .Select(definition => definition.TypeName)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -397,14 +406,32 @@ public sealed class ImportConfigurationService
                 var validRepositoryNames = new List<string>();
                 foreach (var repository in product.Repositories)
                 {
-                    if (availableRepositories.Contains(repository.Name))
+                    if (!string.IsNullOrWhiteSpace(repository.RepositoryId)
+                        && availableRepositoriesById.TryGetValue(repository.RepositoryId, out var repositoryById))
+                    {
+                        validRepositoryNames.Add(repositoryById.Name);
+                        continue;
+                    }
+
+                    if (availableRepositoryGroupsByName.TryGetValue(repository.Name, out var repositoriesByName))
                     {
                         validRepositoryNames.Add(repository.Name);
+
+                        if (repositoriesByName.Count > 1)
+                        {
+                            warnings.Add(
+                                $"Repository '{repository.Name}' for product '{product.Name}' matched multiple repositories by name and could not be uniquely identified.");
+                        }
+                        else if (!string.IsNullOrWhiteSpace(repository.RepositoryId))
+                        {
+                            warnings.Add(
+                                $"Repository '{repository.Name}' for product '{product.Name}' was found by name, but repository ID '{repository.RepositoryId}' was not accessible.");
+                        }
+
+                        continue;
                     }
-                    else
-                    {
-                        errors.Add($"Repository '{repository.Name}' for product '{product.Name}' was not accessible.");
-                    }
+
+                    errors.Add($"Repository '{repository.Name}' for product '{product.Name}' was not found.");
                 }
 
                 validRepositoryNamesByProduct[product.Id] = validRepositoryNames.Distinct(StringComparer.OrdinalIgnoreCase).ToList();

@@ -72,7 +72,38 @@ public sealed class ImportConfigurationServiceTests
     }
 
     [TestMethod]
-    public async Task ImportAsync_ValidateOnlyWithInvalidRepository_DoesNotPersistImportedData()
+    public async Task ImportAsync_WithRepositoryIdentifierMatch_ImportsUsingCurrentRepositoryName()
+    {
+        var configuration = CreateConfigurationExportDto(repositoryName: "Legacy-Repo", repositoryId: "repo-1");
+
+        ConfigureSuccessfulValidation(("Current-Repo", "repo-1"));
+
+        var result = await _service.ImportAsync(JsonSerializer.Serialize(configuration), validateOnly: false);
+
+        Assert.IsTrue(result.CanImport);
+        Assert.IsTrue(result.ImportExecuted);
+        Assert.AreEqual("Current-Repo", (await _dbContext.Repositories.SingleAsync()).Name);
+        Assert.IsEmpty(result.Errors);
+        Assert.IsEmpty(result.Warnings);
+    }
+
+    [TestMethod]
+    public async Task ImportAsync_WithMissingRepositoryIdentifier_FallsBackToRepositoryName()
+    {
+        var configuration = CreateConfigurationExportDto(repositoryName: "Repo-A", repositoryId: null);
+
+        ConfigureSuccessfulValidation(("Repo-A", "repo-1"));
+
+        var result = await _service.ImportAsync(JsonSerializer.Serialize(configuration), validateOnly: true);
+
+        Assert.IsTrue(result.CanImport);
+        Assert.IsFalse(result.ImportExecuted);
+        Assert.IsEmpty(result.Errors);
+        Assert.IsEmpty(result.Warnings);
+    }
+
+    [TestMethod]
+    public async Task ImportAsync_ValidateOnlyWithMissingRepository_AddsNotFoundErrorAndDoesNotPersistImportedData()
     {
         var configuration = CreateConfigurationExportDto();
 
@@ -94,11 +125,27 @@ public sealed class ImportConfigurationServiceTests
         Assert.IsTrue(result.CanImport);
         Assert.IsFalse(result.ImportExecuted);
         Assert.IsFalse(result.RequiresDestructiveConfirmation);
-        Assert.IsTrue(result.Errors.Any(error => error.Contains("Repository 'Repo-A'", StringComparison.Ordinal)));
+        Assert.IsTrue(result.Errors.Any(error => error.Contains("Repository 'Repo-A' for product 'Import Product' was not found.", StringComparison.Ordinal)));
         Assert.AreEqual(0, await _dbContext.Profiles.CountAsync());
         Assert.AreEqual(0, await _dbContext.Products.CountAsync());
         Assert.AreEqual(0, await _dbContext.Teams.CountAsync());
         Assert.AreEqual(0, await _dbContext.TfsConfigs.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task ImportAsync_ValidateOnlyWithRepositoryIdentifierMismatchAndNameFallback_AddsWarning()
+    {
+        var configuration = CreateConfigurationExportDto(repositoryName: "Repo-A", repositoryId: "repo-old");
+
+        ConfigureSuccessfulValidation(("Repo-A", "repo-new"));
+
+        var result = await _service.ImportAsync(JsonSerializer.Serialize(configuration), validateOnly: true);
+
+        Assert.IsTrue(result.CanImport);
+        Assert.IsFalse(result.ImportExecuted);
+        Assert.IsEmpty(result.Errors);
+        Assert.IsTrue(result.Warnings.Any(warning =>
+            warning.Contains("repository ID 'repo-old' was not accessible", StringComparison.Ordinal)));
     }
 
     [TestMethod]
@@ -185,7 +232,9 @@ public sealed class ImportConfigurationServiceTests
         Assert.AreEqual("https://dev.azure.com/example", (await _dbContext.TfsConfigs.SingleAsync()).Url);
     }
 
-    private static ConfigurationExportDto CreateConfigurationExportDto()
+    private static ConfigurationExportDto CreateConfigurationExportDto(
+        string repositoryName = "Repo-A",
+        string? repositoryId = "repo-1")
     {
         return new ConfigurationExportDto(
             Version: ExportConfigurationService.SupportedVersion,
@@ -228,15 +277,15 @@ public sealed class ImportConfigurationServiceTests
                     ProductPictureType.Default,
                     0,
                     null,
-                    DateTimeOffset.UtcNow,
-                    DateTimeOffset.UtcNow,
-                    null,
-                    new List<int> { 1 },
-                    new List<RepositoryDto> { new(1, 1, "Repo-A", DateTimeOffset.UtcNow) })
+                     DateTimeOffset.UtcNow,
+                     DateTimeOffset.UtcNow,
+                     null,
+                     new List<int> { 1 },
+                     new List<RepositoryDto> { new(1, 1, repositoryName, DateTimeOffset.UtcNow, repositoryId) })
             });
     }
 
-    private void ConfigureSuccessfulValidation()
+    private void ConfigureSuccessfulValidation(params (string Name, string Id)[] repositories)
     {
         _tfsClientMock.Setup(client => client.ValidateConnectionAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
@@ -245,7 +294,7 @@ public sealed class ImportConfigurationServiceTests
         _tfsClientMock.Setup(client => client.GetTfsTeamsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { new TfsTeamDto("team-1", "Delivery Team", "Project", null, "Project\\Delivery Team") });
         _tfsClientMock.Setup(client => client.GetGitRepositoriesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { (Name: "Repo-A", Id: "repo-1") });
+            .ReturnsAsync(repositories.Length == 0 ? new[] { (Name: "Repo-A", Id: "repo-1") } : repositories);
         _tfsClientMock.Setup(client => client.GetWorkItemTypeDefinitionsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { new WorkItemTypeDefinitionDto { TypeName = "Epic", States = new[] { "New" } } });
         _tfsClientMock.Setup(client => client.GetWorkItemByIdAsync(12345, It.IsAny<CancellationToken>()))
