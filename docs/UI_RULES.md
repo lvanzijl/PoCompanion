@@ -83,14 +83,109 @@ The following principles are **hard constraints**:
 - **No surprise navigation**  
   User-triggered navigation must be intentional and reversible.
 
-## 9. State Management
+## 9. Button Hierarchy & Emphasis
+
+Buttons are supporting UI elements and must never dominate the interface.
+
+### Visual hierarchy rule
+
+The UI must always follow this visual importance order:
+
+1. Navigation tiles
+2. Cards and dashboards
+3. Buttons
+
+Buttons must never visually compete with navigation tiles. If a button draws more attention than a tile, the button style is incorrect.
+
+### Button roles
+
+Buttons are divided into three semantic roles. Each role maps to a specific visual emphasis level.
+
+#### Utility buttons (lowest emphasis)
+
+Purpose:
+Small operational tools used in headers, toolbars, and page utilities.
+
+Examples:
+Refresh, Sync, Home, Reporting, Snapshots, Scope.
+
+Visual rules:
+- Minimal visual weight
+- No strong borders
+- Icon allowed but muted
+- Must blend into the surrounding UI
+
+MudBlazor style guideline:
+Variant Text  
+Color Default
+
+These buttons must never dominate the page.
+
+#### Action buttons (medium emphasis)
+
+Purpose:
+Start a workflow or navigation step that is meaningful but not dangerous.
+
+Examples:
+Edit Roadmap, Back to Delivery, Bug Triage, Validation Triage.
+
+Visual rules:
+- Slightly stronger than utility buttons
+- Border allowed but visually muted
+- Must remain secondary to cards and navigation tiles
+
+MudBlazor style guideline:
+Variant Outlined  
+Color Default
+
+The border must not be bright or visually heavy.
+
+#### Critical buttons (high emphasis)
+
+Purpose:
+Actions with destructive or irreversible consequences.
+
+Examples:
+Reset All.
+
+Visual rules:
+- Strong visual emphasis
+- Clearly separated from other controls
+- Used rarely
+
+MudBlazor style guideline:
+Variant Filled  
+Color Error
+
+### Icon usage
+
+Icons are allowed in buttons because the application relies on domain metaphors.
+
+Rules:
+- Maximum one icon per button
+- Icon must be placed left of the label
+- Icon must not dominate the text
+- Icon color should follow button color rules
+
+Icons must support recognition, not create visual noise.
+
+### Design safety rule
+
+If a button visually competes with:
+- navigation tiles
+- dashboard cards
+- major visualizations
+
+then the button styling is incorrect and must be reduced in emphasis.
+
+## 10. State Management
 - UI state MUST be explicit and observable.
 - Hidden state mutation is forbidden.
 - State SHOULD be scoped as narrowly as possible:
   - Component-level by default
   - Shared services only when unavoidable
 
-## 10. Form Validation
+## 11. Form Validation
 Validation strategy depends on data source:
 
 - **Locally cached data**
@@ -103,7 +198,7 @@ Validation strategy depends on data source:
 
 - Mixed validation strategies within a single form are forbidden unless explicitly justified.
 
-## 11. Error Handling & Feedback
+## 12. Error Handling & Feedback
 - Errors MUST be:
   - User-readable
   - Contextual
@@ -111,29 +206,29 @@ Validation strategy depends on data source:
 - Silent failures are forbidden.
 - Technical details MAY be logged but MUST NOT be shown to users.
 
-## 12. Performance & Responsiveness
+## 13. Performance & Responsiveness
 - Lists with potentially large datasets MUST use virtualization.
 - Long-running operations MUST provide visible feedback.
 - UI-blocking operations are forbidden.
 
-## 13. Accessibility
+## 14. Accessibility
 - All interactive elements MUST:
   - Be keyboard accessible
   - Have visible focus states
   - Use semantic HTML where possible
 - Accessibility is mandatory, not optional.
 
-## 14. Theming
+## 15. Theming
 - The application uses a **single, fixed dark theme**.
 - No light theme or user-selectable theming is supported.
 - All custom UI elements MUST conform to the dark theme.
 
-## 15. UI Testing Expectations
+## 16. UI Testing Expectations
 - UI logic with conditional behavior MUST be testable.
 - Critical user flows SHOULD be covered by automated tests.
 - Purely visual structure does not require tests; behavior does.
 
-## 16. Primary Visualization Pattern (Analytical Pages)
+## 17. Primary Visualization Pattern (Analytical Pages)
 
 An **analytical page** is any page whose primary purpose is trend analysis, behavioral modeling, structural system insight, or multi-chart comparison.
 
