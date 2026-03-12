@@ -35,6 +35,17 @@ public sealed class ConfigurationImportUiHelperTests
     }
 
     [TestMethod]
+    public void CanImport_ReturnsTrue_WhenJsonIsPresentAndValidationPassed()
+    {
+        var canImport = ConfigurationImportUiHelper.CanImport(
+            isBusy: false,
+            selectedJson: "{\"profiles\":[]}",
+            validationError: null);
+
+        Assert.IsTrue(canImport);
+    }
+
+    [TestMethod]
     public void CanImport_ReturnsFalse_WhenValidationFailed()
     {
         var canImport = ConfigurationImportUiHelper.CanImport(

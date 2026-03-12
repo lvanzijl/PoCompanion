@@ -7,7 +7,7 @@
 @inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
-@implements IDisposable
+@implements IAsyncDisposable
 
 <div class="@GetContainerClass()">
     @if (ShowSectionHeader)
@@ -191,12 +191,14 @@
 
     private bool _isBusy;
     private bool _isImportInProgress;
+    private bool _isDisposed;
     private string? _selectedFileName;
     private string? _selectedJson;
     private string? _selectedFileValidationError;
     private bool _showImportDetails;
     private string _currentImportStageMessage = ConfigurationImportUiHelper.GetImportStageMessage(0);
     private CancellationTokenSource? _importProgressCts;
+    private Task? _importProgressTask;
     private ConfigurationImportResultDto? _importResult;
 
     private async Task HandleFileSelectedAsync(InputFileChangeEventArgs args)
@@ -334,7 +336,7 @@
         }
         finally
         {
-            StopImportProgress();
+            await StopImportProgressAsync();
             _isImportInProgress = false;
             _isBusy = false;
         }
@@ -374,17 +376,27 @@
 
     private void StartImportProgress()
     {
-        StopImportProgress();
         _currentImportStageMessage = ConfigurationImportUiHelper.GetImportStageMessage(0);
         _importProgressCts = new CancellationTokenSource();
-        _ = AdvanceImportProgressAsync(_importProgressCts.Token);
+        _importProgressTask = AdvanceImportProgressAsync(_importProgressCts.Token);
     }
 
-    private void StopImportProgress()
+    private async Task StopImportProgressAsync()
     {
-        _importProgressCts?.Cancel();
-        _importProgressCts?.Dispose();
+        var importProgressCts = _importProgressCts;
+        var importProgressTask = _importProgressTask;
+
         _importProgressCts = null;
+        _importProgressTask = null;
+
+        importProgressCts?.Cancel();
+
+        if (importProgressTask != null)
+        {
+            await importProgressTask;
+        }
+
+        importProgressCts?.Dispose();
         _currentImportStageMessage = ConfigurationImportUiHelper.GetImportStageMessage(0);
     }
 
@@ -395,6 +407,11 @@
             for (var stageIndex = 1; stageIndex < ConfigurationImportUiHelper.GetImportStageMessageCount(); stageIndex++)
             {
                 await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                if (_isDisposed || cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
                 _currentImportStageMessage = ConfigurationImportUiHelper.GetImportStageMessage(stageIndex);
                 await InvokeAsync(StateHasChanged);
             }
@@ -404,8 +421,14 @@
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        StopImportProgress();
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _isDisposed = true;
+        await StopImportProgressAsync();
     }
 }

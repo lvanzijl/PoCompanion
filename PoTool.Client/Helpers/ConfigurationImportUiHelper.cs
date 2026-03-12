@@ -6,6 +6,8 @@ public static class ConfigurationImportUiHelper
 {
     private const string InvalidConfigurationExportMessage = "The selected file is not a valid configuration export.";
 
+    // These labels are intentionally UI-only guidance so the user sees visible progress
+    // during a long-running import. They do not need to map 1:1 to backend orchestration steps.
     private static readonly string[] ImportStageMessages =
     [
         "Validating configuration",
