@@ -5,132 +5,114 @@
 
 <PageTitle>Delivery - PO Companion</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    @* Workspace Header *@
-    <MudPaper Elevation="2" Class="pa-4 mb-4">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-            <MudStack Spacing="1">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Secondary" Size="Size.Large" />
-                    <MudText Typo="Typo.h4">
-                        Delivery
-                    </MudText>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 mb-4 workspace-hub">
+    <MudStack Spacing="3">
+        @* Workspace Header *@
+        <MudPaper Elevation="1" Class="pa-3 workspace-hub__section">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="workspace-hub__header">
+                <MudStack Spacing="1">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Secondary" Size="Size.Large" />
+                        <MudText Typo="Typo.h4">
+                            Delivery
+                        </MudText>
+                    </MudStack>
+
+                    <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
                 </MudStack>
 
-                @* Breadcrumb *@
-                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Home"
+                           OnClick="NavigateToHome"
+                           Size="Size.Small">
+                    Home
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+
+        @* Delivery Navigation *@
+        <MudPaper Elevation="1" Class="pa-3 workspace-hub__section">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.overline" Color="Color.Secondary">Delivery hub</MudText>
+                <MudText Typo="Typo.h5">
+                    Choose a delivery view
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="workspace-hub__section-copy">
+                    Open the view that best explains what landed, where it landed, or what shifted during the sprint.
+                </MudText>
             </MudStack>
 
-            <MudButton Variant="Variant.Outlined"
-                       Color="Color.Default"
-                       StartIcon="@Icons.Material.Filled.Home"
-                       OnClick="NavigateToHome">
-                Home
-            </MudButton>
-        </MudStack>
-    </MudPaper>
+            <MudGrid Spacing="2" Class="mt-1">
+                <MudItem xs="12" sm="6" md="4">
+                    <NavigationTileCard Title="Sprint Delivery"
+                                        Subtitle="Check what landed in the latest sprint"
+                                        Icon="@Icons.Material.Filled.RunCircle"
+                                        IconColor="Color.Success"
+                                        AriaLabel="Sprint Delivery — Check what landed in the latest sprint"
+                                        OnClick="NavigateToSprintDelivery" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <NavigationTileCard Title="Portfolio Delivery"
+                                        Subtitle="Compare delivered work across products"
+                                        Icon="@Icons.Material.Filled.Inventory2"
+                                        IconColor="Color.Warning"
+                                        AriaLabel="Portfolio Delivery — Compare delivered work across products"
+                                        OnClick="NavigateToPortfolioDelivery" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <NavigationTileCard Title="Sprint Execution"
+                                        Subtitle="Investigate churn inside the sprint"
+                                        Icon="@Icons.Material.Filled.Analytics"
+                                        IconColor="Color.Info"
+                                        AriaLabel="Sprint Execution — Investigate churn inside the sprint"
+                                        OnClick="NavigateToSprintExecution" />
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
 
-    @* Delivery Signals Grid *@
-    <MudPaper Elevation="2" Class="pa-4 mb-4">
-        <MudText Typo="Typo.h5" Class="mb-3">
-            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Class="mr-2" />
-            Delivery Views
-        </MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-            Inspect what was delivered — per sprint or aggregated across products
-        </MudText>
+        @* Cross-Workspace Navigation *@
+        <MudPaper Elevation="1" Class="pa-3 workspace-hub__section workspace-hub__secondary-nav">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.overline" Color="Color.Secondary">Other workspaces</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Need a different lens? Jump to the adjacent workspace without leaving the hub.
+                </MudText>
+            </MudStack>
 
-        <MudGrid>
-            @* Sprint Delivery *@
-            <MudItem xs="12" sm="6" md="4">
-                <MudCard Elevation="1"
-                         Style="cursor: pointer; transition: all 0.2s;"
-                         Class="mud-card-hover"
-                         @onclick="NavigateToSprintDelivery">
-                    <MudCardContent Class="d-flex flex-column align-center pa-4">
-                        <MudIcon Icon="@Icons.Material.Filled.RunCircle" Color="Color.Success" Size="Size.Large" />
-                        <MudText Typo="Typo.subtitle1" Class="mt-2">Sprint Delivery</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Stakeholder sprint delivery report</MudText>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-
-            @* Portfolio Delivery *@
-            <MudItem xs="12" sm="6" md="4">
-                <MudCard Elevation="1"
-                         Style="cursor: pointer; transition: all 0.2s;"
-                         Class="mud-card-hover"
-                         @onclick="NavigateToPortfolioDelivery">
-                    <MudCardContent Class="d-flex flex-column align-center pa-4">
-                        <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Warning" Size="Size.Large" />
-                        <MudText Typo="Typo.subtitle1" Class="mt-2">Portfolio Delivery</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Aggregated delivery across products</MudText>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-
-            @* Sprint Execution *@
-            <MudItem xs="12" sm="6" md="4">
-                <MudCard Elevation="1"
-                         Style="cursor: pointer; transition: all 0.2s;"
-                         Class="mud-card-hover"
-                         @onclick="NavigateToSprintExecution">
-                    <MudCardContent Class="d-flex flex-column align-center pa-4">
-                        <MudIcon Icon="@Icons.Material.Filled.Analytics" Color="Color.Info" Size="Size.Large" />
-                        <MudText Typo="Typo.subtitle1" Class="mt-2">Sprint Execution</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Internal sprint diagnostics</MudText>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-        </MudGrid>
-    </MudPaper>
-
-    @* Cross-Workspace Navigation *@
-    <MudPaper Elevation="2" Class="pa-4">
-        <MudText Typo="Typo.h6" Class="mb-3">
-            <MudIcon Icon="@Icons.Material.Filled.Explore" Class="mr-2" />
-            Navigate to Other Workspaces
-        </MudText>
-
-        <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
-            <MudButton Variant="Variant.Outlined"
-                       Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Inventory2"
-                       OnClick="NavigateToBacklogOverview">
-                Backlog Overview
-            </MudButton>
-            <MudButton Variant="Variant.Outlined"
-                       Color="Color.Success"
-                       StartIcon="@Icons.Material.Filled.HealthAndSafety"
-                       OnClick="NavigateToHealth">
-                Health (Now)
-            </MudButton>
-            <MudButton Variant="Variant.Outlined"
-                       Color="Color.Info"
-                       StartIcon="@Icons.Material.Filled.Timeline"
-                       OnClick="NavigateToTrends">
-                Trends (Past)
-            </MudButton>
-            <MudButton Variant="Variant.Outlined"
-                       Color="Color.Warning"
-                       StartIcon="@Icons.Material.Filled.CalendarMonth"
-                       OnClick="NavigateToPlanning">
-                Planning (Future)
-            </MudButton>
-        </MudStack>
-    </MudPaper>
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap" Class="mt-2">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Inventory2"
+                           OnClick="NavigateToBacklogOverview"
+                           Size="Size.Small">
+                    Backlog Overview
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Success"
+                           StartIcon="@Icons.Material.Filled.HealthAndSafety"
+                           OnClick="NavigateToHealth"
+                           Size="Size.Small">
+                    Health (Now)
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Info"
+                           StartIcon="@Icons.Material.Filled.Timeline"
+                           OnClick="NavigateToTrends"
+                           Size="Size.Small">
+                    Trends (Past)
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Warning"
+                           StartIcon="@Icons.Material.Filled.CalendarMonth"
+                           OnClick="NavigateToPlanning"
+                           Size="Size.Small">
+                    Planning (Future)
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    </MudStack>
 </MudContainer>
-
-<style>
-    .mud-card-hover {
-        border: 2px solid transparent;
-    }
-    .mud-card-hover:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.2) !important;
-        border-color: var(--mud-palette-primary);
-    }
-</style>
 
 @code {
     private List<BreadcrumbItem> _breadcrumbs = new();
