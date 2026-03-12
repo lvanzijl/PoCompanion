@@ -1445,14 +1445,13 @@ Gebruik **Instellingen → Import / Export** om de volledige lokale configuratie
 #### Importeren
 
 - Upload een eerder geëxporteerd JSON-bestand.
-- Klik eerst op **Validate import**. De applicatie controleert daarna:
+- Klik op **Import configuration**. Tijdens die ene importactie controleert de applicatie automatisch:
   - of de TFS-server bereikbaar is;
   - of het project bestaat;
   - of repositories toegankelijk zijn;
   - of teams bestaan;
   - of backlog-rootwerkitems nog bestaan en een geldig type hebben;
-  - of profielnamen niet botsen met bestaande profielen.
-- Klik daarna op **Import configuration** om de geldige onderdelen in te lezen.
+  - of het JSON-bestand een ondersteunde versie en complete configuratie bevat.
 - Als er al configuratie aanwezig is, toont de applicatie eerst welke bestaande onderdelen gevonden zijn. Je krijgt daarna expliciet de keuze:
   - **Wipe and import** — verwijder de huidige configuratie gecontroleerd en importeer daarna het nieuwe bestand;
   - **Cancel** — annuleer de import zonder iets te verwijderen.
@@ -1460,7 +1459,7 @@ Gebruik **Instellingen → Import / Export** om de volledige lokale configuratie
 
 #### Resultaten lezen
 
-- **Profiles ready to import** laat zien welke profielen zonder blokkades kunnen worden ingelezen.
+- Bij een volledig schone import van precies één profiel toont de applicatie alleen een korte bevestiging, zoals **PO profile Lesley successfully imported**.
 - **Profiles imported** toont welke profielen daadwerkelijk zijn aangemaakt.
 - **Removed before import** laat zien welke bestaande configuratie eerst is verwijderd wanneer je voor **Wipe and import** hebt gekozen.
 - **Warnings** melden onderdelen die zijn overgeslagen maar waarbij de rest van de import kon doorgaan (bijvoorbeeld een teamkoppeling die niet meer bestaat).

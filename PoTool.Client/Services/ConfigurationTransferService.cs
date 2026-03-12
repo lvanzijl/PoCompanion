@@ -29,14 +29,6 @@ public sealed class ConfigurationTransferService
         return export ?? throw new InvalidOperationException("The export endpoint returned no configuration.");
     }
 
-    public async Task<ConfigurationImportResultDto> ValidateImportAsync(string jsonContent, CancellationToken cancellationToken = default)
-    {
-        return await SendImportRequestAsync(
-            "/api/settings/configuration-import/validate",
-            new ConfigurationImportRequest(jsonContent, ValidateOnly: true, WipeExistingConfiguration: false),
-            cancellationToken);
-    }
-
     public async Task<ConfigurationImportResultDto> ImportAsync(
         string jsonContent,
         bool wipeExistingConfiguration = false,
