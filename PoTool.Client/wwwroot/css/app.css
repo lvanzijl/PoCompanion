@@ -288,6 +288,27 @@ code {
     transition: transform 0.05s ease, box-shadow 0.05s ease, border-color 0.05s ease, background-color 0.05s ease !important;
 }
 
+.workspace-hub {
+    width: 100%;
+}
+
+.workspace-hub__section {
+    width: 100%;
+}
+
+.workspace-hub__header {
+    gap: var(--d3);
+    flex-wrap: wrap;
+}
+
+.workspace-hub__section-copy {
+    max-width: 720px;
+}
+
+.workspace-hub__secondary-nav {
+    border: 1px solid var(--color-border);
+}
+
 /* ═══════════════════════════════════════════════════════════
    Analytical Layout — Primary Visualization Pattern
    Used by AnalyticalPageLayout, PrimaryVisualizationSection,
