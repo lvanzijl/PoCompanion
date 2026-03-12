@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
+using PoTool.Api.Services.Configuration;
 using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Commands;
 using PoTool.Core.Settings.Queries;
@@ -14,10 +15,17 @@ namespace PoTool.Api.Controllers;
 public class SettingsController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly ExportConfigurationService _exportConfigurationService;
+    private readonly ImportConfigurationService _importConfigurationService;
 
-    public SettingsController(IMediator mediator)
+    public SettingsController(
+        IMediator mediator,
+        ExportConfigurationService exportConfigurationService,
+        ImportConfigurationService importConfigurationService)
     {
         _mediator = mediator;
+        _exportConfigurationService = exportConfigurationService;
+        _importConfigurationService = importConfigurationService;
     }
 
     /// <summary>
@@ -97,6 +105,34 @@ public class SettingsController : ControllerBase
     {
         var releaseNotes = await _mediator.Send(new GetReleaseNotesQuery(), cancellationToken);
         return Ok(releaseNotes);
+    }
+
+    [HttpGet("configuration-export")]
+    [ProducesResponseType(typeof(ConfigurationExportDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ConfigurationExportDto>> ExportConfiguration(CancellationToken cancellationToken)
+    {
+        var export = await _exportConfigurationService.ExportAsync(cancellationToken);
+        return Ok(export);
+    }
+
+    [HttpPost("configuration-import/validate")]
+    [ProducesResponseType(typeof(ConfigurationImportResultDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ConfigurationImportResultDto>> ValidateConfigurationImport(
+        [FromBody] ConfigurationImportRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _importConfigurationService.ImportAsync(request.JsonContent, validateOnly: true, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("configuration-import")]
+    [ProducesResponseType(typeof(ConfigurationImportResultDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ConfigurationImportResultDto>> ImportConfiguration(
+        [FromBody] ConfigurationImportRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _importConfigurationService.ImportAsync(request.JsonContent, request.ValidateOnly, cancellationToken);
+        return Ok(result);
     }
 
     /// <summary>

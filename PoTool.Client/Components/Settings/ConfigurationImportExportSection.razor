@@ -1,0 +1,292 @@
+@using System.Text
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Rendering
+@using PoTool.Client.Services
+@using PoTool.Shared.Settings
+@inject ConfigurationTransferService ConfigurationTransferService
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+
+<div class="settings-section">
+    <MudText Typo="Typo.h4" Class="mb-3">@SectionTitle</MudText>
+
+    @if (!string.IsNullOrWhiteSpace(SectionDescription))
+    {
+        <MudText Typo="Typo.body2" Class="mb-3">@SectionDescription</MudText>
+    }
+
+    <MudStack Spacing="3">
+        @if (ShowExportSection)
+        {
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h6">Export</MudText>
+                    <MudText Typo="Typo.body2">
+                        Download the current TFS configuration, profiles, products, teams, repositories, and related settings as a versioned JSON file.
+                    </MudText>
+                    <CompactButton ButtonRole="ButtonRole.Action"
+                                   OnClick="ExportConfigurationAsync"
+                                   Disabled="@_isBusy"
+                                   StartIcon="@Icons.Material.Filled.FileDownload">
+                        Export configuration
+                    </CompactButton>
+                </MudStack>
+            </MudPaper>
+        }
+
+        @if (ShowImportSection)
+        {
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h6">Import</MudText>
+                    <MudText Typo="Typo.body2">
+                        Upload a previously exported JSON file to validate it against TFS before importing profiles and settings.
+                    </MudText>
+
+                    <InputFile OnChange="HandleFileSelectedAsync" accept=".json,application/json" />
+
+                    @if (!string.IsNullOrWhiteSpace(_selectedFileName))
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            Selected file: @_selectedFileName
+                        </MudAlert>
+                    }
+
+                    <MudStack Row="true" Spacing="2">
+                        <CompactButton ButtonRole="ButtonRole.Action"
+                                       OnClick="ValidateImportAsync"
+                                       Disabled="@(_isBusy || string.IsNullOrWhiteSpace(_selectedJson))"
+                                       StartIcon="@Icons.Material.Filled.FactCheck">
+                            Validate import
+                        </CompactButton>
+                        <CompactButton ButtonRole="ButtonRole.Action"
+                                       OnClick="ImportConfigurationAsync"
+                                       Disabled="@(_isBusy || string.IsNullOrWhiteSpace(_selectedJson) || (_validationResult != null && !_validationResult.CanImport))"
+                                       StartIcon="@Icons.Material.Filled.FileUpload">
+                            Import configuration
+                        </CompactButton>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+        }
+
+        @if (_isBusy)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">
+                Processing configuration file...
+            </MudAlert>
+        }
+
+        @if (_validationResult != null && _importResult == null)
+        {
+            @RenderResult("Validation preview", _validationResult, showValidatedProfiles: true)
+        }
+
+        @if (_importResult != null)
+        {
+            @RenderResult("Import results", _importResult, showValidatedProfiles: false)
+        }
+    </MudStack>
+</div>
+
+@code {
+    private const long MaxImportFileSize = 5 * 1024 * 1024;
+
+    [Parameter]
+    public string SectionTitle { get; set; } = "Import / Export";
+
+    [Parameter]
+    public string? SectionDescription { get; set; }
+
+    [Parameter]
+    public bool ShowExportSection { get; set; } = true;
+
+    [Parameter]
+    public bool ShowImportSection { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<ConfigurationImportResultDto> OnImportCompleted { get; set; }
+
+    private bool _isBusy;
+    private string? _selectedFileName;
+    private string? _selectedJson;
+    private ConfigurationImportResultDto? _validationResult;
+    private ConfigurationImportResultDto? _importResult;
+
+    private async Task HandleFileSelectedAsync(InputFileChangeEventArgs args)
+    {
+        _importResult = null;
+        _validationResult = null;
+        _selectedFileName = null;
+        _selectedJson = null;
+
+        var file = args.File;
+        if (file == null)
+        {
+            return;
+        }
+
+        try
+        {
+            using var stream = file.OpenReadStream(MaxImportFileSize);
+            using var reader = new StreamReader(stream);
+            _selectedJson = await reader.ReadToEndAsync();
+            _selectedFileName = file.Name;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to read the selected file: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ExportConfigurationAsync()
+    {
+        _isBusy = true;
+
+        try
+        {
+            var exportConfiguration = await ConfigurationTransferService.ExportAsync();
+            var json = ConfigurationTransferService.Serialize(exportConfiguration);
+            await DownloadFileAsync(
+                json,
+                $"potool-configuration-{DateTime.UtcNow:yyyyMMdd-HHmmss}.json",
+                "application/json");
+            Snackbar.Add("Configuration exported successfully.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to export configuration: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ValidateImportAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedJson))
+        {
+            return;
+        }
+
+        _isBusy = true;
+        _importResult = null;
+
+        try
+        {
+            _validationResult = await ConfigurationTransferService.ValidateImportAsync(_selectedJson);
+            Snackbar.Add("Configuration validation completed.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Validation failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ImportConfigurationAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedJson))
+        {
+            return;
+        }
+
+        _isBusy = true;
+
+        try
+        {
+            _importResult = await ConfigurationTransferService.ImportAsync(_selectedJson);
+            if (OnImportCompleted.HasDelegate)
+            {
+                await OnImportCompleted.InvokeAsync(_importResult);
+            }
+
+            var severity = _importResult.Errors.Count == 0 ? Severity.Success : Severity.Warning;
+            Snackbar.Add("Configuration import completed.", severity);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Import failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private RenderFragment RenderResult(string title, ConfigurationImportResultDto result, bool showValidatedProfiles) => builder =>
+    {
+        var sequence = 0;
+        builder.OpenComponent<MudPaper>(sequence++);
+        builder.AddAttribute(sequence++, "Outlined", true);
+        builder.AddAttribute(sequence++, "Class", "pa-3");
+        builder.AddAttribute(sequence++, "ChildContent", (RenderFragment)(paperBuilder =>
+        {
+            var innerSequence = 0;
+            paperBuilder.OpenComponent<MudText>(innerSequence++);
+            paperBuilder.AddAttribute(innerSequence++, "Typo", Typo.h6);
+            paperBuilder.AddAttribute(innerSequence++, "ChildContent", (RenderFragment)(textBuilder =>
+            {
+                textBuilder.AddContent(0, title);
+            }));
+            paperBuilder.CloseComponent();
+
+            if (showValidatedProfiles && result.ProfilesValidated.Count > 0)
+            {
+                RenderSection(paperBuilder, ref innerSequence, "Profiles ready to import", Severity.Success, result.ProfilesValidated);
+            }
+
+            if (result.ProfilesImported.Count > 0)
+            {
+                RenderSection(paperBuilder, ref innerSequence, "Profiles imported", Severity.Success, result.ProfilesImported);
+            }
+
+            if (result.Warnings.Count > 0)
+            {
+                RenderSection(paperBuilder, ref innerSequence, "Warnings", Severity.Warning, result.Warnings);
+            }
+
+            if (result.Errors.Count > 0)
+            {
+                RenderSection(paperBuilder, ref innerSequence, "Errors", Severity.Error, result.Errors);
+            }
+        }));
+        builder.CloseComponent();
+    };
+
+    private static void RenderSection(RenderTreeBuilder builder, ref int sequence, string title, Severity severity, IReadOnlyList<string> items)
+    {
+        builder.OpenComponent<MudAlert>(sequence++);
+        builder.AddAttribute(sequence++, "Severity", severity);
+        builder.AddAttribute(sequence++, "Dense", true);
+        builder.AddAttribute(sequence++, "Class", "mt-3");
+        builder.AddAttribute(sequence++, "ChildContent", (RenderFragment)(alertBuilder =>
+        {
+            var alertSequence = 0;
+            alertBuilder.OpenElement(alertSequence++, "strong");
+            alertBuilder.AddContent(alertSequence++, title);
+            alertBuilder.CloseElement();
+
+            alertBuilder.OpenElement(alertSequence++, "ul");
+            foreach (var item in items)
+            {
+                alertBuilder.OpenElement(alertSequence++, "li");
+                alertBuilder.AddContent(alertSequence++, item);
+                alertBuilder.CloseElement();
+            }
+            alertBuilder.CloseElement();
+        }));
+        builder.CloseComponent();
+    }
+
+    private async Task DownloadFileAsync(string content, string fileName, string contentType)
+    {
+        var bytes = Encoding.UTF8.GetBytes(content);
+        var base64 = Convert.ToBase64String(bytes);
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, base64, contentType);
+    }
+}

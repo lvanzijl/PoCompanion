@@ -39,6 +39,13 @@
                        Class="@GetTopicClass("tfs")">
                 TFS / Azure DevOps
             </MudNavLink>
+
+            <MudNavLink OnClick="@(() => SelectTopic("import-export"))" 
+                       Icon="@Icons.Material.Filled.ImportExport"
+                       IconColor="@GetTopicColor("import-export")"
+                       Class="@GetTopicClass("import-export")">
+                Import / Export
+            </MudNavLink>
             
             <MudNavLink OnClick="@(() => SelectTopic("workitem-states"))" 
                        Icon="@Icons.Material.Filled.Category"
@@ -106,6 +113,10 @@
         else if (_currentTopic == "workitem-states")
         {
             <WorkItemStateMappingSection />
+        }
+        else if (_currentTopic == "import-export")
+        {
+            <ConfigurationImportExportSection />
         }
         else if (_currentTopic == "triage-tags")
         {

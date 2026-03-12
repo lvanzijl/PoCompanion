@@ -4,6 +4,7 @@ using PoTool.Api.Hubs;
 using PoTool.Api.Persistence;
 using PoTool.Api.Repositories;
 using PoTool.Api.Services;
+using PoTool.Api.Services.Configuration;
 using PoTool.Api.Services.MockData;
 using PoTool.Api.Services.Sync;
 using PoTool.Integrations.Tfs.Clients;
@@ -143,6 +144,8 @@ public static class ApiServiceCollectionExtensions
         // Register Cache Management Service (insights, granular reset, validation)
         services.AddScoped<CacheManagementService>();
         services.AddScoped<SyncChangesSummaryService>();
+        services.AddScoped<ExportConfigurationService>();
+        services.AddScoped<ImportConfigurationService>();
 
         // Register Classification service
         services.AddScoped<IWorkItemClassificationService, WorkItemClassificationService>();

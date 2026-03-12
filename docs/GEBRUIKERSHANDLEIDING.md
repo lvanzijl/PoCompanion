@@ -2,7 +2,7 @@
 
 **Doelgroep:** Product Owners  
 **Taal:** Nederlands  
-**Laatste bijwerking:** 2026-03-10
+**Laatste bijwerking:** 2026-03-12
 
 ---
 
@@ -43,6 +43,7 @@
     - 13.3 [Teams beheren](#133-teams-beheren)
     - 13.4 [Werkitemstatussen configureren](#134-werkitemstatussen-configureren)
     - 13.5 [TFS-verbinding configureren](#135-tfs-verbinding-configureren)
+    - 13.6 [Configuratie importeren en exporteren](#136-configuratie-importeren-en-exporteren)
 14. [Validatieregels — uitleg](#14-validatieregels--uitleg)
 15. [Sneltoetsen](#15-sneltoetsen)
 16. [Veelgestelde vragen](#16-veelgestelde-vragen)
@@ -87,10 +88,10 @@ Goal → Objective → Epic → Feature → PBI → Task
 
 ### Eerste configuratiestap: TFS-verbinding
 
-Bij het allereerste gebruik moet je de verbinding met TFS instellen. Ga via de knop **Instellingen** (tandwielpictogram in de bovenste balk) naar het tabblad **TFS-configuratie** en vul in:
+Bij het allereerste gebruik moet je de verbinding met TFS instellen. Op de eerste onboardingstap kun je nu ook **Import existing configuration** kiezen om een eerder geëxporteerd JSON-bestand terug te zetten. Als je handmatig configureert, ga je via de knop **Instellingen** (tandwielpictogram in de bovenste balk) naar het tabblad **TFS-configuratie** en vul je in:
 
 - **Server-URL** — het adres van je Azure DevOps-server of TFS-instantie.
-- **Persoonlijk toegangstoken (PAT)** — genereer dit in Azure DevOps onder *User Settings → Personal Access Tokens*. De vereiste scopes zijn: Work Items (Read), Code (Read), Build (Read).
+- **Authenticatie** — de applicatie gebruikt de Windows-aanmeldgegevens (NTLM) van de huidige gebruiker. Je hoeft geen PAT op te slaan.
 - **Projectnaam** — de naam van het TFS-project waaruit werkitems worden geladen.
 
 Sla de instellingen op. De applicatie is nu klaar om profielen aan te maken.
@@ -1421,10 +1422,46 @@ Op de statusconfiguratiepagina stel je in welke TFS-status overeenkomt met welke
 Via **Instellingen → TFS** configureer je de verbinding met Azure DevOps of TFS:
 
 - **Server-URL** — het basisadres van de TFS-instantie.
-- **Persoonlijk toegangstoken (PAT)** — beveiligde toegang tot de TFS API.
+- **Authenticatie via Windows/NTLM** — de backend gebruikt de Windows-identiteit van de huidige gebruiker.
 - **Projectnaam** — het TFS-project waaruit gegevens worden geladen.
+- **Default Area Path** — de standaard area path voor queries; deze wordt afgeleid van het gekozen project.
 
 Wijzigingen in de TFS-verbinding vereisen een nieuwe synchronisatie (via de **Handmatig synchroniseren**-knop op de Startpagina of via de Sync Gate).
+
+---
+
+### 13.6 Configuratie importeren en exporteren
+
+**Pagina:** `/settings/import-export`
+
+Gebruik **Instellingen → Import / Export** om de volledige lokale configuratie als JSON-bestand te bewaren of terug te zetten.
+
+#### Exporteren
+
+- Klik op **Export configuration** om een leesbaar JSON-bestand te downloaden.
+- Het exportbestand bevat de opgeslagen TFS-configuratie, profielen, producten, teams, repositorykoppelingen, het actieve profiel en de relevante lokale instellingen.
+- Het bestand is versieerbaar zodat toekomstige imports kunnen controleren of het formaat nog ondersteund wordt.
+
+#### Importeren
+
+- Upload een eerder geëxporteerd JSON-bestand.
+- Klik eerst op **Validate import**. De applicatie controleert daarna:
+  - of de TFS-server bereikbaar is;
+  - of het project bestaat;
+  - of repositories toegankelijk zijn;
+  - of teams bestaan;
+  - of backlog-rootwerkitems nog bestaan en een geldig type hebben;
+  - of profielnamen niet botsen met bestaande profielen.
+- Klik daarna op **Import configuration** om de geldige onderdelen in te lezen.
+
+#### Resultaten lezen
+
+- **Profiles ready to import** laat zien welke profielen zonder blokkades kunnen worden ingelezen.
+- **Profiles imported** toont welke profielen daadwerkelijk zijn aangemaakt.
+- **Warnings** melden onderdelen die zijn overgeslagen maar waarbij de rest van de import kon doorgaan (bijvoorbeeld een teamkoppeling die niet meer bestaat).
+- **Errors** melden onderdelen die niet konden worden geïmporteerd (bijvoorbeeld een repository die niet meer toegankelijk is of een ontbrekend backlog-rootwerkitem).
+
+Deze importfunctie is ook beschikbaar op de **eerste onboardingstap** via **Import existing configuration**.
 
 ---
 

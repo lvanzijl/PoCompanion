@@ -84,7 +84,7 @@ Global header (available on every page) ◄────────────�
   ├──► ProfileSelector  (switch active profile, inline)
   ├──► Onboarding wizard  (Help button → dialog)
   ├──► Keyboard Shortcuts dialog  (? key or toolbar button)
-  └──► /settings  (Settings button — excluded from this map)
+  └──► /settings  (Settings button — includes TFS config, work item states, import/export, and getting started)
 ```
 
 ---
@@ -556,6 +556,21 @@ When multiple linked work items resolve to different categories, the highest-pri
 | Planning button | Returns to `/home/planning`. |
 
 **Outgoing navigation:** `/home/planning`
+
+---
+
+### 2.13a Settings — `/settings/{topic}`
+
+**Purpose:** Meta-level configuration workspace for Azure DevOps/TFS connection settings, work item state mapping, cache tooling, onboarding help, and portable configuration transfer.
+
+| Functionality | Description |
+|---|---|
+| Topic navigation | Left-hand settings navigation switches between cache, TFS, work item states, triage tags, getting started, and import/export topics without leaving the settings workspace. |
+| Import / Export | `/settings/import-export` lets users export the current TFS configuration, profiles, teams, products, repositories, and related settings as a JSON file. The same view also supports uploading a JSON export, validating it against TFS, and importing the valid parts while showing warnings and errors. |
+| TFS configuration | `/settings/tfs` stores the server URL, project, and API settings used by the backend TFS integration. |
+| Validation preview | Import validation reports which profiles are ready, which warnings were found (for example missing teams), and which errors block parts of the import (for example inaccessible repositories or missing backlog roots). |
+
+**Outgoing navigation:** stays inside `/settings/{topic}`, global header destinations
 
 ---
 

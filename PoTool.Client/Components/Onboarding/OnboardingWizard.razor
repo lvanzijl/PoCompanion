@@ -1,5 +1,6 @@
 @using PoTool.Client.Services
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Components.Settings
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Helpers
 @using PoTool.Shared.Contracts
@@ -182,6 +183,13 @@
                         <MudAlert Severity="Severity.Info" Dense="true">
                             You can configure these settings now or skip and do it later from the Configuration page.
                         </MudAlert>
+
+                        <MudDivider />
+
+                        <ConfigurationImportExportSection SectionTitle="Import existing configuration"
+                                                          SectionDescription="Already have a configuration export? Import it here to recreate your settings and profiles before continuing."
+                                                          ShowExportSection="false"
+                                                          OnImportCompleted="HandleImportedConfigurationAsync" />
                     </MudStack>
                 }
                 else if (_currentStep == 1)
@@ -553,7 +561,13 @@
                     Previous
                 </CompactButton>
             }
-            @if (_currentStep < 4)
+            @if (_configurationImported)
+            {
+                <CompactButton OnClick="Complete" Color="Color.Success" Variant="Variant.Filled">
+                    Get Started
+                </CompactButton>
+            }
+            else if (_currentStep < 4)
             {
                 <CompactButton OnClick="Next" 
                               Color="Color.Primary" 
@@ -597,6 +611,7 @@
     private ErrorResponse? _configErrorResponse;
     private List<TfsConfigProgressUpdate> _progressUpdates = new();
     private bool? _configCompleted;
+    private bool _configurationImported;
 
     // Profile form fields
     private MudForm? _profileForm;
@@ -740,6 +755,11 @@
 
     private bool IsNextDisabled()
     {
+        if (_configurationImported)
+        {
+            return false;
+        }
+
         // For step 0 (TFS Configuration), require verification and no changes
         if (_currentStep == 0)
         {
@@ -847,6 +867,13 @@
         );
 
         return Task.FromResult(filtered);
+    }
+
+    private Task HandleImportedConfigurationAsync(ConfigurationImportResultDto result)
+    {
+        _configurationImported = result.ImportExecuted && result.CanImport;
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private async Task Next()
