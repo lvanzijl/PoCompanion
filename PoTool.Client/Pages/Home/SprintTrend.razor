@@ -315,7 +315,11 @@
                         {
                             var completedFeatures = GetProductCompletedFeatures(product.Id);
                             var scopeChange = GetProductSprintEffortDelta(product.Id);
-                            <tr style="cursor: pointer;" @onclick="@(() => DrillIntoProductAsync(product.Id, product.Name))">
+                            <tr style="cursor: pointer;"
+                                role="button"
+                                tabindex="0"
+                                @onclick="@(() => DrillIntoProductAsync(product.Id, product.Name))"
+                                @onkeydown="@(args => HandleDrillDownKeyAsync(args, () => DrillIntoProductAsync(product.Id, product.Name)))">
                                 <td>
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                         <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" Color="Color.Primary" />
@@ -401,7 +405,11 @@
                     <tbody>
                         @foreach (var epic in productEpics)
                         {
-                            <tr style="cursor: pointer;" @onclick="@(() => DrillIntoEpicAsync(epic.EpicId, epic.EpicTitle))">
+                            <tr style="cursor: pointer;"
+                                role="button"
+                                tabindex="0"
+                                @onclick="@(() => DrillIntoEpicAsync(epic.EpicId, epic.EpicTitle))"
+                                @onkeydown="@(args => HandleDrillDownKeyAsync(args, () => DrillIntoEpicAsync(epic.EpicId, epic.EpicTitle)))">
                                 <td>
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                         <span style="@GetEpicColorSquareStyle(_selectedProductId.Value, epic.EpicId)"></span>
@@ -502,7 +510,11 @@
                     <tbody>
                         @foreach (var feature in epicFeatures)
                         {
-                            <tr style="cursor: pointer;" @onclick="@(() => DrillIntoFeatureAsync(feature.FeatureId, feature.FeatureTitle))">
+                            <tr style="cursor: pointer;"
+                                role="button"
+                                tabindex="0"
+                                @onclick="@(() => DrillIntoFeatureAsync(feature.FeatureId, feature.FeatureTitle))"
+                                @onkeydown="@(args => HandleDrillDownKeyAsync(args, () => DrillIntoFeatureAsync(feature.FeatureId, feature.FeatureTitle)))">
                                 <td>
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                         @if (_tfsConfig != null && !string.IsNullOrEmpty(_tfsConfig.Url) && !string.IsNullOrEmpty(_tfsConfig.Project))
@@ -1082,6 +1094,14 @@
         }
 
         await LoadDetailsAsync();
+    }
+
+    private async Task HandleDrillDownKeyAsync(KeyboardEventArgs args, Func<Task> action)
+    {
+        if (args.Key is "Enter" or " " or "Space" or "Spacebar")
+        {
+            await action();
+        }
     }
 
     private async Task DrillIntoProductAsync(int productId, string productName)
