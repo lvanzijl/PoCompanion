@@ -121,7 +121,11 @@ public class SettingsController : ControllerBase
         [FromBody] ConfigurationImportRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _importConfigurationService.ImportAsync(request.JsonContent, validateOnly: true, cancellationToken);
+        var result = await _importConfigurationService.ImportAsync(
+            request.JsonContent,
+            validateOnly: true,
+            wipeExistingConfiguration: false,
+            cancellationToken);
         return Ok(result);
     }
 
@@ -131,7 +135,11 @@ public class SettingsController : ControllerBase
         [FromBody] ConfigurationImportRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _importConfigurationService.ImportAsync(request.JsonContent, request.ValidateOnly, cancellationToken);
+        var result = await _importConfigurationService.ImportAsync(
+            request.JsonContent,
+            request.ValidateOnly,
+            request.WipeExistingConfiguration,
+            cancellationToken);
         return Ok(result);
     }
 

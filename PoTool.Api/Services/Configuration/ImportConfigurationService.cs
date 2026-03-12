@@ -32,6 +32,7 @@ public sealed class ImportConfigurationService
     public async Task<ConfigurationImportResultDto> ImportAsync(
         string jsonContent,
         bool validateOnly,
+        bool wipeExistingConfiguration = false,
         CancellationToken cancellationToken = default)
     {
         var validation = await ValidateAsync(jsonContent, cancellationToken);
@@ -46,6 +47,20 @@ public sealed class ImportConfigurationService
         {
             await RestoreTfsConfigurationAsync(validation.BackupConfiguration, cancellationToken);
             return validation.ToResult(importExecuted: false);
+        }
+
+        if (validation.ExistingConfigurationDetected && !wipeExistingConfiguration)
+        {
+            await RestoreTfsConfigurationAsync(validation.BackupConfiguration, cancellationToken);
+            return validation.ToResult(importExecuted: false, requiresDestructiveConfirmation: true);
+        }
+
+        var removedItems = new List<string>();
+        if (validation.ExistingConfigurationDetected)
+        {
+            await RestoreTfsConfigurationAsync(validation.BackupConfiguration, cancellationToken);
+            removedItems = await WipeExistingConfigurationAsync(cancellationToken);
+            await ApplyImportedTfsConfigurationAsync(validation.Configuration.TfsConfiguration!, cancellationToken);
         }
 
         var importedProfiles = new List<string>();
@@ -238,8 +253,12 @@ public sealed class ImportConfigurationService
         return new ConfigurationImportResultDto(
             CanImport: true,
             ImportExecuted: true,
+            ExistingConfigurationDetected: validation.ExistingConfigurationDetected,
+            RequiresDestructiveConfirmation: false,
             ProfilesValidated: validation.ValidatedProfiles,
             ProfilesImported: importedProfiles,
+            ExistingConfigurationSummary: validation.ExistingConfigurationSummary,
+            RemovedItems: removedItems,
             Warnings: warnings,
             Errors: errors);
     }
@@ -254,6 +273,7 @@ public sealed class ImportConfigurationService
         var validBacklogRootIdsByProduct = new Dictionary<int, List<int>>();
         var validRepositoryNamesByProduct = new Dictionary<int, List<string>>();
         var validTeamIdsByProduct = new Dictionary<int, List<int>>();
+        var existingConfigurationSummary = await GetExistingConfigurationSummaryAsync(cancellationToken);
 
         if (string.IsNullOrWhiteSpace(jsonContent))
         {
@@ -294,7 +314,7 @@ public sealed class ImportConfigurationService
         }
 
         ValidateProfileSchema(configuration, validatedProfiles, importableProfileIds, errors);
-        await ValidateProductSchema(configuration, warnings, errors);
+        ValidateProductSchema(configuration, warnings, errors);
         ValidateTeamSchema(configuration, importableTeamIds, errors);
 
         var backupConfiguration = await ApplyImportedTfsConfigurationAsync(configuration.TfsConfiguration, cancellationToken);
@@ -404,6 +424,7 @@ public sealed class ImportConfigurationService
                 validBacklogRootIdsByProduct,
                 validRepositoryNamesByProduct,
                 validTeamIdsByProduct,
+                existingConfigurationSummary,
                 warnings,
                 errors);
         }
@@ -664,24 +685,11 @@ public sealed class ImportConfigurationService
         }
     }
 
-    private async Task ValidateProductSchema(
+    private static void ValidateProductSchema(
         ConfigurationExportDto configuration,
         ICollection<string> warnings,
         ICollection<string> errors)
     {
-        var existingProfileNames = await _dbContext.Profiles
-            .Select(profile => profile.Name)
-            .ToListAsync();
-        var existingProfileNameSet = existingProfileNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var profile in configuration.Profiles)
-        {
-            if (existingProfileNameSet.Contains(profile.Name))
-            {
-                errors.Add($"Profile '{profile.Name}' already exists.");
-            }
-        }
-
         var availableProfileIds = configuration.Profiles.Select(profile => profile.Id).ToHashSet();
         var availableTeamIds = configuration.Teams.Select(team => team.Id).ToHashSet();
 
@@ -718,6 +726,158 @@ public sealed class ImportConfigurationService
                 }
             }
         }
+    }
+
+    private async Task<List<string>> GetExistingConfigurationSummaryAsync(CancellationToken cancellationToken)
+    {
+        var summary = new List<string>();
+
+        var profileCount = await _dbContext.Profiles.CountAsync(cancellationToken);
+        if (profileCount > 0)
+        {
+            summary.Add($"{profileCount} existing profile(s)");
+        }
+
+        var teamCount = await _dbContext.Teams.CountAsync(cancellationToken);
+        if (teamCount > 0)
+        {
+            summary.Add($"{teamCount} existing team(s)");
+        }
+
+        var productCount = await _dbContext.Products.CountAsync(cancellationToken);
+        if (productCount > 0)
+        {
+            summary.Add($"{productCount} existing product(s)");
+        }
+
+        var repositoryCount = await _dbContext.Repositories.CountAsync(cancellationToken);
+        if (repositoryCount > 0)
+        {
+            summary.Add($"{repositoryCount} existing repository link(s)");
+        }
+
+        var stateClassificationCount = await _dbContext.WorkItemStateClassifications.CountAsync(cancellationToken);
+        if (stateClassificationCount > 0)
+        {
+            summary.Add($"{stateClassificationCount} existing work item state classification(s)");
+        }
+
+        var triageTagCount = await _dbContext.TriageTags.CountAsync(cancellationToken);
+        if (triageTagCount > 0)
+        {
+            summary.Add($"{triageTagCount} existing triage tag(s)");
+        }
+
+        var settingsCount = await _dbContext.Settings.CountAsync(cancellationToken);
+        if (settingsCount > 0)
+        {
+            summary.Add("existing application settings");
+        }
+
+        var effortSettingsCount = await _dbContext.EffortEstimationSettings.CountAsync(cancellationToken);
+        if (effortSettingsCount > 0)
+        {
+            summary.Add("existing effort estimation settings");
+        }
+
+        var tfsConfigCount = await _dbContext.TfsConfigs.CountAsync(cancellationToken);
+        if (tfsConfigCount > 0)
+        {
+            summary.Add("existing TFS configuration");
+        }
+
+        return summary;
+    }
+
+    private async Task<List<string>> WipeExistingConfigurationAsync(CancellationToken cancellationToken)
+    {
+        var removedItems = new List<string>();
+
+        var repositories = await _dbContext.Repositories.ToListAsync(cancellationToken);
+        if (repositories.Count > 0)
+        {
+            _dbContext.Repositories.RemoveRange(repositories);
+            removedItems.Add($"Removed {repositories.Count} repository link(s).");
+        }
+
+        var productTeamLinks = await _dbContext.ProductTeamLinks.ToListAsync(cancellationToken);
+        if (productTeamLinks.Count > 0)
+        {
+            _dbContext.ProductTeamLinks.RemoveRange(productTeamLinks);
+            removedItems.Add($"Removed {productTeamLinks.Count} product-team link(s).");
+        }
+
+        var backlogRoots = await _dbContext.ProductBacklogRoots.ToListAsync(cancellationToken);
+        if (backlogRoots.Count > 0)
+        {
+            _dbContext.ProductBacklogRoots.RemoveRange(backlogRoots);
+            removedItems.Add($"Removed {backlogRoots.Count} backlog root link(s).");
+        }
+
+        var products = await _dbContext.Products.ToListAsync(cancellationToken);
+        if (products.Count > 0)
+        {
+            _dbContext.Products.RemoveRange(products);
+            removedItems.Add($"Removed {products.Count} product(s).");
+        }
+
+        var teams = await _dbContext.Teams.ToListAsync(cancellationToken);
+        if (teams.Count > 0)
+        {
+            _dbContext.Teams.RemoveRange(teams);
+            removedItems.Add($"Removed {teams.Count} team(s).");
+        }
+
+        var profiles = await _dbContext.Profiles.ToListAsync(cancellationToken);
+        if (profiles.Count > 0)
+        {
+            _dbContext.Profiles.RemoveRange(profiles);
+            removedItems.Add($"Removed {profiles.Count} profile(s).");
+        }
+
+        var settings = await _dbContext.Settings.ToListAsync(cancellationToken);
+        if (settings.Count > 0)
+        {
+            _dbContext.Settings.RemoveRange(settings);
+            removedItems.Add($"Removed {settings.Count} application setting record(s).");
+        }
+
+        var effortSettings = await _dbContext.EffortEstimationSettings.ToListAsync(cancellationToken);
+        if (effortSettings.Count > 0)
+        {
+            _dbContext.EffortEstimationSettings.RemoveRange(effortSettings);
+            removedItems.Add($"Removed {effortSettings.Count} effort estimation setting record(s).");
+        }
+
+        var stateClassifications = await _dbContext.WorkItemStateClassifications.ToListAsync(cancellationToken);
+        if (stateClassifications.Count > 0)
+        {
+            _dbContext.WorkItemStateClassifications.RemoveRange(stateClassifications);
+            removedItems.Add($"Removed {stateClassifications.Count} work item state classification(s).");
+        }
+
+        var triageTags = await _dbContext.TriageTags.ToListAsync(cancellationToken);
+        if (triageTags.Count > 0)
+        {
+            _dbContext.TriageTags.RemoveRange(triageTags);
+            removedItems.Add($"Removed {triageTags.Count} triage tag(s).");
+        }
+
+        var tfsConfigs = await _dbContext.TfsConfigs.ToListAsync(cancellationToken);
+        if (tfsConfigs.Count > 0)
+        {
+            _dbContext.TfsConfigs.RemoveRange(tfsConfigs);
+            removedItems.Add($"Removed {tfsConfigs.Count} TFS configuration record(s).");
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        foreach (var removedItem in removedItems)
+        {
+            _logger.LogInformation("Configuration wipe step: {RemovedItem}", removedItem);
+        }
+
+        return removedItems;
     }
 
     private static void ValidateTeamSchema(
@@ -760,8 +920,10 @@ public sealed class ImportConfigurationService
         public required IReadOnlyDictionary<int, List<int>> ValidBacklogRootIdsByProduct { get; init; }
         public required IReadOnlyDictionary<int, List<string>> ValidRepositoryNamesByProduct { get; init; }
         public required IReadOnlyDictionary<int, List<int>> ValidTeamIdsByProduct { get; init; }
+        public required IReadOnlyList<string> ExistingConfigurationSummary { get; init; }
         public required IReadOnlyList<string> Warnings { get; init; }
         public required IReadOnlyList<string> Errors { get; init; }
+        public bool ExistingConfigurationDetected => ExistingConfigurationSummary.Count > 0;
 
         public static ValidationContext Create(
             ConfigurationExportDto configuration,
@@ -773,6 +935,7 @@ public sealed class ImportConfigurationService
             IReadOnlyDictionary<int, List<int>> validBacklogRootIdsByProduct,
             IReadOnlyDictionary<int, List<string>> validRepositoryNamesByProduct,
             IReadOnlyDictionary<int, List<int>> validTeamIdsByProduct,
+            IReadOnlyList<string> existingConfigurationSummary,
             IReadOnlyList<string> warnings,
             IReadOnlyList<string> errors)
         {
@@ -787,6 +950,7 @@ public sealed class ImportConfigurationService
                 ValidBacklogRootIdsByProduct = validBacklogRootIdsByProduct,
                 ValidRepositoryNamesByProduct = validRepositoryNamesByProduct,
                 ValidTeamIdsByProduct = validTeamIdsByProduct,
+                ExistingConfigurationSummary = existingConfigurationSummary,
                 Warnings = warnings,
                 Errors = errors
             };
@@ -818,16 +982,21 @@ public sealed class ImportConfigurationService
                 new Dictionary<int, List<int>>(),
                 new Dictionary<int, List<string>>(),
                 new Dictionary<int, List<int>>(),
+                [],
                 warnings,
                 errors);
         }
 
-        public ConfigurationImportResultDto ToResult(bool importExecuted)
+        public ConfigurationImportResultDto ToResult(bool importExecuted, bool requiresDestructiveConfirmation = false)
         {
             return new ConfigurationImportResultDto(
                 CanImport,
                 importExecuted,
+                ExistingConfigurationDetected,
+                requiresDestructiveConfirmation,
                 ValidatedProfiles.ToList(),
+                [],
+                ExistingConfigurationSummary.ToList(),
                 [],
                 Warnings.ToList(),
                 Errors.ToList());

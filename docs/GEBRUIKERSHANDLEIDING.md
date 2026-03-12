@@ -1453,11 +1453,16 @@ Gebruik **Instellingen → Import / Export** om de volledige lokale configuratie
   - of backlog-rootwerkitems nog bestaan en een geldig type hebben;
   - of profielnamen niet botsen met bestaande profielen.
 - Klik daarna op **Import configuration** om de geldige onderdelen in te lezen.
+- Als er al configuratie aanwezig is, toont de applicatie eerst welke bestaande onderdelen gevonden zijn. Je krijgt daarna expliciet de keuze:
+  - **Wipe and import** — verwijder de huidige configuratie gecontroleerd en importeer daarna het nieuwe bestand;
+  - **Cancel** — annuleer de import zonder iets te verwijderen.
+- Zonder deze bevestiging voert de applicatie **geen destructieve vervanging** uit.
 
 #### Resultaten lezen
 
 - **Profiles ready to import** laat zien welke profielen zonder blokkades kunnen worden ingelezen.
 - **Profiles imported** toont welke profielen daadwerkelijk zijn aangemaakt.
+- **Removed before import** laat zien welke bestaande configuratie eerst is verwijderd wanneer je voor **Wipe and import** hebt gekozen.
 - **Warnings** melden onderdelen die zijn overgeslagen maar waarbij de rest van de import kon doorgaan (bijvoorbeeld een teamkoppeling die niet meer bestaat).
 - **Errors** melden onderdelen die niet konden worden geïmporteerd (bijvoorbeeld een repository die niet meer toegankelijk is of een ontbrekend backlog-rootwerkitem).
 

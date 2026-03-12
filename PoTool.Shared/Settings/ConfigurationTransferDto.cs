@@ -24,14 +24,19 @@ public sealed record ConfigurationStateClassificationDto(
 
 public sealed record ConfigurationImportRequest(
     string JsonContent,
-    bool ValidateOnly = false
+    bool ValidateOnly = false,
+    bool WipeExistingConfiguration = false
 );
 
 public sealed record ConfigurationImportResultDto(
     bool CanImport,
     bool ImportExecuted,
+    bool ExistingConfigurationDetected,
+    bool RequiresDestructiveConfirmation,
     IReadOnlyList<string> ProfilesValidated,
     IReadOnlyList<string> ProfilesImported,
+    IReadOnlyList<string> ExistingConfigurationSummary,
+    IReadOnlyList<string> RemovedItems,
     IReadOnlyList<string> Warnings,
     IReadOnlyList<string> Errors
 );

@@ -3,6 +3,7 @@
 @using PoTool.Client.Services
 @using PoTool.Shared.Settings
 @inject ConfigurationTransferService ConfigurationTransferService
+@inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
 
@@ -95,6 +96,13 @@
                                                     Items="_validationResult.Warnings" />
                 }
 
+                @if (_validationResult.ExistingConfigurationDetected)
+                {
+                    <ConfigurationImportResultPanel Title="Existing configuration detected"
+                                                    Severity="Severity.Warning"
+                                                    Items="_validationResult.ExistingConfigurationSummary" />
+                }
+
                 @if (_validationResult.Errors.Count > 0)
                 {
                     <ConfigurationImportResultPanel Title="Errors"
@@ -114,6 +122,13 @@
                     <ConfigurationImportResultPanel Title="Profiles imported"
                                                     Severity="Severity.Success"
                                                     Items="_importResult.ProfilesImported" />
+                }
+
+                @if (_importResult.RemovedItems.Count > 0)
+                {
+                    <ConfigurationImportResultPanel Title="Removed before import"
+                                                    Severity="Severity.Info"
+                                                    Items="_importResult.RemovedItems" />
                 }
 
                 @if (_importResult.Warnings.Count > 0)
@@ -194,7 +209,7 @@
             var json = ConfigurationTransferService.Serialize(exportConfiguration);
             await DownloadFileAsync(
                 json,
-                $"potool-configuration-{DateTime.UtcNow:yyyyMMdd_HHmmss}.json",
+                $"potool-configuration-{DateTimeOffset.UtcNow:yyyyMMdd_HHmmss}.json",
                 "application/json");
             Snackbar.Add("Configuration exported successfully.", Severity.Success);
         }
@@ -244,14 +259,54 @@
 
         try
         {
-            _importResult = await ConfigurationTransferService.ImportAsync(_selectedJson);
+            var wipeExistingConfiguration = false;
+
+            if ((_validationResult?.ExistingConfigurationDetected ?? false)
+                || (_importResult?.RequiresDestructiveConfirmation ?? false))
+            {
+                var existingSummary = _validationResult?.ExistingConfigurationSummary ?? _importResult?.ExistingConfigurationSummary ?? [];
+                var message = existingSummary.Count == 0
+                    ? "Existing configuration was detected. Do you want to wipe the current configuration and continue with the import?"
+                    : $"The current environment already contains configuration:\n\n- {string.Join("\n- ", existingSummary)}\n\nChoose 'Wipe and import' to remove the current configuration before importing the new file.";
+
+                var confirmed = await DialogService.ShowMessageBox(
+                    "Replace current configuration?",
+                    message,
+                    yesText: "Wipe and import",
+                    cancelText: "Cancel");
+
+                if (confirmed != true)
+                {
+                    Snackbar.Add("Import cancelled. The current configuration was left unchanged.", Severity.Info);
+                    return;
+                }
+
+                wipeExistingConfiguration = true;
+            }
+
+            _importResult = await ConfigurationTransferService.ImportAsync(_selectedJson, wipeExistingConfiguration);
+
+            if (_importResult.RequiresDestructiveConfirmation)
+            {
+                _validationResult = _importResult;
+                Snackbar.Add("Validation detected existing configuration. Confirm wipe before importing.", Severity.Warning);
+                return;
+            }
+
             if (OnImportCompleted.HasDelegate)
             {
                 await OnImportCompleted.InvokeAsync(_importResult);
             }
 
-            var severity = _importResult.Errors.Count == 0 ? Severity.Success : Severity.Warning;
-            Snackbar.Add("Configuration import completed.", severity);
+            if (_importResult.Errors.Count == 0 && _importResult.Warnings.Count == 0 && _importResult.ProfilesImported.Count == 1)
+            {
+                Snackbar.Add($"PO profile {_importResult.ProfilesImported[0]} successfully imported.", Severity.Success);
+            }
+            else
+            {
+                var severity = _importResult.Errors.Count == 0 ? Severity.Success : Severity.Warning;
+                Snackbar.Add("Configuration import completed.", severity);
+            }
         }
         catch (Exception ex)
         {

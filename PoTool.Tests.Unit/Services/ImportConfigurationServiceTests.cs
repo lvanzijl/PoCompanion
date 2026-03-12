@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using PoTool.Api.Persistence;
+using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services.Configuration;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
@@ -49,6 +50,8 @@ public sealed class ImportConfigurationServiceTests
 
         Assert.IsTrue(result.CanImport);
         Assert.IsTrue(result.ImportExecuted);
+        Assert.IsFalse(result.ExistingConfigurationDetected);
+        Assert.IsFalse(result.RequiresDestructiveConfirmation);
         CollectionAssert.AreEquivalent(new[] { "Lesley" }, result.ProfilesImported.ToArray());
 
         var importedProfile = await _dbContext.Profiles.SingleAsync();
@@ -90,11 +93,96 @@ public sealed class ImportConfigurationServiceTests
 
         Assert.IsTrue(result.CanImport);
         Assert.IsFalse(result.ImportExecuted);
+        Assert.IsFalse(result.RequiresDestructiveConfirmation);
         Assert.IsTrue(result.Errors.Any(error => error.Contains("Repository 'Repo-A'", StringComparison.Ordinal)));
         Assert.AreEqual(0, await _dbContext.Profiles.CountAsync());
         Assert.AreEqual(0, await _dbContext.Products.CountAsync());
         Assert.AreEqual(0, await _dbContext.Teams.CountAsync());
         Assert.AreEqual(0, await _dbContext.TfsConfigs.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task ImportAsync_WithExistingConfigurationAndNoWipe_RequiresConfirmationAndDoesNotImport()
+    {
+        _dbContext.Profiles.Add(new ProfileEntity
+        {
+            Name = "Existing Profile",
+            GoalIds = "1"
+        });
+        _dbContext.TfsConfigs.Add(new TfsConfigEntity
+        {
+            Url = "https://dev.azure.com/existing",
+            Project = "ExistingProject",
+            DefaultAreaPath = "ExistingProject"
+        });
+        await _dbContext.SaveChangesAsync();
+
+        var configuration = CreateConfigurationExportDto();
+        ConfigureSuccessfulValidation();
+
+        var result = await _service.ImportAsync(JsonSerializer.Serialize(configuration), validateOnly: false, wipeExistingConfiguration: false);
+
+        Assert.IsTrue(result.CanImport);
+        Assert.IsFalse(result.ImportExecuted);
+        Assert.IsTrue(result.ExistingConfigurationDetected);
+        Assert.IsTrue(result.RequiresDestructiveConfirmation);
+        Assert.IsTrue(result.ExistingConfigurationSummary.Any(item => item.Contains("existing profile", StringComparison.OrdinalIgnoreCase)));
+        Assert.AreEqual(1, await _dbContext.Profiles.CountAsync());
+        Assert.AreEqual("Existing Profile", (await _dbContext.Profiles.SingleAsync()).Name);
+        Assert.AreEqual("https://dev.azure.com/existing", (await _dbContext.TfsConfigs.SingleAsync()).Url);
+    }
+
+    [TestMethod]
+    public async Task ImportAsync_WithExistingConfigurationAndWipe_RemovesOldConfigurationBeforeImport()
+    {
+        _dbContext.Profiles.Add(new ProfileEntity
+        {
+            Name = "Existing Profile",
+            GoalIds = "1"
+        });
+        _dbContext.Teams.Add(new TeamEntity
+        {
+            Name = "Old Team",
+            TeamAreaPath = "Old\\Team"
+        });
+        _dbContext.Products.Add(new ProductEntity
+        {
+            Name = "Old Product"
+        });
+        _dbContext.TriageTags.Add(new TriageTagEntity
+        {
+            Name = "Old Tag",
+            IsEnabled = true,
+            DisplayOrder = 1,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        _dbContext.TfsConfigs.Add(new TfsConfigEntity
+        {
+            Url = "https://dev.azure.com/existing",
+            Project = "ExistingProject",
+            DefaultAreaPath = "ExistingProject"
+        });
+        await _dbContext.SaveChangesAsync();
+
+        var configuration = CreateConfigurationExportDto();
+        ConfigureSuccessfulValidation();
+
+        var result = await _service.ImportAsync(JsonSerializer.Serialize(configuration), validateOnly: false, wipeExistingConfiguration: true);
+
+        Assert.IsTrue(result.ImportExecuted);
+        Assert.IsTrue(result.ExistingConfigurationDetected);
+        Assert.IsFalse(result.RequiresDestructiveConfirmation);
+        Assert.IsTrue(result.RemovedItems.Any(item => item.Contains("profile", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsTrue(result.RemovedItems.Any(item => item.Contains("TFS configuration", StringComparison.OrdinalIgnoreCase)));
+        Assert.AreEqual(1, await _dbContext.Profiles.CountAsync());
+        Assert.AreEqual("Lesley", (await _dbContext.Profiles.SingleAsync()).Name);
+        Assert.AreEqual(1, await _dbContext.Teams.CountAsync());
+        Assert.AreEqual("Delivery Team", (await _dbContext.Teams.SingleAsync()).Name);
+        Assert.AreEqual(1, await _dbContext.Products.CountAsync());
+        Assert.AreEqual("Import Product", (await _dbContext.Products.SingleAsync()).Name);
+        Assert.AreEqual(1, await _dbContext.TriageTags.CountAsync());
+        Assert.AreEqual("Needs Investigation", (await _dbContext.TriageTags.SingleAsync()).Name);
+        Assert.AreEqual("https://dev.azure.com/example", (await _dbContext.TfsConfigs.SingleAsync()).Url);
     }
 
     private static ConfigurationExportDto CreateConfigurationExportDto()

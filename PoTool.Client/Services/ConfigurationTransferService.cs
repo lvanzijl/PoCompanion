@@ -33,15 +33,18 @@ public sealed class ConfigurationTransferService
     {
         return await SendImportRequestAsync(
             "/api/settings/configuration-import/validate",
-            new ConfigurationImportRequest(jsonContent, ValidateOnly: true),
+            new ConfigurationImportRequest(jsonContent, ValidateOnly: true, WipeExistingConfiguration: false),
             cancellationToken);
     }
 
-    public async Task<ConfigurationImportResultDto> ImportAsync(string jsonContent, CancellationToken cancellationToken = default)
+    public async Task<ConfigurationImportResultDto> ImportAsync(
+        string jsonContent,
+        bool wipeExistingConfiguration = false,
+        CancellationToken cancellationToken = default)
     {
         return await SendImportRequestAsync(
             "/api/settings/configuration-import",
-            new ConfigurationImportRequest(jsonContent, ValidateOnly: false),
+            new ConfigurationImportRequest(jsonContent, ValidateOnly: false, WipeExistingConfiguration: wipeExistingConfiguration),
             cancellationToken);
     }
 
