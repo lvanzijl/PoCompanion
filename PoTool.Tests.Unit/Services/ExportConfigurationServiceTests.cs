@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Moq;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Repositories;
 using PoTool.Api.Services.Configuration;
+using PoTool.Core.Contracts;
 using PoTool.Shared.BugTriage;
 using PoTool.Shared.Settings;
 
@@ -13,6 +16,7 @@ public sealed class ExportConfigurationServiceTests
 {
     private PoToolDbContext _dbContext = null!;
     private ExportConfigurationService _service = null!;
+    private Mock<ITfsClient> _tfsClientMock = null!;
 
     [TestInitialize]
     public void Setup()
@@ -22,12 +26,15 @@ public sealed class ExportConfigurationServiceTests
             .Options;
 
         _dbContext = new PoToolDbContext(options);
+        _tfsClientMock = new Mock<ITfsClient>(MockBehavior.Strict);
         _service = new ExportConfigurationService(
             _dbContext,
             new ProfileRepository(_dbContext),
             new ProductRepository(_dbContext),
             new TeamRepository(_dbContext),
-            new SettingsRepository(_dbContext));
+            new SettingsRepository(_dbContext),
+            _tfsClientMock.Object,
+            Mock.Of<ILogger<ExportConfigurationService>>());
     }
 
     [TestCleanup]
@@ -135,6 +142,9 @@ public sealed class ExportConfigurationServiceTests
         });
         await _dbContext.SaveChangesAsync();
 
+        _tfsClientMock.Setup(client => client.GetGitRepositoriesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { (Name: "Repo-A", Id: "repo-123") });
+
         var result = await _service.ExportAsync();
 
         Assert.AreEqual(ExportConfigurationService.SupportedVersion, result.Version);
@@ -149,6 +159,7 @@ public sealed class ExportConfigurationServiceTests
         CollectionAssert.AreEqual(new List<int> { 12345 }, result.Products[0].BacklogRootWorkItemIds);
         CollectionAssert.AreEqual(new List<int> { team.Id }, result.Products[0].TeamIds);
         Assert.AreEqual("Repo-A", result.Products[0].Repositories.Single().Name);
+        Assert.AreEqual("repo-123", result.Products[0].Repositories.Single().RepositoryId);
         Assert.IsNotNull(result.Settings);
         Assert.AreEqual(profile.Id, result.Settings.ActiveProfileId);
         Assert.IsNotNull(result.EffortEstimationSettings);
