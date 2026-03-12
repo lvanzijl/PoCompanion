@@ -1,0 +1,22 @@
+@using MudBlazor
+
+<MudAlert Severity="@Severity" Dense="true" Class="mt-3">
+    <strong>@Title</strong>
+    <ul>
+        @foreach (var item in Items)
+        {
+            <li>@item</li>
+        }
+    </ul>
+</MudAlert>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public Severity Severity { get; set; }
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<string> Items { get; set; } = [];
+}

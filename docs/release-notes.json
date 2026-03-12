@@ -2,6 +2,22 @@
   {
     "date": "2026-03-12",
     "type": "Changed",
+    "title": "Configuration import now runs as one guided flow",
+    "impact": "Import from Settings and the first onboarding step now validates automatically when you click Import configuration, asks before wiping existing local configuration, and only keeps the large results panel for non-clean imports that need inspection.",
+    "area": "Settings",
+    "link": "/settings/import-export"
+  },
+  {
+    "date": "2026-03-12",
+    "type": "New",
+    "title": "Settings can import and export configuration",
+    "impact": "You can now export the current Azure DevOps/TFS configuration to JSON and later validate plus import it again from Settings or the first onboarding step.",
+    "area": "Settings",
+    "link": "/settings/import-export"
+  },
+  {
+    "date": "2026-03-12",
+    "type": "Changed",
     "title": "Sprint Delivery now fills progressively",
     "impact": "Sprint Delivery now shows its shell immediately, loads portfolio metrics first, and only loads deeper drilldown tables when you open them.",
     "area": "Delivery / Sprint Delivery",

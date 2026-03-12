@@ -159,6 +159,7 @@ builder.Services.AddScoped<TeamService>();
 builder.Services.AddScoped<SprintService>();
 builder.Services.AddScoped<SprintDeliveryMetricsService>();
 builder.Services.AddScoped<TfsConfigService>();
+builder.Services.AddScoped<ConfigurationTransferService>();
 builder.Services.AddScoped<ModeIsolatedStateService>();
 builder.Services.AddScoped<ErrorMessageService>();
 builder.Services.AddScoped<StateClassificationService>();

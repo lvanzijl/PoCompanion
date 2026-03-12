@@ -1,0 +1,304 @@
+@using System.Text
+@using Microsoft.AspNetCore.Components.Forms
+@using PoTool.Client.Helpers
+@using PoTool.Client.Services
+@using PoTool.Shared.Settings
+@inject ConfigurationTransferService ConfigurationTransferService
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+
+<div class="@GetContainerClass()">
+    @if (ShowSectionHeader)
+    {
+        <MudText Typo="Typo.h4" Class="mb-3">@SectionTitle</MudText>
+
+        @if (!string.IsNullOrWhiteSpace(SectionDescription))
+        {
+            <MudText Typo="Typo.body2" Class="mb-3">@SectionDescription</MudText>
+        }
+    }
+
+    <MudStack Spacing="@GetStackSpacing()">
+        @if (ShowExportSection)
+        {
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h6">Export</MudText>
+                    <MudText Typo="Typo.body2">
+                        Download the current TFS configuration, profiles, products, teams, repositories, and related settings as a versioned JSON file.
+                    </MudText>
+                    <CompactButton ButtonRole="ButtonRole.Action"
+                                   OnClick="ExportConfigurationAsync"
+                                   Disabled="@_isBusy"
+                                   StartIcon="@Icons.Material.Filled.FileDownload">
+                        Export configuration
+                    </CompactButton>
+                </MudStack>
+            </MudPaper>
+        }
+
+        @if (ShowImportSection)
+        {
+            <MudPaper Outlined="true" Class="@GetImportPanelClass()">
+                <MudStack Spacing="2">
+                    @if (!string.IsNullOrWhiteSpace(ImportTitle))
+                    {
+                        <MudText Typo="Typo.h6">@ImportTitle</MudText>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(ImportDescription))
+                    {
+                        <MudText Typo="Typo.body2">
+                            @ImportDescription
+                        </MudText>
+                    }
+
+                    <InputFile OnChange="HandleFileSelectedAsync" accept=".json,application/json" />
+
+                    @if (!string.IsNullOrWhiteSpace(_selectedFileName))
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            Selected file: @_selectedFileName
+                        </MudAlert>
+                    }
+
+                    <MudStack Row="true" Spacing="2">
+                        <CompactButton ButtonRole="ButtonRole.Action"
+                                       OnClick="ImportConfigurationAsync"
+                                       Disabled="@(_isBusy || string.IsNullOrWhiteSpace(_selectedJson))"
+                                       StartIcon="@Icons.Material.Filled.FileUpload">
+                            Import configuration
+                        </CompactButton>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+        }
+
+        @if (_isBusy)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">
+                Processing configuration file...
+            </MudAlert>
+        }
+
+        @if (ConfigurationImportResultDisplayHelper.ShouldShowDetailedResult(_importResult))
+        {
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudText Typo="Typo.h6">Import results</MudText>
+
+                @if (_importResult!.ProfilesImported.Count > 0)
+                {
+                    <ConfigurationImportResultPanel Title="Profiles imported"
+                                                    Severity="Severity.Success"
+                                                    Items="_importResult.ProfilesImported" />
+                }
+
+                @if (_importResult.RemovedItems.Count > 0)
+                {
+                    <ConfigurationImportResultPanel Title="Removed before import"
+                                                    Severity="Severity.Info"
+                                                    Items="_importResult.RemovedItems" />
+                }
+
+                @if (_importResult.ExistingConfigurationDetected && _importResult.ExistingConfigurationSummary.Count > 0 && !_importResult.ImportExecuted)
+                {
+                    <ConfigurationImportResultPanel Title="Existing configuration detected"
+                                                    Severity="Severity.Warning"
+                                                    Items="_importResult.ExistingConfigurationSummary" />
+                }
+
+                @if (_importResult.Warnings.Count > 0)
+                {
+                    <ConfigurationImportResultPanel Title="Warnings"
+                                                    Severity="Severity.Warning"
+                                                    Items="_importResult.Warnings" />
+                }
+
+                @if (_importResult.Errors.Count > 0)
+                {
+                    <ConfigurationImportResultPanel Title="Errors"
+                                                    Severity="Severity.Error"
+                                                    Items="_importResult.Errors" />
+                }
+            </MudPaper>
+        }
+    </MudStack>
+</div>
+
+@code {
+    private const long MaxImportFileSize = 5 * 1024 * 1024;
+
+    [Parameter]
+    public string SectionTitle { get; set; } = "Import / Export";
+
+    [Parameter]
+    public string? SectionDescription { get; set; }
+
+    [Parameter]
+    public bool ShowExportSection { get; set; } = true;
+
+    [Parameter]
+    public bool ShowImportSection { get; set; } = true;
+
+    [Parameter]
+    public bool ShowSectionHeader { get; set; } = true;
+
+    [Parameter]
+    public bool UseCompactImportLayout { get; set; }
+
+    [Parameter]
+    public string ImportTitle { get; set; } = "Import";
+
+    [Parameter]
+    public string ImportDescription { get; set; } = "Upload a previously exported JSON file. The system validates it automatically during import before rebuilding profiles and settings.";
+
+    [Parameter]
+    public EventCallback<ConfigurationImportResultDto> OnImportCompleted { get; set; }
+
+    private bool _isBusy;
+    private string? _selectedFileName;
+    private string? _selectedJson;
+    private ConfigurationImportResultDto? _importResult;
+
+    private async Task HandleFileSelectedAsync(InputFileChangeEventArgs args)
+    {
+        _importResult = null;
+        _selectedFileName = null;
+        _selectedJson = null;
+
+        var file = args.File;
+        if (file == null)
+        {
+            return;
+        }
+
+        try
+        {
+            using var stream = file.OpenReadStream(MaxImportFileSize);
+            using var reader = new StreamReader(stream);
+            _selectedJson = await reader.ReadToEndAsync();
+            _selectedFileName = file.Name;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to read the selected file: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ExportConfigurationAsync()
+    {
+        _isBusy = true;
+
+        try
+        {
+            var exportConfiguration = await ConfigurationTransferService.ExportAsync();
+            var json = ConfigurationTransferService.Serialize(exportConfiguration);
+            await DownloadFileAsync(
+                json,
+                $"potool-configuration-{DateTimeOffset.UtcNow:yyyyMMdd_HHmmss}.json",
+                "application/json");
+            Snackbar.Add("Configuration exported successfully.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to export configuration: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ImportConfigurationAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedJson))
+        {
+            return;
+        }
+
+        _isBusy = true;
+        _importResult = null;
+
+        try
+        {
+            var initialResult = await ConfigurationTransferService.ImportAsync(_selectedJson);
+
+            if (initialResult.RequiresDestructiveConfirmation)
+            {
+                var existingSummary = initialResult.ExistingConfigurationSummary;
+                var message = existingSummary.Count == 0
+                    ? "Existing configuration was detected. Do you want to wipe the current configuration and continue with the import?"
+                    : $"The current environment already contains configuration:\n\n- {string.Join("\n- ", existingSummary)}\n\nChoose 'Wipe and import' to remove the current configuration before importing the new file.";
+
+                var confirmed = await DialogService.ShowMessageBox(
+                    "Replace current configuration?",
+                    message,
+                    yesText: "Wipe and import",
+                    cancelText: "Cancel");
+
+                if (confirmed != true)
+                {
+                    Snackbar.Add("Import cancelled. The current configuration was left unchanged.", Severity.Info);
+                    return;
+                }
+
+                _importResult = await ConfigurationTransferService.ImportAsync(_selectedJson, wipeExistingConfiguration: true);
+            }
+            else
+            {
+                _importResult = initialResult;
+            }
+
+            if (_importResult.ImportExecuted && OnImportCompleted.HasDelegate)
+            {
+                await OnImportCompleted.InvokeAsync(_importResult);
+            }
+
+            if (ConfigurationImportResultDisplayHelper.IsCleanSingleProfileSuccess(_importResult))
+            {
+                Snackbar.Add($"PO profile {_importResult.ProfilesImported[0]} successfully imported.", Severity.Success);
+            }
+            else if (!_importResult.ImportExecuted)
+            {
+                var severity = _importResult.Errors.Count > 0 ? Severity.Error : Severity.Warning;
+                Snackbar.Add("Configuration import could not be completed.", severity);
+            }
+            else
+            {
+                var severity = _importResult.Errors.Count == 0 ? Severity.Success : Severity.Warning;
+                Snackbar.Add("Configuration import completed.", severity);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Import failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task DownloadFileAsync(string content, string fileName, string contentType)
+    {
+        var bytes = Encoding.UTF8.GetBytes(content);
+        var base64 = Convert.ToBase64String(bytes);
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, base64, contentType);
+    }
+
+    private string GetContainerClass()
+    {
+        return UseCompactImportLayout ? "configuration-import-flow" : "settings-section";
+    }
+
+    private int GetStackSpacing()
+    {
+        return UseCompactImportLayout ? 2 : 3;
+    }
+
+    private string GetImportPanelClass()
+    {
+        return UseCompactImportLayout ? "pa-4" : "pa-3";
+    }
+}
