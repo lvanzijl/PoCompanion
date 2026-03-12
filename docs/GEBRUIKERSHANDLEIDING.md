@@ -138,6 +138,8 @@ Zodra je een profiel selecteert, controleert de applicatie of de lokale cache up
 
 De Startpagina is nu vooral een **werkruimtenavigatie voor Product Owners**. De vier werkruimten vormen het visuele startpunt, daaronder kies je de productcontext, daarna volgen alleen nog lichte snelacties en een subtiele sync-regel.
 
+De pagina rendert direct haar vaste structuur. Tegels, productbalk en sync-regel verschijnen dus meteen; de signalen en contextmetingen vullen zich daarna **progressief** met compacte laadstatussen per onderdeel. Een fout in één tegel of metriek blokkeert de rest van de Startpagina niet.
+
 ### Werkruimten
 
 Bovenaan staan vier grote, klikbare tegels in een 2×2-indeling:
@@ -161,6 +163,8 @@ De Startpagina gebruikt een **signaalgestuurd navigatiemodel**:
 
 De tegels zijn bewust groter en prominenter gemaakt dan de rest van de pagina. Ze gebruiken een gevulde kaart-stijl met verhoging (schaduw), een horizontale indeling (icoon links, naam en signaal rechts gestapeld) en een lichte lift bij hover. De Startpagina draait dus eerst om **kiezen naar welke werkruimte je wilt gaan**.
 
+Tijdens het laden toont elke tegel tijdelijk een lokale laadindicator. Zodra de bijbehorende samenvattingsdata klaar is, wordt alleen die tegel bijgewerkt.
+
 ### Productbalk
 
 Onder de werkruimten staat één horizontale balk met links de productselector en rechts compacte contextmetingen.
@@ -177,6 +181,8 @@ Rechts in dezelfde balk zie je maximaal drie subtiele metrics op één regel:
 - **Team Sprint 72%** — teambrede sprintvoortgang op basis van de huidige sprintperiode; deze blijft teambreed, ook als je één product selecteert.
 - **12 Bugs** — open bugs in de actieve context.
 - **3 changes today** — aantal verschillende werkitems met activiteit vandaag in de actieve context.
+
+Als de context nog wordt geladen, zie je eerst placeholders in dezelfde balk zodat de pagina-indeling stabiel blijft.
 
 Het verschil tussen team- en productscope is als volgt:
 
@@ -196,6 +202,8 @@ Onderaan staat een compacte, rechts uitgelijnde regel:
 
 - **Last Sync** — toont het tijdstip van de laatste succesvolle synchronisatie.
 - **Sync** — start handmatig een cache-sync en ververst daarna de tijdsaanduiding wanneer de sync gereed is.
+
+Ook deze regel verschijnt direct; het sync-tijdstip wordt ingevuld zodra de achtergrondload klaar is.
 
 ---
 

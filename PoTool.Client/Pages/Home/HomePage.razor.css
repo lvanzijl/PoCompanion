@@ -25,6 +25,11 @@
     overflow-y: hidden;
 }
 
+.dashboard-chip-skeleton {
+    border-radius: 999px;
+    flex: 0 0 auto;
+}
+
 .dashboard-product-bar__metrics {
     flex: 0 0 auto;
     margin-left: auto;
@@ -80,6 +85,15 @@
 
 .product-context-button {
     flex: 0 0 auto;
+}
+
+.home-workspace-tile__progress {
+    width: 100%;
+    margin-top: var(--d2, 8px);
+}
+
+.home-workspace-tile__error {
+    margin-top: var(--d2, 8px);
 }
 
 @media (max-width: 960px) {

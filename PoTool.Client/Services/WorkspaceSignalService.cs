@@ -46,10 +46,75 @@ public sealed class WorkspaceSignalService
         int? selectedProductId,
         CancellationToken cancellationToken = default)
     {
+        return new WorkspaceSignalSet(
+            await GetHealthSignalAsync(products, selectedProductId, cancellationToken),
+            await GetDeliverySignalAsync(productOwnerId, products, selectedProductId, cancellationToken),
+            await GetTrendsSignalAsync(productOwnerId, products, selectedProductId, cancellationToken),
+            await GetPlanningSignalAsync(productOwnerId, products, selectedProductId, cancellationToken));
+    }
+
+    public async Task<string> GetHealthSignalAsync(
+        IReadOnlyCollection<ProductDto> products,
+        int? selectedProductId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var scopedProducts = GetScopedProducts(products, selectedProductId);
         if (scopedProducts.Count == 0)
         {
-            return NeutralSignals;
+            return NeutralSignals.Health;
+        }
+
+        var productIds = scopedProducts.Select(product => product.Id).ToArray();
+        var summary = await _workItemService.GetValidationTriageSummaryAsync(productIds);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return SelectHealthSignal(summary);
+    }
+
+    public async Task<string> GetDeliverySignalAsync(
+        int productOwnerId,
+        IReadOnlyCollection<ProductDto> products,
+        int? selectedProductId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var scopedProducts = GetScopedProducts(products, selectedProductId);
+        if (scopedProducts.Count == 0)
+        {
+            return NeutralSignals.Delivery;
+        }
+
+        var teamIds = scopedProducts
+            .SelectMany(product => product.TeamIds)
+            .Distinct()
+            .ToArray();
+
+        var currentSprints = await LoadCurrentSprintsAsync(teamIds);
+        var deliveryContexts = await LoadDeliveryContextsAsync(
+            productOwnerId,
+            selectedProductId,
+            currentSprints,
+            cancellationToken);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return SelectDeliverySignal(deliveryContexts, DateTimeOffset.UtcNow);
+    }
+
+    public async Task<string> GetTrendsSignalAsync(
+        int productOwnerId,
+        IReadOnlyCollection<ProductDto> products,
+        int? selectedProductId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var scopedProducts = GetScopedProducts(products, selectedProductId);
+        if (scopedProducts.Count == 0)
+        {
+            return NeutralSignals.Trends;
         }
 
         var productIds = scopedProducts.Select(product => product.Id).ToArray();
@@ -58,47 +123,60 @@ public sealed class WorkspaceSignalService
             .Distinct()
             .ToArray();
 
-        var validationSummaryTask = _workItemService.GetValidationTriageSummaryAsync(productIds);
-        var backlogStatesTask = LoadBacklogStatesAsync(scopedProducts, cancellationToken);
-        var currentSprintsTask = LoadCurrentSprintsAsync(teamIds);
-        var recentSprintsTask = LoadRecentSprintsAsync(teamIds);
-
-        await Task.WhenAll(validationSummaryTask, backlogStatesTask, currentSprintsTask, recentSprintsTask);
-
-        var recentSprints = await recentSprintsTask;
+        var recentSprints = await LoadRecentSprintsAsync(teamIds);
         var trendSprintIds = recentSprints
             .Take(TrendSprintCount)
             .Select(sprint => sprint.Id)
             .ToArray();
-        var capacitySprintIds = recentSprints
+        var productIdsCsv = string.Join(",", productIds);
+
+        var sprintTrendTask = LoadSprintTrendsAsync(productOwnerId, trendSprintIds, cancellationToken);
+        var prTrendTask = LoadPrTrendsAsync(trendSprintIds, productIdsCsv, cancellationToken);
+
+        await Task.WhenAll(sprintTrendTask, prTrendTask);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return SelectTrendsSignal(await sprintTrendTask, await prTrendTask);
+    }
+
+    public async Task<string> GetPlanningSignalAsync(
+        int productOwnerId,
+        IReadOnlyCollection<ProductDto> products,
+        int? selectedProductId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var scopedProducts = GetScopedProducts(products, selectedProductId);
+        if (scopedProducts.Count == 0)
+        {
+            return NeutralSignals.Planning;
+        }
+
+        var productIds = scopedProducts.Select(product => product.Id).ToArray();
+        var teamIds = scopedProducts
+            .SelectMany(product => product.TeamIds)
+            .Distinct()
+            .ToArray();
+
+        var backlogStatesTask = LoadBacklogStatesAsync(scopedProducts, cancellationToken);
+        var recentSprintsTask = LoadRecentSprintsAsync(teamIds);
+
+        await Task.WhenAll(backlogStatesTask, recentSprintsTask);
+
+        var capacitySprintIds = (await recentSprintsTask)
             .Take(CapacitySprintCount)
             .Select(sprint => sprint.Id)
             .ToArray();
-        var productIdsCsv = string.Join(",", productIds);
 
-        var deliveryContextsTask = LoadDeliveryContextsAsync(
-            productOwnerId,
-            selectedProductId,
-            await currentSprintsTask,
-            cancellationToken);
-        var sprintTrendTask = LoadSprintTrendsAsync(productOwnerId, trendSprintIds, cancellationToken);
-        var prTrendTask = LoadPrTrendsAsync(trendSprintIds, productIdsCsv, cancellationToken);
-        var capacityCalibrationTask = LoadCapacityCalibrationAsync(
+        var capacityCalibration = await LoadCapacityCalibrationAsync(
             productOwnerId,
             capacitySprintIds,
             productIds,
             cancellationToken);
 
-        await Task.WhenAll(deliveryContextsTask, sprintTrendTask, prTrendTask, capacityCalibrationTask);
-
-        var capacityCalibration = await capacityCalibrationTask;
-        var sprintTrends = await sprintTrendTask;
-
-        return new WorkspaceSignalSet(
-            SelectHealthSignal(await validationSummaryTask),
-            SelectDeliverySignal(await deliveryContextsTask, DateTimeOffset.UtcNow),
-            SelectTrendsSignal(sprintTrends, await prTrendTask),
-            SelectPlanningSignal(await backlogStatesTask, capacityCalibration));
+        cancellationToken.ThrowIfCancellationRequested();
+        return SelectPlanningSignal(await backlogStatesTask, capacityCalibration);
     }
 
     public static string SelectHealthSignal(ValidationTriageSummaryDto? summary)

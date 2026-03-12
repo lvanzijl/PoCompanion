@@ -1,9 +1,13 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
 using PoTool.Shared.Health;
 using PoTool.Shared.Metrics;
 using PoTool.Shared.PullRequests;
 using PoTool.Shared.WorkItems;
 using BacklogHealthDto = PoTool.Client.ApiClient.BacklogHealthDto;
+using ProductDto = PoTool.Client.ApiClient.ProductDto;
 using SprintDto = PoTool.Client.ApiClient.SprintDto;
 
 namespace PoTool.Tests.Unit.Services;
@@ -187,6 +191,79 @@ public sealed class WorkspaceSignalServiceTests
         var result = WorkspaceSignalService.SelectPlanningSignal(states, capacity);
 
         Assert.AreEqual("Confirm planning is healthy", result);
+    }
+
+    [TestMethod]
+    public async Task GetHealthSignalAsync_WithNoScopedProducts_ReturnsNeutralSignal()
+    {
+        var service = CreateService();
+
+        var result = await service.GetHealthSignalAsync(CreateProducts(), selectedProductId: 999);
+
+        Assert.AreEqual(WorkspaceSignalSet.Neutral.Health, result);
+    }
+
+    [TestMethod]
+    public async Task GetDeliverySignalAsync_WithNoScopedProducts_ReturnsNeutralSignal()
+    {
+        var service = CreateService();
+
+        var result = await service.GetDeliverySignalAsync(42, CreateProducts(), selectedProductId: 999);
+
+        Assert.AreEqual(WorkspaceSignalSet.Neutral.Delivery, result);
+    }
+
+    [TestMethod]
+    public async Task GetTrendsSignalAsync_WithNoScopedProducts_ReturnsNeutralSignal()
+    {
+        var service = CreateService();
+
+        var result = await service.GetTrendsSignalAsync(42, CreateProducts(), selectedProductId: 999);
+
+        Assert.AreEqual(WorkspaceSignalSet.Neutral.Trends, result);
+    }
+
+    [TestMethod]
+    public async Task GetPlanningSignalAsync_WithNoScopedProducts_ReturnsNeutralSignal()
+    {
+        var service = CreateService();
+
+        var result = await service.GetPlanningSignalAsync(42, CreateProducts(), selectedProductId: 999);
+
+        Assert.AreEqual(WorkspaceSignalSet.Neutral.Planning, result);
+    }
+
+    private static WorkspaceSignalService CreateService()
+    {
+        var metricsClient = new Mock<IMetricsClient>();
+        var pullRequestsClient = new Mock<IPullRequestsClient>();
+        var workItemsClient = new Mock<IWorkItemsClient>();
+        var sprintsClient = new Mock<ISprintsClient>();
+        var sprintService = new SprintService(sprintsClient.Object);
+        var workItemService = new WorkItemService(
+            workItemsClient.Object,
+            new HttpClient(),
+            new WorkItemLoadCoordinatorService(NullLogger<WorkItemLoadCoordinatorService>.Instance));
+
+        return new WorkspaceSignalService(
+            metricsClient.Object,
+            pullRequestsClient.Object,
+            workItemsClient.Object,
+            sprintService,
+            workItemService);
+    }
+
+    private static IReadOnlyCollection<ProductDto> CreateProducts()
+    {
+        return
+        [
+            new ProductDto
+            {
+                Id = 1,
+                Name = "Product A",
+                TeamIds = [10]
+            }
+        ];
     }
 
     private static DeliverySignalContext CreateDeliveryContext(
