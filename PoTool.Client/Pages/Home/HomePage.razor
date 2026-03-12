@@ -245,6 +245,7 @@
     private const string SyncStatusUnavailableMessage = "Last sync unavailable.";
     private const string ProductsUnavailableMessage = "Product context unavailable.";
     private const string WorkspaceSignalUnavailableMessage = "Signal unavailable.";
+    private const int SyncStatusCheckDelayMs = 3000;
 
     private readonly WorkspaceTileState _healthSignalState = new(WorkspaceSignalSet.Neutral.Health);
     private readonly WorkspaceTileState _deliverySignalState = new(WorkspaceSignalSet.Neutral.Delivery);
@@ -269,14 +270,12 @@
     private List<ProductDto> _products = new();
     private HomeProductBarMetricsDto? _productBarMetrics;
 
-    protected override Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            _ = LoadHomeAsync();
+            await LoadHomeAsync();
         }
-
-        return Task.CompletedTask;
     }
 
     public void Dispose()
@@ -611,7 +610,7 @@
             parameters.Add(additionalParams);
         }
 
-        return parameters.Count > 0 ? "?" + string.Join("&", parameters) : string.Empty;
+        return parameters.Count > 0 ? $"?{string.Join("&", parameters)}" : string.Empty;
     }
 
     private async Task SelectProductAsync(int? productId)
@@ -747,8 +746,6 @@
             return;
         }
 
-        const int syncCheckDelayMs = 3000;
-
         try
         {
             _isSyncing = true;
@@ -760,7 +757,7 @@
             {
                 Snackbar.Add("Cache sync started. Your data will be refreshed shortly.", Severity.Info);
 
-                await Task.Delay(syncCheckDelayMs, _lifetimeCts.Token);
+                await Task.Delay(SyncStatusCheckDelayMs, _lifetimeCts.Token);
 
                 var cacheState = await CacheSyncService.GetCacheStatusAsync(_profileId.Value, _lifetimeCts.Token);
                 if (cacheState != null &&

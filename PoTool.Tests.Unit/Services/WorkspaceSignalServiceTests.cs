@@ -15,6 +15,11 @@ namespace PoTool.Tests.Unit.Services;
 [TestClass]
 public sealed class WorkspaceSignalServiceTests
 {
+    private static readonly HttpClient TestHttpClient = new()
+    {
+        BaseAddress = new Uri("http://localhost")
+    };
+
     [TestMethod]
     public void SelectHealthSignal_PicksHighestPriorityStructuralMismatch()
     {
@@ -242,7 +247,7 @@ public sealed class WorkspaceSignalServiceTests
         var sprintService = new SprintService(sprintsClient.Object);
         var workItemService = new WorkItemService(
             workItemsClient.Object,
-            new HttpClient(),
+            TestHttpClient,
             new WorkItemLoadCoordinatorService(NullLogger<WorkItemLoadCoordinatorService>.Instance));
 
         return new WorkspaceSignalService(

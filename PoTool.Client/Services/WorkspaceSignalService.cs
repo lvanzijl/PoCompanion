@@ -46,11 +46,18 @@ public sealed class WorkspaceSignalService
         int? selectedProductId,
         CancellationToken cancellationToken = default)
     {
+        var healthTask = GetHealthSignalAsync(products, selectedProductId, cancellationToken);
+        var deliveryTask = GetDeliverySignalAsync(productOwnerId, products, selectedProductId, cancellationToken);
+        var trendsTask = GetTrendsSignalAsync(productOwnerId, products, selectedProductId, cancellationToken);
+        var planningTask = GetPlanningSignalAsync(productOwnerId, products, selectedProductId, cancellationToken);
+
+        await Task.WhenAll(healthTask, deliveryTask, trendsTask, planningTask);
+
         return new WorkspaceSignalSet(
-            await GetHealthSignalAsync(products, selectedProductId, cancellationToken),
-            await GetDeliverySignalAsync(productOwnerId, products, selectedProductId, cancellationToken),
-            await GetTrendsSignalAsync(productOwnerId, products, selectedProductId, cancellationToken),
-            await GetPlanningSignalAsync(productOwnerId, products, selectedProductId, cancellationToken));
+            await healthTask,
+            await deliveryTask,
+            await trendsTask,
+            await planningTask);
     }
 
     public async Task<string> GetHealthSignalAsync(
