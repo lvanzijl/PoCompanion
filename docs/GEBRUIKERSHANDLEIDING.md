@@ -261,7 +261,7 @@ Rechtsonder staan knoppen om direct naar Health (Nu), Trends (Verleden) en Plann
 
 **Pagina:** `/home/health`
 
-De Health-werkruimte beantwoordt de vraag: *Wat is er op dit moment aan de hand met mijn backlog?* Je ziet twee aparte secties: Verfijningssignalen en Integriteit (onderhoud).
+De Health-werkruimte beantwoordt de vraag: *Wat is er op dit moment aan de hand met mijn backlog?* De pagina rendert nu eerst haar vaste structuur en vult daarna progressief: de signaalbalk en productkaarten laden onafhankelijk van elkaar, elk met een eigen placeholder of compacte foutstatus.
 
 ### Verfijningssignalen
 
@@ -269,7 +269,6 @@ De Health-werkruimte beantwoordt de vraag: *Wat is er op dit moment aan de hand 
 |---|---|---|
 | **Refinement Readiness (RR)** | Werkitems die verfijning blokkeren (RR-regels). Oranje als > 0. | `/home/validation-queue?category=RR` |
 | **Refinement Completeness (RC)** | Werkitems die verfijning nodig hebben (RC-regels). Oranje als > 0. | `/home/validation-queue?category=RC` |
-| **Bugs** | Alle actieve bugs. Kleurcodering op drempelwaarden. | Bug-inzichten |
 
 ### Integriteit (onderhoud)
 
@@ -279,13 +278,25 @@ De Health-werkruimte beantwoordt de vraag: *Wat is er op dit moment aan de hand 
 
 > **Onthoud:** SI-bevindingen blokkeren de backlog **niet** voor planning. Ze zijn zichtbaar als onderhoudssignaal en worden apart bijgehouden.
 
-### Backlog Health-analysepaneel
+### Productkaarten
 
-Onderaan de pagina is een ingesloten paneel met de backlog-gezondheidsanalyse voor de laatste 3 iteraties. Klik op **Backlog Overzicht** om door te gaan naar de detailpagina.
+Onder de signaalbalk staat per product een compacte kaart. Elke kaart laadt zelfstandig en toont alleen de samenvatting die je op de Health-pagina nodig hebt:
+
+- **ready story points** — zichtbare story points onder epics die volledig klaar zijn;
+- **features ready in pending epics** — features die al klaar zijn terwijl het bovenliggende epic nog niet klaar is;
+- **Closest to ready** — de top-3 epics die het dichtst bij volledige verfijning zitten.
+
+Als één kaart niet kan laden, blijven de andere kaarten bruikbaar. Gebruik **Backlog Overview** op de kaart om naar de detailpagina voor dat product te gaan.
 
 ### Primaire actie: Validatie Triage
 
 De knop **Validatie Triage** bovenaan de pagina is de aanbevolen manier om validatiewerk te starten. Die brengt je naar een gestructureerd overzicht per categorie, zodat je kunt beslissen waar je je aandacht op richt.
+
+### Overige acties
+
+- **Bug Triage** — opent direct `/bugs-triage`.
+- **Home** — terug naar `/home`.
+- Onderaan staan knoppen naar **Backlog Overzicht**, **Trends (Past)** en **Planning (Future)**.
 
 ---
 

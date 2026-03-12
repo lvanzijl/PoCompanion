@@ -891,6 +891,35 @@ public class WorkItemsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets a lightweight Health workspace product summary for a single product.
+    /// Returns only the summary metrics and top epics needed for the dashboard cards.
+    /// </summary>
+    /// <param name="productId">Product identifier.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    [HttpGet("health-summary/{productId:int}")]
+    public async Task<ActionResult<HealthWorkspaceProductSummaryDto>> GetHealthSummary(
+        int productId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var summary = await _mediator.Send(new GetHealthWorkspaceProductSummaryQuery(productId), cancellationToken);
+
+            if (summary is null)
+            {
+                return NotFound($"Product with ID {productId} not found");
+            }
+
+            return Ok(summary);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving health summary for ProductId: {ProductId}", productId);
+            return StatusCode(500, "Error retrieving health summary");
+        }
+    }
+
+    /// <summary>
     /// Parses a comma-separated product IDs string into an int array.
     /// Returns null when <paramref name="productIds"/> is null or whitespace.
     /// Returns a BadRequest result when the format is invalid.
