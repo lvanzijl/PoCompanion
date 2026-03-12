@@ -39,13 +39,16 @@ public static class WorkspaceNavigationCatalog
             "var(--color-info)",
             [
                 WorkspaceRoutes.DeliveryWorkspace,
-                WorkspaceRoutes.SprintTrend
+                WorkspaceRoutes.SprintDelivery,
+                WorkspaceRoutes.SprintExecution,
+                WorkspaceRoutes.SprintTrend,
+                WorkspaceRoutes.SprintTrendActivity
             ]),
         new(
             "Trends",
             WorkspaceRoutes.TrendsWorkspace,
             Icons.Material.Filled.Timeline,
-            "#4fc3f7",
+            "var(--color-trends)",
             [
                 WorkspaceRoutes.TrendsWorkspace,
                 WorkspaceRoutes.PrOverview,
@@ -58,10 +61,11 @@ public static class WorkspaceNavigationCatalog
             "Planning",
             WorkspaceRoutes.PlanningWorkspace,
             Icons.Material.Filled.CalendarMonth,
-            "#9575cd",
+            "var(--color-planning)",
             [
                 WorkspaceRoutes.PlanningWorkspace,
-                "/planning"
+                WorkspaceRoutes.ProductRoadmaps,
+                WorkspaceRoutes.PlanBoard
             ])
     ];
 
