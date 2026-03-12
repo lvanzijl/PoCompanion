@@ -2,6 +2,14 @@
   {
     "date": "2026-03-12",
     "type": "Changed",
+    "title": "Home now fills widgets progressively",
+    "impact": "The Home page now renders its shell immediately and lets workspace tiles, product context, and sync status load independently with local placeholders instead of waiting behind one page-level loading state.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-03-12",
+    "type": "Changed",
     "title": "Top workspace menu now reads as navigation",
     "impact": "The top workspace menu now uses a lightweight tab-like navigation bar with colored active workspace highlighting instead of outlined action buttons.",
     "area": "Home",
