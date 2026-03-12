@@ -1,0 +1,10 @@
+.workspace-navigation-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--d1);
+    min-width: 0;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}

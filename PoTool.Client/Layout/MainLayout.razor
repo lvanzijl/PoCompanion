@@ -20,40 +20,20 @@
 <div class="page workspace-layout" @onkeydown="HandleGlobalKeyDown" tabindex="-1">
     <main class="workspace-main">
         <div class="top-row px-4 d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center">
+            <div class="top-row__left d-flex align-items-center">
                 <MudTooltip Text="Return to Home">
                     <CompactIconButton Icon="@Icons.Material.Filled.Home" 
-                                  Color="Color.Inherit" 
-                                  OnClick="NavigateToHome" 
+                                   Color="Color.Inherit" 
+                                   OnClick="NavigateToHome" 
                                   Title="Home" 
                                   AriaLabel="Return to home page" />
                 </MudTooltip>
                 <ProfileSelector @ref="_profileSelector" OnProfileChanged="HandleProfileChanged" />
             </div>
-            @* Workspace navigation — cross-workspace shortcuts in top bar (Suggestion 2) *@
-            <div class="d-flex align-items-center gap-1">
-                <CompactButton ButtonRole="ButtonRole.Action"
-                               OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.HealthWorkspace))"
-                               Icon="@Icons.Material.Filled.HealthAndSafety">
-                    Health
-                </CompactButton>
-                <CompactButton ButtonRole="ButtonRole.Action"
-                               OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.DeliveryWorkspace))"
-                               Icon="@Icons.Material.Filled.CheckCircle">
-                    Delivery
-                </CompactButton>
-                <CompactButton ButtonRole="ButtonRole.Action"
-                               OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.TrendsWorkspace))"
-                               Icon="@Icons.Material.Filled.Timeline">
-                    Trends
-                </CompactButton>
-                <CompactButton ButtonRole="ButtonRole.Action"
-                               OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.PlanningWorkspace))"
-                               Icon="@Icons.Material.Filled.CalendarMonth">
-                    Planning
-                </CompactButton>
+            <div class="top-row__workspace-nav">
+                <WorkspaceNavigationBar OnNavigate="NavigateToWorkspaceAsync" />
             </div>
-            <div class="d-flex align-items-center">
+            <div class="top-row__right d-flex align-items-center">
                 <CompactIconButton Icon="@Icons.Material.Filled.Help" 
                               Color="Color.Inherit" 
                               OnClick="OpenOnboardingWizard" 

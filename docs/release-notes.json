@@ -2,6 +2,14 @@
   {
     "date": "2026-03-12",
     "type": "Changed",
+    "title": "Top workspace menu now reads as navigation",
+    "impact": "The top workspace menu now uses a lightweight tab-like navigation bar with colored active workspace highlighting instead of outlined action buttons.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-03-12",
+    "type": "Changed",
     "title": "Workspace buttons now follow shared roles",
     "impact": "Home, workspace hubs, and top-bar actions now use the shared CompactButton roles so buttons stay compact and visually secondary to navigation tiles and cards.",
     "area": "Home",
