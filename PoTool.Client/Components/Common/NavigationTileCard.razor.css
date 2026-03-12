@@ -1,32 +1,3 @@
-.navigation-tile-card {
-    cursor: pointer;
-    transition: all 0.2s;
-    user-select: none;
-    height: 100%;
-    border: 2px solid transparent;
-}
-
-.navigation-tile-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2) !important;
-    border-color: var(--mud-palette-primary);
-}
-
-.navigation-tile-card:focus-visible {
-    outline: 2px solid var(--mud-palette-primary);
-    outline-offset: 2px;
-    transform: translateY(-4px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2) !important;
-    border-color: var(--mud-palette-primary);
-}
-
-.navigation-tile-card--pressed,
-.navigation-tile-card:active {
-    transform: translateY(1px) !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
-    transition: transform 0.05s ease, box-shadow 0.05s ease !important;
-}
-
 .navigation-tile-card__content {
     height: 100%;
     padding: 16px !important;

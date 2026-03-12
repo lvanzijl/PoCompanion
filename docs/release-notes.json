@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-11",
+    "type": "Fixed",
+    "title": "Navigation tiles show clear interaction states",
+    "impact": "Home and Trends navigation tiles now show visible hover, keyboard focus, and pressed feedback because the shared card shell styling applies directly to the rendered card root.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-03-11",
     "type": "Changed",
     "title": "Home tiles now focus on investigation cues",
     "impact": "Home workspace tiles now show one short investigation-focused reason to navigate and no longer embed mini trend sparklines, so the workspace hub reads as navigation instead of a status dashboard.",
