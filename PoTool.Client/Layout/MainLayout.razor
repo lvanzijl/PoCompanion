@@ -32,34 +32,26 @@
             </div>
             @* Workspace navigation — cross-workspace shortcuts in top bar (Suggestion 2) *@
             <div class="d-flex align-items-center gap-1">
-                <MudButton OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.HealthWorkspace))"
-                           Variant="Variant.Text"
-                           Color="Color.Success"
-                           StartIcon="@Icons.Material.Filled.HealthAndSafety"
-                           Size="Size.Small">
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.HealthWorkspace))"
+                               Icon="@Icons.Material.Filled.HealthAndSafety">
                     Health
-                </MudButton>
-                <MudButton OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.DeliveryWorkspace))"
-                           Variant="Variant.Text"
-                           Color="Color.Secondary"
-                           StartIcon="@Icons.Material.Filled.CheckCircle"
-                           Size="Size.Small">
+                </CompactButton>
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.DeliveryWorkspace))"
+                               Icon="@Icons.Material.Filled.CheckCircle">
                     Delivery
-                </MudButton>
-                <MudButton OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.TrendsWorkspace))"
-                           Variant="Variant.Text"
-                           Color="Color.Info"
-                           StartIcon="@Icons.Material.Filled.Timeline"
-                           Size="Size.Small">
+                </CompactButton>
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.TrendsWorkspace))"
+                               Icon="@Icons.Material.Filled.Timeline">
                     Trends
-                </MudButton>
-                <MudButton OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.PlanningWorkspace))"
-                           Variant="Variant.Text"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.CalendarMonth"
-                           Size="Size.Small">
+                </CompactButton>
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               OnClick="@(() => NavigateToWorkspaceAsync(WorkspaceRoutes.PlanningWorkspace))"
+                               Icon="@Icons.Material.Filled.CalendarMonth">
                     Planning
-                </MudButton>
+                </CompactButton>
             </div>
             <div class="d-flex align-items-center">
                 <CompactIconButton Icon="@Icons.Material.Filled.Help" 

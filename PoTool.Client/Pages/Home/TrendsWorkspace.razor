@@ -120,12 +120,11 @@
                     </MudChip>
                 }
                 
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Default"
-                           StartIcon="@Icons.Material.Filled.Home"
-                           OnClick="NavigateToHome">
+                <CompactButton ButtonRole="ButtonRole.Utility"
+                               Icon="@Icons.Material.Filled.Home"
+                               OnClick="NavigateToHome">
                     Home
-                </MudButton>
+                </CompactButton>
             </MudStack>
         </MudStack>
     </MudPaper>
@@ -252,30 +251,26 @@
             </MudText>
             
             <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Primary" 
-                           StartIcon="@Icons.Material.Filled.Inventory2"
-                           OnClick="NavigateToBacklogOverview">
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               Icon="@Icons.Material.Filled.Inventory2"
+                               OnClick="NavigateToBacklogOverview">
                     Backlog Overview
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Success" 
-                           StartIcon="@Icons.Material.Filled.HealthAndSafety"
-                           OnClick="NavigateToHealth">
+                </CompactButton>
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               Icon="@Icons.Material.Filled.HealthAndSafety"
+                               OnClick="NavigateToHealth">
                     Health (Now)
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Secondary"
-                           StartIcon="@Icons.Material.Filled.CheckCircle"
-                           OnClick="NavigateToDelivery">
+                </CompactButton>
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               Icon="@Icons.Material.Filled.CheckCircle"
+                               OnClick="NavigateToDelivery">
                     Delivery
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Warning" 
-                           StartIcon="@Icons.Material.Filled.CalendarMonth"
-                           OnClick="NavigateToPlanning">
+                </CompactButton>
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               Icon="@Icons.Material.Filled.CalendarMonth"
+                               OnClick="NavigateToPlanning">
                     Planning (Future)
-                </MudButton>
+                </CompactButton>
             </MudStack>
         </MudPaper>
     }

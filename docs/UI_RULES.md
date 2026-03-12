@@ -101,6 +101,9 @@ Buttons must never visually compete with navigation tiles. If a button draws mor
 
 Buttons are divided into three semantic roles. Each role maps to a specific visual emphasis level.
 
+Implementation note:
+- `CompactButton` is the standard implementation mechanism for normal UI actions so semantic roles stay consistent across the application.
+
 #### Utility buttons (lowest emphasis)
 
 Purpose:
@@ -283,4 +286,3 @@ Use the semantic layout components from `PoTool.Client/Components/Analytical/`:
 - Portfolio Progress Trend (`/home/portfolio-progress`)
 - Sprint Trend
 - Any future "Trends (Past)" pages
-

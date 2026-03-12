@@ -21,13 +21,11 @@
                     <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
                 </MudStack>
 
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Default"
-                           StartIcon="@Icons.Material.Filled.Home"
-                           OnClick="NavigateToHome"
-                           Size="Size.Small">
+                <CompactButton ButtonRole="ButtonRole.Utility"
+                               Icon="@Icons.Material.Filled.Home"
+                               OnClick="NavigateToHome">
                     Home
-                </MudButton>
+                </CompactButton>
             </MudStack>
         </MudPaper>
 
@@ -73,34 +71,26 @@
             </MudStack>
 
             <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap" Class="mt-2">
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Inventory2"
-                           OnClick="NavigateToBacklogOverview"
-                           Size="Size.Small">
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               Icon="@Icons.Material.Filled.Inventory2"
+                               OnClick="NavigateToBacklogOverview">
                     Backlog Overview
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Success"
-                           StartIcon="@Icons.Material.Filled.HealthAndSafety"
-                           OnClick="NavigateToHealth"
-                           Size="Size.Small">
+                </CompactButton>
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               Icon="@Icons.Material.Filled.HealthAndSafety"
+                               OnClick="NavigateToHealth">
                     Health (Now)
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Info"
-                           StartIcon="@Icons.Material.Filled.Timeline"
-                           OnClick="NavigateToTrends"
-                           Size="Size.Small">
+                </CompactButton>
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               Icon="@Icons.Material.Filled.Timeline"
+                               OnClick="NavigateToTrends">
                     Trends (Past)
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Secondary"
-                           StartIcon="@Icons.Material.Filled.CheckCircle"
-                           OnClick="NavigateToDelivery"
-                           Size="Size.Small">
+                </CompactButton>
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               Icon="@Icons.Material.Filled.CheckCircle"
+                               OnClick="NavigateToDelivery">
                     Delivery
-                </MudButton>
+                </CompactButton>
             </MudStack>
         </MudPaper>
     </MudStack>

@@ -48,27 +48,24 @@
                 }
                 
                 @* Suggestion 3: Bug Triage as primary action in Health workspace *@
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Error"
-                           StartIcon="@Icons.Material.Filled.BugReport"
-                           OnClick="NavigateToBugTriage">
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               Icon="@Icons.Material.Filled.BugReport"
+                               OnClick="NavigateToBugTriage">
                     Bug Triage
-                </MudButton>
+                </CompactButton>
                 
                 @* Phase 1: Validation Triage as primary entry point for validation work *@
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Warning"
-                           StartIcon="@Icons.Material.Filled.FactCheck"
-                           OnClick="NavigateToValidationTriage">
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               Icon="@Icons.Material.Filled.FactCheck"
+                               OnClick="NavigateToValidationTriage">
                     Validation Triage
-                </MudButton>
+                </CompactButton>
                 
-                    <MudButton Variant="Variant.Outlined"
-                               Color="Color.Default"
-                               StartIcon="@Icons.Material.Filled.Home"
-                               OnClick="NavigateToHome">
+                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                   Icon="@Icons.Material.Filled.Home"
+                                   OnClick="NavigateToHome">
                         Home
-                    </MudButton>
+                    </CompactButton>
             </MudStack>
         </MudStack>
     </MudPaper>
@@ -194,13 +191,11 @@
                                 }
                             </MudCardContent>
                             <MudCardActions>
-                                <MudButton Variant="Variant.Text"
-                                           Color="Color.Primary"
-                                           Size="Size.Small"
-                                           EndIcon="@Icons.Material.Filled.OpenInNew"
-                                           OnClick="() => NavigateToBacklogOverviewForProduct(product.Id)">
+                                <CompactButton ButtonRole="ButtonRole.Action"
+                                               Icon="@Icons.Material.Filled.OpenInNew"
+                                               OnClick="() => NavigateToBacklogOverviewForProduct(product.Id)">
                                     Backlog Overview
-                                </MudButton>
+                                </CompactButton>
                             </MudCardActions>
                         </MudCard>
                     </MudItem>
@@ -216,24 +211,21 @@
             </MudText>
 
             <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Inventory2"
-                           OnClick="NavigateToBacklogOverview">
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               Icon="@Icons.Material.Filled.Inventory2"
+                               OnClick="NavigateToBacklogOverview">
                     Backlog Overview
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Info"
-                           StartIcon="@Icons.Material.Filled.Timeline"
-                           OnClick="NavigateToTrends">
+                </CompactButton>
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               Icon="@Icons.Material.Filled.Timeline"
+                               OnClick="NavigateToTrends">
                     Trends (Past)
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.CalendarMonth"
-                           OnClick="NavigateToPlanning">
+                </CompactButton>
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               Icon="@Icons.Material.Filled.CalendarMonth"
+                               OnClick="NavigateToPlanning">
                     Planning (Future)
-                </MudButton>
+                </CompactButton>
             </MudStack>
         </MudPaper>
     }

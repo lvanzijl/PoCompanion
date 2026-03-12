@@ -93,14 +93,12 @@
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@GetLastSyncLabel()</MudText>
 
                     <div class="dashboard-sync-status__actions">
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Default"
-                                   StartIcon="@Icons.Material.Filled.Sync"
-                                   OnClick="TriggerManualSyncAsync"
-                                   Disabled="@_isSyncing"
-                                   Size="Size.Small">
+                        <CompactButton ButtonRole="ButtonRole.Utility"
+                                       Icon="@Icons.Material.Filled.Sync"
+                                       OnClick="TriggerManualSyncAsync"
+                                       Disabled="@_isSyncing">
                             @(_isSyncing ? "Syncing..." : "Sync")
-                        </MudButton>
+                        </CompactButton>
                         <MudLink Href="@WorkspaceRoutes.HomeChanges"
                                  Color="Color.Primary"
                                  Underline="Underline.Always"
@@ -152,22 +150,18 @@
                     <MudText Typo="Typo.overline" Color="Color.Secondary">Quick Actions</MudText>
 
                     <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Default"
-                                    StartIcon="@Icons.Material.Filled.FactCheck"
-                                    OnClick="NavigateToValidationTriage"
-                                    Size="Size.Small"
-                                    Class="dashboard-quick-action">
+                        <CompactButton ButtonRole="ButtonRole.Action"
+                                       Icon="@Icons.Material.Filled.FactCheck"
+                                       OnClick="NavigateToValidationTriage"
+                                       Class="dashboard-quick-action">
                             Validation Triage
-                        </MudButton>
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Default"
-                                    StartIcon="@Icons.Material.Filled.BugReport"
-                                    OnClick='() => NavigationManager.NavigateTo(WorkspaceRoutes.BugTriage)'
-                                    Size="Size.Small"
-                                    Class="dashboard-quick-action">
+                        </CompactButton>
+                        <CompactButton ButtonRole="ButtonRole.Action"
+                                       Icon="@Icons.Material.Filled.BugReport"
+                                       OnClick='() => NavigationManager.NavigateTo(WorkspaceRoutes.BugTriage)'
+                                       Class="dashboard-quick-action">
                             Bug Triage
-                        </MudButton>
+                        </CompactButton>
                     </MudStack>
                 </MudStack>
             </MudPaper>
