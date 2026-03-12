@@ -148,6 +148,7 @@ Action buttons
 Critical buttons
 
 Compact wrappers such as CompactButton must support these roles without forcing all buttons into a single visual style.
+`CompactButton` is the expected implementation point for applying these compact defaults while keeping the role mapping defined in UI_RULES.md.
 
 Examples of allowed adjustments:
 - reduced padding
@@ -256,4 +257,3 @@ This application is **compact by design**.
 - 4px grid, fixed heights, tight internals
 - Structure provides breathing room, not padding
 - Density is enforced, not negotiated
-

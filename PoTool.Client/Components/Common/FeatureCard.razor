@@ -14,12 +14,11 @@
             <MudText>@Description</MudText>
         </MudCardContent>
         <MudCardActions>
-            <MudButton Variant="Variant.Text" 
-                       Color="@ButtonColor" 
-                       Href="@Href"
-                       Disabled="@IsDisabled">
+            <CompactButton ButtonRole="ButtonRole.Action"
+                           Href="@Href"
+                           Disabled="@IsDisabled">
                 @ButtonText
-            </MudButton>
+            </CompactButton>
         </MudCardActions>
     </MudCard>
 </MudItem>
@@ -54,12 +53,6 @@
     /// </summary>
     [Parameter]
     public string ButtonText { get; set; } = "Learn More";
-
-    /// <summary>
-    /// The color of the action button.
-    /// </summary>
-    [Parameter]
-    public Color ButtonColor { get; set; } = Color.Primary;
 
     /// <summary>
     /// The URL to navigate to when the button is clicked.
