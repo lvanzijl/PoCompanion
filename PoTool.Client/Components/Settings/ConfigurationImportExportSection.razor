@@ -1,6 +1,5 @@
 @using System.Text
 @using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.AspNetCore.Components.Rendering
 @using PoTool.Client.Services
 @using PoTool.Shared.Settings
 @inject ConfigurationTransferService ConfigurationTransferService
@@ -79,12 +78,58 @@
 
         @if (_validationResult != null && _importResult == null)
         {
-            @RenderResult("Validation preview", _validationResult, showValidatedProfiles: true)
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudText Typo="Typo.h6">Validation preview</MudText>
+
+                @if (_validationResult.ProfilesValidated.Count > 0)
+                {
+                    <ConfigurationImportResultPanel Title="Profiles ready to import"
+                                                    Severity="Severity.Success"
+                                                    Items="_validationResult.ProfilesValidated" />
+                }
+
+                @if (_validationResult.Warnings.Count > 0)
+                {
+                    <ConfigurationImportResultPanel Title="Warnings"
+                                                    Severity="Severity.Warning"
+                                                    Items="_validationResult.Warnings" />
+                }
+
+                @if (_validationResult.Errors.Count > 0)
+                {
+                    <ConfigurationImportResultPanel Title="Errors"
+                                                    Severity="Severity.Error"
+                                                    Items="_validationResult.Errors" />
+                }
+            </MudPaper>
         }
 
         @if (_importResult != null)
         {
-            @RenderResult("Import results", _importResult, showValidatedProfiles: false)
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudText Typo="Typo.h6">Import results</MudText>
+
+                @if (_importResult.ProfilesImported.Count > 0)
+                {
+                    <ConfigurationImportResultPanel Title="Profiles imported"
+                                                    Severity="Severity.Success"
+                                                    Items="_importResult.ProfilesImported" />
+                }
+
+                @if (_importResult.Warnings.Count > 0)
+                {
+                    <ConfigurationImportResultPanel Title="Warnings"
+                                                    Severity="Severity.Warning"
+                                                    Items="_importResult.Warnings" />
+                }
+
+                @if (_importResult.Errors.Count > 0)
+                {
+                    <ConfigurationImportResultPanel Title="Errors"
+                                                    Severity="Severity.Error"
+                                                    Items="_importResult.Errors" />
+                }
+            </MudPaper>
         }
     </MudStack>
 </div>
@@ -149,7 +194,7 @@
             var json = ConfigurationTransferService.Serialize(exportConfiguration);
             await DownloadFileAsync(
                 json,
-                $"potool-configuration-{DateTime.UtcNow:yyyyMMdd-HHmmss}.json",
+                $"potool-configuration-{DateTime.UtcNow:yyyyMMdd_HHmmss}.json",
                 "application/json");
             Snackbar.Add("Configuration exported successfully.", Severity.Success);
         }
@@ -216,71 +261,6 @@
         {
             _isBusy = false;
         }
-    }
-
-    private RenderFragment RenderResult(string title, ConfigurationImportResultDto result, bool showValidatedProfiles) => builder =>
-    {
-        var sequence = 0;
-        builder.OpenComponent<MudPaper>(sequence++);
-        builder.AddAttribute(sequence++, "Outlined", true);
-        builder.AddAttribute(sequence++, "Class", "pa-3");
-        builder.AddAttribute(sequence++, "ChildContent", (RenderFragment)(paperBuilder =>
-        {
-            var innerSequence = 0;
-            paperBuilder.OpenComponent<MudText>(innerSequence++);
-            paperBuilder.AddAttribute(innerSequence++, "Typo", Typo.h6);
-            paperBuilder.AddAttribute(innerSequence++, "ChildContent", (RenderFragment)(textBuilder =>
-            {
-                textBuilder.AddContent(0, title);
-            }));
-            paperBuilder.CloseComponent();
-
-            if (showValidatedProfiles && result.ProfilesValidated.Count > 0)
-            {
-                RenderSection(paperBuilder, ref innerSequence, "Profiles ready to import", Severity.Success, result.ProfilesValidated);
-            }
-
-            if (result.ProfilesImported.Count > 0)
-            {
-                RenderSection(paperBuilder, ref innerSequence, "Profiles imported", Severity.Success, result.ProfilesImported);
-            }
-
-            if (result.Warnings.Count > 0)
-            {
-                RenderSection(paperBuilder, ref innerSequence, "Warnings", Severity.Warning, result.Warnings);
-            }
-
-            if (result.Errors.Count > 0)
-            {
-                RenderSection(paperBuilder, ref innerSequence, "Errors", Severity.Error, result.Errors);
-            }
-        }));
-        builder.CloseComponent();
-    };
-
-    private static void RenderSection(RenderTreeBuilder builder, ref int sequence, string title, Severity severity, IReadOnlyList<string> items)
-    {
-        builder.OpenComponent<MudAlert>(sequence++);
-        builder.AddAttribute(sequence++, "Severity", severity);
-        builder.AddAttribute(sequence++, "Dense", true);
-        builder.AddAttribute(sequence++, "Class", "mt-3");
-        builder.AddAttribute(sequence++, "ChildContent", (RenderFragment)(alertBuilder =>
-        {
-            var alertSequence = 0;
-            alertBuilder.OpenElement(alertSequence++, "strong");
-            alertBuilder.AddContent(alertSequence++, title);
-            alertBuilder.CloseElement();
-
-            alertBuilder.OpenElement(alertSequence++, "ul");
-            foreach (var item in items)
-            {
-                alertBuilder.OpenElement(alertSequence++, "li");
-                alertBuilder.AddContent(alertSequence++, item);
-                alertBuilder.CloseElement();
-            }
-            alertBuilder.CloseElement();
-        }));
-        builder.CloseComponent();
     }
 
     private async Task DownloadFileAsync(string content, string fileName, string contentType)

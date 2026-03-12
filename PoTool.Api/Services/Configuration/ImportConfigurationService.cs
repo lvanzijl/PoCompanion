@@ -394,7 +394,7 @@ public sealed class ImportConfigurationService
                     .ToList();
             }
 
-            return new ValidationContext(
+            return ValidationContext.Create(
                 configuration,
                 backupConfiguration,
                 true,
@@ -603,18 +603,7 @@ public sealed class ImportConfigurationService
         }
         else
         {
-            current.Url = backupConfiguration.Url;
-            current.Project = backupConfiguration.Project;
-            current.DefaultAreaPath = backupConfiguration.DefaultAreaPath;
-            current.UseDefaultCredentials = backupConfiguration.UseDefaultCredentials;
-            current.TimeoutSeconds = backupConfiguration.TimeoutSeconds;
-            current.ApiVersion = backupConfiguration.ApiVersion;
-            current.LastValidated = backupConfiguration.LastValidated;
-            current.HasTestedConnectionSuccessfully = backupConfiguration.HasTestedConnectionSuccessfully;
-            current.HasVerifiedTfsApiSuccessfully = backupConfiguration.HasVerifiedTfsApiSuccessfully;
-            current.CreatedAt = backupConfiguration.CreatedAt;
-            current.UpdatedAt = backupConfiguration.UpdatedAt;
-            current.UpdatedAtUtc = backupConfiguration.UpdatedAtUtc;
+            CopyTfsConfiguration(current, backupConfiguration);
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -622,22 +611,26 @@ public sealed class ImportConfigurationService
 
     private static TfsConfigEntity CloneTfsConfiguration(TfsConfigEntity source)
     {
-        return new TfsConfigEntity
-        {
-            Id = source.Id,
-            Url = source.Url,
-            Project = source.Project,
-            DefaultAreaPath = source.DefaultAreaPath,
-            UseDefaultCredentials = source.UseDefaultCredentials,
-            TimeoutSeconds = source.TimeoutSeconds,
-            ApiVersion = source.ApiVersion,
-            LastValidated = source.LastValidated,
-            HasTestedConnectionSuccessfully = source.HasTestedConnectionSuccessfully,
-            HasVerifiedTfsApiSuccessfully = source.HasVerifiedTfsApiSuccessfully,
-            CreatedAt = source.CreatedAt,
-            UpdatedAt = source.UpdatedAt,
-            UpdatedAtUtc = source.UpdatedAtUtc
-        };
+        var clone = new TfsConfigEntity();
+        CopyTfsConfiguration(clone, source);
+        clone.Id = source.Id;
+        return clone;
+    }
+
+    private static void CopyTfsConfiguration(TfsConfigEntity target, TfsConfigEntity source)
+    {
+        target.Url = source.Url;
+        target.Project = source.Project;
+        target.DefaultAreaPath = source.DefaultAreaPath;
+        target.UseDefaultCredentials = source.UseDefaultCredentials;
+        target.TimeoutSeconds = source.TimeoutSeconds;
+        target.ApiVersion = source.ApiVersion;
+        target.LastValidated = source.LastValidated;
+        target.HasTestedConnectionSuccessfully = source.HasTestedConnectionSuccessfully;
+        target.HasVerifiedTfsApiSuccessfully = source.HasVerifiedTfsApiSuccessfully;
+        target.CreatedAt = source.CreatedAt;
+        target.UpdatedAt = source.UpdatedAt;
+        target.UpdatedAtUtc = source.UpdatedAtUtc;
     }
 
     private static void ValidateProfileSchema(
@@ -756,26 +749,56 @@ public sealed class ImportConfigurationService
         }
     }
 
-    private sealed record ValidationContext(
-        ConfigurationExportDto Configuration,
-        TfsConfigEntity? BackupConfiguration,
-        bool CanImport,
-        IReadOnlyList<string> ValidatedProfiles,
-        ISet<int> ImportableProfileIds,
-        ISet<int> ImportableTeamIds,
-        IReadOnlyDictionary<int, List<int>> ValidBacklogRootIdsByProduct,
-        IReadOnlyDictionary<int, List<string>> ValidRepositoryNamesByProduct,
-        IReadOnlyDictionary<int, List<int>> ValidTeamIdsByProduct,
-        IReadOnlyList<string> Warnings,
-        IReadOnlyList<string> Errors)
+    private sealed class ValidationContext
     {
+        public required ConfigurationExportDto Configuration { get; init; }
+        public TfsConfigEntity? BackupConfiguration { get; init; }
+        public bool CanImport { get; init; }
+        public required IReadOnlyList<string> ValidatedProfiles { get; init; }
+        public required ISet<int> ImportableProfileIds { get; init; }
+        public required ISet<int> ImportableTeamIds { get; init; }
+        public required IReadOnlyDictionary<int, List<int>> ValidBacklogRootIdsByProduct { get; init; }
+        public required IReadOnlyDictionary<int, List<string>> ValidRepositoryNamesByProduct { get; init; }
+        public required IReadOnlyDictionary<int, List<int>> ValidTeamIdsByProduct { get; init; }
+        public required IReadOnlyList<string> Warnings { get; init; }
+        public required IReadOnlyList<string> Errors { get; init; }
+
+        public static ValidationContext Create(
+            ConfigurationExportDto configuration,
+            TfsConfigEntity? backupConfiguration,
+            bool canImport,
+            IReadOnlyList<string> validatedProfiles,
+            ISet<int> importableProfileIds,
+            ISet<int> importableTeamIds,
+            IReadOnlyDictionary<int, List<int>> validBacklogRootIdsByProduct,
+            IReadOnlyDictionary<int, List<string>> validRepositoryNamesByProduct,
+            IReadOnlyDictionary<int, List<int>> validTeamIdsByProduct,
+            IReadOnlyList<string> warnings,
+            IReadOnlyList<string> errors)
+        {
+            return new ValidationContext
+            {
+                Configuration = configuration,
+                BackupConfiguration = backupConfiguration,
+                CanImport = canImport,
+                ValidatedProfiles = validatedProfiles,
+                ImportableProfileIds = importableProfileIds,
+                ImportableTeamIds = importableTeamIds,
+                ValidBacklogRootIdsByProduct = validBacklogRootIdsByProduct,
+                ValidRepositoryNamesByProduct = validRepositoryNamesByProduct,
+                ValidTeamIdsByProduct = validTeamIdsByProduct,
+                Warnings = warnings,
+                Errors = errors
+            };
+        }
+
         public static ValidationContext Invalid(
             IReadOnlyList<string> errors,
             IReadOnlyList<string> warnings,
             ConfigurationExportDto? configuration = null,
             TfsConfigEntity? backupConfiguration = null)
         {
-            return new ValidationContext(
+            return Create(
                 configuration ?? new ConfigurationExportDto(
                     ExportConfigurationService.SupportedVersion,
                     DateTimeOffset.UtcNow,
@@ -788,7 +811,7 @@ public sealed class ImportConfigurationService
                     [],
                     []),
                 backupConfiguration,
-                false,
+                canImport: false,
                 [],
                 new HashSet<int>(),
                 new HashSet<int>(),
