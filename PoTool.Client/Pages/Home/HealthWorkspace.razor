@@ -1,13 +1,12 @@
 @page "/home/health"
+@using PoTool.Client.Pages.Home.SubComponents
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
 @using PoTool.Shared.WorkItems
-@using PoTool.Shared.Health
+@implements IDisposable
 @inherits WorkspaceBase
-@inject INavigationContextService NavigationContextService
 @inject WorkItemService WorkItemService
 @inject ProductService ProductService
-@inject IWorkItemsClient WorkItemsClient
 
 <PageTitle>Health (Now) - PO Companion</PageTitle>
 
@@ -46,6 +45,10 @@
                         @_productName
                     </MudChip>
                 }
+                else if (ProductId.HasValue && _isProductsLoading)
+                {
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="32px" Width="120px" />
+                }
                 
                 @* Suggestion 3: Bug Triage as primary action in Health workspace *@
                 <CompactButton ButtonRole="ButtonRole.Action"
@@ -70,14 +73,33 @@
         </MudStack>
     </MudPaper>
 
-    @if (_isLoading)
-    {
-        <LoadingIndicator IsLoading="true" />
-    }
-    else
-    {
-        @* ── COMPACT SIGNALS BAR ───────────────────────────────────────────────── *@
-        <MudPaper Elevation="1" Class="pa-2 mb-3">
+    @* ── COMPACT SIGNALS BAR ───────────────────────────────────────────────── *@
+    <MudPaper Elevation="1" Class="pa-2 mb-3">
+        @if (!string.IsNullOrWhiteSpace(_signalsLoadError))
+        {
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap">
+                <MudText Typo="Typo.body2" Color="Color.Error">@_signalsLoadError</MudText>
+                <CompactButton ButtonRole="ButtonRole.Utility"
+                               Icon="@Icons.Material.Filled.Refresh"
+                               OnClick="RetrySignalsAsync"
+                               Disabled="@(_profileProducts.Count == 0)">
+                    Retry
+                </CompactButton>
+            </MudStack>
+        }
+        else if (_isSignalsLoading)
+        {
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="font-weight:600;">Refinement:</MudText>
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="24px" Width="104px" />
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="24px" Width="96px" />
+                <MudDivider Vertical="true" FlexItem="true" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="font-weight:600;">Integrity:</MudText>
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="24px" Width="88px" />
+            </MudStack>
+        }
+        else
+        {
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Style="font-weight:600;">Refinement:</MudText>
                 <MudChip T="string"
@@ -107,128 +129,99 @@
                     Errors · @_structuralIntegrityCount
                 </MudChip>
             </MudStack>
-        </MudPaper>
-
-        @* ── PER-PRODUCT TILES ────────────────────────────────────────────────── *@
-        @if (_profileProducts.Count == 0)
-        {
-            <MudAlert Severity="Severity.Info" Class="mb-4">No products configured for this profile.</MudAlert>
         }
-        else
-        {
-            <MudGrid Class="mb-4">
-                @foreach (var product in _profileProducts)
-                {
-                    var stats = GetProductStats(product.Id);
-                    <MudItem xs="12" md="6" lg="4" @key="product.Id">
-                        <MudCard Elevation="2" Class="health-product-card">
-                            <MudCardHeader>
-                                <CardHeaderContent>
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                        <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" Size="Size.Small" />
-                                        <MudText Typo="Typo.h6" Class="health-product-title">@product.Name</MudText>
-                                    </MudStack>
-                                </CardHeaderContent>
-                            </MudCardHeader>
-                            <MudCardContent Class="pt-0">
-                                @if (stats == null)
-                                {
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">No backlog data available.</MudText>
-                                }
-                                else
-                                {
-                                    @* Ready-to-pick-up + features ready in pending *@
-                                    <MudGrid Spacing="2" Class="mb-3">
-                                        <MudItem xs="6">
-                                            <MudPaper Elevation="0" Class="pa-2 health-tile-stat health-tile-stat--success">
-                                                <MudText Typo="Typo.h5" Color="Color.Success" Class="health-tile-stat-value">@stats.ReadyEffort</MudText>
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">ready story points</MudText>
-                                            </MudPaper>
-                                        </MudItem>
-                                        <MudItem xs="6">
-                                            <MudPaper Elevation="0" Class="pa-2 health-tile-stat health-tile-stat--info">
-                                                <MudText Typo="Typo.h5" Color="Color.Info" Class="health-tile-stat-value">@stats.FeaturesReadyInPendingEpics</MudText>
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">features ready in pending epics</MudText>
-                                            </MudPaper>
-                                        </MudItem>
-                                    </MudGrid>
+    </MudPaper>
 
-                                    @* Top 3 epics closest to ready *@
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="health-tile-section-label mb-1">
-                                        Closest to ready
-                                    </MudText>
-                                    <MudSimpleTable Dense="true" Class="health-epic-table">
-                                        <tbody>
-                                            @for (int i = 0; i < 3; i++)
-                                            {
-                                                int idx = i;
-                                                @if (idx < stats.TopEpics.Count)
-                                                {
-                                                    var epic = stats.TopEpics[idx];
-                                                    <tr @key="epic.TfsId">
-                                                        <td class="health-epic-title-cell">
-                                                            <MudText Typo="Typo.body2" Class="health-epic-title-text">@epic.Title</MudText>
-                                                        </td>
-                                                        <td class="health-epic-score-cell">
-                                                            <MudChip T="string" Size="Size.Small" Color="@GetEpicScoreColor(epic.Score)" Class="health-epic-score-chip">
-                                                                @epic.Score%
-                                                            </MudChip>
-                                                        </td>
-                                                        <td class="health-epic-effort-cell">
-                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@epic.Effort sp</MudText>
-                                                        </td>
-                                                    </tr>
-                                                }
-                                                else
-                                                {
-                                                    <tr @key="@($"empty-{idx}")">
-                                                        <td colspan="3" class="health-epic-empty-cell">—</td>
-                                                    </tr>
-                                                }
-                                            }
-                                        </tbody>
-                                    </MudSimpleTable>
-                                }
-                            </MudCardContent>
-                            <MudCardActions>
-                                <CompactButton ButtonRole="ButtonRole.Action"
-                                               Icon="@Icons.Material.Filled.OpenInNew"
-                                               OnClick="() => NavigateToBacklogOverviewForProduct(product.Id)">
-                                    Backlog Overview
-                                </CompactButton>
-                            </MudCardActions>
-                        </MudCard>
-                    </MudItem>
-                }
-            </MudGrid>
-        }
-
-        @* Cross-Workspace Navigation *@
-        <MudPaper Elevation="2" Class="pa-4">
-            <MudText Typo="Typo.h6" Class="mb-3">
-                <MudIcon Icon="@Icons.Material.Filled.Explore" Class="mr-2" />
-                Navigate to Other Workspaces
-            </MudText>
-
-            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
-                <CompactButton ButtonRole="ButtonRole.Action"
-                               Icon="@Icons.Material.Filled.Inventory2"
-                               OnClick="NavigateToBacklogOverview">
-                    Backlog Overview
-                </CompactButton>
-                <CompactButton ButtonRole="ButtonRole.Action"
-                               Icon="@Icons.Material.Filled.Timeline"
-                               OnClick="NavigateToTrends">
-                    Trends (Past)
-                </CompactButton>
-                <CompactButton ButtonRole="ButtonRole.Action"
-                               Icon="@Icons.Material.Filled.CalendarMonth"
-                               OnClick="NavigateToPlanning">
-                    Planning (Future)
+    @* ── PER-PRODUCT TILES ────────────────────────────────────────────────── *@
+    @if (!string.IsNullOrWhiteSpace(_productsLoadError))
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap">
+                <MudText Typo="Typo.body2">@_productsLoadError</MudText>
+                <CompactButton ButtonRole="ButtonRole.Utility"
+                               Icon="@Icons.Material.Filled.Refresh"
+                               OnClick="RetryProductsAsync">
+                    Retry
                 </CompactButton>
             </MudStack>
-        </MudPaper>
+        </MudAlert>
     }
+    else if (_isProductsLoading)
+    {
+        <MudGrid Class="mb-4">
+            @for (var index = 0; index < 3; index++)
+            {
+                <MudItem xs="12" md="6" lg="4" @key="@($"placeholder-{index}")">
+                    <MudCard Elevation="2" Class="health-product-card">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudSkeleton SkeletonType="SkeletonType.Text" Height="28px" Width="140px" />
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent Class="pt-0">
+                            <MudGrid Spacing="2" Class="mb-3">
+                                <MudItem xs="6">
+                                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="72px" />
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="72px" />
+                                </MudItem>
+                            </MudGrid>
+                            <MudSkeleton SkeletonType="SkeletonType.Text" Height="20px" Width="96px" Class="mb-2" />
+                            @for (var rowIndex = 0; rowIndex < 3; rowIndex++)
+                            {
+                                <MudSkeleton SkeletonType="SkeletonType.Text" Height="24px" Width="100%" Class="mb-1" />
+                            }
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="28px" Width="132px" />
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+    else if (_profileProducts.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">No products configured for this profile.</MudAlert>
+    }
+    else
+    {
+        <MudGrid Class="mb-4">
+            @foreach (var product in _profileProducts)
+            {
+                <MudItem xs="12" md="6" lg="4" @key="product.Id">
+                    <HealthProductSummaryCard Product="product" />
+                </MudItem>
+            }
+        </MudGrid>
+    }
+
+    @* Cross-Workspace Navigation *@
+    <MudPaper Elevation="2" Class="pa-4">
+        <MudText Typo="Typo.h6" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.Explore" Class="mr-2" />
+            Navigate to Other Workspaces
+        </MudText>
+
+        <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+            <CompactButton ButtonRole="ButtonRole.Action"
+                           Icon="@Icons.Material.Filled.Inventory2"
+                           OnClick="NavigateToBacklogOverview">
+                Backlog Overview
+            </CompactButton>
+            <CompactButton ButtonRole="ButtonRole.Action"
+                           Icon="@Icons.Material.Filled.Timeline"
+                           OnClick="NavigateToTrends">
+                Trends (Past)
+            </CompactButton>
+            <CompactButton ButtonRole="ButtonRole.Action"
+                           Icon="@Icons.Material.Filled.CalendarMonth"
+                           OnClick="NavigateToPlanning">
+                Planning (Future)
+            </CompactButton>
+        </MudStack>
+    </MudPaper>
 </MudContainer>
 
 <style>
@@ -273,226 +266,160 @@
 </style>
 
 @code {
-    private bool _isLoading = true;
-    private int? _profileId;
+    private readonly CancellationTokenSource _lifetimeCts = new();
+    private bool _isProductsLoading = true;
+    private bool _isSignalsLoading = true;
     private ProfileDto? _activeProfile;
     private List<BreadcrumbItem> _breadcrumbs = new();
     private string? _productName;
+    private string? _productsLoadError;
+    private string? _signalsLoadError;
 
     // Products for the active profile
     private List<ProductDto> _profileProducts = new();
-
-    // Per-product backlog state
-    private Dictionary<int, ProductBacklogStateDto?> _productBacklogStates = new();
 
     // Validation issue counts by category
     private int _structuralIntegrityCount;
     private int _refinementReadinessCount;
     private int _refinementCompletenessCount;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
+    {
+        ParseContextQueryParameters();
+        UpdateBreadcrumbs();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadWorkspaceAsync();
+        }
+    }
+
+    private async Task LoadWorkspaceAsync()
     {
         try
         {
-            // Parse context from query string (inherited from base class)
-            ParseContextQueryParameters();
-
             if (!await EnsureProfileAsync())
             {
                 return;
             }
 
             _activeProfile = await ProfileService.GetActiveProfileAsync();
-            _profileId = _activeProfile?.Id;
 
-            await LoadDataAsync();
-            UpdateBreadcrumbs();
+            await LoadProductsAsync();
+            await InvokeAsync(StateHasChanged);
+
+            _ = LoadSignalsAsync();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _isLoading = false;
+            Snackbar.Add($"Error loading Health workspace: {ex.Message}", Severity.Error);
         }
     }
 
-    private async Task LoadDataAsync()
+    private async Task LoadProductsAsync()
     {
         try
         {
-            // Reset counts before loading
-            _structuralIntegrityCount = 0;
-            _refinementReadinessCount = 0;
-            _refinementCompletenessCount = 0;
+            _productsLoadError = null;
+            _productName = null;
 
-            // Get products for the active profile
-            if (_activeProfile != null)
+            _profileProducts = _activeProfile != null
+                ? (await ProductService.GetProductsByOwnerAsync(_activeProfile.Id)).ToList()
+                : (await ProductService.GetAllProductsAsync()).ToList();
+
+            if (_lifetimeCts.IsCancellationRequested)
             {
-                _profileProducts = (await ProductService.GetProductsByOwnerAsync(_activeProfile.Id)).ToList();
-            }
-            else
-            {
-                _profileProducts = (await ProductService.GetAllProductsAsync()).ToList();
+                return;
             }
 
-            // Resolve product name for context chip
             if (ProductId.HasValue)
             {
                 _productName = _profileProducts.FirstOrDefault(p => p.Id == ProductId.Value)?.Name;
             }
-
-            var productIds = _profileProducts.Select(p => p.Id).ToArray();
-
-            // Load validation counts and per-product backlog states in parallel
-            var validationTask = LoadValidationCountsAsync(productIds);
-            var backlogTask = LoadBacklogStatesAsync(_profileProducts);
-            await Task.WhenAll(validationTask, backlogTask);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[HealthWorkspace] Failed to load data: {ex.Message}");
+            _profileProducts.Clear();
+            _productsLoadError = "Product cards unavailable right now.";
+            Console.WriteLine($"[HealthWorkspace] Failed to load products: {ex.Message}");
+        }
+        finally
+        {
+            _isProductsLoading = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
-    private async Task LoadValidationCountsAsync(int[] productIds)
+    private async Task LoadSignalsAsync()
     {
         try
         {
-            var workItemsWithValidation = await WorkItemService.GetAllWithValidationAsync(productIds);
-            var workItemsList = workItemsWithValidation.ToList();
+            _signalsLoadError = null;
+            _structuralIntegrityCount = 0;
+            _refinementReadinessCount = 0;
+            _refinementCompletenessCount = 0;
 
-            var workItemsByCategory = new Dictionary<ValidationCategory, HashSet<int>>
+            if (_profileProducts.Count == 0)
             {
-                { ValidationCategory.StructuralIntegrity, new HashSet<int>() },
-                { ValidationCategory.RefinementReadiness, new HashSet<int>() },
-                { ValidationCategory.RefinementCompleteness, new HashSet<int>() }
-            };
-
-            foreach (var wi in workItemsList)
-            {
-                if (wi.ValidationIssues != null)
-                {
-                    foreach (var issue in wi.ValidationIssues)
-                    {
-                        var category = GetCategoryFromRuleId(issue.RuleId);
-                        if (category.HasValue)
-                        {
-                            workItemsByCategory[category.Value].Add(wi.TfsId);
-                        }
-                    }
-                }
+                return;
             }
 
-            _structuralIntegrityCount = workItemsByCategory[ValidationCategory.StructuralIntegrity].Count;
-            _refinementReadinessCount = workItemsByCategory[ValidationCategory.RefinementReadiness].Count;
-            _refinementCompletenessCount = workItemsByCategory[ValidationCategory.RefinementCompleteness].Count;
+            var productIds = _profileProducts.Select(p => p.Id).ToArray();
+            var summary = await WorkItemService.GetValidationTriageSummaryAsync(productIds, _lifetimeCts.Token);
+
+            if (_lifetimeCts.IsCancellationRequested || summary is null)
+            {
+                return;
+            }
+
+            _structuralIntegrityCount = summary.StructuralIntegrity.TotalItemCount;
+            _refinementReadinessCount = summary.RefinementReadiness.TotalItemCount;
+            _refinementCompletenessCount = summary.RefinementCompleteness.TotalItemCount;
+        }
+        catch (OperationCanceledException)
+        {
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[HealthWorkspace] Failed to load validation counts: {ex.Message}");
+            _signalsLoadError = "Validation signals unavailable right now.";
+            Console.WriteLine($"[HealthWorkspace] Failed to load validation summary: {ex.Message}");
+        }
+        finally
+        {
+            _isSignalsLoading = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
-    private async Task LoadBacklogStatesAsync(List<ProductDto> products)
+    private Task RetryProductsAsync()
     {
-        _productBacklogStates = new Dictionary<int, ProductBacklogStateDto?>();
-        using var semaphore = new SemaphoreSlim(5, 5);
-        var tasks = products.Select(async p =>
+        if (_lifetimeCts.IsCancellationRequested)
         {
-            await semaphore.WaitAsync();
-            try
-            {
-                var state = await WorkItemsClient.GetBacklogStateAsync(p.Id);
-                return (p.Id, state);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[HealthWorkspace] Failed to load backlog state for product {p.Id}: {ex.Message}");
-                return (p.Id, (ProductBacklogStateDto?)null);
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        });
-
-        var results = await Task.WhenAll(tasks);
-        foreach (var (id, state) in results)
-        {
-            _productBacklogStates[id] = state;
+            return Task.CompletedTask;
         }
+
+        _productsLoadError = null;
+        _signalsLoadError = null;
+        _isProductsLoading = true;
+        _isSignalsLoading = true;
+        return LoadWorkspaceAsync();
     }
 
-    // ── Per-product stats helpers ────────────────────────────────────────────
-
-    private sealed record EpicSummary(int TfsId, string Title, int Score, int Effort);
-
-    private sealed record ProductBacklogStats(
-        int ReadyEffort,
-        int FeaturesReadyInPendingEpics,
-        IReadOnlyList<EpicSummary> TopEpics);
-
-    private ProductBacklogStats? GetProductStats(int productId)
+    private Task RetrySignalsAsync()
     {
-        if (!_productBacklogStates.TryGetValue(productId, out var state) || state == null)
-            return null;
+        if (_lifetimeCts.IsCancellationRequested || _profileProducts.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
 
-        var readyEpics = state.Epics.Where(e => e.Score == 100).ToList();
-        var pendingEpics = state.Epics.Where(e => e.Score < 100).ToList();
-
-        int readyEffort = readyEpics
-            .SelectMany(e => e.Features)
-            .SelectMany(f => f.Pbis)
-            .Sum(p => p.Effort ?? 0);
-
-        int featuresReadyInPending = pendingEpics
-            .SelectMany(e => e.Features)
-            .Count(f => f.Score == 100);
-
-        var topEpics = state.Epics
-            .OrderByDescending(e => e.Score)
-            .Take(3)
-            .Select(e => new EpicSummary(
-                e.TfsId,
-                e.Title,
-                e.Score,
-                e.Features.SelectMany(f => f.Pbis).Sum(p => p.Effort ?? 0)))
-            .ToList();
-
-        return new ProductBacklogStats(readyEffort, featuresReadyInPending, topEpics);
+        _isSignalsLoading = true;
+        return LoadSignalsAsync();
     }
 
     // ── Navigation helpers ───────────────────────────────────────────────────
-
-    /// <summary>
-    /// Determines the validation category from a rule ID.
-    /// Maps rule ID prefixes to ValidationCategory enum values.
-    /// </summary>
-    private ValidationCategory? GetCategoryFromRuleId(string? ruleId)
-    {
-        if (string.IsNullOrEmpty(ruleId))
-        {
-            return null;
-        }
-
-        // Rule IDs follow pattern: SI-1, RR-1, RC-1
-        if (ruleId.StartsWith("SI-", StringComparison.OrdinalIgnoreCase))
-        {
-            return ValidationCategory.StructuralIntegrity;
-        }
-        else if (ruleId.StartsWith("RR-", StringComparison.OrdinalIgnoreCase))
-        {
-            return ValidationCategory.RefinementReadiness;
-        }
-        else if (ruleId.StartsWith("RC-", StringComparison.OrdinalIgnoreCase))
-        {
-            return ValidationCategory.RefinementCompleteness;
-        }
-
-        return null;
-    }
 
     private void UpdateBreadcrumbs()
     {
@@ -514,11 +441,6 @@
         };
         NavigationManager.NavigateTo(
             $"{WorkspaceRoutes.ValidationQueue}{BuildContextQuery($"category={categoryKey}")}");
-    }
-
-    private void NavigateToBugOverview()
-    {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BugOverview}{BuildContextQuery()}");
     }
 
     private void NavigateToValidationTriage()
@@ -549,11 +471,6 @@
     private void NavigateToBacklogOverview()
     {
         NavigationManager.NavigateTo($"{WorkspaceRoutes.BacklogOverview}{BuildContextQuery()}");
-    }
-
-    private void NavigateToBacklogOverviewForProduct(int productId)
-    {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BacklogOverview}?productId={productId}");
     }
 
     // ── Color helpers ────────────────────────────────────────────────────────
@@ -591,11 +508,9 @@
         };
     }
 
-    private static Color GetEpicScoreColor(int score) => score switch
+    public void Dispose()
     {
-        100 => Color.Success,
-        >= 70 => Color.Info,
-        >= 40 => Color.Warning,
-        _ => Color.Error
-    };
+        _lifetimeCts.Cancel();
+        _lifetimeCts.Dispose();
+    }
 }

@@ -1,0 +1,186 @@
+@using PoTool.Shared.Health
+@using PoTool.Client.ApiClient
+@implements IDisposable
+@inject WorkItemService WorkItemService
+@inject NavigationManager NavigationManager
+
+<MudCard Elevation="2" Class="health-product-card">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" Size="Size.Small" />
+                <MudText Typo="Typo.h6" Class="health-product-title">@Product.Name</MudText>
+            </MudStack>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent Class="pt-0">
+        @if (_isLoading)
+        {
+            <MudGrid Spacing="2" Class="mb-3">
+                <MudItem xs="6">
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="72px" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="72px" />
+                </MudItem>
+            </MudGrid>
+
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="health-tile-section-label mb-1">
+                Closest to ready
+            </MudText>
+
+            @for (var index = 0; index < 3; index++)
+            {
+                <MudSkeleton SkeletonType="SkeletonType.Text" Height="24px" Width="100%" Class="mb-1" />
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(_loadError))
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap">
+                    <MudText Typo="Typo.body2">@_loadError</MudText>
+                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                   Icon="@Icons.Material.Filled.Refresh"
+                                   OnClick="RetryAsync">
+                        Retry
+                    </CompactButton>
+                </MudStack>
+            </MudAlert>
+        }
+        else if (_summary is null)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary">No backlog data available.</MudText>
+        }
+        else
+        {
+            <MudGrid Spacing="2" Class="mb-3">
+                <MudItem xs="6">
+                    <MudPaper Elevation="0" Class="pa-2 health-tile-stat health-tile-stat--success">
+                        <MudText Typo="Typo.h5" Color="Color.Success" Class="health-tile-stat-value">@_summary.ReadyEffort</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">ready story points</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudPaper Elevation="0" Class="pa-2 health-tile-stat health-tile-stat--info">
+                        <MudText Typo="Typo.h5" Color="Color.Info" Class="health-tile-stat-value">@_summary.FeaturesReadyInPendingEpics</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">features ready in pending epics</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="health-tile-section-label mb-1">
+                Closest to ready
+            </MudText>
+            <MudSimpleTable Dense="true" Class="health-epic-table">
+                <tbody>
+                    @for (int i = 0; i < 3; i++)
+                    {
+                        if (i < _summary.TopEpics.Count)
+                        {
+                            var epic = _summary.TopEpics[i];
+                            <tr @key="epic.TfsId">
+                                <td class="health-epic-title-cell">
+                                    <MudText Typo="Typo.body2" Class="health-epic-title-text">@epic.Title</MudText>
+                                </td>
+                                <td class="health-epic-score-cell">
+                                    <MudChip T="string" Size="Size.Small" Color="@GetEpicScoreColor(epic.Score)" Class="health-epic-score-chip">
+                                        @epic.Score%
+                                    </MudChip>
+                                </td>
+                                <td class="health-epic-effort-cell">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@epic.Effort sp</MudText>
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            <tr @key="@($"empty-{i}")">
+                                <td colspan="3" class="health-epic-empty-cell">—</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </MudSimpleTable>
+        }
+    </MudCardContent>
+    <MudCardActions>
+        <CompactButton ButtonRole="ButtonRole.Action"
+                       Icon="@Icons.Material.Filled.OpenInNew"
+                       OnClick="NavigateToBacklogOverview">
+            Backlog Overview
+        </CompactButton>
+    </MudCardActions>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProductDto Product { get; set; } = default!;
+
+    private readonly CancellationTokenSource _loadCts = new();
+    private bool _isLoading = true;
+    private string? _loadError;
+    private HealthWorkspaceProductSummaryDto? _summary;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadSummaryAsync();
+        }
+    }
+
+    private async Task LoadSummaryAsync()
+    {
+        _isLoading = true;
+        _loadError = null;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            _summary = await WorkItemService.GetHealthWorkspaceProductSummaryAsync(Product.Id, _loadCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _summary = null;
+            _loadError = $"Summary unavailable for {Product.Name.ToLowerInvariant()}.";
+            Console.WriteLine($"[HealthProductSummaryCard] Failed to load summary for product {Product.Id}: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private Task RetryAsync()
+    {
+        if (_loadCts.IsCancellationRequested)
+        {
+            return Task.CompletedTask;
+        }
+
+        return LoadSummaryAsync();
+    }
+
+    private void NavigateToBacklogOverview()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BacklogOverview}?productId={Product.Id}");
+    }
+
+    private static Color GetEpicScoreColor(int score) => score switch
+    {
+        100 => Color.Success,
+        >= 70 => Color.Info,
+        >= 40 => Color.Warning,
+        _ => Color.Error
+    };
+
+    public void Dispose()
+    {
+        _loadCts.Cancel();
+        _loadCts.Dispose();
+    }
+}

@@ -1,6 +1,7 @@
 using PoTool.Client.ApiClient;
 using System.Net.Http.Json;
 using System.Text.Json;
+using PoTool.Shared.Health;
 using SharedWorkItemDto = PoTool.Shared.WorkItems.WorkItemDto;
 using SharedValidateWorkItemResponse = PoTool.Shared.WorkItems.ValidateWorkItemResponse;
 using SharedValidateWorkItemRequest = PoTool.Shared.WorkItems.ValidateWorkItemRequest;
@@ -169,11 +170,30 @@ public class WorkItemService
     }
 
     /// <summary>
+    /// Gets cached work items with validation results filtered by product IDs.
+    /// Supports cancellation for progressively loaded dashboard widgets.
+    /// </summary>
+    public async Task<IEnumerable<WorkItemWithValidationDto>> GetAllWithValidationAsync(
+        int[]? productIds,
+        CancellationToken cancellationToken)
+    {
+        string? productIdsParam = null;
+        if (productIds != null && productIds.Length > 0)
+        {
+            productIdsParam = string.Join(",", productIds);
+        }
+
+        return await _client.GetAllWithValidationAsync(productIdsParam, cancellationToken);
+    }
+
+    /// <summary>
     /// Gets the grouped validation triage summary used by the Validation Triage page.
     /// Returns per-category item counts and top rule groups (SI, RR, RC, EFF).
     /// </summary>
     /// <param name="productIds">Optional list of product IDs to filter by.</param>
-    public async Task<SharedValidationTriageSummaryDto?> GetValidationTriageSummaryAsync(int[]? productIds = null)
+    public async Task<SharedValidationTriageSummaryDto?> GetValidationTriageSummaryAsync(
+        int[]? productIds = null,
+        CancellationToken cancellationToken = default)
     {
         var url = ValidationTriageEndpoint;
         if (productIds != null && productIds.Length > 0)
@@ -181,9 +201,26 @@ public class WorkItemService
             url += $"?productIds={string.Join(",", productIds)}";
         }
 
-        var response = await _httpClient.GetAsync(url);
+        var response = await _httpClient.GetAsync(url, cancellationToken);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<SharedValidationTriageSummaryDto>(_jsonOptions);
+        return await response.Content.ReadFromJsonAsync<SharedValidationTriageSummaryDto>(_jsonOptions, cancellationToken);
+    }
+
+    /// <summary>
+    /// Gets the lightweight Health workspace summary for a single product card.
+    /// </summary>
+    public async Task<HealthWorkspaceProductSummaryDto?> GetHealthWorkspaceProductSummaryAsync(
+        int productId,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.GetAsync($"/api/workitems/health-summary/{productId}", cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<HealthWorkspaceProductSummaryDto>(_jsonOptions, cancellationToken);
     }
 
     /// <summary>
