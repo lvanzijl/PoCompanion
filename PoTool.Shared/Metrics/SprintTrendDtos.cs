@@ -175,6 +175,18 @@ public record ProductSprintMetricsDto
     /// Whether approximation was used for this product.
     /// </summary>
     public bool IsApproximate { get; init; }
+
+    /// <summary>
+    /// Net scope change in story points for this product during the sprint.
+    /// Populated for the current or most recent sprint in the request.
+    /// </summary>
+    public int ScopeChangeEffort { get; init; }
+
+    /// <summary>
+    /// Number of features completed for this product during the sprint.
+    /// Populated for the current or most recent sprint in the request.
+    /// </summary>
+    public int CompletedFeatureCount { get; init; }
 }
 
 /// <summary>
@@ -196,6 +208,11 @@ public record GetSprintTrendMetricsRequest
     /// Whether to recompute metrics (true) or use cached projections (false).
     /// </summary>
     public bool Recompute { get; init; }
+
+    /// <summary>
+    /// Whether feature/epic drilldown detail should be included.
+    /// </summary>
+    public bool IncludeDetails { get; init; } = true;
 }
 
 /// <summary>

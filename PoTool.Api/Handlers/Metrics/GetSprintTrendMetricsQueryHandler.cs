@@ -95,6 +95,57 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                 .Where(p => productIds.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id, p => p, cancellationToken);
 
+            IReadOnlyList<FeatureProgressDto> featureProgress = Array.Empty<FeatureProgressDto>();
+            IReadOnlyList<EpicProgressDto> epicProgress = Array.Empty<EpicProgressDto>();
+            Dictionary<int, (int ScopeChangeEffort, int CompletedFeatureCount)> deliverySummaryByProduct = new();
+            int? mostRecentSprintId = null;
+
+            if (query.SprintIds.Count > 0)
+            {
+                // Determine the most recent sprint's date range for activity-based filtering
+                var mostRecentSprint = sprints.Values
+                    .Where(s => s.StartDateUtc != null)
+                    .OrderByDescending(s => s.StartDateUtc)
+                    .FirstOrDefault();
+
+                mostRecentSprintId = mostRecentSprint?.Id;
+
+                DateTime? sprintStartForFilter = mostRecentSprint?.StartDateUtc is { } startDate
+                    ? DateTime.SpecifyKind(startDate, DateTimeKind.Utc)
+                    : null;
+                DateTime? sprintEndForFilter = mostRecentSprint?.EndDateUtc is { } endDate
+                    ? DateTime.SpecifyKind(endDate, DateTimeKind.Utc)
+                    : null;
+
+                // Compute real feature progress from resolved hierarchy, filtered to sprint activity
+                featureProgress = await _projectionService.ComputeFeatureProgressAsync(
+                    query.ProductOwnerId,
+                    sprintStartForFilter,
+                    sprintEndForFilter,
+                    cancellationToken,
+                    mostRecentSprint?.Id);
+
+                // Compute epic progress from feature progress
+                epicProgress = await _projectionService.ComputeEpicProgressAsync(
+                    query.ProductOwnerId,
+                    featureProgress,
+                    cancellationToken);
+
+                deliverySummaryByProduct = epicProgress
+                    .GroupBy(epic => epic.ProductId)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => (
+                            ScopeChangeEffort: group.Sum(epic => epic.SprintEffortDelta),
+                            CompletedFeatureCount: group.Sum(epic => epic.SprintCompletedFeatureCount)));
+
+                if (!query.IncludeDetails)
+                {
+                    featureProgress = Array.Empty<FeatureProgressDto>();
+                    epicProgress = Array.Empty<EpicProgressDto>();
+                }
+            }
+
             // Group by sprint
             var metricsBySprint = projections
                 .GroupBy(p => p.SprintId)
@@ -103,23 +154,32 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                     var sprintId = g.Key;
                     var sprint = sprints.GetValueOrDefault(sprintId);
 
-                    var productMetrics = g.Select(p => new ProductSprintMetricsDto
+                    var productMetrics = g.Select(p =>
                     {
-                        ProductId = p.ProductId,
-                        ProductName = products.GetValueOrDefault(p.ProductId)?.Name ?? "Unknown",
-                        PlannedCount = p.PlannedCount,
-                        PlannedEffort = p.PlannedEffort,
-                        WorkedCount = p.WorkedCount,
-                        WorkedEffort = p.WorkedEffort,
-                        BugsPlannedCount = p.BugsPlannedCount,
-                        BugsWorkedCount = p.BugsWorkedCount,
-                        CompletedPbiCount = p.CompletedPbiCount,
-                        CompletedPbiEffort = p.CompletedPbiEffort,
-                        ProgressionDelta = p.ProgressionDelta,
-                        BugsCreatedCount = p.BugsCreatedCount,
-                        BugsClosedCount = p.BugsClosedCount,
-                        MissingEffortCount = p.MissingEffortCount,
-                        IsApproximate = p.IsApproximate
+                        var deliverySummary = sprintId == mostRecentSprintId && deliverySummaryByProduct.TryGetValue(p.ProductId, out var summary)
+                            ? summary
+                            : default;
+
+                        return new ProductSprintMetricsDto
+                        {
+                            ProductId = p.ProductId,
+                            ProductName = products.GetValueOrDefault(p.ProductId)?.Name ?? "Unknown",
+                            PlannedCount = p.PlannedCount,
+                            PlannedEffort = p.PlannedEffort,
+                            WorkedCount = p.WorkedCount,
+                            WorkedEffort = p.WorkedEffort,
+                            BugsPlannedCount = p.BugsPlannedCount,
+                            BugsWorkedCount = p.BugsWorkedCount,
+                            CompletedPbiCount = p.CompletedPbiCount,
+                            CompletedPbiEffort = p.CompletedPbiEffort,
+                            ProgressionDelta = p.ProgressionDelta,
+                            BugsCreatedCount = p.BugsCreatedCount,
+                            BugsClosedCount = p.BugsClosedCount,
+                            MissingEffortCount = p.MissingEffortCount,
+                            IsApproximate = p.IsApproximate,
+                            ScopeChangeEffort = deliverySummary.ScopeChangeEffort,
+                            CompletedFeatureCount = deliverySummary.CompletedFeatureCount
+                        };
                     }).ToList();
 
                     return new SprintTrendMetricsDto
@@ -150,33 +210,6 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
             _logger.LogInformation(
                 "Returning sprint trend metrics for ProductOwner {ProductOwnerId}: {SprintMetricCount} sprint rows from {ProjectionCount} projections.",
                 query.ProductOwnerId, metricsBySprint.Count, projections.Count);
-
-            // Determine the most recent sprint's date range for activity-based filtering
-            var mostRecentSprint = sprints.Values
-                .Where(s => s.StartDateUtc != null)
-                .OrderByDescending(s => s.StartDateUtc)
-                .FirstOrDefault();
-
-            DateTime? sprintStartForFilter = mostRecentSprint?.StartDateUtc is { } startDate
-                ? DateTime.SpecifyKind(startDate, DateTimeKind.Utc)
-                : null;
-            DateTime? sprintEndForFilter = mostRecentSprint?.EndDateUtc is { } endDate
-                ? DateTime.SpecifyKind(endDate, DateTimeKind.Utc)
-                : null;
-
-            // Compute real feature progress from resolved hierarchy, filtered to sprint activity
-            var featureProgress = await _projectionService.ComputeFeatureProgressAsync(
-                query.ProductOwnerId,
-                sprintStartForFilter,
-                sprintEndForFilter,
-                cancellationToken,
-                mostRecentSprint?.Id);
-
-            // Compute epic progress from feature progress
-            var epicProgress = await _projectionService.ComputeEpicProgressAsync(
-                query.ProductOwnerId,
-                featureProgress,
-                cancellationToken);
 
             // Detect staleness: activity events ingested after last projection computation
             var cacheState = await _context.ProductOwnerCacheStates

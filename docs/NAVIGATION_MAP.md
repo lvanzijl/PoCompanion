@@ -582,13 +582,14 @@ Each level only appears when the user drills into the previous one. Users naviga
 |---|---|
 | Breadcrumb | `Home › Delivery › Sprint Delivery`. |
 | Sprint navigation arrows | Navigate backwards and forwards one sprint at a time through the sprint history. Changing sprint resets drill-down to portfolio level. |
+| Progressive loading shell | The page shell, sprint navigation card, summary cards, and table layout render immediately with local placeholders while sprint data loads in the background. |
 | Drill-down breadcrumb bar | Shows the current position in the hierarchy (Portfolio › Product › Epic › Feature). Click a breadcrumb or the back arrow to return to a higher level. |
 | Portfolio summary | Top-level stakeholder summary showing: Completed PBIs, Effort delivered, Scope Change (Δ Effort), Completed Features, and Bugs (Created / Worked / Closed). Completed PBIs and Effort delivered include comparison badges against the previous sprint. |
 | Effort distribution chart | When multiple products have delivery, shows a horizontal bar chart of effort distribution by product. |
 | Product delivery table | Table of products with delivery activity. Columns: Product, Delivered (pts), Completed PBIs, Completed Features, Scope Change. Click a product row to drill into its epic breakdown. Products with no delivery signal are hidden. |
-| Epic delivery table | Shown after selecting a product. Columns: Epic (ID + title), Progress, Delivered (pts), Δ Effort (pts), Features ✓, PBIs ✓, History. Click an epic row to drill into its feature breakdown. History icon navigates to the Work Item Activity page. |
-| Feature delivery table | Shown after selecting an epic. Columns: Feature (ID + title), Progress, Delivered (pts), Δ Effort (pts), PBIs ✓. Click a feature row to see completed PBIs. Features with zero activity are hidden. |
-| Completed PBIs table | Shown after selecting a feature. Columns: Work Item (ID, linked to TFS), Title, Completed (date), Effort (pts). Displays total count and effort. |
+| Epic delivery table | Shown after selecting a product. Loads on demand rather than with the initial page load. Columns: Epic (ID + title), Progress, Delivered (pts), Δ Effort (pts), Features ✓, PBIs ✓, History. Click an epic row to drill into its feature breakdown. History icon navigates to the Work Item Activity page. |
+| Feature delivery table | Shown after selecting an epic. Loads on demand rather than with the initial page load. Columns: Feature (ID + title), Progress, Delivered (pts), Δ Effort (pts), PBIs ✓. Click a feature row to see completed PBIs. Features with zero activity are hidden. |
+| Completed PBIs table | Shown after selecting a feature. Loads on demand rather than with the initial page load. Columns: Work Item (ID, linked to TFS), Title, Completed (date), Effort (pts). Displays total count and effort. |
 | Back to Delivery button | Returns to `/home/delivery`. |
 | Home button | Returns to `/home`. |
 

@@ -20,9 +20,9 @@ public class SprintService
     /// </summary>
     /// <param name="teamId">The team ID.</param>
     /// <returns>List of sprints ordered by start date descending.</returns>
-    public async Task<IEnumerable<SprintDto>> GetSprintsForTeamAsync(int teamId)
+    public async Task<IEnumerable<SprintDto>> GetSprintsForTeamAsync(int teamId, CancellationToken cancellationToken = default)
     {
-        return await _client.GetSprintsForTeamAsync(teamId);
+        return await _client.GetSprintsForTeamAsync(teamId, cancellationToken);
     }
 
     /// <summary>
@@ -30,11 +30,11 @@ public class SprintService
     /// </summary>
     /// <param name="teamId">The team ID.</param>
     /// <returns>The current sprint, or null if none found.</returns>
-    public async Task<SprintDto?> GetCurrentSprintForTeamAsync(int teamId)
+    public async Task<SprintDto?> GetCurrentSprintForTeamAsync(int teamId, CancellationToken cancellationToken = default)
     {
         try
         {
-            return await _client.GetCurrentSprintForTeamAsync(teamId);
+            return await _client.GetCurrentSprintForTeamAsync(teamId, cancellationToken);
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
         {
