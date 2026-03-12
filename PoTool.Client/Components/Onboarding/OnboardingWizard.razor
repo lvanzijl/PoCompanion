@@ -190,7 +190,7 @@
                             <MudStack Spacing="2">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.FileUpload" Color="Color.Primary" />
-                                    <MudText Typo="Typo.h6">Start from an exported configuration</MudText>
+                                    <MudText Typo="Typo.h6">Import existing configuration</MudText>
                                 </MudStack>
                                 <MudText Typo="Typo.body2">
                                     If you already exported your setup from another environment, import it here. The wizard validates the file automatically, asks before replacing existing configuration, and then continues with the imported profiles and settings.
@@ -199,6 +199,7 @@
                                                                   ShowExportSection="false"
                                                                   UseCompactImportLayout="true"
                                                                   ImportTitle=""
+                                                                  ImportButtonText="Import existing configuration"
                                                                   ImportDescription="Select your exported JSON file and start the import. Validation happens automatically as part of the import flow."
                                                                   OnImportCompleted="HandleImportedConfigurationAsync" />
                             </MudStack>

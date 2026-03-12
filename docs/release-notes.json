@@ -2,6 +2,14 @@
   {
     "date": "2026-03-12",
     "type": "Changed",
+    "title": "Configuration import now blocks duplicate actions",
+    "impact": "Configuration import now validates JSON immediately, disables file selection plus repeat clicks while the import runs, shows staged progress text, and lets you reveal hidden clean-success details on demand.",
+    "area": "Settings",
+    "link": "/settings/import-export"
+  },
+  {
+    "date": "2026-03-12",
+    "type": "Changed",
     "title": "Configuration import now runs as one guided flow",
     "impact": "Import from Settings and the first onboarding step now validates automatically when you click Import configuration, asks before wiping existing local configuration, and only keeps the large results panel for non-clean imports that need inspection.",
     "area": "Settings",
