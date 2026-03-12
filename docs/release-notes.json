@@ -2,6 +2,14 @@
   {
     "date": "2026-03-12",
     "type": "Changed",
+    "title": "Configuration import now tracks entity results",
+    "impact": "Configuration import now records structured per-entity results for profiles, products, teams, repository links, and settings so follow-up diagnostics can be more precise.",
+    "area": "Settings",
+    "link": "/settings/import-export"
+  },
+  {
+    "date": "2026-03-12",
+    "type": "Changed",
     "title": "Configuration import now blocks duplicate actions",
     "impact": "Configuration import now validates JSON immediately, disables file selection plus repeat clicks while the import runs, shows staged progress text, and lets you reveal hidden clean-success details on demand.",
     "area": "Settings",

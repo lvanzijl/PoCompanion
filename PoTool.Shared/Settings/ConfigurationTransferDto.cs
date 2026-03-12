@@ -28,6 +28,21 @@ public sealed record ConfigurationImportRequest(
     bool WipeExistingConfiguration = false
 );
 
+public enum ConfigurationImportEntityStatus
+{
+    Success,
+    Skipped,
+    Warning,
+    Error
+}
+
+public sealed record ConfigurationImportEntityResultDto(
+    string EntityType,
+    string Name,
+    ConfigurationImportEntityStatus Status,
+    string? Message
+);
+
 public sealed record ConfigurationImportResultDto(
     bool CanImport,
     bool ImportExecuted,
@@ -38,5 +53,10 @@ public sealed record ConfigurationImportResultDto(
     IReadOnlyList<string> ExistingConfigurationSummary,
     IReadOnlyList<string> RemovedItems,
     IReadOnlyList<string> Warnings,
-    IReadOnlyList<string> Errors
+    IReadOnlyList<string> Errors,
+    IReadOnlyList<ConfigurationImportEntityResultDto> StructuredProfilesImported,
+    IReadOnlyList<ConfigurationImportEntityResultDto> ProductsImported,
+    IReadOnlyList<ConfigurationImportEntityResultDto> TeamsImported,
+    IReadOnlyList<ConfigurationImportEntityResultDto> RepositoriesLinked,
+    IReadOnlyList<ConfigurationImportEntityResultDto> GlobalSettingsApplied
 );

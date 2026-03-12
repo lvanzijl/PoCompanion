@@ -1461,6 +1461,7 @@ Gebruik **Instellingen → Import / Export** om de volledige lokale configuratie
 
 - Bij een volledig schone import van precies één profiel toont de applicatie alleen een korte bevestiging, zoals **PO profile Lesley successfully imported**.
 - **Profiles imported** toont welke profielen daadwerkelijk zijn aangemaakt.
+- Achter de schermen bewaart het importresultaat nu ook **gestructureerde resultaten per entiteit** voor profielen, producten, teams, repositorykoppelingen en globale instellingen. Daardoor kan de applicatie later gerichter tonen wat exact is gelukt, hergebruikt, overgeslagen of mislukt.
 - **Removed before import** laat zien welke bestaande configuratie eerst is verwijderd wanneer je voor **Wipe and import** hebt gekozen.
 - **Warnings** melden onderdelen die zijn overgeslagen maar waarbij de rest van de import kon doorgaan (bijvoorbeeld een teamkoppeling die niet meer bestaat).
 - **Errors** melden onderdelen die niet konden worden geïmporteerd (bijvoorbeeld een repository die niet meer toegankelijk is of een ontbrekend backlog-rootwerkitem).
