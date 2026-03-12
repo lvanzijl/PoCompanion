@@ -32,7 +32,10 @@ Before producing any output, you MUST load, understand, and apply:
 7. Mock data rules  
    `docs/mock-data-rules.md`
 
-8. Release notes discipline  
+8. UI Loading rules
+   `docs/UI_LOADING_RULES.md`
+
+10. Release notes discipline  
    `docs/PROCESS_RULES.md` §14
 
 If any rule conflicts, is ambiguous, or cannot be satisfied, you MUST stop and ask for clarification.
