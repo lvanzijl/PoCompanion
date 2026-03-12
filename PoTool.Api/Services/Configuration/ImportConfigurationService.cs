@@ -349,12 +349,9 @@ public sealed class ImportConfigurationService
                     repository => repository.Id,
                     repository => repository,
                     StringComparer.OrdinalIgnoreCase);
-            var availableRepositoriesByName = availableRepositories
+            var availableRepositoryGroupsByName = availableRepositories
                 .GroupBy(repository => repository.Name, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(
-                    group => group.Key,
-                    group => group.First(),
-                    StringComparer.OrdinalIgnoreCase);
+                .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
             var workItemTypes = (await _tfsClient.GetWorkItemTypeDefinitionsAsync(cancellationToken))
                 .Select(definition => definition.TypeName)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -416,11 +413,16 @@ public sealed class ImportConfigurationService
                         continue;
                     }
 
-                    if (availableRepositoriesByName.TryGetValue(repository.Name, out var repositoryByName))
+                    if (availableRepositoryGroupsByName.TryGetValue(repository.Name, out var repositoriesByName))
                     {
-                        validRepositoryNames.Add(repositoryByName.Name);
+                        validRepositoryNames.Add(repository.Name);
 
-                        if (!string.IsNullOrWhiteSpace(repository.RepositoryId))
+                        if (repositoriesByName.Count > 1)
+                        {
+                            warnings.Add(
+                                $"Repository '{repository.Name}' for product '{product.Name}' matched multiple repositories by name and could not be uniquely identified.");
+                        }
+                        else if (!string.IsNullOrWhiteSpace(repository.RepositoryId))
                         {
                             warnings.Add(
                                 $"Repository '{repository.Name}' for product '{product.Name}' was found by name, but repository ID '{repository.RepositoryId}' was not accessible.");

@@ -113,13 +113,25 @@ public sealed class ExportConfigurationService
 
         try
         {
-            var repositoryIdsByName = (await _tfsClient.GetGitRepositoriesAsync(cancellationToken))
+            var repositoriesByName = (await _tfsClient.GetGitRepositoriesAsync(cancellationToken))
                 .Where(repository => !string.IsNullOrWhiteSpace(repository.Name))
                 .GroupBy(repository => repository.Name, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(
-                    group => group.Key,
-                    group => group.First().Id,
-                    StringComparer.OrdinalIgnoreCase);
+                .ToList();
+            var repositoryIdsByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var repositoryGroup in repositoriesByName)
+            {
+                if (repositoryGroup.Count() != 1)
+                {
+                    _logger.LogWarning(
+                        "Skipping repository identifier export for duplicate repository name '{RepositoryName}'",
+                        repositoryGroup.Key);
+                    continue;
+                }
+
+                var repository = repositoryGroup.Single();
+                repositoryIdsByName[repository.Name] = repository.Id;
+            }
 
             return products
                 .Select(product => product with
