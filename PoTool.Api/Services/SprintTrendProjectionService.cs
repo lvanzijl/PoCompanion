@@ -24,8 +24,15 @@ public class SprintTrendProjectionService
 
     public SprintTrendProjectionService(
         IServiceScopeFactory scopeFactory,
+        ILogger<SprintTrendProjectionService> logger)
+        : this(scopeFactory, logger, null)
+    {
+    }
+
+    public SprintTrendProjectionService(
+        IServiceScopeFactory scopeFactory,
         ILogger<SprintTrendProjectionService> logger,
-        IWorkItemStateClassificationService? stateClassificationService = null)
+        IWorkItemStateClassificationService? stateClassificationService)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;

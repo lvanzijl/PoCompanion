@@ -12,14 +12,23 @@ internal static class StateClassificationLookup
     public static IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification> Create(
         IEnumerable<WorkItemStateClassificationDto> classifications)
     {
-        return classifications
+        var groupedClassifications = classifications
             .GroupBy(
                 classification => (classification.WorkItemType, classification.StateName),
                 StateKeyComparer.Instance)
-            .ToDictionary(
-                group => group.Key,
-                group => group.Last().Classification,
-                StateKeyComparer.Instance);
+            .ToList();
+
+        var duplicateKey = groupedClassifications.FirstOrDefault(group => group.Skip(1).Any());
+        if (duplicateKey != null)
+        {
+            throw new InvalidOperationException(
+                $"Duplicate state classification detected for work item type '{duplicateKey.Key.WorkItemType}' and state '{duplicateKey.Key.StateName}'.");
+        }
+
+        return groupedClassifications.ToDictionary(
+            group => group.Key,
+            group => group.Single().Classification,
+            StateKeyComparer.Instance);
     }
 
     public static StateClassification GetClassification(
