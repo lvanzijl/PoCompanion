@@ -2,6 +2,14 @@
   {
     "date": "2026-03-13",
     "type": "Fixed",
+    "title": "Sprint commitment now uses day-two history",
+    "impact": "Sprint planned scope, added scope, and removed scope now reconstruct commitment from the item's sprint membership one day after sprint start instead of using its current iteration assignment.",
+    "area": "Trends",
+    "link": "/home/delivery/sprint"
+  },
+  {
+    "date": "2026-03-13",
+    "type": "Fixed",
     "title": "Sprint delivery now uses first Done timing",
     "impact": "Sprint delivery and sprint execution completion now count a work item only when its first canonical Done transition happens in the sprint window, preventing reopened items from being counted twice or reassigned by current state.",
     "area": "Trends",

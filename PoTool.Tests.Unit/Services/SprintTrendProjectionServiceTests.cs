@@ -1178,6 +1178,73 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
+    public void ComputeProductSprintProjection_UsesCommittedScope_WhenItemMovedAwayAfterCommitment()
+    {
+        var sprint = CreateSprint(1, "Sprint 1");
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedSprintId = 2 }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "Moved PBI", effort: 13, state: "Active")
+        };
+        workItems[201].IterationPath = "\\Project\\Backlog";
+
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>();
+
+        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint,
+            1,
+            resolved,
+            workItems,
+            activity,
+            sprintStart,
+            sprintEnd,
+            committedWorkItemIds: new HashSet<int> { 201 });
+
+        Assert.AreEqual(1, result.PlannedCount, "Committed items should remain planned even when current sprint membership changed later.");
+        Assert.AreEqual(13, result.PlannedEffort);
+    }
+
+    [TestMethod]
+    public void ComputeProductSprintProjection_ExcludesItemsAddedAfterCommitment_FromPlannedScope()
+    {
+        var sprint = CreateSprint(1, "Sprint 1");
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedSprintId = 1 }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "Late Add", effort: 8, state: "Active")
+        };
+
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>();
+
+        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint,
+            1,
+            resolved,
+            workItems,
+            activity,
+            sprintStart,
+            sprintEnd,
+            committedWorkItemIds: new HashSet<int>());
+
+        Assert.AreEqual(0, result.PlannedCount, "Items that were not on the sprint at commitment should not count as planned scope.");
+        Assert.AreEqual(0, result.PlannedEffort);
+    }
+
+    [TestMethod]
     public void ComputeProductSprintProjection_MetadataOnlyActivity_DoesNotCountAsWorked()
     {
         var sprint = CreateSprint(1, "Sprint 1");
@@ -1869,6 +1936,22 @@ public class SprintTrendProjectionServiceTests
             FieldRefName = fieldRefName,
             EventTimestamp = timestamp,
             EventTimestampUtc = timestamp.UtcDateTime,
+        };
+    }
+
+    private static ActivityEventLedgerEntryEntity CreateIterationPathActivity(
+        int workItemId, DateTimeOffset timestamp, string? oldValue, string? newValue)
+    {
+        return new ActivityEventLedgerEntryEntity
+        {
+            WorkItemId = workItemId,
+            ProductOwnerId = 1,
+            UpdateId = 1,
+            FieldRefName = "System.IterationPath",
+            EventTimestamp = timestamp,
+            EventTimestampUtc = timestamp.UtcDateTime,
+            OldValue = oldValue,
+            NewValue = newValue
         };
     }
 
