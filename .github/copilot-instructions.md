@@ -42,6 +42,26 @@ If any rule conflicts, is ambiguous, or cannot be satisfied, you MUST stop and a
 
 ---
 
+# Domain Model
+
+PoTool analytics logic must follow the canonical domain model.
+
+Canonical reference:
+docs/domain/domain_model.md
+
+Copilot must follow the summarized domain rules located in:
+
+docs/domain/rules/hierarchy_rules.md
+docs/domain/rules/estimation_rules.md
+docs/domain/rules/state_rules.md
+docs/domain/rules/sprint_rules.md
+docs/domain/rules/propagation_rules.md
+docs/domain/rules/metrics_rules.md
+docs/domain/rules/source_rules.md
+
+When implementing analytics logic, always apply these rules before writing queries or calculations.
+
+
 ## 2. Mandatory pre-generation verification (silent)
 
 Before generating any output, you MUST internally verify that:
