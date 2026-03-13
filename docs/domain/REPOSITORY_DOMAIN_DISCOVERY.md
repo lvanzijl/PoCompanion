@@ -64,7 +64,7 @@ The analysis focuses on how the code currently interprets:
 
 The shared/core hierarchy vocabulary is:
 
-1. lowercase `goal` (implemented constant name)
+1. `goal` (lowercase implemented constant name)
 2. `Objective`
 3. `Epic`
 4. `Feature`
@@ -282,13 +282,13 @@ The whitelist comes from `RevisionFieldWhitelist` and includes fields such as:
 
 ### Whether comments count
 
-No explicit comment-ingestion model was found.
+No explicit comment ingestion model was found.
 
 The activity pipeline iterates `update.FieldChanges`; it does not separately persist a comment concept, discussion concept, or review-note concept for work items.
 
 ### Whether link changes count
 
-No explicit link-change ingestion model was found for work item activity.
+No explicit link change ingestion model was found for work item activity.
 
 Dependency and hierarchy links are loaded from the current `Relations` snapshot for dependency analysis, but the activity ledger does not store a dedicated relation-change event type.
 
