@@ -234,3 +234,20 @@ The repository contains the building blocks required by the canonical domain mod
 - **Tests added or updated**
   - Updated `SprintTrendProjectionServiceTests` to verify canonical mappings such as `Resolved -> Done` for PBI, bug, feature, and epic analytics.
   - Added `GetSprintExecutionQueryHandlerTests` to verify canonical done mapping is honored and raw done fallbacks are no longer used.
+
+## Fix Progress — First Done Delivery Rule
+
+- **Services updated**
+  - `PoTool.Api/Services/FirstDoneDeliveryLookup.cs`
+  - `PoTool.Api/Services/SprintTrendProjectionService.cs`
+  - `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs`
+
+- **Logic replaced**
+  - Sprint trend projection delivery now counts PBIs and bugs from the first canonical `Done` transition timestamp found in update history, not from any in-window re-done event.
+  - Sprint execution completion ordering now uses the first canonical `Done` transition within the sprint window instead of current snapshot state or `ClosedDate`.
+  - Sprint execution delivery no longer depends on the work item still being in the sprint iteration path after the sprint window.
+
+- **Test cases added**
+  - `Done -> Reopened -> Done` counts only one delivery in `SprintTrendProjectionServiceTests`.
+  - `Done before sprint -> reopened during sprint -> done again` does not create a second delivery in both projection and sprint execution tests.
+  - `First done inside sprint window` counts delivery from update history, including when the item is no longer in the sprint iteration path.

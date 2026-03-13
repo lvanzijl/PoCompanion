@@ -255,6 +255,114 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
+    public void ComputeProductSprintProjection_DoneReopenedDone_CountsOnlyFirstDoneDelivery()
+    {
+        var sprint = CreateSprint(1, "Sprint 1");
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedSprintId = 1 }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 8, state: "Done")
+        };
+
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [201] = new()
+            {
+                CreateStateChangeActivity(201, sprintStart.AddDays(2), "Active", "Done"),
+                CreateStateChangeActivity(201, sprintStart.AddDays(4), "Done", "Active"),
+                CreateStateChangeActivity(201, sprintStart.AddDays(6), "Active", "Done")
+            }
+        };
+
+        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
+
+        Assert.AreEqual(1, projection.CompletedPbiCount, "Only the first Done transition should count as delivery");
+        Assert.AreEqual(8, projection.CompletedPbiEffort);
+    }
+
+    [TestMethod]
+    public void ComputeProductSprintProjection_DoneBeforeSprint_ReopenedDuringSprint_DoesNotCountDelivery()
+    {
+        var sprint = CreateSprint(1, "Sprint 1");
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedSprintId = 1 }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 8, state: "Done")
+        };
+
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [201] = new()
+            {
+                CreateStateChangeActivity(201, sprintStart.AddDays(-1), "Active", "Done"),
+                CreateStateChangeActivity(201, sprintStart.AddDays(3), "Done", "Active"),
+                CreateStateChangeActivity(201, sprintStart.AddDays(5), "Active", "Done")
+            }
+        };
+
+        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
+
+        Assert.AreEqual(0, projection.CompletedPbiCount, "A second Done transition must not create a new sprint delivery");
+        Assert.AreEqual(0, projection.CompletedPbiEffort);
+    }
+
+    [TestMethod]
+    public void ComputeProductSprintProjection_FirstDoneInsideSprint_CountsCanonicalDelivery()
+    {
+        var sprint = CreateSprint(1, "Sprint 1");
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedSprintId = 1 }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 13, state: "Resolved")
+        };
+
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [201] = new()
+            {
+                CreateStateChangeActivity(201, sprintStart.AddDays(-2), "New", "Active"),
+                CreateStateChangeActivity(201, sprintStart.AddDays(2), "Active", "Resolved")
+            }
+        };
+
+        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint,
+            1,
+            resolved,
+            workItems,
+            activity,
+            sprintStart,
+            sprintEnd,
+            BuildStateLookup((WorkItemType.Pbi, "Resolved", StateClassification.Done)));
+
+        Assert.AreEqual(1, projection.CompletedPbiCount, "The first canonical Done transition inside the sprint should count as delivery");
+        Assert.AreEqual(13, projection.CompletedPbiEffort);
+    }
+
+    [TestMethod]
     public void ComputeProgressionDelta_ReturnsZero_WhenNoFeatures()
     {
         var resolved = new List<ResolvedWorkItemEntity>();
@@ -1744,6 +1852,7 @@ public class SprintTrendProjectionServiceTests
             UpdateId = 1,
             FieldRefName = "System.State",
             EventTimestamp = timestamp,
+            EventTimestampUtc = timestamp.UtcDateTime,
             OldValue = oldValue,
             NewValue = newValue,
         };
@@ -1759,6 +1868,7 @@ public class SprintTrendProjectionServiceTests
             UpdateId = 1,
             FieldRefName = fieldRefName,
             EventTimestamp = timestamp,
+            EventTimestampUtc = timestamp.UtcDateTime,
         };
     }
 
