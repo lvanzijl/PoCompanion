@@ -100,6 +100,8 @@ public class SprintTrendProjectionService
             return Array.Empty<SprintMetricsProjectionEntity>();
         }
 
+        var stateLookup = await GetStateLookupAsync(cancellationToken);
+
         // Batch-load all activity events for the full date range across all sprints
         var rangeStartUtc = validSprints.Min(s => DateTime.SpecifyKind(s.StartDateUtc!.Value, DateTimeKind.Utc));
         var rangeEndUtc = validSprints.Max(s => DateTime.SpecifyKind(s.EndDateUtc!.Value, DateTimeKind.Utc));
@@ -111,6 +113,14 @@ public class SprintTrendProjectionService
                 && e.EventTimestampUtc <= rangeEndUtc)
             .ToListAsync(cancellationToken);
 
+        var allStateEvents = await context.ActivityEventLedgerEntries
+            .AsNoTracking()
+            .Where(e => e.ProductOwnerId == productOwnerId
+                && e.FieldRefName == "System.State"
+                && e.EventTimestampUtc <= rangeEndUtc
+                && resolvedWorkItemIds.Contains(e.WorkItemId))
+            .ToListAsync(cancellationToken);
+
         // Batch-load existing projections for all sprint+product combinations
         var validSprintIds = validSprints.Select(s => s.Id).ToList();
         var existingProjections = await context.SprintMetricsProjections
@@ -120,7 +130,8 @@ public class SprintTrendProjectionService
         var existingByKey = existingProjections
             .ToDictionary(p => (p.SprintId, p.ProductId), p => p);
 
-        var stateLookup = await GetStateLookupAsync(cancellationToken);
+        var workItemTypesById = workItemsByTfsId.ToDictionary(pair => pair.Key, pair => pair.Value.Type);
+        var firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(allStateEvents, workItemTypesById, stateLookup);
         var results = new List<SprintMetricsProjectionEntity>();
 
         foreach (var sprint in validSprints)
@@ -144,7 +155,7 @@ public class SprintTrendProjectionService
                 var projection = ComputeProductSprintProjection(
                     sprint, productId,
                     resolvedItems, workItemsByTfsId,
-                    activityByWorkItem, sprintStart, sprintEnd, stateLookup);
+                    activityByWorkItem, sprintStart, sprintEnd, stateLookup, firstDoneByWorkItem);
 
                 if (existingByKey.TryGetValue((sprint.Id, productId), out var existing))
                 {
@@ -190,13 +201,25 @@ public class SprintTrendProjectionService
         IReadOnlyDictionary<int, List<ActivityEventLedgerEntryEntity>> activityByWorkItem,
         DateTimeOffset sprintStart,
         DateTimeOffset sprintEnd,
-        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null,
+        IReadOnlyDictionary<int, DateTimeOffset>? firstDoneByWorkItem = null)
     {
+        var effectiveFirstDoneByWorkItem = firstDoneByWorkItem
+            ?? FirstDoneDeliveryLookup.Build(
+                activityByWorkItem.Values.SelectMany(events => events),
+                workItemsByTfsId.ToDictionary(pair => pair.Key, pair => pair.Value.Type),
+                stateLookup);
+
         var functionalActivityByWorkItem = activityByWorkItem
             .Select(pair => new
             {
                 pair.Key,
                 Events = pair.Value
+                    .Where(e =>
+                    {
+                        var eventTimestamp = FirstDoneDeliveryLookup.GetEventTimestamp(e);
+                        return eventTimestamp >= sprintStart && eventTimestamp <= sprintEnd;
+                    })
                     .Where(e => !string.IsNullOrWhiteSpace(e.FieldRefName)
                         && !ExcludedActivityFields.Contains(e.FieldRefName))
                     .ToList()
@@ -242,12 +265,11 @@ public class SprintTrendProjectionService
             if (!workItemsByTfsId.TryGetValue(pbi.WorkItemId, out var wi))
                 continue;
 
-            var pbiActivity = functionalActivityByWorkItem.GetValueOrDefault(pbi.WorkItemId);
-            var transitionedToDone = pbiActivity?.Any(e =>
-                string.Equals(e.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase)
-                && StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, e.NewValue)) == true;
+            var deliveredInSprint = effectiveFirstDoneByWorkItem.TryGetValue(pbi.WorkItemId, out var firstDoneTimestamp)
+                && firstDoneTimestamp >= sprintStart
+                && firstDoneTimestamp <= sprintEnd;
 
-            if (transitionedToDone)
+            if (deliveredInSprint)
             {
                 completedPbiCount++;
                 completedPbiEffort += wi.Effort ?? 0;
@@ -294,10 +316,9 @@ public class SprintTrendProjectionService
                 bugsCreated++;
             }
 
-            var bugActivity = functionalActivityByWorkItem.GetValueOrDefault(bug.WorkItemId);
-            var bugClosedInSprint = bugActivity?.Any(e =>
-                string.Equals(e.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase)
-                && StateClassificationLookup.IsDone(stateLookup, WorkItemType.Bug, e.NewValue)) == true;
+            var bugClosedInSprint = effectiveFirstDoneByWorkItem.TryGetValue(bug.WorkItemId, out var bugFirstDoneTimestamp)
+                && bugFirstDoneTimestamp >= sprintStart
+                && bugFirstDoneTimestamp <= sprintEnd;
 
             if (bugClosedInSprint)
             {

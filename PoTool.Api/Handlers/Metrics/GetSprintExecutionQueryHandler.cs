@@ -91,13 +91,17 @@ public sealed class GetSprintExecutionQueryHandler
         var resolvedWorkItemIds = resolvedItems.Select(r => r.WorkItemId).ToHashSet();
         var productByWorkItem = resolvedItems.ToDictionary(r => r.WorkItemId, r => r.ResolvedProductId!.Value);
 
-        // ── Step 4: Load current work items in the sprint iteration path ──────
-        var currentSprintItems = await _context.WorkItems
+        // ── Step 4: Load relevant work items ──────────────────────────────────
+        var relevantWorkItems = await _context.WorkItems
             .AsNoTracking()
-            .Where(w => w.IterationPath == sprint.Path
-                        && (w.Type == PbiType || w.Type == BugType)
+            .Where(w => (w.Type == PbiType || w.Type == BugType)
                         && resolvedWorkItemIds.Contains(w.TfsId))
             .ToListAsync(cancellationToken);
+
+        var relevantWorkItemsById = relevantWorkItems.ToDictionary(w => w.TfsId, w => w);
+        var currentSprintItems = relevantWorkItems
+            .Where(w => w.IterationPath == sprint.Path)
+            .ToList();
 
         // ── Step 5: Get product names ─────────────────────────────────────────
         var productNames = await _context.Products
@@ -112,9 +116,27 @@ public sealed class GetSprintExecutionQueryHandler
         // ── Step 7: Detect sprint additions and removals from activity events ─
         var sprintStart = sprint.StartUtc;
         var sprintEnd = sprint.EndUtc;
+        var firstDoneByWorkItem = new Dictionary<int, DateTimeOffset>();
 
         var addedWorkItemIds = new HashSet<int>();
         var removedEntries = new List<(int WorkItemId, DateTimeOffset Timestamp)>();
+
+        if (sprintEnd.HasValue)
+        {
+            var stateEvents = await _context.ActivityEventLedgerEntries
+                .AsNoTracking()
+                .Where(e => e.ProductOwnerId == query.ProductOwnerId
+                            && e.FieldRefName == "System.State"
+                            && e.EventTimestampUtc <= sprintEnd.Value.UtcDateTime
+                            && resolvedWorkItemIds.Contains(e.WorkItemId))
+                .ToListAsync(cancellationToken);
+
+            firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(
+                    stateEvents,
+                    relevantWorkItemsById.ToDictionary(pair => pair.Key, pair => pair.Value.Type),
+                    stateLookup)
+                .ToDictionary(pair => pair.Key, pair => pair.Value);
+        }
 
         if (sprintStart.HasValue && sprintEnd.HasValue)
         {
@@ -170,13 +192,20 @@ public sealed class GetSprintExecutionQueryHandler
             : new List<Persistence.Entities.WorkItemEntity>();
 
         // ── Step 9: Classify items ────────────────────────────────────────────
-        var completedItems = currentSprintItems
-            .Where(w => StateClassificationLookup.IsDone(stateLookup, w.Type, w.State))
-            .OrderBy(w => w.ClosedDate ?? DateTimeOffset.MaxValue)
-            .ToList();
+        var completedItems = sprintStart.HasValue && sprintEnd.HasValue
+            ? relevantWorkItems
+                .Where(w => firstDoneByWorkItem.TryGetValue(w.TfsId, out var firstDoneTimestamp)
+                            && firstDoneTimestamp >= sprintStart.Value
+                            && firstDoneTimestamp <= sprintEnd.Value)
+                .OrderBy(w => firstDoneByWorkItem[w.TfsId])
+                .ThenBy(w => w.TfsId)
+                .ToList()
+            : new List<Persistence.Entities.WorkItemEntity>();
+
+        var completedItemIds = completedItems.Select(w => w.TfsId).ToHashSet();
 
         var unfinishedItems = currentSprintItems
-            .Where(w => !StateClassificationLookup.IsDone(stateLookup, w.Type, w.State))
+            .Where(w => !completedItemIds.Contains(w.TfsId))
             .ToList();
 
         // Items in initial scope = current items NOT in addedDuringSprint + removed items NOT in addedDuringSprint
@@ -231,7 +260,7 @@ public sealed class GetSprintExecutionQueryHandler
             Title = w.Title,
             Effort = w.Effort,
             State = w.State,
-            ClosedDate = w.ClosedDate,
+            ClosedDate = firstDoneByWorkItem[w.TfsId],
             EnteredSprintDate = enteredSprintDates.GetValueOrDefault(w.TfsId),
             ProductName = ResolveProductName(w.TfsId),
             CompletionOrder = ++completionOrder
@@ -314,7 +343,7 @@ public sealed class GetSprintExecutionQueryHandler
             AddedDuringSprint = addedPbiDtos,
             RemovedDuringSprint = removedPbiDtos,
             StarvedPbis = starvedPbiDtos,
-            HasData = currentSprintItems.Count > 0 || removedWorkItems.Count > 0
+            HasData = currentSprintItems.Count > 0 || removedWorkItems.Count > 0 || completedItems.Count > 0
         };
     }
 
