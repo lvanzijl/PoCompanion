@@ -64,7 +64,7 @@ The analysis focuses on how the code currently interprets:
 
 The shared/core hierarchy vocabulary is:
 
-1. `goal`
+1. lowercase `goal` (implemented constant name)
 2. `Objective`
 3. `Epic`
 4. `Feature`
@@ -491,7 +491,7 @@ The repository-wide type model includes `Goal` and `Objective`, but many importa
 Different parts of the code interpret effort differently:
 
 - TFS ingestion normalizes `Effort` with fallback to `StoryPoints`
-- `WorkItemEntity` comments describe effort as hours
+- `WorkItemEntity` comments describe the same normalized integer field as hours
 - many DTOs and handlers label the same data as story points
 - roadmap analytics interprets active PBI/Bug effort as remaining work
 - feature progress substitutes missing PBI effort with sibling averages
