@@ -338,7 +338,7 @@ Implemented rules include:
 - `PbiDescriptionEmptyRule`
 - `PbiEffortEmptyRule`
 
-The minimum description threshold is `10` characters (`ValidationRuleConstants.MinimumDescriptionLength`).
+The shared `10`-character minimum (`ValidationRuleConstants.MinimumDescriptionLength`) is applied by the Epic and Feature description readiness rules. The PBI description rule is looser: it checks only for an empty/whitespace description.
 
 ### Severity / consequence model
 
@@ -486,12 +486,14 @@ The repository-wide type model includes `Goal` and `Objective`, but many importa
 - roadmap discovery uses `Objective` and `Epic`
 - release planning uses `Objective → Epic`, but delivery models usually start at `Epic` or `Feature`
 
+There is also a smaller naming inconsistency in the base type model itself: `WorkItemType.Goal` is implemented as lowercase `goal`, while the other built-in type constants are title-cased.
+
 ### 2. Effort semantics are inconsistent
 
 Different parts of the code interpret effort differently:
 
 - TFS ingestion normalizes `Effort` with fallback to `StoryPoints`
-- `PoTool.Api/Persistence/Entities/WorkItemEntity.cs` documents the same normalized integer field as an effort estimate in hours
+- the XML comment on `PoTool.Api/Persistence/Entities/WorkItemEntity.Effort` says `Effort estimate in hours (nullable)`
 - many DTOs and handlers label the same data as story points
 - roadmap analytics interprets active PBI/Bug effort as remaining work
 - feature progress substitutes missing PBI effort with sibling averages
