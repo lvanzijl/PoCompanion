@@ -4,6 +4,7 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -210,6 +211,50 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
+    public void ComputeProductSprintProjection_UsesCanonicalDoneMappingForResolvedStates()
+    {
+        var sprint = CreateSprint(1, "Sprint 1");
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1, ResolvedSprintId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100, ResolvedSprintId = 1 },
+            new() { WorkItemId = 300, WorkItemType = WorkItemType.Bug, ResolvedProductId = 1, ResolvedSprintId = 1 }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 13, state: "Resolved", parentId: 100),
+            [300] = CreateWorkItem(300, WorkItemType.Bug, "Bug 1", state: "Resolved", createdDate: sprintStart.AddDays(1))
+        };
+
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [201] = new() { CreateStateChangeActivity(201, sprintStart.AddDays(2), "Active", "Resolved") },
+            [300] = new() { CreateStateChangeActivity(300, sprintStart.AddDays(3), "Active", "Resolved") }
+        };
+
+        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint,
+            1,
+            resolved,
+            workItems,
+            activity,
+            sprintStart,
+            sprintEnd,
+            BuildStateLookup(
+                (WorkItemType.Pbi, "Resolved", StateClassification.Done),
+                (WorkItemType.Bug, "Resolved", StateClassification.Done)));
+
+        Assert.AreEqual(1, projection.CompletedPbiCount, "Resolved PBI should count as completed when mapped to canonical Done");
+        Assert.AreEqual(13, projection.CompletedPbiEffort);
+        Assert.AreEqual(1, projection.BugsClosedCount, "Resolved bug should count as closed when mapped to canonical Done");
+    }
+
+    [TestMethod]
     public void ComputeProgressionDelta_ReturnsZero_WhenNoFeatures()
     {
         var resolved = new List<ResolvedWorkItemEntity>();
@@ -324,11 +369,11 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
-    public void ComputeFeatureProgress_DoneFeature_Shows100Percent()
+    public void ComputeFeatureProgress_CanonicallyDoneFeature_Shows100Percent()
     {
         var workItems = new Dictionary<int, WorkItemEntity>
         {
-            [100] = CreateWorkItem(100, WorkItemType.Feature, "Done Feature", state: "Done"),
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Done Feature", state: "Resolved"),
             [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 5, state: "Done", parentId: 100),
             [202] = CreateWorkItem(202, WorkItemType.Pbi, "PBI 2", effort: 5, state: "Active", parentId: 100),
         };
@@ -343,7 +388,38 @@ public class SprintTrendProjectionServiceTests
         var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
 
         Assert.HasCount(1, result);
-        Assert.AreEqual(100, result[0].ProgressPercent, "Done feature should show 100%");
+        Assert.AreEqual(100, result[0].ProgressPercent, "Canonically done feature should show 100%");
+        Assert.IsTrue(result[0].IsDone);
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_UsesCanonicalDoneMappingForResolvedStates()
+    {
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Resolved Feature", state: "Resolved"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "Resolved PBI", effort: 5, state: "Resolved", parentId: 100),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "Active PBI", effort: 5, state: "Active", parentId: 100),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+        };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+            resolved,
+            workItems,
+            new List<int> { 1 },
+            stateLookup: BuildStateLookup(
+                (WorkItemType.Feature, "Resolved", StateClassification.Done),
+                (WorkItemType.Pbi, "Resolved", StateClassification.Done)));
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(100, result[0].ProgressPercent, "Resolved feature should be treated as done when canonically mapped");
+        Assert.AreEqual(5, result[0].DoneEffort, "Resolved PBI should contribute to done effort");
         Assert.IsTrue(result[0].IsDone);
     }
 
@@ -671,7 +747,7 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
-    public void ComputeEpicProgress_DoneEpic_Shows100Percent()
+    public void ComputeEpicProgress_CanonicallyDoneEpic_Shows100Percent()
     {
         var featureProgress = new List<FeatureProgressDto>
         {
@@ -691,14 +767,49 @@ public class SprintTrendProjectionServiceTests
 
         var workItems = new Dictionary<int, WorkItemEntity>
         {
-            [100] = CreateWorkItem(100, WorkItemType.Epic, "Done Epic", state: "Done"),
+            [100] = CreateWorkItem(100, WorkItemType.Epic, "Done Epic", state: "Resolved"),
         };
         var resolvedItems = new List<ResolvedWorkItemEntity>();
 
         var result = SprintTrendProjectionService.ComputeEpicProgress(featureProgress, resolvedItems, workItems);
 
         Assert.HasCount(1, result);
-        Assert.AreEqual(100, result[0].ProgressPercent, "Done epic should show 100%");
+        Assert.AreEqual(100, result[0].ProgressPercent, "Canonically done epic should show 100%");
+        Assert.IsTrue(result[0].IsDone);
+    }
+
+    [TestMethod]
+    public void ComputeEpicProgress_UsesCanonicalDoneMappingForResolvedState()
+    {
+        var featureProgress = new List<FeatureProgressDto>
+        {
+            new()
+            {
+                FeatureId = 200,
+                FeatureTitle = "Feature A",
+                EpicId = 100,
+                EpicTitle = "Resolved Epic",
+                ProductId = 1,
+                ProgressPercent = 50,
+                TotalEffort = 10,
+                DoneEffort = 5,
+                IsDone = false
+            }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Epic, "Resolved Epic", state: "Resolved"),
+        };
+
+        var result = SprintTrendProjectionService.ComputeEpicProgress(
+            featureProgress,
+            new List<ResolvedWorkItemEntity>(),
+            workItems,
+            BuildStateLookup((WorkItemType.Epic, "Resolved", StateClassification.Done)));
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(100, result[0].ProgressPercent, "Resolved epic should be treated as done when canonically mapped");
         Assert.IsTrue(result[0].IsDone);
     }
 
@@ -1649,5 +1760,13 @@ public class SprintTrendProjectionServiceTests
             FieldRefName = fieldRefName,
             EventTimestamp = timestamp,
         };
+    }
+
+    private static IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification> BuildStateLookup(
+        params (string WorkItemType, string StateName, StateClassification Classification)[] classifications)
+    {
+        return classifications.ToDictionary(
+            classification => (classification.WorkItemType, classification.StateName),
+            classification => classification.Classification);
     }
 }

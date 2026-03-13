@@ -214,3 +214,23 @@
 **Non compliant**
 
 The repository contains the building blocks required by the canonical domain model: configurable state mapping and timestamped update-event ingestion. However, the audited sprint and delivery implementation is not compliant overall because core production handlers still mix current iteration membership, current state snapshots, `ClosedDate`, and raw TFS state names in places where the domain model requires canonical state resolution plus first-done event semantics within the sprint window. Commitment timestamp reconstruction, canonical spillover detection, and globally correct first-done handling are not implemented in the audited code paths.
+
+## Fix Progress — Canonical State Usage
+
+- **Files changed**
+  - `PoTool.Api/Services/StateClassificationLookup.cs`
+  - `PoTool.Api/Services/WorkItemStateClassificationService.cs`
+  - `PoTool.Api/Services/SprintTrendProjectionService.cs`
+  - `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs`
+  - `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs`
+  - `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs`
+
+- **Raw state comparisons removed**
+  - Replaced sprint projection PBI and bug delivery checks with canonical done classification lookups.
+  - Replaced sprint progression, feature progress, and epic progress raw done checks with canonical state resolution.
+  - Replaced sprint execution completion classification and raw done fallback with `IWorkItemStateClassificationService` lookups.
+  - Replaced sprint-scoped PBI completion event filtering from raw `"Done"` to the configured canonical done states for PBIs.
+
+- **Tests added or updated**
+  - Updated `SprintTrendProjectionServiceTests` to verify canonical mappings such as `Resolved -> Done` for PBI, bug, feature, and epic analytics.
+  - Added `GetSprintExecutionQueryHandlerTests` to verify canonical done mapping is honored and raw done fallbacks are no longer used.
