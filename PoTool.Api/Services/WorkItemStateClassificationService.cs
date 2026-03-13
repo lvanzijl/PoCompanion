@@ -199,7 +199,7 @@ public class WorkItemStateClassificationService : IWorkItemStateClassificationSe
     /// <summary>
     /// Returns default state classifications based on common TFS patterns.
     /// </summary>
-    private static List<WorkItemStateClassificationDto> GetDefaultClassifications()
+    internal static List<WorkItemStateClassificationDto> GetDefaultClassifications()
     {
         var defaults = new List<WorkItemStateClassificationDto>();
 

@@ -3,8 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Services;
 
@@ -18,13 +20,23 @@ public class SprintTrendProjectionService
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<SprintTrendProjectionService> _logger;
+    private readonly IWorkItemStateClassificationService? _stateClassificationService;
 
     public SprintTrendProjectionService(
         IServiceScopeFactory scopeFactory,
         ILogger<SprintTrendProjectionService> logger)
+        : this(scopeFactory, logger, null)
+    {
+    }
+
+    public SprintTrendProjectionService(
+        IServiceScopeFactory scopeFactory,
+        ILogger<SprintTrendProjectionService> logger,
+        IWorkItemStateClassificationService? stateClassificationService)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _stateClassificationService = stateClassificationService;
     }
 
     public virtual async Task<IReadOnlyList<SprintMetricsProjectionEntity>> ComputeProjectionsAsync(
@@ -108,6 +120,7 @@ public class SprintTrendProjectionService
         var existingByKey = existingProjections
             .ToDictionary(p => (p.SprintId, p.ProductId), p => p);
 
+        var stateLookup = await GetStateLookupAsync(cancellationToken);
         var results = new List<SprintMetricsProjectionEntity>();
 
         foreach (var sprint in validSprints)
@@ -131,7 +144,7 @@ public class SprintTrendProjectionService
                 var projection = ComputeProductSprintProjection(
                     sprint, productId,
                     resolvedItems, workItemsByTfsId,
-                    activityByWorkItem, sprintStart, sprintEnd);
+                    activityByWorkItem, sprintStart, sprintEnd, stateLookup);
 
                 if (existingByKey.TryGetValue((sprint.Id, productId), out var existing))
                 {
@@ -176,7 +189,8 @@ public class SprintTrendProjectionService
         IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
         IReadOnlyDictionary<int, List<ActivityEventLedgerEntryEntity>> activityByWorkItem,
         DateTimeOffset sprintStart,
-        DateTimeOffset sprintEnd)
+        DateTimeOffset sprintEnd,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
     {
         var functionalActivityByWorkItem = activityByWorkItem
             .Select(pair => new
@@ -231,7 +245,7 @@ public class SprintTrendProjectionService
             var pbiActivity = functionalActivityByWorkItem.GetValueOrDefault(pbi.WorkItemId);
             var transitionedToDone = pbiActivity?.Any(e =>
                 string.Equals(e.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase)
-                && string.Equals(e.NewValue, "Done", StringComparison.OrdinalIgnoreCase)) == true;
+                && StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, e.NewValue)) == true;
 
             if (transitionedToDone)
             {
@@ -262,7 +276,7 @@ public class SprintTrendProjectionService
 
         // Feature/Epic progression delta
         var progressionDelta = ComputeProgressionDelta(
-            productResolved, workItemsByTfsId, functionalActivityByWorkItem);
+            productResolved, workItemsByTfsId, functionalActivityByWorkItem, stateLookup);
 
         // Bug metrics
         var bugResolved = productResolved.Where(r => r.WorkItemType == WorkItemType.Bug).ToList();
@@ -283,8 +297,7 @@ public class SprintTrendProjectionService
             var bugActivity = functionalActivityByWorkItem.GetValueOrDefault(bug.WorkItemId);
             var bugClosedInSprint = bugActivity?.Any(e =>
                 string.Equals(e.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase)
-                && (string.Equals(e.NewValue, "Done", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(e.NewValue, "Closed", StringComparison.OrdinalIgnoreCase))) == true;
+                && StateClassificationLookup.IsDone(stateLookup, WorkItemType.Bug, e.NewValue)) == true;
 
             if (bugClosedInSprint)
             {
@@ -345,7 +358,8 @@ public class SprintTrendProjectionService
     internal static double ComputeProgressionDelta(
         IReadOnlyList<ResolvedWorkItemEntity> productResolved,
         IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
-        IReadOnlyDictionary<int, List<ActivityEventLedgerEntryEntity>> activityByWorkItem)
+        IReadOnlyDictionary<int, List<ActivityEventLedgerEntryEntity>> activityByWorkItem,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
     {
         var featureResolved = productResolved.Where(r => r.WorkItemType == WorkItemType.Feature).ToList();
         if (featureResolved.Count == 0) return 0;
@@ -380,7 +394,7 @@ public class SprintTrendProjectionService
                 }
 
                 totalEffort += effort;
-                if (string.Equals(pbi!.State, "Done", StringComparison.OrdinalIgnoreCase))
+                if (StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, pbi!.State))
                 {
                     doneEffort += effort;
                 }
@@ -392,7 +406,7 @@ public class SprintTrendProjectionService
                     activityByWorkItem.TryGetValue(p!.TfsId, out var pbiEvents)
                     && pbiEvents.Any(e =>
                         string.Equals(e.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase)
-                        && string.Equals(e.NewValue, "Done", StringComparison.OrdinalIgnoreCase)));
+                        && StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, e.NewValue)));
 
                 if (featureHadProgress)
                 {
@@ -487,6 +501,7 @@ public class SprintTrendProjectionService
         HashSet<int>? sprintCompletedPbiIds = null;
         IReadOnlyDictionary<int, int>? sprintEffortDeltaByWorkItem = null;
         HashSet<int>? sprintAssignedPbiIds = null;
+        var stateLookup = await GetStateLookupAsync(cancellationToken);
         if (sprintStartUtc.HasValue && sprintEndUtc.HasValue)
         {
             // Callers must supply UTC DateTime values; SpecifyKind guards against unspecified Kind
@@ -507,6 +522,11 @@ public class SprintTrendProjectionService
 
             activeWorkItemIds = sprintActivity.ToHashSet();
 
+            var donePbiStates = StateClassificationLookup.GetStatesForClassification(
+                stateLookup,
+                WorkItemType.Pbi,
+                StateClassification.Done);
+
             // Load PBI IDs that transitioned to Done during this sprint
             var closedInSprint = await context.ActivityEventLedgerEntries
                 .AsNoTracking()
@@ -514,7 +534,7 @@ public class SprintTrendProjectionService
                     && e.EventTimestampUtc >= sprintStart
                     && e.EventTimestampUtc <= sprintEnd
                     && e.FieldRefName == "System.State"
-                    && e.NewValue == "Done")
+                    && donePbiStates.Contains(e.NewValue!))
                 .Select(e => e.WorkItemId)
                 .Distinct()
                 .ToListAsync(cancellationToken);
@@ -556,7 +576,15 @@ public class SprintTrendProjectionService
             }
         }
 
-        return ComputeFeatureProgress(resolvedItems, workItemsByTfsId, productIds, activeWorkItemIds, sprintCompletedPbiIds, sprintEffortDeltaByWorkItem, sprintAssignedPbiIds);
+        return ComputeFeatureProgress(
+            resolvedItems,
+            workItemsByTfsId,
+            productIds,
+            activeWorkItemIds,
+            sprintCompletedPbiIds,
+            sprintEffortDeltaByWorkItem,
+            sprintAssignedPbiIds,
+            stateLookup);
     }
 
     private const string EffortFieldRef = "Microsoft.VSTS.Scheduling.Effort";
@@ -568,7 +596,8 @@ public class SprintTrendProjectionService
         IReadOnlyCollection<int>? activeWorkItemIds = null,
         IReadOnlyCollection<int>? sprintCompletedPbiIds = null,
         IReadOnlyDictionary<int, int>? sprintEffortDeltaByWorkItem = null,
-        IReadOnlyCollection<int>? sprintAssignedPbiIds = null)
+        IReadOnlyCollection<int>? sprintAssignedPbiIds = null,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
     {
         var results = new List<FeatureProgressDto>();
 
@@ -626,14 +655,14 @@ public class SprintTrendProjectionService
                     }
 
                     totalEffort += effort;
-                    if (string.Equals(pbi!.State, "Done", StringComparison.OrdinalIgnoreCase))
+                    if (StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, pbi!.State))
                     {
                         doneEffort += effort;
                         donePbiCount++;
                     }
                 }
 
-                var featureIsDone = string.Equals(featureWi.State, "Done", StringComparison.OrdinalIgnoreCase);
+                var featureIsDone = StateClassificationLookup.IsDone(stateLookup, WorkItemType.Feature, featureWi.State);
                 var rawPercent = totalEffort > 0 ? (int)Math.Round((double)doneEffort / totalEffort * 100) : 0;
                 var progressPercent = featureIsDone ? 100 : Math.Min(rawPercent, 90);
 
@@ -718,7 +747,8 @@ public class SprintTrendProjectionService
     internal static IReadOnlyList<EpicProgressDto> ComputeEpicProgress(
         IReadOnlyList<FeatureProgressDto> featureProgress,
         IReadOnlyList<ResolvedWorkItemEntity> resolvedItems,
-        IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId)
+        IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
     {
         // Group features by their parent epic
         var featuresByEpic = featureProgress
@@ -739,7 +769,7 @@ public class SprintTrendProjectionService
             var doneEffort = features.Sum(f => f.DoneEffort);
             var doneFeatureCount = features.Count(f => f.IsDone);
             var donePbiCount = features.Sum(f => f.DonePbiCount);
-            var epicIsDone = string.Equals(epicWi.State, "Done", StringComparison.OrdinalIgnoreCase);
+            var epicIsDone = StateClassificationLookup.IsDone(stateLookup, WorkItemType.Epic, epicWi.State);
             var rawPercent = totalEffort > 0 ? (int)Math.Round((double)doneEffort / totalEffort * 100) : 0;
             var progressPercent = epicIsDone ? 100 : Math.Min(rawPercent, 90);
 
@@ -814,6 +844,19 @@ public class SprintTrendProjectionService
 
         var workItemsByTfsId = workItems.ToDictionary(w => w.TfsId, w => w);
 
-        return ComputeEpicProgress(featureProgress, resolvedItems, workItemsByTfsId);
+        var stateLookup = await GetStateLookupAsync(cancellationToken);
+        return ComputeEpicProgress(featureProgress, resolvedItems, workItemsByTfsId, stateLookup);
+    }
+
+    private async Task<IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>> GetStateLookupAsync(
+        CancellationToken cancellationToken)
+    {
+        if (_stateClassificationService == null)
+        {
+            return StateClassificationLookup.Default;
+        }
+
+        var response = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
+        return StateClassificationLookup.Create(response.Classifications);
     }
 }

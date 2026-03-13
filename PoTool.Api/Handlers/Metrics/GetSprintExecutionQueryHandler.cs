@@ -2,6 +2,8 @@ using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
+using PoTool.Api.Services;
+using PoTool.Core.Contracts;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
 using PoTool.Shared.Settings;
@@ -22,17 +24,17 @@ public sealed class GetSprintExecutionQueryHandler
     private const string PbiType = "Product Backlog Item";
     private const string BugType = "Bug";
 
-    /// <summary>Fallback done state names when no state classifications are configured.</summary>
-    private static readonly IReadOnlyList<string> FallbackDoneStates = new[] { "Done", "Closed" };
-
     private readonly PoToolDbContext _context;
+    private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<GetSprintExecutionQueryHandler> _logger;
 
     public GetSprintExecutionQueryHandler(
         PoToolDbContext context,
+        IWorkItemStateClassificationService stateClassificationService,
         ILogger<GetSprintExecutionQueryHandler> logger)
     {
         _context = context;
+        _stateClassificationService = stateClassificationService;
         _logger = logger;
     }
 
@@ -103,22 +105,9 @@ public sealed class GetSprintExecutionQueryHandler
             .Where(p => targetProductIds.Contains(p.Id))
             .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
 
-        // ── Step 6: Get done states for classification ────────────────────────
-        var doneStates = await _context.WorkItemStateClassifications
-            .AsNoTracking()
-            .Where(c => c.Classification == (int)StateClassification.Done
-                        && (c.WorkItemType == PbiType || c.WorkItemType == BugType))
-            .Select(c => c.StateName)
-            .Distinct()
-            .ToListAsync(cancellationToken);
-
-        // Fallback: if no state classifications configured, use common defaults
-        if (doneStates.Count == 0)
-        {
-            doneStates = FallbackDoneStates.ToList();
-        }
-
-        var doneStateSet = doneStates.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // ── Step 6: Get canonical state classifications ───────────────────────
+        var classifications = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
+        var stateLookup = StateClassificationLookup.Create(classifications.Classifications);
 
         // ── Step 7: Detect sprint additions and removals from activity events ─
         var sprintStart = sprint.StartUtc;
@@ -182,12 +171,12 @@ public sealed class GetSprintExecutionQueryHandler
 
         // ── Step 9: Classify items ────────────────────────────────────────────
         var completedItems = currentSprintItems
-            .Where(w => doneStateSet.Contains(w.State))
+            .Where(w => StateClassificationLookup.IsDone(stateLookup, w.Type, w.State))
             .OrderBy(w => w.ClosedDate ?? DateTimeOffset.MaxValue)
             .ToList();
 
         var unfinishedItems = currentSprintItems
-            .Where(w => !doneStateSet.Contains(w.State))
+            .Where(w => !StateClassificationLookup.IsDone(stateLookup, w.Type, w.State))
             .ToList();
 
         // Items in initial scope = current items NOT in addedDuringSprint + removed items NOT in addedDuringSprint
