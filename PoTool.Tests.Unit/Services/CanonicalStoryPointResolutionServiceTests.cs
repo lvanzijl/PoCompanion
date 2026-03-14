@@ -70,7 +70,6 @@ public sealed class CanonicalStoryPointResolutionServiceTests
         var target = CreateWorkItem(101, parentTfsId: 10, storyPoints: null, businessValue: null);
         var siblings = new[]
         {
-            new StoryPointResolutionCandidate(CreateWorkItem(101, parentTfsId: 10, storyPoints: null, businessValue: null), false),
             new StoryPointResolutionCandidate(CreateWorkItem(102, parentTfsId: 10, storyPoints: 3), false),
             new StoryPointResolutionCandidate(CreateWorkItem(103, parentTfsId: 10, storyPoints: null, businessValue: 7), false),
             new StoryPointResolutionCandidate(CreateWorkItem(104, parentTfsId: 99, storyPoints: 100), false),

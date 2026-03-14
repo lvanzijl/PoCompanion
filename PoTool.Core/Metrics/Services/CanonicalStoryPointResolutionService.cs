@@ -65,7 +65,7 @@ public sealed record StoryPointResolutionRequest(
 /// </summary>
 public sealed class CanonicalStoryPointResolutionService : ICanonicalStoryPointResolutionService
 {
-    private static readonly ResolvedStoryPointEstimate MissingEstimate =
+    private static ResolvedStoryPointEstimate MissingEstimate =>
         new(null, StoryPointEstimateSource.Missing);
 
     public ResolvedStoryPointEstimate Resolve(StoryPointResolutionRequest request)
@@ -139,7 +139,7 @@ public sealed class CanonicalStoryPointResolutionService : ICanonicalStoryPointR
     private static bool IsAuthoritativePbi(string workItemType)
     {
         return workItemType.Equals(WorkItemType.Pbi, StringComparison.OrdinalIgnoreCase)
-            || workItemType.Equals("PBI", StringComparison.OrdinalIgnoreCase)
-            || workItemType.Equals("User Story", StringComparison.OrdinalIgnoreCase);
+            || workItemType.Equals(WorkItemType.PbiShort, StringComparison.OrdinalIgnoreCase)
+            || workItemType.Equals(WorkItemType.UserStory, StringComparison.OrdinalIgnoreCase);
     }
 }
