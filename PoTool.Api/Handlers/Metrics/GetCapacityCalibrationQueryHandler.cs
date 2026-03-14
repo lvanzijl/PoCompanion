@@ -13,9 +13,10 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Computes velocity distribution and predictability ratios across a selected sprint range.
 ///
 /// Calculation approach:
-///   Committed per sprint: sum of PlannedEffort across all relevant products for that sprint.
-///   Done per sprint:      sum of CompletedPbiEffort across all relevant products for that sprint.
-///   Velocity:             Done (completed PBI effort).
+///   Committed per sprint: sum of canonical planned PBI story points, excluding derived estimates.
+///   Done per sprint:      sum of delivered PBI story points whose first Done transition occurred in sprint.
+///   Velocity:             delivered story points.
+///   Delivered effort:     completed PBI effort-hours, exposed only as diagnostics.
 ///
 /// Percentile method — linear interpolation on sorted values:
 ///   Index = (p / 100.0) * (n − 1); value = lower + frac * (upper − lower).
@@ -94,12 +95,19 @@ public sealed class GetCapacityCalibrationQueryHandler
             .Where(p => sprintIdList.Contains(p.SprintId) && productIds.Contains(p.ProductId))
             .ToListAsync(cancellationToken);
 
-        // Aggregate committed and done per sprint by summing across all products
-        var committedBySprint = projections
+        // PlannedStoryPoints includes derived estimates for aggregation scenarios.
+        // Capacity calibration must exclude derived points from committed scope.
+        var committedStoryPointsBySprint = projections
             .GroupBy(p => p.SprintId)
-            .ToDictionary(g => g.Key, g => g.Sum(p => p.PlannedEffort));
+            .ToDictionary(g => g.Key, g => g.Sum(p => Math.Max(0d, p.PlannedStoryPoints - p.DerivedStoryPoints)));
 
-        var doneBySprint = projections
+        // CompletedPbiStoryPoints already uses canonical delivery semantics:
+        // PBIs only, bugs/tasks excluded, BusinessValue fallback allowed, derived estimates excluded.
+        var deliveredStoryPointsBySprint = projections
+            .GroupBy(p => p.SprintId)
+            .ToDictionary(g => g.Key, g => g.Sum(p => p.CompletedPbiStoryPoints));
+
+        var deliveredEffortBySprint = projections
             .GroupBy(p => p.SprintId)
             .ToDictionary(g => g.Key, g => g.Sum(p => p.CompletedPbiEffort));
 
@@ -107,15 +115,22 @@ public sealed class GetCapacityCalibrationQueryHandler
         var entries = new List<SprintCalibrationEntry>(sprints.Count);
         foreach (var sprint in sprints)
         {
-            var committed = committedBySprint.TryGetValue(sprint.Id, out var c) ? c : 0;
-            var done = doneBySprint.TryGetValue(sprint.Id, out var d) ? d : 0;
+            var committedStoryPoints = committedStoryPointsBySprint.TryGetValue(sprint.Id, out var committed) ? committed : 0d;
+            var deliveredStoryPoints = deliveredStoryPointsBySprint.TryGetValue(sprint.Id, out var delivered) ? delivered : 0d;
+            var deliveredEffort = deliveredEffortBySprint.TryGetValue(sprint.Id, out var effort) ? effort : 0;
+            var hoursPerSp = deliveredStoryPoints > 0
+                ? (double)deliveredEffort / deliveredStoryPoints
+                : 0d;
+
             // Predictability: how much of the commitment was delivered (0 when uncommitted)
-            var predictability = committed > 0 ? (double)done / committed : 0.0;
+            var predictability = committedStoryPoints > 0 ? deliveredStoryPoints / committedStoryPoints : 0d;
 
             entries.Add(new SprintCalibrationEntry(
                 SprintName: sprint.Name,
-                Committed: committed,
-                Done: done,
+                CommittedStoryPoints: Math.Round(committedStoryPoints, 3),
+                DeliveredStoryPoints: Math.Round(deliveredStoryPoints, 3),
+                DeliveredEffort: deliveredEffort,
+                HoursPerSP: Math.Round(hoursPerSp, 3),
                 PredictabilityRatio: predictability));
         }
 
@@ -125,7 +140,7 @@ public sealed class GetCapacityCalibrationQueryHandler
         }
 
         // Velocity distribution (sorted ascending for percentile computation)
-        var velocities = entries.Select(e => (double)e.Done).OrderBy(v => v).ToList();
+        var velocities = entries.Select(e => e.DeliveredStoryPoints).OrderBy(v => v).ToList();
 
         var medianVelocity = Percentile(velocities, 50);
         var p25Velocity = Percentile(velocities, 25);
@@ -135,13 +150,13 @@ public sealed class GetCapacityCalibrationQueryHandler
         var p10 = Percentile(velocities, 10);
         var p90 = Percentile(velocities, 90);
         var outlierNames = entries
-            .Where(e => e.Done < p10 || e.Done > p90)
+            .Where(e => e.DeliveredStoryPoints < p10 || e.DeliveredStoryPoints > p90)
             .Select(e => e.SprintName)
             .ToList();
 
         // Predictability aggregate: only sprints with a non-zero commitment
         var predictabilityValues = entries
-            .Where(e => e.Committed > 0)
+            .Where(e => e.CommittedStoryPoints > 0)
             .Select(e => e.PredictabilityRatio)
             .OrderBy(v => v)
             .ToList();

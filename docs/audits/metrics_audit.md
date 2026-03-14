@@ -99,3 +99,9 @@ The repository is mostly aligned on the core delivery semantics: velocity in spr
 2. Add explicit `HoursPerSP` capacity diagnostics to the capacity calibration contract.
 3. Extend sprint execution summaries to calculate and return the canonical Story Point churn and completion formulas.
 4. Keep portfolio effort-trend proxies isolated from canonical churn reporting to prevent future metric drift.
+
+## Fix Progress — Capacity Calibration Semantics
+
+- Updated `PoTool.Api/Handlers/Metrics/GetCapacityCalibrationQueryHandler.cs` so capacity calibration now uses canonical delivered PBI story points for velocity percentiles and predictability, while keeping delivered effort only as a diagnostic metric. Committed story points now exclude derived estimates by subtracting `DerivedStoryPoints` from the projection's aggregate planned story points.
+- Updated `PoTool.Shared/Metrics/CapacityCalibrationDto.cs` so per-sprint entries use `CommittedStoryPoints`, `DeliveredStoryPoints`, `DeliveredEffort`, and `HoursPerSP` naming instead of effort-based `Committed` / `Done` semantics.
+- Expanded `PoTool.Tests.Unit/Handlers/GetCapacityCalibrationQueryHandlerTests.cs` to verify velocity is story-point based, derived commitment is excluded, effort-only delivery does not become velocity, and `HoursPerSP` is calculated safely without dividing by zero.

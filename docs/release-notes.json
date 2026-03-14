@@ -1,6 +1,13 @@
 [
   {
     "date": "2026-03-14",
+    "type": "Fixed",
+    "title": "Capacity calibration now uses story points",
+    "impact": "Capacity calibration and planning guidance now measure sprint velocity with delivered PBI story points while exposing effort only as a diagnostic hours-per-story-point metric.",
+    "area": "Planning"
+  },
+  {
+    "date": "2026-03-14",
     "type": "Changed",
     "title": "Sprint trend projections now store story points",
     "impact": "Sprint trend metrics now keep planned, delivered, and spillover story-point totals plus derived and unestimated-delivery diagnostics separately from effort hours.",
