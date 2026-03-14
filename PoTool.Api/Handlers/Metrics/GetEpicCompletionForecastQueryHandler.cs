@@ -1,7 +1,7 @@
 using Mediator;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
-using PoTool.Core.Metrics.Services;
+using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;

@@ -349,3 +349,30 @@ Keep API-specific mappers, handlers, EF queries, and projection orchestration in
 **Ready for CDC extraction**
 
 The final remaining architectural coupling risk from the `domain_library_readiness` cleanup sprint has been removed. The canonical sprint-history helpers, sprint execution calculator, canonical story-point resolver, and hierarchy rollup service now all satisfy the extraction requirement that domain services depend only on Core domain input models, with API-side mapping and DI boundaries preserved.
+
+## CDC Extraction Progress — Metrics and Hierarchy Services Moved
+
+- **Services moved:**  
+  `CanonicalStoryPointResolutionService`, `SprintExecutionMetricsCalculator`, and `HierarchyRollupService` now physically live under `PoTool.Core.Domain/Domain/Estimation`, `PoTool.Core.Domain/Domain/Metrics`, and `PoTool.Core.Domain/Domain/Hierarchy`, with CDC namespaces:
+  - `PoTool.Core.Domain.Estimation`
+  - `PoTool.Core.Domain.Metrics`
+  - `PoTool.Core.Domain.Hierarchy`
+  - supporting domain-only helper `PoTool.Core.Domain/Domain/WorkItems/CanonicalWorkItemTypes.cs`
+
+- **Consumers updated:**  
+  API handlers and services now reference the moved CDC namespaces without changing DTO or adapter boundaries:
+  - `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs`
+  - `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs`
+  - `PoTool.Api/Handlers/Metrics/GetEpicCompletionForecastQueryHandler.cs`
+  - `PoTool.Api/Services/SprintTrendProjectionService.cs`
+  - `PoTool.Api/Configuration/ApiServiceCollectionExtensions.cs`
+
+- **DI confirmed:**  
+  Existing singleton registrations continue to resolve the moved CDC services through their interfaces:
+  - `ICanonicalStoryPointResolutionService`
+  - `ISprintExecutionMetricsCalculator`
+  - `IHierarchyRollupService`
+  The registrations remain in the API composition root while the implementations now live in the CDC assembly.
+
+- **Tests passing:**  
+  Verified with `dotnet build PoTool.sln --no-restore` and `dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~CanonicalStoryPointResolutionServiceTests|FullyQualifiedName~SprintExecutionMetricsCalculatorTests|FullyQualifiedName~HierarchyRollupServiceTests|FullyQualifiedName~GetSprintExecutionQueryHandlerTests|FullyQualifiedName~GetEpicCompletionForecastQueryHandlerTests|FullyQualifiedName~SprintTrendProjectionServiceTests|FullyQualifiedName~ServiceCollectionTests" -v minimal`.

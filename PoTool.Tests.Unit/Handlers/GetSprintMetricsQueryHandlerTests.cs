@@ -8,7 +8,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Repositories;
 using PoTool.Core.Contracts;
-using PoTool.Core.Metrics.Services;
+using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Settings;
