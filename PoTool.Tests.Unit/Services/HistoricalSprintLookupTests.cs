@@ -1,7 +1,6 @@
 using PoTool.Core.Domain.Sprints;
 using PoTool.Core.Domain.Models;
 using PoTool.Core.WorkItems;
-using PoTool.Shared.Settings;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -51,18 +50,8 @@ public sealed class HistoricalSprintLookupTests
         };
         var stateLookup = StateClassificationLookup.Create(
         [
-            new WorkItemStateClassificationDto
-            {
-                WorkItemType = WorkItemType.Pbi,
-                StateName = "Active",
-                Classification = StateClassification.InProgress
-            },
-            new WorkItemStateClassificationDto
-            {
-                WorkItemType = WorkItemType.Pbi,
-                StateName = "Resolved",
-                Classification = StateClassification.Done
-            }
+            new(WorkItemType.Pbi, "Active", StateClassification.InProgress),
+            new(WorkItemType.Pbi, "Resolved", StateClassification.Done)
         ]);
         IReadOnlyList<FieldChangeEvent> stateEvents =
         [
@@ -81,12 +70,7 @@ public sealed class HistoricalSprintLookupTests
     {
         var stateLookup = StateClassificationLookup.Create(
         [
-            new WorkItemStateClassificationDto
-            {
-                WorkItemType = WorkItemType.Pbi,
-                StateName = "Done",
-                Classification = StateClassification.Done
-            }
+            new(WorkItemType.Pbi, "Done", StateClassification.Done)
         ]);
 
         var classification = StateClassificationLookup.GetClassification(stateLookup, WorkItemType.Pbi, "done");

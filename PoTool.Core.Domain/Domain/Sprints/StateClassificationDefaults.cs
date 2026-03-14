@@ -1,4 +1,4 @@
-using PoTool.Shared.Settings;
+using PoTool.Core.Domain.Models;
 
 namespace PoTool.Core.Domain.Sprints;
 
@@ -10,55 +10,55 @@ public static class StateClassificationDefaults
     /// <summary>
     /// Creates the default state classifications based on the repository's canonical TFS mappings.
     /// </summary>
-    public static IReadOnlyList<WorkItemStateClassificationDto> Create()
+    public static IReadOnlyList<WorkItemStateClassification> Create()
     {
         return
         [
             // Goal
-            new WorkItemStateClassificationDto { WorkItemType = "goal", StateName = "Proposed", Classification = StateClassification.New },
-            new WorkItemStateClassificationDto { WorkItemType = "goal", StateName = "Active", Classification = StateClassification.InProgress },
-            new WorkItemStateClassificationDto { WorkItemType = "goal", StateName = "Completed", Classification = StateClassification.Done },
-            new WorkItemStateClassificationDto { WorkItemType = "goal", StateName = "Removed", Classification = StateClassification.Removed },
+            new("goal", "Proposed", StateClassification.New),
+            new("goal", "Active", StateClassification.InProgress),
+            new("goal", "Completed", StateClassification.Done),
+            new("goal", "Removed", StateClassification.Removed),
 
             // Objective
-            new WorkItemStateClassificationDto { WorkItemType = "Objective", StateName = "Proposed", Classification = StateClassification.New },
-            new WorkItemStateClassificationDto { WorkItemType = "Objective", StateName = "Active", Classification = StateClassification.InProgress },
-            new WorkItemStateClassificationDto { WorkItemType = "Objective", StateName = "Completed", Classification = StateClassification.Done },
-            new WorkItemStateClassificationDto { WorkItemType = "Objective", StateName = "Removed", Classification = StateClassification.Removed },
+            new("Objective", "Proposed", StateClassification.New),
+            new("Objective", "Active", StateClassification.InProgress),
+            new("Objective", "Completed", StateClassification.Done),
+            new("Objective", "Removed", StateClassification.Removed),
 
             // Epic
-            new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "New", Classification = StateClassification.New },
-            new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "Active", Classification = StateClassification.InProgress },
-            new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "Resolved", Classification = StateClassification.Done },
-            new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "Closed", Classification = StateClassification.Done },
-            new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "Removed", Classification = StateClassification.Removed },
+            new("Epic", "New", StateClassification.New),
+            new("Epic", "Active", StateClassification.InProgress),
+            new("Epic", "Resolved", StateClassification.Done),
+            new("Epic", "Closed", StateClassification.Done),
+            new("Epic", "Removed", StateClassification.Removed),
 
             // Feature
-            new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "New", Classification = StateClassification.New },
-            new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "Active", Classification = StateClassification.InProgress },
-            new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "Resolved", Classification = StateClassification.Done },
-            new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "Closed", Classification = StateClassification.Done },
-            new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "Removed", Classification = StateClassification.Removed },
+            new("Feature", "New", StateClassification.New),
+            new("Feature", "Active", StateClassification.InProgress),
+            new("Feature", "Resolved", StateClassification.Done),
+            new("Feature", "Closed", StateClassification.Done),
+            new("Feature", "Removed", StateClassification.Removed),
 
             // Product Backlog Item
-            new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "New", Classification = StateClassification.New },
-            new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "Approved", Classification = StateClassification.New },
-            new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "Committed", Classification = StateClassification.InProgress },
-            new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "Done", Classification = StateClassification.Done },
-            new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "Removed", Classification = StateClassification.Removed },
+            new("Product Backlog Item", "New", StateClassification.New),
+            new("Product Backlog Item", "Approved", StateClassification.New),
+            new("Product Backlog Item", "Committed", StateClassification.InProgress),
+            new("Product Backlog Item", "Done", StateClassification.Done),
+            new("Product Backlog Item", "Removed", StateClassification.Removed),
 
             // Bug
-            new WorkItemStateClassificationDto { WorkItemType = "Bug", StateName = "New", Classification = StateClassification.New },
-            new WorkItemStateClassificationDto { WorkItemType = "Bug", StateName = "Approved", Classification = StateClassification.New },
-            new WorkItemStateClassificationDto { WorkItemType = "Bug", StateName = "Committed", Classification = StateClassification.InProgress },
-            new WorkItemStateClassificationDto { WorkItemType = "Bug", StateName = "Done", Classification = StateClassification.Done },
-            new WorkItemStateClassificationDto { WorkItemType = "Bug", StateName = "Removed", Classification = StateClassification.Removed },
+            new("Bug", "New", StateClassification.New),
+            new("Bug", "Approved", StateClassification.New),
+            new("Bug", "Committed", StateClassification.InProgress),
+            new("Bug", "Done", StateClassification.Done),
+            new("Bug", "Removed", StateClassification.Removed),
 
             // Task
-            new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "To Do", Classification = StateClassification.New },
-            new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "In Progress", Classification = StateClassification.InProgress },
-            new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "Done", Classification = StateClassification.Done },
-            new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "Removed", Classification = StateClassification.Removed }
+            new("Task", "To Do", StateClassification.New),
+            new("Task", "In Progress", StateClassification.InProgress),
+            new("Task", "Done", StateClassification.Done),
+            new("Task", "Removed", StateClassification.Removed)
         ];
     }
 }

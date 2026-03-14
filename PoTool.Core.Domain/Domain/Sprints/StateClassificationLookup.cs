@@ -1,5 +1,4 @@
 using PoTool.Core.Domain.Models;
-using PoTool.Shared.Settings;
 
 namespace PoTool.Core.Domain.Sprints;
 
@@ -20,7 +19,7 @@ public static class StateClassificationLookup
     /// Builds a canonical state lookup from configured work item state classifications.
     /// </summary>
     public static IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification> Create(
-        IEnumerable<WorkItemStateClassificationDto> classifications)
+        IEnumerable<WorkItemStateClassification> classifications)
     {
         var groupedClassifications = classifications
             .GroupBy(

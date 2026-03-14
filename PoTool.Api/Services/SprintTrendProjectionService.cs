@@ -11,7 +11,6 @@ using PoTool.Core.Domain.Models;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.WorkItems;
 using PoTool.Shared.Metrics;
-using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Services;
 
@@ -1093,6 +1092,6 @@ public class SprintTrendProjectionService
         }
 
         var response = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
-        return StateClassificationLookup.Create(response.Classifications);
+        return StateClassificationLookup.Create(response.Classifications.ToDomainStateClassifications());
     }
 }

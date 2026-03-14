@@ -8,7 +8,6 @@ using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
-using PoTool.Shared.Settings;
 
 namespace PoTool.Tests.Unit.Services;
 

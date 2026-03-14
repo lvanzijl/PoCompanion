@@ -376,3 +376,22 @@ The final remaining architectural coupling risk from the `domain_library_readine
 
 - **Tests passing:**  
   Verified with `dotnet build PoTool.sln --no-restore` and `dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~CanonicalStoryPointResolutionServiceTests|FullyQualifiedName~SprintExecutionMetricsCalculatorTests|FullyQualifiedName~HierarchyRollupServiceTests|FullyQualifiedName~GetSprintExecutionQueryHandlerTests|FullyQualifiedName~GetEpicCompletionForecastQueryHandlerTests|FullyQualifiedName~SprintTrendProjectionServiceTests|FullyQualifiedName~ServiceCollectionTests" -v minimal`.
+
+## CDC Extraction Progress — API Boundary Cleanup
+
+- **Adapter boundaries confirmed:**  
+  `HistoricalSprintInputMapper` and `CanonicalMetricsInputMapper` remain the API-side translation seam for EF entities, DTOs, and API-shaped inputs. State-classification transport models now follow the same pattern via `PoTool.Api/Services/StateClassificationInputMapper.cs`, which maps `PoTool.Shared.Settings.WorkItemStateClassificationDto` into the CDC-owned `PoTool.Core.Domain.Models.WorkItemStateClassification` input before invoking `StateClassificationLookup`.
+
+- **Handler and projection responsibilities cleaned:**  
+  `GetSprintMetricsQueryHandler`, `GetSprintExecutionQueryHandler`, and `SprintTrendProjectionService` now stop at orchestration boundaries for state classification lookup construction:
+  - fetch API/persistence data
+  - map transport classifications into CDC inputs
+  - call CDC sprint/history helpers and metrics services
+  - continue mapping results into DTOs/projections
+  No canonical state-classification input types remain sourced directly from Shared contracts inside `PoTool.Core.Domain`.
+
+- **Project references verified:**  
+  `PoTool.Core.Domain/PoTool.Core.Domain.csproj` no longer references `PoTool.Shared`. The CDC now depends only on its own domain models, while `PoTool.Api` remains the adapter layer that references both the CDC and shared transport contracts.
+
+- **Tests passing:**  
+  Verified with `dotnet build PoTool.sln --no-restore` and `dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~StateClassificationInputMapperTests|FullyQualifiedName~HistoricalSprintLookupTests|FullyQualifiedName~HistoricalSprintInputMapperTests|FullyQualifiedName~GetSprintMetricsQueryHandlerTests|FullyQualifiedName~GetSprintExecutionQueryHandlerTests|FullyQualifiedName~SprintTrendProjectionServiceTests|FullyQualifiedName~ServiceCollectionTests|FullyQualifiedName~WorkItemStateClassificationServiceTests" -v minimal`.
