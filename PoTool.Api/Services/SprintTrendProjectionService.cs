@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
+using PoTool.Core.Metrics.Models;
 using PoTool.Core.Metrics.Services;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.WorkItems;
@@ -158,16 +159,14 @@ public class SprintTrendProjectionService
         var existingByKey = existingProjections
             .ToDictionary(p => (p.SprintId, p.ProductId), p => p);
 
-        var workItemTypesById = workItemsByTfsId.ToDictionary(pair => pair.Key, pair => pair.Value.Type);
-        var currentStatesById = workItemsByTfsId.ToDictionary(pair => pair.Key, pair => (string?)pair.Value.State);
-        var currentIterationPathsById = workItemsByTfsId.ToDictionary(pair => pair.Key, pair => (string?)pair.Value.IterationPath);
-        var stateEventsByWorkItem = allStateEvents
-            .GroupBy(e => e.WorkItemId)
-            .ToDictionary(g => g.Key, g => (IReadOnlyList<ActivityEventLedgerEntryEntity>)g.ToList());
-        var iterationEventsByWorkItem = allIterationEvents
-            .GroupBy(e => e.WorkItemId)
-            .ToDictionary(g => g.Key, g => (IReadOnlyList<ActivityEventLedgerEntryEntity>)g.ToList());
-        var firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(allStateEvents, workItemTypesById, stateLookup);
+        var workItemSnapshotsById = workItems.ToSnapshotDictionary();
+        var stateFieldChanges = allStateEvents.ToFieldChangeEvents();
+        var iterationFieldChanges = allIterationEvents.ToFieldChangeEvents();
+        var stateEventsByWorkItem = stateFieldChanges.GroupByWorkItemId();
+        var iterationEventsByWorkItem = iterationFieldChanges.GroupByWorkItemId();
+        var firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(stateFieldChanges, workItemSnapshotsById, stateLookup);
+        var sprintDefinitionsById = validSprints.ToDictionary(sprint => sprint.Id, sprint => sprint.ToDefinition());
+        var teamSprintDefinitions = teamSprints.Select(teamSprint => teamSprint.ToDefinition()).ToList();
         var results = new List<SprintMetricsProjectionEntity>();
 
         foreach (var sprint in validSprints)
@@ -176,11 +175,12 @@ public class SprintTrendProjectionService
             var sprintEndUtc = DateTime.SpecifyKind(sprint.EndDateUtc!.Value, DateTimeKind.Utc);
             var sprintStart = new DateTimeOffset(sprintStartUtc, TimeSpan.Zero);
             var sprintEnd = new DateTimeOffset(sprintEndUtc, TimeSpan.Zero);
-            var nextSprintPath = SprintSpilloverLookup.GetNextSprintPath(sprint, teamSprints);
+            var sprintDefinition = sprintDefinitionsById[sprint.Id];
+            var nextSprintPath = SprintSpilloverLookup.GetNextSprintPath(sprintDefinition, teamSprintDefinitions);
             var committedWorkItemIds = SprintCommitmentLookup.BuildCommittedWorkItemIds(
-                currentIterationPathsById,
+                workItemSnapshotsById,
                 iterationEventsByWorkItem,
-                sprint.Path,
+                sprintDefinition.Path,
                 SprintCommitmentLookup.GetCommitmentTimestamp(sprintStart));
 
             // Filter the pre-loaded activity events to this sprint's date range
@@ -198,7 +198,7 @@ public class SprintTrendProjectionService
                     sprint, productId,
                     resolvedItems, workItemsByTfsId,
                     activityByWorkItem, sprintStart, sprintEnd, stateLookup, firstDoneByWorkItem, committedWorkItemIds,
-                    nextSprintPath, currentStatesById, stateEventsByWorkItem, iterationEventsByWorkItem);
+                    nextSprintPath, workItemSnapshotsById, stateEventsByWorkItem, iterationEventsByWorkItem);
 
                 if (existingByKey.TryGetValue((sprint.Id, productId), out var existing))
                 {
@@ -257,15 +257,17 @@ public class SprintTrendProjectionService
         IReadOnlyDictionary<int, DateTimeOffset>? firstDoneByWorkItem = null,
         IReadOnlySet<int>? committedWorkItemIds = null,
         string? nextSprintPath = null,
-        IReadOnlyDictionary<int, string?>? currentStatesById = null,
-        IReadOnlyDictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>>? stateEventsByWorkItem = null,
-        IReadOnlyDictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>>? iterationEventsByWorkItem = null)
+        IReadOnlyDictionary<int, WorkItemSnapshot>? workItemSnapshotsById = null,
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? stateEventsByWorkItem = null,
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? iterationEventsByWorkItem = null)
     {
         var resolver = new CanonicalStoryPointResolutionService();
+        var effectiveWorkItemSnapshotsById = workItemSnapshotsById
+            ?? workItemsByTfsId.Values.ToSnapshotDictionary();
         var effectiveFirstDoneByWorkItem = firstDoneByWorkItem
             ?? FirstDoneDeliveryLookup.Build(
-                activityByWorkItem.Values.SelectMany(events => events),
-                workItemsByTfsId.ToDictionary(pair => pair.Key, pair => pair.Value.Type),
+                activityByWorkItem.Values.SelectMany(events => events).ToFieldChangeEvents(),
+                effectiveWorkItemSnapshotsById,
                 stateLookup);
 
         var functionalActivityByWorkItem = activityByWorkItem
@@ -275,7 +277,9 @@ public class SprintTrendProjectionService
                 Events = pair.Value
                     .Where(e =>
                     {
-                        var eventTimestamp = FirstDoneDeliveryLookup.GetEventTimestamp(e);
+                        var eventTimestamp = e.EventTimestamp != default
+                            ? e.EventTimestamp
+                            : new DateTimeOffset(DateTime.SpecifyKind(e.EventTimestampUtc, DateTimeKind.Utc));
                         return eventTimestamp >= sprintStart && eventTimestamp <= sprintEnd;
                     })
                     .Where(e => !string.IsNullOrWhiteSpace(e.FieldRefName)
@@ -367,30 +371,25 @@ public class SprintTrendProjectionService
                 .Where(r => r.ResolvedSprintId == sprint.Id)
                 .Select(r => r.WorkItemId)
                 .ToHashSet();
-        var effectiveCurrentStatesById = currentStatesById
-            ?? workItemsByTfsId.ToDictionary(pair => pair.Key, pair => (string?)pair.Value.State);
         var effectiveStateEventsByWorkItem = stateEventsByWorkItem
             ?? activityByWorkItem
-                .ToDictionary(
-                    pair => pair.Key,
-                    pair => (IReadOnlyList<ActivityEventLedgerEntryEntity>)pair.Value
-                        .Where(e => string.Equals(e.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase))
-                        .ToList());
+                .SelectMany(pair => pair.Value
+                    .Where(e => string.Equals(e.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase)))
+                .ToFieldChangeEvents()
+                .GroupByWorkItemId();
         var effectiveIterationEventsByWorkItem = iterationEventsByWorkItem
             ?? activityByWorkItem
-                .ToDictionary(
-                    pair => pair.Key,
-                    pair => (IReadOnlyList<ActivityEventLedgerEntryEntity>)pair.Value
-                        .Where(e => string.Equals(e.FieldRefName, "System.IterationPath", StringComparison.OrdinalIgnoreCase))
-                        .ToList());
+                .SelectMany(pair => pair.Value
+                    .Where(e => string.Equals(e.FieldRefName, "System.IterationPath", StringComparison.OrdinalIgnoreCase)))
+                .ToFieldChangeEvents()
+                .GroupByWorkItemId();
         var spilloverWorkItemIds = SprintSpilloverLookup.BuildSpilloverWorkItemIds(
             effectiveCommittedWorkItemIds,
-            effectiveCurrentStatesById,
-            workItemsByTfsId.ToDictionary(pair => pair.Key, pair => pair.Value.Type),
+            effectiveWorkItemSnapshotsById,
             effectiveStateEventsByWorkItem,
             effectiveIterationEventsByWorkItem,
             stateLookup,
-            sprint.Path,
+            sprint.ToDefinition(),
             nextSprintPath,
             sprintEnd);
         var spilloverPbis = pbiResolved

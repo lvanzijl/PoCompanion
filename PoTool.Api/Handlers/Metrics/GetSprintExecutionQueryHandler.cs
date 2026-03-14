@@ -5,6 +5,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Metrics.Models;
 using PoTool.Core.Metrics.Services;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems;
@@ -106,10 +107,11 @@ public sealed class GetSprintExecutionQueryHandler
             .ToListAsync(cancellationToken);
 
         var relevantWorkItemsById = relevantWorkItems.ToDictionary(w => w.TfsId, w => w);
-        var currentIterationPathsById = relevantWorkItemsById.ToDictionary(pair => pair.Key, pair => (string?)pair.Value.IterationPath);
+        var workItemSnapshotsById = relevantWorkItems.ToSnapshotDictionary();
         var currentSprintItems = relevantWorkItems
             .Where(w => w.IterationPath == sprint.Path)
             .ToList();
+        var sprintDefinition = sprint.ToDefinition();
 
         // ── Step 5: Get product names ─────────────────────────────────────────
         var productNames = await _context.Products
@@ -132,12 +134,10 @@ public sealed class GetSprintExecutionQueryHandler
 
         var addedWorkItemIds = new HashSet<int>();
         var removedEntries = new List<(int WorkItemId, DateTimeOffset Timestamp)>();
-        var iterationEvents = new List<ActivityEventLedgerEntryEntity>();
-        var iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>>();
-        var stateEventsByWorkItem = new Dictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>>();
+        var iterationEvents = new List<FieldChangeEvent>();
+        var iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>();
+        var stateEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>();
         var stateHistoryCutoffUtc = DateTime.UtcNow;
-        var workItemTypesById = relevantWorkItemsById.ToDictionary(pair => pair.Key, pair => pair.Value.Type);
-        var currentStatesById = relevantWorkItemsById.ToDictionary(pair => pair.Key, pair => (string?)pair.Value.State);
 
         if (sprintEnd.HasValue)
         {
@@ -148,39 +148,38 @@ public sealed class GetSprintExecutionQueryHandler
                             && e.EventTimestampUtc <= stateHistoryCutoffUtc
                             && resolvedWorkItemIds.Contains(e.WorkItemId))
                 .ToListAsync(cancellationToken);
+            var stateFieldChanges = stateEvents.ToFieldChangeEvents();
 
-            stateEventsByWorkItem = stateEvents
-                .GroupBy(e => e.WorkItemId)
-                .ToDictionary(g => g.Key, g => (IReadOnlyList<ActivityEventLedgerEntryEntity>)g.ToList());
+            stateEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>(stateFieldChanges.GroupByWorkItemId());
 
             firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(
-                    stateEvents,
-                    workItemTypesById,
+                    stateFieldChanges,
+                    workItemSnapshotsById,
                     stateLookup)
                 .ToDictionary(pair => pair.Key, pair => pair.Value);
         }
 
         if (sprintStart.HasValue)
         {
-            iterationEvents = await _context.ActivityEventLedgerEntries
+            var rawIterationEvents = await _context.ActivityEventLedgerEntries
                 .AsNoTracking()
                 .Where(e => e.ProductOwnerId == query.ProductOwnerId
                             && e.FieldRefName == IterationPathField
                             && e.EventTimestampUtc >= sprintStart.Value.UtcDateTime
                             && resolvedWorkItemIds.Contains(e.WorkItemId))
                 .ToListAsync(cancellationToken);
+            var iterationFieldChanges = rawIterationEvents.ToFieldChangeEvents();
 
-            iterationEventsByWorkItem = iterationEvents
-                .GroupBy(e => e.WorkItemId)
-                .ToDictionary(g => g.Key, g => (IReadOnlyList<ActivityEventLedgerEntryEntity>)g.ToList());
+            iterationEvents = iterationFieldChanges.ToList();
+            iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>(iterationFieldChanges.GroupByWorkItemId());
         }
 
         if (commitmentTimestamp.HasValue)
         {
             committedWorkItemIds = SprintCommitmentLookup.BuildCommittedWorkItemIds(
-                    currentIterationPathsById,
+                    workItemSnapshotsById,
                     iterationEventsByWorkItem,
-                    sprint.Path,
+                    sprintDefinition.Path,
                     commitmentTimestamp.Value)
                 .ToHashSet();
         }
@@ -210,7 +209,7 @@ public sealed class GetSprintExecutionQueryHandler
             }
         }
 
-        var nextSprintPath = await ResolveNextSprintPathAsync(sprint, cancellationToken);
+        var nextSprintPath = await ResolveNextSprintPathAsync(sprintDefinition, cancellationToken);
 
         // ── Step 8: Load removed items (no longer in sprint iteration) ────────
         var removedWorkItemIds = removedEntries.Select(r => r.WorkItemId).Distinct().ToHashSet();
@@ -243,12 +242,11 @@ public sealed class GetSprintExecutionQueryHandler
         IReadOnlySet<int> spilloverWorkItemIds = sprintEnd.HasValue
             ? SprintSpilloverLookup.BuildSpilloverWorkItemIds(
                 committedWorkItemIds,
-                currentStatesById,
-                workItemTypesById,
+                workItemSnapshotsById,
                 stateEventsByWorkItem,
                 iterationEventsByWorkItem,
                 stateLookup,
-                sprint.Path,
+                sprintDefinition,
                 nextSprintPath,
                 sprintEnd.Value)
             : new HashSet<int>();
@@ -466,7 +464,7 @@ public sealed class GetSprintExecutionQueryHandler
     }
 
     private async Task<string?> ResolveNextSprintPathAsync(
-        SprintEntity sprint,
+        SprintDefinition sprint,
         CancellationToken cancellationToken)
     {
         var teamSprints = await _context.Sprints
@@ -474,7 +472,9 @@ public sealed class GetSprintExecutionQueryHandler
             .Where(candidate => candidate.TeamId == sprint.TeamId)
             .ToListAsync(cancellationToken);
 
-        return SprintSpilloverLookup.GetNextSprintPath(sprint, teamSprints);
+        return SprintSpilloverLookup.GetNextSprintPath(
+            sprint,
+            teamSprints.Select(candidate => candidate.ToDefinition()));
     }
 
     private double SumStoryPoints(

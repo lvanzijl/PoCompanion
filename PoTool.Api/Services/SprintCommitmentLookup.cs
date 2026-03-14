@@ -1,4 +1,4 @@
-using PoTool.Api.Persistence.Entities;
+using PoTool.Core.Metrics.Models;
 
 namespace PoTool.Api.Services;
 
@@ -12,23 +12,23 @@ internal static class SprintCommitmentLookup
     }
 
     public static IReadOnlySet<int> BuildCommittedWorkItemIds(
-        IReadOnlyDictionary<int, string?> currentIterationPathsById,
-        IReadOnlyDictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>> iterationEventsByWorkItem,
+        IReadOnlyDictionary<int, WorkItemSnapshot> workItemsById,
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>> iterationEventsByWorkItem,
         string sprintPath,
         DateTimeOffset commitmentTimestamp)
     {
         var committedWorkItemIds = new HashSet<int>();
 
-        foreach (var currentIterationPath in currentIterationPathsById)
+        foreach (var workItem in workItemsById.Values)
         {
             var reconstructedIterationPath = GetIterationPathAtTimestamp(
-                currentIterationPath.Value,
-                iterationEventsByWorkItem.GetValueOrDefault(currentIterationPath.Key),
+                workItem.CurrentIterationPath,
+                iterationEventsByWorkItem.GetValueOrDefault(workItem.WorkItemId),
                 commitmentTimestamp);
 
             if (string.Equals(reconstructedIterationPath, sprintPath, StringComparison.OrdinalIgnoreCase))
             {
-                committedWorkItemIds.Add(currentIterationPath.Key);
+                committedWorkItemIds.Add(workItem.WorkItemId);
             }
         }
 
@@ -37,7 +37,7 @@ internal static class SprintCommitmentLookup
 
     public static string? GetIterationPathAtTimestamp(
         string? currentIterationPath,
-        IReadOnlyList<ActivityEventLedgerEntryEntity>? iterationEvents,
+        IReadOnlyList<FieldChangeEvent>? iterationEvents,
         DateTimeOffset targetTimestamp)
     {
         var reconstructedIterationPath = NormalizeIterationPath(currentIterationPath);
@@ -51,7 +51,7 @@ internal static class SprintCommitmentLookup
                      .Where(IsIterationPathEvent)
                      .Where(iterationEvent => FirstDoneDeliveryLookup.GetEventTimestamp(iterationEvent) > targetTimestamp)
                      .OrderByDescending(GetOrderingTimestampUtc)
-                     .ThenByDescending(iterationEvent => iterationEvent.Id)
+                     .ThenByDescending(iterationEvent => iterationEvent.EventId)
                      .ThenByDescending(iterationEvent => iterationEvent.UpdateId))
         {
             reconstructedIterationPath = NormalizeIterationPath(iterationEvent.OldValue);
@@ -60,16 +60,14 @@ internal static class SprintCommitmentLookup
         return reconstructedIterationPath;
     }
 
-    private static bool IsIterationPathEvent(ActivityEventLedgerEntryEntity activityEvent)
+    private static bool IsIterationPathEvent(FieldChangeEvent activityEvent)
     {
         return string.Equals(activityEvent.FieldRefName, IterationPathFieldRefName, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static DateTime GetOrderingTimestampUtc(ActivityEventLedgerEntryEntity activityEvent)
+    private static DateTime GetOrderingTimestampUtc(FieldChangeEvent activityEvent)
     {
-        return activityEvent.EventTimestampUtc != default
-            ? DateTime.SpecifyKind(activityEvent.EventTimestampUtc, DateTimeKind.Utc)
-            : FirstDoneDeliveryLookup.GetEventTimestamp(activityEvent).UtcDateTime;
+        return activityEvent.TimestampUtc;
     }
 
     private static string? NormalizeIterationPath(string? iterationPath)

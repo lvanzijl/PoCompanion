@@ -4,6 +4,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Metrics.Models;
 using PoTool.Core.Metrics.Services;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
@@ -104,16 +105,13 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         var relevantWorkItems = allWorkItems
             .ToList();
 
-        IReadOnlyDictionary<int, string?> currentIterationPathsById = relevantWorkItems
-            .ToDictionary(
-                wi => wi.TfsId,
-                wi => string.IsNullOrWhiteSpace(wi.IterationPath) ? null : wi.IterationPath);
-        var workItemTypesById = relevantWorkItems.ToDictionary(wi => wi.TfsId, wi => wi.Type);
         var workItemIds = relevantWorkItems.Select(wi => wi.TfsId).ToArray();
         var sprintStart = matchingSprint.StartUtc.Value;
         var sprintEnd = matchingSprint.EndUtc.Value;
+        var sprintDefinition = matchingSprint.ToDefinition();
+        var workItemSnapshotsById = relevantWorkItems.ToSnapshotDictionary();
         var commitmentTimestamp = SprintCommitmentLookup.GetCommitmentTimestamp(sprintStart);
-        var iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>>();
+        var iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>();
         var firstDoneByWorkItem = new Dictionary<int, DateTimeOffset>();
         var addedWorkItemIds = new HashSet<int>();
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null;
@@ -125,23 +123,22 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
                 .Where(e => workItemIds.Contains(e.WorkItemId)
                             && (e.FieldRefName == IterationPathFieldRefName || e.FieldRefName == StateFieldRefName))
                 .ToListAsync(cancellationToken);
+            var allHistoryFieldChanges = allHistoryEvents.ToFieldChangeEvents();
 
-            var iterationEvents = allHistoryEvents
+            var iterationEvents = allHistoryFieldChanges
                 .Where(e => string.Equals(e.FieldRefName, IterationPathFieldRefName, StringComparison.OrdinalIgnoreCase))
-                .Where(e => e.EventTimestampUtc >= sprintStart.UtcDateTime)
+                .Where(e => e.TimestampUtc >= sprintStart.UtcDateTime)
                 .ToList();
 
-            iterationEventsByWorkItem = iterationEvents
-                .GroupBy(e => e.WorkItemId)
-                .ToDictionary(g => g.Key, g => (IReadOnlyList<ActivityEventLedgerEntryEntity>)g.ToList());
+            iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>(iterationEvents.GroupByWorkItemId());
 
             var classifications = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
             stateLookup = StateClassificationLookup.Create(classifications.Classifications);
-            firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(allHistoryEvents, workItemTypesById, stateLookup)
+            firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(allHistoryFieldChanges, workItemSnapshotsById, stateLookup)
                 .ToDictionary(pair => pair.Key, pair => pair.Value);
 
             addedWorkItemIds = iterationEvents
-                .Where(e => string.Equals(e.NewValue, matchingSprint.Path, StringComparison.OrdinalIgnoreCase))
+                .Where(e => string.Equals(e.NewValue, sprintDefinition.Path, StringComparison.OrdinalIgnoreCase))
                 .Where(e =>
                 {
                     var eventTimestamp = FirstDoneDeliveryLookup.GetEventTimestamp(e);
@@ -152,9 +149,9 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         }
 
         var committedWorkItemIds = SprintCommitmentLookup.BuildCommittedWorkItemIds(
-                currentIterationPathsById,
+                workItemSnapshotsById,
                 iterationEventsByWorkItem,
-                matchingSprint.Path,
+                sprintDefinition.Path,
                 commitmentTimestamp)
             .ToHashSet();
 

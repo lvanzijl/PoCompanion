@@ -1,3 +1,4 @@
+using PoTool.Core.Metrics.Models;
 using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Services;
@@ -53,6 +54,13 @@ internal static class StateClassificationLookup
         string? state)
     {
         return GetClassification(lookup, workItemType, state) == StateClassification.Done;
+    }
+
+    public static bool IsDone(
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? lookup,
+        WorkItemSnapshot workItem)
+    {
+        return IsDone(lookup, workItem.WorkItemType, workItem.CurrentState);
     }
 
     public static IReadOnlySet<string> GetStatesForClassification(

@@ -1,4 +1,4 @@
-using PoTool.Api.Persistence.Entities;
+using PoTool.Core.Metrics.Models;
 
 namespace PoTool.Api.Services;
 
@@ -8,7 +8,7 @@ internal static class StateReconstructionLookup
 
     public static string? GetStateAtTimestamp(
         string? currentState,
-        IReadOnlyList<ActivityEventLedgerEntryEntity>? stateEvents,
+        IReadOnlyList<FieldChangeEvent>? stateEvents,
         DateTimeOffset targetTimestamp)
     {
         var reconstructedState = NormalizeState(currentState);
@@ -22,7 +22,7 @@ internal static class StateReconstructionLookup
                      .Where(IsStateEvent)
                      .Where(stateEvent => FirstDoneDeliveryLookup.GetEventTimestamp(stateEvent) > targetTimestamp)
                      .OrderByDescending(GetOrderingTimestampUtc)
-                     .ThenByDescending(stateEvent => stateEvent.Id)
+                     .ThenByDescending(stateEvent => stateEvent.EventId)
                      .ThenByDescending(stateEvent => stateEvent.UpdateId))
         {
             reconstructedState = NormalizeState(stateEvent.OldValue);
@@ -31,16 +31,14 @@ internal static class StateReconstructionLookup
         return reconstructedState;
     }
 
-    private static bool IsStateEvent(ActivityEventLedgerEntryEntity activityEvent)
+    private static bool IsStateEvent(FieldChangeEvent activityEvent)
     {
         return string.Equals(activityEvent.FieldRefName, StateFieldRefName, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static DateTime GetOrderingTimestampUtc(ActivityEventLedgerEntryEntity activityEvent)
+    private static DateTime GetOrderingTimestampUtc(FieldChangeEvent activityEvent)
     {
-        return activityEvent.EventTimestampUtc != default
-            ? DateTime.SpecifyKind(activityEvent.EventTimestampUtc, DateTimeKind.Utc)
-            : FirstDoneDeliveryLookup.GetEventTimestamp(activityEvent).UtcDateTime;
+        return activityEvent.TimestampUtc;
     }
 
     private static string? NormalizeState(string? state)
