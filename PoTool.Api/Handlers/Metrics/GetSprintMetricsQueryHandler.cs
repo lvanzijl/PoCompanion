@@ -4,7 +4,10 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Metrics.Services;
+using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
+using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems.Queries;
@@ -29,6 +32,7 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
     private readonly IProductRepository _productRepository;
     private readonly ISprintRepository _sprintRepository;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
+    private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
     private readonly IMediator _mediator;
     private readonly PoToolDbContext _context;
     private readonly ILogger<GetSprintMetricsQueryHandler> _logger;
@@ -38,6 +42,7 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         IProductRepository productRepository,
         ISprintRepository sprintRepository,
         IWorkItemStateClassificationService stateClassificationService,
+        ICanonicalStoryPointResolutionService storyPointResolutionService,
         IMediator mediator,
         PoToolDbContext context,
         ILogger<GetSprintMetricsQueryHandler> logger)
@@ -46,6 +51,7 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         _productRepository = productRepository;
         _sprintRepository = sprintRepository;
         _stateClassificationService = stateClassificationService;
+        _storyPointResolutionService = storyPointResolutionService;
         _mediator = mediator;
         _context = context;
         _logger = logger;
@@ -110,6 +116,7 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         var iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>>();
         var firstDoneByWorkItem = new Dictionary<int, DateTimeOffset>();
         var addedWorkItemIds = new HashSet<int>();
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null;
 
         if (workItemIds.Length > 0)
         {
@@ -129,7 +136,7 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
                 .ToDictionary(g => g.Key, g => (IReadOnlyList<ActivityEventLedgerEntryEntity>)g.ToList());
 
             var classifications = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
-            var stateLookup = StateClassificationLookup.Create(classifications.Classifications);
+            stateLookup = StateClassificationLookup.Create(classifications.Classifications);
             firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(allHistoryEvents, workItemTypesById, stateLookup)
                 .ToDictionary(pair => pair.Key, pair => pair.Value);
 
@@ -166,25 +173,35 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
                          && firstDoneTimestamp <= sprintEnd)
             .ToList();
 
+        if (stateLookup == null)
+        {
+            var classificationsResponse = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
+            stateLookup = StateClassificationLookup.Create(classificationsResponse.Classifications);
+        }
+
         var completedStoryPoints = completedItems
-            .Where(wi => wi.Effort.HasValue)
-            .Sum(wi => wi.Effort!.Value);
+            .Select(wi => ResolveSprintStoryPoints(wi, isDone: true))
+            .Where(resolution => resolution.HasValue)
+            .Select(resolution => resolution!.Value)
+            .Sum();
 
         var plannedStoryPoints = sprintScopeWorkItems
             .Where(wi => committedWorkItemIds.Contains(wi.TfsId))
-            .Where(wi => wi.Effort.HasValue)
-            .Sum(wi => wi.Effort!.Value);
+            .Select(wi => ResolveSprintStoryPoints(
+                wi,
+                StateClassificationLookup.IsDone(stateLookup, wi.Type, wi.State)))
+            .Where(resolution => resolution.HasValue)
+            .Select(resolution => resolution!.Value)
+            .Sum();
 
         var completedPBIs = completedItems.Count(wi =>
-            wi.Type.Equals("Product Backlog Item", StringComparison.OrdinalIgnoreCase) ||
-            wi.Type.Equals("PBI", StringComparison.OrdinalIgnoreCase) ||
-            wi.Type.Equals("User Story", StringComparison.OrdinalIgnoreCase));
+            IsPbiType(wi.Type));
 
         var completedBugs = completedItems.Count(wi =>
-            wi.Type.Equals("Bug", StringComparison.OrdinalIgnoreCase));
+            wi.Type.Equals(WorkItemType.Bug, StringComparison.OrdinalIgnoreCase));
 
         var completedTasks = completedItems.Count(wi =>
-            wi.Type.Equals("Task", StringComparison.OrdinalIgnoreCase));
+            wi.Type.Equals(WorkItemType.Task, StringComparison.OrdinalIgnoreCase));
 
         var sprintName = string.IsNullOrWhiteSpace(matchingSprint.Name)
             ? query.IterationPath
@@ -205,12 +222,30 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         );
 
         _logger.LogInformation(
-            "Sprint metrics calculated for {IterationPath}: delivered {CompletedPoints} effort from {CompletedCount} scope items against {PlannedPoints} committed effort",
+            "Sprint metrics calculated for {IterationPath}: delivered {CompletedPoints} story points from {CompletedCount} scope items against {PlannedPoints} committed story points",
             query.IterationPath,
             completedStoryPoints,
             completedItems.Count,
             plannedStoryPoints);
 
         return metrics;
+    }
+
+    private int? ResolveSprintStoryPoints(WorkItemDto workItem, bool isDone)
+    {
+        var estimate = _storyPointResolutionService.Resolve(new StoryPointResolutionRequest(workItem, isDone));
+        if (estimate.Source is StoryPointEstimateSource.Missing or StoryPointEstimateSource.Derived || !estimate.Value.HasValue)
+        {
+            return null;
+        }
+
+        return (int)estimate.Value.Value;
+    }
+
+    private static bool IsPbiType(string workItemType)
+    {
+        return workItemType.Equals(WorkItemType.Pbi, StringComparison.OrdinalIgnoreCase)
+            || workItemType.Equals(WorkItemType.PbiShort, StringComparison.OrdinalIgnoreCase)
+            || workItemType.Equals(WorkItemType.UserStory, StringComparison.OrdinalIgnoreCase);
     }
 }
