@@ -78,6 +78,22 @@ public class GetEpicCompletionForecastQueryHandlerTests
     }
 
     [TestMethod]
+    public void Constructor_AllowsInjectedHierarchyRollupDouble()
+    {
+        var hierarchyRollupService = new Mock<IHierarchyRollupService>();
+
+        var handler = new GetEpicCompletionForecastQueryHandler(
+            _mockRepository.Object,
+            _mockProductRepository.Object,
+            _mockMediator.Object,
+            _mockStateService.Object,
+            hierarchyRollupService.Object,
+            _mockLogger.Object);
+
+        Assert.IsNotNull(handler);
+    }
+
+    [TestMethod]
     public async Task Handle_WithNonExistentEpic_ReturnsNull()
     {
         // Arrange

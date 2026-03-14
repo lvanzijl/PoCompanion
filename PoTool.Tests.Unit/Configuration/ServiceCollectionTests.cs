@@ -1,12 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using PoTool.Api.Configuration;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Metrics.Services;
 
 namespace PoTool.Tests.Unit.Configuration;
 
@@ -25,6 +29,7 @@ public class ServiceCollectionTests
         
         // Add required dependencies
         services.AddLogging();
+        RegisterHostEnvironment(services);
         services.AddDbContext<PoToolDbContext>(options => 
             options.UseInMemoryDatabase("TestDb"));
 
@@ -59,6 +64,7 @@ public class ServiceCollectionTests
         
         // Add required dependencies
         services.AddLogging();
+        RegisterHostEnvironment(services);
         services.AddDbContext<PoToolDbContext>(options => 
             options.UseInMemoryDatabase("TestDb2"));
 
@@ -72,5 +78,40 @@ public class ServiceCollectionTests
         var stateClassificationService = serviceProvider.GetService<IWorkItemStateClassificationService>();
         Assert.IsNotNull(stateClassificationService, 
             "IWorkItemStateClassificationService should be resolvable (validates TfsConfigurationService dependency)");
+    }
+
+    [TestMethod]
+    public void AddPoToolApiServices_RegistersCanonicalMetricsServices_ForDiConsumers()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+
+        services.AddLogging();
+        RegisterHostEnvironment(services);
+        services.AddDbContext<PoToolDbContext>(options =>
+            options.UseInMemoryDatabase("TestDb3"));
+
+        services.AddPoToolApiServices(configuration, isDevelopment: true);
+
+        using var serviceProvider = services.BuildServiceProvider();
+
+        var storyPointResolutionService = serviceProvider.GetService<ICanonicalStoryPointResolutionService>();
+        var hierarchyRollupService = serviceProvider.GetService<IHierarchyRollupService>();
+        var projectionService = serviceProvider.GetService<SprintTrendProjectionService>();
+
+        Assert.IsNotNull(storyPointResolutionService, "Canonical story-point resolution service should be registered.");
+        Assert.IsNotNull(hierarchyRollupService, "Hierarchy rollup service should be registered.");
+        Assert.IsNotNull(projectionService, "SprintTrendProjectionService should be resolvable from DI.");
+    }
+
+    private static void RegisterHostEnvironment(IServiceCollection services)
+    {
+        var hostEnvironment = new Mock<IHostEnvironment>();
+        hostEnvironment.SetupProperty(environment => environment.EnvironmentName, Environments.Development);
+        hostEnvironment.SetupProperty(environment => environment.ApplicationName, "PoTool.Tests.Unit");
+        hostEnvironment.SetupProperty(environment => environment.ContentRootPath, AppContext.BaseDirectory);
+        hostEnvironment.SetupProperty(environment => environment.ContentRootFileProvider, new NullFileProvider());
+
+        services.AddSingleton(hostEnvironment.Object);
     }
 }

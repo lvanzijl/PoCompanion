@@ -44,6 +44,11 @@ public class SprintTrendProjectionService
         ICanonicalStoryPointResolutionService storyPointResolutionService,
         IHierarchyRollupService hierarchyRollupService)
     {
+        ArgumentNullException.ThrowIfNull(scopeFactory);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(storyPointResolutionService);
+        ArgumentNullException.ThrowIfNull(hierarchyRollupService);
+
         _scopeFactory = scopeFactory;
         _logger = logger;
         _stateClassificationService = stateClassificationService;
@@ -262,8 +267,11 @@ public class SprintTrendProjectionService
         ICanonicalStoryPointResolutionService? storyPointResolutionService = null,
         IHierarchyRollupService? hierarchyRollupService = null)
     {
-        var resolver = storyPointResolutionService ?? new CanonicalStoryPointResolutionService();
-        var rollupService = hierarchyRollupService ?? new HierarchyRollupService(resolver);
+        ArgumentNullException.ThrowIfNull(storyPointResolutionService);
+        ArgumentNullException.ThrowIfNull(hierarchyRollupService);
+
+        var resolver = storyPointResolutionService;
+        var rollupService = hierarchyRollupService;
         var effectiveWorkItemSnapshotsById = workItemSnapshotsById
             ?? workItemsByTfsId.Values.ToSnapshotDictionary();
         var effectiveFirstDoneByWorkItem = firstDoneByWorkItem
@@ -402,7 +410,7 @@ public class SprintTrendProjectionService
 
         // Feature/Epic progression delta
         var progressionDelta = ComputeProgressionDelta(
-            productResolved, workItemsByTfsId, functionalActivityByWorkItem, rollupService, stateLookup);
+            productResolved, workItemsByTfsId, functionalActivityByWorkItem, rollupService, stateLookup, resolver);
 
         // Bug metrics
         var bugResolved = productResolved.Where(r => r.WorkItemType == WorkItemType.Bug).ToList();
@@ -521,8 +529,11 @@ public class SprintTrendProjectionService
         var featureResolved = productResolved.Where(r => r.WorkItemType == WorkItemType.Feature).ToList();
         if (featureResolved.Count == 0) return 0;
 
-        var resolver = storyPointResolutionService ?? new CanonicalStoryPointResolutionService();
-        var rollupService = hierarchyRollupService ?? new HierarchyRollupService(resolver);
+        ArgumentNullException.ThrowIfNull(hierarchyRollupService);
+        ArgumentNullException.ThrowIfNull(storyPointResolutionService);
+
+        var resolver = storyPointResolutionService;
+        var rollupService = hierarchyRollupService;
         var totalFeatureProgression = 0.0;
         var featureCount = 0;
 
@@ -856,8 +867,11 @@ public class SprintTrendProjectionService
         IHierarchyRollupService? hierarchyRollupService = null)
     {
         var results = new List<FeatureProgressDto>();
-        var resolver = storyPointResolutionService ?? new CanonicalStoryPointResolutionService();
-        var rollupService = hierarchyRollupService ?? new HierarchyRollupService(resolver);
+        ArgumentNullException.ThrowIfNull(storyPointResolutionService);
+        ArgumentNullException.ThrowIfNull(hierarchyRollupService);
+
+        var resolver = storyPointResolutionService;
+        var rollupService = hierarchyRollupService;
 
         foreach (var productId in productIds)
         {

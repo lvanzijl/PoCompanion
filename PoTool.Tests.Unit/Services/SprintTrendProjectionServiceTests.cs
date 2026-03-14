@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
+using PoTool.Core.Metrics.Models;
 using PoTool.Core.Metrics.Services;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
@@ -12,6 +14,9 @@ namespace PoTool.Tests.Unit.Services;
 [TestClass]
 public class SprintTrendProjectionServiceTests
 {
+    private static readonly ICanonicalStoryPointResolutionService DefaultStoryPointResolutionService = new CanonicalStoryPointResolutionService();
+    private static readonly IHierarchyRollupService DefaultHierarchyRollupService = new HierarchyRollupService(DefaultStoryPointResolutionService);
+
     [TestMethod]
     public async Task ComputeProjectionsAsync_ReturnsEmpty_WhenNoSprintIds()
     {
@@ -19,12 +24,108 @@ public class SprintTrendProjectionServiceTests
         var service = new SprintTrendProjectionService(
             serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<SprintTrendProjectionService>.Instance,
-            new CanonicalStoryPointResolutionService(),
-            new HierarchyRollupService(new CanonicalStoryPointResolutionService()));
+            DefaultStoryPointResolutionService,
+            DefaultHierarchyRollupService);
 
         var projections = await service.ComputeProjectionsAsync(1, Array.Empty<int>());
 
         Assert.HasCount(0, projections);
+    }
+
+    [TestMethod]
+    public async Task ComputeProjectionsAsync_AllowsInjectedCanonicalServiceDoubles()
+    {
+        var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        var storyPointResolutionService = new Mock<ICanonicalStoryPointResolutionService>();
+        var hierarchyRollupService = new Mock<IHierarchyRollupService>();
+        var service = new SprintTrendProjectionService(
+            serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<SprintTrendProjectionService>.Instance,
+            storyPointResolutionService.Object,
+            hierarchyRollupService.Object);
+
+        var projections = await service.ComputeProjectionsAsync(1, Array.Empty<int>());
+
+        Assert.HasCount(0, projections);
+    }
+
+    private static SprintMetricsProjectionEntity ComputeProductSprintProjection(
+        SprintEntity sprint,
+        int productId,
+        IReadOnlyList<ResolvedWorkItemEntity> resolvedItems,
+        IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
+        IReadOnlyDictionary<int, List<ActivityEventLedgerEntryEntity>> activityByWorkItem,
+        DateTimeOffset sprintStart,
+        DateTimeOffset sprintEnd,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null,
+        IReadOnlyDictionary<int, DateTimeOffset>? firstDoneByWorkItem = null,
+        IReadOnlySet<int>? committedWorkItemIds = null,
+        string? nextSprintPath = null,
+        IReadOnlyDictionary<int, WorkItemSnapshot>? workItemSnapshotsById = null,
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? stateEventsByWorkItem = null,
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? iterationEventsByWorkItem = null,
+        ICanonicalStoryPointResolutionService? storyPointResolutionService = null,
+        IHierarchyRollupService? hierarchyRollupService = null)
+    {
+        return SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint,
+            productId,
+            resolvedItems,
+            workItemsByTfsId,
+            activityByWorkItem,
+            sprintStart,
+            sprintEnd,
+            stateLookup,
+            firstDoneByWorkItem,
+            committedWorkItemIds,
+            nextSprintPath,
+            workItemSnapshotsById,
+            stateEventsByWorkItem,
+            iterationEventsByWorkItem,
+            storyPointResolutionService ?? DefaultStoryPointResolutionService,
+            hierarchyRollupService ?? DefaultHierarchyRollupService);
+    }
+
+    private static double ComputeProgressionDelta(
+        IReadOnlyList<ResolvedWorkItemEntity> productResolved,
+        IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
+        IReadOnlyDictionary<int, List<ActivityEventLedgerEntryEntity>> activityByWorkItem,
+        IHierarchyRollupService? hierarchyRollupService = null,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null,
+        ICanonicalStoryPointResolutionService? storyPointResolutionService = null)
+    {
+        return SprintTrendProjectionService.ComputeProgressionDelta(
+            productResolved,
+            workItemsByTfsId,
+            activityByWorkItem,
+            hierarchyRollupService ?? DefaultHierarchyRollupService,
+            stateLookup,
+            storyPointResolutionService ?? DefaultStoryPointResolutionService);
+    }
+
+    private static IReadOnlyList<FeatureProgressDto> ComputeFeatureProgress(
+        IReadOnlyList<ResolvedWorkItemEntity> resolvedItems,
+        IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
+        IReadOnlyList<int> productIds,
+        IReadOnlyCollection<int>? activeWorkItemIds = null,
+        IReadOnlyCollection<int>? sprintCompletedPbiIds = null,
+        IReadOnlyDictionary<int, int>? sprintEffortDeltaByWorkItem = null,
+        IReadOnlyCollection<int>? sprintAssignedPbiIds = null,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null,
+        ICanonicalStoryPointResolutionService? storyPointResolutionService = null,
+        IHierarchyRollupService? hierarchyRollupService = null)
+    {
+        return SprintTrendProjectionService.ComputeFeatureProgress(
+            resolvedItems,
+            workItemsByTfsId,
+            productIds,
+            activeWorkItemIds,
+            sprintCompletedPbiIds,
+            sprintEffortDeltaByWorkItem,
+            sprintAssignedPbiIds,
+            stateLookup,
+            storyPointResolutionService ?? DefaultStoryPointResolutionService,
+            hierarchyRollupService ?? DefaultHierarchyRollupService);
     }
 
     [TestMethod]
@@ -58,7 +159,7 @@ public class SprintTrendProjectionServiceTests
         };
 
         // Act
-        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var projection = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
         // Assert
@@ -98,7 +199,7 @@ public class SprintTrendProjectionServiceTests
             }
         };
 
-        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var projection = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
         Assert.AreEqual(60, projection.PlannedEffort, "Effort totals should continue to use effort hours.");
@@ -155,7 +256,7 @@ public class SprintTrendProjectionServiceTests
             }
         };
 
-        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var projection = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
         Assert.AreEqual(10d, projection.PlannedStoryPoints, 0.001d, "Planned story points should include derived estimates for aggregation.");
@@ -200,7 +301,7 @@ public class SprintTrendProjectionServiceTests
         };
 
         // Act
-        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var projection = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
         // Assert
@@ -237,7 +338,7 @@ public class SprintTrendProjectionServiceTests
         };
 
         // Act
-        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var projection = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
         // Assert
@@ -268,7 +369,7 @@ public class SprintTrendProjectionServiceTests
         var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>();
 
         // Act
-        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var projection = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
         // Assert
@@ -303,7 +404,7 @@ public class SprintTrendProjectionServiceTests
         };
 
         // Act
-        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var projection = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
         // Assert
@@ -338,7 +439,7 @@ public class SprintTrendProjectionServiceTests
             [300] = new() { CreateStateChangeActivity(300, sprintStart.AddDays(3), "Active", "Resolved") }
         };
 
-        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var projection = ComputeProductSprintProjection(
             sprint,
             1,
             resolved,
@@ -382,7 +483,7 @@ public class SprintTrendProjectionServiceTests
             }
         };
 
-        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var projection = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
         Assert.AreEqual(1, projection.CompletedPbiCount, "Only the first Done transition should count as delivery");
@@ -416,7 +517,7 @@ public class SprintTrendProjectionServiceTests
             }
         };
 
-        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var projection = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
         Assert.AreEqual(0, projection.CompletedPbiCount, "A second Done transition must not create a new sprint delivery");
@@ -449,7 +550,7 @@ public class SprintTrendProjectionServiceTests
             }
         };
 
-        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var projection = ComputeProductSprintProjection(
             sprint,
             1,
             resolved,
@@ -470,7 +571,7 @@ public class SprintTrendProjectionServiceTests
         var workItems = new Dictionary<int, WorkItemEntity>();
         var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>();
 
-        var delta = SprintTrendProjectionService.ComputeProgressionDelta(resolved, workItems, activity);
+        var delta = ComputeProgressionDelta(resolved, workItems, activity);
 
         Assert.AreEqual(0, delta);
     }
@@ -500,7 +601,7 @@ public class SprintTrendProjectionServiceTests
             [201] = new() { CreateStateChangeActivity(201, DateTimeOffset.UtcNow, "Active", "Done") },
         };
 
-        var delta = SprintTrendProjectionService.ComputeProgressionDelta(resolved, workItems, activity);
+        var delta = ComputeProgressionDelta(resolved, workItems, activity);
 
         Assert.AreEqual(33.33, delta, 0.01, "Progression should be 33.33% (50/150 * 100)");
     }
@@ -527,7 +628,7 @@ public class SprintTrendProjectionServiceTests
             [201] = new() { CreateActivity(201, DateTimeOffset.UtcNow, "System.Title") },
         };
 
-        var delta = SprintTrendProjectionService.ComputeProgressionDelta(resolved, workItems, activity);
+        var delta = ComputeProgressionDelta(resolved, workItems, activity);
 
         Assert.AreEqual(0, delta, "Non-status activity should not contribute to progression delta");
     }
@@ -541,7 +642,7 @@ public class SprintTrendProjectionServiceTests
         var workItems = new Dictionary<int, WorkItemEntity>();
         var productIds = new List<int> { 1 };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, productIds);
+        var result = ComputeFeatureProgress(resolved, workItems, productIds);
 
         Assert.IsEmpty(result, "Should return empty when no features");
     }
@@ -565,7 +666,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 203, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
         };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
 
         Assert.HasCount(1, result);
         var feature = result[0];
@@ -594,7 +695,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
         };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
 
         Assert.HasCount(1, result);
         Assert.AreEqual(100, result[0].ProgressPercent, "Canonically done feature should show 100%");
@@ -618,7 +719,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
         };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+        var result = ComputeFeatureProgress(
             resolved,
             workItems,
             new List<int> { 1 },
@@ -649,7 +750,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
         };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
 
         Assert.HasCount(1, result);
         Assert.AreEqual(90, result[0].ProgressPercent, "Non-done feature with all PBIs done should be capped at 90%");
@@ -673,7 +774,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
         };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
 
         Assert.HasCount(1, result);
         Assert.AreEqual(50, result[0].EpicId);
@@ -693,7 +794,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
         };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
 
         Assert.IsEmpty(result, "Features with no child PBIs should be skipped");
     }
@@ -720,7 +821,7 @@ public class SprintTrendProjectionServiceTests
         // Only PBI 201 had activity — Feature 101 / PBI 202 had none
         var activeWorkItemIds = new HashSet<int> { 201 };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, activeWorkItemIds);
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, activeWorkItemIds);
 
         Assert.HasCount(1, result, "Only the feature with child PBI activity should be returned");
         Assert.AreEqual(100, result[0].FeatureId);
@@ -744,7 +845,7 @@ public class SprintTrendProjectionServiceTests
         // Feature itself had direct activity (e.g. title change), but no PBI activity
         var activeWorkItemIds = new HashSet<int> { 100 };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, activeWorkItemIds);
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, activeWorkItemIds);
 
         Assert.HasCount(1, result, "Feature with direct activity should be included even without PBI activity");
         Assert.AreEqual(100, result[0].FeatureId);
@@ -769,7 +870,7 @@ public class SprintTrendProjectionServiceTests
 
         var activeWorkItemIds = new HashSet<int> { 301 };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+        var result = ComputeFeatureProgress(
             resolved,
             workItems,
             new List<int> { 1 },
@@ -799,7 +900,7 @@ public class SprintTrendProjectionServiceTests
         };
 
         // No activity filter — both features should be returned
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, null);
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, null);
 
         Assert.HasCount(2, result, "Without activity filter, all features with PBIs should be returned");
     }
@@ -830,7 +931,7 @@ public class SprintTrendProjectionServiceTests
         // PBI 202 is assigned to the sprint
         var sprintAssignedPbiIds = new HashSet<int> { 202 };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+        var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: activeWorkItemIds,
             sprintAssignedPbiIds: sprintAssignedPbiIds);
@@ -864,7 +965,7 @@ public class SprintTrendProjectionServiceTests
         // PBI 202 is NOT in the sprint
         var sprintAssignedPbiIds = new HashSet<int>(); // empty
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+        var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: activeWorkItemIds,
             sprintAssignedPbiIds: sprintAssignedPbiIds);
@@ -895,7 +996,7 @@ public class SprintTrendProjectionServiceTests
 
         var activeWorkItemIds = new HashSet<int> { 201 };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+        var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: activeWorkItemIds,
             sprintAssignedPbiIds: null);
@@ -921,7 +1022,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
         };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
 
         Assert.HasCount(1, result);
         // PBI2 missing effort → sibling avg = 10, so total = 10 + 10 = 20, done = 10
@@ -949,7 +1050,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 101 },
         };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
 
         Assert.HasCount(2, result);
         Assert.AreEqual(8d, result.Single(f => f.FeatureId == 100).TotalEffort);
@@ -977,7 +1078,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 203, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
         };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
 
         Assert.HasCount(1, result);
         Assert.AreEqual(10.5d, result[0].TotalEffort, 0.001d);
@@ -1004,7 +1105,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 203, WorkItemType = WorkItemType.Task, ResolvedProductId = 1 },
         };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
 
         Assert.HasCount(1, result);
         Assert.AreEqual(5d, result[0].TotalEffort);
@@ -1268,11 +1369,11 @@ public class SprintTrendProjectionServiceTests
         };
 
         // Compute projection for Sprint 1
-        var result1 = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var result1 = ComputeProductSprintProjection(
             sprint1, 1, resolved, workItems, sprint1Activity, sprint1Start, sprint1End);
 
         // Compute projection for Sprint 2
-        var result2 = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var result2 = ComputeProductSprintProjection(
             sprint2, 1, resolved, workItems, sprint2Activity, sprint2Start, sprint2End);
 
         // Sprint 1 should have 1 completed PBI with 50 effort
@@ -1316,7 +1417,7 @@ public class SprintTrendProjectionServiceTests
             [301] = new() { CreateStateChangeActivity(301, sprintStart.AddDays(3), "New", "Active") }
         };
 
-        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var result = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
         // Task activity should bubble all the way through Task → PBI → Feature
@@ -1349,7 +1450,7 @@ public class SprintTrendProjectionServiceTests
 
         var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>();
 
-        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var result = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
         Assert.AreEqual(2, result.PlannedCount, "PlannedCount should be 2 (only PBIs resolved to sprint 1)");
@@ -1379,7 +1480,7 @@ public class SprintTrendProjectionServiceTests
         // No activity events at all
         var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>();
 
-        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var result = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
         Assert.AreEqual(0, result.WorkedCount, "WorkedCount should be 0 with no activity");
@@ -1408,7 +1509,7 @@ public class SprintTrendProjectionServiceTests
 
         var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>();
 
-        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var result = ComputeProductSprintProjection(
             sprint,
             1,
             resolved,
@@ -1441,7 +1542,7 @@ public class SprintTrendProjectionServiceTests
 
         var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>();
 
-        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var result = ComputeProductSprintProjection(
             sprint,
             1,
             resolved,
@@ -1482,7 +1583,7 @@ public class SprintTrendProjectionServiceTests
             }
         };
 
-        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var result = ComputeProductSprintProjection(
             sprint,
             1,
             resolved,
@@ -1525,7 +1626,7 @@ public class SprintTrendProjectionServiceTests
             }
         };
 
-        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var result = ComputeProductSprintProjection(
             sprint,
             1,
             resolved,
@@ -1560,7 +1661,7 @@ public class SprintTrendProjectionServiceTests
 
         var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>();
 
-        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var result = ComputeProductSprintProjection(
             sprint,
             1,
             resolved,
@@ -1603,7 +1704,7 @@ public class SprintTrendProjectionServiceTests
             }
         };
 
-        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var result = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
         Assert.AreEqual(0, result.WorkedCount, "Metadata-only changes should not count as worked activity");
@@ -1636,7 +1737,7 @@ public class SprintTrendProjectionServiceTests
             }
         };
 
-        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var result = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
         Assert.IsGreaterThan(0, result.WorkedCount, "Functional changes should count as worked activity");
@@ -1671,7 +1772,7 @@ public class SprintTrendProjectionServiceTests
             }
         };
 
-        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var result = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
         Assert.IsGreaterThan(0, result.WorkedCount, "Mixed revisions should count as worked when functional fields changed");
@@ -1701,7 +1802,7 @@ public class SprintTrendProjectionServiceTests
 
         var sprintCompletedPbiIds = new HashSet<int> { 201 };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+        var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: null, sprintCompletedPbiIds: sprintCompletedPbiIds);
 
@@ -1727,7 +1828,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
         };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+        var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: null, sprintCompletedPbiIds: null);
 
@@ -1754,7 +1855,7 @@ public class SprintTrendProjectionServiceTests
         // Sprint filter provided but no PBIs closed
         var sprintCompletedPbiIds = new HashSet<int>();
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+        var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: null, sprintCompletedPbiIds: sprintCompletedPbiIds);
 
@@ -1868,7 +1969,7 @@ public class SprintTrendProjectionServiceTests
 
         var sprintCompletedPbiIds = new HashSet<int> { 201, 202 };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+        var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: null, sprintCompletedPbiIds: sprintCompletedPbiIds);
 
@@ -1896,7 +1997,7 @@ public class SprintTrendProjectionServiceTests
         // The closedInSprint set includes both the feature and its PBI
         var sprintCompletedPbiIds = new HashSet<int> { 100, 201 };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+        var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: null, sprintCompletedPbiIds: sprintCompletedPbiIds);
 
@@ -1920,7 +2021,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
         };
 
-        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+        var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: null, sprintCompletedPbiIds: null);
 
@@ -2013,7 +2114,7 @@ public class SprintTrendProjectionServiceTests
         // PBI P had a non-noise activity event (System.Title change) — no state transition to Done
         var activeWorkItemIds = new HashSet<int> { 30 };
 
-        var featureProgress = SprintTrendProjectionService.ComputeFeatureProgress(
+        var featureProgress = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: activeWorkItemIds,
             sprintCompletedPbiIds: new HashSet<int>());
@@ -2061,7 +2162,7 @@ public class SprintTrendProjectionServiceTests
         // PBI P had an activity event for the given non-noise field
         var activeWorkItemIds = new HashSet<int> { 30 };
 
-        var featureProgress = SprintTrendProjectionService.ComputeFeatureProgress(
+        var featureProgress = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: activeWorkItemIds,
             sprintCompletedPbiIds: new HashSet<int>());
@@ -2097,7 +2198,7 @@ public class SprintTrendProjectionServiceTests
         // (System.ChangedBy / System.ChangedDate are excluded before the set is built)
         var activeWorkItemIds = new HashSet<int>();
 
-        var featureProgress = SprintTrendProjectionService.ComputeFeatureProgress(
+        var featureProgress = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: activeWorkItemIds,
             sprintAssignedPbiIds: new HashSet<int>());
@@ -2133,7 +2234,7 @@ public class SprintTrendProjectionServiceTests
         var activeWorkItemIds = new HashSet<int>();
         var sprintAssignedPbiIds = new HashSet<int>();
 
-        var featureProgress = SprintTrendProjectionService.ComputeFeatureProgress(
+        var featureProgress = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: activeWorkItemIds,
             sprintAssignedPbiIds: sprintAssignedPbiIds);
@@ -2177,7 +2278,7 @@ public class SprintTrendProjectionServiceTests
             }
         };
 
-        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+        var result = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
         Assert.AreEqual(0, result.WorkedCount,
