@@ -8,6 +8,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Repositories;
 using PoTool.Core.Contracts;
+using PoTool.Core.Metrics.Services;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Settings;
@@ -56,6 +57,7 @@ public sealed class GetSprintMetricsQueryHandlerTests
             _productRepository.Object,
             _sprintRepository.Object,
             _stateClassificationService.Object,
+            new CanonicalStoryPointResolutionService(),
             _mediator.Object,
             _context,
             NullLogger<GetSprintMetricsQueryHandler>.Instance);
@@ -70,7 +72,7 @@ public sealed class GetSprintMetricsQueryHandlerTests
     [TestMethod]
     public async Task Handle_ReturnsNull_WhenSprintMetadataIsMissing()
     {
-        await SeedWorkItemAsync(101, WorkItemType.Pbi, "\\Project\\Sprint 1", "Resolved", 5);
+        await SeedWorkItemAsync(101, WorkItemType.Pbi, "\\Project\\Sprint 1", "Resolved", storyPoints: 5);
         _sprintRepository
             .Setup(repository => repository.GetAllSprintsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
@@ -94,16 +96,16 @@ public sealed class GetSprintMetricsQueryHandlerTests
                 CreateSprint(1, sprintPath, "Sprint 1", sprintStart, sprintEnd)
             ]);
 
-        await SeedWorkItemAsync(101, WorkItemType.Pbi, backlogPath, "Resolved", 5);
+        await SeedWorkItemAsync(101, WorkItemType.Pbi, backlogPath, "Resolved", storyPoints: 5);
         await SeedIterationEventAsync(101, sprintEnd.AddDays(1), sprintPath, backlogPath);
         await SeedStateEventAsync(101, sprintStart.AddDays(4), "Active", "Resolved");
 
-        await SeedWorkItemAsync(102, WorkItemType.Pbi, backlogPath, "Resolved", 3);
+        await SeedWorkItemAsync(102, WorkItemType.Pbi, backlogPath, "Resolved", storyPoints: 3);
         await SeedIterationEventAsync(102, sprintStart.AddDays(3), backlogPath, sprintPath);
         await SeedIterationEventAsync(102, sprintStart.AddDays(6), sprintPath, backlogPath);
         await SeedStateEventAsync(102, sprintStart.AddDays(5), "Active", "Resolved");
 
-        await SeedWorkItemAsync(103, WorkItemType.Pbi, sprintPath, "Resolved", 8);
+        await SeedWorkItemAsync(103, WorkItemType.Pbi, sprintPath, "Resolved", storyPoints: 8);
         await SeedStateEventAsync(103, sprintStart.AddDays(-1), "Active", "Resolved");
 
         var result = await _handler.Handle(new GetSprintMetricsQuery("\\project\\sprint 1"), CancellationToken.None);
@@ -134,7 +136,7 @@ public sealed class GetSprintMetricsQueryHandlerTests
                 CreateSprint(1, sprintPath, "Sprint 1", sprintStart, sprintEnd)
             ]);
 
-        await SeedWorkItemAsync(101, WorkItemType.Pbi, sprintPath, "Resolved", 8);
+        await SeedWorkItemAsync(101, WorkItemType.Pbi, sprintPath, "Resolved", storyPoints: 8);
         await SeedStateEventAsync(101, sprintStart.AddDays(-1), "Active", "Resolved");
         await SeedStateEventAsync(101, sprintStart.AddDays(2), "Resolved", "Active");
         await SeedStateEventAsync(101, sprintStart.AddDays(4), "Active", "Resolved");
@@ -170,7 +172,7 @@ public sealed class GetSprintMetricsQueryHandlerTests
                 Classifications = []
             });
 
-        await SeedWorkItemAsync(101, WorkItemType.Pbi, sprintPath, "Closed", 8);
+        await SeedWorkItemAsync(101, WorkItemType.Pbi, sprintPath, "Closed", storyPoints: 8);
         await SeedStateEventAsync(101, sprintStart.AddDays(2), "Active", "Closed");
 
         var result = await _handler.Handle(new GetSprintMetricsQuery(sprintPath), CancellationToken.None);
@@ -204,7 +206,145 @@ public sealed class GetSprintMetricsQueryHandlerTests
         Assert.AreEqual(sprintEnd, result.EndDate);
     }
 
-    private async Task SeedWorkItemAsync(int id, string type, string iterationPath, string state, int? effort)
+    [TestMethod]
+    public async Task Handle_ExcludesBugAndTaskStoryPointsFromSprintTotals()
+    {
+        var sprintStart = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var sprintEnd = new DateTimeOffset(new DateTime(2026, 1, 14, 0, 0, 0, DateTimeKind.Utc));
+        const string sprintPath = "\\Project\\Sprint 1";
+
+        _sprintRepository
+            .Setup(repository => repository.GetAllSprintsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                CreateSprint(1, sprintPath, "Sprint 1", sprintStart, sprintEnd)
+            ]);
+
+        await SeedWorkItemAsync(101, WorkItemType.Pbi, sprintPath, "Resolved", storyPoints: 5);
+        await SeedStateEventAsync(101, sprintStart.AddDays(3), "Active", "Resolved");
+
+        await SeedWorkItemAsync(102, WorkItemType.Bug, sprintPath, "Resolved", storyPoints: 8);
+        await SeedStateEventAsync(102, sprintStart.AddDays(4), "Active", "Resolved");
+
+        await SeedWorkItemAsync(103, WorkItemType.Task, sprintPath, "Resolved", storyPoints: 3);
+        await SeedStateEventAsync(103, sprintStart.AddDays(5), "Active", "Resolved");
+
+        var result = await _handler.Handle(new GetSprintMetricsQuery(sprintPath), CancellationToken.None);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(5, result.PlannedStoryPoints);
+        Assert.AreEqual(5, result.CompletedStoryPoints);
+        Assert.AreEqual(3, result.CompletedWorkItemCount);
+        Assert.AreEqual(1, result.CompletedPBIs);
+        Assert.AreEqual(1, result.CompletedBugs);
+        Assert.AreEqual(1, result.CompletedTasks);
+    }
+
+    [TestMethod]
+    public async Task Handle_UsesBusinessValueFallbackForSprintStoryPoints()
+    {
+        var sprintStart = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var sprintEnd = new DateTimeOffset(new DateTime(2026, 1, 14, 0, 0, 0, DateTimeKind.Utc));
+        const string sprintPath = "\\Project\\Sprint 1";
+
+        _sprintRepository
+            .Setup(repository => repository.GetAllSprintsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                CreateSprint(1, sprintPath, "Sprint 1", sprintStart, sprintEnd)
+            ]);
+
+        await SeedWorkItemAsync(101, WorkItemType.Pbi, sprintPath, "Resolved", businessValue: 13);
+        await SeedStateEventAsync(101, sprintStart.AddDays(2), "Active", "Resolved");
+
+        var result = await _handler.Handle(new GetSprintMetricsQuery(sprintPath), CancellationToken.None);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(13, result.PlannedStoryPoints);
+        Assert.AreEqual(13, result.CompletedStoryPoints);
+        Assert.AreEqual(1, result.CompletedPBIs);
+    }
+
+    [TestMethod]
+    public async Task Handle_ExcludesDeliveredPBIsWithoutEstimatesFromVelocity()
+    {
+        var sprintStart = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var sprintEnd = new DateTimeOffset(new DateTime(2026, 1, 14, 0, 0, 0, DateTimeKind.Utc));
+        const string sprintPath = "\\Project\\Sprint 1";
+
+        _sprintRepository
+            .Setup(repository => repository.GetAllSprintsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                CreateSprint(1, sprintPath, "Sprint 1", sprintStart, sprintEnd)
+            ]);
+
+        await SeedWorkItemAsync(101, WorkItemType.Pbi, sprintPath, "Resolved");
+        await SeedStateEventAsync(101, sprintStart.AddDays(2), "Active", "Resolved");
+
+        var result = await _handler.Handle(new GetSprintMetricsQuery(sprintPath), CancellationToken.None);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(0, result.PlannedStoryPoints);
+        Assert.AreEqual(0, result.CompletedStoryPoints);
+        Assert.AreEqual(1, result.CompletedWorkItemCount);
+        Assert.AreEqual(1, result.CompletedPBIs);
+    }
+
+    [TestMethod]
+    public async Task Handle_TreatsZeroDonePbiAsValidZeroPointDelivery()
+    {
+        var sprintStart = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var sprintEnd = new DateTimeOffset(new DateTime(2026, 1, 14, 0, 0, 0, DateTimeKind.Utc));
+        const string sprintPath = "\\Project\\Sprint 1";
+
+        _sprintRepository
+            .Setup(repository => repository.GetAllSprintsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                CreateSprint(1, sprintPath, "Sprint 1", sprintStart, sprintEnd)
+            ]);
+
+        await SeedWorkItemAsync(101, WorkItemType.Pbi, sprintPath, "Resolved", storyPoints: 0);
+        await SeedStateEventAsync(101, sprintStart.AddDays(2), "Active", "Resolved");
+
+        var result = await _handler.Handle(new GetSprintMetricsQuery(sprintPath), CancellationToken.None);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(0, result.PlannedStoryPoints);
+        Assert.AreEqual(0, result.CompletedStoryPoints);
+        Assert.AreEqual(1, result.CompletedWorkItemCount);
+        Assert.AreEqual(1, result.CompletedPBIs);
+    }
+
+    [TestMethod]
+    public async Task Handle_TreatsZeroNonDonePbiAsMissingEstimate()
+    {
+        var sprintStart = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var sprintEnd = new DateTimeOffset(new DateTime(2026, 1, 14, 0, 0, 0, DateTimeKind.Utc));
+        const string sprintPath = "\\Project\\Sprint 1";
+
+        _sprintRepository
+            .Setup(repository => repository.GetAllSprintsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                CreateSprint(1, sprintPath, "Sprint 1", sprintStart, sprintEnd)
+            ]);
+
+        await SeedWorkItemAsync(101, WorkItemType.Pbi, sprintPath, "Active", storyPoints: 0);
+
+        var result = await _handler.Handle(new GetSprintMetricsQuery(sprintPath), CancellationToken.None);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(0, result.PlannedStoryPoints);
+        Assert.AreEqual(0, result.CompletedStoryPoints);
+        Assert.AreEqual(0, result.CompletedWorkItemCount);
+        Assert.AreEqual(1, result.TotalWorkItemCount);
+    }
+
+    private async Task SeedWorkItemAsync(
+        int id,
+        string type,
+        string iterationPath,
+        string state,
+        int? effort = null,
+        int? storyPoints = null,
+        int? businessValue = null)
     {
         _context.WorkItems.Add(new WorkItemEntity
         {
@@ -215,6 +355,8 @@ public sealed class GetSprintMetricsQueryHandlerTests
             IterationPath = iterationPath,
             State = state,
             Effort = effort,
+            StoryPoints = storyPoints,
+            BusinessValue = businessValue,
             RetrievedAt = DateTimeOffset.UtcNow,
             TfsChangedDate = DateTimeOffset.UtcNow,
             TfsChangedDateUtc = DateTime.UtcNow

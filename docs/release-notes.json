@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-14",
+    "type": "Fixed",
+    "title": "Sprint story point totals now use canonical PBIs",
+    "impact": "Sprint planned and completed story-point totals now count only canonical PBI estimates with BusinessValue fallback, excluding bugs, tasks, and unestimated deliveries from velocity.",
+    "area": "Planning",
+    "link": "/home/delivery/sprint"
+  },
+  {
+    "date": "2026-03-14",
     "type": "Changed",
     "title": "Work item sync now keeps story points separate",
     "impact": "Cached work items now preserve source story points independently from effort hours and business value so future planning metrics can use the original estimation fields correctly.",

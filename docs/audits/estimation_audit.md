@@ -142,3 +142,21 @@ The repository has some correct estimation foundations. TFS retrieval already re
   - `CanonicalStoryPointResolutionServiceTests.Resolve_DerivesMissingEstimateFromSameFeatureSiblingAverage`
   - `CanonicalStoryPointResolutionServiceTests.Resolve_KeepsDerivedEstimateFractional`
   - `CanonicalStoryPointResolutionServiceTests.Resolve_ReturnsExpectedEstimateSourceClassification`
+
+## Fix Progress — Sprint StoryPoint Metrics
+
+- **Sprint metric handlers updated**
+  - `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs` now resolves sprint `PlannedStoryPoints` and `CompletedStoryPoints` through `ICanonicalStoryPointResolutionService` instead of summing `Effort`.
+  - The handler now counts story points only from authoritative PBIs and continues to keep historical sprint-window semantics based on commitment reconstruction and first Done delivery.
+
+- **Velocity semantics corrected**
+  - Delivered story points now include only PBIs whose first canonical Done transition occurred inside the sprint window.
+  - Bugs, tasks, missing estimates, and derived estimates are excluded from sprint story-point totals.
+  - BusinessValue fallback is honored for PBIs when `StoryPoints` is absent, and zero-point PBIs are treated according to the canonical done/non-done rule.
+
+- **Tests added**
+  - `GetSprintMetricsQueryHandlerTests.Handle_ExcludesBugAndTaskStoryPointsFromSprintTotals`
+  - `GetSprintMetricsQueryHandlerTests.Handle_UsesBusinessValueFallbackForSprintStoryPoints`
+  - `GetSprintMetricsQueryHandlerTests.Handle_ExcludesDeliveredPBIsWithoutEstimatesFromVelocity`
+  - `GetSprintMetricsQueryHandlerTests.Handle_TreatsZeroDonePbiAsValidZeroPointDelivery`
+  - `GetSprintMetricsQueryHandlerTests.Handle_TreatsZeroNonDonePbiAsMissingEstimate`
