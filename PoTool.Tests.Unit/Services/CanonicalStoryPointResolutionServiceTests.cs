@@ -124,6 +124,22 @@ public sealed class CanonicalStoryPointResolutionServiceTests
         Assert.AreEqual(StoryPointEstimateSource.Derived, derived.Source);
     }
 
+    [TestMethod]
+    public void ResolveParentFallback_UsesCanonicalFieldPrecedenceForNonPbiParents()
+    {
+        var featureFallback = _service.ResolveParentFallback(new StoryPointFallbackRequest(
+            CreateWorkItem(201, type: WorkItemType.Feature, storyPoints: null, businessValue: 8),
+            IsDone: true));
+        var epicStoryPoints = _service.ResolveParentFallback(new StoryPointFallbackRequest(
+            CreateWorkItem(202, type: WorkItemType.Epic, storyPoints: 13, businessValue: 21),
+            IsDone: false));
+
+        Assert.AreEqual(8d, featureFallback.Value);
+        Assert.AreEqual(StoryPointEstimateSource.Fallback, featureFallback.Source);
+        Assert.AreEqual(13d, epicStoryPoints.Value);
+        Assert.AreEqual(StoryPointEstimateSource.Real, epicStoryPoints.Source);
+    }
+
     private static WorkItemDto CreateWorkItem(
         int tfsId,
         string type = WorkItemType.Pbi,

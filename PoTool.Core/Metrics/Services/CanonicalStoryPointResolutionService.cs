@@ -14,6 +14,13 @@ public interface ICanonicalStoryPointResolutionService
     /// <param name="request">The work item and optional feature-sibling context.</param>
     /// <returns>The resolved estimate and its source classification.</returns>
     ResolvedStoryPointEstimate Resolve(StoryPointResolutionRequest request);
+
+    /// <summary>
+    /// Resolves a parent-level fallback estimate using canonical field precedence without PBI-only restrictions.
+    /// </summary>
+    /// <param name="request">The parent work item and Done-state context.</param>
+    /// <returns>The resolved fallback estimate and its source classification.</returns>
+    ResolvedStoryPointEstimate ResolveParentFallback(StoryPointFallbackRequest request);
 }
 
 /// <summary>
@@ -60,6 +67,15 @@ public sealed record StoryPointResolutionRequest(
     IReadOnlyCollection<StoryPointResolutionCandidate>? FeaturePbis = null);
 
 /// <summary>
+/// Request for resolving a non-PBI fallback estimate during parent rollups.
+/// </summary>
+/// <param name="WorkItem">The parent work item to resolve.</param>
+/// <param name="IsDone">Whether the parent work item is canonically Done.</param>
+public sealed record StoryPointFallbackRequest(
+    WorkItemDto WorkItem,
+    bool IsDone);
+
+/// <summary>
 /// Implements canonical story point resolution:
 /// StoryPoints -> BusinessValue -> Missing, with optional feature-sibling derivation.
 /// </summary>
@@ -82,6 +98,14 @@ public sealed class CanonicalStoryPointResolutionService : ICanonicalStoryPointR
         return TryResolveDerived(request) ?? MissingEstimate;
     }
 
+    public ResolvedStoryPointEstimate ResolveParentFallback(StoryPointFallbackRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.WorkItem);
+
+        return ResolveFallbackEstimate(request.WorkItem, request.IsDone);
+    }
+
     private static ResolvedStoryPointEstimate ResolveDirect(WorkItemDto workItem, bool isDone)
     {
         if (!IsAuthoritativePbi(workItem.Type))
@@ -89,6 +113,11 @@ public sealed class CanonicalStoryPointResolutionService : ICanonicalStoryPointR
             return MissingEstimate;
         }
 
+        return ResolveFallbackEstimate(workItem, isDone);
+    }
+
+    private static ResolvedStoryPointEstimate ResolveFallbackEstimate(WorkItemDto workItem, bool isDone)
+    {
         if (workItem.StoryPoints is int storyPoints)
         {
             if (storyPoints != 0 || isDone)

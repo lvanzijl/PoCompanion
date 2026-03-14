@@ -163,8 +163,8 @@ public class GetEpicCompletionForecastQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(15, result.TotalEffort); // 5 + 8 + 2 (all descendants)
-        Assert.AreEqual(7, result.CompletedEffort); // 5 + 2 (pbi1 and task)
+        Assert.AreEqual(13d, result.TotalEffort); // 5 + 8 (task excluded from canonical story-point scope)
+        Assert.AreEqual(5d, result.CompletedEffort); // Only the completed PBI contributes
         Assert.AreEqual(8, result.RemainingEffort);
     }
 
@@ -228,9 +228,9 @@ public class GetEpicCompletionForecastQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(15, result.TotalEffort); // 5 + 10 (null ignored)
-        Assert.AreEqual(5, result.CompletedEffort);
-        Assert.AreEqual(10, result.RemainingEffort);
+        Assert.AreEqual(22.5d, result.TotalEffort, 0.001d); // 5 + 10 + derived 7.5
+        Assert.AreEqual(5d, result.CompletedEffort, 0.001d);
+        Assert.AreEqual(17.5d, result.RemainingEffort, 0.001d);
     }
 
     [TestMethod]
@@ -359,6 +359,80 @@ public class GetEpicCompletionForecastQueryHandlerTests
         Assert.AreEqual(10, result.RemainingEffort);
     }
 
+    [TestMethod]
+    public async Task Handle_UsesFeatureFallbackOnlyWhenChildPbisLackEstimates()
+    {
+        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
+        var featureWithoutChildEstimates = CreateWorkItem(2, "Feature", "Done", "TestArea", "Sprint 1", 1, null, storyPoints: null, businessValue: 8);
+        var fallbackPbi = CreateWorkItem(3, "PBI", "Done", "TestArea", "Sprint 1", 2, null, storyPoints: null, businessValue: null);
+        var featureWithChildEstimate = CreateWorkItem(4, "Feature", "Active", "TestArea", "Sprint 1", 1, null, storyPoints: null, businessValue: 13);
+        var estimatedPbi = CreateWorkItem(5, "PBI", "Active", "TestArea", "Sprint 2", 4, 5);
+
+        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(epic);
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WorkItemDto>
+            {
+                epic,
+                featureWithoutChildEstimates,
+                fallbackPbi,
+                featureWithChildEstimate,
+                estimatedPbi
+            });
+
+        var result = await _handler.Handle(new GetEpicCompletionForecastQuery(1), CancellationToken.None);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(13d, result.TotalEffort, "Feature fallback should contribute only when its PBIs remain unestimated.");
+        Assert.AreEqual(8d, result.CompletedEffort, "Done feature fallback should count as completed scope.");
+        Assert.AreEqual(5d, result.RemainingEffort);
+    }
+
+    [TestMethod]
+    public async Task Handle_ExcludesBugAndTaskStoryPointsFromForecastScope()
+    {
+        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
+        var feature = CreateWorkItem(2, "Feature", "In Progress", "TestArea", "Sprint 1", 1, null);
+        var pbi = CreateWorkItem(3, "PBI", "Done", "TestArea", "Sprint 1", 2, 5);
+        var bug = CreateWorkItem(4, "Bug", "Done", "TestArea", "Sprint 1", 2, 13);
+        var task = CreateWorkItem(5, "Task", "Done", "TestArea", "Sprint 1", 3, 8);
+
+        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(epic);
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WorkItemDto> { epic, feature, pbi, bug, task });
+
+        var result = await _handler.Handle(new GetEpicCompletionForecastQuery(1), CancellationToken.None);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(5d, result.TotalEffort);
+        Assert.AreEqual(5d, result.CompletedEffort);
+        Assert.AreEqual(0d, result.RemainingEffort);
+    }
+
+    [TestMethod]
+    public async Task Handle_UsesFractionalDerivedStoryPointsInForecast()
+    {
+        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
+        var feature = CreateWorkItem(2, "Feature", "In Progress", "TestArea", "Sprint 1", 1, null);
+        var estimatedPbiA = CreateWorkItem(3, "PBI", "Done", "TestArea", "Sprint 1", 2, 3);
+        var estimatedPbiB = CreateWorkItem(4, "PBI", "Active", "TestArea", "Sprint 2", 2, 4);
+        var missingPbi = CreateWorkItem(5, "PBI", "Active", "TestArea", "Sprint 3", 2, null, storyPoints: null, businessValue: null);
+
+        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(epic);
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WorkItemDto> { epic, feature, estimatedPbiA, estimatedPbiB, missingPbi });
+
+        var result = await _handler.Handle(new GetEpicCompletionForecastQuery(1), CancellationToken.None);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(10.5d, result.TotalEffort, 0.001d);
+        Assert.AreEqual(3d, result.CompletedEffort, 0.001d);
+        Assert.AreEqual(7.5d, result.RemainingEffort, 0.001d);
+        Assert.AreEqual(7.5d, result.ForecastByDate[0].ExpectedCompletedEffort, 0.001d);
+    }
+
     private static WorkItemDto CreateWorkItem(
         int id,
         string type,
@@ -366,7 +440,9 @@ public class GetEpicCompletionForecastQueryHandlerTests
         string areaPath,
         string iterationPath,
         int? parentTfsId,
-        int? effort)
+        int? effort,
+        int? storyPoints = null,
+        int? businessValue = null)
     {
         return new WorkItemDto(
             TfsId: id,
@@ -378,8 +454,10 @@ public class GetEpicCompletionForecastQueryHandlerTests
             State: state,
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
-                    Description: null,
-                    Tags: null
+            Description: null,
+            Tags: null,
+            BusinessValue: businessValue,
+            StoryPoints: storyPoints ?? effort
         );
     }
 }

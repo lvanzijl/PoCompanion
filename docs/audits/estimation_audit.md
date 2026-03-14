@@ -160,3 +160,25 @@ The repository has some correct estimation foundations. TFS retrieval already re
   - `GetSprintMetricsQueryHandlerTests.Handle_ExcludesDeliveredPBIsWithoutEstimatesFromVelocity`
   - `GetSprintMetricsQueryHandlerTests.Handle_TreatsZeroDonePbiAsValidZeroPointDelivery`
   - `GetSprintMetricsQueryHandlerTests.Handle_TreatsZeroNonDonePbiAsMissingEstimate`
+
+## Fix Progress — Forecasting and Rollup Semantics
+
+- **Services updated**
+  - `PoTool.Api/Services/SprintTrendProjectionService.cs`
+  - `PoTool.Api/Handlers/Metrics/GetEpicCompletionForecastQueryHandler.cs`
+  - `PoTool.Api/Handlers/Metrics/GetSprintTrendMetricsQueryHandler.cs`
+  - `PoTool.Core/Metrics/Services/CanonicalStoryPointResolutionService.cs`
+
+- **Rollup logic replaced**
+  - Feature and epic progress now derive scope from canonical PBI story-point rollups instead of descendant effort totals.
+  - Parent fallback estimates now apply only when child PBIs have no canonical estimates, while bugs and tasks remain excluded from story-point analytics.
+  - Forecasting now uses nested canonical rollups with fractional derived estimates preserved for progress and remaining-scope calculations, while sprint trend effort diagnostics stay effort-based.
+
+- **Tests added**
+  - `CanonicalStoryPointResolutionServiceTests.ResolveParentFallback_UsesCanonicalFieldPrecedenceForNonPbiParents`
+  - `GetEpicCompletionForecastQueryHandlerTests.Handle_UsesFeatureFallbackOnlyWhenChildPbisLackEstimates`
+  - `GetEpicCompletionForecastQueryHandlerTests.Handle_ExcludesBugAndTaskStoryPointsFromForecastScope`
+  - `GetEpicCompletionForecastQueryHandlerTests.Handle_UsesFractionalDerivedStoryPointsInForecast`
+  - `SprintTrendProjectionServiceTests.ComputeFeatureProgress_UsesFeatureFallbackOnlyWhenChildPbisLackEstimates`
+  - `SprintTrendProjectionServiceTests.ComputeFeatureProgress_UsesFractionalDerivedStoryPointsWithoutRounding`
+  - `SprintTrendProjectionServiceTests.ComputeFeatureProgress_ExcludesBugAndTaskStoryPoints`

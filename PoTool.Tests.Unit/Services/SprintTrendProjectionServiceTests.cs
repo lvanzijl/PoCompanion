@@ -800,6 +800,87 @@ public class SprintTrendProjectionServiceTests
         Assert.AreEqual(50, result[0].ProgressPercent);
     }
 
+    [TestMethod]
+    public void ComputeFeatureProgress_UsesFeatureFallbackOnlyWhenChildPbisLackEstimates()
+    {
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Fallback Feature", state: "Resolved", businessValue: 8),
+            [101] = CreateWorkItem(101, WorkItemType.Feature, "Child Estimate Feature", state: "Active", businessValue: 13),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "Missing PBI", effort: null, state: "Done", parentId: 100, storyPoints: null, businessValue: null),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "Estimated PBI", effort: 5, state: "Active", parentId: 101),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 101, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 101 },
+        };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+
+        Assert.HasCount(2, result);
+        Assert.AreEqual(8d, result.Single(f => f.FeatureId == 100).TotalEffort);
+        Assert.AreEqual(8d, result.Single(f => f.FeatureId == 100).DoneEffort);
+        Assert.AreEqual(5d, result.Single(f => f.FeatureId == 101).TotalEffort);
+        Assert.AreEqual(0d, result.Single(f => f.FeatureId == 101).DoneEffort);
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_UsesFractionalDerivedStoryPointsWithoutRounding()
+    {
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 3, state: "Done", parentId: 100),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "PBI 2", effort: 4, state: "Active", parentId: 100),
+            [203] = CreateWorkItem(203, WorkItemType.Pbi, "PBI 3", effort: null, state: "Active", parentId: 100, storyPoints: null, businessValue: null),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 203, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+        };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(10.5d, result[0].TotalEffort, 0.001d);
+        Assert.AreEqual(3d, result[0].DoneEffort, 0.001d);
+        Assert.AreEqual(29, result[0].ProgressPercent);
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_ExcludesBugAndTaskStoryPoints()
+    {
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 5, state: "Done", parentId: 100),
+            [202] = CreateWorkItem(202, WorkItemType.Bug, "Bug 1", effort: 13, state: "Done", parentId: 100),
+            [203] = CreateWorkItem(203, WorkItemType.Task, "Task 1", effort: 8, state: "Done", parentId: 201),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Bug, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 203, WorkItemType = WorkItemType.Task, ResolvedProductId = 1 },
+        };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(5d, result[0].TotalEffort);
+        Assert.AreEqual(5d, result[0].DoneEffort);
+    }
+
     #endregion
 
     #region ComputeEpicProgress Tests
@@ -2011,7 +2092,8 @@ public class SprintTrendProjectionServiceTests
     private static WorkItemEntity CreateWorkItem(
         int tfsId, string type, string title,
         int? effort = null, string state = "New",
-        int? parentId = null, DateTimeOffset? createdDate = null)
+        int? parentId = null, DateTimeOffset? createdDate = null,
+        int? storyPoints = null, int? businessValue = null)
     {
         return new WorkItemEntity
         {
@@ -2019,6 +2101,8 @@ public class SprintTrendProjectionServiceTests
             Type = type,
             Title = title,
             Effort = effort,
+            StoryPoints = storyPoints ?? effort,
+            BusinessValue = businessValue,
             State = state,
             ParentTfsId = parentId,
             AreaPath = "\\Project",
