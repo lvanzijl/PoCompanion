@@ -5,6 +5,7 @@ using Moq;
 using PoTool.Api.Handlers.Metrics;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Metrics.Services;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems.Queries;
@@ -23,6 +24,7 @@ public class GetEpicCompletionForecastQueryHandlerTests
     private Mock<IMediator> _mockMediator = null!;
     private Mock<IWorkItemStateClassificationService> _mockStateService = null!;
     private Mock<ILogger<GetEpicCompletionForecastQueryHandler>> _mockLogger = null!;
+    private IHierarchyRollupService _hierarchyRollupService = null!;
     private GetEpicCompletionForecastQueryHandler _handler = null!;
 
     [TestInitialize]
@@ -33,6 +35,7 @@ public class GetEpicCompletionForecastQueryHandlerTests
         _mockMediator = new Mock<IMediator>();
         _mockStateService = new Mock<IWorkItemStateClassificationService>();
         _mockLogger = new Mock<ILogger<GetEpicCompletionForecastQueryHandler>>();
+        _hierarchyRollupService = new HierarchyRollupService(new CanonicalStoryPointResolutionService());
         
         // Setup default state classification
         _mockStateService.Setup(s => s.IsDoneStateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -70,6 +73,7 @@ public class GetEpicCompletionForecastQueryHandlerTests
             _mockProductRepository.Object,
             _mockMediator.Object,
             _mockStateService.Object,
+            _hierarchyRollupService,
             _mockLogger.Object);
     }
 

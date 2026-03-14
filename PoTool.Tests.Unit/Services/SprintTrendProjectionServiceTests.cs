@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
+using PoTool.Core.Metrics.Services;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
 using PoTool.Shared.Settings;
@@ -17,7 +18,9 @@ public class SprintTrendProjectionServiceTests
         var serviceProvider = new ServiceCollection().BuildServiceProvider();
         var service = new SprintTrendProjectionService(
             serviceProvider.GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<SprintTrendProjectionService>.Instance);
+            NullLogger<SprintTrendProjectionService>.Instance,
+            new CanonicalStoryPointResolutionService(),
+            new HierarchyRollupService(new CanonicalStoryPointResolutionService()));
 
         var projections = await service.ComputeProjectionsAsync(1, Array.Empty<int>());
 

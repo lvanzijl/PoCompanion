@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
+using PoTool.Core.Metrics.Services;
 using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
@@ -122,7 +123,9 @@ public class SprintTrendProjectionServiceSqliteTests
 
         var service = new SprintTrendProjectionService(
             _serviceProvider.GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<SprintTrendProjectionService>.Instance);
+            NullLogger<SprintTrendProjectionService>.Instance,
+            new CanonicalStoryPointResolutionService(),
+            new HierarchyRollupService(new CanonicalStoryPointResolutionService()));
 
         var projections = await service.ComputeProjectionsAsync(productOwnerId, new[] { sprintId });
 

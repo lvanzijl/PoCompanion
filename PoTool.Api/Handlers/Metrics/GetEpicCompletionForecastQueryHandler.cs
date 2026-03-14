@@ -26,7 +26,7 @@ public sealed class GetEpicCompletionForecastQueryHandler
     private readonly IProductRepository _productRepository;
     private readonly IMediator _mediator;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
-    private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
+    private readonly IHierarchyRollupService _hierarchyRollupService;
     private readonly ILogger<GetEpicCompletionForecastQueryHandler> _logger;
 
     public GetEpicCompletionForecastQueryHandler(
@@ -34,30 +34,14 @@ public sealed class GetEpicCompletionForecastQueryHandler
         IProductRepository productRepository,
         IMediator mediator,
         IWorkItemStateClassificationService stateClassificationService,
-        ILogger<GetEpicCompletionForecastQueryHandler> logger)
-        : this(
-            repository,
-            productRepository,
-            mediator,
-            stateClassificationService,
-            new CanonicalStoryPointResolutionService(),
-            logger)
-    {
-    }
-
-    public GetEpicCompletionForecastQueryHandler(
-        IWorkItemRepository repository,
-        IProductRepository productRepository,
-        IMediator mediator,
-        IWorkItemStateClassificationService stateClassificationService,
-        ICanonicalStoryPointResolutionService storyPointResolutionService,
+        IHierarchyRollupService hierarchyRollupService,
         ILogger<GetEpicCompletionForecastQueryHandler> logger)
     {
         _repository = repository;
         _productRepository = productRepository;
         _mediator = mediator;
         _stateClassificationService = stateClassificationService;
-        _storyPointResolutionService = storyPointResolutionService;
+        _hierarchyRollupService = hierarchyRollupService;
         _logger = logger;
     }
 
@@ -108,7 +92,7 @@ public sealed class GetEpicCompletionForecastQueryHandler
         }
 
         var doneByWorkItemId = await BuildDoneLookupAsync(workItemsList, cancellationToken);
-        var scope = RollupCanonicalScope(epic, workItemsList, doneByWorkItemId);
+        var scope = _hierarchyRollupService.RollupCanonicalScope(epic, workItemsList, doneByWorkItemId);
 
         var totalEffort = scope.Total;
         var completedEffort = scope.Completed;
@@ -186,135 +170,6 @@ public sealed class GetEpicCompletionForecastQueryHandler
     private async Task<bool> IsCompletedAsync(string workItemType, string state, CancellationToken cancellationToken)
     {
         return await _stateClassificationService.IsDoneStateAsync(workItemType, state, cancellationToken);
-    }
-
-    private ScopeRollup RollupCanonicalScope(
-        WorkItemDto workItem,
-        IReadOnlyList<WorkItemDto> allWorkItems,
-        IReadOnlyDictionary<int, bool> doneByWorkItemId)
-    {
-        var isDone = doneByWorkItemId.GetValueOrDefault(workItem.TfsId);
-        var directChildren = allWorkItems
-            .Where(candidate => candidate.ParentTfsId == workItem.TfsId)
-            .ToList();
-
-        if (IsFeature(workItem.Type))
-        {
-            return RollupFeatureScope(workItem, isDone, directChildren, doneByWorkItemId);
-        }
-
-        var totalScope = 0d;
-        var completedScope = 0d;
-
-        foreach (var childFeature in directChildren.Where(child => IsFeature(child.Type)))
-        {
-            var childScope = RollupCanonicalScope(childFeature, allWorkItems, doneByWorkItemId);
-            totalScope += childScope.Total;
-            completedScope += childScope.Completed;
-        }
-
-        var directPbis = directChildren
-            .Where(child => IsAuthoritativePbi(child.Type))
-            .ToList();
-        if (directPbis.Count > 0)
-        {
-            var directPbiScope = RollupPbiChildren(directPbis, doneByWorkItemId);
-            totalScope += directPbiScope.Total;
-            completedScope += directPbiScope.Completed;
-        }
-
-        if (totalScope > 0)
-        {
-            return new ScopeRollup(totalScope, completedScope);
-        }
-
-        var fallbackEstimate = _storyPointResolutionService.ResolveParentFallback(new StoryPointFallbackRequest(workItem, isDone));
-        if (!fallbackEstimate.HasValue)
-        {
-            return ScopeRollup.Empty;
-        }
-
-        var fallbackValue = fallbackEstimate.Value!.Value;
-        return new ScopeRollup(fallbackValue, isDone ? fallbackValue : 0d);
-    }
-
-    private ScopeRollup RollupFeatureScope(
-        WorkItemDto feature,
-        bool featureIsDone,
-        IReadOnlyList<WorkItemDto> directChildren,
-        IReadOnlyDictionary<int, bool> doneByWorkItemId)
-    {
-        var featurePbis = directChildren
-            .Where(child => IsAuthoritativePbi(child.Type))
-            .ToList();
-
-        var scope = RollupPbiChildren(featurePbis, doneByWorkItemId);
-        if (scope.Total > 0)
-        {
-            return scope;
-        }
-
-        var fallbackEstimate = _storyPointResolutionService.ResolveParentFallback(new StoryPointFallbackRequest(feature, featureIsDone));
-        if (!fallbackEstimate.HasValue)
-        {
-            return ScopeRollup.Empty;
-        }
-
-        var fallbackValue = fallbackEstimate.Value!.Value;
-        return new ScopeRollup(fallbackValue, featureIsDone ? fallbackValue : 0d);
-    }
-
-    private ScopeRollup RollupPbiChildren(
-        IReadOnlyList<WorkItemDto> featurePbis,
-        IReadOnlyDictionary<int, bool> doneByWorkItemId)
-    {
-        if (featurePbis.Count == 0)
-        {
-            return ScopeRollup.Empty;
-        }
-
-        var candidates = featurePbis
-            .Select(pbi => new StoryPointResolutionCandidate(
-                pbi,
-                doneByWorkItemId.GetValueOrDefault(pbi.TfsId)))
-            .ToArray();
-
-        var totalScope = 0d;
-        var completedScope = 0d;
-
-        foreach (var pbi in featurePbis)
-        {
-            var isDone = doneByWorkItemId.GetValueOrDefault(pbi.TfsId);
-            var estimate = _storyPointResolutionService.Resolve(new StoryPointResolutionRequest(
-                pbi,
-                isDone,
-                candidates));
-
-            if (!estimate.HasValue)
-            {
-                continue;
-            }
-
-            totalScope += estimate.Value!.Value;
-            if (isDone)
-            {
-                completedScope += estimate.Value.Value;
-            }
-        }
-
-        return new ScopeRollup(totalScope, completedScope);
-    }
-
-    private static bool IsFeature(string workItemType)
-    {
-        return workItemType.Equals(WorkItemType.Feature, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsAuthoritativePbi(string workItemType)
-    {
-        return workItemType.Equals(WorkItemType.Pbi, StringComparison.OrdinalIgnoreCase)
-            || workItemType.Equals(WorkItemType.PbiShort, StringComparison.OrdinalIgnoreCase)
-            || workItemType.Equals(WorkItemType.UserStory, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -418,10 +273,5 @@ public sealed class GetEpicCompletionForecastQueryHandler
         }
 
         return forecasts;
-    }
-
-    private readonly record struct ScopeRollup(double Total, double Completed)
-    {
-        public static ScopeRollup Empty => new(0d, 0d);
     }
 }

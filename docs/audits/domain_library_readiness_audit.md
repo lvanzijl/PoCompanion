@@ -186,3 +186,21 @@ Extraction therefore appears **feasible with targeted boundary refactors, not wi
 - Added reusable Core calculator `PoTool.Core/Metrics/Services/SprintExecutionMetricsCalculator.cs` that accepts reconstructed story-point totals and returns the canonical derived rates with the existing safe zero-denominator behavior.
 - Simplified `GetSprintExecutionQueryHandler` so it still reconstructs committed, added, removed, delivered, and spillover totals, but now delegates formula calculation to the reusable calculator before mapping `SprintExecutionSummaryDto`.
 - Added focused calculator coverage in `PoTool.Tests.Unit/Services/SprintExecutionMetricsCalculatorTests.cs`, while keeping the existing handler-level sprint execution tests in place.
+
+## Fix Progress — Centralized Hierarchy Rollup Orchestration
+
+- Removed duplicated hierarchy rollup orchestration from:
+  - `PoTool.Api/Handlers/Metrics/GetEpicCompletionForecastQueryHandler.cs`
+  - `PoTool.Api/Services/SprintTrendProjectionService.cs`
+- Introduced shared Core service `PoTool.Core/Metrics/Services/HierarchyRollupService.cs` to centralize:
+  - PBI-based feature scope
+  - feature-based epic scope
+  - canonical parent fallback behavior
+  - bug/task exclusion from story-point rollups
+- Updated the epic forecast handler and sprint trend projection service to delegate canonical hierarchy scope calculation to the shared service while preserving the existing story-point resolution semantics.
+- Added focused rollup coverage in `PoTool.Tests.Unit/Services/HierarchyRollupServiceTests.cs` for:
+  - feature scope rollups
+  - epic scope rollups
+  - parent fallback behavior
+  - bug/task exclusion
+  - derived estimate handling
