@@ -2,7 +2,7 @@ using PoTool.Core.Domain.Models;
 using SharedStateClassification = PoTool.Shared.Settings.StateClassification;
 using WorkItemStateClassificationDto = PoTool.Shared.Settings.WorkItemStateClassificationDto;
 
-namespace PoTool.Api.Services;
+namespace PoTool.Api.Adapters;
 
 internal static class StateClassificationInputMapper
 {

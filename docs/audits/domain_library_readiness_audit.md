@@ -458,3 +458,20 @@ The final remaining architectural coupling risk from the `domain_library_readine
 **CDC extracted with minor cleanup remaining**
 
 The canonical sprint analytics domain now lives in `PoTool.Core.Domain` with clean boundaries: models and services are CDC-owned, API code maps and orchestrates, DTOs remain transport-only, and DI wiring stays in the API composition root. The only remaining items are packaging/namespace cleanup choices in the API adapter layer, not extraction blockers.
+
+## Post-Extraction Cleanup — API Adapter Boundary Clarity
+
+- **Adapter classes regrouped:**  
+  `HistoricalSprintInputMapper`, `CanonicalMetricsInputMapper`, and `StateClassificationInputMapper` now live under `PoTool.Api/Adapters` in the `PoTool.Api.Adapters` namespace. This keeps the EF/DTO-to-CDC translation seam explicit without moving any transport contracts or changing any CDC behavior.
+
+- **API orchestration remains unchanged:**  
+  `GetSprintMetricsQueryHandler`, `GetSprintExecutionQueryHandler`, `GetEpicCompletionForecastQueryHandler`, `SprintTrendProjectionService`, and `WorkItemStateClassificationService` continue to own EF access, handler orchestration, and projection composition. Only their mapper namespace imports changed.
+
+- **No extra adapter extraction was required:**  
+  A pass over `PoTool.Api/Services` found the standalone adapter-only classes were the three mappers already identified by the extraction audit. Other services still contain orchestration, persistence, caching, or transport responsibilities and correctly remain outside the adapter grouping.
+
+- **Boundary purity preserved:**  
+  `PoTool.Core.Domain` remains free of API, EF, and shared transport dependencies; `PoTool.Api` now exposes the adapter boundary more clearly; and `PoTool.Shared` remains transport-only.
+
+- **Tests passing:**  
+  Verified with `dotnet restore PoTool.sln`, `dotnet build PoTool.sln --no-restore`, and `dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~HistoricalSprintInputMapperTests|FullyQualifiedName~StateClassificationInputMapperTests|FullyQualifiedName~GetSprintMetricsQueryHandlerTests|FullyQualifiedName~GetSprintExecutionQueryHandlerTests|FullyQualifiedName~GetEpicCompletionForecastQueryHandlerTests|FullyQualifiedName~SprintTrendProjectionServiceTests|FullyQualifiedName~ServiceCollectionTests" -v minimal`.

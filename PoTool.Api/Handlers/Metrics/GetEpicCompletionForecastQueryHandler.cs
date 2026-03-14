@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Adapters;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Domain.Hierarchy;

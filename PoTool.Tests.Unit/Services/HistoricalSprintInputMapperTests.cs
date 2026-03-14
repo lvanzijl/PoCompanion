@@ -1,3 +1,4 @@
+using PoTool.Api.Adapters;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Domain.Models;
