@@ -313,3 +313,157 @@ The repository contains the building blocks required by the canonical domain mod
 - **Endpoints affected**
   - `GET /api/Metrics/sprint`
   - Indirect consumer: `GetEpicCompletionForecastQueryHandler` velocity lookup via `GetSprintMetricsQuery`
+
+## Re-Audit Results — Post Fix Validation
+
+### Scope re-audited
+
+- `PoTool.Api/Services/SprintTrendProjectionService.cs`
+- `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs`
+- `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs`
+- `PoTool.Api/Services/WorkItemStateClassificationService.cs`
+- `PoTool.Api/Services/FirstDoneDeliveryLookup.cs`
+- `PoTool.Api/Services/SprintCommitmentLookup.cs`
+- `PoTool.Api/Services/SprintSpilloverLookup.cs`
+- `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs`
+- `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs`
+- `PoTool.Tests.Unit/Handlers/GetSprintMetricsQueryHandlerTests.cs`
+- `PoTool.Tests.Unit/WorkItemStateClassificationServiceTests.cs`
+
+### Reconstructed domain expectations
+
+- **Canonical State Usage**
+  - Analytics must resolve work item states through canonical mappings (`New`, `InProgress`, `Done`, `Removed`) rather than raw TFS state string checks.
+  - Delivery-related logic must use canonical `Done` classification and ignore non-meaningful transitions.
+
+- **Delivery Semantics**
+  - Delivery is the **first** transition to canonical `Done` inside `SprintWindow`.
+  - Reopen flows (`Done -> InProgress -> Done`) must not create a second delivery.
+  - Delivery attribution must come from update history, not current snapshot state or current sprint membership.
+
+- **Commitment Semantics**
+  - Committed scope is the set of items whose `IterationPath` equals the sprint path at `CommitmentTimestamp = SprintStart + 1 day`.
+  - Committed scope must be reconstructed from iteration history and must not depend on current snapshot membership.
+
+- **Spillover Semantics**
+  - Spillover requires all three conditions:
+    - item was committed
+    - item was not `Done` at `SprintEnd`
+    - item moved to the next sprint
+  - Spillover must stay distinct from heuristics such as starved work.
+
+- **Snapshot Endpoint Clarification**
+  - Historical sprint analytics endpoints must not be interpreted as current-board snapshot views.
+  - Historical delivery and scope metrics must remain event-based even if the API route shape stays unchanged.
+
+### Implementation re-scan
+
+| Rule category | Status | Evidence |
+| --- | --- | --- |
+| Canonical state usage | **Compliant** | `PoTool.Api/Services/WorkItemStateClassificationService.cs` (`GetClassificationsAsync`, `GetClassificationAsync`) supplies configurable canonical mappings; `PoTool.Api/Services/FirstDoneDeliveryLookup.cs` (`Build`, `GetFirstDoneTransitionTimestamp`) and `PoTool.Api/Services/StateClassificationLookup.cs` resolve done-state checks canonically; no raw `"Done"` / `"Closed"` comparisons remain in `SprintTrendProjectionService`, `GetSprintExecutionQueryHandler`, or `GetSprintMetricsQueryHandler`. |
+| Delivery = first canonical done in sprint | **Compliant** | `PoTool.Api/Services/FirstDoneDeliveryLookup.cs` (`GetFirstDoneTransitionTimestamp`) counts only the first canonical done transition; `PoTool.Api/Services/SprintTrendProjectionService.cs` (`ComputeProductSprintProjection`) and `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs` (`Handle`) both consume `firstDoneByWorkItem` rather than current state or `ClosedDate`; `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs` (`Handle`) uses the same first-done lookup for completed scope. |
+| Commitment reconstruction at SprintStart + 1 day | **Compliant** | `PoTool.Api/Services/SprintCommitmentLookup.cs` (`GetCommitmentTimestamp`, `BuildCommittedWorkItemIds`, `GetIterationPathAtTimestamp`) reconstructs membership at `SprintStart + 1 day`; `SprintTrendProjectionService.ComputeProjectionsAsync`, `GetSprintExecutionQueryHandler.Handle`, and `GetSprintMetricsQueryHandler.Handle` all use that helper to derive committed scope. |
+| Canonical spillover detection | **Compliant** | `PoTool.Api/Services/SprintSpilloverLookup.cs` (`BuildSpilloverWorkItemIds`) checks committed membership, canonical state at sprint end via `StateReconstructionLookup.GetStateAtTimestamp`, and a direct move to the next sprint path; `SprintTrendProjectionService.ComputeProductSprintProjection` and `GetSprintExecutionQueryHandler.Handle` delegate spillover classification to this helper; starved work remains separate in `GetSprintExecutionQueryHandler.Handle`. |
+| Snapshot/historical separation | **Compliant** | `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs` (`Handle`) now explicitly reconstructs historical committed scope and historical first-done delivery from activity history. The handler no longer implements “current board state in this sprint path” semantics, which resolves the earlier ambiguity documented in this audit. |
+
+### Component-by-component status
+
+- **`PoTool.Api/Services/WorkItemStateClassificationService.cs`**
+  - **Class:** `WorkItemStateClassificationService`
+  - **Methods:** `GetClassificationsAsync`, `GetClassificationAsync`, `IsDoneStateAsync`
+  - **Status:** **Compliant**
+  - **Audit note:** State interpretation is centralized in canonical mappings loaded from configuration, matching the domain rules.
+
+- **`PoTool.Api/Services/SprintTrendProjectionService.cs`**
+  - **Class:** `SprintTrendProjectionService`
+  - **Methods:** `ComputeProjectionsAsync`, `ComputeProductSprintProjection`, `ComputeProgressionDelta`, `ComputeFeatureProgress`
+  - **Status:** **Compliant**
+  - **Audit note:** Projection delivery uses `FirstDoneDeliveryLookup`; planned scope is injected from `SprintCommitmentLookup`; spillover delegates to `SprintSpilloverLookup`; feature/epic progress uses canonical done classification rather than raw state strings.
+
+- **`PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs`**
+  - **Class:** `GetSprintExecutionQueryHandler`
+  - **Method:** `Handle`
+  - **Status:** **Compliant**
+  - **Audit note:** Completion ordering, initial scope, added scope, removed scope, and spillover now align with the canonical sprint rules. The remaining starved-work heuristic is explicitly separate from spillover.
+
+- **`PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs`**
+  - **Class:** `GetSprintMetricsQueryHandler`
+  - **Method:** `Handle`
+  - **Status:** **Compliant**
+  - **Audit note:** This handler now behaves as a historical sprint metrics query: it reconstructs commitment at `SprintStart + 1 day`, includes added scope from iteration history, and counts completed scope from first canonical done transitions within the sprint window.
+
+### Remaining violations
+
+- **None identified in the re-audited rule categories.**
+
+The prior critical findings for raw state checks, re-delivery after reopen, snapshot-based commitment, and missing spillover logic are no longer present in the re-audited production paths.
+
+### Test coverage validation
+
+The requested unit-test coverage now exists.
+
+- **First Done delivery semantics**
+  - `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs`
+    - `ComputeProductSprintProjection_FirstDoneInsideSprint_CountsCanonicalDelivery`
+  - `PoTool.Tests.Unit/Handlers/GetSprintMetricsQueryHandlerTests.cs`
+    - `Handle_UsesHistoricalCommitmentAndFirstDoneSemantics`
+  - `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs`
+    - `Handle_CountsFirstDoneWithinSprint_WhenItemIsNoLongerInSprintIteration`
+
+- **Reopen handling**
+  - `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs`
+    - `ComputeProductSprintProjection_DoneReopenedDone_CountsOnlyFirstDoneDelivery`
+    - `ComputeProductSprintProjection_DoneBeforeSprint_ReopenedDuringSprint_DoesNotCountDelivery`
+  - `PoTool.Tests.Unit/Handlers/GetSprintMetricsQueryHandlerTests.cs`
+    - `Handle_DoesNotCountSecondDoneTransition_WhenFirstDoneWasBeforeSprint`
+  - `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs`
+    - `Handle_DoesNotCountSecondDone_WhenFirstDoneWasBeforeSprint`
+
+- **Commitment timestamp reconstruction**
+  - `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs`
+    - `ComputeProductSprintProjection_UsesCommittedScope_WhenItemMovedAwayAfterCommitment`
+    - `ComputeProductSprintProjection_ExcludesItemsAddedAfterCommitment_FromPlannedScope`
+  - `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs`
+    - `Handle_TreatsItemAddedAfterCommitment_AsAddedScope`
+    - `Handle_KeepsCommittedItemInInitialScope_WhenMovedAwayAfterCommitment`
+  - `PoTool.Tests.Unit/Handlers/GetSprintMetricsQueryHandlerTests.cs`
+    - `Handle_UsesHistoricalCommitmentAndFirstDoneSemantics`
+
+- **Spillover detection**
+  - `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs`
+    - `ComputeProductSprintProjection_CountsCommittedPbiMovedDirectlyToNextSprint_AsSpillover`
+    - `ComputeProductSprintProjection_DoesNotCountBacklogRoundTripToNextSprint_AsSpillover`
+    - `ComputeProductSprintProjection_DoesNotCountUnfinishedCommittedPbiStillOnSprintPath_AsSpillover`
+  - `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs`
+    - `Handle_CountsCommittedPbiMovedDirectlyToNextSprint_AsSpillover`
+    - `Handle_DoesNotCountBacklogRoundTripToNextSprint_AsSpillover`
+    - `Handle_DoesNotCountUnfinishedItemStillOnSprintPath_AsSpillover`
+
+- **Coverage verdict**
+  - No coverage gap remains for the four requested validation categories.
+  - Focused validation run: `dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~GetSprintMetricsQueryHandlerTests|FullyQualifiedName~GetSprintExecutionQueryHandlerTests|FullyQualifiedName~SprintTrendProjectionServiceTests|FullyQualifiedName~WorkItemStateClassificationServiceTests" -v minimal` → **86/86 passed**.
+
+### Summary of improvements
+
+- Canonical state mapping is now consistently used across the re-audited sprint analytics code paths.
+- Delivery detection now follows the first canonical done transition rule and is resilient to reopen scenarios.
+- Commitment reconstruction now uses the canonical `SprintStart + 1 day` timestamp.
+- Spillover is now implemented canonically and no longer conflated with starved work.
+- The sprint metrics endpoint has been clarified by implementation: it now behaves as a historical analytics endpoint, not a current-board snapshot.
+
+### Risk assessment
+
+- **Current compliance risk:** **Low**
+- **Operational caveat:** canonical analytics still depend on correct state-mapping configuration. If a team leaves a real done-state unmapped, the audited services will undercount done transitions rather than infer raw TFS semantics. That is safer than the previous hardcoded behavior, but it remains a configuration-quality dependency rather than a code-path violation.
+
+### Recommended next fixes if any remain
+
+- No blocking follow-up is required for the re-audited rule set.
+- Optional follow-up only:
+  - add an operational/configuration audit to detect unmapped live TFS states so canonical analytics cannot silently degrade due to incomplete settings.
+
+### Final audit verdict
+
+**Domain Compliance Level: Fully compliant**
+
+The sprint analytics pipeline covered by this audit now aligns with the domain model for canonical state usage, first-done delivery attribution, commitment reconstruction at `SprintStart + 1 day`, canonical spillover detection, and the historical interpretation of sprint metrics.
