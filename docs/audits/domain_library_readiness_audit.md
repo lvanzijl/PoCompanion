@@ -90,8 +90,8 @@ Extraction therefore appears **feasible with targeted boundary refactors, not wi
 - **A few APIs still preserve legacy naming that is awkward for a clean domain package.**  
   `EpicCompletionForecastDto` and feature/epic progress contracts retain `*Effort` names for story-point-based scope values for API compatibility. This does not break DTO separation, but it is a friction point if the CDC is intended to publish a clean domain-first vocabulary.
 
-- **Canonical services must still be enforced through DI in every remaining helper path.**  
-  `GetEpicCompletionForecastQueryHandler` now consumes shared hierarchy rollups through injected services only, but `SprintTrendProjectionService` still contains internal helper paths that accept nullable canonical service parameters. Those nullable entry points preserve the risk of bypassing DI if future callers omit the injected services.
+- **Canonical services are now enforced through DI in the current metrics/projection paths.**  
+  `GetEpicCompletionForecastQueryHandler` and `SprintTrendProjectionService` now consume the shared canonical story-point and hierarchy rollup services through injected dependencies only, including the internal sprint projection helper paths.
 
 ## Recommended Fixes
 
@@ -110,8 +110,8 @@ Extraction therefore appears **feasible with targeted boundary refactors, not wi
 5. **Keep `PoTool.Shared` as transport-only and adapt at the boundary.**  
    Do not move DTOs into the CDC. If API compatibility requires legacy names such as `TotalEffort`, keep those names in the API contract and map them from cleaner domain concepts inside the handler/service boundary.
 
-6. **Prefer injected CDC services over nullable helper entry points.**  
-   Ensure the remaining sprint projection helpers require injected canonical services end to end so future callers cannot accidentally bypass DI even inside internal orchestration code.
+6. **Preserve injected CDC service usage end to end.**  
+   Future changes must keep the sprint projection helpers and handler orchestration on injected canonical services so decoration or alternate implementations remain possible during CDC extraction.
 
 ## Final Readiness Classification
 

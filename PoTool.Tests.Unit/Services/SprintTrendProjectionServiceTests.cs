@@ -14,18 +14,16 @@ namespace PoTool.Tests.Unit.Services;
 [TestClass]
 public class SprintTrendProjectionServiceTests
 {
-    private static readonly ICanonicalStoryPointResolutionService DefaultStoryPointResolutionService = new CanonicalStoryPointResolutionService();
-    private static readonly IHierarchyRollupService DefaultHierarchyRollupService = new HierarchyRollupService(DefaultStoryPointResolutionService);
-
     [TestMethod]
     public async Task ComputeProjectionsAsync_ReturnsEmpty_WhenNoSprintIds()
     {
         var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        using var defaultServices = CreateDefaultServices();
         var service = new SprintTrendProjectionService(
             serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<SprintTrendProjectionService>.Instance,
-            DefaultStoryPointResolutionService,
-            DefaultHierarchyRollupService);
+            defaultServices.GetRequiredService<ICanonicalStoryPointResolutionService>(),
+            defaultServices.GetRequiredService<IHierarchyRollupService>());
 
         var projections = await service.ComputeProjectionsAsync(1, Array.Empty<int>());
 
@@ -63,10 +61,10 @@ public class SprintTrendProjectionServiceTests
         string? nextSprintPath = null,
         IReadOnlyDictionary<int, WorkItemSnapshot>? workItemSnapshotsById = null,
         IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? stateEventsByWorkItem = null,
-        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? iterationEventsByWorkItem = null,
-        ICanonicalStoryPointResolutionService? storyPointResolutionService = null,
-        IHierarchyRollupService? hierarchyRollupService = null)
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? iterationEventsByWorkItem = null)
     {
+        using var services = CreateDefaultServices();
+
         return SprintTrendProjectionService.ComputeProductSprintProjection(
             sprint,
             productId,
@@ -75,32 +73,32 @@ public class SprintTrendProjectionServiceTests
             activityByWorkItem,
             sprintStart,
             sprintEnd,
+            services.GetRequiredService<ICanonicalStoryPointResolutionService>(),
+            services.GetRequiredService<IHierarchyRollupService>(),
             stateLookup,
             firstDoneByWorkItem,
             committedWorkItemIds,
             nextSprintPath,
             workItemSnapshotsById,
             stateEventsByWorkItem,
-            iterationEventsByWorkItem,
-            storyPointResolutionService ?? DefaultStoryPointResolutionService,
-            hierarchyRollupService ?? DefaultHierarchyRollupService);
+            iterationEventsByWorkItem);
     }
 
     private static double ComputeProgressionDelta(
         IReadOnlyList<ResolvedWorkItemEntity> productResolved,
         IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
         IReadOnlyDictionary<int, List<ActivityEventLedgerEntryEntity>> activityByWorkItem,
-        IHierarchyRollupService? hierarchyRollupService = null,
-        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null,
-        ICanonicalStoryPointResolutionService? storyPointResolutionService = null)
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
     {
+        using var services = CreateDefaultServices();
+
         return SprintTrendProjectionService.ComputeProgressionDelta(
             productResolved,
             workItemsByTfsId,
             activityByWorkItem,
-            hierarchyRollupService ?? DefaultHierarchyRollupService,
-            stateLookup,
-            storyPointResolutionService ?? DefaultStoryPointResolutionService);
+            services.GetRequiredService<IHierarchyRollupService>(),
+            services.GetRequiredService<ICanonicalStoryPointResolutionService>(),
+            stateLookup);
     }
 
     private static IReadOnlyList<FeatureProgressDto> ComputeFeatureProgress(
@@ -111,21 +109,29 @@ public class SprintTrendProjectionServiceTests
         IReadOnlyCollection<int>? sprintCompletedPbiIds = null,
         IReadOnlyDictionary<int, int>? sprintEffortDeltaByWorkItem = null,
         IReadOnlyCollection<int>? sprintAssignedPbiIds = null,
-        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null,
-        ICanonicalStoryPointResolutionService? storyPointResolutionService = null,
-        IHierarchyRollupService? hierarchyRollupService = null)
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
     {
+        using var services = CreateDefaultServices();
+
         return SprintTrendProjectionService.ComputeFeatureProgress(
             resolvedItems,
             workItemsByTfsId,
             productIds,
+            services.GetRequiredService<ICanonicalStoryPointResolutionService>(),
+            services.GetRequiredService<IHierarchyRollupService>(),
             activeWorkItemIds,
             sprintCompletedPbiIds,
             sprintEffortDeltaByWorkItem,
             sprintAssignedPbiIds,
-            stateLookup,
-            storyPointResolutionService ?? DefaultStoryPointResolutionService,
-            hierarchyRollupService ?? DefaultHierarchyRollupService);
+            stateLookup);
+    }
+
+    private static ServiceProvider CreateDefaultServices()
+    {
+        return new ServiceCollection()
+            .AddSingleton<ICanonicalStoryPointResolutionService, CanonicalStoryPointResolutionService>()
+            .AddSingleton<IHierarchyRollupService, HierarchyRollupService>()
+            .BuildServiceProvider();
     }
 
     [TestMethod]
