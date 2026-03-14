@@ -2,6 +2,9 @@ namespace PoTool.Shared.Metrics;
 
 /// <summary>
 /// Stock-and-flow classification for portfolio trajectory.
+/// The DTO surface retains several legacy <c>*Effort</c> names for compatibility,
+/// and in this API they represent effort-based scope proxies rather than canonical
+/// story-point scope.
 ///
 /// Classification rules (documented in GetPortfolioProgressTrendQueryHandler.ComputeSummary):
 ///   Expanding   — cumulative Net Flow &lt; -tolerance AND Remaining Effort is increasing.
@@ -74,7 +77,8 @@ public record PortfolioSprintProgressDto
     public double? TotalScopeEffort { get; init; }
 
     /// <summary>
-    /// Remaining effort as of the end of this sprint.
+    /// Remaining scope effort as of the end of this sprint.
+    /// This is the effort-based stock proxy for backlog still open after cumulative deliveries.
     /// Definition: TotalScopeEffort - CumulativeDoneEffort.
     /// </summary>
     public double? RemainingEffort { get; init; }
@@ -114,7 +118,7 @@ public record PortfolioProgressSummaryDto
     public double? CumulativeNetFlow { get; init; }
 
     /// <summary>
-    /// Change in TotalScopeEffort across the selected range (last − first), in story points.
+    /// Change in TotalScopeEffort across the selected range (last − first), in effort units.
     /// Computed from historically-reconstructed per-sprint scope values.
     /// Positive = scope grew; Negative = scope contracted.
     /// </summary>
@@ -127,7 +131,8 @@ public record PortfolioProgressSummaryDto
     public double? TotalScopeChangePercent { get; init; }
 
     /// <summary>
-    /// Change in RemainingEffort across the selected range (last − first), in story points.
+    /// Change in RemainingEffort across the selected range (last − first), in effort units.
+    /// This is a remaining-scope-effort delta even though the legacy property name says effort.
     /// Negative = backlog digestion pressure decreased (good).
     /// </summary>
     public double? RemainingEffortChangePts { get; init; }

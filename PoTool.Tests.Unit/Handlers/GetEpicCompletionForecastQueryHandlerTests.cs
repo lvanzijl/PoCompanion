@@ -454,6 +454,44 @@ public class GetEpicCompletionForecastQueryHandlerTests
         Assert.AreEqual(7.5d, result.ForecastByDate[0].ExpectedCompletedEffort, 0.001d);
     }
 
+    [TestMethod]
+    public async Task Handle_MapsLegacyEffortFieldsFromCanonicalStoryPointScope()
+    {
+        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
+        var feature = CreateWorkItem(2, "Feature", "In Progress", "TestArea", "Sprint 1", 1, null);
+        var completedPbi = CreateWorkItem(3, "PBI", "Done", "TestArea", "Sprint 1", 2, effort: 40, storyPoints: 8);
+        var remainingPbi = CreateWorkItem(4, "PBI", "Active", "TestArea", "Sprint 2", 2, effort: 100, storyPoints: 5);
+
+        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(epic);
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WorkItemDto> { epic, feature, completedPbi, remainingPbi });
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetSprintMetricsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GetSprintMetricsQuery q, CancellationToken ct) =>
+                new SprintMetricsDto(
+                    IterationPath: q.IterationPath,
+                    SprintName: q.IterationPath,
+                    StartDate: DateTimeOffset.UtcNow.AddDays(-28),
+                    EndDate: DateTimeOffset.UtcNow.AddDays(-14),
+                    CompletedStoryPoints: 4,
+                    PlannedStoryPoints: 13,
+                    CompletedWorkItemCount: 1,
+                    TotalWorkItemCount: 2,
+                    CompletedPBIs: 1,
+                    CompletedBugs: 0,
+                    CompletedTasks: 0
+                ));
+
+        var result = await _handler.Handle(new GetEpicCompletionForecastQuery(1), CancellationToken.None);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(13d, result.TotalEffort, 0.001d, "Legacy TotalEffort should carry total canonical story-point scope.");
+        Assert.AreEqual(8d, result.CompletedEffort, 0.001d, "Legacy CompletedEffort should carry delivered canonical story-point scope.");
+        Assert.AreEqual(5d, result.RemainingEffort, 0.001d, "Legacy RemainingEffort should carry remaining canonical story-point scope.");
+        Assert.AreEqual(4d, result.EstimatedVelocity, 0.001d, "Velocity should continue to come from CompletedStoryPoints.");
+        Assert.AreEqual(2, result.SprintsRemaining, "Forecast should divide remaining scope story points by delivered story-point velocity.");
+    }
+
     private static WorkItemDto CreateWorkItem(
         int id,
         string type,

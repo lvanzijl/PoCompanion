@@ -886,8 +886,8 @@ public class SprintTrendProjectionService
 
                 var (featureWorkItem, featureWorkItems, doneByWorkItemId) = BuildFeatureRollupContext(featureWi, childPbis, stateLookup);
                 var featureScope = hierarchyRollupService.RollupCanonicalScope(featureWorkItem, featureWorkItems, doneByWorkItemId);
-                var totalEffort = featureScope.Total;
-                var doneEffort = featureScope.Completed;
+                var totalScopeStoryPoints = featureScope.Total;
+                var doneScopeStoryPoints = featureScope.Completed;
                 var donePbiCount = 0;
 
                 foreach (var pbi in childPbis)
@@ -899,11 +899,11 @@ public class SprintTrendProjectionService
                 }
 
                 var featureIsDone = StateClassificationLookup.IsDone(stateLookup, WorkItemType.Feature, featureWi.State);
-                var rawPercent = totalEffort > 0 ? (int)Math.Round((double)doneEffort / totalEffort * 100) : 0;
+                var rawPercent = totalScopeStoryPoints > 0 ? (int)Math.Round((double)doneScopeStoryPoints / totalScopeStoryPoints * 100) : 0;
                 var progressPercent = featureIsDone ? 100 : Math.Min(rawPercent, 90);
 
                 // Sprint-scoped metrics
-                var sprintCompletedEffort = sprintCompletedPbiIds == null
+                var sprintCompletedScopeStoryPoints = sprintCompletedPbiIds == null
                     ? 0d
                     : childPbis
                         .Where(pbi => sprintCompletedPbiIds.Contains(pbi.TfsId))
@@ -916,8 +916,8 @@ public class SprintTrendProjectionService
                 var featureCompletedInSprint = sprintCompletedPbiIds != null
                     && sprintCompletedPbiIds.Contains(feature.WorkItemId);
 
-                var sprintProgressionDelta = totalEffort > 0
-                    ? Math.Round((double)sprintCompletedEffort / totalEffort * 100, 2)
+                var sprintProgressionDelta = totalScopeStoryPoints > 0
+                    ? Math.Round((double)sprintCompletedScopeStoryPoints / totalScopeStoryPoints * 100, 2)
                     : 0.0;
 
                 // Δ Effort = effort_end_of_sprint − effort_start_of_sprint for child PBIs
@@ -956,11 +956,11 @@ public class SprintTrendProjectionService
                     EpicTitle = epicTitle,
                     ProductId = productId,
                     ProgressPercent = progressPercent,
-                    TotalEffort = totalEffort,
-                    DoneEffort = doneEffort,
+                    TotalEffort = totalScopeStoryPoints,
+                    DoneEffort = doneScopeStoryPoints,
                     DonePbiCount = donePbiCount,
                     IsDone = featureIsDone,
-                    SprintCompletedEffort = sprintCompletedEffort,
+                    SprintCompletedEffort = sprintCompletedScopeStoryPoints,
                     SprintProgressionDelta = sprintProgressionDelta,
                     SprintEffortDelta = sprintEffortDelta,
                     SprintCompletedPbiCount = sprintCompletedPbiCount,
@@ -978,7 +978,8 @@ public class SprintTrendProjectionService
 
     /// <summary>
     /// Computes Epic-level progress from Feature progress data.
-    /// Each Epic's progress is the effort-weighted completion of its child Features.
+    /// Each Epic's progress is the story-point-weighted completion of its child Features.
+    /// The DTO keeps legacy <c>*Effort</c> property names for API compatibility.
     /// </summary>
     internal static IReadOnlyList<EpicProgressDto> ComputeEpicProgress(
         IReadOnlyList<FeatureProgressDto> featureProgress,
@@ -1001,18 +1002,18 @@ public class SprintTrendProjectionService
                 continue;
 
             var features = group.ToList();
-            var totalEffort = features.Sum(f => f.TotalEffort);
-            var doneEffort = features.Sum(f => f.DoneEffort);
+            var totalScopeStoryPoints = features.Sum(f => f.TotalEffort);
+            var doneScopeStoryPoints = features.Sum(f => f.DoneEffort);
             var doneFeatureCount = features.Count(f => f.IsDone);
             var donePbiCount = features.Sum(f => f.DonePbiCount);
             var epicIsDone = StateClassificationLookup.IsDone(stateLookup, WorkItemType.Epic, epicWi.State);
-            var rawPercent = totalEffort > 0 ? (int)Math.Round((double)doneEffort / totalEffort * 100) : 0;
+            var rawPercent = totalScopeStoryPoints > 0 ? (int)Math.Round((double)doneScopeStoryPoints / totalScopeStoryPoints * 100) : 0;
             var progressPercent = epicIsDone ? 100 : Math.Min(rawPercent, 90);
 
             // Aggregate sprint-scoped metrics from child features
-            var epicSprintCompletedEffort = features.Sum(f => f.SprintCompletedEffort);
-            var epicSprintProgressionDelta = totalEffort > 0
-                ? Math.Round((double)epicSprintCompletedEffort / totalEffort * 100, 2)
+            var epicSprintCompletedScopeStoryPoints = features.Sum(f => f.SprintCompletedEffort);
+            var epicSprintProgressionDelta = totalScopeStoryPoints > 0
+                ? Math.Round((double)epicSprintCompletedScopeStoryPoints / totalScopeStoryPoints * 100, 2)
                 : 0.0;
             var epicSprintEffortDelta = features.Sum(f => f.SprintEffortDelta);
             var epicSprintCompletedPbiCount = features.Sum(f => f.SprintCompletedPbiCount);
@@ -1027,13 +1028,13 @@ public class SprintTrendProjectionService
                 EpicTitle = epicWi.Title,
                 ProductId = productId,
                 ProgressPercent = progressPercent,
-                TotalEffort = totalEffort,
-                DoneEffort = doneEffort,
+                TotalEffort = totalScopeStoryPoints,
+                DoneEffort = doneScopeStoryPoints,
                 FeatureCount = features.Count,
                 DoneFeatureCount = doneFeatureCount,
                 DonePbiCount = donePbiCount,
                 IsDone = epicIsDone,
-                SprintCompletedEffort = epicSprintCompletedEffort,
+                SprintCompletedEffort = epicSprintCompletedScopeStoryPoints,
                 SprintProgressionDelta = epicSprintProgressionDelta,
                 SprintEffortDelta = epicSprintEffortDelta,
                 SprintCompletedPbiCount = epicSprintCompletedPbiCount,

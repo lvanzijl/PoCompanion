@@ -390,12 +390,14 @@ public record FeatureProgressDto
 
     /// <summary>
     /// Total canonical story-point scope of all PBIs under this feature.
+    /// Domain meaning: TotalScope.
     /// The legacy property name is retained for API compatibility and values may be fractional.
     /// </summary>
     public double TotalEffort { get; init; }
 
     /// <summary>
     /// Canonical story-point scope of done PBIs under this feature.
+    /// Domain meaning: DeliveredScope.
     /// The legacy property name is retained for API compatibility and values may be fractional.
     /// </summary>
     public double DoneEffort { get; init; }
@@ -412,6 +414,7 @@ public record FeatureProgressDto
 
     /// <summary>
     /// Canonical story-point scope of PBIs that closed (transitioned to Done) during the selected sprint.
+    /// Domain meaning: SprintDeliveredScope.
     /// The legacy property name is retained for API compatibility and values may be fractional.
     /// Zero when not in single-sprint view.
     /// </summary>
@@ -424,7 +427,8 @@ public record FeatureProgressDto
     public double SprintProgressionDelta { get; init; }
 
     /// <summary>
-    /// Absolute effort scope change during the sprint for this feature.
+    /// Absolute effort-hour scope change during the sprint for this feature.
+    /// This field remains effort-based and is not a story-point alias.
     /// Computed as effort_end_of_sprint − effort_start_of_sprint for child PBIs.
     /// Positive = scope added, negative = scope reduced. Zero when not in single-sprint view.
     /// </summary>
@@ -479,12 +483,14 @@ public record EpicProgressDto
 
     /// <summary>
     /// Total canonical story-point scope of all PBIs under this epic's features.
+    /// Domain meaning: TotalScope.
     /// The legacy property name is retained for API compatibility and values may be fractional.
     /// </summary>
     public double TotalEffort { get; init; }
 
     /// <summary>
     /// Canonical story-point scope of done PBIs under this epic's features.
+    /// Domain meaning: DeliveredScope.
     /// The legacy property name is retained for API compatibility and values may be fractional.
     /// </summary>
     public double DoneEffort { get; init; }
@@ -511,6 +517,7 @@ public record EpicProgressDto
 
     /// <summary>
     /// Canonical story-point scope of PBIs that closed (transitioned to Done) during the selected sprint across this epic's features.
+    /// Domain meaning: SprintDeliveredScope.
     /// The legacy property name is retained for API compatibility and values may be fractional.
     /// Zero when not in single-sprint view.
     /// </summary>
@@ -523,7 +530,8 @@ public record EpicProgressDto
     public double SprintProgressionDelta { get; init; }
 
     /// <summary>
-    /// Absolute effort scope change during the sprint for this epic.
+    /// Absolute effort-hour scope change during the sprint for this epic.
+    /// This field remains effort-based and is not a story-point alias.
     /// Aggregated from child Feature SprintEffortDelta values.
     /// Positive = scope added, negative = scope reduced. Zero when not in single-sprint view.
     /// </summary>

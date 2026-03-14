@@ -7,6 +7,19 @@ namespace PoTool.Shared.Metrics;
 /// but now represent canonical story-point rollups and may be fractional
 /// when derived estimates are used.
 /// </summary>
+/// <param name="EpicId">TFS ID of the requested epic or feature.</param>
+/// <param name="Title">Display title of the requested work item.</param>
+/// <param name="Type">Work item type of the requested item.</param>
+/// <param name="TotalEffort">Legacy contract name for total canonical story-point scope.</param>
+/// <param name="CompletedEffort">Legacy contract name for completed canonical story-point scope.</param>
+/// <param name="RemainingEffort">Legacy contract name for remaining canonical story-point scope.</param>
+/// <param name="EstimatedVelocity">Average delivered story points across the sampled historical sprints.</param>
+/// <param name="SprintsRemaining">Forecasted sprint count required to finish the remaining scope.</param>
+/// <param name="EstimatedCompletionDate">Projected completion date using the estimated velocity.</param>
+/// <param name="Confidence">Confidence derived from the amount of sprint history available.</param>
+/// <param name="ForecastByDate">Sprint-by-sprint projection of completed and remaining scope.</param>
+/// <param name="AreaPath">Area path used to scope the forecast history.</param>
+/// <param name="AnalysisTimestamp">UTC timestamp when the forecast was computed.</param>
 public sealed record EpicCompletionForecastDto(
     int EpicId,
     string Title,
@@ -26,6 +39,13 @@ public sealed record EpicCompletionForecastDto(
 /// <summary>
 /// Sprint-by-sprint forecast showing predicted progress.
 /// </summary>
+/// <param name="SprintName">Display name for the forecast sprint bucket.</param>
+/// <param name="IterationPath">Synthetic iteration path used for the forecast bucket.</param>
+/// <param name="SprintStartDate">Forecast sprint start date.</param>
+/// <param name="SprintEndDate">Forecast sprint end date.</param>
+/// <param name="ExpectedCompletedEffort">Legacy contract name for expected completed scope in story points.</param>
+/// <param name="RemainingEffortAfterSprint">Legacy contract name for remaining scope after the sprint, in story points.</param>
+/// <param name="ProgressPercentage">Cumulative completion percentage after this forecast sprint.</param>
 public sealed record SprintForecast(
     string SprintName,
     string IterationPath,

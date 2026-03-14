@@ -20,6 +20,8 @@ namespace PoTool.Api.Handlers.Metrics;
 /// items, retrieves historical SprintMetrics for each (via GetSprintMetricsQuery), and derives
 /// average velocity from CompletedStoryPoints. Sprints older than 6 months are excluded,
 /// and the result is capped at MaxSprintsForVelocity.
+/// The forecast DTO intentionally keeps legacy <c>*Effort</c> property names for API compatibility,
+/// but this handler maps those fields from canonical story-point scope rollups.
 /// </summary>
 public sealed class GetEpicCompletionForecastQueryHandler
     : IQueryHandler<GetEpicCompletionForecastQuery, EpicCompletionForecastDto?>
@@ -99,10 +101,9 @@ public sealed class GetEpicCompletionForecastQueryHandler
             .ToList();
         var scope = _hierarchyRollupService.RollupCanonicalScope(epic.ToCanonicalWorkItem(), canonicalWorkItems, doneByWorkItemId);
 
-        var totalEffort = scope.Total;
-        var completedEffort = scope.Completed;
-
-        var remainingEffort = totalEffort - completedEffort;
+        var totalScopeStoryPoints = scope.Total;
+        var completedScopeStoryPoints = scope.Completed;
+        var remainingScopeStoryPoints = totalScopeStoryPoints - completedScopeStoryPoints;
 
         // Compute velocity inline from the distinct iteration paths of the epic's work items.
         // Avoids a dependency on a separate velocity query handler.
@@ -118,7 +119,7 @@ public sealed class GetEpicCompletionForecastQueryHandler
 
         // Calculate forecast
         var sprintsRemaining = estimatedVelocity > 0
-            ? (int)Math.Ceiling(remainingEffort / estimatedVelocity)
+            ? (int)Math.Ceiling(remainingScopeStoryPoints / estimatedVelocity)
             : 0;
 
         // Determine confidence based on data availability
@@ -127,7 +128,7 @@ public sealed class GetEpicCompletionForecastQueryHandler
         // Build sprint-by-sprint forecast
         var forecastByDate = BuildSprintForecast(
             sprintMetricsList,
-            remainingEffort,
+            remainingScopeStoryPoints,
             estimatedVelocity);
 
         // Estimate completion date based on last sprint end date + remaining sprints
@@ -146,9 +147,9 @@ public sealed class GetEpicCompletionForecastQueryHandler
             EpicId: epic.TfsId,
             Title: epic.Title,
             Type: epic.Type,
-            TotalEffort: totalEffort,
-            CompletedEffort: completedEffort,
-            RemainingEffort: remainingEffort,
+            TotalEffort: totalScopeStoryPoints,
+            CompletedEffort: completedScopeStoryPoints,
+            RemainingEffort: remainingScopeStoryPoints,
             EstimatedVelocity: estimatedVelocity,
             SprintsRemaining: sprintsRemaining,
             EstimatedCompletionDate: estimatedCompletionDate,
@@ -237,7 +238,7 @@ public sealed class GetEpicCompletionForecastQueryHandler
 
     private static List<SprintForecast> BuildSprintForecast(
         IReadOnlyList<SprintMetricsDto> historicalSprints,
-        double remainingEffort,
+        double remainingScopeStoryPoints,
         double estimatedVelocity)
     {
         var forecasts = new List<SprintForecast>();
@@ -249,7 +250,7 @@ public sealed class GetEpicCompletionForecastQueryHandler
         if (!lastSprint.EndDate.HasValue)
             return forecasts;
 
-        var currentRemaining = remainingEffort;
+        var currentRemaining = remainingScopeStoryPoints;
         var sprintNumber = 1;
 
         while (currentRemaining > 0 && sprintNumber <= 20) // Cap at 20 sprints
@@ -260,8 +261,8 @@ public sealed class GetEpicCompletionForecastQueryHandler
             var expectedCompleted = Math.Min(currentRemaining, estimatedVelocity);
             currentRemaining = Math.Max(0d, currentRemaining - expectedCompleted);
 
-            var progressPercentage = remainingEffort > 0
-                ? ((double)(remainingEffort - currentRemaining) / remainingEffort) * 100
+            var progressPercentage = remainingScopeStoryPoints > 0
+                ? ((double)(remainingScopeStoryPoints - currentRemaining) / remainingScopeStoryPoints) * 100
                 : 100;
 
             forecasts.Add(new SprintForecast(
