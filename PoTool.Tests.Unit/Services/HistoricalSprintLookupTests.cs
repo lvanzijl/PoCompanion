@@ -77,7 +77,7 @@ public sealed class HistoricalSprintLookupTests
     }
 
     [TestMethod]
-    public void GetClassification_UsesCanonicalStateMappings()
+    public void GetClassification_UsesCanonicalStateMappingsCaseInsensitively()
     {
         var stateLookup = StateClassificationLookup.Create(
         [
