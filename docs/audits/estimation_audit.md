@@ -120,3 +120,25 @@ The repository has some correct estimation foundations. TFS retrieval already re
   - `UpsertManyAsync_PreservesStoryPointsSeparatelyFromEffortAndBusinessValue`
   - `GetWorkItemsAsync_PreservesStoryPointsEffortAndBusinessValueSeparately`
   - `GetWorkItemsByRootIdsAsync_DoesNotFallbackStoryPointsIntoEffort`
+
+## Fix Progress — Canonical StoryPoint Resolution
+
+- **New shared service**
+  - Added `PoTool.Core/Metrics/Services/CanonicalStoryPointResolutionService.cs` with a reusable `ICanonicalStoryPointResolutionService`.
+
+- **Rules implemented**
+  - Resolves canonical story points using `StoryPoints -> BusinessValue -> Missing`.
+  - Treats `StoryPoints = 0` as valid only when the item is Done; otherwise zero remains missing unless BusinessValue fallback exists.
+  - Distinguishes `Real`, `Fallback`, `Missing`, and `Derived` estimate sources.
+  - Derives missing PBI estimates from same-feature sibling averages without rounding, while keeping derived values distinct from real estimates.
+  - Keeps effort separate by resolving only story-point semantics from `StoryPoints` and `BusinessValue`.
+
+- **Tests added**
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_UsesStoryPointsWhenPresent`
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_UsesBusinessValueFallbackWhenStoryPointsAreMissing`
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_ReturnsMissingWhenNoEstimateExists`
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_TreatsZeroStoryPointsOnDoneItemAsValidRealEstimate`
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_TreatsZeroStoryPointsOnNonDoneItemAsMissing`
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_DerivesMissingEstimateFromSameFeatureSiblingAverage`
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_KeepsDerivedEstimateFractional`
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_ReturnsExpectedEstimateSourceClassification`
