@@ -90,8 +90,8 @@ Extraction therefore appears **feasible with targeted boundary refactors, not wi
 - **A few APIs still preserve legacy naming that is awkward for a clean domain package.**  
   `EpicCompletionForecastDto` and feature/epic progress contracts retain `*Effort` names for story-point-based scope values for API compatibility. This does not break DTO separation, but it is a friction point if the CDC is intended to publish a clean domain-first vocabulary.
 
-- **Canonical services are not always consumed through DI end to end.**  
-  `GetEpicCompletionForecastQueryHandler` has a constructor overload that instantiates `CanonicalStoryPointResolutionService` directly, and `SprintTrendProjectionService` falls back to `new CanonicalStoryPointResolutionService()` when no service is injected. That is semantically correct today, but it weakens the extraction story if the CDC later needs decoration or alternate implementations.
+- **Canonical services are now enforced through DI in the current metrics/projection paths.**  
+  `GetEpicCompletionForecastQueryHandler` and `SprintTrendProjectionService` now consume the shared canonical story-point and hierarchy rollup services through injected dependencies only, including the internal sprint projection helper paths.
 
 ## Recommended Fixes
 
@@ -110,8 +110,8 @@ Extraction therefore appears **feasible with targeted boundary refactors, not wi
 5. **Keep `PoTool.Shared` as transport-only and adapt at the boundary.**  
    Do not move DTOs into the CDC. If API compatibility requires legacy names such as `TotalEffort`, keep those names in the API contract and map them from cleaner domain concepts inside the handler/service boundary.
 
-6. **Prefer injected CDC services over direct construction.**  
-   Once the CDC exists, remove fallback `new CanonicalStoryPointResolutionService()` creation paths so all consumers use the extracted domain service surface consistently.
+6. **Preserve injected CDC service usage end to end.**  
+   Future changes must keep the sprint projection helpers and handler orchestration on injected canonical services so decoration or alternate implementations remain possible during CDC extraction.
 
 ## Final Readiness Classification
 
@@ -204,3 +204,16 @@ Extraction therefore appears **feasible with targeted boundary refactors, not wi
   - parent fallback behavior
   - bug/task exclusion
   - derived estimate handling
+
+## Fix Progress — DI Enforcement for Canonical Services
+
+- Removed direct `new CanonicalStoryPointResolutionService()` and `new HierarchyRollupService(...)` fallback paths from `PoTool.Api/Services/SprintTrendProjectionService.cs`.
+- Kept `GetEpicCompletionForecastQueryHandler` on constructor-injected shared services only; no direct canonical resolver construction remains in the handler.
+- Confirmed DI registrations already provide the shared canonical services consumed by current metrics/projection paths:
+  - `ICanonicalStoryPointResolutionService`
+  - `IHierarchyRollupService`
+  - `SprintTrendProjectionService`
+- Added focused test coverage for DI enforcement and injectable doubles:
+  - `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs`
+  - `PoTool.Tests.Unit/Handlers/GetEpicCompletionForecastQueryHandlerTests.cs`
+  - `PoTool.Tests.Unit/Configuration/ServiceCollectionTests.cs`
