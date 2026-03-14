@@ -1,7 +1,7 @@
 # PoTool Unit Test Redundancy Audit
 
 ## Summary
-- **Likely redundant tests:** the clearest duplication is not inside the CDC files; it is CDC semantics being re-asserted in handler and projection tests with nearly identical scenarios. The biggest overlap clusters are:
+- **Likely redundant tests:** the clearest duplication occurs when CDC semantics are re-asserted in handler and projection tests with nearly identical scenarios, rather than within the CDC files themselves. The biggest overlap clusters are:
   - first-Done / canonical Done behavior across `HistoricalSprintLookupTests`, `GetSprintMetricsQueryHandlerTests`, `GetSprintExecutionQueryHandlerTests`, and `SprintTrendProjectionServiceTests`
   - story-point resolution and fallback behavior across `CanonicalStoryPointResolutionServiceTests`, `GetSprintMetricsQueryHandlerTests`, `GetEpicCompletionForecastQueryHandlerTests`, and `SprintTrendProjectionServiceTests`
   - hierarchy rollup rules across `HierarchyRollupServiceTests`, `GetEpicCompletionForecastQueryHandlerTests`, and `SprintTrendProjectionServiceTests`
@@ -60,7 +60,7 @@
     - `Handle_UsesBusinessValueFallbackForSprintStoryPoints`
     - `Handle_TreatsZeroDonePbiAsValidZeroPointDelivery`
     - `Handle_TreatsZeroNonDonePbiAsMissingEstimate`
-  - **suggested consolidation:** Reduce to one handler-level smoke test proving the handler consumes canonical story-point resolution, and leave detailed precedence/zero-value semantics to `CanonicalStoryPointResolutionServiceTests`.
+  - **suggested consolidation:** Reduce to one handler-level integration regression proving the handler consumes canonical story-point resolution, and leave detailed precedence/zero-value semantics to `CanonicalStoryPointResolutionServiceTests`.
 - **file:** `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs`
   - **related overlapping tests:**
     - `Handle_UsesCanonicalDoneMapping_ForCompletedItems`
