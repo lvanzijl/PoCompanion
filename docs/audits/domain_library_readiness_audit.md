@@ -217,3 +217,58 @@ Extraction therefore appears **feasible with targeted boundary refactors, not wi
   - `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs`
   - `PoTool.Tests.Unit/Handlers/GetEpicCompletionForecastQueryHandlerTests.cs`
   - `PoTool.Tests.Unit/Configuration/ServiceCollectionTests.cs`
+
+## Re-Audit Results — CDC Extraction Readiness
+
+### Summary of improvements
+
+- **Canonical sprint-history helpers are now extraction-safe domain code.**  
+  `PoTool.Core/Domain/Sprints/SprintCommitmentLookup.cs`, `FirstDoneDeliveryLookup.cs`, `SprintSpilloverLookup.cs`, `StateClassificationLookup.cs`, and `StateReconstructionLookup.cs` now operate on `WorkItemSnapshot`, `SprintDefinition`, and `FieldChangeEvent` from `PoTool.Core/Metrics/Models/HistoricalSprintInputs.cs` instead of `PoTool.Api.Persistence.Entities`.
+
+- **API persistence translation is isolated at the boundary.**  
+  `PoTool.Api/Services/HistoricalSprintInputMapper.cs` keeps `WorkItemEntity`, `SprintEntity`, `ActivityEventLedgerEntryEntity`, and DTO translation in the API layer, so the canonical sprint helpers no longer need API or EF types to run.
+
+- **Sprint execution formulas are now reusable Core logic.**  
+  `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs` delegates canonical `ChurnRate`, `CommitmentCompletion`, `SpilloverRate`, and `AddedDeliveryRate` calculation to `PoTool.Core/Metrics/Services/SprintExecutionMetricsCalculator.cs` through `ISprintExecutionMetricsCalculator`.
+
+- **Hierarchy rollup orchestration is now centralized.**  
+  `PoTool.Core/Metrics/Services/HierarchyRollupService.cs` is the shared implementation for canonical feature/epic scope rollups, and both `PoTool.Api/Handlers/Metrics/GetEpicCompletionForecastQueryHandler.cs` and `PoTool.Api/Services/SprintTrendProjectionService.cs` now consume it instead of maintaining competing rollup implementations.
+
+- **Canonical services are consumed through DI and DTOs remain transport-only.**  
+  `PoTool.Api/Configuration/ApiServiceCollectionExtensions.cs` registers `ICanonicalStoryPointResolutionService`, `IHierarchyRollupService`, and `ISprintExecutionMetricsCalculator`, while `PoTool.Shared/Metrics/SprintExecutionDtos.cs`, `PoTool.Shared/Metrics/EpicCompletionForecastDto.cs`, and `PoTool.Shared/WorkItems/WorkItemDto.cs` remain data contracts only.
+
+### Remaining blockers
+
+- **No extraction-blocking redesign issues remain in the canonical domain surface audited in the original report.**  
+  The previously blocking concerns around persistence-coupled sprint helpers, handler-owned sprint execution formulas, duplicated hierarchy rollups, and direct canonical-service construction have been cleared.
+
+- **Minor cleanup only:**  
+  `PoTool.Api/Services/HistoricalSprintInputMapper.cs` should stay an API-side adapter when the CDC package is created, or be moved to an adjacent adapter namespace during the extraction PR if that improves packaging clarity.  
+  `PoTool.Api/Services/SprintTrendProjectionService.cs` still contains API orchestration and persistence access, but its canonical scope and estimation logic now flow through injected shared services; that remaining API orchestration does not block extraction of the CDC itself.
+
+### Test coverage check
+
+- **Domain input model boundaries:** covered by `PoTool.Tests.Unit/Services/HistoricalSprintInputMapperTests.cs` and `PoTool.Tests.Unit/Services/HistoricalSprintLookupTests.cs`.
+- **Extracted sprint execution formulas:** covered by `PoTool.Tests.Unit/Services/SprintExecutionMetricsCalculatorTests.cs`, with handler-level regression coverage in `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs`.
+- **Centralized hierarchy rollups:** covered by `PoTool.Tests.Unit/Services/HierarchyRollupServiceTests.cs`, with consuming-path coverage in `PoTool.Tests.Unit/Handlers/GetEpicCompletionForecastQueryHandlerTests.cs` and `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs`.
+- **DI-based canonical service consumption:** covered by `PoTool.Tests.Unit/Configuration/ServiceCollectionTests.cs`, plus injectable-double coverage in `PoTool.Tests.Unit/Handlers/GetEpicCompletionForecastQueryHandlerTests.cs` and `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs`.
+
+### Final readiness verdict
+
+**Mostly ready with minor cleanup**
+
+**Outcome: CDC extraction ready after minor cleanup**
+
+The repository now satisfies the target CDC readiness conditions for the canonical sprint helpers, sprint execution formulas, hierarchy rollup service, DTO boundaries, and DI consumption. Extraction to `PoTool.Core.Domain` or `PoTool.Domain` is now feasible without redesign; the remaining work is packaging and boundary cleanup, not another round of semantic refactoring.
+
+### Recommended next step
+
+Create the CDC package and move the canonical services into it:
+
+- `PoTool.Core/Domain/Sprints/*`
+- `PoTool.Core/Metrics/Models/HistoricalSprintInputs.cs`
+- `PoTool.Core/Metrics/Services/CanonicalStoryPointResolutionService.cs`
+- `PoTool.Core/Metrics/Services/SprintExecutionMetricsCalculator.cs`
+- `PoTool.Core/Metrics/Services/HierarchyRollupService.cs`
+
+Keep API-specific mappers, handlers, EF queries, and projection orchestration in `PoTool.Api` as boundary adapters around the extracted CDC package.
