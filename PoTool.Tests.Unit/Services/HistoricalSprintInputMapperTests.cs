@@ -3,6 +3,7 @@ using PoTool.Api.Services;
 using PoTool.Core.Metrics.Models;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Settings;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -78,5 +79,53 @@ public sealed class HistoricalSprintInputMapperTests
         Assert.AreEqual(timestampUtc, fieldChange.TimestampUtc);
         Assert.AreEqual("Active", fieldChange.OldValue);
         Assert.AreEqual("Resolved", fieldChange.NewValue);
+    }
+
+    [TestMethod]
+    public void ToCanonicalWorkItem_MapsWorkItemEntityToMinimalMetricsDomainInput()
+    {
+        var entity = new WorkItemEntity
+        {
+            TfsId = 101,
+            Type = WorkItemType.Pbi,
+            ParentTfsId = 55,
+            BusinessValue = 8,
+            StoryPoints = 5
+        };
+
+        var workItem = entity.ToCanonicalWorkItem();
+
+        Assert.AreEqual(101, workItem.WorkItemId);
+        Assert.AreEqual(WorkItemType.Pbi, workItem.WorkItemType);
+        Assert.AreEqual(55, workItem.ParentWorkItemId);
+        Assert.AreEqual(8, workItem.BusinessValue);
+        Assert.AreEqual(5, workItem.StoryPoints);
+    }
+
+    [TestMethod]
+    public void ToCanonicalWorkItem_MapsWorkItemDtoToMinimalMetricsDomainInput()
+    {
+        var dto = new WorkItemDto(
+            TfsId: 202,
+            Type: WorkItemType.Feature,
+            Title: "Feature",
+            ParentTfsId: 11,
+            AreaPath: "Area",
+            IterationPath: "Sprint 1",
+            State: "Active",
+            RetrievedAt: DateTimeOffset.UtcNow,
+            Effort: 3,
+            Description: null,
+            BusinessValue: 13,
+            BacklogPriority: null,
+            StoryPoints: null);
+
+        var workItem = dto.ToCanonicalWorkItem();
+
+        Assert.AreEqual(202, workItem.WorkItemId);
+        Assert.AreEqual(WorkItemType.Feature, workItem.WorkItemType);
+        Assert.AreEqual(11, workItem.ParentWorkItemId);
+        Assert.AreEqual(13, workItem.BusinessValue);
+        Assert.IsNull(workItem.StoryPoints);
     }
 }

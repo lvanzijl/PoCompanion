@@ -272,3 +272,52 @@ Create the CDC package and move the canonical services into it:
 - `PoTool.Core/Metrics/Services/HierarchyRollupService.cs`
 
 Keep API-specific mappers, handlers, EF queries, and projection orchestration in `PoTool.Api` as boundary adapters around the extracted CDC package.
+
+## Fix Progress — DTO Boundary Cleanup for Canonical Metrics Services
+
+- Identified one remaining CDC extraction blocker after the prior re-audit: `PoTool.Core/Metrics/Services/CanonicalStoryPointResolutionService.cs` and `PoTool.Core/Metrics/Services/HierarchyRollupService.cs` still depended on `PoTool.Shared/WorkItems/WorkItemDto`, which is a transport DTO rather than a domain input model.
+- Introduced a minimal Core metrics input model in `PoTool.Core/Metrics/Models/CanonicalWorkItem.cs` with only the fields required by the canonical metrics services:
+  - `WorkItemId`
+  - `WorkItemType`
+  - `ParentWorkItemId`
+  - `BusinessValue`
+  - `StoryPoints`
+- Kept the DTO/entity → domain mapping boundary in the API layer with `PoTool.Api/Services/CanonicalMetricsInputMapper.cs`, so:
+  - `WorkItemDto` is translated before invoking Core metrics services
+  - `WorkItemEntity` is translated before invoking Core metrics services
+  - canonical Core services no longer depend on API or transport contracts
+- Updated current consumers to map into `CanonicalWorkItem` before invoking the canonical services, without changing semantics:
+  - `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs`
+  - `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs`
+  - `PoTool.Api/Handlers/Metrics/GetEpicCompletionForecastQueryHandler.cs`
+  - `PoTool.Api/Services/SprintTrendProjectionService.cs`
+- Added focused coverage for the new API-side mapping boundary in `PoTool.Tests.Unit/Services/HistoricalSprintInputMapperTests.cs`, and updated canonical Core service tests to run against the new domain input model:
+  - `PoTool.Tests.Unit/Services/CanonicalStoryPointResolutionServiceTests.cs`
+  - `PoTool.Tests.Unit/Services/HierarchyRollupServiceTests.cs`
+
+## Re-Audit Addendum — Canonical Metrics Service Independence
+
+### Finding
+
+- **Previously missed DTO coupling in Core metrics services:**  
+  The earlier re-audit correctly cleared the sprint-history helpers, sprint execution calculator, and DI construction issues, but it overstated DTO-boundary readiness for the canonical metrics services. `CanonicalStoryPointResolutionService` and `HierarchyRollupService` still accepted `WorkItemDto`, which would have forced the CDC package to reference `PoTool.Shared` transport contracts.
+
+### Result after cleanup
+
+- **Canonical Core metrics services are now domain-input only.**  
+  `CanonicalStoryPointResolutionService` and `HierarchyRollupService` now operate on `CanonicalWorkItem` from `PoTool.Core/Metrics/Models/CanonicalWorkItem.cs`, while API handlers/services translate `WorkItemDto` and `WorkItemEntity` at the boundary.
+
+- **API → domain mapping remains explicit.**  
+  The repository now consistently applies the same boundary pattern already used by `HistoricalSprintInputMapper`:
+  - infrastructure/transport types in `PoTool.Api`
+  - minimal domain inputs in `PoTool.Core`
+  - canonical services consume only domain inputs
+
+- **No remaining production direct construction was found for the audited canonical services.**  
+  A repository-wide search confirmed that direct construction patterns remain only in unit tests; production paths continue to use DI registrations in `PoTool.Api/Configuration/ApiServiceCollectionExtensions.cs`.
+
+### Updated readiness verdict
+
+**Ready for CDC extraction**
+
+The final remaining architectural coupling risk from the `domain_library_readiness` cleanup sprint has been removed. The canonical sprint-history helpers, sprint execution calculator, canonical story-point resolver, and hierarchy rollup service now all satisfy the extraction requirement that domain services depend only on Core domain input models, with API-side mapping and DI boundaries preserved.

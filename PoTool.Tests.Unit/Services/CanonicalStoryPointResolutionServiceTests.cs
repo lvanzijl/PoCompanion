@@ -1,6 +1,6 @@
+using PoTool.Core.Metrics.Models;
 using PoTool.Core.Metrics.Services;
 using PoTool.Core.WorkItems;
-using PoTool.Shared.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -140,26 +140,18 @@ public sealed class CanonicalStoryPointResolutionServiceTests
         Assert.AreEqual(StoryPointEstimateSource.Real, epicStoryPoints.Source);
     }
 
-    private static WorkItemDto CreateWorkItem(
+    private static CanonicalWorkItem CreateWorkItem(
         int tfsId,
         string type = WorkItemType.Pbi,
         int? parentTfsId = null,
         int? storyPoints = null,
         int? businessValue = null)
     {
-        return new WorkItemDto(
-            TfsId: tfsId,
-            Type: type,
-            Title: $"Work Item {tfsId}",
-            ParentTfsId: parentTfsId,
-            AreaPath: "\\Project",
-            IterationPath: "\\Project\\Sprint 1",
-            State: "Active",
-            RetrievedAt: DateTimeOffset.UtcNow,
-            Effort: null,
-            Description: null,
-            BusinessValue: businessValue,
-            BacklogPriority: null,
-            StoryPoints: storyPoints);
+        return new CanonicalWorkItem(
+            tfsId,
+            type,
+            parentTfsId,
+            businessValue,
+            storyPoints);
     }
 }

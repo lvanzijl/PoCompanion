@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Metrics.Services;
 using PoTool.Core.WorkItems;
@@ -92,7 +93,10 @@ public sealed class GetEpicCompletionForecastQueryHandler
         }
 
         var doneByWorkItemId = await BuildDoneLookupAsync(workItemsList, cancellationToken);
-        var scope = _hierarchyRollupService.RollupCanonicalScope(epic, workItemsList, doneByWorkItemId);
+        var canonicalWorkItems = workItemsList
+            .Select(workItem => workItem.ToCanonicalWorkItem())
+            .ToList();
+        var scope = _hierarchyRollupService.RollupCanonicalScope(epic.ToCanonicalWorkItem(), canonicalWorkItems, doneByWorkItemId);
 
         var totalEffort = scope.Total;
         var completedEffort = scope.Completed;

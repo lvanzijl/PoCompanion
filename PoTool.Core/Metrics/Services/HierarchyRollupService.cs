@@ -1,5 +1,5 @@
+using PoTool.Core.Metrics.Models;
 using PoTool.Core.WorkItems;
-using PoTool.Shared.WorkItems;
 
 namespace PoTool.Core.Metrics.Services;
 
@@ -16,8 +16,8 @@ public interface IHierarchyRollupService
     /// <param name="doneByWorkItemId">Canonical Done-state lookup keyed by work item id.</param>
     /// <returns>The total and completed canonical scope for the hierarchy rooted at <paramref name="workItem"/>.</returns>
     HierarchyScopeRollup RollupCanonicalScope(
-        WorkItemDto workItem,
-        IReadOnlyList<WorkItemDto> allWorkItems,
+        CanonicalWorkItem workItem,
+        IReadOnlyList<CanonicalWorkItem> allWorkItems,
         IReadOnlyDictionary<int, bool> doneByWorkItemId);
 }
 
@@ -44,20 +44,20 @@ public sealed class HierarchyRollupService : IHierarchyRollupService
     }
 
     public HierarchyScopeRollup RollupCanonicalScope(
-        WorkItemDto workItem,
-        IReadOnlyList<WorkItemDto> allWorkItems,
+        CanonicalWorkItem workItem,
+        IReadOnlyList<CanonicalWorkItem> allWorkItems,
         IReadOnlyDictionary<int, bool> doneByWorkItemId)
     {
         ArgumentNullException.ThrowIfNull(workItem);
         ArgumentNullException.ThrowIfNull(allWorkItems);
         ArgumentNullException.ThrowIfNull(doneByWorkItemId);
 
-        var isDone = doneByWorkItemId.GetValueOrDefault(workItem.TfsId);
+        var isDone = doneByWorkItemId.GetValueOrDefault(workItem.WorkItemId);
         var directChildren = allWorkItems
-            .Where(candidate => candidate.ParentTfsId == workItem.TfsId)
+            .Where(candidate => candidate.ParentWorkItemId == workItem.WorkItemId)
             .ToList();
 
-        if (IsFeature(workItem.Type))
+        if (IsFeature(workItem.WorkItemType))
         {
             return RollupFeatureScope(workItem, isDone, directChildren, doneByWorkItemId);
         }
@@ -65,7 +65,7 @@ public sealed class HierarchyRollupService : IHierarchyRollupService
         var totalScope = 0d;
         var completedScope = 0d;
 
-        foreach (var childFeature in directChildren.Where(child => IsFeature(child.Type)))
+        foreach (var childFeature in directChildren.Where(child => IsFeature(child.WorkItemType)))
         {
             var childScope = RollupCanonicalScope(childFeature, allWorkItems, doneByWorkItemId);
             totalScope += childScope.Total;
@@ -73,7 +73,7 @@ public sealed class HierarchyRollupService : IHierarchyRollupService
         }
 
         var directPbis = directChildren
-            .Where(child => IsAuthoritativePbi(child.Type))
+            .Where(child => IsAuthoritativePbi(child.WorkItemType))
             .ToList();
         if (directPbis.Count > 0)
         {
@@ -91,13 +91,13 @@ public sealed class HierarchyRollupService : IHierarchyRollupService
     }
 
     private HierarchyScopeRollup RollupFeatureScope(
-        WorkItemDto feature,
+        CanonicalWorkItem feature,
         bool featureIsDone,
-        IReadOnlyList<WorkItemDto> directChildren,
+        IReadOnlyList<CanonicalWorkItem> directChildren,
         IReadOnlyDictionary<int, bool> doneByWorkItemId)
     {
         var featurePbis = directChildren
-            .Where(child => IsAuthoritativePbi(child.Type))
+            .Where(child => IsAuthoritativePbi(child.WorkItemType))
             .ToList();
 
         var scope = RollupPbiChildren(featurePbis, doneByWorkItemId);
@@ -110,7 +110,7 @@ public sealed class HierarchyRollupService : IHierarchyRollupService
     }
 
     private HierarchyScopeRollup RollupPbiChildren(
-        IReadOnlyList<WorkItemDto> featurePbis,
+        IReadOnlyList<CanonicalWorkItem> featurePbis,
         IReadOnlyDictionary<int, bool> doneByWorkItemId)
     {
         if (featurePbis.Count == 0)
@@ -121,7 +121,7 @@ public sealed class HierarchyRollupService : IHierarchyRollupService
         var candidates = featurePbis
             .Select(pbi => new StoryPointResolutionCandidate(
                 pbi,
-                doneByWorkItemId.GetValueOrDefault(pbi.TfsId)))
+                doneByWorkItemId.GetValueOrDefault(pbi.WorkItemId)))
             .ToArray();
 
         var totalScope = 0d;
@@ -129,7 +129,7 @@ public sealed class HierarchyRollupService : IHierarchyRollupService
 
         foreach (var pbi in featurePbis)
         {
-            var isDone = doneByWorkItemId.GetValueOrDefault(pbi.TfsId);
+            var isDone = doneByWorkItemId.GetValueOrDefault(pbi.WorkItemId);
             var estimate = _storyPointResolutionService.Resolve(new StoryPointResolutionRequest(
                 pbi,
                 isDone,
@@ -151,7 +151,7 @@ public sealed class HierarchyRollupService : IHierarchyRollupService
         return new HierarchyScopeRollup(totalScope, completedScope);
     }
 
-    private HierarchyScopeRollup ResolveParentFallback(WorkItemDto workItem, bool isDone)
+    private HierarchyScopeRollup ResolveParentFallback(CanonicalWorkItem workItem, bool isDone)
     {
         var fallbackEstimate = _storyPointResolutionService.ResolveParentFallback(new StoryPointFallbackRequest(workItem, isDone));
         if (!fallbackEstimate.HasValue)
