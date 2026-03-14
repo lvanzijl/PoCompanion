@@ -73,6 +73,16 @@ public class SprintMetricsProjectionEntity
     public int CompletedPbiEffort { get; set; }
 
     /// <summary>
+    /// Number of committed PBIs that spilled directly into the next sprint unfinished.
+    /// </summary>
+    public int SpilloverCount { get; set; }
+
+    /// <summary>
+    /// Sum of effort of committed PBIs that spilled directly into the next sprint unfinished.
+    /// </summary>
+    public int SpilloverEffort { get; set; }
+
+    /// <summary>
     /// Feature/Epic progression delta percentage (0-100 scale) within the sprint.
     /// Represents measurable forward movement.
     /// </summary>

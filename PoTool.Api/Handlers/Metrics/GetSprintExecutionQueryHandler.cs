@@ -15,7 +15,7 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Handler for GetSprintExecutionQuery.
 ///
 /// Reconstructs sprint backlog evolution from cached work items and activity events.
-/// Derives initial scope, added/removed items, completion order, and starved work
+/// Derives initial scope, added/removed items, completion order, spillover, and starved work
 /// using lightweight queries against existing data — no heavy revision fetches.
 /// </summary>
 public sealed class GetSprintExecutionQueryHandler
@@ -128,6 +128,9 @@ public sealed class GetSprintExecutionQueryHandler
         var removedEntries = new List<(int WorkItemId, DateTimeOffset Timestamp)>();
         var iterationEvents = new List<ActivityEventLedgerEntryEntity>();
         var iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>>();
+        var stateEventsByWorkItem = new Dictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>>();
+        var workItemTypesById = relevantWorkItemsById.ToDictionary(pair => pair.Key, pair => pair.Value.Type);
+        var currentStatesById = relevantWorkItemsById.ToDictionary(pair => pair.Key, pair => (string?)pair.Value.State);
 
         if (sprintEnd.HasValue)
         {
@@ -135,13 +138,16 @@ public sealed class GetSprintExecutionQueryHandler
                 .AsNoTracking()
                 .Where(e => e.ProductOwnerId == query.ProductOwnerId
                             && e.FieldRefName == "System.State"
-                            && e.EventTimestampUtc <= sprintEnd.Value.UtcDateTime
                             && resolvedWorkItemIds.Contains(e.WorkItemId))
                 .ToListAsync(cancellationToken);
 
+            stateEventsByWorkItem = stateEvents
+                .GroupBy(e => e.WorkItemId)
+                .ToDictionary(g => g.Key, g => (IReadOnlyList<ActivityEventLedgerEntryEntity>)g.ToList());
+
             firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(
                     stateEvents,
-                    relevantWorkItemsById.ToDictionary(pair => pair.Key, pair => pair.Value.Type),
+                    workItemTypesById,
                     stateLookup)
                 .ToDictionary(pair => pair.Key, pair => pair.Value);
         }
@@ -196,6 +202,8 @@ public sealed class GetSprintExecutionQueryHandler
             }
         }
 
+        var nextSprintPath = await ResolveNextSprintPathAsync(sprint, cancellationToken);
+
         // ── Step 8: Load removed items (no longer in sprint iteration) ────────
         var removedWorkItemIds = removedEntries.Select(r => r.WorkItemId).Distinct().ToHashSet();
         // Exclude items that are also currently in the sprint (re-added after removal)
@@ -224,6 +232,21 @@ public sealed class GetSprintExecutionQueryHandler
             .ToList();
 
         var initialScopeIds = committedWorkItemIds;
+        IReadOnlySet<int> spilloverWorkItemIds = sprintEnd.HasValue
+            ? SprintSpilloverLookup.BuildSpilloverWorkItemIds(
+                committedWorkItemIds,
+                currentStatesById,
+                workItemTypesById,
+                stateEventsByWorkItem,
+                iterationEventsByWorkItem,
+                stateLookup,
+                sprint.Path,
+                nextSprintPath,
+                sprintEnd.Value)
+            : new HashSet<int>();
+        var spilloverItems = relevantWorkItems
+            .Where(w => w.Type == PbiType && spilloverWorkItemIds.Contains(w.TfsId))
+            .ToList();
 
         // ── Step 10: Detect starved work ──────────────────────────────────────
         // Starved = items in initial scope that are unfinished, while items added later completed
@@ -310,6 +333,16 @@ public sealed class GetSprintExecutionQueryHandler
             ProductName = ResolveProductName(w.TfsId)
         }).ToList();
 
+        var spilloverPbiDtos = spilloverItems.Select(w => new SprintExecutionPbiDto
+        {
+            TfsId = w.TfsId,
+            Title = w.Title,
+            Effort = w.Effort,
+            State = w.State,
+            ClosedDate = w.ClosedDate,
+            ProductName = ResolveProductName(w.TfsId)
+        }).ToList();
+
         var starvedPbiDtos = starvedItems.Select(w => new SprintExecutionPbiDto
         {
             TfsId = w.TfsId,
@@ -336,6 +369,8 @@ public sealed class GetSprintExecutionQueryHandler
             CompletedEffort = completedItems.Sum(w => w.Effort ?? 0),
             UnfinishedCount = unfinishedItems.Count,
             UnfinishedEffort = unfinishedItems.Sum(w => w.Effort ?? 0),
+            SpilloverCount = spilloverItems.Count,
+            SpilloverEffort = spilloverItems.Sum(w => w.Effort ?? 0),
             StarvedCount = starvedItems.Count
         };
 
@@ -350,6 +385,7 @@ public sealed class GetSprintExecutionQueryHandler
             UnfinishedPbis = unfinishedPbiDtos,
             AddedDuringSprint = addedPbiDtos,
             RemovedDuringSprint = removedPbiDtos,
+            SpilloverPbis = spilloverPbiDtos,
             StarvedPbis = starvedPbiDtos,
             HasData = committedWorkItemIds.Count > 0
                 || addedWorkItemIds.Count > 0
@@ -376,8 +412,21 @@ public sealed class GetSprintExecutionQueryHandler
             UnfinishedPbis = Array.Empty<SprintExecutionPbiDto>(),
             AddedDuringSprint = Array.Empty<SprintExecutionPbiDto>(),
             RemovedDuringSprint = Array.Empty<SprintExecutionPbiDto>(),
+            SpilloverPbis = Array.Empty<SprintExecutionPbiDto>(),
             StarvedPbis = Array.Empty<SprintExecutionPbiDto>(),
             HasData = false
         };
+    }
+
+    private async Task<string?> ResolveNextSprintPathAsync(
+        SprintEntity sprint,
+        CancellationToken cancellationToken)
+    {
+        var teamSprints = await _context.Sprints
+            .AsNoTracking()
+            .Where(candidate => candidate.TeamId == sprint.TeamId)
+            .ToListAsync(cancellationToken);
+
+        return SprintSpilloverLookup.GetNextSprintPath(sprint, teamSprints);
     }
 }

@@ -309,6 +309,7 @@ public sealed class WorkspaceSignalServiceTests
                 UnfinishedPbis = [],
                 AddedDuringSprint = [],
                 RemovedDuringSprint = [],
+                SpilloverPbis = [],
                 StarvedPbis = []
             },
             new BacklogHealthDto
