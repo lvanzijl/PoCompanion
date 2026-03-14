@@ -26,11 +26,11 @@ public class MetricsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets metrics for a specific sprint.
+    /// Gets historical metrics for a specific sprint window.
     /// </summary>
     /// <param name="iterationPath">The iteration path of the sprint (e.g., "ProjectName\2025\Sprint 1")</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Sprint metrics or 404 if no work items found for the sprint</returns>
+    /// <returns>Sprint metrics, or 404 when the sprint path has no dated sprint metadata</returns>
     [HttpGet("sprint")]
     public async Task<ActionResult<SprintMetricsDto>> GetSprintMetrics(
         [FromQuery][Required] string iterationPath,

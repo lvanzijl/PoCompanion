@@ -1,351 +1,299 @@
 using Mediator;
-using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Api.Handlers.Metrics;
-using PoTool.Api.Services;
+using PoTool.Api.Persistence;
+using PoTool.Api.Persistence.Entities;
+using PoTool.Api.Repositories;
 using PoTool.Core.Contracts;
 using PoTool.Core.Metrics.Queries;
-using PoTool.Core.WorkItems.Queries;
-using PoTool.Shared.Settings;
-using PoTool.Shared.WorkItems;
-
 using PoTool.Core.WorkItems;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Tests.Unit.Handlers;
 
 [TestClass]
-public class GetSprintMetricsQueryHandlerTests
+public sealed class GetSprintMetricsQueryHandlerTests
 {
-    private Mock<IWorkItemRepository> _mockRepository = null!;
-    private Mock<IProductRepository> _mockProductRepository = null!;
-    private Mock<ISprintRepository> _mockSprintRepository = null!;
-    private Mock<IWorkItemStateClassificationService> _mockStateService = null!;
-    private Mock<IMediator> _mockMediator = null!;
-    private Mock<ILogger<GetSprintMetricsQueryHandler>> _mockLogger = null!;
+    private PoToolDbContext _context = null!;
+    private Mock<IProductRepository> _productRepository = null!;
+    private Mock<ISprintRepository> _sprintRepository = null!;
+    private Mock<IWorkItemStateClassificationService> _stateClassificationService = null!;
+    private Mock<IMediator> _mediator = null!;
     private GetSprintMetricsQueryHandler _handler = null!;
 
     [TestInitialize]
     public void Setup()
     {
-        _mockRepository = new Mock<IWorkItemRepository>();
-        _mockProductRepository = new Mock<IProductRepository>();
-        _mockSprintRepository = new Mock<ISprintRepository>();
-        _mockStateService = new Mock<IWorkItemStateClassificationService>();
-        _mockMediator = new Mock<IMediator>();
-        _mockLogger = new Mock<ILogger<GetSprintMetricsQueryHandler>>();
-        
-        // Setup default state classification behavior
-        _mockStateService.Setup(s => s.IsDoneStateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string type, string state, CancellationToken ct) => 
-                state.Equals("Done", StringComparison.OrdinalIgnoreCase) ||
-                state.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
-                state.Equals("Completed", StringComparison.OrdinalIgnoreCase) ||
-                state.Equals("Resolved", StringComparison.OrdinalIgnoreCase));
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
 
-        // Setup default mock behaviors
-        _mockProductRepository.Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ProductDto>());
-        _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto>());
-        _mockSprintRepository.Setup(r => r.GetAllSprintsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SprintDto>());
-        
+        _context = new PoToolDbContext(options);
+        _productRepository = new Mock<IProductRepository>();
+        _sprintRepository = new Mock<ISprintRepository>();
+        _stateClassificationService = new Mock<IWorkItemStateClassificationService>();
+        _mediator = new Mock<IMediator>();
+
+        _productRepository
+            .Setup(repository => repository.GetAllProductsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        _stateClassificationService
+            .Setup(service => service.GetClassificationsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildStateClassificationsResponse(
+                (WorkItemType.Pbi, "Resolved", StateClassification.Done),
+                (WorkItemType.Pbi, "Active", StateClassification.InProgress),
+                (WorkItemType.Bug, "Resolved", StateClassification.Done),
+                (WorkItemType.Bug, "Active", StateClassification.InProgress),
+                (WorkItemType.Task, "Resolved", StateClassification.Done),
+                (WorkItemType.Task, "Active", StateClassification.InProgress)));
+
         _handler = new GetSprintMetricsQueryHandler(
-            _mockRepository.Object, 
-            _mockProductRepository.Object,
-            _mockSprintRepository.Object,
-            _mockStateService.Object, 
-            _mockMediator.Object,
-            _mockLogger.Object);
+            new WorkItemRepository(_context),
+            _productRepository.Object,
+            _sprintRepository.Object,
+            _stateClassificationService.Object,
+            _mediator.Object,
+            _context,
+            NullLogger<GetSprintMetricsQueryHandler>.Instance);
+    }
+
+    [TestCleanup]
+    public void Cleanup()
+    {
+        _context.Dispose();
     }
 
     [TestMethod]
-    public async Task Handle_WithNoWorkItems_ReturnsNull()
+    public async Task Handle_ReturnsNull_WhenSprintMetadataIsMissing()
     {
-        // Arrange
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto>());
-        var query = new GetSprintMetricsQuery("Sprint 1");
+        await SeedWorkItemAsync(101, WorkItemType.Pbi, "\\Project\\Sprint 1", "Resolved", 5);
+        _sprintRepository
+            .Setup(repository => repository.GetAllSprintsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
 
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(new GetSprintMetricsQuery("\\Project\\Sprint 1"), CancellationToken.None);
 
-        // Assert
         Assert.IsNull(result);
     }
 
     [TestMethod]
-    public async Task Handle_WithMatchingWorkItems_CalculatesMetricsCorrectly()
+    public async Task Handle_UsesHistoricalCommitmentAndFirstDoneSemantics()
     {
-        // Arrange
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "PBI", "Done", "Sprint 1", 5),
-            CreateWorkItem(2, "PBI", "Done", "Sprint 1", 8),
-            CreateWorkItem(3, "Bug", "In Progress", "Sprint 1", 3),
-            CreateWorkItem(4, "Task", "Done", "Sprint 1", 2),
-            CreateWorkItem(5, "PBI", "New", "Sprint 2", 5) // Different sprint
-        };
+        var sprintStart = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var sprintEnd = new DateTimeOffset(new DateTime(2026, 1, 14, 0, 0, 0, DateTimeKind.Utc));
+        const string sprintPath = "\\Project\\Sprint 1";
+        const string backlogPath = "\\Project\\Backlog";
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetSprintMetricsQuery("Sprint 1");
+        _sprintRepository
+            .Setup(repository => repository.GetAllSprintsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                CreateSprint(1, sprintPath, "Sprint 1", sprintStart, sprintEnd)
+            ]);
 
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        await SeedWorkItemAsync(101, WorkItemType.Pbi, backlogPath, "Resolved", 5);
+        await SeedIterationEventAsync(101, sprintEnd.AddDays(1), sprintPath, backlogPath);
+        await SeedStateEventAsync(101, sprintStart.AddDays(4), "Active", "Resolved");
 
-        // Assert
+        await SeedWorkItemAsync(102, WorkItemType.Pbi, backlogPath, "Resolved", 3);
+        await SeedIterationEventAsync(102, sprintStart.AddDays(3), backlogPath, sprintPath);
+        await SeedIterationEventAsync(102, sprintStart.AddDays(6), sprintPath, backlogPath);
+        await SeedStateEventAsync(102, sprintStart.AddDays(5), "Active", "Resolved");
+
+        await SeedWorkItemAsync(103, WorkItemType.Pbi, sprintPath, "Resolved", 8);
+        await SeedStateEventAsync(103, sprintStart.AddDays(-1), "Active", "Resolved");
+
+        var result = await _handler.Handle(new GetSprintMetricsQuery("\\project\\sprint 1"), CancellationToken.None);
+
         Assert.IsNotNull(result);
-        Assert.AreEqual("Sprint 1", result.IterationPath);
         Assert.AreEqual("Sprint 1", result.SprintName);
-        Assert.AreEqual(15, result.CompletedStoryPoints); // 5 + 8 + 2 = 15
-        Assert.AreEqual(18, result.PlannedStoryPoints); // 5 + 8 + 3 + 2 = 18
-        Assert.AreEqual(3, result.CompletedWorkItemCount); // 3 items done
-        Assert.AreEqual(4, result.TotalWorkItemCount); // 4 items in sprint
-        Assert.AreEqual(2, result.CompletedPBIs); // 2 PBIs done
-        Assert.AreEqual(0, result.CompletedBugs); // No bugs done
-        Assert.AreEqual(1, result.CompletedTasks); // 1 task done
-    }
-
-    [TestMethod]
-    public async Task Handle_WithCaseDifferentIterationPath_MatchesCorrectly()
-    {
-        // Arrange
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "PBI", "Done", "SPRINT 1", 5),
-            CreateWorkItem(2, "PBI", "Done", "Sprint 1", 8)
-        };
-
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetSprintMetricsQuery("sprint 1");
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
+        Assert.AreEqual(sprintStart, result.StartDate);
+        Assert.AreEqual(sprintEnd, result.EndDate);
+        Assert.AreEqual(13, result.PlannedStoryPoints, "Committed scope should come from sprint membership at the day-two commitment timestamp.");
+        Assert.AreEqual(8, result.CompletedStoryPoints, "Completed scope should use first Done transitions that happened inside the sprint window.");
         Assert.AreEqual(2, result.CompletedWorkItemCount);
-    }
-
-    [TestMethod]
-    public async Task Handle_WithVariousCompletedStates_RecognizesAll()
-    {
-        // Arrange
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "PBI", "Done", "Sprint 1", 5),
-            CreateWorkItem(2, "PBI", "Closed", "Sprint 1", 8),
-            CreateWorkItem(3, "PBI", "Completed", "Sprint 1", 3),
-            CreateWorkItem(4, "PBI", "Resolved", "Sprint 1", 2)
-        };
-
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetSprintMetricsQuery("Sprint 1");
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(4, result.CompletedWorkItemCount);
-        Assert.AreEqual(18, result.CompletedStoryPoints);
-    }
-
-    [TestMethod]
-    public async Task Handle_WithNullEffortValues_HandlesCorrectly()
-    {
-        // Arrange
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "PBI", "Done", "Sprint 1", 5),
-            CreateWorkItem(2, "PBI", "Done", "Sprint 1", null),
-            CreateWorkItem(3, "Task", "Done", "Sprint 1", 3)
-        };
-
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetSprintMetricsQuery("Sprint 1");
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(8, result.CompletedStoryPoints); // 5 + 3 = 8 (null ignored)
-        Assert.AreEqual(8, result.PlannedStoryPoints);
-        Assert.AreEqual(3, result.CompletedWorkItemCount);
-    }
-
-    [TestMethod]
-    public async Task Handle_WithZeroEffortValues_IncludesInCount()
-    {
-        // Arrange
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "PBI", "Done", "Sprint 1", 0),
-            CreateWorkItem(2, "PBI", "Done", "Sprint 1", 5),
-            CreateWorkItem(3, "Task", "In Progress", "Sprint 1", 0)
-        };
-
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetSprintMetricsQuery("Sprint 1");
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(5, result.CompletedStoryPoints); // Only item 2 has effort
-        Assert.AreEqual(5, result.PlannedStoryPoints);
-        Assert.AreEqual(2, result.CompletedWorkItemCount); // Items 1 and 2
-        Assert.AreEqual(3, result.TotalWorkItemCount);
-    }
-
-    [TestMethod]
-    public async Task Handle_WithAllNullEffort_ReturnsZeroStoryPoints()
-    {
-        // Arrange
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "PBI", "Done", "Sprint 1", null),
-            CreateWorkItem(2, "Bug", "Done", "Sprint 1", null),
-            CreateWorkItem(3, "Task", "In Progress", "Sprint 1", null)
-        };
-
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetSprintMetricsQuery("Sprint 1");
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(0, result.CompletedStoryPoints);
-        Assert.AreEqual(0, result.PlannedStoryPoints);
-        Assert.AreEqual(2, result.CompletedWorkItemCount);
-        Assert.AreEqual(3, result.TotalWorkItemCount);
-    }
-
-    [TestMethod]
-    public async Task Handle_WithUserStoryType_CountsAsPBI()
-    {
-        // Arrange
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "User Story", "Done", "Sprint 1", 5),
-            CreateWorkItem(2, "Product Backlog Item", "Done", "Sprint 1", 8)
-        };
-
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetSprintMetricsQuery("Sprint 1");
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(2, result.CompletedPBIs); // Both counted as PBIs
+        Assert.AreEqual(3, result.TotalWorkItemCount, "Total scope should include committed items plus scope added after commitment.");
+        Assert.AreEqual(2, result.CompletedPBIs);
         Assert.AreEqual(0, result.CompletedBugs);
         Assert.AreEqual(0, result.CompletedTasks);
     }
 
     [TestMethod]
-    public async Task Handle_WithComplexIterationPath_ExtractsCorrectSprintName()
+    public async Task Handle_DoesNotCountSecondDoneTransition_WhenFirstDoneWasBeforeSprint()
     {
-        // Arrange
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "PBI", "Done", "Project\\Team A\\2024\\Sprint 5", 5)
-        };
+        var sprintStart = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var sprintEnd = new DateTimeOffset(new DateTime(2026, 1, 14, 0, 0, 0, DateTimeKind.Utc));
+        const string sprintPath = "\\Project\\Sprint 1";
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetSprintMetricsQuery("Project\\Team A\\2024\\Sprint 5");
+        _sprintRepository
+            .Setup(repository => repository.GetAllSprintsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                CreateSprint(1, sprintPath, "Sprint 1", sprintStart, sprintEnd)
+            ]);
 
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        await SeedWorkItemAsync(101, WorkItemType.Pbi, sprintPath, "Resolved", 8);
+        await SeedStateEventAsync(101, sprintStart.AddDays(-1), "Active", "Resolved");
+        await SeedStateEventAsync(101, sprintStart.AddDays(2), "Resolved", "Active");
+        await SeedStateEventAsync(101, sprintStart.AddDays(4), "Active", "Resolved");
 
-        // Assert
+        var result = await _handler.Handle(new GetSprintMetricsQuery(sprintPath), CancellationToken.None);
+
         Assert.IsNotNull(result);
-        Assert.AreEqual("Sprint 5", result.SprintName);
-        Assert.AreEqual("Project\\Team A\\2024\\Sprint 5", result.IterationPath);
+        Assert.AreEqual(8, result.PlannedStoryPoints);
+        Assert.AreEqual(0, result.CompletedStoryPoints);
+        Assert.AreEqual(0, result.CompletedWorkItemCount);
+        Assert.AreEqual(1, result.TotalWorkItemCount);
     }
 
     [TestMethod]
-    public async Task Handle_WithForwardSlashSeparator_ExtractsCorrectSprintName()
+    public async Task Handle_DoesNotUseRawDoneFallback_WhenCanonicalMappingIsMissing()
     {
-        // Arrange
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "PBI", "Done", "Project/Team A/2024/Sprint 5", 5)
-        };
+        var sprintStart = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var sprintEnd = new DateTimeOffset(new DateTime(2026, 1, 14, 0, 0, 0, DateTimeKind.Utc));
+        const string sprintPath = "\\Project\\Sprint 1";
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetSprintMetricsQuery("Project/Team A/2024/Sprint 5");
+        _sprintRepository
+            .Setup(repository => repository.GetAllSprintsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                CreateSprint(1, sprintPath, "Sprint 1", sprintStart, sprintEnd)
+            ]);
 
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        _stateClassificationService
+            .Setup(service => service.GetClassificationsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GetStateClassificationsResponse
+            {
+                ProjectName = "Test",
+                IsDefault = false,
+                Classifications = []
+            });
 
-        // Assert
+        await SeedWorkItemAsync(101, WorkItemType.Pbi, sprintPath, "Closed", 8);
+        await SeedStateEventAsync(101, sprintStart.AddDays(2), "Active", "Closed");
+
+        var result = await _handler.Handle(new GetSprintMetricsQuery(sprintPath), CancellationToken.None);
+
         Assert.IsNotNull(result);
-        Assert.AreEqual("Sprint 5", result.SprintName);
+        Assert.AreEqual(8, result.PlannedStoryPoints);
+        Assert.AreEqual(0, result.CompletedStoryPoints);
+        Assert.AreEqual(0, result.CompletedWorkItemCount);
     }
 
     [TestMethod]
-    public async Task Handle_WithMixedCompletionStates_CountsOnlyCompleted()
+    public async Task Handle_ReturnsZeroMetrics_ForKnownSprintWithoutHistoricalScope()
     {
-        // Arrange
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "PBI", "Done", "Sprint 1", 5),
-            CreateWorkItem(2, "PBI", "New", "Sprint 1", 8),
-            CreateWorkItem(3, "PBI", "Active", "Sprint 1", 3),
-            CreateWorkItem(4, "Bug", "Closed", "Sprint 1", 2),
-            CreateWorkItem(5, "Task", "Removed", "Sprint 1", 1)
-        };
+        var sprintStart = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var sprintEnd = new DateTimeOffset(new DateTime(2026, 1, 14, 0, 0, 0, DateTimeKind.Utc));
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetSprintMetricsQuery("Sprint 1");
+        _sprintRepository
+            .Setup(repository => repository.GetAllSprintsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                CreateSprint(1, "\\Project\\Sprint 1", "Sprint 1", sprintStart, sprintEnd)
+            ]);
 
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(new GetSprintMetricsQuery("\\Project\\Sprint 1"), CancellationToken.None);
 
-        // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(7, result.CompletedStoryPoints); // 5 + 2 = 7
-        Assert.AreEqual(19, result.PlannedStoryPoints); // All items
-        Assert.AreEqual(2, result.CompletedWorkItemCount); // Done and Closed only
-        Assert.AreEqual(5, result.TotalWorkItemCount);
+        Assert.AreEqual(0, result.PlannedStoryPoints);
+        Assert.AreEqual(0, result.CompletedStoryPoints);
+        Assert.AreEqual(0, result.CompletedWorkItemCount);
+        Assert.AreEqual(0, result.TotalWorkItemCount);
+        Assert.AreEqual(sprintStart, result.StartDate);
+        Assert.AreEqual(sprintEnd, result.EndDate);
     }
 
-    private static WorkItemDto CreateWorkItem(
+    private async Task SeedWorkItemAsync(int id, string type, string iterationPath, string state, int? effort)
+    {
+        _context.WorkItems.Add(new WorkItemEntity
+        {
+            TfsId = id,
+            Type = type,
+            Title = $"Work Item {id}",
+            AreaPath = "\\Project",
+            IterationPath = iterationPath,
+            State = state,
+            Effort = effort,
+            RetrievedAt = DateTimeOffset.UtcNow,
+            TfsChangedDate = DateTimeOffset.UtcNow,
+            TfsChangedDateUtc = DateTime.UtcNow
+        });
+
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task SeedStateEventAsync(int workItemId, DateTimeOffset timestamp, string oldState, string newState)
+    {
+        _context.ActivityEventLedgerEntries.Add(new ActivityEventLedgerEntryEntity
+        {
+            ProductOwnerId = 1,
+            WorkItemId = workItemId,
+            UpdateId = NextUpdateId(),
+            FieldRefName = "System.State",
+            EventTimestamp = timestamp,
+            EventTimestampUtc = timestamp.UtcDateTime,
+            OldValue = oldState,
+            NewValue = newState
+        });
+
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task SeedIterationEventAsync(int workItemId, DateTimeOffset timestamp, string? oldIterationPath, string? newIterationPath)
+    {
+        _context.ActivityEventLedgerEntries.Add(new ActivityEventLedgerEntryEntity
+        {
+            ProductOwnerId = 1,
+            WorkItemId = workItemId,
+            UpdateId = NextUpdateId(),
+            FieldRefName = "System.IterationPath",
+            EventTimestamp = timestamp,
+            EventTimestampUtc = timestamp.UtcDateTime,
+            OldValue = oldIterationPath,
+            NewValue = newIterationPath
+        });
+
+        await _context.SaveChangesAsync();
+    }
+
+    private int NextUpdateId()
+    {
+        return _context.ActivityEventLedgerEntries.Count() + 1;
+    }
+
+    private static SprintDto CreateSprint(
         int id,
-        string type,
-        string state,
-        string iterationPath,
-        int? effort)
+        string path,
+        string name,
+        DateTimeOffset startUtc,
+        DateTimeOffset endUtc)
     {
-        return new WorkItemDto(
-            TfsId: id,
-            Type: type,
-            Title: $"Work Item {id}",
-            ParentTfsId: null,
-            AreaPath: "TestArea",
-            IterationPath: iterationPath,
-            State: state,
-            RetrievedAt: DateTimeOffset.UtcNow,
-            Effort: effort,
-                    Description: null,
-                    Tags: null
-        );
+        return new SprintDto(
+            Id: id,
+            TeamId: 1,
+            TfsIterationId: null,
+            Path: path,
+            Name: name,
+            StartUtc: startUtc,
+            EndUtc: endUtc,
+            TimeFrame: null,
+            LastSyncedUtc: DateTimeOffset.UtcNow);
+    }
+
+    private static GetStateClassificationsResponse BuildStateClassificationsResponse(
+        params (string WorkItemType, string StateName, StateClassification Classification)[] classifications)
+    {
+        return new GetStateClassificationsResponse
+        {
+            ProjectName = "Test",
+            IsDefault = false,
+            Classifications = classifications.Select(classification => new WorkItemStateClassificationDto
+            {
+                WorkItemType = classification.WorkItemType,
+                StateName = classification.StateName,
+                Classification = classification.Classification
+            }).ToList()
+        };
     }
 }
