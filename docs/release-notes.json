@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-14",
+    "type": "Changed",
+    "title": "Sprint trend projections now store story points",
+    "impact": "Sprint trend metrics now keep planned, delivered, and spillover story-point totals plus derived and unestimated-delivery diagnostics separately from effort hours.",
+    "area": "Trends",
+    "link": "/home/delivery/sprint"
+  },
+  {
+    "date": "2026-03-14",
     "type": "Fixed",
     "title": "Forecast rollups now use canonical story points",
     "impact": "Epic forecasts and Sprint Trend progress now roll up canonical PBI story points with parent fallback, derived fractional estimates, and bug/task exclusion instead of mixing effort hours into scope.",

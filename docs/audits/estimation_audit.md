@@ -182,3 +182,22 @@ The repository has some correct estimation foundations. TFS retrieval already re
   - `SprintTrendProjectionServiceTests.ComputeFeatureProgress_UsesFeatureFallbackOnlyWhenChildPbisLackEstimates`
   - `SprintTrendProjectionServiceTests.ComputeFeatureProgress_UsesFractionalDerivedStoryPointsWithoutRounding`
   - `SprintTrendProjectionServiceTests.ComputeFeatureProgress_ExcludesBugAndTaskStoryPoints`
+
+## Fix Progress — Projection and Persistence Alignment
+
+- **Entities/contracts updated**
+  - `PoTool.Api/Persistence/Entities/SprintMetricsProjectionEntity.cs`
+  - `PoTool.Shared/Metrics/SprintTrendDtos.cs`
+  - `PoTool.Api/Handlers/Metrics/GetSprintTrendMetricsQueryHandler.cs`
+  - `PoTool.Api/Migrations/20260314113737_AddSprintProjectionStoryPointMetrics.cs`
+  - `PoTool.Api/Migrations/20260314113737_AddSprintProjectionStoryPointMetrics.Designer.cs`
+
+- **Fields added**
+  - Added additive projection fields for `PlannedStoryPoints`, `CompletedPbiStoryPoints`, and `SpilloverStoryPoints` so sprint trend projections can persist canonical story-point totals separately from effort hours.
+  - Added aggregate diagnostics for `MissingStoryPointCount`, `DerivedStoryPointCount`, `DerivedStoryPoints`, and `UnestimatedDeliveryCount`.
+  - Preserved backward compatibility by keeping the existing effort-based fields and broadening trend DTO outputs additively.
+
+- **Tests added**
+  - `SprintTrendProjectionServiceTests.ComputeProductSprintProjection_StoresStoryPointTotalsSeparatelyFromEffort`
+  - `SprintTrendProjectionServiceTests.ComputeProductSprintProjection_PreservesDerivedStoryPointDiagnostics`
+  - `GetSprintTrendMetricsQueryHandlerTests.Handle_MultipleProducts_AggregatesMetricsCorrectly` now verifies aggregated story-point and diagnostic fields in the surfaced sprint trend response.

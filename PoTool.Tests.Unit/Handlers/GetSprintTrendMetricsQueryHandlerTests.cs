@@ -282,14 +282,24 @@ public class GetSprintTrendMetricsQueryHandlerTests
                 Product = product1,
                 PlannedCount = 10, 
                 PlannedEffort = 30,
+                PlannedStoryPoints = 13.5d,
                 WorkedCount = 8,
                 WorkedEffort = 25,
                 BugsPlannedCount = 2,
                 BugsWorkedCount = 1,
+                CompletedPbiCount = 2,
+                CompletedPbiEffort = 12,
+                CompletedPbiStoryPoints = 8,
                 SpilloverCount = 1,
                 SpilloverEffort = 8,
+                SpilloverStoryPoints = 5.5d,
+                MissingStoryPointCount = 1,
+                DerivedStoryPointCount = 1,
+                DerivedStoryPoints = 3.5d,
+                UnestimatedDeliveryCount = 1,
                 LastComputedAt = DateTimeOffset.UtcNow,
-                IncludedUpToRevisionId = 100
+                IncludedUpToRevisionId = 100,
+                IsApproximate = true
             },
             new() 
             { 
@@ -299,12 +309,21 @@ public class GetSprintTrendMetricsQueryHandlerTests
                 Product = product2,
                 PlannedCount = 5, 
                 PlannedEffort = 15,
+                PlannedStoryPoints = 8,
                 WorkedCount = 4,
                 WorkedEffort = 12,
                 BugsPlannedCount = 3,
                 BugsWorkedCount = 2,
+                CompletedPbiCount = 1,
+                CompletedPbiEffort = 7,
+                CompletedPbiStoryPoints = 5,
                 SpilloverCount = 2,
                 SpilloverEffort = 13,
+                SpilloverStoryPoints = 3,
+                MissingStoryPointCount = 0,
+                DerivedStoryPointCount = 0,
+                DerivedStoryPoints = 0,
+                UnestimatedDeliveryCount = 0,
                 LastComputedAt = DateTimeOffset.UtcNow,
                 IncludedUpToRevisionId = 100
             }
@@ -331,17 +350,31 @@ public class GetSprintTrendMetricsQueryHandlerTests
         // Check aggregated totals
         Assert.AreEqual(15, sprintMetrics.TotalPlannedCount, "Total planned count should be 10 + 5");
         Assert.AreEqual(45, sprintMetrics.TotalPlannedEffort, "Total planned effort should be 30 + 15");
+        Assert.AreEqual(21.5d, sprintMetrics.TotalPlannedStoryPoints, 0.001d, "Total planned story points should aggregate independently from effort.");
         Assert.AreEqual(12, sprintMetrics.TotalWorkedCount, "Total worked count should be 8 + 4");
         Assert.AreEqual(37, sprintMetrics.TotalWorkedEffort, "Total worked effort should be 25 + 12");
         Assert.AreEqual(5, sprintMetrics.TotalBugsPlannedCount, "Total bugs planned should be 2 + 3");
         Assert.AreEqual(3, sprintMetrics.TotalBugsWorkedCount, "Total bugs worked should be 1 + 2");
+        Assert.AreEqual(3, sprintMetrics.TotalCompletedPbiCount, "Total completed PBI count should aggregate across products.");
+        Assert.AreEqual(19, sprintMetrics.TotalCompletedPbiEffort, "Total completed effort should aggregate across products.");
+        Assert.AreEqual(13d, sprintMetrics.TotalCompletedPbiStoryPoints, 0.001d, "Delivered story points should aggregate independently from effort.");
         Assert.AreEqual(3, sprintMetrics.TotalSpilloverCount, "Total spillover count should be 1 + 2");
         Assert.AreEqual(21, sprintMetrics.TotalSpilloverEffort, "Total spillover effort should be 8 + 13");
+        Assert.AreEqual(8.5d, sprintMetrics.TotalSpilloverStoryPoints, 0.001d, "Spillover story points should aggregate independently from effort.");
+        Assert.AreEqual(1, sprintMetrics.TotalMissingStoryPointCount, "Missing story-point diagnostics should be preserved.");
+        Assert.AreEqual(1, sprintMetrics.TotalDerivedStoryPointCount, "Derived estimate diagnostics should be preserved.");
+        Assert.AreEqual(3.5d, sprintMetrics.TotalDerivedStoryPoints, 0.001d, "Derived story-point totals should be preserved.");
+        Assert.AreEqual(1, sprintMetrics.TotalUnestimatedDeliveryCount, "Unestimated delivery counts should be preserved.");
+        Assert.IsTrue(sprintMetrics.IsApproximate, "Approximation should remain true when any product used derived estimates.");
 
         // Check product-level metrics
         Assert.HasCount(2, sprintMetrics.ProductMetrics);
         Assert.AreEqual(1, sprintMetrics.ProductMetrics[0].SpilloverCount);
         Assert.AreEqual(8, sprintMetrics.ProductMetrics[0].SpilloverEffort);
+        Assert.AreEqual(13.5d, sprintMetrics.ProductMetrics[0].PlannedStoryPoints, 0.001d);
+        Assert.AreEqual(8d, sprintMetrics.ProductMetrics[0].CompletedPbiStoryPoints, 0.001d);
+        Assert.AreEqual(1, sprintMetrics.ProductMetrics[0].DerivedStoryPointCount);
+        Assert.AreEqual(1, sprintMetrics.ProductMetrics[0].UnestimatedDeliveryCount);
     }
 
     [TestMethod]
