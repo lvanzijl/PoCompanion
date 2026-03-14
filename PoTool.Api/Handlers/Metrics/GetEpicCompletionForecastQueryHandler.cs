@@ -13,7 +13,7 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Uses product-scoped hierarchical loading when products are configured.
 ///
 /// Velocity computation: iterates the distinct iteration paths of the epic's child work
-/// items, retrieves SprintMetrics for each (via GetSprintMetricsQuery), and derives
+/// items, retrieves historical SprintMetrics for each (via GetSprintMetricsQuery), and derives
 /// average velocity from CompletedStoryPoints. Sprints older than 6 months are excluded,
 /// and the result is capped at MaxSprintsForVelocity.
 /// </summary>

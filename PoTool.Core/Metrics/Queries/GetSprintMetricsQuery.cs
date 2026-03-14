@@ -5,7 +5,8 @@ using PoTool.Shared.Metrics;
 namespace PoTool.Core.Metrics.Queries;
 
 /// <summary>
-/// Query to get metrics for a specific sprint by iteration path.
+/// Query to get historical sprint metrics for a specific sprint path.
+/// The sprint path selects the sprint window and the commitment reconstruction target.
 /// </summary>
 public sealed record GetSprintMetricsQuery(
     string IterationPath

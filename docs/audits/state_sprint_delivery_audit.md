@@ -297,3 +297,19 @@ The repository contains the building blocks required by the canonical domain mod
     - projection spillover metrics match the same three canonical scenarios
   - `PoTool.Tests.Unit/Handlers/GetSprintTrendMetricsQueryHandlerTests.cs`
     - trend aggregation includes spillover counts and effort from the projection rows
+
+## Fix Progress — Snapshot Sprint Metrics Endpoint
+
+- **Decision taken**
+  - Converted `GetSprintMetricsQueryHandler` from a current snapshot endpoint into a historical sprint metrics endpoint.
+  - Kept the existing route and DTO shape so downstream consumers continue to call the same API, but the handler now follows canonical sprint delivery semantics instead of current iteration membership.
+  - This resolves the ambiguity called out earlier in this audit: the endpoint no longer represents "what is in the sprint today."
+
+- **Changes implemented**
+  - `GetSprintMetricsQueryHandler` now requires dated sprint metadata, reconstructs committed scope at `CommitmentTimestamp = SprintStart + 1 day`, includes scope added after commitment from iteration-history events, and counts completion from the first canonical `Done` transition inside the sprint window.
+  - Handler, query, DTO, controller, and forecast comments were updated to document the historical semantics and point future readers back to the canonical sprint/domain rules.
+  - `GetSprintMetricsQueryHandlerTests` were replaced with history-based tests that verify commitment reconstruction, added-scope handling, first-done-only delivery, and the absence of raw done-state fallbacks.
+
+- **Endpoints affected**
+  - `GET /api/Metrics/sprint`
+  - Indirect consumer: `GetEpicCompletionForecastQueryHandler` velocity lookup via `GetSprintMetricsQuery`
