@@ -1,15 +1,24 @@
 using PoTool.Core.Metrics.Models;
 using PoTool.Shared.Settings;
 
-namespace PoTool.Api.Services;
+namespace PoTool.Core.Domain.Sprints;
 
-internal static class StateClassificationLookup
+/// <summary>
+/// Resolves canonical lifecycle classifications for work item states.
+/// </summary>
+public static class StateClassificationLookup
 {
     private static readonly Lazy<IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>> DefaultLookup =
-        new(() => Create(WorkItemStateClassificationService.GetDefaultClassifications()));
+        new(() => Create(StateClassificationDefaults.Create()));
 
+    /// <summary>
+    /// Gets the fallback canonical state lookup used when no custom mapping is supplied.
+    /// </summary>
     public static IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification> Default => DefaultLookup.Value;
 
+    /// <summary>
+    /// Builds a canonical state lookup from configured work item state classifications.
+    /// </summary>
     public static IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification> Create(
         IEnumerable<WorkItemStateClassificationDto> classifications)
     {
@@ -32,6 +41,9 @@ internal static class StateClassificationLookup
             StateKeyComparer.Instance);
     }
 
+    /// <summary>
+    /// Resolves the canonical classification for a work item type and raw state value.
+    /// </summary>
     public static StateClassification GetClassification(
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? lookup,
         string workItemType,
@@ -48,6 +60,9 @@ internal static class StateClassificationLookup
             : StateClassification.New;
     }
 
+    /// <summary>
+    /// Returns whether the supplied raw state is canonically classified as Done.
+    /// </summary>
     public static bool IsDone(
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? lookup,
         string workItemType,
@@ -56,6 +71,9 @@ internal static class StateClassificationLookup
         return GetClassification(lookup, workItemType, state) == StateClassification.Done;
     }
 
+    /// <summary>
+    /// Returns whether the supplied snapshot is currently canonically classified as Done.
+    /// </summary>
     public static bool IsDone(
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? lookup,
         WorkItemSnapshot workItem)
@@ -63,6 +81,9 @@ internal static class StateClassificationLookup
         return IsDone(lookup, workItem.WorkItemType, workItem.CurrentState);
     }
 
+    /// <summary>
+    /// Gets the raw states for a work item type that map to the requested canonical classification.
+    /// </summary>
     public static IReadOnlySet<string> GetStatesForClassification(
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? lookup,
         string workItemType,

@@ -1,11 +1,17 @@
 using PoTool.Core.Metrics.Models;
 
-namespace PoTool.Api.Services;
+namespace PoTool.Core.Domain.Sprints;
 
-internal static class StateReconstructionLookup
+/// <summary>
+/// Reconstructs a work item's raw state at a point in time from canonical field-change history.
+/// </summary>
+public static class StateReconstructionLookup
 {
     private const string StateFieldRefName = "System.State";
 
+    /// <summary>
+    /// Replays post-target state changes backward from the current snapshot state to recover the state at the requested timestamp.
+    /// </summary>
     public static string? GetStateAtTimestamp(
         string? currentState,
         IReadOnlyList<FieldChangeEvent>? stateEvents,
