@@ -576,12 +576,12 @@ public class SprintTrendProjectionService
     {
         var candidates = featurePbis
             .Select(candidate => new StoryPointResolutionCandidate(
-                ToWorkItemDto(candidate),
+                candidate.ToCanonicalWorkItem(),
                 StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, candidate.State)))
             .ToArray();
 
         return storyPointResolutionService.Resolve(new StoryPointResolutionRequest(
-            ToWorkItemDto(pbi),
+            pbi.ToCanonicalWorkItem(),
             StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, pbi.State),
             candidates));
     }
@@ -612,43 +612,24 @@ public class SprintTrendProjectionService
             && estimate.Source is not StoryPointEstimateSource.Derived;
     }
 
-    private static WorkItemDto ToWorkItemDto(WorkItemEntity workItem)
-    {
-        return new WorkItemDto(
-            TfsId: workItem.TfsId,
-            Type: workItem.Type,
-            Title: workItem.Title,
-            ParentTfsId: workItem.ParentTfsId,
-            AreaPath: workItem.AreaPath,
-            IterationPath: workItem.IterationPath,
-            State: workItem.State,
-            RetrievedAt: workItem.RetrievedAt,
-            Effort: workItem.Effort,
-            Description: workItem.Description,
-            CreatedDate: workItem.CreatedDate,
-            ClosedDate: workItem.ClosedDate,
-            Severity: workItem.Severity,
-            Tags: workItem.Tags,
-            IsBlocked: workItem.IsBlocked,
-            Relations: null,
-            ChangedDate: workItem.TfsChangedDate,
-            BusinessValue: workItem.BusinessValue,
-            BacklogPriority: workItem.BacklogPriority,
-            StoryPoints: workItem.StoryPoints);
-    }
-
-    private static (WorkItemDto FeatureWorkItem, List<WorkItemDto> FeatureWorkItems, Dictionary<int, bool> DoneByWorkItemId)
+    private static (CanonicalWorkItem FeatureWorkItem, List<CanonicalWorkItem> FeatureWorkItems, Dictionary<int, bool> DoneByWorkItemId)
         BuildFeatureRollupContext(
             WorkItemEntity featureWi,
             IReadOnlyList<WorkItemEntity> childPbis,
             IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup)
     {
-        var featureWorkItem = ToWorkItemDto(featureWi);
-        var featureWorkItems = new List<WorkItemDto>(childPbis.Count + 1) { featureWorkItem };
-        featureWorkItems.AddRange(childPbis.Select(ToWorkItemDto));
-        var doneByWorkItemId = featureWorkItems.ToDictionary(
-            workItem => workItem.TfsId,
-            workItem => StateClassificationLookup.IsDone(stateLookup, workItem.Type, workItem.State));
+        var featureWorkItem = featureWi.ToCanonicalWorkItem();
+        var featureWorkItems = new List<CanonicalWorkItem>(childPbis.Count + 1) { featureWorkItem };
+        featureWorkItems.AddRange(childPbis.Select(childPbi => childPbi.ToCanonicalWorkItem()));
+        var doneByWorkItemId = new Dictionary<int, bool>
+        {
+            [featureWi.TfsId] = StateClassificationLookup.IsDone(stateLookup, featureWi.Type, featureWi.State)
+        };
+
+        foreach (var childPbi in childPbis)
+        {
+            doneByWorkItemId[childPbi.TfsId] = StateClassificationLookup.IsDone(stateLookup, childPbi.Type, childPbi.State);
+        }
 
         return (featureWorkItem, featureWorkItems, doneByWorkItemId);
     }

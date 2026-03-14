@@ -231,7 +231,7 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
 
     private int? ResolveSprintStoryPoints(WorkItemDto workItem, bool isDone)
     {
-        var estimate = _storyPointResolutionService.Resolve(new StoryPointResolutionRequest(workItem, isDone));
+        var estimate = _storyPointResolutionService.Resolve(new StoryPointResolutionRequest(workItem.ToCanonicalWorkItem(), isDone));
         if (estimate.Source is StoryPointEstimateSource.Missing or StoryPointEstimateSource.Derived || !estimate.Value.HasValue)
         {
             return null;

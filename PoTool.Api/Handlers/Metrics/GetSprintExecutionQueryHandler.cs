@@ -515,7 +515,7 @@ public sealed class GetSprintExecutionQueryHandler
         bool excludeDerived)
     {
         var estimate = _storyPointResolutionService.Resolve(new StoryPointResolutionRequest(
-            ToWorkItemDto(workItem),
+            workItem.ToCanonicalWorkItem(),
             StateClassificationLookup.IsDone(stateLookup, workItem.Type, workItem.State),
             BuildFeaturePbiCandidates(workItem, stateLookup, workItemsById)));
 
@@ -537,7 +537,7 @@ public sealed class GetSprintExecutionQueryHandler
         IReadOnlyDictionary<int, WorkItemEntity> workItemsById)
     {
         var estimate = _storyPointResolutionService.Resolve(new StoryPointResolutionRequest(
-            ToWorkItemDto(workItem),
+            workItem.ToCanonicalWorkItem(),
             IsDone: true,
             BuildFeaturePbiCandidates(workItem, stateLookup: null, workItemsById)));
 
@@ -563,34 +563,9 @@ public sealed class GetSprintExecutionQueryHandler
             .Where(candidate => candidate.ParentTfsId == workItem.ParentTfsId)
             .Where(candidate => IsPbiType(candidate.Type))
             .Select(candidate => new StoryPointResolutionCandidate(
-                ToWorkItemDto(candidate),
+                candidate.ToCanonicalWorkItem(),
                 StateClassificationLookup.IsDone(stateLookup, candidate.Type, candidate.State)))
             .ToList();
-    }
-
-    private static WorkItemDto ToWorkItemDto(WorkItemEntity workItem)
-    {
-        return new WorkItemDto(
-            TfsId: workItem.TfsId,
-            Type: workItem.Type,
-            Title: workItem.Title,
-            ParentTfsId: workItem.ParentTfsId,
-            AreaPath: workItem.AreaPath,
-            IterationPath: workItem.IterationPath,
-            State: workItem.State,
-            RetrievedAt: workItem.RetrievedAt,
-            Effort: workItem.Effort,
-            Description: workItem.Description,
-            CreatedDate: workItem.CreatedDate,
-            ClosedDate: workItem.ClosedDate,
-            Severity: workItem.Severity,
-            Tags: workItem.Tags,
-            IsBlocked: workItem.IsBlocked,
-            Relations: null,
-            ChangedDate: workItem.TfsChangedDate,
-            BusinessValue: workItem.BusinessValue,
-            BacklogPriority: workItem.BacklogPriority,
-            StoryPoints: workItem.StoryPoints);
     }
 
     private static bool IsPbiType(string workItemType)

@@ -1,6 +1,6 @@
+using PoTool.Core.Metrics.Models;
 using PoTool.Core.Metrics.Services;
 using PoTool.Core.WorkItems;
-using PoTool.Shared.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -17,7 +17,7 @@ public sealed class HierarchyRollupServiceTests
         var activePbi = CreateWorkItem(202, WorkItemType.Pbi, "Active", 100, 8);
         var workItems = new[] { feature, donePbi, activePbi };
 
-        var result = _service.RollupCanonicalScope(feature, workItems, BuildDoneLookup(workItems));
+        var result = _service.RollupCanonicalScope(feature.WorkItem, workItems.Select(item => item.WorkItem).ToList(), BuildDoneLookup(workItems));
 
         Assert.AreEqual(13d, result.Total, 0.001d);
         Assert.AreEqual(5d, result.Completed, 0.001d);
@@ -34,7 +34,7 @@ public sealed class HierarchyRollupServiceTests
         var pbiC = CreateWorkItem(103, WorkItemType.Pbi, "Done", 11, 8);
         var workItems = new[] { epic, featureA, featureB, pbiA, pbiB, pbiC };
 
-        var result = _service.RollupCanonicalScope(epic, workItems, BuildDoneLookup(workItems));
+        var result = _service.RollupCanonicalScope(epic.WorkItem, workItems.Select(item => item.WorkItem).ToList(), BuildDoneLookup(workItems));
 
         Assert.AreEqual(16d, result.Total, 0.001d);
         Assert.AreEqual(13d, result.Completed, 0.001d);
@@ -47,7 +47,7 @@ public sealed class HierarchyRollupServiceTests
         var missingPbi = CreateWorkItem(201, WorkItemType.Pbi, "Done", 100, null, storyPoints: null, businessValue: null);
         var workItems = new[] { feature, missingPbi };
 
-        var result = _service.RollupCanonicalScope(feature, workItems, BuildDoneLookup(workItems));
+        var result = _service.RollupCanonicalScope(feature.WorkItem, workItems.Select(item => item.WorkItem).ToList(), BuildDoneLookup(workItems));
 
         Assert.AreEqual(8d, result.Total, 0.001d);
         Assert.AreEqual(8d, result.Completed, 0.001d);
@@ -62,7 +62,7 @@ public sealed class HierarchyRollupServiceTests
         var task = CreateWorkItem(203, WorkItemType.Task, "Done", 100, 8);
         var workItems = new[] { feature, pbi, bug, task };
 
-        var result = _service.RollupCanonicalScope(feature, workItems, BuildDoneLookup(workItems));
+        var result = _service.RollupCanonicalScope(feature.WorkItem, workItems.Select(item => item.WorkItem).ToList(), BuildDoneLookup(workItems));
 
         Assert.AreEqual(5d, result.Total, 0.001d);
         Assert.AreEqual(5d, result.Completed, 0.001d);
@@ -77,20 +77,20 @@ public sealed class HierarchyRollupServiceTests
         var missingPbi = CreateWorkItem(203, WorkItemType.Pbi, "Active", 100, null, storyPoints: null, businessValue: null);
         var workItems = new[] { feature, estimatedPbiA, estimatedPbiB, missingPbi };
 
-        var result = _service.RollupCanonicalScope(feature, workItems, BuildDoneLookup(workItems));
+        var result = _service.RollupCanonicalScope(feature.WorkItem, workItems.Select(item => item.WorkItem).ToList(), BuildDoneLookup(workItems));
 
         Assert.AreEqual(10.5d, result.Total, 0.001d);
         Assert.AreEqual(3d, result.Completed, 0.001d);
     }
 
-    private static Dictionary<int, bool> BuildDoneLookup(IEnumerable<WorkItemDto> workItems)
+    private static Dictionary<int, bool> BuildDoneLookup(IEnumerable<TestWorkItem> workItems)
     {
         return workItems.ToDictionary(
-            workItem => workItem.TfsId,
-            workItem => string.Equals(workItem.State, "Done", StringComparison.OrdinalIgnoreCase));
+            workItem => workItem.WorkItem.WorkItemId,
+            workItem => workItem.IsDone);
     }
 
-    private static WorkItemDto CreateWorkItem(
+    private static TestWorkItem CreateWorkItem(
         int id,
         string type,
         string state,
@@ -99,19 +99,15 @@ public sealed class HierarchyRollupServiceTests
         int? storyPoints = null,
         int? businessValue = null)
     {
-        return new WorkItemDto(
-            TfsId: id,
-            Type: type,
-            Title: $"Work Item {id}",
-            ParentTfsId: parentTfsId,
-            AreaPath: "Area",
-            IterationPath: "Sprint 1",
-            State: state,
-            RetrievedAt: DateTimeOffset.UtcNow,
-            Effort: effort,
-            Description: null,
-            Tags: null,
-            BusinessValue: businessValue,
-            StoryPoints: storyPoints ?? effort);
+        return new TestWorkItem(
+            new CanonicalWorkItem(
+                id,
+                type,
+                parentTfsId,
+                businessValue,
+                storyPoints ?? effort),
+            string.Equals(state, "Done", StringComparison.OrdinalIgnoreCase));
     }
+
+    private readonly record struct TestWorkItem(CanonicalWorkItem WorkItem, bool IsDone);
 }

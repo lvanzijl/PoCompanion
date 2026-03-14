@@ -1,5 +1,5 @@
+using PoTool.Core.Metrics.Models;
 using PoTool.Core.WorkItems;
-using PoTool.Shared.WorkItems;
 
 namespace PoTool.Core.Metrics.Services;
 
@@ -52,7 +52,7 @@ public sealed record ResolvedStoryPointEstimate(
 /// <param name="WorkItem">The work item to resolve.</param>
 /// <param name="IsDone">Whether the work item is canonically Done.</param>
 public sealed record StoryPointResolutionCandidate(
-    WorkItemDto WorkItem,
+    CanonicalWorkItem WorkItem,
     bool IsDone);
 
 /// <summary>
@@ -62,7 +62,7 @@ public sealed record StoryPointResolutionCandidate(
 /// <param name="IsDone">Whether the work item is canonically Done.</param>
 /// <param name="FeaturePbis">Optional feature-local PBI candidates used for derived estimates.</param>
 public sealed record StoryPointResolutionRequest(
-    WorkItemDto WorkItem,
+    CanonicalWorkItem WorkItem,
     bool IsDone,
     IReadOnlyCollection<StoryPointResolutionCandidate>? FeaturePbis = null);
 
@@ -72,7 +72,7 @@ public sealed record StoryPointResolutionRequest(
 /// <param name="WorkItem">The parent work item to resolve.</param>
 /// <param name="IsDone">Whether the parent work item is canonically Done.</param>
 public sealed record StoryPointFallbackRequest(
-    WorkItemDto WorkItem,
+    CanonicalWorkItem WorkItem,
     bool IsDone);
 
 /// <summary>
@@ -106,9 +106,9 @@ public sealed class CanonicalStoryPointResolutionService : ICanonicalStoryPointR
         return ResolveFallbackEstimate(request.WorkItem, request.IsDone);
     }
 
-    private static ResolvedStoryPointEstimate ResolveDirect(WorkItemDto workItem, bool isDone)
+    private static ResolvedStoryPointEstimate ResolveDirect(CanonicalWorkItem workItem, bool isDone)
     {
-        if (!IsAuthoritativePbi(workItem.Type))
+        if (!IsAuthoritativePbi(workItem.WorkItemType))
         {
             return MissingEstimate;
         }
@@ -116,7 +116,7 @@ public sealed class CanonicalStoryPointResolutionService : ICanonicalStoryPointR
         return ResolveFallbackEstimate(workItem, isDone);
     }
 
-    private static ResolvedStoryPointEstimate ResolveFallbackEstimate(WorkItemDto workItem, bool isDone)
+    private static ResolvedStoryPointEstimate ResolveFallbackEstimate(CanonicalWorkItem workItem, bool isDone)
     {
         if (workItem.StoryPoints is int storyPoints)
         {
@@ -136,7 +136,7 @@ public sealed class CanonicalStoryPointResolutionService : ICanonicalStoryPointR
 
     private static ResolvedStoryPointEstimate? TryResolveDerived(StoryPointResolutionRequest request)
     {
-        if (!IsAuthoritativePbi(request.WorkItem.Type) || request.WorkItem.ParentTfsId == null)
+        if (!IsAuthoritativePbi(request.WorkItem.WorkItemType) || request.WorkItem.ParentWorkItemId == null)
         {
             return null;
         }
@@ -147,9 +147,9 @@ public sealed class CanonicalStoryPointResolutionService : ICanonicalStoryPointR
         }
 
         var siblingEstimates = request.FeaturePbis
-            .Where(candidate => candidate.WorkItem.TfsId != request.WorkItem.TfsId)
-            .Where(candidate => candidate.WorkItem.ParentTfsId == request.WorkItem.ParentTfsId)
-            .Where(candidate => IsAuthoritativePbi(candidate.WorkItem.Type))
+            .Where(candidate => candidate.WorkItem.WorkItemId != request.WorkItem.WorkItemId)
+            .Where(candidate => candidate.WorkItem.ParentWorkItemId == request.WorkItem.ParentWorkItemId)
+            .Where(candidate => IsAuthoritativePbi(candidate.WorkItem.WorkItemType))
             .Select(candidate => ResolveDirect(candidate.WorkItem, candidate.IsDone))
             .Where(estimate => estimate.HasValue)
             .Select(estimate => estimate.Value!.Value)
