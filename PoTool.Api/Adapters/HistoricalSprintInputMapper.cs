@@ -3,7 +3,7 @@ using PoTool.Core.Domain.Models;
 using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 
-namespace PoTool.Api.Services;
+namespace PoTool.Api.Adapters;
 
 internal static class HistoricalSprintInputMapper
 {

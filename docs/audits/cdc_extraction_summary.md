@@ -10,3 +10,9 @@
 ## Final verdict
 
 **CDC extracted with minor cleanup remaining**
+
+## Adapter Boundary Cleanup
+
+- adapter classes regrouped under `PoTool.Api/Adapters`
+- namespaces updated to `PoTool.Api.Adapters`
+- no semantic changes to CDC logic, handlers, or DTO contracts

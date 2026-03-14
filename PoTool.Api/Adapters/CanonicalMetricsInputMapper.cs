@@ -2,7 +2,7 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Domain.Models;
 using PoTool.Shared.WorkItems;
 
-namespace PoTool.Api.Services;
+namespace PoTool.Api.Adapters;
 
 internal static class CanonicalMetricsInputMapper
 {
