@@ -1,12 +1,18 @@
 using PoTool.Core.Metrics.Models;
 using PoTool.Shared.Settings;
 
-namespace PoTool.Api.Services;
+namespace PoTool.Core.Domain.Sprints;
 
-internal static class FirstDoneDeliveryLookup
+/// <summary>
+/// Attributes delivery to the first canonical transition into Done for each work item.
+/// </summary>
+public static class FirstDoneDeliveryLookup
 {
     private const string StateFieldRefName = "System.State";
 
+    /// <summary>
+    /// Builds the first-Done timestamp lookup for work items present in the provided snapshot set.
+    /// </summary>
     public static IReadOnlyDictionary<int, DateTimeOffset> Build(
         IEnumerable<FieldChangeEvent> activityEvents,
         IReadOnlyDictionary<int, WorkItemSnapshot> workItemsById,
@@ -34,6 +40,9 @@ internal static class FirstDoneDeliveryLookup
             .ToDictionary(entry => entry.WorkItemId, entry => entry.FirstDoneTimestamp!.Value);
     }
 
+    /// <summary>
+    /// Returns the first timestamp where a work item transitioned from a non-Done state into canonical Done.
+    /// </summary>
     public static DateTimeOffset? GetFirstDoneTransitionTimestamp(
         IEnumerable<FieldChangeEvent>? activityEvents,
         string workItemType,
@@ -66,6 +75,9 @@ internal static class FirstDoneDeliveryLookup
         return null;
     }
 
+    /// <summary>
+    /// Returns the event timestamp used by the sprint-history helpers for point-in-time ordering.
+    /// </summary>
     public static DateTimeOffset GetEventTimestamp(FieldChangeEvent activityEvent)
     {
         return activityEvent.Timestamp;

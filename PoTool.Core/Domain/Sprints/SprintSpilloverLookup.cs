@@ -1,12 +1,18 @@
 using PoTool.Core.Metrics.Models;
 using PoTool.Shared.Settings;
 
-namespace PoTool.Api.Services;
+namespace PoTool.Core.Domain.Sprints;
 
-internal static class SprintSpilloverLookup
+/// <summary>
+/// Detects committed work that carried over directly into the next sprint.
+/// </summary>
+public static class SprintSpilloverLookup
 {
     private const string IterationPathFieldRefName = "System.IterationPath";
 
+    /// <summary>
+    /// Resolves the next sprint path for the same team based on sprint ordering.
+    /// </summary>
     public static string? GetNextSprintPath(
         SprintDefinition sprint,
         IEnumerable<SprintDefinition> teamSprints)
@@ -29,6 +35,9 @@ internal static class SprintSpilloverLookup
             .FirstOrDefault(path => path != null);
     }
 
+    /// <summary>
+    /// Builds the set of committed work item IDs that were not Done at sprint end and moved directly into the next sprint.
+    /// </summary>
     public static IReadOnlySet<int> BuildSpilloverWorkItemIds(
         IReadOnlySet<int> committedWorkItemIds,
         IReadOnlyDictionary<int, WorkItemSnapshot> workItemsById,

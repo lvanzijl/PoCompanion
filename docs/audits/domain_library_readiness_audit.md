@@ -156,3 +156,22 @@ Extraction therefore appears **feasible with targeted boundary refactors, not wi
 - Added focused unit coverage for:
   - persistence-to-domain input mapping correctness
   - canonical helper behavior using the new domain inputs
+
+## Fix Progress — Coherent Domain Surface for Sprint History
+
+- Grouped the canonical sprint-history helpers into `PoTool.Core/Domain/Sprints` so the domain surface now collects:
+  - `SprintCommitmentLookup`
+  - `FirstDoneDeliveryLookup`
+  - `SprintSpilloverLookup`
+  - `StateClassificationLookup`
+  - `StateReconstructionLookup`
+- Reduced API coupling by moving the fallback state-classification source into `PoTool.Core/Domain/Sprints/StateClassificationDefaults.cs`; the helper group no longer depends on `PoTool.Api.Services.WorkItemStateClassificationService`.
+- Updated existing API consumers to use the Core domain helper namespace without changing reconstruction semantics:
+  - `GetSprintMetricsQueryHandler`
+  - `GetSprintExecutionQueryHandler`
+  - `SprintTrendProjectionService`
+  - `WorkItemStateClassificationService` now reuses the Core fallback classification source instead of owning a duplicate API-local copy
+- Added focused unit coverage in `PoTool.Tests.Unit/Services/HistoricalSprintLookupTests.cs` for:
+  - canonical state mapping
+  - point-in-time state reconstruction
+  - existing commitment, first-Done, and spillover reconstruction behavior

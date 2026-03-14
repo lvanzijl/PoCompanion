@@ -1,4 +1,4 @@
-using PoTool.Api.Services;
+using PoTool.Core.Domain.Sprints;
 using PoTool.Core.Metrics.Models;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Settings;
@@ -74,6 +74,46 @@ public sealed class HistoricalSprintLookupTests
         var firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(stateEvents, workItemsById, stateLookup);
 
         Assert.AreEqual(firstDoneTimestamp, firstDoneByWorkItem[101]);
+    }
+
+    [TestMethod]
+    public void GetClassification_UsesCanonicalStateMappings()
+    {
+        var stateLookup = StateClassificationLookup.Create(
+        [
+            new WorkItemStateClassificationDto
+            {
+                WorkItemType = WorkItemType.Pbi,
+                StateName = "Done",
+                Classification = StateClassification.Done
+            }
+        ]);
+
+        var classification = StateClassificationLookup.GetClassification(stateLookup, WorkItemType.Pbi, "done");
+
+        Assert.AreEqual(StateClassification.Done, classification);
+    }
+
+    [TestMethod]
+    public void GetStateAtTimestamp_ReconstructsHistoricalStateFromLaterEvents()
+    {
+        var targetTimestamp = new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, DateTimeKind.Utc));
+        IReadOnlyList<FieldChangeEvent> stateEvents =
+        [
+            new FieldChangeEvent(
+                EventId: 1,
+                WorkItemId: 101,
+                UpdateId: 10,
+                FieldRefName: "System.State",
+                Timestamp: targetTimestamp.AddHours(1),
+                TimestampUtc: targetTimestamp.AddHours(1).UtcDateTime,
+                OldValue: "Active",
+                NewValue: "Resolved")
+        ];
+
+        var stateAtTimestamp = StateReconstructionLookup.GetStateAtTimestamp("Resolved", stateEvents, targetTimestamp);
+
+        Assert.AreEqual("Active", stateAtTimestamp);
     }
 
     [TestMethod]

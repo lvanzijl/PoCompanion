@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
+using PoTool.Core.Domain.Sprints;
 using PoTool.Core.Metrics.Models;
 using PoTool.Core.Metrics.Services;
 using PoTool.Core.WorkItems;

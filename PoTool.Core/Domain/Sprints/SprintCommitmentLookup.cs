@@ -1,16 +1,25 @@
 using PoTool.Core.Metrics.Models;
 
-namespace PoTool.Api.Services;
+namespace PoTool.Core.Domain.Sprints;
 
-internal static class SprintCommitmentLookup
+/// <summary>
+/// Reconstructs sprint commitment membership at the canonical sprint commitment timestamp.
+/// </summary>
+public static class SprintCommitmentLookup
 {
     private const string IterationPathFieldRefName = "System.IterationPath";
 
+    /// <summary>
+    /// Returns the canonical sprint commitment timestamp.
+    /// </summary>
     public static DateTimeOffset GetCommitmentTimestamp(DateTimeOffset sprintStart)
     {
         return sprintStart.AddDays(1);
     }
 
+    /// <summary>
+    /// Builds the set of work item IDs whose iteration path matched the sprint at the commitment timestamp.
+    /// </summary>
     public static IReadOnlySet<int> BuildCommittedWorkItemIds(
         IReadOnlyDictionary<int, WorkItemSnapshot> workItemsById,
         IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>> iterationEventsByWorkItem,
@@ -35,6 +44,9 @@ internal static class SprintCommitmentLookup
         return committedWorkItemIds;
     }
 
+    /// <summary>
+    /// Replays iteration-path changes backward from the current snapshot to recover sprint membership at the requested timestamp.
+    /// </summary>
     public static string? GetIterationPathAtTimestamp(
         string? currentIterationPath,
         IReadOnlyList<FieldChangeEvent>? iterationEvents,
