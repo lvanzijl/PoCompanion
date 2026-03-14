@@ -748,6 +748,35 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
+    public void ComputeFeatureProgress_WithActivityFilter_IncludesFeatureWhenOnlyTaskDescendantIsActive()
+    {
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "PBI 1", effort: 10, state: "Active", parentId: 100),
+            [301] = CreateWorkItem(301, WorkItemType.Task, "Task 1", state: "Active", parentId: 201),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 301, WorkItemType = WorkItemType.Task, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+        };
+
+        var activeWorkItemIds = new HashSet<int> { 301 };
+
+        var result = SprintTrendProjectionService.ComputeFeatureProgress(
+            resolved,
+            workItems,
+            new List<int> { 1 },
+            activeWorkItemIds: activeWorkItemIds);
+
+        Assert.HasCount(1, result, "Feature should remain visible when only a task descendant changed during the sprint.");
+        Assert.AreEqual(100, result[0].FeatureId);
+    }
+
+    [TestMethod]
     public void ComputeFeatureProgress_WithNullActivityFilter_IncludesAllFeaturesWithPbis()
     {
         var workItems = new Dictionary<int, WorkItemEntity>
@@ -1287,8 +1316,8 @@ public class SprintTrendProjectionServiceTests
         var result = SprintTrendProjectionService.ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
-        // Feature and PBI should both count as "worked" due to child activity
-        Assert.IsGreaterThanOrEqualTo(result.WorkedCount, 2, "WorkedCount should include Feature and PBI due to task child activity");
+        // Task activity should bubble all the way through Task → PBI → Feature
+        Assert.AreEqual(3, result.WorkedCount, "WorkedCount should include the task plus its PBI and Feature ancestors.");
     }
 
     [TestMethod]

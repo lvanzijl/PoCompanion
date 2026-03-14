@@ -291,25 +291,10 @@ public class SprintTrendProjectionService
 
         var productWorkItemIds = productResolved.Select(r => r.WorkItemId).ToHashSet();
 
-        var workedItemIds = functionalActivityByWorkItem.Keys
-            .Where(k => productWorkItemIds.Contains(k))
-            .ToHashSet();
-
-        // Bubble up activity from children to parents
-        foreach (var resolved in productResolved)
-        {
-            if (resolved.WorkItemType is WorkItemType.Feature or WorkItemType.Epic or WorkItemType.Pbi or WorkItemType.Bug)
-            {
-                var hasChildActivity = productResolved
-                    .Where(r => IsChildOf(r, resolved, workItemsByTfsId))
-                    .Any(r => functionalActivityByWorkItem.ContainsKey(r.WorkItemId));
-
-                if (hasChildActivity)
-                {
-                    workedItemIds.Add(resolved.WorkItemId);
-                }
-            }
-        }
+        var workedItemIds = PropagateActivityToAncestors(
+            functionalActivityByWorkItem.Keys.Where(productWorkItemIds.Contains).ToHashSet(),
+            productResolved,
+            workItemsByTfsId);
 
         // PBI metrics
         var pbiResolved = productResolved.Where(r => r.WorkItemType == WorkItemType.Pbi).ToList();
@@ -701,15 +686,36 @@ public class SprintTrendProjectionService
     private readonly record struct ProjectionStoryPointMetrics(
         ResolvedStoryPointEstimate Estimate);
 
-    private static bool IsChildOf(
-        ResolvedWorkItemEntity candidate,
-        ResolvedWorkItemEntity parent,
+    private static HashSet<int> PropagateActivityToAncestors(
+        IReadOnlyCollection<int> activeWorkItemIds,
+        IReadOnlyCollection<ResolvedWorkItemEntity> resolvedItems,
         IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId)
     {
-        if (!workItemsByTfsId.TryGetValue(candidate.WorkItemId, out var childWi))
-            return false;
+        var resolvedWorkItemIds = resolvedItems
+            .Select(item => item.WorkItemId)
+            .ToHashSet();
+        var propagatedWorkItemIds = activeWorkItemIds
+            .Where(resolvedWorkItemIds.Contains)
+            .ToHashSet();
+        var queue = new Queue<int>(propagatedWorkItemIds);
 
-        return childWi.ParentTfsId == parent.WorkItemId;
+        while (queue.Count > 0)
+        {
+            var workItemId = queue.Dequeue();
+            if (!workItemsByTfsId.TryGetValue(workItemId, out var workItem)
+                || !workItem.ParentTfsId.HasValue
+                || !resolvedWorkItemIds.Contains(workItem.ParentTfsId.Value))
+            {
+                continue;
+            }
+
+            if (propagatedWorkItemIds.Add(workItem.ParentTfsId.Value))
+            {
+                queue.Enqueue(workItem.ParentTfsId.Value);
+            }
+        }
+
+        return propagatedWorkItemIds;
     }
 
     public virtual async Task<IReadOnlyList<SprintMetricsProjectionEntity>> GetProjectionsAsync(
@@ -890,6 +896,9 @@ public class SprintTrendProjectionService
             var productResolved = resolvedItems
                 .Where(r => r.ResolvedProductId == productId)
                 .ToList();
+            var activeHierarchyIds = activeWorkItemIds == null
+                ? null
+                : PropagateActivityToAncestors(activeWorkItemIds, productResolved, workItemsByTfsId);
 
             var features = productResolved
                 .Where(r => r.WorkItemType == WorkItemType.Feature)
@@ -911,10 +920,9 @@ public class SprintTrendProjectionService
 
                 // When an activity filter is provided, skip features that have neither sprint
                 // activity events nor PBIs assigned to the sprint.
-                if (activeWorkItemIds != null)
+                if (activeHierarchyIds != null)
                 {
-                    var hasActivity = activeWorkItemIds.Contains(feature.WorkItemId)
-                        || childPbis.Any(pbi => activeWorkItemIds.Contains(pbi.TfsId));
+                    var hasActivity = activeHierarchyIds.Contains(feature.WorkItemId);
                     var hasSprintPbis = sprintAssignedPbiIds != null
                         && childPbis.Any(pbi => sprintAssignedPbiIds.Contains(pbi.TfsId));
                     if (!hasActivity && !hasSprintPbis)
