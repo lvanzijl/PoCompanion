@@ -541,12 +541,8 @@ public class SprintTrendProjectionService
 
             if (childPbis.Count == 0) continue;
 
-            var featureWorkItems = new List<WorkItemDto>(childPbis.Count + 1) { ToWorkItemDto(featureWi) };
-            featureWorkItems.AddRange(childPbis.Select(ToWorkItemDto));
-            var doneByWorkItemId = featureWorkItems.ToDictionary(
-                workItem => workItem.TfsId,
-                workItem => StateClassificationLookup.IsDone(stateLookup, workItem.Type, workItem.State));
-            var scope = rollupService.RollupCanonicalScope(featureWorkItems[0], featureWorkItems, doneByWorkItemId);
+            var (featureWorkItem, featureWorkItems, doneByWorkItemId) = BuildFeatureRollupContext(featureWi, childPbis, stateLookup);
+            var scope = rollupService.RollupCanonicalScope(featureWorkItem, featureWorkItems, doneByWorkItemId);
             if (scope.Total > 0)
             {
                 var featureHadProgress = childPbis.Any(p =>
@@ -634,6 +630,22 @@ public class SprintTrendProjectionService
             BusinessValue: workItem.BusinessValue,
             BacklogPriority: workItem.BacklogPriority,
             StoryPoints: workItem.StoryPoints);
+    }
+
+    private static (WorkItemDto FeatureWorkItem, List<WorkItemDto> FeatureWorkItems, Dictionary<int, bool> DoneByWorkItemId)
+        BuildFeatureRollupContext(
+            WorkItemEntity featureWi,
+            IReadOnlyList<WorkItemEntity> childPbis,
+            IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup)
+    {
+        var featureWorkItem = ToWorkItemDto(featureWi);
+        var featureWorkItems = new List<WorkItemDto>(childPbis.Count + 1) { featureWorkItem };
+        featureWorkItems.AddRange(childPbis.Select(ToWorkItemDto));
+        var doneByWorkItemId = featureWorkItems.ToDictionary(
+            workItem => workItem.TfsId,
+            workItem => StateClassificationLookup.IsDone(stateLookup, workItem.Type, workItem.State));
+
+        return (featureWorkItem, featureWorkItems, doneByWorkItemId);
     }
 
     private readonly record struct ProjectionStoryPointMetrics(
@@ -885,12 +897,8 @@ public class SprintTrendProjectionService
                         continue;
                 }
 
-                var featureWorkItems = new List<WorkItemDto>(childPbis.Count + 1) { ToWorkItemDto(featureWi) };
-                featureWorkItems.AddRange(childPbis.Select(ToWorkItemDto));
-                var doneByWorkItemId = featureWorkItems.ToDictionary(
-                    workItem => workItem.TfsId,
-                    workItem => StateClassificationLookup.IsDone(stateLookup, workItem.Type, workItem.State));
-                var featureScope = rollupService.RollupCanonicalScope(featureWorkItems[0], featureWorkItems, doneByWorkItemId);
+                var (featureWorkItem, featureWorkItems, doneByWorkItemId) = BuildFeatureRollupContext(featureWi, childPbis, stateLookup);
+                var featureScope = rollupService.RollupCanonicalScope(featureWorkItem, featureWorkItems, doneByWorkItemId);
                 var totalEffort = featureScope.Total;
                 var doneEffort = featureScope.Completed;
                 var donePbiCount = 0;

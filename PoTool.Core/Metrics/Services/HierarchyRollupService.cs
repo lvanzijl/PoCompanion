@@ -140,10 +140,11 @@ public sealed class HierarchyRollupService : IHierarchyRollupService
                 continue;
             }
 
-            totalScope += estimate.Value!.Value;
+            var estimateValue = estimate.Value.GetValueOrDefault();
+            totalScope += estimateValue;
             if (isDone)
             {
-                completedScope += estimate.Value.Value;
+                completedScope += estimateValue;
             }
         }
 
@@ -158,7 +159,7 @@ public sealed class HierarchyRollupService : IHierarchyRollupService
             return HierarchyScopeRollup.Empty;
         }
 
-        var fallbackValue = fallbackEstimate.Value!.Value;
+        var fallbackValue = fallbackEstimate.Value.GetValueOrDefault();
         return new HierarchyScopeRollup(fallbackValue, isDone ? fallbackValue : 0d);
     }
 
