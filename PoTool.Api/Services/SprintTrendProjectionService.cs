@@ -26,19 +26,14 @@ public class SprintTrendProjectionService
     private readonly ILogger<SprintTrendProjectionService> _logger;
     private readonly IWorkItemStateClassificationService? _stateClassificationService;
     private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
-
-    public SprintTrendProjectionService(
-        IServiceScopeFactory scopeFactory,
-        ILogger<SprintTrendProjectionService> logger)
-        : this(scopeFactory, logger, null, null)
-    {
-    }
+    private readonly IHierarchyRollupService _hierarchyRollupService;
 
     public SprintTrendProjectionService(
         IServiceScopeFactory scopeFactory,
         ILogger<SprintTrendProjectionService> logger,
-        IWorkItemStateClassificationService? stateClassificationService)
-        : this(scopeFactory, logger, stateClassificationService, null)
+        ICanonicalStoryPointResolutionService storyPointResolutionService,
+        IHierarchyRollupService hierarchyRollupService)
+        : this(scopeFactory, logger, null, storyPointResolutionService, hierarchyRollupService)
     {
     }
 
@@ -46,12 +41,14 @@ public class SprintTrendProjectionService
         IServiceScopeFactory scopeFactory,
         ILogger<SprintTrendProjectionService> logger,
         IWorkItemStateClassificationService? stateClassificationService,
-        ICanonicalStoryPointResolutionService? storyPointResolutionService)
+        ICanonicalStoryPointResolutionService storyPointResolutionService,
+        IHierarchyRollupService hierarchyRollupService)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
         _stateClassificationService = stateClassificationService;
-        _storyPointResolutionService = storyPointResolutionService ?? new CanonicalStoryPointResolutionService();
+        _storyPointResolutionService = storyPointResolutionService;
+        _hierarchyRollupService = hierarchyRollupService;
     }
 
     public virtual async Task<IReadOnlyList<SprintMetricsProjectionEntity>> ComputeProjectionsAsync(
@@ -199,7 +196,8 @@ public class SprintTrendProjectionService
                     sprint, productId,
                     resolvedItems, workItemsByTfsId,
                     activityByWorkItem, sprintStart, sprintEnd, stateLookup, firstDoneByWorkItem, committedWorkItemIds,
-                    nextSprintPath, workItemSnapshotsById, stateEventsByWorkItem, iterationEventsByWorkItem);
+                    nextSprintPath, workItemSnapshotsById, stateEventsByWorkItem, iterationEventsByWorkItem,
+                    _storyPointResolutionService, _hierarchyRollupService);
 
                 if (existingByKey.TryGetValue((sprint.Id, productId), out var existing))
                 {
@@ -260,9 +258,12 @@ public class SprintTrendProjectionService
         string? nextSprintPath = null,
         IReadOnlyDictionary<int, WorkItemSnapshot>? workItemSnapshotsById = null,
         IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? stateEventsByWorkItem = null,
-        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? iterationEventsByWorkItem = null)
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? iterationEventsByWorkItem = null,
+        ICanonicalStoryPointResolutionService? storyPointResolutionService = null,
+        IHierarchyRollupService? hierarchyRollupService = null)
     {
-        var resolver = new CanonicalStoryPointResolutionService();
+        var resolver = storyPointResolutionService ?? new CanonicalStoryPointResolutionService();
+        var rollupService = hierarchyRollupService ?? new HierarchyRollupService(resolver);
         var effectiveWorkItemSnapshotsById = workItemSnapshotsById
             ?? workItemsByTfsId.Values.ToSnapshotDictionary();
         var effectiveFirstDoneByWorkItem = firstDoneByWorkItem
@@ -401,7 +402,7 @@ public class SprintTrendProjectionService
 
         // Feature/Epic progression delta
         var progressionDelta = ComputeProgressionDelta(
-            productResolved, workItemsByTfsId, functionalActivityByWorkItem, stateLookup);
+            productResolved, workItemsByTfsId, functionalActivityByWorkItem, rollupService, stateLookup);
 
         // Bug metrics
         var bugResolved = productResolved.Where(r => r.WorkItemType == WorkItemType.Bug).ToList();
@@ -513,6 +514,7 @@ public class SprintTrendProjectionService
         IReadOnlyList<ResolvedWorkItemEntity> productResolved,
         IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
         IReadOnlyDictionary<int, List<ActivityEventLedgerEntryEntity>> activityByWorkItem,
+        IHierarchyRollupService? hierarchyRollupService = null,
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null,
         ICanonicalStoryPointResolutionService? storyPointResolutionService = null)
     {
@@ -520,6 +522,7 @@ public class SprintTrendProjectionService
         if (featureResolved.Count == 0) return 0;
 
         var resolver = storyPointResolutionService ?? new CanonicalStoryPointResolutionService();
+        var rollupService = hierarchyRollupService ?? new HierarchyRollupService(resolver);
         var totalFeatureProgression = 0.0;
         var featureCount = 0;
 
@@ -538,7 +541,8 @@ public class SprintTrendProjectionService
 
             if (childPbis.Count == 0) continue;
 
-            var scope = ComputeFeatureScope(featureWi, childPbis, stateLookup, resolver);
+            var (featureWorkItem, featureWorkItems, doneByWorkItemId) = BuildFeatureRollupContext(featureWi, childPbis, stateLookup);
+            var scope = rollupService.RollupCanonicalScope(featureWorkItem, featureWorkItems, doneByWorkItemId);
             if (scope.Total > 0)
             {
                 var featureHadProgress = childPbis.Any(p =>
@@ -557,46 +561,6 @@ public class SprintTrendProjectionService
         }
 
         return featureCount > 0 ? Math.Round(totalFeatureProgression / featureCount, 2) : 0;
-    }
-
-    private static ScopeRollup ComputeFeatureScope(
-        WorkItemEntity featureWi,
-        IReadOnlyList<WorkItemEntity> childPbis,
-        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
-        ICanonicalStoryPointResolutionService storyPointResolutionService)
-    {
-        if (childPbis.Count == 0)
-        {
-            return ScopeRollup.Empty;
-        }
-
-        var resolvedPbiEstimates = childPbis
-            .Select(pbi => new
-            {
-                Pbi = pbi,
-                Estimate = ResolvePbiStoryPointEstimate(pbi, childPbis, stateLookup, storyPointResolutionService)
-            })
-            .Where(x => x.Estimate.HasValue)
-            .ToList();
-
-        if (resolvedPbiEstimates.Count > 0)
-        {
-            return new ScopeRollup(
-                resolvedPbiEstimates.Sum(x => x.Estimate.Value ?? 0d),
-                resolvedPbiEstimates
-                    .Where(x => StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, x.Pbi.State))
-                    .Sum(x => x.Estimate.Value ?? 0d));
-        }
-
-        var fallbackEstimate = ResolveParentFallbackEstimate(featureWi, stateLookup, storyPointResolutionService);
-        if (!fallbackEstimate.HasValue)
-        {
-            return ScopeRollup.Empty;
-        }
-
-        var fallbackValue = fallbackEstimate.Value ?? 0d;
-        var featureIsDone = StateClassificationLookup.IsDone(stateLookup, WorkItemType.Feature, featureWi.State);
-        return new ScopeRollup(fallbackValue, featureIsDone ? fallbackValue : 0d);
     }
 
     private static ResolvedStoryPointEstimate ResolvePbiStoryPointEstimate(
@@ -643,16 +607,6 @@ public class SprintTrendProjectionService
             && estimate.Source is not StoryPointEstimateSource.Derived;
     }
 
-    private static ResolvedStoryPointEstimate ResolveParentFallbackEstimate(
-        WorkItemEntity workItem,
-        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
-        ICanonicalStoryPointResolutionService storyPointResolutionService)
-    {
-        return storyPointResolutionService.ResolveParentFallback(new StoryPointFallbackRequest(
-            ToWorkItemDto(workItem),
-            StateClassificationLookup.IsDone(stateLookup, workItem.Type, workItem.State)));
-    }
-
     private static WorkItemDto ToWorkItemDto(WorkItemEntity workItem)
     {
         return new WorkItemDto(
@@ -678,9 +632,20 @@ public class SprintTrendProjectionService
             StoryPoints: workItem.StoryPoints);
     }
 
-    private readonly record struct ScopeRollup(double Total, double Completed)
+    private static (WorkItemDto FeatureWorkItem, List<WorkItemDto> FeatureWorkItems, Dictionary<int, bool> DoneByWorkItemId)
+        BuildFeatureRollupContext(
+            WorkItemEntity featureWi,
+            IReadOnlyList<WorkItemEntity> childPbis,
+            IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup)
     {
-        public static ScopeRollup Empty => new(0d, 0d);
+        var featureWorkItem = ToWorkItemDto(featureWi);
+        var featureWorkItems = new List<WorkItemDto>(childPbis.Count + 1) { featureWorkItem };
+        featureWorkItems.AddRange(childPbis.Select(ToWorkItemDto));
+        var doneByWorkItemId = featureWorkItems.ToDictionary(
+            workItem => workItem.TfsId,
+            workItem => StateClassificationLookup.IsDone(stateLookup, workItem.Type, workItem.State));
+
+        return (featureWorkItem, featureWorkItems, doneByWorkItemId);
     }
 
     private readonly record struct ProjectionStoryPointMetrics(
@@ -872,7 +837,8 @@ public class SprintTrendProjectionService
             sprintEffortDeltaByWorkItem,
             sprintAssignedPbiIds,
             stateLookup,
-            _storyPointResolutionService);
+            _storyPointResolutionService,
+            _hierarchyRollupService);
     }
 
     private const string EffortFieldRef = "Microsoft.VSTS.Scheduling.Effort";
@@ -886,10 +852,12 @@ public class SprintTrendProjectionService
         IReadOnlyDictionary<int, int>? sprintEffortDeltaByWorkItem = null,
         IReadOnlyCollection<int>? sprintAssignedPbiIds = null,
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null,
-        ICanonicalStoryPointResolutionService? storyPointResolutionService = null)
+        ICanonicalStoryPointResolutionService? storyPointResolutionService = null,
+        IHierarchyRollupService? hierarchyRollupService = null)
     {
         var results = new List<FeatureProgressDto>();
         var resolver = storyPointResolutionService ?? new CanonicalStoryPointResolutionService();
+        var rollupService = hierarchyRollupService ?? new HierarchyRollupService(resolver);
 
         foreach (var productId in productIds)
         {
@@ -929,7 +897,8 @@ public class SprintTrendProjectionService
                         continue;
                 }
 
-                var featureScope = ComputeFeatureScope(featureWi, childPbis, stateLookup, resolver);
+                var (featureWorkItem, featureWorkItems, doneByWorkItemId) = BuildFeatureRollupContext(featureWi, childPbis, stateLookup);
+                var featureScope = rollupService.RollupCanonicalScope(featureWorkItem, featureWorkItems, doneByWorkItemId);
                 var totalEffort = featureScope.Total;
                 var doneEffort = featureScope.Completed;
                 var donePbiCount = 0;
