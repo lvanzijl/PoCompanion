@@ -151,14 +151,16 @@ public record FeatureDeliveryDto
     public required string ProductName { get; init; }
 
     /// <summary>
-    /// Effort delivered (story points) for this feature in the sprint range.
+    /// Canonical story-point scope delivered for this feature in the sprint range.
+    /// The legacy property name is retained for API compatibility and values may be fractional.
     /// </summary>
-    public int SprintCompletedEffort { get; init; }
+    public double SprintCompletedEffort { get; init; }
 
     /// <summary>
-    /// Total effort of all PBIs under this feature.
+    /// Total canonical story-point scope of all PBIs under this feature.
+    /// The legacy property name is retained for API compatibility and values may be fractional.
     /// </summary>
-    public int TotalEffort { get; init; }
+    public double TotalEffort { get; init; }
 
     /// <summary>
     /// Share of total portfolio delivered effort for this feature (0–100 percentage).

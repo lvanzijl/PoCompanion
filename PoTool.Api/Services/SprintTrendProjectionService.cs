@@ -4,7 +4,9 @@ using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
+using PoTool.Core.Metrics.Services;
 using PoTool.Core.WorkItems;
+using PoTool.Shared.WorkItems;
 using PoTool.Shared.Metrics;
 using PoTool.Shared.Settings;
 
@@ -21,11 +23,12 @@ public class SprintTrendProjectionService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<SprintTrendProjectionService> _logger;
     private readonly IWorkItemStateClassificationService? _stateClassificationService;
+    private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
 
     public SprintTrendProjectionService(
         IServiceScopeFactory scopeFactory,
         ILogger<SprintTrendProjectionService> logger)
-        : this(scopeFactory, logger, null)
+        : this(scopeFactory, logger, null, null)
     {
     }
 
@@ -33,10 +36,20 @@ public class SprintTrendProjectionService
         IServiceScopeFactory scopeFactory,
         ILogger<SprintTrendProjectionService> logger,
         IWorkItemStateClassificationService? stateClassificationService)
+        : this(scopeFactory, logger, stateClassificationService, null)
+    {
+    }
+
+    public SprintTrendProjectionService(
+        IServiceScopeFactory scopeFactory,
+        ILogger<SprintTrendProjectionService> logger,
+        IWorkItemStateClassificationService? stateClassificationService,
+        ICanonicalStoryPointResolutionService? storyPointResolutionService)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
         _stateClassificationService = stateClassificationService;
+        _storyPointResolutionService = storyPointResolutionService ?? new CanonicalStoryPointResolutionService();
     }
 
     public virtual async Task<IReadOnlyList<SprintMetricsProjectionEntity>> ComputeProjectionsAsync(
@@ -458,58 +471,43 @@ public class SprintTrendProjectionService
         IReadOnlyList<ResolvedWorkItemEntity> productResolved,
         IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
         IReadOnlyDictionary<int, List<ActivityEventLedgerEntryEntity>> activityByWorkItem,
-        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null,
+        ICanonicalStoryPointResolutionService? storyPointResolutionService = null)
     {
         var featureResolved = productResolved.Where(r => r.WorkItemType == WorkItemType.Feature).ToList();
         if (featureResolved.Count == 0) return 0;
 
+        var resolver = storyPointResolutionService ?? new CanonicalStoryPointResolutionService();
         var totalFeatureProgression = 0.0;
         var featureCount = 0;
 
         foreach (var feature in featureResolved)
         {
+            if (!workItemsByTfsId.TryGetValue(feature.WorkItemId, out var featureWi))
+            {
+                continue;
+            }
+
             var childPbis = productResolved
                 .Where(r => r.WorkItemType == WorkItemType.Pbi && r.ResolvedFeatureId == feature.WorkItemId)
                 .Select(r => workItemsByTfsId.GetValueOrDefault(r.WorkItemId))
-                .Where(w => w != null)
+                .OfType<WorkItemEntity>()
                 .ToList();
 
             if (childPbis.Count == 0) continue;
 
-            var totalEffort = 0;
-            var doneEffort = 0;
-
-            foreach (var pbi in childPbis)
-            {
-                var effort = pbi!.Effort ?? 0;
-                if (pbi.Effort == null)
-                {
-                    var siblingAvg = childPbis
-                        .Where(p => p!.Effort != null)
-                        .Select(p => p!.Effort!.Value)
-                        .DefaultIfEmpty(0)
-                        .Average();
-                    effort = (int)Math.Round(siblingAvg);
-                }
-
-                totalEffort += effort;
-                if (StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, pbi!.State))
-                {
-                    doneEffort += effort;
-                }
-            }
-
-            if (totalEffort > 0)
+            var scope = ComputeFeatureScope(featureWi, childPbis, stateLookup, resolver);
+            if (scope.Total > 0)
             {
                 var featureHadProgress = childPbis.Any(p =>
-                    activityByWorkItem.TryGetValue(p!.TfsId, out var pbiEvents)
+                    activityByWorkItem.TryGetValue(p.TfsId, out var pbiEvents)
                     && pbiEvents.Any(e =>
                         string.Equals(e.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase)
                         && StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, e.NewValue)));
 
                 if (featureHadProgress)
                 {
-                    var featurePercent = (double)doneEffort / totalEffort * 100;
+                    var featurePercent = scope.Completed / scope.Total * 100;
                     totalFeatureProgression += featurePercent;
                     featureCount++;
                 }
@@ -517,6 +515,104 @@ public class SprintTrendProjectionService
         }
 
         return featureCount > 0 ? Math.Round(totalFeatureProgression / featureCount, 2) : 0;
+    }
+
+    private static ScopeRollup ComputeFeatureScope(
+        WorkItemEntity featureWi,
+        IReadOnlyList<WorkItemEntity> childPbis,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
+        ICanonicalStoryPointResolutionService storyPointResolutionService)
+    {
+        if (childPbis.Count == 0)
+        {
+            return ScopeRollup.Empty;
+        }
+
+        var resolvedPbiEstimates = childPbis
+            .Select(pbi => new
+            {
+                Pbi = pbi,
+                Estimate = ResolvePbiStoryPointEstimate(pbi, childPbis, stateLookup, storyPointResolutionService)
+            })
+            .Where(x => x.Estimate.HasValue)
+            .ToList();
+
+        if (resolvedPbiEstimates.Count > 0)
+        {
+            return new ScopeRollup(
+                resolvedPbiEstimates.Sum(x => x.Estimate.Value ?? 0d),
+                resolvedPbiEstimates
+                    .Where(x => StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, x.Pbi.State))
+                    .Sum(x => x.Estimate.Value ?? 0d));
+        }
+
+        var fallbackEstimate = ResolveParentFallbackEstimate(featureWi, stateLookup, storyPointResolutionService);
+        if (!fallbackEstimate.HasValue)
+        {
+            return ScopeRollup.Empty;
+        }
+
+        var fallbackValue = fallbackEstimate.Value ?? 0d;
+        var featureIsDone = StateClassificationLookup.IsDone(stateLookup, WorkItemType.Feature, featureWi.State);
+        return new ScopeRollup(fallbackValue, featureIsDone ? fallbackValue : 0d);
+    }
+
+    private static ResolvedStoryPointEstimate ResolvePbiStoryPointEstimate(
+        WorkItemEntity pbi,
+        IReadOnlyList<WorkItemEntity> featurePbis,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
+        ICanonicalStoryPointResolutionService storyPointResolutionService)
+    {
+        var candidates = featurePbis
+            .Select(candidate => new StoryPointResolutionCandidate(
+                ToWorkItemDto(candidate),
+                StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, candidate.State)))
+            .ToArray();
+
+        return storyPointResolutionService.Resolve(new StoryPointResolutionRequest(
+            ToWorkItemDto(pbi),
+            StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, pbi.State),
+            candidates));
+    }
+
+    private static ResolvedStoryPointEstimate ResolveParentFallbackEstimate(
+        WorkItemEntity workItem,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
+        ICanonicalStoryPointResolutionService storyPointResolutionService)
+    {
+        return storyPointResolutionService.ResolveParentFallback(new StoryPointFallbackRequest(
+            ToWorkItemDto(workItem),
+            StateClassificationLookup.IsDone(stateLookup, workItem.Type, workItem.State)));
+    }
+
+    private static WorkItemDto ToWorkItemDto(WorkItemEntity workItem)
+    {
+        return new WorkItemDto(
+            TfsId: workItem.TfsId,
+            Type: workItem.Type,
+            Title: workItem.Title,
+            ParentTfsId: workItem.ParentTfsId,
+            AreaPath: workItem.AreaPath,
+            IterationPath: workItem.IterationPath,
+            State: workItem.State,
+            RetrievedAt: workItem.RetrievedAt,
+            Effort: workItem.Effort,
+            Description: workItem.Description,
+            CreatedDate: workItem.CreatedDate,
+            ClosedDate: workItem.ClosedDate,
+            Severity: workItem.Severity,
+            Tags: workItem.Tags,
+            IsBlocked: workItem.IsBlocked,
+            Relations: null,
+            ChangedDate: workItem.TfsChangedDate,
+            BusinessValue: workItem.BusinessValue,
+            BacklogPriority: workItem.BacklogPriority,
+            StoryPoints: workItem.StoryPoints);
+    }
+
+    private readonly record struct ScopeRollup(double Total, double Completed)
+    {
+        public static ScopeRollup Empty => new(0d, 0d);
     }
 
     private static bool IsChildOf(
@@ -683,7 +779,8 @@ public class SprintTrendProjectionService
             sprintCompletedPbiIds,
             sprintEffortDeltaByWorkItem,
             sprintAssignedPbiIds,
-            stateLookup);
+            stateLookup,
+            _storyPointResolutionService);
     }
 
     private const string EffortFieldRef = "Microsoft.VSTS.Scheduling.Effort";
@@ -696,9 +793,11 @@ public class SprintTrendProjectionService
         IReadOnlyCollection<int>? sprintCompletedPbiIds = null,
         IReadOnlyDictionary<int, int>? sprintEffortDeltaByWorkItem = null,
         IReadOnlyCollection<int>? sprintAssignedPbiIds = null,
-        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null,
+        ICanonicalStoryPointResolutionService? storyPointResolutionService = null)
     {
         var results = new List<FeatureProgressDto>();
+        var resolver = storyPointResolutionService ?? new CanonicalStoryPointResolutionService();
 
         foreach (var productId in productIds)
         {
@@ -718,7 +817,7 @@ public class SprintTrendProjectionService
                 var childPbis = productResolved
                     .Where(r => r.WorkItemType == WorkItemType.Pbi && r.ResolvedFeatureId == feature.WorkItemId)
                     .Select(r => workItemsByTfsId.GetValueOrDefault(r.WorkItemId))
-                    .Where(w => w != null)
+                    .OfType<WorkItemEntity>()
                     .ToList();
 
                 if (childPbis.Count == 0)
@@ -729,34 +828,22 @@ public class SprintTrendProjectionService
                 if (activeWorkItemIds != null)
                 {
                     var hasActivity = activeWorkItemIds.Contains(feature.WorkItemId)
-                        || childPbis.Any(pbi => activeWorkItemIds.Contains(pbi!.TfsId));
+                        || childPbis.Any(pbi => activeWorkItemIds.Contains(pbi.TfsId));
                     var hasSprintPbis = sprintAssignedPbiIds != null
-                        && childPbis.Any(pbi => sprintAssignedPbiIds.Contains(pbi!.TfsId));
+                        && childPbis.Any(pbi => sprintAssignedPbiIds.Contains(pbi.TfsId));
                     if (!hasActivity && !hasSprintPbis)
                         continue;
                 }
 
-                var totalEffort = 0;
-                var doneEffort = 0;
+                var featureScope = ComputeFeatureScope(featureWi, childPbis, stateLookup, resolver);
+                var totalEffort = featureScope.Total;
+                var doneEffort = featureScope.Completed;
                 var donePbiCount = 0;
 
                 foreach (var pbi in childPbis)
                 {
-                    var effort = pbi!.Effort ?? 0;
-                    if (pbi.Effort == null)
+                    if (StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, pbi.State))
                     {
-                        var siblingAvg = childPbis
-                            .Where(p => p!.Effort != null)
-                            .Select(p => p!.Effort!.Value)
-                            .DefaultIfEmpty(0)
-                            .Average();
-                        effort = (int)Math.Round(siblingAvg);
-                    }
-
-                    totalEffort += effort;
-                    if (StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, pbi!.State))
-                    {
-                        doneEffort += effort;
                         donePbiCount++;
                     }
                 }
@@ -767,14 +854,14 @@ public class SprintTrendProjectionService
 
                 // Sprint-scoped metrics
                 var sprintCompletedEffort = sprintCompletedPbiIds == null
-                    ? 0
+                    ? 0d
                     : childPbis
-                        .Where(pbi => sprintCompletedPbiIds.Contains(pbi!.TfsId))
-                        .Sum(pbi => pbi!.Effort ?? 0);
+                        .Where(pbi => sprintCompletedPbiIds.Contains(pbi.TfsId))
+                        .Sum(pbi => ResolvePbiStoryPointEstimate(pbi, childPbis, stateLookup, resolver).Value ?? 0d);
 
                 var sprintCompletedPbiCount = sprintCompletedPbiIds == null
                     ? 0
-                    : childPbis.Count(pbi => sprintCompletedPbiIds.Contains(pbi!.TfsId));
+                    : childPbis.Count(pbi => sprintCompletedPbiIds.Contains(pbi.TfsId));
 
                 var featureCompletedInSprint = sprintCompletedPbiIds != null
                     && sprintCompletedPbiIds.Contains(feature.WorkItemId);
@@ -786,7 +873,7 @@ public class SprintTrendProjectionService
                 // Δ Effort = effort_end_of_sprint − effort_start_of_sprint for child PBIs
                 var sprintEffortDelta = sprintEffortDeltaByWorkItem == null
                     ? 0
-                    : childPbis.Sum(pbi => sprintEffortDeltaByWorkItem.GetValueOrDefault(pbi!.TfsId, 0));
+                    : childPbis.Sum(pbi => sprintEffortDeltaByWorkItem.GetValueOrDefault(pbi.TfsId, 0));
 
                 // Resolve epic info
                 int? epicId = feature.ResolvedEpicId;
@@ -800,12 +887,12 @@ public class SprintTrendProjectionService
                 var completedPbis = sprintCompletedPbiIds == null
                     ? Array.Empty<CompletedPbiDto>()
                     : childPbis
-                        .Where(pbi => sprintCompletedPbiIds.Contains(pbi!.TfsId))
+                        .Where(pbi => sprintCompletedPbiIds.Contains(pbi.TfsId))
                         .Select(pbi => new CompletedPbiDto
                         {
-                            TfsId = pbi!.TfsId,
+                            TfsId = pbi.TfsId,
                             Title = pbi.Title,
-                            Effort = pbi.Effort ?? 0,
+                            Effort = ResolvePbiStoryPointEstimate(pbi, childPbis, stateLookup, resolver).Value ?? 0d,
                             ClosedDate = pbi.ClosedDate
                         })
                         .OrderBy(p => p.Title)

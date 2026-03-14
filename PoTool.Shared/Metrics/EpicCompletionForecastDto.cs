@@ -3,14 +3,17 @@ namespace PoTool.Shared.Metrics;
 /// <summary>
 /// DTO representing completion forecast for an Epic or Feature.
 /// Uses historical velocity to predict completion date.
+/// The scope fields retain their legacy names for API compatibility,
+/// but now represent canonical story-point rollups and may be fractional
+/// when derived estimates are used.
 /// </summary>
 public sealed record EpicCompletionForecastDto(
     int EpicId,
     string Title,
     string Type,
-    int TotalEffort,
-    int CompletedEffort,
-    int RemainingEffort,
+    double TotalEffort,
+    double CompletedEffort,
+    double RemainingEffort,
     double EstimatedVelocity,
     int SprintsRemaining,
     DateTimeOffset? EstimatedCompletionDate,
@@ -28,8 +31,8 @@ public sealed record SprintForecast(
     string IterationPath,
     DateTimeOffset SprintStartDate,
     DateTimeOffset SprintEndDate,
-    int ExpectedCompletedEffort,
-    int RemainingEffortAfterSprint,
+    double ExpectedCompletedEffort,
+    double RemainingEffortAfterSprint,
     double ProgressPercentage
 );
 

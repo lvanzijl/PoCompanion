@@ -315,14 +315,16 @@ public record FeatureProgressDto
     public int ProgressPercent { get; init; }
 
     /// <summary>
-    /// Total effort of all PBIs under this feature.
+    /// Total canonical story-point scope of all PBIs under this feature.
+    /// The legacy property name is retained for API compatibility and values may be fractional.
     /// </summary>
-    public int TotalEffort { get; init; }
+    public double TotalEffort { get; init; }
 
     /// <summary>
-    /// Effort of done PBIs under this feature.
+    /// Canonical story-point scope of done PBIs under this feature.
+    /// The legacy property name is retained for API compatibility and values may be fractional.
     /// </summary>
-    public int DoneEffort { get; init; }
+    public double DoneEffort { get; init; }
 
     /// <summary>
     /// Number of PBIs in Done state under this feature.
@@ -335,10 +337,11 @@ public record FeatureProgressDto
     public bool IsDone { get; init; }
 
     /// <summary>
-    /// Effort of PBIs that closed (transitioned to Done) during the selected sprint.
+    /// Canonical story-point scope of PBIs that closed (transitioned to Done) during the selected sprint.
+    /// The legacy property name is retained for API compatibility and values may be fractional.
     /// Zero when not in single-sprint view.
     /// </summary>
-    public int SprintCompletedEffort { get; init; }
+    public double SprintCompletedEffort { get; init; }
 
     /// <summary>
     /// Progression delta gained during the selected sprint for this feature (0-100).
@@ -374,7 +377,7 @@ public record FeatureProgressDto
 
 /// <summary>
 /// DTO for epic-level progress information.
-/// Epic progress is derived from effort-weighted child Feature completion.
+/// Epic progress is derived from child feature story-point rollups.
 /// </summary>
 public record EpicProgressDto
 {
@@ -395,20 +398,22 @@ public record EpicProgressDto
 
     /// <summary>
     /// Progress percentage (0-100).
-    /// Derived from effort-weighted child Feature completion.
+    /// Derived from child feature story-point rollups.
     /// Epic.State == Done => 100%, otherwise min(raw, 90%).
     /// </summary>
     public int ProgressPercent { get; init; }
 
     /// <summary>
-    /// Total effort of all PBIs under this epic's features.
+    /// Total canonical story-point scope of all PBIs under this epic's features.
+    /// The legacy property name is retained for API compatibility and values may be fractional.
     /// </summary>
-    public int TotalEffort { get; init; }
+    public double TotalEffort { get; init; }
 
     /// <summary>
-    /// Effort of done PBIs under this epic's features.
+    /// Canonical story-point scope of done PBIs under this epic's features.
+    /// The legacy property name is retained for API compatibility and values may be fractional.
     /// </summary>
-    public int DoneEffort { get; init; }
+    public double DoneEffort { get; init; }
 
     /// <summary>
     /// Number of child features under this epic.
@@ -431,10 +436,11 @@ public record EpicProgressDto
     public bool IsDone { get; init; }
 
     /// <summary>
-    /// Effort of PBIs that closed (transitioned to Done) during the selected sprint across this epic's features.
+    /// Canonical story-point scope of PBIs that closed (transitioned to Done) during the selected sprint across this epic's features.
+    /// The legacy property name is retained for API compatibility and values may be fractional.
     /// Zero when not in single-sprint view.
     /// </summary>
-    public int SprintCompletedEffort { get; init; }
+    public double SprintCompletedEffort { get; init; }
 
     /// <summary>
     /// Progression delta gained during the selected sprint for this epic (0-100).
@@ -479,9 +485,10 @@ public record CompletedPbiDto
     public required string Title { get; init; }
 
     /// <summary>
-    /// Effort (story points) of this PBI.
+    /// Canonical story-point scope of this PBI.
+    /// The legacy property name is retained for API compatibility and values may be fractional.
     /// </summary>
-    public int Effort { get; init; }
+    public double Effort { get; init; }
 
     /// <summary>
     /// Date the PBI was closed (transitioned to Done). Null if not available.
