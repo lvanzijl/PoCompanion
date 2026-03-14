@@ -395,3 +395,66 @@ The final remaining architectural coupling risk from the `domain_library_readine
 
 - **Tests passing:**  
   Verified with `dotnet build PoTool.sln --no-restore` and `dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~StateClassificationInputMapperTests|FullyQualifiedName~HistoricalSprintLookupTests|FullyQualifiedName~HistoricalSprintInputMapperTests|FullyQualifiedName~GetSprintMetricsQueryHandlerTests|FullyQualifiedName~GetSprintExecutionQueryHandlerTests|FullyQualifiedName~SprintTrendProjectionServiceTests|FullyQualifiedName~ServiceCollectionTests|FullyQualifiedName~WorkItemStateClassificationServiceTests" -v minimal`.
+
+## Final Re-Audit — CDC Extraction Completed
+
+### What is now in CDC
+
+- **CDC package:** `PoTool.Core.Domain`
+- **Canonical models now owned by CDC:**  
+  `PoTool.Core.Domain/Models/HistoricalSprintInputs.cs` (`WorkItemSnapshot`, `SprintDefinition`, `FieldChangeEvent`),  
+  `PoTool.Core.Domain/Models/CanonicalWorkItem.cs`, and  
+  `PoTool.Core.Domain/Models/StateClassificationModels.cs` (`StateClassification`, `WorkItemStateClassification`).
+- **Canonical services now owned by CDC:**  
+  `PoTool.Core.Domain/Domain/Sprints/SprintCommitmentLookup.cs`,  
+  `PoTool.Core.Domain/Domain/Sprints/FirstDoneDeliveryLookup.cs`,  
+  `PoTool.Core.Domain/Domain/Sprints/SprintSpilloverLookup.cs`,  
+  `PoTool.Core.Domain/Domain/Sprints/StateClassificationLookup.cs`,  
+  `PoTool.Core.Domain/Domain/Sprints/StateReconstructionLookup.cs`,  
+  `PoTool.Core.Domain/Domain/Estimation/CanonicalStoryPointResolutionService.cs`,  
+  `PoTool.Core.Domain/Domain/Metrics/SprintExecutionMetricsCalculator.cs`, and  
+  `PoTool.Core.Domain/Domain/Hierarchy/HierarchyRollupService.cs`.
+- **Boundary independence confirmed:**  
+  `PoTool.Core.Domain/PoTool.Core.Domain.csproj` has no project references, and a repository scan found no CDC code depending on `PoTool.Api`, EF Core, `PoTool.Shared`, transport DTOs, or persistence entities.
+
+### What remains outside CDC
+
+- **API adapters intentionally remain in `PoTool.Api`:**  
+  `PoTool.Api/Services/HistoricalSprintInputMapper.cs`,  
+  `PoTool.Api/Services/CanonicalMetricsInputMapper.cs`, and  
+  `PoTool.Api/Services/StateClassificationInputMapper.cs`.
+- **API orchestration intentionally remains in handlers/services:**  
+  `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs`,  
+  `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs`,  
+  `PoTool.Api/Handlers/Metrics/GetEpicCompletionForecastQueryHandler.cs`, and  
+  `PoTool.Api/Services/SprintTrendProjectionService.cs` still fetch EF data, invoke CDC services, and map results into DTOs/projections.
+- **Transport contracts remain transport-only:**  
+  `PoTool.Shared/Metrics/*.cs`, `PoTool.Shared/Settings/*.cs`, and `PoTool.Shared/WorkItems/WorkItemDto.cs` continue to stay outside CDC and are only consumed through API mapping seams.
+- **DI wiring remains in the API composition root:**  
+  `PoTool.Api/Configuration/ApiServiceCollectionExtensions.cs` registers `ICanonicalStoryPointResolutionService`, `IHierarchyRollupService`, and `ISprintExecutionMetricsCalculator`, which is the correct boundary for application composition.
+
+### Remaining minor cleanup
+
+- **Namespace clarity only:**  
+  The three API mappers still live under `PoTool.Api/Services`. If desired, they could be moved later into an API `Adapters` namespace/folder for packaging clarity, but this is not a CDC extraction blocker.
+- **State-classification management remains an API concern:**  
+  `PoTool.Api/Services/WorkItemStateClassificationService.cs` still persists and serves transport-facing state classification settings, while CDC keeps only the canonical lookup models and defaults. This separation is correct; only namespace organization remains a possible cleanup topic.
+
+### Test validation
+
+- **Sprint helpers:** `PoTool.Tests.Unit/Services/HistoricalSprintLookupTests.cs`
+- **Story-point resolution:** `PoTool.Tests.Unit/Services/CanonicalStoryPointResolutionServiceTests.cs`
+- **Hierarchy rollups:** `PoTool.Tests.Unit/Services/HierarchyRollupServiceTests.cs`
+- **Sprint execution formulas:** `PoTool.Tests.Unit/Services/SprintExecutionMetricsCalculatorTests.cs`
+- **API boundary mappers:** `PoTool.Tests.Unit/Services/HistoricalSprintInputMapperTests.cs`, `PoTool.Tests.Unit/Services/StateClassificationInputMapperTests.cs`
+- **Handler orchestration:** `PoTool.Tests.Unit/Handlers/GetSprintMetricsQueryHandlerTests.cs`, `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs`, `PoTool.Tests.Unit/Handlers/GetEpicCompletionForecastQueryHandlerTests.cs`, `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs`, `PoTool.Tests.Unit/Configuration/ServiceCollectionTests.cs`
+- **Local verification:**  
+  `dotnet restore PoTool.sln`  
+  `dotnet build PoTool.sln --no-restore`  
+  `dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~HistoricalSprintInputMapperTests|FullyQualifiedName~HistoricalSprintLookupTests|FullyQualifiedName~CanonicalStoryPointResolutionServiceTests|FullyQualifiedName~HierarchyRollupServiceTests|FullyQualifiedName~SprintExecutionMetricsCalculatorTests|FullyQualifiedName~StateClassificationInputMapperTests|FullyQualifiedName~GetSprintMetricsQueryHandlerTests|FullyQualifiedName~GetSprintExecutionQueryHandlerTests|FullyQualifiedName~GetEpicCompletionForecastQueryHandlerTests|FullyQualifiedName~SprintTrendProjectionServiceTests|FullyQualifiedName~ServiceCollectionTests" -v minimal`
+
+### Final extraction verdict
+
+**CDC extracted with minor cleanup remaining**
+
+The canonical sprint analytics domain now lives in `PoTool.Core.Domain` with clean boundaries: models and services are CDC-owned, API code maps and orchestrates, DTOs remain transport-only, and DI wiring stays in the API composition root. The only remaining items are packaging/namespace cleanup choices in the API adapter layer, not extraction blockers.
