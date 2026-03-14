@@ -14,6 +14,7 @@ using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems.Validators.Rules;
 using PoTool.Core.WorkItems.Filtering;
 using PoTool.Core.Health;
+using PoTool.Core.Metrics.Services;
 using PoTool.Client.Services;
 
 namespace PoTool.Api.Configuration;
@@ -245,6 +246,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<WorkItemFilterer>();
         services.AddScoped<BacklogHealthCalculator>();
         services.AddScoped<BacklogStateComputationService>();
+        services.AddSingleton<ICanonicalStoryPointResolutionService, CanonicalStoryPointResolutionService>();
 
         // Register TFS configuration and client
         services.AddDataProtection();

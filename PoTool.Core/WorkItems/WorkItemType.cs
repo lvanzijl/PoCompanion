@@ -10,6 +10,8 @@ public static class WorkItemType
     public const string Epic = "Epic";
     public const string Feature = "Feature";
     public const string Pbi = "Product Backlog Item";
+    public const string PbiShort = "PBI";
+    public const string UserStory = "User Story";
     public const string Bug = "Bug";
     public const string Task = "Task";
 
