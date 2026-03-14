@@ -247,6 +247,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<BacklogHealthCalculator>();
         services.AddScoped<BacklogStateComputationService>();
         services.AddSingleton<ICanonicalStoryPointResolutionService, CanonicalStoryPointResolutionService>();
+        services.AddSingleton<ISprintExecutionMetricsCalculator, SprintExecutionMetricsCalculator>();
 
         // Register TFS configuration and client
         services.AddDataProtection();
