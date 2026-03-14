@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-14",
+    "type": "Changed",
+    "title": "Sprint execution now reports canonical SP rates",
+    "impact": "Sprint execution summaries now expose committed, added, removed, delivered, and spillover story-point totals plus churn and completion rates based on canonical PBI sprint rules.",
+    "area": "Trends",
+    "link": "/home/delivery/sprint"
+  },
+  {
+    "date": "2026-03-14",
     "type": "Fixed",
     "title": "Capacity calibration now uses story points",
     "impact": "Capacity calibration and planning guidance now measure sprint velocity with delivered PBI story points while exposing effort only as a diagnostic hours-per-story-point metric.",

@@ -134,6 +134,59 @@ public record SprintExecutionSummaryDto
     public int SpilloverEffort { get; init; }
 
     /// <summary>
+    /// Canonical committed story points at the sprint commitment timestamp.
+    /// Derived estimates are excluded from sprint commitment.
+    /// </summary>
+    public double CommittedSP { get; init; }
+
+    /// <summary>
+    /// Canonical story points added to the sprint after commitment.
+    /// </summary>
+    public double AddedSP { get; init; }
+
+    /// <summary>
+    /// Canonical story points removed from the sprint after commitment.
+    /// </summary>
+    public double RemovedSP { get; init; }
+
+    /// <summary>
+    /// Canonical delivered story points whose first Done transition occurred during the sprint.
+    /// Derived estimates are excluded from delivered velocity.
+    /// </summary>
+    public double DeliveredSP { get; init; }
+
+    /// <summary>
+    /// Canonical delivered story points from work added after commitment.
+    /// Derived estimates are excluded from delivered velocity.
+    /// </summary>
+    public double DeliveredFromAddedSP { get; init; }
+
+    /// <summary>
+    /// Canonical story points that spilled from committed scope into the next sprint.
+    /// </summary>
+    public double SpilloverSP { get; init; }
+
+    /// <summary>
+    /// Canonical scope churn rate: (AddedSP + RemovedSP) / (CommittedSP + AddedSP).
+    /// </summary>
+    public double ChurnRate { get; init; }
+
+    /// <summary>
+    /// Canonical commitment completion: DeliveredSP / (CommittedSP - RemovedSP).
+    /// </summary>
+    public double CommitmentCompletion { get; init; }
+
+    /// <summary>
+    /// Canonical spillover rate: SpilloverSP / (CommittedSP - RemovedSP).
+    /// </summary>
+    public double SpilloverRate { get; init; }
+
+    /// <summary>
+    /// Canonical added delivery rate: DeliveredFromAddedSP / AddedSP.
+    /// </summary>
+    public double AddedDeliveryRate { get; init; }
+
+    /// <summary>
     /// Number of PBIs flagged as potentially starved.
     /// </summary>
     public int StarvedCount { get; init; }

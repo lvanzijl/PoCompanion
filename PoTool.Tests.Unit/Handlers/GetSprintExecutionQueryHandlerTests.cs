@@ -5,6 +5,7 @@ using PoTool.Api.Handlers.Metrics;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
+using PoTool.Core.Metrics.Services;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Settings;
@@ -284,20 +285,245 @@ public sealed class GetSprintExecutionQueryHandlerTests
         Assert.AreEqual(1, result.Summary.UnfinishedCount, "Items still assigned to the sprint remain unfinished, not spillover.");
     }
 
+    [TestMethod]
+    public async Task Handle_ComputesCanonicalStoryPointAggregatesAndRates()
+    {
+        var sprintStart = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var sprintEnd = new DateTimeOffset(new DateTime(2026, 1, 14, 0, 0, 0, DateTimeKind.Utc));
+        const string backlogPath = "\\Project\\Backlog";
+        const string sprintPath = "\\Project\\Sprint 1";
+        const string nextSprintPath = "\\Project\\Sprint 2";
+
+        await SeedSprintExecutionScenarioAsync(
+            "Resolved",
+            stateTransitions:
+            [
+                (sprintStart.AddDays(2), "Active", "Resolved")
+            ],
+            additionalSprints:
+            [
+                (2, "Sprint 2", nextSprintPath, sprintEnd.AddDays(1), sprintEnd.AddDays(14))
+            ],
+            additionalWorkItems:
+            [
+                new SprintExecutionTestWorkItem(
+                    102,
+                    WorkItemType.Pbi,
+                    "Added and delivered",
+                    "Resolved",
+                    sprintPath,
+                    5,
+                    null,
+                    3,
+                    StateTransitions:
+                    [
+                        (sprintStart.AddDays(4), "Active", "Resolved")
+                    ],
+                    IterationTransitions:
+                    [
+                        (sprintStart.AddDays(3), backlogPath, sprintPath)
+                    ]),
+                new SprintExecutionTestWorkItem(
+                    103,
+                    WorkItemType.Pbi,
+                    "Removed committed scope",
+                    "Active",
+                    backlogPath,
+                    3,
+                    2,
+                    null,
+                    StateTransitions: [],
+                    IterationTransitions:
+                    [
+                        (sprintStart.AddDays(5), sprintPath, backlogPath)
+                    ]),
+                new SprintExecutionTestWorkItem(
+                    104,
+                    WorkItemType.Pbi,
+                    "Spillover",
+                    "Active",
+                    nextSprintPath,
+                    8,
+                    8,
+                    null,
+                    StateTransitions: [],
+                    IterationTransitions:
+                    [
+                        (sprintEnd.AddHours(1), sprintPath, nextSprintPath)
+                    ]),
+                new SprintExecutionTestWorkItem(
+                    105,
+                    WorkItemType.Bug,
+                    "Bug with points",
+                    "Resolved",
+                    sprintPath,
+                    2,
+                    13,
+                    null,
+                    StateTransitions:
+                    [
+                        (sprintStart.AddDays(6), "Active", "Resolved")
+                    ]),
+                new SprintExecutionTestWorkItem(
+                    106,
+                    WorkItemType.Task,
+                    "Task with points",
+                    "Resolved",
+                    sprintPath,
+                    1,
+                    21,
+                    null,
+                    StateTransitions:
+                    [
+                        (sprintStart.AddDays(7), "Active", "Resolved")
+                    ])
+            ]);
+
+        _stateClassificationService
+            .Setup(service => service.GetClassificationsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildStateClassificationsResponse(
+                (WorkItemType.Pbi, "Resolved", StateClassification.Done),
+                (WorkItemType.Bug, "Resolved", StateClassification.Done),
+                (WorkItemType.Task, "Resolved", StateClassification.Done)));
+
+        var handler = CreateHandler();
+
+        var result = await handler.Handle(new GetSprintExecutionQuery(1, 1, 1), CancellationToken.None);
+
+        Assert.AreEqual(15d, result.Summary.CommittedSP);
+        Assert.AreEqual(3d, result.Summary.AddedSP);
+        Assert.AreEqual(2d, result.Summary.RemovedSP);
+        Assert.AreEqual(8d, result.Summary.DeliveredSP);
+        Assert.AreEqual(3d, result.Summary.DeliveredFromAddedSP);
+        Assert.AreEqual(8d, result.Summary.SpilloverSP);
+        Assert.AreEqual(5d / 18d, result.Summary.ChurnRate, 1e-9);
+        Assert.AreEqual(8d / 13d, result.Summary.CommitmentCompletion, 1e-9);
+        Assert.AreEqual(8d / 13d, result.Summary.SpilloverRate, 1e-9);
+        Assert.AreEqual(1d, result.Summary.AddedDeliveryRate, 1e-9);
+        Assert.IsFalse(result.CompletedPbis.Any(pbi => pbi.TfsId == 106), "Tasks should be excluded from sprint execution story-point scope.");
+    }
+
+    [TestMethod]
+    public async Task Handle_UsesDerivedEstimatesOnlyForAddedAndRemovedScope()
+    {
+        var sprintStart = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        const string backlogPath = "\\Project\\Backlog";
+        const string sprintPath = "\\Project\\Sprint 1";
+
+        await SeedSprintExecutionScenarioAsync(
+            "Active",
+            stateTransitions: [],
+            additionalWorkItems:
+            [
+                new SprintExecutionTestWorkItem(
+                    102,
+                    WorkItemType.Pbi,
+                    "Derived added item",
+                    "Active",
+                    backlogPath,
+                    3,
+                    null,
+                    null,
+                    ParentTfsId: 900,
+                    StateTransitions: [],
+                    IterationTransitions:
+                    [
+                        (sprintStart.AddDays(3), backlogPath, sprintPath),
+                        (sprintStart.AddDays(5), sprintPath, backlogPath)
+                    ]),
+                new SprintExecutionTestWorkItem(
+                    103,
+                    WorkItemType.Pbi,
+                    "Sibling estimate",
+                    "Active",
+                    backlogPath,
+                    5,
+                    8,
+                    null,
+                    ParentTfsId: 900,
+                    StateTransitions: [])
+            ]);
+
+        _stateClassificationService
+            .Setup(service => service.GetClassificationsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildStateClassificationsResponse());
+
+        var handler = CreateHandler();
+
+        var result = await handler.Handle(new GetSprintExecutionQuery(1, 1, 1), CancellationToken.None);
+
+        Assert.AreEqual(5d, result.Summary.CommittedSP, "Committed scope should exclude derived estimates.");
+        Assert.AreEqual(8d, result.Summary.AddedSP, "Added scope may use derived estimates for scope totals.");
+        Assert.AreEqual(8d, result.Summary.RemovedSP, "Removed scope may use derived estimates for scope totals.");
+        Assert.AreEqual(0d, result.Summary.DeliveredSP);
+        Assert.AreEqual(0d, result.Summary.SpilloverSP, "Spillover remains aligned with committed non-derived scope.");
+        Assert.AreEqual(16d / 13d, result.Summary.ChurnRate, 1e-9);
+    }
+
+    [TestMethod]
+    public async Task Handle_ReturnsZeroStoryPointRates_WhenDenominatorsAreZero()
+    {
+        await SeedSprintExecutionScenarioAsync(
+            "Resolved",
+            storyPoints: null,
+            businessValue: null,
+            additionalWorkItems:
+            [
+                new SprintExecutionTestWorkItem(
+                    102,
+                    WorkItemType.Bug,
+                    "Bug only",
+                    "Resolved",
+                    "\\Project\\Sprint 1",
+                    2,
+                    13,
+                    null,
+                    StateTransitions:
+                    [
+                        (new DateTimeOffset(new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc)), "Active", "Resolved")
+                    ])
+            ]);
+
+        _stateClassificationService
+            .Setup(service => service.GetClassificationsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildStateClassificationsResponse(
+                (WorkItemType.Pbi, "Resolved", StateClassification.Done),
+                (WorkItemType.Bug, "Resolved", StateClassification.Done)));
+
+        var handler = CreateHandler();
+
+        var result = await handler.Handle(new GetSprintExecutionQuery(1, 1, 1), CancellationToken.None);
+
+        Assert.AreEqual(0d, result.Summary.CommittedSP);
+        Assert.AreEqual(0d, result.Summary.AddedSP);
+        Assert.AreEqual(0d, result.Summary.RemovedSP);
+        Assert.AreEqual(0d, result.Summary.DeliveredSP);
+        Assert.AreEqual(0d, result.Summary.DeliveredFromAddedSP);
+        Assert.AreEqual(0d, result.Summary.SpilloverSP);
+        Assert.AreEqual(0d, result.Summary.ChurnRate);
+        Assert.AreEqual(0d, result.Summary.CommitmentCompletion);
+        Assert.AreEqual(0d, result.Summary.SpilloverRate);
+        Assert.AreEqual(0d, result.Summary.AddedDeliveryRate);
+    }
+
     private GetSprintExecutionQueryHandler CreateHandler()
     {
         return new GetSprintExecutionQueryHandler(
             _context,
             _stateClassificationService.Object,
+            new CanonicalStoryPointResolutionService(),
             NullLogger<GetSprintExecutionQueryHandler>.Instance);
     }
 
     private async Task SeedSprintExecutionScenarioAsync(
         string workItemState,
         string? currentIterationPath = null,
+        int? storyPoints = 5,
+        int? businessValue = null,
         IEnumerable<(DateTimeOffset Timestamp, string OldState, string NewState)>? stateTransitions = null,
         IEnumerable<(DateTimeOffset Timestamp, string? OldIterationPath, string? NewIterationPath)>? iterationTransitions = null,
-        IEnumerable<(int Id, string Name, string Path, DateTimeOffset StartUtc, DateTimeOffset EndUtc)>? additionalSprints = null)
+        IEnumerable<(int Id, string Name, string Path, DateTimeOffset StartUtc, DateTimeOffset EndUtc)>? additionalSprints = null,
+        IEnumerable<SprintExecutionTestWorkItem>? additionalWorkItems = null)
     {
         var profile = new ProfileEntity
         {
@@ -341,10 +567,13 @@ public sealed class GetSprintExecutionQueryHandlerTests
             TfsId = 101,
             Type = WorkItemType.Pbi,
             Title = "PBI 101",
+            ParentTfsId = null,
             AreaPath = "\\Project",
             IterationPath = currentIterationPath ?? sprint.Path,
             State = workItemState,
             Effort = 8,
+            StoryPoints = storyPoints,
+            BusinessValue = businessValue,
             RetrievedAt = DateTimeOffset.UtcNow,
             TfsChangedDate = DateTimeOffset.UtcNow,
             TfsChangedDateUtc = DateTime.UtcNow
@@ -386,13 +615,65 @@ public sealed class GetSprintExecutionQueryHandlerTests
         _context.ResolvedWorkItems.Add(resolved);
         var updateId = 1;
 
-        foreach (var (timestamp, oldState, newState) in stateTransitions
-                     ?? [(sprintStart.AddDays(2), "Active", workItemState)])
+        AddStateTransitions(workItem.TfsId, profile.Id, stateTransitions ?? [(sprintStart.AddDays(2), "Active", workItemState)], ref updateId);
+        AddIterationTransitions(workItem.TfsId, profile.Id, iterationTransitions ?? [], ref updateId);
+
+        foreach (var additionalWorkItem in additionalWorkItems ?? [])
+        {
+            _context.WorkItems.Add(new WorkItemEntity
+            {
+                TfsId = additionalWorkItem.TfsId,
+                Type = additionalWorkItem.Type,
+                Title = additionalWorkItem.Title,
+                ParentTfsId = additionalWorkItem.ParentTfsId,
+                AreaPath = "\\Project",
+                IterationPath = additionalWorkItem.CurrentIterationPath ?? sprint.Path,
+                State = additionalWorkItem.State,
+                Effort = additionalWorkItem.Effort,
+                StoryPoints = additionalWorkItem.StoryPoints,
+                BusinessValue = additionalWorkItem.BusinessValue,
+                RetrievedAt = DateTimeOffset.UtcNow,
+                TfsChangedDate = DateTimeOffset.UtcNow,
+                TfsChangedDateUtc = DateTime.UtcNow
+            });
+
+            _context.ResolvedWorkItems.Add(new ResolvedWorkItemEntity
+            {
+                WorkItemId = additionalWorkItem.TfsId,
+                WorkItemType = additionalWorkItem.Type,
+                ResolvedProductId = product.Id,
+                ResolvedSprintId = sprint.Id,
+                ResolutionStatus = ResolutionStatus.Resolved,
+                ResolvedAtRevision = 1
+            });
+
+            AddStateTransitions(
+                additionalWorkItem.TfsId,
+                profile.Id,
+                additionalWorkItem.StateTransitions ?? [(sprintStart.AddDays(2), "Active", additionalWorkItem.State)],
+                ref updateId);
+            AddIterationTransitions(
+                additionalWorkItem.TfsId,
+                profile.Id,
+                additionalWorkItem.IterationTransitions ?? [],
+                ref updateId);
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
+    private void AddStateTransitions(
+        int workItemId,
+        int productOwnerId,
+        IEnumerable<(DateTimeOffset Timestamp, string OldState, string NewState)> transitions,
+        ref int updateId)
+    {
+        foreach (var (timestamp, oldState, newState) in transitions)
         {
             _context.ActivityEventLedgerEntries.Add(new ActivityEventLedgerEntryEntity
             {
-                ProductOwnerId = profile.Id,
-                WorkItemId = workItem.TfsId,
+                ProductOwnerId = productOwnerId,
+                WorkItemId = workItemId,
                 UpdateId = updateId++,
                 FieldRefName = "System.State",
                 EventTimestamp = timestamp,
@@ -401,13 +682,20 @@ public sealed class GetSprintExecutionQueryHandlerTests
                 NewValue = newState
             });
         }
+    }
 
-        foreach (var (timestamp, oldIterationPath, newIterationPath) in iterationTransitions ?? [])
+    private void AddIterationTransitions(
+        int workItemId,
+        int productOwnerId,
+        IEnumerable<(DateTimeOffset Timestamp, string? OldIterationPath, string? NewIterationPath)> transitions,
+        ref int updateId)
+    {
+        foreach (var (timestamp, oldIterationPath, newIterationPath) in transitions)
         {
             _context.ActivityEventLedgerEntries.Add(new ActivityEventLedgerEntryEntity
             {
-                ProductOwnerId = profile.Id,
-                WorkItemId = workItem.TfsId,
+                ProductOwnerId = productOwnerId,
+                WorkItemId = workItemId,
                 UpdateId = updateId++,
                 FieldRefName = "System.IterationPath",
                 EventTimestamp = timestamp,
@@ -416,8 +704,6 @@ public sealed class GetSprintExecutionQueryHandlerTests
                 NewValue = newIterationPath
             });
         }
-
-        await _context.SaveChangesAsync();
     }
 
     private static GetStateClassificationsResponse BuildStateClassificationsResponse(
@@ -435,4 +721,17 @@ public sealed class GetSprintExecutionQueryHandlerTests
             }).ToList()
         };
     }
+
+    private sealed record SprintExecutionTestWorkItem(
+        int TfsId,
+        string Type,
+        string Title,
+        string State,
+        string? CurrentIterationPath,
+        int? Effort,
+        int? StoryPoints,
+        int? BusinessValue,
+        int? ParentTfsId = null,
+        IEnumerable<(DateTimeOffset Timestamp, string OldState, string NewState)>? StateTransitions = null,
+        IEnumerable<(DateTimeOffset Timestamp, string? OldIterationPath, string? NewIterationPath)>? IterationTransitions = null);
 }

@@ -105,3 +105,10 @@ The repository is mostly aligned on the core delivery semantics: velocity in spr
 - Updated `PoTool.Api/Handlers/Metrics/GetCapacityCalibrationQueryHandler.cs` so capacity calibration now uses canonical delivered PBI story points for velocity percentiles and predictability, while keeping delivered effort only as a diagnostic metric. Committed story points now exclude derived estimates by subtracting `DerivedStoryPoints` from the projection's aggregate planned story points.
 - Updated `PoTool.Shared/Metrics/CapacityCalibrationDto.cs` so per-sprint entries use `CommittedStoryPoints`, `DeliveredStoryPoints`, `DeliveredEffort`, and `HoursPerSP` naming instead of effort-based `Committed` / `Done` semantics.
 - Expanded `PoTool.Tests.Unit/Handlers/GetCapacityCalibrationQueryHandlerTests.cs` to verify velocity is story-point based, derived commitment is excluded, effort-only delivery does not become velocity, and `HoursPerSP` is calculated safely without dividing by zero.
+
+## Fix Progress — Sprint Execution StoryPoint Metrics
+
+- Updated `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs` to resolve canonical story-point aggregates from the already reconstructed committed, added, removed, delivered, and spillover work-item sets.
+- Updated `PoTool.Shared/Metrics/SprintExecutionDtos.cs` so sprint execution summaries now expose `CommittedSP`, `AddedSP`, `RemovedSP`, `DeliveredSP`, `DeliveredFromAddedSP`, `SpilloverSP`, `ChurnRate`, `CommitmentCompletion`, `SpilloverRate`, and `AddedDeliveryRate` alongside the existing count/effort diagnostics.
+- Implemented canonical formulas from `docs/domain/rules/metrics_rules.md`, including safe zero-denominator handling and explicit bug/task exclusion via canonical story-point resolution.
+- Expanded `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs` to verify story-point aggregation, bug/task exclusion, derived-estimate handling, and the churn / commitment / spillover / added-delivery rate formulas.

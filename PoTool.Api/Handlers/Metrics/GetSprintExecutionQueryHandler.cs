@@ -5,9 +5,12 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Metrics.Services;
 using PoTool.Core.Metrics.Queries;
+using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
 using PoTool.Shared.Settings;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Api.Handlers.Metrics;
 
@@ -27,15 +30,18 @@ public sealed class GetSprintExecutionQueryHandler
 
     private readonly PoToolDbContext _context;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
+    private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
     private readonly ILogger<GetSprintExecutionQueryHandler> _logger;
 
     public GetSprintExecutionQueryHandler(
         PoToolDbContext context,
         IWorkItemStateClassificationService stateClassificationService,
+        ICanonicalStoryPointResolutionService storyPointResolutionService,
         ILogger<GetSprintExecutionQueryHandler> logger)
     {
         _context = context;
         _stateClassificationService = stateClassificationService;
+        _storyPointResolutionService = storyPointResolutionService;
         _logger = logger;
     }
 
@@ -355,6 +361,35 @@ public sealed class GetSprintExecutionQueryHandler
             ProductName = ResolveProductName(w.TfsId)
         }).ToList();
 
+        var committedSp = SumStoryPoints(
+            relevantWorkItems.Where(w => initialScopeIds.Contains(w.TfsId)),
+            stateLookup,
+            relevantWorkItemsById,
+            excludeDerived: true);
+        var addedSp = SumStoryPoints(
+            relevantWorkItems.Where(w => addedWorkItemIds.Contains(w.TfsId)),
+            stateLookup,
+            relevantWorkItemsById,
+            excludeDerived: false);
+        var removedSp = SumStoryPoints(
+            removedWorkItems,
+            stateLookup,
+            relevantWorkItemsById,
+            excludeDerived: false);
+        var deliveredSp = SumDeliveredStoryPoints(completedItems, relevantWorkItemsById);
+        var deliveredFromAddedSp = SumDeliveredStoryPoints(
+            completedItems.Where(w => addedWorkItemIds.Contains(w.TfsId)),
+            relevantWorkItemsById);
+        var spilloverSp = SumStoryPoints(
+            spilloverItems,
+            stateLookup,
+            relevantWorkItemsById,
+            excludeDerived: true);
+        var churnRate = SafeDivide(addedSp + removedSp, committedSp + addedSp);
+        var commitmentCompletion = SafeDivide(deliveredSp, committedSp - removedSp);
+        var spilloverRate = SafeDivide(spilloverSp, committedSp - removedSp);
+        var addedDeliveryRate = SafeDivide(deliveredFromAddedSp, addedSp);
+
         var summary = new SprintExecutionSummaryDto
         {
             InitialScopeCount = initialScopeIds.Count,
@@ -373,6 +408,16 @@ public sealed class GetSprintExecutionQueryHandler
             UnfinishedEffort = unfinishedItems.Sum(w => w.Effort ?? 0),
             SpilloverCount = spilloverItems.Count,
             SpilloverEffort = spilloverItems.Sum(w => w.Effort ?? 0),
+            CommittedSP = committedSp,
+            AddedSP = addedSp,
+            RemovedSP = removedSp,
+            DeliveredSP = deliveredSp,
+            DeliveredFromAddedSP = deliveredFromAddedSp,
+            SpilloverSP = spilloverSp,
+            ChurnRate = churnRate,
+            CommitmentCompletion = commitmentCompletion,
+            SpilloverRate = spilloverRate,
+            AddedDeliveryRate = addedDeliveryRate,
             StarvedCount = starvedItems.Count
         };
 
@@ -430,5 +475,126 @@ public sealed class GetSprintExecutionQueryHandler
             .ToListAsync(cancellationToken);
 
         return SprintSpilloverLookup.GetNextSprintPath(sprint, teamSprints);
+    }
+
+    private double SumStoryPoints(
+        IEnumerable<WorkItemEntity> workItems,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
+        IReadOnlyDictionary<int, WorkItemEntity> workItemsById,
+        bool excludeDerived)
+    {
+        return workItems
+            .Select(workItem => ResolveStoryPointEstimate(workItem, stateLookup, workItemsById, excludeDerived))
+            .Where(estimate => estimate.HasValue)
+            .Select(estimate => estimate!.Value)
+            .Sum();
+    }
+
+    private double SumDeliveredStoryPoints(
+        IEnumerable<WorkItemEntity> workItems,
+        IReadOnlyDictionary<int, WorkItemEntity> workItemsById)
+    {
+        return workItems
+            .Select(workItem => ResolveDeliveredStoryPointEstimate(workItem, workItemsById))
+            .Where(estimate => estimate.HasValue)
+            .Select(estimate => estimate!.Value)
+            .Sum();
+    }
+
+    private double? ResolveStoryPointEstimate(
+        WorkItemEntity workItem,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
+        IReadOnlyDictionary<int, WorkItemEntity> workItemsById,
+        bool excludeDerived)
+    {
+        var estimate = _storyPointResolutionService.Resolve(new StoryPointResolutionRequest(
+            ToWorkItemDto(workItem),
+            StateClassificationLookup.IsDone(stateLookup, workItem.Type, workItem.State),
+            BuildFeaturePbiCandidates(workItem, stateLookup, workItemsById)));
+
+        if (!estimate.Value.HasValue || estimate.Source == StoryPointEstimateSource.Missing)
+        {
+            return null;
+        }
+
+        if (excludeDerived && estimate.Source == StoryPointEstimateSource.Derived)
+        {
+            return null;
+        }
+
+        return estimate.Value.Value;
+    }
+
+    private double? ResolveDeliveredStoryPointEstimate(
+        WorkItemEntity workItem,
+        IReadOnlyDictionary<int, WorkItemEntity> workItemsById)
+    {
+        var estimate = _storyPointResolutionService.Resolve(new StoryPointResolutionRequest(
+            ToWorkItemDto(workItem),
+            IsDone: true,
+            BuildFeaturePbiCandidates(workItem, stateLookup: null, workItemsById)));
+
+        if (!estimate.Value.HasValue || estimate.Source is StoryPointEstimateSource.Missing or StoryPointEstimateSource.Derived)
+        {
+            return null;
+        }
+
+        return estimate.Value.Value;
+    }
+
+    private static IReadOnlyCollection<StoryPointResolutionCandidate> BuildFeaturePbiCandidates(
+        WorkItemEntity workItem,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
+        IReadOnlyDictionary<int, WorkItemEntity> workItemsById)
+    {
+        if (workItem.ParentTfsId == null)
+        {
+            return [];
+        }
+
+        return workItemsById.Values
+            .Where(candidate => candidate.ParentTfsId == workItem.ParentTfsId)
+            .Where(candidate => IsPbiType(candidate.Type))
+            .Select(candidate => new StoryPointResolutionCandidate(
+                ToWorkItemDto(candidate),
+                StateClassificationLookup.IsDone(stateLookup, candidate.Type, candidate.State)))
+            .ToList();
+    }
+
+    private static WorkItemDto ToWorkItemDto(WorkItemEntity workItem)
+    {
+        return new WorkItemDto(
+            TfsId: workItem.TfsId,
+            Type: workItem.Type,
+            Title: workItem.Title,
+            ParentTfsId: workItem.ParentTfsId,
+            AreaPath: workItem.AreaPath,
+            IterationPath: workItem.IterationPath,
+            State: workItem.State,
+            RetrievedAt: workItem.RetrievedAt,
+            Effort: workItem.Effort,
+            Description: workItem.Description,
+            CreatedDate: workItem.CreatedDate,
+            ClosedDate: workItem.ClosedDate,
+            Severity: workItem.Severity,
+            Tags: workItem.Tags,
+            IsBlocked: workItem.IsBlocked,
+            Relations: null,
+            ChangedDate: workItem.TfsChangedDate,
+            BusinessValue: workItem.BusinessValue,
+            BacklogPriority: workItem.BacklogPriority,
+            StoryPoints: workItem.StoryPoints);
+    }
+
+    private static double SafeDivide(double numerator, double denominator)
+    {
+        return denominator <= 0d ? 0d : numerator / denominator;
+    }
+
+    private static bool IsPbiType(string workItemType)
+    {
+        return workItemType.Equals(WorkItemType.Pbi, StringComparison.OrdinalIgnoreCase)
+            || workItemType.Equals(WorkItemType.PbiShort, StringComparison.OrdinalIgnoreCase)
+            || workItemType.Equals(WorkItemType.UserStory, StringComparison.OrdinalIgnoreCase);
     }
 }
