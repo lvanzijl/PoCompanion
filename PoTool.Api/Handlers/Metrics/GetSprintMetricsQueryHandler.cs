@@ -9,7 +9,6 @@ using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
-using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems.Queries;
@@ -134,7 +133,7 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
             iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>(iterationEvents.GroupByWorkItemId());
 
             var classifications = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
-            stateLookup = StateClassificationLookup.Create(classifications.Classifications);
+            stateLookup = StateClassificationLookup.Create(classifications.Classifications.ToDomainStateClassifications());
             firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(allHistoryFieldChanges, workItemSnapshotsById, stateLookup)
                 .ToDictionary(pair => pair.Key, pair => pair.Value);
 
@@ -174,7 +173,7 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         if (stateLookup == null)
         {
             var classificationsResponse = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
-            stateLookup = StateClassificationLookup.Create(classificationsResponse.Classifications);
+            stateLookup = StateClassificationLookup.Create(classificationsResponse.Classifications.ToDomainStateClassifications());
         }
 
         var completedStoryPoints = completedItems

@@ -202,6 +202,8 @@ public class WorkItemStateClassificationService : IWorkItemStateClassificationSe
     /// </summary>
     internal static List<WorkItemStateClassificationDto> GetDefaultClassifications()
     {
-        return StateClassificationDefaults.Create().ToList();
+        return StateClassificationDefaults.Create()
+            .Select(classification => classification.ToDto())
+            .ToList();
     }
 }

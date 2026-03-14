@@ -12,7 +12,6 @@ using PoTool.Core.Domain.Models;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
-using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 
 namespace PoTool.Api.Handlers.Metrics;
@@ -126,7 +125,7 @@ public sealed class GetSprintExecutionQueryHandler
 
         // ── Step 6: Get canonical state classifications ───────────────────────
         var classifications = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
-        var stateLookup = StateClassificationLookup.Create(classifications.Classifications);
+        var stateLookup = StateClassificationLookup.Create(classifications.Classifications.ToDomainStateClassifications());
 
         // ── Step 7: Detect sprint additions and removals from activity events ─
         var sprintStart = sprint.StartUtc;
