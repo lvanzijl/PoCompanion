@@ -132,3 +132,27 @@ Extraction therefore appears **feasible with targeted boundary refactors, not wi
 2. Extract the missing sprint-execution formula surface from `GetSprintExecutionQueryHandler`.
 3. Centralize hierarchy rollup/forecast orchestration that is currently split between the forecast handler and sprint trend projection service.
 4. Keep API DTOs as adapters around the CDC rather than treating them as the domain contract.
+
+## Fix Progress — Domain Input Model Boundary
+
+- Added minimal historical domain input models in `PoTool.Core/Metrics/Models/HistoricalSprintInputs.cs`:
+  - `WorkItemSnapshot`
+  - `SprintDefinition`
+  - `FieldChangeEvent`
+- Kept persistence-to-domain mapping inside the API layer with `PoTool.Api/Services/HistoricalSprintInputMapper.cs`, including adapters from:
+  - `WorkItemEntity` and `WorkItemDto` to `WorkItemSnapshot`
+  - `SprintEntity` and `SprintDto` to `SprintDefinition`
+  - `ActivityEventLedgerEntryEntity` to `FieldChangeEvent`
+- Updated canonical sprint-history helpers to consume the new domain-facing inputs instead of `PoTool.Api.Persistence.Entities`:
+  - `SprintCommitmentLookup`
+  - `FirstDoneDeliveryLookup`
+  - `SprintSpilloverLookup`
+  - `StateReconstructionLookup`
+  - `StateClassificationLookup` now also supports `WorkItemSnapshot`
+- Updated current API callers to supply mapped domain inputs without changing sprint analytics behavior:
+  - `GetSprintMetricsQueryHandler`
+  - `GetSprintExecutionQueryHandler`
+  - `SprintTrendProjectionService`
+- Added focused unit coverage for:
+  - persistence-to-domain input mapping correctness
+  - canonical helper behavior using the new domain inputs

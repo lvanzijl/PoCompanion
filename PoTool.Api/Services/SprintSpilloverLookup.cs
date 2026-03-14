@@ -1,4 +1,4 @@
-using PoTool.Api.Persistence.Entities;
+using PoTool.Core.Metrics.Models;
 using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Services;
@@ -8,10 +8,10 @@ internal static class SprintSpilloverLookup
     private const string IterationPathFieldRefName = "System.IterationPath";
 
     public static string? GetNextSprintPath(
-        SprintEntity sprint,
-        IEnumerable<SprintEntity> teamSprints)
+        SprintDefinition sprint,
+        IEnumerable<SprintDefinition> teamSprints)
     {
-        var orderingAnchor = sprint.EndDateUtc ?? sprint.StartDateUtc;
+        var orderingAnchor = sprint.EndUtc ?? sprint.StartUtc;
 
         if (!orderingAnchor.HasValue)
         {
@@ -20,23 +20,22 @@ internal static class SprintSpilloverLookup
 
         return teamSprints
             .Where(candidate => candidate.TeamId == sprint.TeamId
-                                && candidate.Id != sprint.Id
-                                && candidate.StartDateUtc.HasValue
-                                && candidate.StartDateUtc.Value >= orderingAnchor.Value)
-            .OrderBy(candidate => candidate.StartDateUtc)
-            .ThenBy(candidate => candidate.Id)
+                                && candidate.SprintId != sprint.SprintId
+                                && candidate.StartUtc.HasValue
+                                && candidate.StartUtc.Value >= orderingAnchor.Value)
+            .OrderBy(candidate => candidate.StartUtc)
+            .ThenBy(candidate => candidate.SprintId)
             .Select(candidate => NormalizeIterationPath(candidate.Path))
             .FirstOrDefault(path => path != null);
     }
 
     public static IReadOnlySet<int> BuildSpilloverWorkItemIds(
         IReadOnlySet<int> committedWorkItemIds,
-        IReadOnlyDictionary<int, string?> currentStatesById,
-        IReadOnlyDictionary<int, string> workItemTypesById,
-        IReadOnlyDictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>> stateEventsByWorkItem,
-        IReadOnlyDictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>> iterationEventsByWorkItem,
+        IReadOnlyDictionary<int, WorkItemSnapshot> workItemsById,
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>> stateEventsByWorkItem,
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>> iterationEventsByWorkItem,
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
-        string sprintPath,
+        SprintDefinition sprint,
         string? nextSprintPath,
         DateTimeOffset sprintEnd)
     {
@@ -45,23 +44,23 @@ internal static class SprintSpilloverLookup
             return new HashSet<int>();
         }
 
-        var normalizedSprintPath = NormalizeIterationPath(sprintPath);
+        var normalizedSprintPath = NormalizeIterationPath(sprint.Path);
         var normalizedNextSprintPath = NormalizeIterationPath(nextSprintPath);
         var spilloverWorkItemIds = new HashSet<int>();
 
         foreach (var workItemId in committedWorkItemIds)
         {
-            if (!workItemTypesById.TryGetValue(workItemId, out var workItemType))
+            if (!workItemsById.TryGetValue(workItemId, out var workItem))
             {
                 continue;
             }
 
             var stateAtSprintEnd = StateReconstructionLookup.GetStateAtTimestamp(
-                currentStatesById.GetValueOrDefault(workItemId),
+                workItem.CurrentState,
                 stateEventsByWorkItem.GetValueOrDefault(workItemId),
                 sprintEnd);
 
-            if (StateClassificationLookup.IsDone(stateLookup, workItemType, stateAtSprintEnd))
+            if (StateClassificationLookup.IsDone(stateLookup, workItem.WorkItemType, stateAtSprintEnd))
             {
                 continue;
             }
@@ -80,7 +79,7 @@ internal static class SprintSpilloverLookup
     }
 
     private static bool MovedDirectlyToNextSprint(
-        IReadOnlyList<ActivityEventLedgerEntryEntity>? iterationEvents,
+        IReadOnlyList<FieldChangeEvent>? iterationEvents,
         string? sprintPath,
         string? nextSprintPath,
         DateTimeOffset sprintEnd)
@@ -94,7 +93,7 @@ internal static class SprintSpilloverLookup
             .Where(IsIterationPathEvent)
             .Where(iterationEvent => FirstDoneDeliveryLookup.GetEventTimestamp(iterationEvent) >= sprintEnd)
             .OrderBy(GetOrderingTimestampUtc)
-            .ThenBy(iterationEvent => iterationEvent.Id)
+            .ThenBy(iterationEvent => iterationEvent.EventId)
             .ThenBy(iterationEvent => iterationEvent.UpdateId)
             .FirstOrDefault();
 
@@ -103,16 +102,14 @@ internal static class SprintSpilloverLookup
                && string.Equals(NormalizeIterationPath(firstPostSprintMove.NewValue), nextSprintPath, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsIterationPathEvent(ActivityEventLedgerEntryEntity activityEvent)
+    private static bool IsIterationPathEvent(FieldChangeEvent activityEvent)
     {
         return string.Equals(activityEvent.FieldRefName, IterationPathFieldRefName, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static DateTime GetOrderingTimestampUtc(ActivityEventLedgerEntryEntity activityEvent)
+    private static DateTime GetOrderingTimestampUtc(FieldChangeEvent activityEvent)
     {
-        return activityEvent.EventTimestampUtc != default
-            ? DateTime.SpecifyKind(activityEvent.EventTimestampUtc, DateTimeKind.Utc)
-            : FirstDoneDeliveryLookup.GetEventTimestamp(activityEvent).UtcDateTime;
+        return activityEvent.TimestampUtc;
     }
 
     private static string? NormalizeIterationPath(string? iterationPath)
