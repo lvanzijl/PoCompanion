@@ -134,6 +134,69 @@ public sealed class GetSprintExecutionQueryHandlerTests
         Assert.AreEqual(new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, DateTimeKind.Utc)), result.CompletedPbis[0].ClosedDate);
     }
 
+    [TestMethod]
+    public async Task Handle_TreatsItemAddedAfterCommitment_AsAddedScope()
+    {
+        var sprintStart = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        const string backlogPath = "\\Project\\Backlog";
+        const string sprintPath = "\\Project\\Sprint 1";
+
+        await SeedSprintExecutionScenarioAsync(
+            "Active",
+            currentIterationPath: sprintPath,
+            stateTransitions: [],
+            iterationTransitions:
+            [
+                (sprintStart.AddDays(3), backlogPath, sprintPath)
+            ]);
+
+        _stateClassificationService
+            .Setup(service => service.GetClassificationsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildStateClassificationsResponse());
+
+        var handler = CreateHandler();
+
+        var result = await handler.Handle(new GetSprintExecutionQuery(1, 1, 1), CancellationToken.None);
+
+        Assert.AreEqual(0, result.Summary.InitialScopeCount, "Items added after commitment should not be counted in initial scope.");
+        Assert.AreEqual(1, result.Summary.AddedDuringSprintCount, "Items entering the sprint after commitment should count as added scope.");
+        Assert.HasCount(1, result.AddedDuringSprint);
+        Assert.AreEqual(101, result.AddedDuringSprint[0].TfsId);
+        Assert.AreEqual(sprintStart.AddDays(3), result.AddedDuringSprint[0].EnteredSprintDate);
+    }
+
+    [TestMethod]
+    public async Task Handle_KeepsCommittedItemInInitialScope_WhenMovedAwayAfterCommitment()
+    {
+        var sprintStart = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        const string backlogPath = "\\Project\\Backlog";
+        const string sprintPath = "\\Project\\Sprint 1";
+
+        await SeedSprintExecutionScenarioAsync(
+            "Active",
+            currentIterationPath: backlogPath,
+            stateTransitions: [],
+            iterationTransitions:
+            [
+                (sprintStart.AddDays(3), sprintPath, backlogPath)
+            ]);
+
+        _stateClassificationService
+            .Setup(service => service.GetClassificationsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildStateClassificationsResponse());
+
+        var handler = CreateHandler();
+
+        var result = await handler.Handle(new GetSprintExecutionQuery(1, 1, 1), CancellationToken.None);
+
+        Assert.AreEqual(1, result.Summary.InitialScopeCount, "Committed items should stay in reconstructed initial scope even after moving away.");
+        Assert.AreEqual(1, result.Summary.RemovedDuringSprintCount, "Moving away after commitment should count as removed scope.");
+        Assert.HasCount(1, result.RemovedDuringSprint);
+        Assert.AreEqual(101, result.RemovedDuringSprint[0].TfsId);
+        Assert.AreEqual(sprintStart.AddDays(3), result.RemovedDuringSprint[0].RemovedFromSprintDate);
+        Assert.IsTrue(result.HasData, "Committed scope reconstruction should keep historical sprint data visible.");
+    }
+
     private GetSprintExecutionQueryHandler CreateHandler()
     {
         return new GetSprintExecutionQueryHandler(
@@ -145,7 +208,8 @@ public sealed class GetSprintExecutionQueryHandlerTests
     private async Task SeedSprintExecutionScenarioAsync(
         string workItemState,
         string? currentIterationPath = null,
-        IEnumerable<(DateTimeOffset Timestamp, string OldState, string NewState)>? stateTransitions = null)
+        IEnumerable<(DateTimeOffset Timestamp, string OldState, string NewState)>? stateTransitions = null,
+        IEnumerable<(DateTimeOffset Timestamp, string? OldIterationPath, string? NewIterationPath)>? iterationTransitions = null)
     {
         var profile = new ProfileEntity
         {
@@ -214,6 +278,8 @@ public sealed class GetSprintExecutionQueryHandlerTests
         _context.Sprints.Add(sprint);
         _context.WorkItems.Add(workItem);
         _context.ResolvedWorkItems.Add(resolved);
+        var updateId = 1;
+
         foreach (var (timestamp, oldState, newState) in stateTransitions
                      ?? [(sprintStart.AddDays(2), "Active", workItemState)])
         {
@@ -221,12 +287,27 @@ public sealed class GetSprintExecutionQueryHandlerTests
             {
                 ProductOwnerId = profile.Id,
                 WorkItemId = workItem.TfsId,
-                UpdateId = 1,
+                UpdateId = updateId++,
                 FieldRefName = "System.State",
                 EventTimestamp = timestamp,
                 EventTimestampUtc = timestamp.UtcDateTime,
                 OldValue = oldState,
                 NewValue = newState
+            });
+        }
+
+        foreach (var (timestamp, oldIterationPath, newIterationPath) in iterationTransitions ?? [])
+        {
+            _context.ActivityEventLedgerEntries.Add(new ActivityEventLedgerEntryEntity
+            {
+                ProductOwnerId = profile.Id,
+                WorkItemId = workItem.TfsId,
+                UpdateId = updateId++,
+                FieldRefName = "System.IterationPath",
+                EventTimestamp = timestamp,
+                EventTimestampUtc = timestamp.UtcDateTime,
+                OldValue = oldIterationPath,
+                NewValue = newIterationPath
             });
         }
 

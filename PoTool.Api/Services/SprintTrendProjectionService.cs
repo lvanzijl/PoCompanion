@@ -121,6 +121,14 @@ public class SprintTrendProjectionService
                 && resolvedWorkItemIds.Contains(e.WorkItemId))
             .ToListAsync(cancellationToken);
 
+        var allIterationEvents = await context.ActivityEventLedgerEntries
+            .AsNoTracking()
+            .Where(e => e.ProductOwnerId == productOwnerId
+                && e.FieldRefName == "System.IterationPath"
+                && e.EventTimestampUtc >= rangeStartUtc
+                && resolvedWorkItemIds.Contains(e.WorkItemId))
+            .ToListAsync(cancellationToken);
+
         // Batch-load existing projections for all sprint+product combinations
         var validSprintIds = validSprints.Select(s => s.Id).ToList();
         var existingProjections = await context.SprintMetricsProjections
@@ -131,6 +139,10 @@ public class SprintTrendProjectionService
             .ToDictionary(p => (p.SprintId, p.ProductId), p => p);
 
         var workItemTypesById = workItemsByTfsId.ToDictionary(pair => pair.Key, pair => pair.Value.Type);
+        var currentIterationPathsById = workItemsByTfsId.ToDictionary(pair => pair.Key, pair => (string?)pair.Value.IterationPath);
+        var iterationEventsByWorkItem = allIterationEvents
+            .GroupBy(e => e.WorkItemId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<ActivityEventLedgerEntryEntity>)g.ToList());
         var firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(allStateEvents, workItemTypesById, stateLookup);
         var results = new List<SprintMetricsProjectionEntity>();
 
@@ -140,6 +152,11 @@ public class SprintTrendProjectionService
             var sprintEndUtc = DateTime.SpecifyKind(sprint.EndDateUtc!.Value, DateTimeKind.Utc);
             var sprintStart = new DateTimeOffset(sprintStartUtc, TimeSpan.Zero);
             var sprintEnd = new DateTimeOffset(sprintEndUtc, TimeSpan.Zero);
+            var committedWorkItemIds = SprintCommitmentLookup.BuildCommittedWorkItemIds(
+                currentIterationPathsById,
+                iterationEventsByWorkItem,
+                sprint.Path,
+                SprintCommitmentLookup.GetCommitmentTimestamp(sprintStart));
 
             // Filter the pre-loaded activity events to this sprint's date range
             var sprintActivity = allActivityEvents
@@ -155,7 +172,7 @@ public class SprintTrendProjectionService
                 var projection = ComputeProductSprintProjection(
                     sprint, productId,
                     resolvedItems, workItemsByTfsId,
-                    activityByWorkItem, sprintStart, sprintEnd, stateLookup, firstDoneByWorkItem);
+                    activityByWorkItem, sprintStart, sprintEnd, stateLookup, firstDoneByWorkItem, committedWorkItemIds);
 
                 if (existingByKey.TryGetValue((sprint.Id, productId), out var existing))
                 {
@@ -202,7 +219,8 @@ public class SprintTrendProjectionService
         DateTimeOffset sprintStart,
         DateTimeOffset sprintEnd,
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null,
-        IReadOnlyDictionary<int, DateTimeOffset>? firstDoneByWorkItem = null)
+        IReadOnlyDictionary<int, DateTimeOffset>? firstDoneByWorkItem = null,
+        IReadOnlySet<int>? committedWorkItemIds = null)
     {
         var effectiveFirstDoneByWorkItem = firstDoneByWorkItem
             ?? FirstDoneDeliveryLookup.Build(
@@ -345,12 +363,14 @@ public class SprintTrendProjectionService
 
         // Planned counts
         var plannedPbis = productResolved
-            .Where(r => r.ResolvedSprintId == sprint.Id && r.WorkItemType == WorkItemType.Pbi)
+            .Where(r => r.WorkItemType == WorkItemType.Pbi
+                && (committedWorkItemIds?.Contains(r.WorkItemId) ?? r.ResolvedSprintId == sprint.Id))
             .Select(r => workItemsByTfsId.GetValueOrDefault(r.WorkItemId))
             .Where(w => w != null)
             .ToList();
         var plannedBugs = productResolved
-            .Count(r => r.ResolvedSprintId == sprint.Id && r.WorkItemType == WorkItemType.Bug);
+            .Count(r => r.WorkItemType == WorkItemType.Bug
+                && (committedWorkItemIds?.Contains(r.WorkItemId) ?? r.ResolvedSprintId == sprint.Id));
 
         return new SprintMetricsProjectionEntity
         {

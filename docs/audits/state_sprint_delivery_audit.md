@@ -251,3 +251,23 @@ The repository contains the building blocks required by the canonical domain mod
   - `Done -> Reopened -> Done` counts only one delivery in `SprintTrendProjectionServiceTests`.
   - `Done before sprint -> reopened during sprint -> done again` does not create a second delivery in both projection and sprint execution tests.
   - `First done inside sprint window` counts delivery from update history, including when the item is no longer in the sprint iteration path.
+
+## Fix Progress — Commitment Reconstruction
+
+- **Services modified**
+  - `PoTool.Api/Services/SprintCommitmentLookup.cs`
+  - `PoTool.Api/Services/SprintTrendProjectionService.cs`
+  - `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs`
+
+- **New reconstruction logic**
+  - Added `SprintCommitmentLookup` to reconstruct a work item's `System.IterationPath` at `CommitmentTimestamp = SprintStart + 1 day` by walking iteration-path updates backward from the current snapshot.
+  - `SprintTrendProjectionService` now computes planned PBI and bug scope from reconstructed commitment membership instead of current `ResolvedSprintId` / snapshot iteration membership.
+  - `GetSprintExecutionQueryHandler` now derives initial scope from reconstructed commitment membership and classifies added / removed churn only from iteration changes after the commitment timestamp.
+
+- **Tests added**
+  - `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs`
+    - committed item moved away later still counts as planned scope
+    - item added after commitment is excluded from planned scope
+  - `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs`
+    - item added after commitment counts as added scope
+    - committed item moved away later remains in initial scope and counts as removed scope

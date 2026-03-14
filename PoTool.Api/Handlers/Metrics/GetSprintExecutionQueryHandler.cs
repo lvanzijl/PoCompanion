@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
+using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Metrics.Queries;
@@ -99,6 +100,7 @@ public sealed class GetSprintExecutionQueryHandler
             .ToListAsync(cancellationToken);
 
         var relevantWorkItemsById = relevantWorkItems.ToDictionary(w => w.TfsId, w => w);
+        var currentIterationPathsById = relevantWorkItemsById.ToDictionary(pair => pair.Key, pair => (string?)pair.Value.IterationPath);
         var currentSprintItems = relevantWorkItems
             .Where(w => w.IterationPath == sprint.Path)
             .ToList();
@@ -116,10 +118,16 @@ public sealed class GetSprintExecutionQueryHandler
         // ── Step 7: Detect sprint additions and removals from activity events ─
         var sprintStart = sprint.StartUtc;
         var sprintEnd = sprint.EndUtc;
+        var commitmentTimestamp = sprintStart.HasValue
+            ? SprintCommitmentLookup.GetCommitmentTimestamp(sprintStart.Value)
+            : (DateTimeOffset?)null;
         var firstDoneByWorkItem = new Dictionary<int, DateTimeOffset>();
+        var committedWorkItemIds = new HashSet<int>();
 
         var addedWorkItemIds = new HashSet<int>();
         var removedEntries = new List<(int WorkItemId, DateTimeOffset Timestamp)>();
+        var iterationEvents = new List<ActivityEventLedgerEntryEntity>();
+        var iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>>();
 
         if (sprintEnd.HasValue)
         {
@@ -138,43 +146,53 @@ public sealed class GetSprintExecutionQueryHandler
                 .ToDictionary(pair => pair.Key, pair => pair.Value);
         }
 
-        if (sprintStart.HasValue && sprintEnd.HasValue)
+        if (sprintStart.HasValue)
         {
-            var startUtc = sprintStart.Value.UtcDateTime;
-            var endUtc = sprintEnd.Value.UtcDateTime;
-
-            // Find items added TO this sprint during the sprint window
-            var addedEvents = await _context.ActivityEventLedgerEntries
+            iterationEvents = await _context.ActivityEventLedgerEntries
                 .AsNoTracking()
                 .Where(e => e.ProductOwnerId == query.ProductOwnerId
                             && e.FieldRefName == IterationPathField
-                            && e.NewValue == sprint.Path
-                            && e.EventTimestampUtc >= startUtc
-                            && e.EventTimestampUtc <= endUtc
+                            && e.EventTimestampUtc >= sprintStart.Value.UtcDateTime
                             && resolvedWorkItemIds.Contains(e.WorkItemId))
-                .Select(e => new { e.WorkItemId, e.EventTimestamp })
                 .ToListAsync(cancellationToken);
 
-            foreach (var evt in addedEvents)
+            iterationEventsByWorkItem = iterationEvents
+                .GroupBy(e => e.WorkItemId)
+                .ToDictionary(g => g.Key, g => (IReadOnlyList<ActivityEventLedgerEntryEntity>)g.ToList());
+        }
+
+        if (commitmentTimestamp.HasValue)
+        {
+            committedWorkItemIds = SprintCommitmentLookup.BuildCommittedWorkItemIds(
+                    currentIterationPathsById,
+                    iterationEventsByWorkItem,
+                    sprint.Path,
+                    commitmentTimestamp.Value)
+                .ToHashSet();
+        }
+        else
+        {
+            committedWorkItemIds = currentSprintItems
+                .Select(w => w.TfsId)
+                .ToHashSet();
+        }
+
+        if (commitmentTimestamp.HasValue && sprintEnd.HasValue)
+        {
+            foreach (var evt in iterationEvents
+                         .Where(e => string.Equals(e.NewValue, sprint.Path, StringComparison.OrdinalIgnoreCase)
+                                     && FirstDoneDeliveryLookup.GetEventTimestamp(e) > commitmentTimestamp.Value
+                                     && FirstDoneDeliveryLookup.GetEventTimestamp(e) <= sprintEnd.Value))
             {
                 addedWorkItemIds.Add(evt.WorkItemId);
             }
 
-            // Find items removed FROM this sprint during the sprint window
-            var removedEvents = await _context.ActivityEventLedgerEntries
-                .AsNoTracking()
-                .Where(e => e.ProductOwnerId == query.ProductOwnerId
-                            && e.FieldRefName == IterationPathField
-                            && e.OldValue == sprint.Path
-                            && e.EventTimestampUtc >= startUtc
-                            && e.EventTimestampUtc <= endUtc
-                            && resolvedWorkItemIds.Contains(e.WorkItemId))
-                .Select(e => new { e.WorkItemId, e.EventTimestamp })
-                .ToListAsync(cancellationToken);
-
-            foreach (var evt in removedEvents)
+            foreach (var evt in iterationEvents
+                         .Where(e => string.Equals(e.OldValue, sprint.Path, StringComparison.OrdinalIgnoreCase)
+                                     && FirstDoneDeliveryLookup.GetEventTimestamp(e) > commitmentTimestamp.Value
+                                     && FirstDoneDeliveryLookup.GetEventTimestamp(e) <= sprintEnd.Value))
             {
-                removedEntries.Add((evt.WorkItemId, evt.EventTimestamp));
+                removedEntries.Add((evt.WorkItemId, FirstDoneDeliveryLookup.GetEventTimestamp(evt)));
             }
         }
 
@@ -184,12 +202,9 @@ public sealed class GetSprintExecutionQueryHandler
         var currentItemIds = currentSprintItems.Select(w => w.TfsId).ToHashSet();
         removedWorkItemIds.ExceptWith(currentItemIds);
 
-        var removedWorkItems = removedWorkItemIds.Count > 0
-            ? await _context.WorkItems
-                .AsNoTracking()
-                .Where(w => removedWorkItemIds.Contains(w.TfsId))
-                .ToListAsync(cancellationToken)
-            : new List<Persistence.Entities.WorkItemEntity>();
+        var removedWorkItems = relevantWorkItems
+            .Where(w => removedWorkItemIds.Contains(w.TfsId))
+            .ToList();
 
         // ── Step 9: Classify items ────────────────────────────────────────────
         var completedItems = sprintStart.HasValue && sprintEnd.HasValue
@@ -208,11 +223,7 @@ public sealed class GetSprintExecutionQueryHandler
             .Where(w => !completedItemIds.Contains(w.TfsId))
             .ToList();
 
-        // Items in initial scope = current items NOT in addedDuringSprint + removed items NOT in addedDuringSprint
-        var initialScopeIds = currentItemIds
-            .Where(id => !addedWorkItemIds.Contains(id))
-            .Concat(removedWorkItemIds.Where(id => !addedWorkItemIds.Contains(id)))
-            .ToHashSet();
+        var initialScopeIds = committedWorkItemIds;
 
         // ── Step 10: Detect starved work ──────────────────────────────────────
         // Starved = items in initial scope that are unfinished, while items added later completed
@@ -223,21 +234,19 @@ public sealed class GetSprintExecutionQueryHandler
 
         // ── Step 11: Build entry timestamps for added items ───────────────────
         var enteredSprintDates = new Dictionary<int, DateTimeOffset>();
-        if (sprintStart.HasValue && sprintEnd.HasValue)
+        if (commitmentTimestamp.HasValue && sprintEnd.HasValue)
         {
-            // Fetch raw rows first; SQLite cannot apply Min on DateTimeOffset in SQL.
-            var addedItemEvents = await _context.ActivityEventLedgerEntries
-                .AsNoTracking()
-                .Where(e => e.ProductOwnerId == query.ProductOwnerId
-                            && e.FieldRefName == IterationPathField
-                            && e.NewValue == sprint.Path
-                            && addedWorkItemIds.Contains(e.WorkItemId))
-                .Select(e => new { e.WorkItemId, e.EventTimestamp })
-                .ToListAsync(cancellationToken);
-
-            foreach (var entry in addedItemEvents
+            foreach (var entry in iterationEvents
+                         .Where(e => string.Equals(e.NewValue, sprint.Path, StringComparison.OrdinalIgnoreCase)
+                                     && addedWorkItemIds.Contains(e.WorkItemId)
+                                     && FirstDoneDeliveryLookup.GetEventTimestamp(e) > commitmentTimestamp.Value
+                                     && FirstDoneDeliveryLookup.GetEventTimestamp(e) <= sprintEnd.Value)
                          .GroupBy(e => e.WorkItemId)
-                         .Select(g => new { WorkItemId = g.Key, EnteredDate = g.Min(e => e.EventTimestamp) }))
+                         .Select(g => new
+                         {
+                             WorkItemId = g.Key,
+                             EnteredDate = g.Min(e => FirstDoneDeliveryLookup.GetEventTimestamp(e))
+                         }))
             {
                 enteredSprintDates[entry.WorkItemId] = entry.EnteredDate;
             }
@@ -277,7 +286,7 @@ public sealed class GetSprintExecutionQueryHandler
             ProductName = ResolveProductName(w.TfsId)
         }).ToList();
 
-        var addedPbiDtos = currentSprintItems
+        var addedPbiDtos = relevantWorkItems
             .Where(w => addedWorkItemIds.Contains(w.TfsId))
             .Select(w => new SprintExecutionPbiDto
             {
@@ -314,12 +323,11 @@ public sealed class GetSprintExecutionQueryHandler
         var summary = new SprintExecutionSummaryDto
         {
             InitialScopeCount = initialScopeIds.Count,
-            InitialScopeEffort = currentSprintItems
+            InitialScopeEffort = relevantWorkItems
                 .Where(w => initialScopeIds.Contains(w.TfsId))
-                .Concat(removedWorkItems.Where(w => initialScopeIds.Contains(w.TfsId)))
                 .Sum(w => w.Effort ?? 0),
             AddedDuringSprintCount = addedWorkItemIds.Count,
-            AddedDuringSprintEffort = currentSprintItems
+            AddedDuringSprintEffort = relevantWorkItems
                 .Where(w => addedWorkItemIds.Contains(w.TfsId))
                 .Sum(w => w.Effort ?? 0),
             RemovedDuringSprintCount = removedWorkItemIds.Count,
@@ -343,7 +351,11 @@ public sealed class GetSprintExecutionQueryHandler
             AddedDuringSprint = addedPbiDtos,
             RemovedDuringSprint = removedPbiDtos,
             StarvedPbis = starvedPbiDtos,
-            HasData = currentSprintItems.Count > 0 || removedWorkItems.Count > 0 || completedItems.Count > 0
+            HasData = committedWorkItemIds.Count > 0
+                || addedWorkItemIds.Count > 0
+                || removedWorkItems.Count > 0
+                || completedItems.Count > 0
+                || currentSprintItems.Count > 0
         };
     }
 
