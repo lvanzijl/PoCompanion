@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
-using PoTool.Core.Metrics.Models;
+using PoTool.Core.Domain.Models;
 using PoTool.Core.Metrics.Services;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;

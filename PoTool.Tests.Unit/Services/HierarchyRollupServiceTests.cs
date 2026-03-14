@@ -1,4 +1,4 @@
-using PoTool.Core.Metrics.Models;
+using PoTool.Core.Domain.Models;
 using PoTool.Core.Metrics.Services;
 using PoTool.Core.WorkItems;
 

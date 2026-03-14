@@ -1,4 +1,4 @@
-using PoTool.Core.Metrics.Models;
+using PoTool.Core.Domain.Models;
 
 namespace PoTool.Core.Domain.Sprints;
 

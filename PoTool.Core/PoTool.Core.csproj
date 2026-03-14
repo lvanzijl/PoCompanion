@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PoTool.Shared\PoTool.Shared.csproj" />
+    <ProjectReference Include="..\PoTool.Core.Domain\PoTool.Core.Domain.csproj" />
   </ItemGroup>
 
 </Project>
