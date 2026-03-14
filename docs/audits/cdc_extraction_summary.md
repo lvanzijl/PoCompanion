@@ -16,3 +16,11 @@
 - adapter classes regrouped under `PoTool.Api/Adapters`
 - namespaces updated to `PoTool.Api.Adapters`
 - no semantic changes to CDC logic, handlers, or DTO contracts
+
+## Final CDC Cleanup Verification
+
+- adapter boundaries are now clean: `HistoricalSprintInputMapper`, `CanonicalMetricsInputMapper`, and `StateClassificationInputMapper` are explicitly grouped under `PoTool.Api/Adapters`, while handlers and projection services remain in API orchestration roles
+- no structural CDC issues remain after the boundary cleanup: `PoTool.Core.Domain` has no project references and no direct dependencies on API, EF, shared DTOs, or persistence entities
+- the shared DTO surface used at the CDC seam remains transport-only, and handlers continue to orchestrate EF reads plus CDC service calls rather than owning domain formulas
+- final verdict: **CDC clean with optional naming cleanup only**
+- prompt 6 is now the only remaining optional step, and it is the previously defined naming cleanup prompt rather than a required structural fix

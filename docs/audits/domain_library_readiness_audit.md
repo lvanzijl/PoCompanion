@@ -475,3 +475,48 @@ The canonical sprint analytics domain now lives in `PoTool.Core.Domain` with cle
 
 - **Tests passing:**  
   Verified with `dotnet restore PoTool.sln`, `dotnet build PoTool.sln --no-restore`, and `dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~HistoricalSprintInputMapperTests|FullyQualifiedName~StateClassificationInputMapperTests|FullyQualifiedName~GetSprintMetricsQueryHandlerTests|FullyQualifiedName~GetSprintExecutionQueryHandlerTests|FullyQualifiedName~GetEpicCompletionForecastQueryHandlerTests|FullyQualifiedName~SprintTrendProjectionServiceTests|FullyQualifiedName~ServiceCollectionTests" -v minimal`.
+
+## Final Cleanup Re-Audit — API Boundary Verified
+
+### Expected final architecture restated
+
+- **`PoTool.Core.Domain`:** canonical domain models and canonical domain services only, with no API, EF, or shared transport dependencies.
+- **`PoTool.Api`:** handlers, projection orchestration, EF access, adapter/mapping boundary classes, and the DI composition root.
+- **`PoTool.Shared`:** transport-facing contracts used across boundaries, with the CDC consuming none of them directly.
+
+### Boundary re-scan
+
+- **Adapter boundary is now explicit:**  
+  `PoTool.Api/Adapters/HistoricalSprintInputMapper.cs`,  
+  `PoTool.Api/Adapters/CanonicalMetricsInputMapper.cs`, and  
+  `PoTool.Api/Adapters/StateClassificationInputMapper.cs` are clearly grouped as API-side adapters/mappers. They translate EF entities and shared DTOs into `PoTool.Core.Domain.Models` inputs without carrying domain formulas.
+
+- **API handlers and projections remain orchestration-only in the CDC slice:**  
+  `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs` continues to load EF data, build CDC inputs through adapters, and delegate metric formulas to `ISprintExecutionMetricsCalculator`, `ICanonicalStoryPointResolutionService`, `StateClassificationLookup`, `SprintCommitmentLookup`, and `SprintSpilloverLookup`.  
+  `PoTool.Api/Services/SprintTrendProjectionService.cs` still owns projection orchestration, EF reads, and DTO/projection composition while delegating hierarchy and estimation rules to CDC services.
+
+- **CDC dependency purity remains intact:**  
+  `PoTool.Core.Domain/PoTool.Core.Domain.csproj` still has no project references, and a repository scan over `PoTool.Core.Domain/**/*.cs` found no usages of `PoTool.Api`, `PoTool.Shared`, `Microsoft.EntityFrameworkCore`, transport DTOs, or persistence entities.
+
+- **Shared DTOs used by the CDC boundary remain transport-only:**  
+  The audited shared contracts consumed around the CDC seam, including `PoTool.Shared/Metrics/SprintExecutionDtos.cs`, `PoTool.Shared/Settings/SprintDto.cs`, and `PoTool.Shared/Settings/WorkItemStateClassificationDto.cs`, remain transport/data shapes. The CDC no longer consumes them directly; only API adapters do.
+
+### Remaining structural issues
+
+- **Classification:** None
+- **Leftover adapter/service ambiguity:** None in the audited CDC boundary. The three mapper classes are now grouped under `PoTool.Api.Adapters`, and the remaining API services inspected still own orchestration, persistence, caching, or transport responsibilities rather than displaced domain rules.
+- **Prompt 6 status:** The previously defined naming cleanup prompt is now the only optional next step. It is no longer needed for structural correctness.
+
+### Reference and test validation
+
+- **Reference direction confirmed:**  
+  `PoTool.Api/PoTool.Api.csproj` references `PoTool.Core.Domain`, while `PoTool.Core.Domain/PoTool.Core.Domain.csproj` references no projects and therefore cannot depend on `PoTool.Api`. The CDC dependency direction is clean.
+
+- **Focused validation still passes:**  
+  Verified again with `dotnet restore PoTool.sln`, `dotnet build PoTool.sln --no-restore`, and `dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~HistoricalSprintInputMapperTests|FullyQualifiedName~StateClassificationInputMapperTests|FullyQualifiedName~HistoricalSprintLookupTests|FullyQualifiedName~CanonicalStoryPointResolutionServiceTests|FullyQualifiedName~HierarchyRollupServiceTests|FullyQualifiedName~SprintExecutionMetricsCalculatorTests|FullyQualifiedName~GetSprintMetricsQueryHandlerTests|FullyQualifiedName~GetSprintExecutionQueryHandlerTests|FullyQualifiedName~GetEpicCompletionForecastQueryHandlerTests|FullyQualifiedName~SprintTrendProjectionServiceTests|FullyQualifiedName~ServiceCollectionTests" -v minimal`.
+
+### Final verdict
+
+**CDC clean with optional naming cleanup only**
+
+The CDC extraction is now structurally clean after the API boundary cleanup: adapter seams are explicit, handlers remain orchestration-only, DTOs at the seam remain transport-only, and `PoTool.Core.Domain` stays isolated from API, EF, and shared transport dependencies. The next optional step is the previously defined naming cleanup prompt, not a structural extraction fix.
