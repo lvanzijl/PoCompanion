@@ -45,6 +45,29 @@ public sealed class WorkItemDtoTests
     }
 
     [TestMethod]
+    public void WorkItemDto_PreservesSeparateStoryPointsField()
+    {
+        var dto = new WorkItemDto(
+            TfsId: 123,
+            Type: "Product Backlog Item",
+            Title: "Test PBI",
+            ParentTfsId: null,
+            AreaPath: "Project\\Team",
+            IterationPath: "Sprint 1",
+            State: "Active",
+            RetrievedAt: DateTimeOffset.UtcNow,
+            Effort: 8,
+            Description: null,
+            BusinessValue: 13,
+            StoryPoints: 5
+        );
+
+        Assert.AreEqual(8, dto.Effort);
+        Assert.AreEqual(5, dto.StoryPoints);
+        Assert.AreEqual(13, dto.BusinessValue);
+    }
+
+    [TestMethod]
     public void WorkItemDto_IsImmutable()
     {
         // Arrange & Act

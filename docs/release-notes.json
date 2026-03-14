@@ -2,6 +2,13 @@
   {
     "date": "2026-03-14",
     "type": "Changed",
+    "title": "Work item sync now keeps story points separate",
+    "impact": "Cached work items now preserve source story points independently from effort hours and business value so future planning metrics can use the original estimation fields correctly.",
+    "area": "Planning"
+  },
+  {
+    "date": "2026-03-14",
+    "type": "Changed",
     "title": "Sprint velocity now uses historical sprint rules",
     "impact": "Sprint metrics and forecast velocity now reconstruct committed sprint scope from day-two history and count delivery from the first canonical Done transition in the sprint window instead of today's sprint assignment.",
     "area": "Planning"

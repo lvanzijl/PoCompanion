@@ -140,6 +140,7 @@ public class WorkItemRepository : IWorkItemRepository
                     existing.State = dto.State;
                     existing.RetrievedAt = dto.RetrievedAt;
                     existing.Effort = dto.Effort;
+                    existing.StoryPoints = dto.StoryPoints;
                     existing.BusinessValue = dto.BusinessValue;
                     existing.Description = dto.Description;
                     existing.CreatedDate = dto.CreatedDate;
@@ -189,6 +190,7 @@ public class WorkItemRepository : IWorkItemRepository
                     entity.State = dto.State;
                     entity.RetrievedAt = dto.RetrievedAt;
                     entity.Effort = dto.Effort;
+                    entity.StoryPoints = dto.StoryPoints;
                     entity.BusinessValue = dto.BusinessValue;
                     entity.Description = dto.Description;
                     entity.CreatedDate = dto.CreatedDate;
@@ -254,7 +256,8 @@ public class WorkItemRepository : IWorkItemRepository
                 Relations: relations,
                 ChangedDate: entity.TfsChangedDate,
                 BusinessValue: entity.BusinessValue,
-                BacklogPriority: entity.BacklogPriority
+                BacklogPriority: entity.BacklogPriority,
+                StoryPoints: entity.StoryPoints
             );
     }
 
@@ -271,6 +274,7 @@ public class WorkItemRepository : IWorkItemRepository
             State = dto.State,
             RetrievedAt = dto.RetrievedAt,
             Effort = dto.Effort,
+            StoryPoints = dto.StoryPoints,
             BusinessValue = dto.BusinessValue,
             Description = dto.Description,
             CreatedDate = dto.CreatedDate,

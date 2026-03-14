@@ -699,8 +699,9 @@ public partial class RealTfsClient
         // Note: ExtractParentIdFromRelations handles missing relations gracefully
         int? parentId = ExtractParentIdFromRelations(workItemElement);
         
-        // Extract effort, dates, severity, and tags
+        // Extract effort, story points, dates, severity, and tags
         int? effort = ParseEffortField(fields);
+        int? storyPoints = ParseStoryPointsField(fields);
         int? businessValue = ParseBusinessValueField(fields);
         DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
         DateTimeOffset? changedDate = ParseDateTimeField(fields, "System.ChangedDate");
@@ -726,7 +727,8 @@ public partial class RealTfsClient
             Severity: severity,
             Tags: tags,
             ChangedDate: changedDate,
-            BacklogPriority: backlogPriority
+            BacklogPriority: backlogPriority,
+            StoryPoints: storyPoints
         );
     }
 

@@ -23,5 +23,6 @@ public sealed record WorkItemDto(
     List<WorkItemRelation>? Relations = null,
     DateTimeOffset? ChangedDate = null,
     int? BusinessValue = null,
-    double? BacklogPriority = null
+    double? BacklogPriority = null,
+    int? StoryPoints = null
 );

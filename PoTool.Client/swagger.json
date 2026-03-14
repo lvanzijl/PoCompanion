@@ -9726,6 +9726,11 @@
             "type": "number",
             "format": "double",
             "nullable": true
+          },
+          "storyPoints": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           }
         }
       },
@@ -9805,6 +9810,11 @@
           "backlogPriority": {
             "type": "number",
             "format": "double",
+            "nullable": true
+          },
+          "storyPoints": {
+            "type": "integer",
+            "format": "int32",
             "nullable": true
           }
         }

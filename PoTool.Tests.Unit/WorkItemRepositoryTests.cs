@@ -317,6 +317,36 @@ public sealed class WorkItemRepositoryTests
     }
 
     [TestMethod]
+    public async Task UpsertManyAsync_PreservesStoryPointsSeparatelyFromEffortAndBusinessValue()
+    {
+        using var context = CreateInMemoryContext();
+        var repository = new WorkItemRepository(context);
+
+        var workItem = new WorkItemDto(
+            TfsId: 301,
+            Type: "Product Backlog Item",
+            Title: "PBI with separate estimates",
+            ParentTfsId: null,
+            AreaPath: "Project\\Team",
+            IterationPath: "Sprint 3",
+            State: "Active",
+            RetrievedAt: DateTimeOffset.UtcNow,
+            Effort: 8,
+            Description: "PBI description",
+            BusinessValue: 21,
+            StoryPoints: 5
+        );
+
+        await repository.UpsertManyAsync(new[] { workItem });
+        var result = await repository.GetByTfsIdAsync(301);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(8, result.Effort);
+        Assert.AreEqual(5, result.StoryPoints);
+        Assert.AreEqual(21, result.BusinessValue);
+    }
+
+    [TestMethod]
     public async Task UpsertManyAsync_UpdatesBacklogPriority_ForExistingEntity()
     {
         // Arrange

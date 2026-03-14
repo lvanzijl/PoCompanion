@@ -329,8 +329,9 @@ public partial class RealTfsClient
             var iteration = fields.TryGetProperty("System.IterationPath", out var ip) ? ip.GetString() ?? "" : "";
             var description = fields.TryGetProperty("System.Description", out var d) ? d.GetString() : null;
 
-            // Extract effort field with robust parsing
+            // Extract effort and story points with robust parsing
             int? effort = ParseEffortField(fields);
+            int? storyPoints = ParseStoryPointsField(fields);
             int? businessValue = ParseBusinessValueField(fields);
 
             // Extract created date from TFS (System.CreatedDate)
@@ -373,7 +374,8 @@ public partial class RealTfsClient
                 ChangedDate: changedDate,
                 IsBlocked: isBlocked,
                 Relations: relations, // Use relations from Phase 1
-                BacklogPriority: backlogPriority
+                BacklogPriority: backlogPriority,
+                StoryPoints: storyPoints
             );
 
             _logger.LogInformation("Retrieved work item {WorkItemId} from TFS: {Title}", id, title);
@@ -591,9 +593,10 @@ public partial class RealTfsClient
                     // Get parent ID from relations map (populated in Phase 1)
                     var parentId = relationsMap.TryGetValue(id, out var pid) ? pid : null;
 
-                    // Extract effort field with robust parsing (requirement #5)
+                    // Extract effort and story points with robust parsing (requirement #5)
                     // Handle int, double, and string values safely
                     int? effort = ParseEffortField(fields);
+                    int? storyPoints = ParseStoryPointsField(fields);
                     int? businessValue = ParseBusinessValueField(fields);
 
                     // Extract created date from TFS (System.CreatedDate)
@@ -630,7 +633,8 @@ public partial class RealTfsClient
                         Severity: severity,
                         Tags: tags,
                         ChangedDate: changedDate,
-                        BacklogPriority: backlogPriority
+                        BacklogPriority: backlogPriority,
+                        StoryPoints: storyPoints
                     ));
                 }
 
