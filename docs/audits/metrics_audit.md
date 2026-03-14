@@ -112,3 +112,59 @@ The repository is mostly aligned on the core delivery semantics: velocity in spr
 - Updated `PoTool.Shared/Metrics/SprintExecutionDtos.cs` so sprint execution summaries now expose `CommittedSP`, `AddedSP`, `RemovedSP`, `DeliveredSP`, `DeliveredFromAddedSP`, `SpilloverSP`, `ChurnRate`, `CommitmentCompletion`, `SpilloverRate`, and `AddedDeliveryRate` alongside the existing count/effort diagnostics.
 - Implemented canonical formulas from `docs/domain/rules/metrics_rules.md`, including safe zero-denominator handling and explicit bug/task exclusion via canonical story-point resolution.
 - Expanded `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs` to verify story-point aggregation, bug/task exclusion, derived-estimate handling, and the churn / commitment / spillover / added-delivery rate formulas.
+
+## Re-Audit Results — Post Metrics Fix
+
+### Canonical metric definitions revalidated
+
+- **Velocity** = delivered PBI Story Points whose **first Done transition** occurs within the sprint window. Bugs, tasks, removed items, and missing/derived estimates do not contribute.
+- **Spillover** = committed scope that is **not Done at sprint end** and then moves **directly** into the next sprint.
+- **Churn** = added scope + removed scope after the canonical commitment timestamp.
+- **Activity** = meaningful updates during the sprint, excluding trivial metadata-only fields.
+- **Capacity** = Story Point-based velocity and predictability, with **HoursPerSP = DeliveredEffort / DeliveredStoryPoints** exposed only as a diagnostic.
+
+### Improvements implemented
+
+- `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs` continues to compute sprint velocity from canonical PBI Story Points resolved through `CanonicalStoryPointResolutionService`, using commitment reconstruction plus first-Done delivery semantics.
+- `PoTool.Api/Handlers/Metrics/GetCapacityCalibrationQueryHandler.cs` now uses committed and delivered Story Points for velocity and predictability, while exposing `DeliveredEffort` and `HoursPerSP` as diagnostics through `PoTool.Shared/Metrics/CapacityCalibrationDto.cs`.
+- `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs` now publishes canonical Story Point aggregates and formulas through `PoTool.Shared/Metrics/SprintExecutionDtos.cs`: `CommittedSP`, `AddedSP`, `RemovedSP`, `DeliveredSP`, `DeliveredFromAddedSP`, `SpilloverSP`, `ChurnRate`, `CommitmentCompletion`, `SpilloverRate`, and `AddedDeliveryRate`.
+- `PoTool.Api/Services/SprintTrendProjectionService.cs` and `PoTool.Api/Handlers/Metrics/GetSprintTrendMetricsQueryHandler.cs` preserve the same Story Point semantics in stored projections and surfaced trend DTOs, including `CompletedPbiStoryPoints`, `PlannedStoryPoints`, `SpilloverStoryPoints`, derived-estimate diagnostics, and unestimated-delivery diagnostics.
+- `PoTool.Api/Services/SprintSpilloverLookup.cs` still enforces the canonical spillover rule: committed item, not Done at sprint end, first post-sprint move goes directly from Sprint N to Sprint N+1.
+
+### DTO contract validation
+
+- `PoTool.Shared/Metrics/CapacityCalibrationDto.cs` exposes `DeliveredStoryPoints` and `HoursPerSP` and no longer labels effort throughput as velocity.
+- `PoTool.Shared/Metrics/SprintExecutionDtos.cs` exposes the canonical Story Point aggregates and rates required by `docs/domain/rules/metrics_rules.md`.
+- `PoTool.Api/Handlers/Metrics/GetSprintTrendMetricsQueryHandler.cs` returns Story Point trend fields alongside effort diagnostics, keeping effort and velocity semantics explicitly separated.
+
+### Test coverage validation
+
+The current unit suite covers the required post-fix behaviors:
+
+- **Velocity using Story Points** — `PoTool.Tests.Unit/Handlers/GetSprintMetricsQueryHandlerTests.cs` and `PoTool.Tests.Unit/Handlers/GetCapacityCalibrationQueryHandlerTests.cs`
+- **HoursPerSP capacity metric** — `PoTool.Tests.Unit/Handlers/GetCapacityCalibrationQueryHandlerTests.cs`
+- **Churn formulas and commitment completion** — `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs`
+- **Spillover rate and canonical spillover detection** — `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs` and `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs`
+- **Added-delivery rate** — `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs`
+- **Trend projection Story Point handling** — `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs` and `PoTool.Tests.Unit/Handlers/GetSprintTrendMetricsQueryHandlerTests.cs`
+
+Local re-validation for this re-audit:
+
+- `dotnet restore PoTool.sln`
+- `dotnet build PoTool.sln --no-restore`
+- `dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~GetSprintMetricsQueryHandlerTests|FullyQualifiedName~GetSprintExecutionQueryHandlerTests|FullyQualifiedName~GetCapacityCalibrationQueryHandlerTests|FullyQualifiedName~SprintTrendProjectionServiceTests|FullyQualifiedName~GetSprintTrendMetricsQueryHandlerTests" -v minimal`
+
+### Remaining violations
+
+- **No remaining violations were found in the audited metrics layer.**
+
+### Architectural risks
+
+- `PoTool.Api/Handlers/Metrics/GetPortfolioProgressTrendQueryHandler.cs` still represents an effort-oriented stock/flow helper rather than a canonical churn implementation. This is not a violation in the audited metrics layer, but it should remain clearly documented and isolated so it is not reused as sprint-scope truth.
+- The audited handlers now rely on shared Story Point semantics across `CanonicalStoryPointResolutionService`, sprint projections, and execution summaries. Future changes must preserve that single interpretation to avoid reintroducing metric drift.
+
+### Final verdict
+
+**Fully compliant**
+
+The metrics layer reviewed in this re-audit now matches the canonical domain model for velocity, spillover, churn, activity, sprint execution formulas, and capacity diagnostics.
