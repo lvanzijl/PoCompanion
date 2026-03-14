@@ -264,7 +264,7 @@ public sealed class GetSprintMetricsQueryHandlerTests
     }
 
     [TestMethod]
-    public async Task Handle_ExcludesDeliveredPbisWithoutEstimatesFromVelocity()
+    public async Task Handle_ExcludesDeliveredPBIsWithoutEstimatesFromVelocity()
     {
         var sprintStart = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         var sprintEnd = new DateTimeOffset(new DateTime(2026, 1, 14, 0, 0, 0, DateTimeKind.Utc));

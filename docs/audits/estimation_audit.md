@@ -157,6 +157,6 @@ The repository has some correct estimation foundations. TFS retrieval already re
 - **Tests added**
   - `GetSprintMetricsQueryHandlerTests.Handle_ExcludesBugAndTaskStoryPointsFromSprintTotals`
   - `GetSprintMetricsQueryHandlerTests.Handle_UsesBusinessValueFallbackForSprintStoryPoints`
-  - `GetSprintMetricsQueryHandlerTests.Handle_ExcludesDeliveredPbisWithoutEstimatesFromVelocity`
+  - `GetSprintMetricsQueryHandlerTests.Handle_ExcludesDeliveredPBIsWithoutEstimatesFromVelocity`
   - `GetSprintMetricsQueryHandlerTests.Handle_TreatsZeroDonePbiAsValidZeroPointDelivery`
   - `GetSprintMetricsQueryHandlerTests.Handle_TreatsZeroNonDonePbiAsMissingEstimate`
