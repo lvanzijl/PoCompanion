@@ -41,6 +41,12 @@ public record SprintTrendMetricsDto
     public int TotalPlannedEffort { get; init; }
 
     /// <summary>
+    /// Total resolved story points for planned PBIs.
+    /// Includes real, fallback, and derived estimates.
+    /// </summary>
+    public double TotalPlannedStoryPoints { get; init; }
+
+    /// <summary>
     /// Total worked items (excluding bugs).
     /// </summary>
     public int TotalWorkedCount { get; init; }
@@ -71,6 +77,12 @@ public record SprintTrendMetricsDto
     public int TotalCompletedPbiEffort { get; init; }
 
     /// <summary>
+    /// Total delivered story points for completed PBIs in this sprint.
+    /// Derived and missing estimates are excluded.
+    /// </summary>
+    public double TotalCompletedPbiStoryPoints { get; init; }
+
+    /// <summary>
     /// Total committed PBIs that spilled into the next sprint unfinished.
     /// </summary>
     public int TotalSpilloverCount { get; init; }
@@ -79,6 +91,11 @@ public record SprintTrendMetricsDto
     /// Total effort of committed PBIs that spilled into the next sprint unfinished.
     /// </summary>
     public int TotalSpilloverEffort { get; init; }
+
+    /// <summary>
+    /// Total resolved story points of committed PBIs that spilled unfinished into the next sprint.
+    /// </summary>
+    public double TotalSpilloverStoryPoints { get; init; }
 
     /// <summary>
     /// Aggregate progression delta across products.
@@ -99,6 +116,26 @@ public record SprintTrendMetricsDto
     /// Total PBIs with missing effort.
     /// </summary>
     public int TotalMissingEffortCount { get; init; }
+
+    /// <summary>
+    /// Total planned PBIs with no resolved story-point estimate.
+    /// </summary>
+    public int TotalMissingStoryPointCount { get; init; }
+
+    /// <summary>
+    /// Total planned PBIs whose story points were derived from sibling estimates.
+    /// </summary>
+    public int TotalDerivedStoryPointCount { get; init; }
+
+    /// <summary>
+    /// Total derived story points used for planned scope sizing.
+    /// </summary>
+    public double TotalDerivedStoryPoints { get; init; }
+
+    /// <summary>
+    /// Total delivered PBIs without an authoritative story-point estimate.
+    /// </summary>
+    public int TotalUnestimatedDeliveryCount { get; init; }
 
     /// <summary>
     /// Whether any metric in this sprint used approximation.
@@ -132,6 +169,12 @@ public record ProductSprintMetricsDto
     public int PlannedEffort { get; init; }
 
     /// <summary>
+    /// Resolved story points for planned PBIs.
+    /// Includes real, fallback, and derived estimates.
+    /// </summary>
+    public double PlannedStoryPoints { get; init; }
+
+    /// <summary>
     /// Number of items with activity in this sprint-product.
     /// </summary>
     public int WorkedCount { get; init; }
@@ -162,6 +205,12 @@ public record ProductSprintMetricsDto
     public int CompletedPbiEffort { get; init; }
 
     /// <summary>
+    /// Delivered story points for completed PBIs in this sprint for this product.
+    /// Derived and missing estimates are excluded.
+    /// </summary>
+    public double CompletedPbiStoryPoints { get; init; }
+
+    /// <summary>
     /// Committed PBIs that spilled into the next sprint unfinished for this product.
     /// </summary>
     public int SpilloverCount { get; init; }
@@ -170,6 +219,11 @@ public record ProductSprintMetricsDto
     /// Effort of committed PBIs that spilled into the next sprint unfinished for this product.
     /// </summary>
     public int SpilloverEffort { get; init; }
+
+    /// <summary>
+    /// Resolved story points of committed PBIs that spilled into the next sprint unfinished for this product.
+    /// </summary>
+    public double SpilloverStoryPoints { get; init; }
 
     /// <summary>
     /// Progression delta for this product in this sprint.
@@ -190,6 +244,26 @@ public record ProductSprintMetricsDto
     /// PBIs with missing effort for this product.
     /// </summary>
     public int MissingEffortCount { get; init; }
+
+    /// <summary>
+    /// Planned PBIs with no resolved story-point estimate for this product.
+    /// </summary>
+    public int MissingStoryPointCount { get; init; }
+
+    /// <summary>
+    /// Planned PBIs whose story points were derived from sibling estimates for this product.
+    /// </summary>
+    public int DerivedStoryPointCount { get; init; }
+
+    /// <summary>
+    /// Aggregate derived story points used for planned scope sizing for this product.
+    /// </summary>
+    public double DerivedStoryPoints { get; init; }
+
+    /// <summary>
+    /// Delivered PBIs without an authoritative story-point estimate for this product.
+    /// </summary>
+    public int UnestimatedDeliveryCount { get; init; }
 
     /// <summary>
     /// Whether approximation was used for this product.

@@ -204,18 +204,25 @@ public class SprintTrendProjectionService
                 {
                     existing.PlannedCount = projection.PlannedCount;
                     existing.PlannedEffort = projection.PlannedEffort;
+                    existing.PlannedStoryPoints = projection.PlannedStoryPoints;
                     existing.WorkedCount = projection.WorkedCount;
                     existing.WorkedEffort = projection.WorkedEffort;
                     existing.BugsPlannedCount = projection.BugsPlannedCount;
                     existing.BugsWorkedCount = projection.BugsWorkedCount;
                     existing.CompletedPbiCount = projection.CompletedPbiCount;
                     existing.CompletedPbiEffort = projection.CompletedPbiEffort;
+                    existing.CompletedPbiStoryPoints = projection.CompletedPbiStoryPoints;
                     existing.SpilloverCount = projection.SpilloverCount;
                     existing.SpilloverEffort = projection.SpilloverEffort;
+                    existing.SpilloverStoryPoints = projection.SpilloverStoryPoints;
                     existing.ProgressionDelta = projection.ProgressionDelta;
                     existing.BugsCreatedCount = projection.BugsCreatedCount;
                     existing.BugsClosedCount = projection.BugsClosedCount;
                     existing.MissingEffortCount = projection.MissingEffortCount;
+                    existing.MissingStoryPointCount = projection.MissingStoryPointCount;
+                    existing.DerivedStoryPointCount = projection.DerivedStoryPointCount;
+                    existing.DerivedStoryPoints = projection.DerivedStoryPoints;
+                    existing.UnestimatedDeliveryCount = projection.UnestimatedDeliveryCount;
                     existing.IsApproximate = projection.IsApproximate;
                     existing.LastComputedAt = DateTimeOffset.UtcNow;
                     results.Add(existing);
@@ -254,6 +261,7 @@ public class SprintTrendProjectionService
         IReadOnlyDictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>>? stateEventsByWorkItem = null,
         IReadOnlyDictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>>? iterationEventsByWorkItem = null)
     {
+        var resolver = new CanonicalStoryPointResolutionService();
         var effectiveFirstDoneByWorkItem = firstDoneByWorkItem
             ?? FirstDoneDeliveryLookup.Build(
                 activityByWorkItem.Values.SelectMany(events => events),
@@ -309,6 +317,9 @@ public class SprintTrendProjectionService
         var completedPbiEffort = 0;
         var missingEffortCount = 0;
         var isApproximate = false;
+        var completedPbiStoryPoints = 0d;
+        var unestimatedDeliveryCount = 0;
+        var usedDerivedDeliveryEstimate = false;
 
         foreach (var pbi in pbiResolved)
         {
@@ -323,6 +334,26 @@ public class SprintTrendProjectionService
             {
                 completedPbiCount++;
                 completedPbiEffort += wi.Effort ?? 0;
+
+                var deliveredEstimate = ResolvePbiStoryPointEstimate(
+                    wi,
+                    pbiResolved
+                        .Where(r => r.ResolvedFeatureId == pbi.ResolvedFeatureId)
+                        .Select(r => workItemsByTfsId.GetValueOrDefault(r.WorkItemId))
+                        .OfType<WorkItemEntity>()
+                        .ToList(),
+                    stateLookup,
+                    resolver);
+
+                if (IsVelocityStoryPointEstimate(deliveredEstimate))
+                {
+                    completedPbiStoryPoints += deliveredEstimate.Value ?? 0d;
+                }
+                else
+                {
+                    unestimatedDeliveryCount++;
+                    usedDerivedDeliveryEstimate |= deliveredEstimate.Source == StoryPointEstimateSource.Derived;
+                }
             }
 
             if (wi.Effort == null)
@@ -437,9 +468,28 @@ public class SprintTrendProjectionService
             .Select(r => workItemsByTfsId.GetValueOrDefault(r.WorkItemId))
             .Where(w => w != null)
             .ToList();
+        var plannedStoryPointMetrics = plannedPbis
+            .Select(w => ResolveProjectionStoryPointMetrics(w!, pbiResolved, workItemsByTfsId, stateLookup, resolver))
+            .ToList();
+        var spilloverStoryPoints = spilloverPbis
+            .Select(w => ResolveProjectionStoryPointMetrics(w!, pbiResolved, workItemsByTfsId, stateLookup, resolver))
+            .Where(metric => metric.Estimate.HasValue)
+            .Sum(metric => metric.Estimate.Value ?? 0d);
         var plannedBugs = productResolved
             .Count(r => r.WorkItemType == WorkItemType.Bug
                 && (committedWorkItemIds?.Contains(r.WorkItemId) ?? r.ResolvedSprintId == sprint.Id));
+
+        var derivedStoryPointCount = plannedStoryPointMetrics.Count(metric => metric.Estimate.Source == StoryPointEstimateSource.Derived);
+        var derivedStoryPoints = plannedStoryPointMetrics
+            .Where(metric => metric.Estimate.Source == StoryPointEstimateSource.Derived)
+            .Sum(metric => metric.Estimate.Value ?? 0d);
+        var missingStoryPointCount = plannedStoryPointMetrics.Count(metric => metric.Estimate.Source == StoryPointEstimateSource.Missing);
+        var plannedStoryPoints = plannedStoryPointMetrics
+            .Where(metric => metric.Estimate.HasValue)
+            .Sum(metric => metric.Estimate.Value ?? 0d);
+        isApproximate = isApproximate
+            || derivedStoryPointCount > 0
+            || usedDerivedDeliveryEstimate;
 
         return new SprintMetricsProjectionEntity
         {
@@ -447,6 +497,7 @@ public class SprintTrendProjectionService
             ProductId = productId,
             PlannedCount = plannedPbis.Count,
             PlannedEffort = plannedPbis.Sum(w => w!.Effort ?? 0),
+            PlannedStoryPoints = plannedStoryPoints,
             WorkedCount = workedItemIds.Count,
             WorkedEffort = workedItemIds
                 .Select(id => workItemsByTfsId.GetValueOrDefault(id))
@@ -456,12 +507,18 @@ public class SprintTrendProjectionService
             BugsWorkedCount = bugsWorkedOn,
             CompletedPbiCount = completedPbiCount,
             CompletedPbiEffort = completedPbiEffort,
+            CompletedPbiStoryPoints = completedPbiStoryPoints,
             SpilloverCount = spilloverPbis.Count,
             SpilloverEffort = spilloverPbis.Sum(w => w!.Effort ?? 0),
+            SpilloverStoryPoints = spilloverStoryPoints,
             ProgressionDelta = progressionDelta,
             BugsCreatedCount = bugsCreated,
             BugsClosedCount = bugsClosed,
             MissingEffortCount = missingEffortCount,
+            MissingStoryPointCount = missingStoryPointCount,
+            DerivedStoryPointCount = derivedStoryPointCount,
+            DerivedStoryPoints = derivedStoryPoints,
+            UnestimatedDeliveryCount = unestimatedDeliveryCount,
             IsApproximate = isApproximate,
             IncludedUpToRevisionId = 0
         };
@@ -575,6 +632,32 @@ public class SprintTrendProjectionService
             candidates));
     }
 
+    private static ProjectionStoryPointMetrics ResolveProjectionStoryPointMetrics(
+        WorkItemEntity pbi,
+        IReadOnlyList<ResolvedWorkItemEntity> pbiResolved,
+        IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
+        ICanonicalStoryPointResolutionService storyPointResolutionService)
+    {
+        var resolvedPbi = pbiResolved.FirstOrDefault(r => r.WorkItemId == pbi.TfsId);
+        var featureId = resolvedPbi?.ResolvedFeatureId ?? pbi.ParentTfsId;
+        var featurePbis = pbiResolved
+            .Where(r => r.ResolvedFeatureId == featureId)
+            .Select(r => workItemsByTfsId.GetValueOrDefault(r.WorkItemId))
+            .OfType<WorkItemEntity>()
+            .ToList();
+
+        return new ProjectionStoryPointMetrics(
+            ResolvePbiStoryPointEstimate(pbi, featurePbis, stateLookup, storyPointResolutionService));
+    }
+
+    private static bool IsVelocityStoryPointEstimate(ResolvedStoryPointEstimate estimate)
+    {
+        return estimate.HasValue
+            && estimate.Source is not StoryPointEstimateSource.Missing
+            && estimate.Source is not StoryPointEstimateSource.Derived;
+    }
+
     private static ResolvedStoryPointEstimate ResolveParentFallbackEstimate(
         WorkItemEntity workItem,
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
@@ -614,6 +697,9 @@ public class SprintTrendProjectionService
     {
         public static ScopeRollup Empty => new(0d, 0d);
     }
+
+    private readonly record struct ProjectionStoryPointMetrics(
+        ResolvedStoryPointEstimate Estimate);
 
     private static bool IsChildOf(
         ResolvedWorkItemEntity candidate,

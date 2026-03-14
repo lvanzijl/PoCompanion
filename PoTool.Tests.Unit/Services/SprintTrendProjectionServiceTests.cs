@@ -67,6 +67,104 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
+    public void ComputeProductSprintProjection_StoresStoryPointTotalsSeparatelyFromEffort()
+    {
+        var sprint = CreateSprint(1, "Sprint 1");
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1, ResolvedSprintId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100, ResolvedSprintId = 1 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100, ResolvedSprintId = 1 }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "Delivered PBI", effort: 40, state: "Done", parentId: 100, storyPoints: 8),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "Planned PBI", effort: 20, state: "Active", parentId: 100, storyPoints: 5)
+        };
+
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [201] = new()
+            {
+                CreateStateChangeActivity(201, sprintStart.AddDays(1), "Active", "Done")
+            }
+        };
+
+        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
+
+        Assert.AreEqual(60, projection.PlannedEffort, "Effort totals should continue to use effort hours.");
+        Assert.AreEqual(13d, projection.PlannedStoryPoints, 0.001d, "Story-point totals should be stored independently from effort.");
+        Assert.AreEqual(40, projection.CompletedPbiEffort, "Completed effort should remain effort-based.");
+        Assert.AreEqual(8d, projection.CompletedPbiStoryPoints, 0.001d, "Delivered story points should reflect canonical story-point values.");
+        Assert.AreEqual(0, projection.UnestimatedDeliveryCount, "Authoritatively estimated delivery should not count as unestimated.");
+    }
+
+    [TestMethod]
+    public void ComputeProductSprintProjection_PreservesDerivedStoryPointDiagnostics()
+    {
+        var sprint = CreateSprint(1, "Sprint 1");
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1, ResolvedSprintId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100, ResolvedSprintId = 1 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100, ResolvedSprintId = 1 }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "Estimated PBI", effort: 50, state: "Done", parentId: 100, storyPoints: 5),
+            [202] = new WorkItemEntity
+            {
+                TfsId = 202,
+                Type = WorkItemType.Pbi,
+                Title = "Derived PBI",
+                Effort = null,
+                StoryPoints = null,
+                BusinessValue = null,
+                State = "Done",
+                ParentTfsId = 100,
+                AreaPath = "\\Project",
+                IterationPath = "\\Project\\Sprint 1",
+                RetrievedAt = DateTimeOffset.UtcNow,
+                TfsChangedDate = DateTimeOffset.UtcNow
+            }
+        };
+
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [201] = new()
+            {
+                CreateStateChangeActivity(201, sprintStart.AddDays(1), "Active", "Done")
+            },
+            [202] = new()
+            {
+                CreateStateChangeActivity(202, sprintStart.AddDays(2), "Active", "Done")
+            }
+        };
+
+        var projection = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
+
+        Assert.AreEqual(10d, projection.PlannedStoryPoints, 0.001d, "Planned story points should include derived estimates for aggregation.");
+        Assert.AreEqual(1, projection.DerivedStoryPointCount, "Derived planned PBIs should be counted separately.");
+        Assert.AreEqual(5d, projection.DerivedStoryPoints, 0.001d, "Derived story points should preserve their aggregate value.");
+        Assert.AreEqual(0, projection.MissingStoryPointCount, "Derived estimates should not remain in the missing bucket.");
+        Assert.AreEqual(5d, projection.CompletedPbiStoryPoints, 0.001d, "Velocity-aligned delivery should exclude derived estimates.");
+        Assert.AreEqual(1, projection.UnestimatedDeliveryCount, "Derived deliveries should be surfaced as unestimated delivery.");
+        Assert.IsTrue(projection.IsApproximate, "Derived estimates should keep the projection flagged as approximate.");
+    }
+
+    [TestMethod]
     public void ComputeProductSprintProjection_MissingEffort_SiblingAverageApproximation()
     {
         // Arrange: 3 PBIs, one with missing effort
