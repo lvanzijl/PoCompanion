@@ -105,6 +105,7 @@ public class SprintTrendProjectionService
         // Batch-load all activity events for the full date range across all sprints
         var rangeStartUtc = validSprints.Min(s => DateTime.SpecifyKind(s.StartDateUtc!.Value, DateTimeKind.Utc));
         var rangeEndUtc = validSprints.Max(s => DateTime.SpecifyKind(s.EndDateUtc!.Value, DateTimeKind.Utc));
+        var stateHistoryCutoffUtc = DateTime.UtcNow;
 
         var allActivityEvents = await context.ActivityEventLedgerEntries
             .AsNoTracking()
@@ -117,6 +118,7 @@ public class SprintTrendProjectionService
             .AsNoTracking()
             .Where(e => e.ProductOwnerId == productOwnerId
                 && e.FieldRefName == "System.State"
+                && e.EventTimestampUtc <= stateHistoryCutoffUtc
                 && resolvedWorkItemIds.Contains(e.WorkItemId))
             .ToListAsync(cancellationToken);
 

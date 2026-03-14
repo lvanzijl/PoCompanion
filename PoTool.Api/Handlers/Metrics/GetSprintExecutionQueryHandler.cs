@@ -129,6 +129,7 @@ public sealed class GetSprintExecutionQueryHandler
         var iterationEvents = new List<ActivityEventLedgerEntryEntity>();
         var iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>>();
         var stateEventsByWorkItem = new Dictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>>();
+        var stateHistoryCutoffUtc = DateTime.UtcNow;
         var workItemTypesById = relevantWorkItemsById.ToDictionary(pair => pair.Key, pair => pair.Value.Type);
         var currentStatesById = relevantWorkItemsById.ToDictionary(pair => pair.Key, pair => (string?)pair.Value.State);
 
@@ -138,6 +139,7 @@ public sealed class GetSprintExecutionQueryHandler
                 .AsNoTracking()
                 .Where(e => e.ProductOwnerId == query.ProductOwnerId
                             && e.FieldRefName == "System.State"
+                            && e.EventTimestampUtc <= stateHistoryCutoffUtc
                             && resolvedWorkItemIds.Contains(e.WorkItemId))
                 .ToListAsync(cancellationToken);
 
