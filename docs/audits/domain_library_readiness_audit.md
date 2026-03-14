@@ -159,13 +159,13 @@ Extraction therefore appears **feasible with targeted boundary refactors, not wi
 
 ## Fix Progress — Coherent Domain Surface for Sprint History
 
-- Grouped the canonical sprint-history helpers into `PoTool.Core/Domain/Sprints` so the domain surface now collects:
+- Grouped the canonical sprint-history helpers into `PoTool.Core.Domain/Domain/Sprints` so the domain surface now collects:
   - `SprintCommitmentLookup`
   - `FirstDoneDeliveryLookup`
   - `SprintSpilloverLookup`
   - `StateClassificationLookup`
   - `StateReconstructionLookup`
-- Reduced API coupling by moving the fallback state-classification source into `PoTool.Core/Domain/Sprints/StateClassificationDefaults.cs`; the helper group no longer depends on `PoTool.Api.Services.WorkItemStateClassificationService`.
+- Reduced API coupling by moving the fallback state-classification source into `PoTool.Core.Domain/Domain/Sprints/StateClassificationDefaults.cs`; the helper group no longer depends on `PoTool.Api.Services.WorkItemStateClassificationService`.
 - Updated existing API consumers to use the Core domain helper namespace without changing reconstruction semantics:
   - `GetSprintMetricsQueryHandler`
   - `GetSprintExecutionQueryHandler`
@@ -223,7 +223,7 @@ Extraction therefore appears **feasible with targeted boundary refactors, not wi
 ### Summary of improvements
 
 - **Canonical sprint-history helpers are now extraction-safe domain code.**  
-  `PoTool.Core/Domain/Sprints/SprintCommitmentLookup.cs`, `FirstDoneDeliveryLookup.cs`, `SprintSpilloverLookup.cs`, `StateClassificationLookup.cs`, and `StateReconstructionLookup.cs` now operate on `WorkItemSnapshot`, `SprintDefinition`, and `FieldChangeEvent` from `PoTool.Core/Metrics/Models/HistoricalSprintInputs.cs` instead of `PoTool.Api.Persistence.Entities`.
+  `PoTool.Core.Domain/Domain/Sprints/SprintCommitmentLookup.cs`, `FirstDoneDeliveryLookup.cs`, `SprintSpilloverLookup.cs`, `StateClassificationLookup.cs`, and `StateReconstructionLookup.cs` now operate on `WorkItemSnapshot`, `SprintDefinition`, and `FieldChangeEvent` from `PoTool.Core.Domain/Models/HistoricalSprintInputs.cs` instead of `PoTool.Api.Persistence.Entities`.
 
 - **API persistence translation is isolated at the boundary.**  
   `PoTool.Api/Services/HistoricalSprintInputMapper.cs` keeps `WorkItemEntity`, `SprintEntity`, `ActivityEventLedgerEntryEntity`, and DTO translation in the API layer, so the canonical sprint helpers no longer need API or EF types to run.
@@ -279,7 +279,21 @@ The repository now satisfies the target CDC readiness conditions for the canonic
 
 Create the CDC package and move the canonical services into it:
 
-- `PoTool.Core/Domain/Sprints/*`
+- `PoTool.Core.Domain/Domain/Sprints/*`
+
+## CDC Extraction Progress — Sprint Domain Services Moved
+
+- **Services moved:**  
+  `SprintCommitmentLookup`, `FirstDoneDeliveryLookup`, `SprintSpilloverLookup`, `StateClassificationLookup`, `StateReconstructionLookup`, and supporting fallback mappings in `StateClassificationDefaults` now physically live under `PoTool.Core.Domain/Domain/Sprints`.
+
+- **Consumers updated:**  
+  `GetSprintMetricsQueryHandler`, `GetSprintExecutionQueryHandler`, `SprintTrendProjectionService`, and `WorkItemStateClassificationService` continue consuming the same `PoTool.Core.Domain.Sprints` namespace, so no behavior change was required when the files moved into the CDC assembly.
+
+- **DI updated:**  
+  `PoTool.Core.Domain/PoTool.Core.Domain.csproj` now references `PoTool.Shared` so the moved CDC services can keep using `WorkItemStateClassificationDto` without leaking API dependencies. No additional runtime DI registrations were required because the moved sprint helpers remain static domain services.
+
+- **Tests passing:**  
+  Verified with `dotnet restore PoTool.sln`, `dotnet build PoTool.sln --no-restore`, and `dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~HistoricalSprintLookupTests|FullyQualifiedName~HistoricalSprintInputMapperTests|FullyQualifiedName~GetSprintMetricsQueryHandlerTests|FullyQualifiedName~GetSprintExecutionQueryHandlerTests|FullyQualifiedName~SprintTrendProjectionServiceTests|FullyQualifiedName~ServiceCollectionTests" -v minimal`.
 - `PoTool.Core/Metrics/Models/HistoricalSprintInputs.cs`
 - `PoTool.Core/Metrics/Services/CanonicalStoryPointResolutionService.cs`
 - `PoTool.Core/Metrics/Services/SprintExecutionMetricsCalculator.cs`
