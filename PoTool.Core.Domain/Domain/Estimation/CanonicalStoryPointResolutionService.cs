@@ -1,7 +1,7 @@
 using PoTool.Core.Domain.Models;
-using PoTool.Core.WorkItems;
+using PoTool.Core.Domain.WorkItems;
 
-namespace PoTool.Core.Metrics.Services;
+namespace PoTool.Core.Domain.Estimation;
 
 /// <summary>
 /// Resolves canonical story point estimates using the domain estimation rules.
@@ -108,7 +108,7 @@ public sealed class CanonicalStoryPointResolutionService : ICanonicalStoryPointR
 
     private static ResolvedStoryPointEstimate ResolveDirect(CanonicalWorkItem workItem, bool isDone)
     {
-        if (!IsAuthoritativePbi(workItem.WorkItemType))
+        if (!CanonicalWorkItemTypes.IsAuthoritativePbi(workItem.WorkItemType))
         {
             return MissingEstimate;
         }
@@ -136,7 +136,7 @@ public sealed class CanonicalStoryPointResolutionService : ICanonicalStoryPointR
 
     private static ResolvedStoryPointEstimate? TryResolveDerived(StoryPointResolutionRequest request)
     {
-        if (!IsAuthoritativePbi(request.WorkItem.WorkItemType) || request.WorkItem.ParentWorkItemId == null)
+        if (!CanonicalWorkItemTypes.IsAuthoritativePbi(request.WorkItem.WorkItemType) || request.WorkItem.ParentWorkItemId == null)
         {
             return null;
         }
@@ -149,7 +149,7 @@ public sealed class CanonicalStoryPointResolutionService : ICanonicalStoryPointR
         var siblingEstimates = request.FeaturePbis
             .Where(candidate => candidate.WorkItem.WorkItemId != request.WorkItem.WorkItemId)
             .Where(candidate => candidate.WorkItem.ParentWorkItemId == request.WorkItem.ParentWorkItemId)
-            .Where(candidate => IsAuthoritativePbi(candidate.WorkItem.WorkItemType))
+            .Where(candidate => CanonicalWorkItemTypes.IsAuthoritativePbi(candidate.WorkItem.WorkItemType))
             .Select(candidate => ResolveDirect(candidate.WorkItem, candidate.IsDone))
             .Where(estimate => estimate.HasValue)
             .Select(estimate => estimate.Value!.Value)
@@ -163,12 +163,5 @@ public sealed class CanonicalStoryPointResolutionService : ICanonicalStoryPointR
         return new ResolvedStoryPointEstimate(
             siblingEstimates.Average(),
             StoryPointEstimateSource.Derived);
-    }
-
-    private static bool IsAuthoritativePbi(string workItemType)
-    {
-        return workItemType.Equals(WorkItemType.Pbi, StringComparison.OrdinalIgnoreCase)
-            || workItemType.Equals(WorkItemType.PbiShort, StringComparison.OrdinalIgnoreCase)
-            || workItemType.Equals(WorkItemType.UserStory, StringComparison.OrdinalIgnoreCase);
     }
 }

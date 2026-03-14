@@ -1,4 +1,4 @@
-using PoTool.Core.Metrics.Services;
+using PoTool.Core.Domain.Metrics;
 
 namespace PoTool.Tests.Unit.Services;
 

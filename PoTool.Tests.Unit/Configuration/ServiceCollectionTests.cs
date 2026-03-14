@@ -10,7 +10,9 @@ using PoTool.Api.Configuration;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
-using PoTool.Core.Metrics.Services;
+using PoTool.Core.Domain.Estimation;
+using PoTool.Core.Domain.Hierarchy;
+using PoTool.Core.Domain.Metrics;
 
 namespace PoTool.Tests.Unit.Configuration;
 

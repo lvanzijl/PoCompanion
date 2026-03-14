@@ -1,7 +1,8 @@
 using PoTool.Core.Domain.Models;
-using PoTool.Core.WorkItems;
+using PoTool.Core.Domain.Estimation;
+using PoTool.Core.Domain.WorkItems;
 
-namespace PoTool.Core.Metrics.Services;
+namespace PoTool.Core.Domain.Hierarchy;
 
 /// <summary>
 /// Computes canonical hierarchy story-point rollups for Features and Epics.
@@ -57,7 +58,7 @@ public sealed class HierarchyRollupService : IHierarchyRollupService
             .Where(candidate => candidate.ParentWorkItemId == workItem.WorkItemId)
             .ToList();
 
-        if (IsFeature(workItem.WorkItemType))
+        if (CanonicalWorkItemTypes.IsFeature(workItem.WorkItemType))
         {
             return RollupFeatureScope(workItem, isDone, directChildren, doneByWorkItemId);
         }
@@ -65,7 +66,7 @@ public sealed class HierarchyRollupService : IHierarchyRollupService
         var totalScope = 0d;
         var completedScope = 0d;
 
-        foreach (var childFeature in directChildren.Where(child => IsFeature(child.WorkItemType)))
+        foreach (var childFeature in directChildren.Where(child => CanonicalWorkItemTypes.IsFeature(child.WorkItemType)))
         {
             var childScope = RollupCanonicalScope(childFeature, allWorkItems, doneByWorkItemId);
             totalScope += childScope.Total;
@@ -73,7 +74,7 @@ public sealed class HierarchyRollupService : IHierarchyRollupService
         }
 
         var directPbis = directChildren
-            .Where(child => IsAuthoritativePbi(child.WorkItemType))
+            .Where(child => CanonicalWorkItemTypes.IsAuthoritativePbi(child.WorkItemType))
             .ToList();
         if (directPbis.Count > 0)
         {
@@ -97,7 +98,7 @@ public sealed class HierarchyRollupService : IHierarchyRollupService
         IReadOnlyDictionary<int, bool> doneByWorkItemId)
     {
         var featurePbis = directChildren
-            .Where(child => IsAuthoritativePbi(child.WorkItemType))
+            .Where(child => CanonicalWorkItemTypes.IsAuthoritativePbi(child.WorkItemType))
             .ToList();
 
         var scope = RollupPbiChildren(featurePbis, doneByWorkItemId);
@@ -161,17 +162,5 @@ public sealed class HierarchyRollupService : IHierarchyRollupService
 
         var fallbackValue = fallbackEstimate.Value.GetValueOrDefault();
         return new HierarchyScopeRollup(fallbackValue, isDone ? fallbackValue : 0d);
-    }
-
-    private static bool IsFeature(string workItemType)
-    {
-        return workItemType.Equals(WorkItemType.Feature, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsAuthoritativePbi(string workItemType)
-    {
-        return workItemType.Equals(WorkItemType.Pbi, StringComparison.OrdinalIgnoreCase)
-            || workItemType.Equals(WorkItemType.PbiShort, StringComparison.OrdinalIgnoreCase)
-            || workItemType.Equals(WorkItemType.UserStory, StringComparison.OrdinalIgnoreCase);
     }
 }

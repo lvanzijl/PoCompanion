@@ -1,5 +1,5 @@
 using PoTool.Core.Domain.Models;
-using PoTool.Core.Metrics.Services;
+using PoTool.Core.Domain.Estimation;
 using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;

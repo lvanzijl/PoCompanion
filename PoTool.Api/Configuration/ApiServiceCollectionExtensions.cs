@@ -14,7 +14,9 @@ using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems.Validators.Rules;
 using PoTool.Core.WorkItems.Filtering;
 using PoTool.Core.Health;
-using PoTool.Core.Metrics.Services;
+using PoTool.Core.Domain.Estimation;
+using PoTool.Core.Domain.Hierarchy;
+using PoTool.Core.Domain.Metrics;
 using PoTool.Client.Services;
 
 namespace PoTool.Api.Configuration;

@@ -1,4 +1,4 @@
-namespace PoTool.Core.Metrics.Services;
+namespace PoTool.Core.Domain.Metrics;
 
 /// <summary>
 /// Calculates canonical sprint execution story-point metrics from reconstructed totals.
