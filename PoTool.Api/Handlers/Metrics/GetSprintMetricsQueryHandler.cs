@@ -98,7 +98,10 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         var relevantWorkItems = allWorkItems
             .ToList();
 
-        var currentIterationPathsById = relevantWorkItems.ToDictionary(wi => wi.TfsId, wi => (string?)wi.IterationPath);
+        IReadOnlyDictionary<int, string?> currentIterationPathsById = relevantWorkItems
+            .ToDictionary(
+                wi => wi.TfsId,
+                wi => string.IsNullOrWhiteSpace(wi.IterationPath) ? null : wi.IterationPath);
         var workItemTypesById = relevantWorkItems.ToDictionary(wi => wi.TfsId, wi => wi.Type);
         var workItemIds = relevantWorkItems.Select(wi => wi.TfsId).ToArray();
         var sprintStart = matchingSprint.StartUtc.Value;
