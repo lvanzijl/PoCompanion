@@ -71,6 +71,11 @@ public class WorkItemEntity
     public int? Effort { get; set; }
 
     /// <summary>
+    /// Story point estimate from TFS (Microsoft.VSTS.Scheduling.StoryPoints).
+    /// </summary>
+    public int? StoryPoints { get; set; }
+
+    /// <summary>
     /// Business value from TFS (Microsoft.VSTS.Common.BusinessValue).
     /// </summary>
     public int? BusinessValue { get; set; }

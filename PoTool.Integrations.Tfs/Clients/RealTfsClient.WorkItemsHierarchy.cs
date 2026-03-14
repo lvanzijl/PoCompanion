@@ -285,16 +285,17 @@ public partial class RealTfsClient
 
             var parentId = relationsMap.TryGetValue(id, out var pid) ? pid : null;
             int? effort = ParseEffortField(fields);
+            int? storyPoints = ParseStoryPointsField(fields);
             int? businessValue = ParseBusinessValueField(fields);
             DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
-             DateTimeOffset? changedDate = ParseDateTimeField(fields, "System.ChangedDate");
-             DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
-             string? severity = ParseSeverityField(fields);
-             string? tags = ParseTagsField(fields);
-             double? backlogPriority = ParseBacklogPriorityField(fields);
+            DateTimeOffset? changedDate = ParseDateTimeField(fields, "System.ChangedDate");
+            DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
+            string? severity = ParseSeverityField(fields);
+            string? tags = ParseTagsField(fields);
+            double? backlogPriority = ParseBacklogPriorityField(fields);
 
-             results.Add(new WorkItemDto(
-                 TfsId: id,
+            results.Add(new WorkItemDto(
+                TfsId: id,
                 Type: type,
                 Title: title,
                 ParentTfsId: parentId,
@@ -305,13 +306,14 @@ public partial class RealTfsClient
                 Effort: effort,
                 BusinessValue: businessValue,
                 Description: description,
-                 CreatedDate: createdDate,
-                 ClosedDate: closedDate,
-                 Severity: severity,
-                 Tags: tags,
-                 ChangedDate: changedDate,
-                 BacklogPriority: backlogPriority
-             ));
+                CreatedDate: createdDate,
+                ClosedDate: closedDate,
+                Severity: severity,
+                Tags: tags,
+                ChangedDate: changedDate,
+                BacklogPriority: backlogPriority,
+                StoryPoints: storyPoints
+            ));
          }
 
          var batchElapsed = DateTimeOffset.UtcNow - batchStartTime;
@@ -443,21 +445,20 @@ public partial class RealTfsClient
     /// </summary>
     private static int? ParseEffortField(JsonElement fields)
     {
-        // Try Microsoft.VSTS.Scheduling.Effort first
-        if (fields.TryGetProperty(TfsFieldEffort, out var effortField))
-        {
-            var parsed = ParseNumericValue(effortField);
-            if (parsed.HasValue)
-                return parsed;
-        }
+        return fields.TryGetProperty(TfsFieldEffort, out var effortField)
+            ? ParseNumericValue(effortField)
+            : null;
+    }
 
-        // Fall back to Microsoft.VSTS.Scheduling.StoryPoints
-        if (fields.TryGetProperty(TfsFieldStoryPoints, out var storyPoints))
-        {
-            return ParseNumericValue(storyPoints);
-        }
-
-        return null;
+    /// <summary>
+    /// Parses story points from work item fields with robust type handling.
+    /// Handles int, double, and string values safely.
+    /// </summary>
+    private static int? ParseStoryPointsField(JsonElement fields)
+    {
+        return fields.TryGetProperty(TfsFieldStoryPoints, out var storyPointsField)
+            ? ParseNumericValue(storyPointsField)
+            : null;
     }
 
     /// <summary>

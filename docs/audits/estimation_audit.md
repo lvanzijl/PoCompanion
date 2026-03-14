@@ -88,3 +88,35 @@ The repository has some correct estimation foundations. TFS retrieval already re
 3. Implement shared derived-estimate handling with fractional values and explicit derived markers.
 4. Update feature/epic rollups and forecasting to use the canonical story-point/effort rules instead of descendant-effort shortcuts.
 5. Extend unit tests around sprint metrics, trend projections, and forecasting to lock in the canonical estimation behavior.
+
+## Fix Progress — First-Class StoryPoints Foundation
+
+- **Files changed**
+  - `PoTool.Shared/WorkItems/WorkItemDto.cs`
+  - `PoTool.Shared/WorkItems/WorkItemWithValidationDto.cs`
+  - `PoTool.Api/Persistence/Entities/WorkItemEntity.cs`
+  - `PoTool.Api/Repositories/WorkItemRepository.cs`
+  - `PoTool.Api/Handlers/WorkItems/GetAllWorkItemsWithValidationQueryHandler.cs`
+  - `PoTool.Api/Handlers/WorkItems/GetWorkItemByIdWithValidationQueryHandler.cs`
+  - `PoTool.Integrations.Tfs/Clients/RealTfsClient.WorkItems.cs`
+  - `PoTool.Integrations.Tfs/Clients/RealTfsClient.WorkItemsHierarchy.cs`
+  - `PoTool.Integrations.Tfs/Clients/RealTfsClient.WorkItemsUpdate.cs`
+  - `PoTool.Tests.Unit/Test1.cs`
+  - `PoTool.Tests.Unit/WorkItemRepositoryTests.cs`
+  - `PoTool.Tests.Unit/TfsClientTests.cs`
+
+- **Model changes**
+  - Added `StoryPoints` as a first-class nullable field on `WorkItemDto`, `WorkItemWithValidationDto`, and `WorkItemEntity`.
+  - Kept `Effort` as a separate hours field.
+  - Kept `BusinessValue` as an independent raw source field for later canonical resolution.
+
+- **Ingestion changes**
+  - TFS ingestion now parses `Microsoft.VSTS.Scheduling.StoryPoints` into `StoryPoints`.
+  - `Effort` parsing no longer falls back to `StoryPoints`, so hours and story points remain separate.
+  - Repository and validation DTO mapping now preserve `StoryPoints` end to end.
+
+- **Tests added**
+  - `WorkItemDto_PreservesSeparateStoryPointsField`
+  - `UpsertManyAsync_PreservesStoryPointsSeparatelyFromEffortAndBusinessValue`
+  - `GetWorkItemsAsync_PreservesStoryPointsEffortAndBusinessValueSeparately`
+  - `GetWorkItemsByRootIdsAsync_DoesNotFallbackStoryPointsIntoEffort`

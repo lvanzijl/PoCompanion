@@ -605,6 +605,99 @@ public class TfsClientTests
         Assert.HasCount(3, results, "All items should be processed");
     }
 
+    [TestMethod]
+    public async Task GetWorkItemsAsync_PreservesStoryPointsEffortAndBusinessValueSeparately()
+    {
+        await _configService.SaveConfigAsync(
+            "https://dev.azure.com/testorg",
+            "TestProject",
+            "TestProject\\Team",
+            true);
+
+        var wiqlResponse = new
+        {
+            workItems = new[] { new { id = 42 } }
+        };
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(wiqlResponse));
+
+        var workItemsResponse = new
+        {
+            count = 1,
+            value = new object[]
+            {
+                new Dictionary<string, object>
+                {
+                    ["id"] = 42,
+                    ["fields"] = new Dictionary<string, object>
+                    {
+                        ["System.WorkItemType"] = "Product Backlog Item",
+                        ["System.Title"] = "Separate estimate fields",
+                        ["System.State"] = "Active",
+                        ["System.AreaPath"] = "TestProject",
+                        ["System.IterationPath"] = "Sprint 1",
+                        ["Microsoft.VSTS.Scheduling.Effort"] = 13,
+                        ["Microsoft.VSTS.Scheduling.StoryPoints"] = 8,
+                        ["Microsoft.VSTS.Common.BusinessValue"] = 21
+                    }
+                }
+            }
+        };
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(workItemsResponse));
+
+        var results = (await _client.GetWorkItemsAsync("TestProject")).ToList();
+
+        Assert.HasCount(1, results);
+        Assert.AreEqual(13, results[0].Effort);
+        Assert.AreEqual(8, results[0].StoryPoints);
+        Assert.AreEqual(21, results[0].BusinessValue);
+    }
+
+    [TestMethod]
+    public async Task GetWorkItemsByRootIdsAsync_DoesNotFallbackStoryPointsIntoEffort()
+    {
+        await _configService.SaveConfigAsync(
+            "https://dev.azure.com/testorg",
+            "TestProject",
+            "TestProject\\Team",
+            true);
+
+        var recursiveHierarchyResponse = new
+        {
+            workItemRelations = Array.Empty<object>()
+        };
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(recursiveHierarchyResponse));
+
+        var fieldsResponse = new
+        {
+            count = 1,
+            value = new object[]
+            {
+                new Dictionary<string, object>
+                {
+                    ["id"] = 501,
+                    ["fields"] = new Dictionary<string, object>
+                    {
+                        ["System.WorkItemType"] = "Product Backlog Item",
+                        ["System.Title"] = "Hierarchy estimate fields",
+                        ["System.State"] = "Active",
+                        ["System.AreaPath"] = "TestProject",
+                        ["System.IterationPath"] = "Sprint 1",
+                        ["Microsoft.VSTS.Scheduling.StoryPoints"] = 3,
+                        ["Microsoft.VSTS.Common.BusinessValue"] = 5
+                    }
+                }
+            }
+        };
+        SetupHttpResponse(HttpStatusCode.OK, JsonSerializer.Serialize(fieldsResponse));
+
+        var results = (await _client.GetWorkItemsByRootIdsAsync(new[] { 501 })).ToList();
+
+        Assert.HasCount(1, results);
+        Assert.IsNull(results[0].Effort);
+        Assert.AreEqual(3, results[0].StoryPoints);
+        Assert.AreEqual(5, results[0].BusinessValue);
+    }
+
     private int _responseIndex = 0;
     private readonly List<(HttpStatusCode statusCode, string content)> _responses = new();
 
