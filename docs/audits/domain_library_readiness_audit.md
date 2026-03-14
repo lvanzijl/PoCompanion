@@ -257,6 +257,20 @@ Extraction therefore appears **feasible with targeted boundary refactors, not wi
 
 **Mostly ready with minor cleanup**
 
+## CDC Extraction Progress — Domain Models Moved
+
+- Created the pure domain project `PoTool.Core.Domain/PoTool.Core.Domain.csproj` and added it to `PoTool.sln`.
+- Moved the canonical domain input models into the CDC package:
+  - `PoTool.Core.Domain/Models/HistoricalSprintInputs.cs`
+    - `WorkItemSnapshot`
+    - `SprintDefinition`
+    - `FieldChangeEvent`
+  - `PoTool.Core.Domain/Models/CanonicalWorkItem.cs`
+- Updated Core, API, and unit-test references/usings so canonical domain model consumption now flows through `PoTool.Core.Domain.Models`, while API mappers remain in the API layer.
+- Tests passing:
+  - `dotnet build PoTool.sln --no-restore`
+  - `dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~HistoricalSprintInputMapperTests|FullyQualifiedName~HistoricalSprintLookupTests|FullyQualifiedName~CanonicalStoryPointResolutionServiceTests|FullyQualifiedName~HierarchyRollupServiceTests|FullyQualifiedName~GetSprintExecutionQueryHandlerTests|FullyQualifiedName~GetEpicCompletionForecastQueryHandlerTests|FullyQualifiedName~ServiceCollectionTests|FullyQualifiedName~SprintTrendProjectionServiceTests" -v minimal`
+
 **Outcome: CDC extraction ready after minor cleanup**
 
 The repository now satisfies the target CDC readiness conditions for the canonical sprint helpers, sprint execution formulas, hierarchy rollup service, DTO boundaries, and DI consumption. Extraction to `PoTool.Core.Domain` or `PoTool.Domain` is now feasible without redesign; the remaining work is packaging and boundary cleanup, not another round of semantic refactoring.

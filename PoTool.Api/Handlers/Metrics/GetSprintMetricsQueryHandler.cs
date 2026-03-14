@@ -5,7 +5,7 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Domain.Sprints;
-using PoTool.Core.Metrics.Models;
+using PoTool.Core.Domain.Models;
 using PoTool.Core.Metrics.Services;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;

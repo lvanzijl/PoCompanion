@@ -1,5 +1,5 @@
 using PoTool.Core.Domain.Sprints;
-using PoTool.Core.Metrics.Models;
+using PoTool.Core.Domain.Models;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Settings;
 

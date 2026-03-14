@@ -1,6 +1,6 @@
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
-using PoTool.Core.Metrics.Models;
+using PoTool.Core.Domain.Models;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;

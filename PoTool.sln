@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Integrations.Tfs", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Tools.TfsRetrievalValidator", "PoTool.Tools.TfsRetrievalValidator\PoTool.Tools.TfsRetrievalValidator.csproj", "{3E0A9750-943A-40A5-B729-5A7ADFB1CE0A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Core.Domain", "PoTool.Core.Domain\PoTool.Core.Domain.csproj", "{D6690720-E0AB-40F1-A17D-5FBF38088B8B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -111,6 +113,18 @@ Global
 		{3E0A9750-943A-40A5-B729-5A7ADFB1CE0A}.Release|x64.Build.0 = Release|Any CPU
 		{3E0A9750-943A-40A5-B729-5A7ADFB1CE0A}.Release|x86.ActiveCfg = Release|Any CPU
 		{3E0A9750-943A-40A5-B729-5A7ADFB1CE0A}.Release|x86.Build.0 = Release|Any CPU
+		{D6690720-E0AB-40F1-A17D-5FBF38088B8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6690720-E0AB-40F1-A17D-5FBF38088B8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6690720-E0AB-40F1-A17D-5FBF38088B8B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D6690720-E0AB-40F1-A17D-5FBF38088B8B}.Debug|x64.Build.0 = Debug|Any CPU
+		{D6690720-E0AB-40F1-A17D-5FBF38088B8B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D6690720-E0AB-40F1-A17D-5FBF38088B8B}.Debug|x86.Build.0 = Debug|Any CPU
+		{D6690720-E0AB-40F1-A17D-5FBF38088B8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6690720-E0AB-40F1-A17D-5FBF38088B8B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D6690720-E0AB-40F1-A17D-5FBF38088B8B}.Release|x64.ActiveCfg = Release|Any CPU
+		{D6690720-E0AB-40F1-A17D-5FBF38088B8B}.Release|x64.Build.0 = Release|Any CPU
+		{D6690720-E0AB-40F1-A17D-5FBF38088B8B}.Release|x86.ActiveCfg = Release|Any CPU
+		{D6690720-E0AB-40F1-A17D-5FBF38088B8B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

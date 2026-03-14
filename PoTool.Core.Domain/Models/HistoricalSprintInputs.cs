@@ -1,4 +1,4 @@
-namespace PoTool.Core.Metrics.Models;
+namespace PoTool.Core.Domain.Models;
 
 /// <summary>
 /// Minimal work item data required by canonical sprint-history helpers.
