@@ -71,6 +71,16 @@ public record SprintTrendMetricsDto
     public int TotalCompletedPbiEffort { get; init; }
 
     /// <summary>
+    /// Total committed PBIs that spilled into the next sprint unfinished.
+    /// </summary>
+    public int TotalSpilloverCount { get; init; }
+
+    /// <summary>
+    /// Total effort of committed PBIs that spilled into the next sprint unfinished.
+    /// </summary>
+    public int TotalSpilloverEffort { get; init; }
+
+    /// <summary>
     /// Aggregate progression delta across products.
     /// </summary>
     public double TotalProgressionDelta { get; init; }
@@ -150,6 +160,16 @@ public record ProductSprintMetricsDto
     /// Effort of completed PBIs in this sprint for this product.
     /// </summary>
     public int CompletedPbiEffort { get; init; }
+
+    /// <summary>
+    /// Committed PBIs that spilled into the next sprint unfinished for this product.
+    /// </summary>
+    public int SpilloverCount { get; init; }
+
+    /// <summary>
+    /// Effort of committed PBIs that spilled into the next sprint unfinished for this product.
+    /// </summary>
+    public int SpilloverEffort { get; init; }
 
     /// <summary>
     /// Progression delta for this product in this sprint.

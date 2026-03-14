@@ -1245,6 +1245,126 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
+    public void ComputeProductSprintProjection_CountsCommittedPbiMovedDirectlyToNextSprint_AsSpillover()
+    {
+        var sprint = CreateSprint(1, "Sprint 1");
+        var nextSprint = CreateSprintWithDates(2, "Sprint 2", new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc), new DateTime(2026, 1, 28, 0, 0, 0, DateTimeKind.Utc));
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedSprintId = nextSprint.Id }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "Spillover PBI", effort: 8, state: "Active")
+        };
+        workItems[201].IterationPath = nextSprint.Path;
+
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [201] = new()
+            {
+                CreateIterationPathActivity(201, sprintEnd.AddHours(1), sprint.Path, nextSprint.Path)
+            }
+        };
+
+        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint,
+            1,
+            resolved,
+            workItems,
+            activity,
+            sprintStart,
+            sprintEnd,
+            committedWorkItemIds: new HashSet<int> { 201 },
+            nextSprintPath: nextSprint.Path);
+
+        Assert.AreEqual(1, result.SpilloverCount);
+        Assert.AreEqual(8, result.SpilloverEffort);
+    }
+
+    [TestMethod]
+    public void ComputeProductSprintProjection_DoesNotCountBacklogRoundTripToNextSprint_AsSpillover()
+    {
+        var sprint = CreateSprint(1, "Sprint 1");
+        var nextSprint = CreateSprintWithDates(2, "Sprint 2", new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc), new DateTime(2026, 1, 28, 0, 0, 0, DateTimeKind.Utc));
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedSprintId = nextSprint.Id }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "Round Trip PBI", effort: 5, state: "Active")
+        };
+        workItems[201].IterationPath = nextSprint.Path;
+
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [201] = new()
+            {
+                CreateIterationPathActivity(201, sprintEnd.AddHours(1), sprint.Path, "\\Project\\Backlog"),
+                CreateIterationPathActivity(201, sprintEnd.AddDays(2), "\\Project\\Backlog", nextSprint.Path)
+            }
+        };
+
+        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint,
+            1,
+            resolved,
+            workItems,
+            activity,
+            sprintStart,
+            sprintEnd,
+            committedWorkItemIds: new HashSet<int> { 201 },
+            nextSprintPath: nextSprint.Path);
+
+        Assert.AreEqual(0, result.SpilloverCount);
+        Assert.AreEqual(0, result.SpilloverEffort);
+    }
+
+    [TestMethod]
+    public void ComputeProductSprintProjection_DoesNotCountUnfinishedCommittedPbiStillOnSprintPath_AsSpillover()
+    {
+        var sprint = CreateSprint(1, "Sprint 1");
+        var nextSprint = CreateSprintWithDates(2, "Sprint 2", new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc), new DateTime(2026, 1, 28, 0, 0, 0, DateTimeKind.Utc));
+        var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
+        var sprintEnd = new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero);
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedSprintId = sprint.Id }
+        };
+
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "Still In Sprint", effort: 3, state: "Active")
+        };
+
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>();
+
+        var result = SprintTrendProjectionService.ComputeProductSprintProjection(
+            sprint,
+            1,
+            resolved,
+            workItems,
+            activity,
+            sprintStart,
+            sprintEnd,
+            committedWorkItemIds: new HashSet<int> { 201 },
+            nextSprintPath: nextSprint.Path);
+
+        Assert.AreEqual(0, result.SpilloverCount);
+        Assert.AreEqual(0, result.SpilloverEffort);
+    }
+
+    [TestMethod]
     public void ComputeProductSprintProjection_MetadataOnlyActivity_DoesNotCountAsWorked()
     {
         var sprint = CreateSprint(1, "Sprint 1");

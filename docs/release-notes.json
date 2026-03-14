@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-14",
+    "type": "Fixed",
+    "title": "Sprint spillover now follows canonical rules",
+    "impact": "Sprint execution and sprint trend projections now count spillover only for committed PBIs that were not done at sprint end and moved directly into the next sprint.",
+    "area": "Trends",
+    "link": "/home/delivery/sprint"
+  },
+  {
     "date": "2026-03-13",
     "type": "Fixed",
     "title": "Sprint commitment now uses day-two history",

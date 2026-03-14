@@ -271,3 +271,29 @@ The repository contains the building blocks required by the canonical domain mod
   - `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs`
     - item added after commitment counts as added scope
     - committed item moved away later remains in initial scope and counts as removed scope
+
+## Fix Progress — Spillover Detection
+
+- **Logic implemented**
+  - Added `StateReconstructionLookup` to replay post-sprint `System.State` changes backward from the current snapshot so spillover checks use the canonical state at `SprintEnd`.
+  - Added `SprintSpilloverLookup` to identify only committed PBIs whose first post-sprint iteration move goes directly from the current sprint path to the next sprint path.
+  - Kept the existing starved-work heuristic separate from spillover; starved work still reports unfinished initial-scope items when later-added work completed, while spillover now follows the canonical committed + not-done-at-end + direct-next-sprint rule.
+
+- **Services modified**
+  - `PoTool.Api/Services/StateReconstructionLookup.cs`
+  - `PoTool.Api/Services/SprintSpilloverLookup.cs`
+  - `PoTool.Api/Services/SprintTrendProjectionService.cs`
+  - `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs`
+  - `PoTool.Api/Handlers/Metrics/GetSprintTrendMetricsQueryHandler.cs`
+  - `PoTool.Api/Persistence/Entities/SprintMetricsProjectionEntity.cs`
+  - `PoTool.Api/Migrations/20260314054759_AddSprintProjectionSpilloverMetrics.cs`
+
+- **Test coverage added**
+  - `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs`
+    - committed Sprint N → Sprint N+1 move counts as spillover
+    - Sprint N → backlog → Sprint N+1 does not count as spillover
+    - unfinished item still on the sprint path does not count as spillover
+  - `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs`
+    - projection spillover metrics match the same three canonical scenarios
+  - `PoTool.Tests.Unit/Handlers/GetSprintTrendMetricsQueryHandlerTests.cs`
+    - trend aggregation includes spillover counts and effort from the projection rows

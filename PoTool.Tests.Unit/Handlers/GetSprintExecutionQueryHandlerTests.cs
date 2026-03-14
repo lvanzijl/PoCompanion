@@ -197,6 +197,93 @@ public sealed class GetSprintExecutionQueryHandlerTests
         Assert.IsTrue(result.HasData, "Committed scope reconstruction should keep historical sprint data visible.");
     }
 
+    [TestMethod]
+    public async Task Handle_CountsCommittedPbiMovedDirectlyToNextSprint_AsSpillover()
+    {
+        var sprintEnd = new DateTimeOffset(new DateTime(2026, 1, 14, 0, 0, 0, DateTimeKind.Utc));
+        const string sprintPath = "\\Project\\Sprint 1";
+        const string nextSprintPath = "\\Project\\Sprint 2";
+
+        await SeedSprintExecutionScenarioAsync(
+            "Active",
+            currentIterationPath: nextSprintPath,
+            stateTransitions: [],
+            iterationTransitions:
+            [
+                (sprintEnd.AddHours(1), sprintPath, nextSprintPath)
+            ],
+            additionalSprints:
+            [
+                (2, "Sprint 2", nextSprintPath, sprintEnd.AddDays(1), sprintEnd.AddDays(14))
+            ]);
+
+        _stateClassificationService
+            .Setup(service => service.GetClassificationsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildStateClassificationsResponse());
+
+        var handler = CreateHandler();
+
+        var result = await handler.Handle(new GetSprintExecutionQuery(1, 1, 1), CancellationToken.None);
+
+        Assert.AreEqual(1, result.Summary.SpilloverCount);
+        Assert.AreEqual(8, result.Summary.SpilloverEffort);
+        Assert.HasCount(1, result.SpilloverPbis);
+        Assert.AreEqual(101, result.SpilloverPbis[0].TfsId);
+        Assert.AreEqual(0, result.Summary.StarvedCount, "Canonical spillover should stay separate from starved work heuristics.");
+    }
+
+    [TestMethod]
+    public async Task Handle_DoesNotCountBacklogRoundTripToNextSprint_AsSpillover()
+    {
+        var sprintEnd = new DateTimeOffset(new DateTime(2026, 1, 14, 0, 0, 0, DateTimeKind.Utc));
+        const string sprintPath = "\\Project\\Sprint 1";
+        const string backlogPath = "\\Project\\Backlog";
+        const string nextSprintPath = "\\Project\\Sprint 2";
+
+        await SeedSprintExecutionScenarioAsync(
+            "Active",
+            currentIterationPath: nextSprintPath,
+            stateTransitions: [],
+            iterationTransitions:
+            [
+                (sprintEnd.AddHours(1), sprintPath, backlogPath),
+                (sprintEnd.AddDays(2), backlogPath, nextSprintPath)
+            ],
+            additionalSprints:
+            [
+                (2, "Sprint 2", nextSprintPath, sprintEnd.AddDays(1), sprintEnd.AddDays(14))
+            ]);
+
+        _stateClassificationService
+            .Setup(service => service.GetClassificationsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildStateClassificationsResponse());
+
+        var handler = CreateHandler();
+
+        var result = await handler.Handle(new GetSprintExecutionQuery(1, 1, 1), CancellationToken.None);
+
+        Assert.AreEqual(0, result.Summary.SpilloverCount);
+        Assert.HasCount(0, result.SpilloverPbis);
+    }
+
+    [TestMethod]
+    public async Task Handle_DoesNotCountUnfinishedItemStillOnSprintPath_AsSpillover()
+    {
+        await SeedSprintExecutionScenarioAsync("Active", stateTransitions: [], iterationTransitions: []);
+
+        _stateClassificationService
+            .Setup(service => service.GetClassificationsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildStateClassificationsResponse());
+
+        var handler = CreateHandler();
+
+        var result = await handler.Handle(new GetSprintExecutionQuery(1, 1, 1), CancellationToken.None);
+
+        Assert.AreEqual(0, result.Summary.SpilloverCount);
+        Assert.HasCount(0, result.SpilloverPbis);
+        Assert.AreEqual(1, result.Summary.UnfinishedCount, "Items still assigned to the sprint remain unfinished, not spillover.");
+    }
+
     private GetSprintExecutionQueryHandler CreateHandler()
     {
         return new GetSprintExecutionQueryHandler(
@@ -209,7 +296,8 @@ public sealed class GetSprintExecutionQueryHandlerTests
         string workItemState,
         string? currentIterationPath = null,
         IEnumerable<(DateTimeOffset Timestamp, string OldState, string NewState)>? stateTransitions = null,
-        IEnumerable<(DateTimeOffset Timestamp, string? OldIterationPath, string? NewIterationPath)>? iterationTransitions = null)
+        IEnumerable<(DateTimeOffset Timestamp, string? OldIterationPath, string? NewIterationPath)>? iterationTransitions = null,
+        IEnumerable<(int Id, string Name, string Path, DateTimeOffset StartUtc, DateTimeOffset EndUtc)>? additionalSprints = null)
     {
         var profile = new ProfileEntity
         {
@@ -276,6 +364,24 @@ public sealed class GetSprintExecutionQueryHandlerTests
         _context.Teams.Add(team);
         _context.Products.Add(product);
         _context.Sprints.Add(sprint);
+
+        foreach (var (id, name, path, startUtc, endUtc) in additionalSprints ?? [])
+        {
+            _context.Sprints.Add(new SprintEntity
+            {
+                Id = id,
+                TeamId = team.Id,
+                Name = name,
+                Path = path,
+                StartUtc = startUtc,
+                StartDateUtc = startUtc.UtcDateTime,
+                EndUtc = endUtc,
+                EndDateUtc = endUtc.UtcDateTime,
+                LastSyncedUtc = DateTimeOffset.UtcNow,
+                LastSyncedDateUtc = DateTime.UtcNow
+            });
+        }
+
         _context.WorkItems.Add(workItem);
         _context.ResolvedWorkItems.Add(resolved);
         var updateId = 1;

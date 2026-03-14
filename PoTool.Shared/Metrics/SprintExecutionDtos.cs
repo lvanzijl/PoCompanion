@@ -52,6 +52,11 @@ public record SprintExecutionDto
     public required IReadOnlyList<SprintExecutionPbiDto> RemovedDuringSprint { get; init; }
 
     /// <summary>
+    /// PBIs that spilled from the committed scope into the next sprint.
+    /// </summary>
+    public required IReadOnlyList<SprintExecutionPbiDto> SpilloverPbis { get; init; }
+
+    /// <summary>
     /// PBIs flagged as potentially starved — present early in the sprint but
     /// never completed, while later-added work was completed.
     /// </summary>
@@ -117,6 +122,16 @@ public record SprintExecutionSummaryDto
     /// Total effort of unfinished PBIs.
     /// </summary>
     public int UnfinishedEffort { get; init; }
+
+    /// <summary>
+    /// Number of committed PBIs that moved directly into the next sprint unfinished.
+    /// </summary>
+    public int SpilloverCount { get; init; }
+
+    /// <summary>
+    /// Total effort of committed PBIs that spilled into the next sprint unfinished.
+    /// </summary>
+    public int SpilloverEffort { get; init; }
 
     /// <summary>
     /// Number of PBIs flagged as potentially starved.

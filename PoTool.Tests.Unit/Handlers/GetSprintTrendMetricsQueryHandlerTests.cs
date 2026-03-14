@@ -286,6 +286,8 @@ public class GetSprintTrendMetricsQueryHandlerTests
                 WorkedEffort = 25,
                 BugsPlannedCount = 2,
                 BugsWorkedCount = 1,
+                SpilloverCount = 1,
+                SpilloverEffort = 8,
                 LastComputedAt = DateTimeOffset.UtcNow,
                 IncludedUpToRevisionId = 100
             },
@@ -301,6 +303,8 @@ public class GetSprintTrendMetricsQueryHandlerTests
                 WorkedEffort = 12,
                 BugsPlannedCount = 3,
                 BugsWorkedCount = 2,
+                SpilloverCount = 2,
+                SpilloverEffort = 13,
                 LastComputedAt = DateTimeOffset.UtcNow,
                 IncludedUpToRevisionId = 100
             }
@@ -331,9 +335,13 @@ public class GetSprintTrendMetricsQueryHandlerTests
         Assert.AreEqual(37, sprintMetrics.TotalWorkedEffort, "Total worked effort should be 25 + 12");
         Assert.AreEqual(5, sprintMetrics.TotalBugsPlannedCount, "Total bugs planned should be 2 + 3");
         Assert.AreEqual(3, sprintMetrics.TotalBugsWorkedCount, "Total bugs worked should be 1 + 2");
+        Assert.AreEqual(3, sprintMetrics.TotalSpilloverCount, "Total spillover count should be 1 + 2");
+        Assert.AreEqual(21, sprintMetrics.TotalSpilloverEffort, "Total spillover effort should be 8 + 13");
 
         // Check product-level metrics
         Assert.HasCount(2, sprintMetrics.ProductMetrics);
+        Assert.AreEqual(1, sprintMetrics.ProductMetrics[0].SpilloverCount);
+        Assert.AreEqual(8, sprintMetrics.ProductMetrics[0].SpilloverEffort);
     }
 
     [TestMethod]

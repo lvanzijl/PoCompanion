@@ -105,6 +105,7 @@ public class SprintTrendProjectionService
         // Batch-load all activity events for the full date range across all sprints
         var rangeStartUtc = validSprints.Min(s => DateTime.SpecifyKind(s.StartDateUtc!.Value, DateTimeKind.Utc));
         var rangeEndUtc = validSprints.Max(s => DateTime.SpecifyKind(s.EndDateUtc!.Value, DateTimeKind.Utc));
+        var stateHistoryCutoffUtc = DateTime.UtcNow;
 
         var allActivityEvents = await context.ActivityEventLedgerEntries
             .AsNoTracking()
@@ -117,7 +118,7 @@ public class SprintTrendProjectionService
             .AsNoTracking()
             .Where(e => e.ProductOwnerId == productOwnerId
                 && e.FieldRefName == "System.State"
-                && e.EventTimestampUtc <= rangeEndUtc
+                && e.EventTimestampUtc <= stateHistoryCutoffUtc
                 && resolvedWorkItemIds.Contains(e.WorkItemId))
             .ToListAsync(cancellationToken);
 
@@ -135,11 +136,21 @@ public class SprintTrendProjectionService
             .Where(p => validSprintIds.Contains(p.SprintId) && productIds.Contains(p.ProductId))
             .ToListAsync(cancellationToken);
 
+        var teamIds = validSprints.Select(s => s.TeamId).Distinct().ToList();
+        var teamSprints = await context.Sprints
+            .AsNoTracking()
+            .Where(s => teamIds.Contains(s.TeamId))
+            .ToListAsync(cancellationToken);
+
         var existingByKey = existingProjections
             .ToDictionary(p => (p.SprintId, p.ProductId), p => p);
 
         var workItemTypesById = workItemsByTfsId.ToDictionary(pair => pair.Key, pair => pair.Value.Type);
+        var currentStatesById = workItemsByTfsId.ToDictionary(pair => pair.Key, pair => (string?)pair.Value.State);
         var currentIterationPathsById = workItemsByTfsId.ToDictionary(pair => pair.Key, pair => (string?)pair.Value.IterationPath);
+        var stateEventsByWorkItem = allStateEvents
+            .GroupBy(e => e.WorkItemId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<ActivityEventLedgerEntryEntity>)g.ToList());
         var iterationEventsByWorkItem = allIterationEvents
             .GroupBy(e => e.WorkItemId)
             .ToDictionary(g => g.Key, g => (IReadOnlyList<ActivityEventLedgerEntryEntity>)g.ToList());
@@ -152,6 +163,7 @@ public class SprintTrendProjectionService
             var sprintEndUtc = DateTime.SpecifyKind(sprint.EndDateUtc!.Value, DateTimeKind.Utc);
             var sprintStart = new DateTimeOffset(sprintStartUtc, TimeSpan.Zero);
             var sprintEnd = new DateTimeOffset(sprintEndUtc, TimeSpan.Zero);
+            var nextSprintPath = SprintSpilloverLookup.GetNextSprintPath(sprint, teamSprints);
             var committedWorkItemIds = SprintCommitmentLookup.BuildCommittedWorkItemIds(
                 currentIterationPathsById,
                 iterationEventsByWorkItem,
@@ -172,7 +184,8 @@ public class SprintTrendProjectionService
                 var projection = ComputeProductSprintProjection(
                     sprint, productId,
                     resolvedItems, workItemsByTfsId,
-                    activityByWorkItem, sprintStart, sprintEnd, stateLookup, firstDoneByWorkItem, committedWorkItemIds);
+                    activityByWorkItem, sprintStart, sprintEnd, stateLookup, firstDoneByWorkItem, committedWorkItemIds,
+                    nextSprintPath, currentStatesById, stateEventsByWorkItem, iterationEventsByWorkItem);
 
                 if (existingByKey.TryGetValue((sprint.Id, productId), out var existing))
                 {
@@ -184,6 +197,8 @@ public class SprintTrendProjectionService
                     existing.BugsWorkedCount = projection.BugsWorkedCount;
                     existing.CompletedPbiCount = projection.CompletedPbiCount;
                     existing.CompletedPbiEffort = projection.CompletedPbiEffort;
+                    existing.SpilloverCount = projection.SpilloverCount;
+                    existing.SpilloverEffort = projection.SpilloverEffort;
                     existing.ProgressionDelta = projection.ProgressionDelta;
                     existing.BugsCreatedCount = projection.BugsCreatedCount;
                     existing.BugsClosedCount = projection.BugsClosedCount;
@@ -220,7 +235,11 @@ public class SprintTrendProjectionService
         DateTimeOffset sprintEnd,
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null,
         IReadOnlyDictionary<int, DateTimeOffset>? firstDoneByWorkItem = null,
-        IReadOnlySet<int>? committedWorkItemIds = null)
+        IReadOnlySet<int>? committedWorkItemIds = null,
+        string? nextSprintPath = null,
+        IReadOnlyDictionary<int, string?>? currentStatesById = null,
+        IReadOnlyDictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>>? stateEventsByWorkItem = null,
+        IReadOnlyDictionary<int, IReadOnlyList<ActivityEventLedgerEntryEntity>>? iterationEventsByWorkItem = null)
     {
         var effectiveFirstDoneByWorkItem = firstDoneByWorkItem
             ?? FirstDoneDeliveryLookup.Build(
@@ -314,6 +333,43 @@ public class SprintTrendProjectionService
             }
         }
 
+        var effectiveCommittedWorkItemIds = committedWorkItemIds
+            ?? productResolved
+                .Where(r => r.ResolvedSprintId == sprint.Id)
+                .Select(r => r.WorkItemId)
+                .ToHashSet();
+        var effectiveCurrentStatesById = currentStatesById
+            ?? workItemsByTfsId.ToDictionary(pair => pair.Key, pair => (string?)pair.Value.State);
+        var effectiveStateEventsByWorkItem = stateEventsByWorkItem
+            ?? activityByWorkItem
+                .ToDictionary(
+                    pair => pair.Key,
+                    pair => (IReadOnlyList<ActivityEventLedgerEntryEntity>)pair.Value
+                        .Where(e => string.Equals(e.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase))
+                        .ToList());
+        var effectiveIterationEventsByWorkItem = iterationEventsByWorkItem
+            ?? activityByWorkItem
+                .ToDictionary(
+                    pair => pair.Key,
+                    pair => (IReadOnlyList<ActivityEventLedgerEntryEntity>)pair.Value
+                        .Where(e => string.Equals(e.FieldRefName, "System.IterationPath", StringComparison.OrdinalIgnoreCase))
+                        .ToList());
+        var spilloverWorkItemIds = SprintSpilloverLookup.BuildSpilloverWorkItemIds(
+            effectiveCommittedWorkItemIds,
+            effectiveCurrentStatesById,
+            workItemsByTfsId.ToDictionary(pair => pair.Key, pair => pair.Value.Type),
+            effectiveStateEventsByWorkItem,
+            effectiveIterationEventsByWorkItem,
+            stateLookup,
+            sprint.Path,
+            nextSprintPath,
+            sprintEnd);
+        var spilloverPbis = pbiResolved
+            .Where(r => spilloverWorkItemIds.Contains(r.WorkItemId))
+            .Select(r => workItemsByTfsId.GetValueOrDefault(r.WorkItemId))
+            .Where(w => w != null)
+            .ToList();
+
         // Feature/Epic progression delta
         var progressionDelta = ComputeProgressionDelta(
             productResolved, workItemsByTfsId, functionalActivityByWorkItem, stateLookup);
@@ -387,6 +443,8 @@ public class SprintTrendProjectionService
             BugsWorkedCount = bugsWorkedOn,
             CompletedPbiCount = completedPbiCount,
             CompletedPbiEffort = completedPbiEffort,
+            SpilloverCount = spilloverPbis.Count,
+            SpilloverEffort = spilloverPbis.Sum(w => w!.Effort ?? 0),
             ProgressionDelta = progressionDelta,
             BugsCreatedCount = bugsCreated,
             BugsClosedCount = bugsClosed,
