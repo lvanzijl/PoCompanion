@@ -271,7 +271,7 @@ public record ProductSprintMetricsDto
     public bool IsApproximate { get; init; }
 
     /// <summary>
-    /// Net scope change in story points for this product during the sprint.
+    /// Net scope change in effort for this product during the sprint.
     /// Populated for the current or most recent sprint in the request.
     /// </summary>
     public int ScopeChangeEffort { get; init; }
