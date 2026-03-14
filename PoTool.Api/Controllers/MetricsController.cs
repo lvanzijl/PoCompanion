@@ -494,7 +494,9 @@ public class MetricsController : ControllerBase
 
     /// <summary>
     /// Gets portfolio progress trend metrics across a selected sprint range.
-    /// Returns per-sprint % done, total scope, remaining effort, and throughput.
+    /// Returns per-sprint % done, total scope effort, remaining scope effort, and throughput.
+    /// The response DTO keeps legacy <c>RemainingEffort</c> naming for API compatibility,
+    /// but that field represents remaining scope effort rather than a separate domain concept.
     /// </summary>
     /// <param name="productOwnerId">Product Owner ID</param>
     /// <param name="sprintIds">Sprint IDs to include in the trend (ordered chronologically)</param>
