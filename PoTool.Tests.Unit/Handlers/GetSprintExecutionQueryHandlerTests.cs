@@ -512,6 +512,7 @@ public sealed class GetSprintExecutionQueryHandlerTests
             _context,
             _stateClassificationService.Object,
             new CanonicalStoryPointResolutionService(),
+            new SprintExecutionMetricsCalculator(),
             NullLogger<GetSprintExecutionQueryHandler>.Instance);
     }
 

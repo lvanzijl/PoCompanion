@@ -33,17 +33,20 @@ public sealed class GetSprintExecutionQueryHandler
     private readonly PoToolDbContext _context;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
+    private readonly ISprintExecutionMetricsCalculator _sprintExecutionMetricsCalculator;
     private readonly ILogger<GetSprintExecutionQueryHandler> _logger;
 
     public GetSprintExecutionQueryHandler(
         PoToolDbContext context,
         IWorkItemStateClassificationService stateClassificationService,
         ICanonicalStoryPointResolutionService storyPointResolutionService,
+        ISprintExecutionMetricsCalculator sprintExecutionMetricsCalculator,
         ILogger<GetSprintExecutionQueryHandler> logger)
     {
         _context = context;
         _stateClassificationService = stateClassificationService;
         _storyPointResolutionService = storyPointResolutionService;
+        _sprintExecutionMetricsCalculator = sprintExecutionMetricsCalculator;
         _logger = logger;
     }
 
@@ -384,10 +387,13 @@ public sealed class GetSprintExecutionQueryHandler
             stateLookup,
             relevantWorkItemsById,
             excludeDerived: true);
-        var churnRate = SafeDivide(addedSp + removedSp, committedSp + addedSp);
-        var commitmentCompletion = SafeDivide(deliveredSp, committedSp - removedSp);
-        var spilloverRate = SafeDivide(spilloverSp, committedSp - removedSp);
-        var addedDeliveryRate = SafeDivide(deliveredFromAddedSp, addedSp);
+        var metrics = _sprintExecutionMetricsCalculator.Calculate(new SprintExecutionMetricsInput(
+            committedSp,
+            addedSp,
+            removedSp,
+            deliveredSp,
+            deliveredFromAddedSp,
+            spilloverSp));
 
         var summary = new SprintExecutionSummaryDto
         {
@@ -407,16 +413,16 @@ public sealed class GetSprintExecutionQueryHandler
             UnfinishedEffort = unfinishedItems.Sum(w => w.Effort ?? 0),
             SpilloverCount = spilloverItems.Count,
             SpilloverEffort = spilloverItems.Sum(w => w.Effort ?? 0),
-            CommittedSP = committedSp,
-            AddedSP = addedSp,
-            RemovedSP = removedSp,
-            DeliveredSP = deliveredSp,
-            DeliveredFromAddedSP = deliveredFromAddedSp,
-            SpilloverSP = spilloverSp,
-            ChurnRate = churnRate,
-            CommitmentCompletion = commitmentCompletion,
-            SpilloverRate = spilloverRate,
-            AddedDeliveryRate = addedDeliveryRate,
+            CommittedSP = metrics.CommittedSP,
+            AddedSP = metrics.AddedSP,
+            RemovedSP = metrics.RemovedSP,
+            DeliveredSP = metrics.DeliveredSP,
+            DeliveredFromAddedSP = metrics.DeliveredFromAddedSP,
+            SpilloverSP = metrics.SpilloverSP,
+            ChurnRate = metrics.ChurnRate,
+            CommitmentCompletion = metrics.CommitmentCompletion,
+            SpilloverRate = metrics.SpilloverRate,
+            AddedDeliveryRate = metrics.AddedDeliveryRate,
             StarvedCount = starvedItems.Count
         };
 
@@ -585,11 +591,6 @@ public sealed class GetSprintExecutionQueryHandler
             BusinessValue: workItem.BusinessValue,
             BacklogPriority: workItem.BacklogPriority,
             StoryPoints: workItem.StoryPoints);
-    }
-
-    private static double SafeDivide(double numerator, double denominator)
-    {
-        return denominator <= 0d ? 0d : numerator / denominator;
     }
 
     private static bool IsPbiType(string workItemType)

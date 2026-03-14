@@ -175,3 +175,14 @@ Extraction therefore appears **feasible with targeted boundary refactors, not wi
   - canonical state mapping
   - point-in-time state reconstruction
   - existing commitment, first-Done, and spillover reconstruction behavior
+
+## Fix Progress — Sprint Execution Formula Extraction
+
+- Moved canonical sprint execution formulas out of `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs` for:
+  - `ChurnRate`
+  - `CommitmentCompletion`
+  - `SpilloverRate`
+  - `AddedDeliveryRate`
+- Added reusable Core calculator `PoTool.Core/Metrics/Services/SprintExecutionMetricsCalculator.cs` that accepts reconstructed story-point totals and returns the canonical derived rates with the existing safe zero-denominator behavior.
+- Simplified `GetSprintExecutionQueryHandler` so it still reconstructs committed, added, removed, delivered, and spillover totals, but now delegates formula calculation to the reusable calculator before mapping `SprintExecutionSummaryDto`.
+- Added focused calculator coverage in `PoTool.Tests.Unit/Services/SprintExecutionMetricsCalculatorTests.cs`, while keeping the existing handler-level sprint execution tests in place.
