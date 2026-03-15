@@ -29,6 +29,10 @@ public sealed class TrendDeliveryAnalyticsExplorationDocumentTests
         StringAssert.Contains(report, "PoTool.Api/Handlers/Metrics/GetPortfolioProgressTrendQueryHandler.cs");
         StringAssert.Contains(report, "PoTool.Api/Handlers/PullRequests/GetPrDeliveryInsightsQueryHandler.cs");
         StringAssert.Contains(report, "PoTool.Api/Handlers/Pipelines/GetPipelineInsightsQueryHandler.cs");
+        StringAssert.Contains(report, "## Delivery Trend Analytics CDC Progress — Projection Core Extracted");
+        StringAssert.Contains(report, "PoTool.Core.Domain/Domain/DeliveryTrends/Services/SprintDeliveryProjectionService.cs");
+        StringAssert.Contains(report, "projection core");
+        StringAssert.Contains(report, "reduced to orchestration responsibilities");
         StringAssert.Contains(report, "Velocity7d");
         StringAssert.Contains(report, "confidence");
         StringAssert.Contains(report, "A — ready candidate for CDC slice");

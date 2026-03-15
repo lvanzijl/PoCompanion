@@ -214,3 +214,29 @@ Focused MSTest coverage was added for:
 - bounded progression delta semantics
 - aggregation of sprint totals from per-product projections
 - construction-time invariant validation only
+
+## Delivery Trend Analytics CDC Progress — Projection Core Extracted
+
+The canonical sprint projection formulas have now been moved into `PoTool.Core.Domain/Domain/DeliveryTrends/Services/SprintDeliveryProjectionService.cs`.
+
+Formulas moved into the CDC service:
+
+- planned/worked/completed counts
+- planned/completed/spillover story-point delivery values
+- spillover counts and effort values
+- derived-estimate diagnostics
+- unestimated delivery counts
+- progression delta integration
+
+`PoTool.Api/Services/SprintTrendProjectionService.cs` is now reduced to orchestration responsibilities:
+
+- loading sprints, work items, and activity history
+- preparing canonical domain inputs
+- reconstructing commitment / first-Done / spillover context
+- persisting `SprintMetricsProjectionEntity` rows
+
+Focused tests were added for the extracted projection core to verify:
+
+- derived-story-point and unestimated-delivery semantics
+- commitment plus spillover handling
+- progression delta averaging based on sprint progress activity
