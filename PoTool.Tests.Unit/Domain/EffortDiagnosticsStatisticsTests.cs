@@ -1,14 +1,16 @@
-using PoTool.Core.Metrics.EffortDiagnostics;
+using PoTool.Core.Domain.EffortDiagnostics;
 
 namespace PoTool.Tests.Unit.Domain;
 
 [TestClass]
 public sealed class EffortDiagnosticsStatisticsTests
 {
+    private static readonly EffortDiagnosticsStatistics Statistics = new CanonicalEffortDiagnosticsStatistics();
+
     [TestMethod]
     public void Mean_ReturnsArithmeticAverage()
     {
-        var result = EffortDiagnosticsStatistics.Mean(new[] { 10d, 20d, 30d, 40d });
+        var result = Statistics.Mean(new[] { 10d, 20d, 30d, 40d });
 
         Assert.AreEqual(25d, result, 0.001);
     }
@@ -16,8 +18,8 @@ public sealed class EffortDiagnosticsStatisticsTests
     [TestMethod]
     public void Median_ReturnsExpectedValue_ForBothOddAndEvenSizedArrays()
     {
-        var oddMedian = EffortDiagnosticsStatistics.Median(new[] { 7d, 1d, 4d });
-        var evenMedian = EffortDiagnosticsStatistics.Median(new[] { 40d, 10d, 30d, 20d });
+        var oddMedian = Statistics.Median(new[] { 7d, 1d, 4d });
+        var evenMedian = Statistics.Median(new[] { 40d, 10d, 30d, 20d });
 
         Assert.AreEqual(4d, oddMedian, 0.001);
         Assert.AreEqual(25d, evenMedian, 0.001);
@@ -26,7 +28,7 @@ public sealed class EffortDiagnosticsStatisticsTests
     [TestMethod]
     public void Variance_ReturnsPopulationVariance()
     {
-        var result = EffortDiagnosticsStatistics.Variance(new[] { 10d, 20d, 30d, 40d });
+        var result = Statistics.Variance(new[] { 10d, 20d, 30d, 40d });
 
         Assert.AreEqual(125d, result, 0.001);
     }
@@ -34,31 +36,39 @@ public sealed class EffortDiagnosticsStatisticsTests
     [TestMethod]
     public void CoefficientOfVariation_ReturnsStandardDeviationOverMean()
     {
-        var result = EffortDiagnosticsStatistics.CoefficientOfVariation(new[] { 10d, 20d, 30d, 40d });
+        var values = new[] { 10d, 20d, 30d, 40d };
+        var variance = Statistics.Variance(values);
+        var mean = Statistics.Mean(values);
+        var result = Statistics.CoefficientOfVariation(variance, mean);
 
         Assert.AreEqual(0.447, result, 0.001);
     }
 
     [TestMethod]
-    public void HHI_ReturnsCalculatedIndex()
+    public void HHI_ReturnsCalculatedRawIndex()
     {
-        var normalizedResult = EffortDiagnosticsStatistics.HHI(new[] { 0.5d, 0.25d, 0.25d });
+        var result = Statistics.HHI(new[] { 0.5d, 0.25d, 0.25d });
 
-        Assert.AreEqual(37.5d, normalizedResult, 0.001);
+        Assert.AreEqual(0.375d, result, 0.001);
     }
 
     [TestMethod]
-    public void HHI_CapsResultAt100()
+    public void DeviationAndShare_ReturnExpectedRatios()
     {
-        var result = EffortDiagnosticsStatistics.HHI(new[] { 1.5d });
+        var deviation = Statistics.DeviationFromMean(40d, 25d);
+        var share = Statistics.ShareOfTotal(25d, 100d);
 
-        Assert.AreEqual(100d, result, 0.001);
+        Assert.AreEqual(0.6d, deviation, 0.001);
+        Assert.AreEqual(0.25d, share, 0.001);
     }
 
     [TestMethod]
-    public void HHI_WithNegativeShare_ThrowsArgumentOutOfRangeException()
+    public void HHI_WithOutOfRangeShare_ThrowsArgumentOutOfRangeException()
     {
         Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
-            EffortDiagnosticsStatistics.HHI(new[] { 0.5d, -0.1d, 0.6d }));
+            Statistics.HHI(new[] { 0.5d, -0.1d, 0.6d }));
+
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
+            Statistics.HHI(new[] { 1.5d }));
     }
 }

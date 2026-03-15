@@ -12,10 +12,12 @@
   - DTO mapping
   - recommendation text composition
 - Removed the remaining legacy forwarding wrapper at `/PoTool.Core/Metrics/EffortDiagnosticsStatistics.cs` so the stable production helper implementation is no longer duplicated outside the CDC slice.
+- A later statistical core cleanup pass then removed `/PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsStatistics.cs` as a second production owner and consolidated primitive helper ownership into `/PoTool.Core.Domain/Domain/EffortDiagnostics`.
 
 ## Files changed
 
 - Deleted `/PoTool.Core/Metrics/EffortDiagnosticsStatistics.cs`
+- Deleted `/PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsStatistics.cs`
 - Added `/PoTool.Tests.Unit/Audits/EffortDiagnosticsCdcExtractionAuditTests.cs`
 - Added `/docs/audits/effort_diagnostics_cdc_extraction_report.md`
 
@@ -36,12 +38,13 @@
 - Added `PoTool.Tests.Unit/Audits/EffortDiagnosticsCdcExtractionAuditTests.cs`
 - New audit coverage verifies:
   - the legacy wrapper file outside the CDC slice is gone
-  - the stable helper file still exists under `/PoTool.Core/Metrics/EffortDiagnostics`
+  - the duplicate stable helper file under `/PoTool.Core/Metrics/EffortDiagnostics` is gone
+  - the canonical stable helper file exists under `/PoTool.Core.Domain/Domain/EffortDiagnostics`
   - the two stable handlers remain orchestration/mapping-only and do not perform direct math helper calls
 
 ## Confirmation of CDC boundary
 
-- **Stable production helper ownership:** after removing the legacy wrapper, the stable production implementation of the audited math helpers is centralized in `/PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsStatistics.cs`.
+- **Stable production helper ownership:** after the later statistical core cleanup, the stable production implementation of the audited math helpers is centralized in `/PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsStatistics.cs`.
 - **Handler boundary:** both audited handlers remain adapter/orchestration code and call the analyzer instead of implementing formulas inline.
 - **Unstable families untouched:** no code changes were made to:
   - `EstimationQuality`
@@ -53,7 +56,7 @@
 ## Final assessment
 
 - The EffortDiagnostics stable CDC slice is clean at the audited adapter boundary:
-  - stable math implementation is centralized
+  - stable math implementation is centralized in the domain-owned surface
   - stable handlers are orchestration-only
   - unstable effort families were left unchanged
 - Remaining non-handler search hits are documentation/tests/domain-abstraction references rather than duplicated stable helper implementations in the API handlers.
