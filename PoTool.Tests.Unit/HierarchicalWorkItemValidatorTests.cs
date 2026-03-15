@@ -480,7 +480,30 @@ public class HierarchicalWorkItemValidatorTests
     {
         public Task<GetStateClassificationsResponse> GetClassificationsAsync(CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            return Task.FromResult(new GetStateClassificationsResponse
+            {
+                ProjectName = "Test",
+                Classifications =
+                [
+                    new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "Done", Classification = StateClassification.Done },
+                    new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "Removed", Classification = StateClassification.Removed },
+                    new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "In Progress", Classification = StateClassification.InProgress },
+                    new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "New", Classification = StateClassification.New },
+                    new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "Done", Classification = StateClassification.Done },
+                    new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "Removed", Classification = StateClassification.Removed },
+                    new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "In Progress", Classification = StateClassification.InProgress },
+                    new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "New", Classification = StateClassification.New },
+                    new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "Done", Classification = StateClassification.Done },
+                    new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "Removed", Classification = StateClassification.Removed },
+                    new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "In Progress", Classification = StateClassification.InProgress },
+                    new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "New", Classification = StateClassification.New },
+                    new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "Done", Classification = StateClassification.Done },
+                    new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "Removed", Classification = StateClassification.Removed },
+                    new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "In Progress", Classification = StateClassification.InProgress },
+                    new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "New", Classification = StateClassification.New }
+                ],
+                IsDefault = false
+            });
         }
 
         public Task<bool> SaveClassificationsAsync(SaveStateClassificationsRequest request, CancellationToken cancellationToken = default)

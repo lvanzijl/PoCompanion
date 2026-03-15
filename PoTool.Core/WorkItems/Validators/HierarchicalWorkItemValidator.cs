@@ -33,7 +33,7 @@ public sealed class HierarchicalWorkItemValidator : IHierarchicalWorkItemValidat
         ArgumentNullException.ThrowIfNull(rules);
         _rules = rules.ToList();
         _stateClassificationService = stateClassificationService;
-        _backlogQualityAnalyzer = backlogQualityAnalyzer ?? (stateClassificationService is null ? null : new BacklogQualityAnalyzer());
+        _backlogQualityAnalyzer = ResolveAnalyzer(backlogQualityAnalyzer, stateClassificationService);
     }
 
     /// <inheritdoc />
@@ -66,11 +66,12 @@ public sealed class HierarchicalWorkItemValidator : IHierarchicalWorkItemValidat
         var itemsList = workItems as List<WorkItemDto> ?? workItems.ToList();
         if (_stateClassificationService is not null && _backlogQualityAnalyzer is not null)
         {
+            var classifications = BacklogQualityDomainAdapter.CreateClassificationLookup(_stateClassificationService);
             var graph = BacklogQualityDomainAdapter.CreateGraph(
                 itemsList,
-                item => BacklogQualityDomainAdapter.Classify(_stateClassificationService, item));
+                item => BacklogQualityDomainAdapter.Classify(classifications, item));
             var analysis = _backlogQualityAnalyzer.Analyze(graph);
-            return CreateAnalyzerResult(rootWorkItemId, itemsList, graph, analysis);
+            return CreateAnalyzerResult(rootWorkItemId, itemsList, graph, analysis, classifications);
         }
 
         // Get all items in this tree
@@ -126,13 +127,14 @@ public sealed class HierarchicalWorkItemValidator : IHierarchicalWorkItemValidat
 
     private IReadOnlyList<HierarchicalValidationResult> ValidateWithAnalyzer(List<WorkItemDto> itemsList)
     {
+        var classifications = BacklogQualityDomainAdapter.CreateClassificationLookup(_stateClassificationService!);
         var graph = BacklogQualityDomainAdapter.CreateGraph(
             itemsList,
-            item => BacklogQualityDomainAdapter.Classify(_stateClassificationService!, item));
+            item => BacklogQualityDomainAdapter.Classify(classifications, item));
         var analysis = _backlogQualityAnalyzer!.Analyze(graph);
 
         return graph.RootItems
-            .Select(root => CreateAnalyzerResult(root.WorkItemId, itemsList, graph, analysis))
+            .Select(root => CreateAnalyzerResult(root.WorkItemId, itemsList, graph, analysis, classifications))
             .ToArray();
     }
 
@@ -140,7 +142,8 @@ public sealed class HierarchicalWorkItemValidator : IHierarchicalWorkItemValidat
         int rootWorkItemId,
         IReadOnlyList<WorkItemDto> itemsList,
         PoTool.Core.Domain.BacklogQuality.Models.BacklogGraph graph,
-        PoTool.Core.Domain.BacklogQuality.Models.BacklogQualityAnalysisResult analysis)
+        PoTool.Core.Domain.BacklogQuality.Models.BacklogQualityAnalysisResult analysis,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), PoTool.Core.Domain.Models.StateClassification> classifications)
     {
         var treeIds = CollectTreeIds(graph, rootWorkItemId);
         var backlogHealthProblems = analysis.IntegrityFindings
@@ -167,7 +170,7 @@ public sealed class HierarchicalWorkItemValidator : IHierarchicalWorkItemValidat
                 .Select(finding => BacklogQualityDomainAdapter.ToLegacyValidationResult(finding))
                 .ToArray();
 
-        var missingEffortIssues = BuildLegacyMissingEffortIssues(itemsList, treeIds, analysis);
+        var missingEffortIssues = BuildLegacyMissingEffortIssues(itemsList, treeIds, analysis, classifications);
 
         return new HierarchicalValidationResult(
             rootWorkItemId,
@@ -181,7 +184,8 @@ public sealed class HierarchicalWorkItemValidator : IHierarchicalWorkItemValidat
     private IReadOnlyList<ValidationRuleResult> BuildLegacyMissingEffortIssues(
         IReadOnlyList<WorkItemDto> itemsList,
         IReadOnlySet<int> treeIds,
-        PoTool.Core.Domain.BacklogQuality.Models.BacklogQualityAnalysisResult analysis)
+        PoTool.Core.Domain.BacklogQuality.Models.BacklogQualityAnalysisResult analysis,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), PoTool.Core.Domain.Models.StateClassification> classifications)
     {
         var results = new List<ValidationRuleResult>();
         var seenWorkItemIds = new HashSet<int>();
@@ -207,7 +211,7 @@ public sealed class HierarchicalWorkItemValidator : IHierarchicalWorkItemValidat
                      .Where(item => treeIds.Contains(item.TfsId))
                      .Where(item => string.Equals(item.Type, WorkItemType.Epic, StringComparison.OrdinalIgnoreCase) ||
                                     string.Equals(item.Type, WorkItemType.Feature, StringComparison.OrdinalIgnoreCase))
-                     .Where(item => !IsFinished(item))
+                     .Where(item => !IsFinished(item, classifications))
                      .Where(item => item.Effort is not > 0)
                      .OrderBy(item => item.TfsId))
         {
@@ -248,11 +252,19 @@ public sealed class HierarchicalWorkItemValidator : IHierarchicalWorkItemValidat
         return treeIds;
     }
 
-    private bool IsFinished(WorkItemDto item)
+    private static bool IsFinished(
+        WorkItemDto item,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), PoTool.Core.Domain.Models.StateClassification> classifications)
     {
-        return _stateClassificationService is not null &&
-               BacklogQualityDomainAdapter.Classify(_stateClassificationService, item) is
-                   PoTool.Core.Domain.Models.StateClassification.Done or PoTool.Core.Domain.Models.StateClassification.Removed;
+        return BacklogQualityDomainAdapter.Classify(classifications, item) is
+            PoTool.Core.Domain.Models.StateClassification.Done or PoTool.Core.Domain.Models.StateClassification.Removed;
+    }
+
+    private static BacklogQualityAnalyzer? ResolveAnalyzer(
+        BacklogQualityAnalyzer? backlogQualityAnalyzer,
+        IWorkItemStateClassificationService? stateClassificationService)
+    {
+        return backlogQualityAnalyzer ?? (stateClassificationService is null ? null : new BacklogQualityAnalyzer());
     }
 
     /// <summary>

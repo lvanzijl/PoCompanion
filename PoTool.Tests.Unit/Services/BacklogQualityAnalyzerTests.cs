@@ -18,7 +18,9 @@ public sealed class BacklogQualityAnalyzerTests
 
         var result = analyzer.Analyze(graph);
 
-        Assert.AreEqual(result.Findings, result.Validation.Findings);
+        CollectionAssert.AreEqual(
+            result.Findings.Select(finding => $"{finding.Rule.RuleId}:{finding.WorkItemId}").ToArray(),
+            result.Validation.Findings.Select(finding => $"{finding.Rule.RuleId}:{finding.WorkItemId}").ToArray());
         Assert.HasCount(0, result.IntegrityFindings);
         Assert.AreEqual(
             "(1,75),(2,75),(3,75)",
@@ -47,6 +49,23 @@ public sealed class BacklogQualityAnalyzerTests
         CollectionAssert.AreEqual(
             new[] { "RC-1", "RC-2" },
             pbiImplementation.BlockingFindings.Select(finding => finding.Rule.RuleId).ToArray());
+    }
+
+    [TestMethod]
+    public void Analyze_PropagatesStructuralIntegrityFindings()
+    {
+        var analyzer = new BacklogQualityAnalyzer();
+        var graph = CreateGraph(
+            Snapshot(1, BacklogWorkItemTypes.Epic, null, "Valid epic description", null, StateClassification.Done),
+            Snapshot(2, BacklogWorkItemTypes.Task, 1, "Task still in progress", null, StateClassification.New));
+
+        var result = analyzer.Analyze(graph);
+
+        Assert.HasCount(1, result.IntegrityFindings);
+        Assert.AreEqual("SI-1", result.IntegrityFindings[0].Rule.RuleId);
+        CollectionAssert.AreEqual(
+            new[] { "SI-1" },
+            result.Findings.Select(finding => finding.Rule.RuleId).ToArray());
     }
 
     private static BacklogGraph CreateGraph(params WorkItemSnapshot[] items)

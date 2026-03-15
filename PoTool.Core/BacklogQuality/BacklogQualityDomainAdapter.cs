@@ -26,19 +26,40 @@ internal static class BacklogQualityDomainAdapter
     }
 
     public static DomainStateClassification Classify(
-        IWorkItemStateClassificationService stateClassificationService,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), DomainStateClassification> classifications,
         WorkItemDto workItem)
     {
-        ArgumentNullException.ThrowIfNull(stateClassificationService);
+        ArgumentNullException.ThrowIfNull(classifications);
         ArgumentNullException.ThrowIfNull(workItem);
 
-        return stateClassificationService.GetClassificationAsync(workItem.Type, workItem.State).GetAwaiter().GetResult() switch
-        {
-            Shared.Settings.StateClassification.Done => DomainStateClassification.Done,
-            Shared.Settings.StateClassification.Removed => DomainStateClassification.Removed,
-            Shared.Settings.StateClassification.InProgress => DomainStateClassification.InProgress,
-            _ => DomainStateClassification.New
-        };
+        return classifications.TryGetValue(
+            (Normalize(workItem.Type), Normalize(workItem.State)),
+            out var classification)
+            ? classification
+            : DomainStateClassification.New;
+    }
+
+    public static IReadOnlyDictionary<(string WorkItemType, string StateName), DomainStateClassification> CreateClassificationLookup(
+        IWorkItemStateClassificationService stateClassificationService)
+    {
+        ArgumentNullException.ThrowIfNull(stateClassificationService);
+
+        return stateClassificationService.GetClassificationsAsync().GetAwaiter().GetResult().Classifications
+            .GroupBy(item => (Normalize(item.WorkItemType), Normalize(item.StateName)))
+            .ToDictionary(
+                group => group.Key,
+                group => group.Last().Classification switch
+                {
+                    Shared.Settings.StateClassification.Done => DomainStateClassification.Done,
+                    Shared.Settings.StateClassification.Removed => DomainStateClassification.Removed,
+                    Shared.Settings.StateClassification.InProgress => DomainStateClassification.InProgress,
+                    _ => DomainStateClassification.New
+                });
+    }
+
+    private static string Normalize(string value)
+    {
+        return value.Trim().ToLowerInvariant();
     }
 
     public static FeatureOwnerState ToFeatureOwnerState(ReadinessOwnerState ownerState)

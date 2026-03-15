@@ -203,7 +203,7 @@ Keep outside the first extraction:
 ## Backlog Quality CDC Progress — Analyzer Introduced
 
 - **Analyzer added in `PoTool.Core.Domain/BacklogQuality/Services/BacklogQualityAnalyzer.cs`:**
-  - provides one façade entrypoint over `BacklogValidationService`, `BacklogReadinessService`, and `ImplementationReadinessService`
+  - provides one facade entrypoint over `BacklogValidationService`, `BacklogReadinessService`, and `ImplementationReadinessService`
   - returns one domain analysis result that exposes validation findings, integrity findings, refinement states, implementation states, and readiness scores together
 - **Existing Core consumers integrated or wrapped:**
   - `PoTool.Core/Health/BacklogStateComputationService.cs` now delegates score computation through the canonical backlog-quality analyzer while preserving its existing return types
