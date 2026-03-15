@@ -93,6 +93,12 @@ public sealed record ImplementationReadinessState(
 /// </summary>
 public sealed record BacklogValidationResult(
     IReadOnlyList<BacklogIntegrityFinding> IntegrityFindings,
-    IReadOnlyList<ValidationRuleResult> RuleResults,
+    IReadOnlyList<ValidationRuleResult> Findings,
     IReadOnlyList<RefinementReadinessState> RefinementStates,
-    IReadOnlyList<ImplementationReadinessState> ImplementationStates);
+    IReadOnlyList<ImplementationReadinessState> ImplementationStates)
+{
+    /// <summary>
+    /// Gets all reported rule results in canonical output order.
+    /// </summary>
+    public IReadOnlyList<ValidationRuleResult> RuleResults => Findings;
+}

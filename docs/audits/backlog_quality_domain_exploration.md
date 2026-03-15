@@ -167,3 +167,17 @@ Keep outside the first extraction:
 - **Tests added/updated:**
   - `PoTool.Tests.Unit/Services/BacklogQualityCanonicalRulesTests.cs`
   - coverage includes per-rule firing behavior, canonical metadata/family assertions, deterministic family ordering, and explicit `RC-2` identity preservation
+
+## Backlog Quality CDC Progress — BacklogValidationService Implemented
+
+- **Validation service added in `PoTool.Core.Domain/BacklogQuality/Services/BacklogValidationService.cs`:**
+  - executes Structural Integrity, Refinement Readiness, and Implementation Readiness in fixed canonical order
+  - aggregates reported findings, specialized structural findings, refinement states, and implementation states into `BacklogValidationResult`
+  - preserves canonical rule metadata by consuming rule outputs from the domain `RuleCatalog`
+- **Suppression semantics implemented:**
+  - refinement-readiness blockers suppress implementation-readiness findings for the blocked scope and descendants in the reported findings list
+  - implementation-readiness states still retain their own blocking findings so readiness computation remains independent from reporting suppression
+  - structural-integrity findings remain reported even when refinement blockers suppress lower implementation findings
+- **Tests added:**
+  - `PoTool.Tests.Unit/Services/BacklogValidationServiceTests.cs`
+  - coverage includes canonical family execution order, suppression beneath refinement blockers, structural reporting, aggregate output shape, and deterministic mixed-tree behavior
