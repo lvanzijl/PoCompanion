@@ -135,3 +135,21 @@ Keep outside the first extraction:
 - UI pages and components
 - queue/triage/fix-session orchestration
 - multi-iteration health dashboards until their heuristics are canonicalized
+
+## Backlog Quality CDC Progress — Domain Models and Rule Catalog
+
+- **Models added in `PoTool.Core.Domain/BacklogQuality`:**
+  - `Models/BacklogGraph.cs`
+  - `Models/WorkItemSnapshot.cs`
+  - `Models/ReadinessScore.cs`
+  - `Models/ValidationOutputs.cs` (`ValidationRuleResult`, `BacklogIntegrityFinding`, `RefinementReadinessState`, `ImplementationReadinessState`, `BacklogValidationResult`)
+  - `Models/ReadinessOwnerState.cs`
+- **Rule catalog created:**
+  - `Rules/RuleFamily.cs`
+  - `Rules/RuleMetadata.cs`
+  - `Rules/IBacklogQualityRule.cs`
+  - `Rules/PlaceholderBacklogQualityRule.cs`
+  - `Services/RuleCatalog.cs`
+- **Tests added:**
+  - `PoTool.Tests.Unit/Services/BacklogQualityDomainModelsTests.cs`
+  - coverage includes backlog-graph construction/invariants, readiness-score semantics, rule metadata shape, and stable manual rule registration order
