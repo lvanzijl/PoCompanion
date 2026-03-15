@@ -17,6 +17,7 @@ namespace PoTool.Api.Handlers.Metrics;
 public sealed class GetEffortImbalanceQueryHandler
     : IQueryHandler<GetEffortImbalanceQuery, EffortImbalanceDto>
 {
+    private static readonly PoTool.Core.Metrics.EffortDiagnostics.EffortDiagnosticsAnalyzer Analyzer = new();
     private readonly IWorkItemRepository _repository;
     private readonly IProductRepository _productRepository;
     private readonly IMediator _mediator;
@@ -111,21 +112,22 @@ public sealed class GetEffortImbalanceQueryHandler
             .Take(query.MaxIterations)
             .ToList();
 
-        // Analyze team imbalances
-        var teamImbalances = AnalyzeTeamImbalances(
-            workItemsWithEffort,
-            topAreaPaths,
-            query.ImbalanceThreshold);
+        var areaBuckets = topAreaPaths.ToDictionary(
+            areaPath => areaPath,
+            areaPath => workItemsWithEffort
+                .Where(wi => wi.AreaPath.Equals(areaPath, StringComparison.OrdinalIgnoreCase))
+                .Sum(wi => wi.Effort ?? 0));
+        var iterationBuckets = iterationPaths.ToDictionary(
+            iterationPath => iterationPath,
+            iterationPath => workItemsWithEffort
+                .Where(wi => wi.IterationPath.Equals(iterationPath, StringComparison.OrdinalIgnoreCase))
+                .Sum(wi => wi.Effort ?? 0));
 
-        // Analyze sprint imbalances
-        var sprintImbalances = AnalyzeSprintImbalances(
-            workItemsWithEffort,
-            iterationPaths,
-            query.ImbalanceThreshold,
-            query.DefaultCapacityPerIteration);
-
-        // Calculate overall risk and imbalance score
-        var (overallRisk, imbalanceScore) = CalculateOverallRisk(teamImbalances, sprintImbalances);
+        var analysis = Analyzer.AnalyzeImbalance(areaBuckets, iterationBuckets, query.ImbalanceThreshold);
+        var teamImbalances = MapTeamImbalances(analysis.AreaBuckets);
+        var sprintImbalances = MapSprintImbalances(analysis.IterationBuckets, query.DefaultCapacityPerIteration);
+        var overallRisk = MapImbalanceRiskLevel(analysis.OverallRiskLevel);
+        var imbalanceScore = analysis.ImbalanceScore;
 
         // Generate recommendations
         var recommendations = GenerateRecommendations(teamImbalances, sprintImbalances, overallRisk);
@@ -140,127 +142,71 @@ public sealed class GetEffortImbalanceQueryHandler
         );
     }
 
-    private static List<TeamImbalance> AnalyzeTeamImbalances(
-        List<WorkItemDto> workItems,
-        List<string> areaPaths,
-        double threshold)
+    private static List<TeamImbalance> MapTeamImbalances(
+        IReadOnlyList<PoTool.Core.Metrics.EffortDiagnostics.EffortImbalanceBucket> areaBuckets)
     {
-        var effortByArea = areaPaths
-            .Select(areaPath => new
+        return areaBuckets
+            .Where(bucket => bucket.RiskLevel != PoTool.Core.Metrics.EffortDiagnostics.ImbalanceRiskLevel.Low)
+            .Select(bucket =>
             {
-                AreaPath = areaPath,
-                TotalEffort = workItems
-                    .Where(wi => wi.AreaPath.Equals(areaPath, StringComparison.OrdinalIgnoreCase))
-                    .Sum(wi => wi.Effort ?? 0)
-            })
-            .ToList();
-
-        var averageEffort = effortByArea.Average(e => e.TotalEffort);
-
-        return effortByArea
-            .Select(e =>
-            {
-                var deviation = EffortDiagnosticsStatistics.CalculateDeviationFromMean(e.TotalEffort, averageEffort);
-                var riskLevel = DetermineImbalanceRisk(deviation, threshold);
-                var description = GenerateTeamImbalanceDescription(e.TotalEffort, averageEffort, deviation);
+                var totalEffort = (int)bucket.EffortAmount;
+                var averageEffort = (int)bucket.MeanEffort;
+                var deviation = bucket.DeviationFromMean;
+                var description = GenerateTeamImbalanceDescription(totalEffort, bucket.MeanEffort, deviation);
 
                 return new TeamImbalance(
-                    AreaPath: e.AreaPath,
-                    TotalEffort: e.TotalEffort,
-                    AverageEffortAcrossTeams: (int)averageEffort,
+                    AreaPath: bucket.BucketKey,
+                    TotalEffort: totalEffort,
+                    AverageEffortAcrossTeams: averageEffort,
                     DeviationPercentage: deviation * 100,
-                    RiskLevel: riskLevel,
+                    RiskLevel: MapImbalanceRiskLevel(bucket.RiskLevel),
                     Description: description
                 );
             })
-            .Where(t => t.RiskLevel != ImbalanceRiskLevel.Low)
             .OrderByDescending(t => t.DeviationPercentage)
             .ToList();
     }
 
-    private static List<SprintImbalance> AnalyzeSprintImbalances(
-        List<WorkItemDto> workItems,
-        List<string> iterationPaths,
-        double threshold,
+    private static List<SprintImbalance> MapSprintImbalances(
+        IReadOnlyList<PoTool.Core.Metrics.EffortDiagnostics.EffortImbalanceBucket> iterationBuckets,
         int? defaultCapacity)
     {
-        var effortBySprint = iterationPaths
-            .Select(iterationPath => new
+        return iterationBuckets
+            .Where(bucket => bucket.RiskLevel != PoTool.Core.Metrics.EffortDiagnostics.ImbalanceRiskLevel.Low)
+            .Select(bucket =>
             {
-                IterationPath = iterationPath,
-                SprintName = ExtractSprintName(iterationPath),
-                TotalEffort = workItems
-                    .Where(wi => wi.IterationPath.Equals(iterationPath, StringComparison.OrdinalIgnoreCase))
-                    .Sum(wi => wi.Effort ?? 0)
-            })
-            .ToList();
-
-        var averageEffort = effortBySprint.Average(e => e.TotalEffort);
-
-        return effortBySprint
-            .Select(e =>
-            {
-                var deviation = EffortDiagnosticsStatistics.CalculateDeviationFromMean(e.TotalEffort, averageEffort);
-                var riskLevel = DetermineImbalanceRisk(deviation, threshold);
+                var totalEffort = (int)bucket.EffortAmount;
                 var description = GenerateSprintImbalanceDescription(
-                    e.TotalEffort,
-                    averageEffort,
-                    deviation,
+                    totalEffort,
+                    bucket.MeanEffort,
+                    bucket.DeviationFromMean,
                     defaultCapacity);
 
                 return new SprintImbalance(
-                    IterationPath: e.IterationPath,
-                    SprintName: e.SprintName,
-                    TotalEffort: e.TotalEffort,
-                    AverageEffortAcrossSprints: (int)averageEffort,
-                    DeviationPercentage: deviation * 100,
-                    RiskLevel: riskLevel,
+                    IterationPath: bucket.BucketKey,
+                    SprintName: ExtractSprintName(bucket.BucketKey),
+                    TotalEffort: totalEffort,
+                    AverageEffortAcrossSprints: (int)bucket.MeanEffort,
+                    DeviationPercentage: bucket.DeviationFromMean * 100,
+                    RiskLevel: MapImbalanceRiskLevel(bucket.RiskLevel),
                     Description: description
                 );
             })
-            .Where(s => s.RiskLevel != ImbalanceRiskLevel.Low)
             .OrderByDescending(s => s.DeviationPercentage)
             .ToList();
     }
 
-    private static ImbalanceRiskLevel DetermineImbalanceRisk(double deviation, double threshold)
+    private static ImbalanceRiskLevel MapImbalanceRiskLevel(
+        PoTool.Core.Metrics.EffortDiagnostics.ImbalanceRiskLevel riskLevel)
     {
-        // Use threshold as base, with Medium at threshold, High at 1.5x, Critical at 2x
-        return deviation switch
+        return riskLevel switch
         {
-            var d when d < threshold => ImbalanceRiskLevel.Low,
-            var d when d < threshold * 1.5 => ImbalanceRiskLevel.Medium,
-            var d when d < threshold * 2.5 => ImbalanceRiskLevel.High,
-            _ => ImbalanceRiskLevel.Critical
+            PoTool.Core.Metrics.EffortDiagnostics.ImbalanceRiskLevel.Low => ImbalanceRiskLevel.Low,
+            PoTool.Core.Metrics.EffortDiagnostics.ImbalanceRiskLevel.Medium => ImbalanceRiskLevel.Medium,
+            PoTool.Core.Metrics.EffortDiagnostics.ImbalanceRiskLevel.High => ImbalanceRiskLevel.High,
+            PoTool.Core.Metrics.EffortDiagnostics.ImbalanceRiskLevel.Critical => ImbalanceRiskLevel.Critical,
+            _ => throw new ArgumentOutOfRangeException(nameof(riskLevel), riskLevel, null)
         };
-    }
-
-    private static (ImbalanceRiskLevel, double) CalculateOverallRisk(
-        List<TeamImbalance> teamImbalances,
-        List<SprintImbalance> sprintImbalances)
-    {
-        var allDeviations = teamImbalances
-            .Select(t => t.DeviationPercentage)
-            .Concat(sprintImbalances.Select(s => s.DeviationPercentage))
-            .ToList();
-
-        if (!allDeviations.Any())
-        {
-            return (ImbalanceRiskLevel.Low, 0);
-        }
-
-        var maxDeviation = allDeviations.Max() / 100.0;
-        var imbalanceScore = EffortDiagnosticsStatistics.CalculateWeightedDeviationScore(allDeviations);
-
-        var overallRisk = maxDeviation switch
-        {
-            < 0.3 => ImbalanceRiskLevel.Low,
-            >= 0.3 and < 0.5 => ImbalanceRiskLevel.Medium,
-            >= 0.5 and < 0.8 => ImbalanceRiskLevel.High,
-            _ => ImbalanceRiskLevel.Critical
-        };
-
-        return (overallRisk, imbalanceScore);
     }
 
     private static List<RebalancingRecommendation> GenerateRecommendations(
