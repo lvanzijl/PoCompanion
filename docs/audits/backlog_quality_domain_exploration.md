@@ -199,3 +199,16 @@ Keep outside the first extraction:
   - `PoTool.Tests.Unit/Services/ImplementationReadinessServiceTests.cs`
   - `PoTool.Tests.Unit/Services/BacklogValidationServiceTests.cs`
   - coverage includes PBI/Feature/Epic score rules, done descendant contribution, removed descendant exclusion, midpoint-to-even rounding, owner-state semantics, binary readiness derivation, and the contradiction case where an Epic score is blocked while mature descendants still retain their own scores
+
+## Backlog Quality CDC Progress — Analyzer Introduced
+
+- **Analyzer added in `PoTool.Core.Domain/BacklogQuality/Services/BacklogQualityAnalyzer.cs`:**
+  - provides one facade entrypoint over `BacklogValidationService`, `BacklogReadinessService`, and `ImplementationReadinessService`
+  - returns one domain analysis result that exposes validation findings, integrity findings, refinement states, implementation states, and readiness scores together
+- **Existing Core consumers integrated or wrapped:**
+  - `PoTool.Core/Health/BacklogStateComputationService.cs` now delegates score computation through the canonical backlog-quality analyzer while preserving its existing return types
+  - `PoTool.Core/WorkItems/Validators/HierarchicalWorkItemValidator.cs` now uses the analyzer-backed path when state classification is available, while keeping legacy wrapper behavior such as tree-level suppression and legacy epic/feature `RC-2` reporting intact
+- **Tests added/updated:**
+  - `PoTool.Tests.Unit/Services/BacklogQualityAnalyzerTests.cs`
+  - `PoTool.Tests.Unit/HierarchicalWorkItemValidatorTests.cs`
+  - coverage includes coherent combined analyzer output, readiness/validation alignment, and preservation of adapted Core validator behavior

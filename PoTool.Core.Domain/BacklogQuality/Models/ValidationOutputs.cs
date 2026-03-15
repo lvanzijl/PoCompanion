@@ -102,3 +102,31 @@ public sealed record BacklogValidationResult(
     /// </summary>
     public IReadOnlyList<ValidationRuleResult> RuleResults => Findings;
 }
+
+/// <summary>
+/// Coherent aggregate output for backlog-quality analysis.
+/// </summary>
+public sealed record BacklogQualityAnalysisResult(
+    BacklogValidationResult Validation,
+    IReadOnlyList<BacklogReadinessScore> ReadinessScores)
+{
+    /// <summary>
+    /// Gets the structural-integrity findings from the validation result.
+    /// </summary>
+    public IReadOnlyList<BacklogIntegrityFinding> IntegrityFindings => Validation.IntegrityFindings;
+
+    /// <summary>
+    /// Gets the canonical validation findings from the validation result.
+    /// </summary>
+    public IReadOnlyList<ValidationRuleResult> Findings => Validation.Findings;
+
+    /// <summary>
+    /// Gets the refinement states from the validation result.
+    /// </summary>
+    public IReadOnlyList<RefinementReadinessState> RefinementStates => Validation.RefinementStates;
+
+    /// <summary>
+    /// Gets the implementation states from the validation result.
+    /// </summary>
+    public IReadOnlyList<ImplementationReadinessState> ImplementationStates => Validation.ImplementationStates;
+}

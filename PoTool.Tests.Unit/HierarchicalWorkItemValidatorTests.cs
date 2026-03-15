@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems.Validators.Rules;
+using PoTool.Core.Domain.BacklogQuality.Services;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
@@ -302,6 +303,52 @@ public class HierarchicalWorkItemValidatorTests
         Assert.IsTrue(tree2.HasRefinementBlockers, "Tree 2 should have refinement blocker");
     }
 
+    [TestMethod]
+    public void AnalyzerBackedValidation_PreservesLegacySuppressionAndMissingEffort()
+    {
+        var validator = new HierarchicalWorkItemValidator(
+            Array.Empty<IHierarchicalValidationRule>(),
+            CreateMockStateClassificationService(),
+            new BacklogQualityAnalyzer());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "", null),
+            CreateWorkItem(2, "Feature", "New", 1, "Feature description", null),
+            CreateWorkItem(3, "Product Backlog Item", "New", 2, "", null)
+        };
+
+        var result = validator.ValidateTree(1, items);
+
+        Assert.IsTrue(result.HasRefinementBlockers);
+        Assert.IsFalse(result.HasIncompleteRefinement);
+        Assert.IsTrue(result.WasSuppressed);
+        Assert.IsTrue(result.MissingEffortIssues.Any(issue => issue.WorkItemId == 1 && issue.Rule.RuleId == "RC-2"));
+        Assert.IsTrue(result.MissingEffortIssues.Any(issue => issue.WorkItemId == 2 && issue.Rule.RuleId == "RC-2"));
+        Assert.IsTrue(result.MissingEffortIssues.Any(issue => issue.WorkItemId == 3 && issue.Rule.RuleId == "RC-2"));
+    }
+
+    [TestMethod]
+    public void AnalyzerBackedValidation_MultipleRootsRemainIndependent()
+    {
+        var validator = new HierarchicalWorkItemValidator(
+            Array.Empty<IHierarchicalValidationRule>(),
+            CreateMockStateClassificationService(),
+            new BacklogQualityAnalyzer());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "Epic description", null),
+            CreateWorkItem(2, "Feature", "New", 1, "Feature description", null),
+            CreateWorkItem(10, "Epic", "New", null, "", null),
+            CreateWorkItem(11, "Feature", "New", 10, "Feature description", null)
+        };
+
+        var results = validator.ValidateWorkItems(items);
+
+        Assert.HasCount(2, results);
+        Assert.IsFalse(results.Single(result => result.RootWorkItemId == 1).HasRefinementBlockers);
+        Assert.IsTrue(results.Single(result => result.RootWorkItemId == 10).HasRefinementBlockers);
+    }
+
     #endregion
 
     #region Edge Cases
@@ -433,7 +480,30 @@ public class HierarchicalWorkItemValidatorTests
     {
         public Task<GetStateClassificationsResponse> GetClassificationsAsync(CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            return Task.FromResult(new GetStateClassificationsResponse
+            {
+                ProjectName = "Test",
+                Classifications =
+                [
+                    new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "Done", Classification = StateClassification.Done },
+                    new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "Removed", Classification = StateClassification.Removed },
+                    new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "In Progress", Classification = StateClassification.InProgress },
+                    new WorkItemStateClassificationDto { WorkItemType = "Epic", StateName = "New", Classification = StateClassification.New },
+                    new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "Done", Classification = StateClassification.Done },
+                    new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "Removed", Classification = StateClassification.Removed },
+                    new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "In Progress", Classification = StateClassification.InProgress },
+                    new WorkItemStateClassificationDto { WorkItemType = "Feature", StateName = "New", Classification = StateClassification.New },
+                    new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "Done", Classification = StateClassification.Done },
+                    new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "Removed", Classification = StateClassification.Removed },
+                    new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "In Progress", Classification = StateClassification.InProgress },
+                    new WorkItemStateClassificationDto { WorkItemType = "Product Backlog Item", StateName = "New", Classification = StateClassification.New },
+                    new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "Done", Classification = StateClassification.Done },
+                    new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "Removed", Classification = StateClassification.Removed },
+                    new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "In Progress", Classification = StateClassification.InProgress },
+                    new WorkItemStateClassificationDto { WorkItemType = "Task", StateName = "New", Classification = StateClassification.New }
+                ],
+                IsDefault = false
+            });
         }
 
         public Task<bool> SaveClassificationsAsync(SaveStateClassificationsRequest request, CancellationToken cancellationToken = default)
