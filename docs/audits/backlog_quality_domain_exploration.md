@@ -1,0 +1,137 @@
+# Backlog Quality Domain Exploration
+
+## Summary
+- **Rule families found:** four clear families exist today: structural integrity, refinement readiness, ready-to-implement / implementation readiness, and backlog health scoring. The first three already have named executable rules in `PoTool.Core`; the fourth is split between one simple calculator and several handler heuristics.
+- **Stability assessment:** the validation engine and backlog-readiness scoring are stable enough to centralize. They are specification-backed (`/features/20260119_workitem_validation.md`, `/features/02032026_backlog_health.md`), isolated from persistence, and covered by dedicated tests in `/PoTool.Tests.Unit/HierarchicalWorkItemValidatorTests.cs` and `/PoTool.Tests.Unit/Services/BacklogStateComputationServiceTests.cs`.
+- **Duplication assessment:** executable rule duplication is low in the core engine, but rule metadata and categorization are duplicated outside it. The biggest hotspot is `RC-2`: the rule itself lives in `/PoTool.Core/WorkItems/Validators/Rules/PbiEffortEmptyRule.cs`, while queue/triage/filter/UI code repeatedly special-case that rule as the separate `EFF` category.
+- **Domain vs UI:** the actual backlog-quality logic lives in Core and some API handlers. The Blazor pages (`/PoTool.Client/Pages/Home/BacklogOverviewPage.razor`, `/PoTool.Client/Pages/Home/ValidationTriagePage.razor`, `/PoTool.Client/Pages/Home/ValidationQueuePage.razor`) are presentational and do not evaluate rules themselves.
+- **Recommendation:** yes, backlog quality should be the next domain slice after sprint analytics CDC, but the slice should focus on **validation + backlog readiness** first. Queue/triage pages, handler orchestration, and heuristic health dashboards should remain adapters around that slice.
+
+## Integrity Rules
+- **Locations**
+  - Executable rules: `/PoTool.Core/WorkItems/Validators/Rules/DoneParentWithUnfinishedDescendantsRule.cs`, `/RemovedParentWithUnfinishedDescendantsRule.cs`, `/NewParentWithInProgressDescendantsRule.cs`
+  - Orchestration and suppression order: `/PoTool.Core/WorkItems/Validators/HierarchicalWorkItemValidator.cs`
+  - Shared consequence/responsibility contracts: `/PoTool.Shared/WorkItems/ValidationCategory.cs`, `/ValidationConsequence.cs`, `/ResponsibleParty.cs`, `/HierarchicalValidationResult.cs`
+  - UI/reporting consumers: `/PoTool.Api/Handlers/WorkItems/GetValidationTriageSummaryQueryHandler.cs`, `/GetValidationQueueQueryHandler.cs`, `/PoTool.Client/Components/Validation/TriageCategoryCard.razor`
+  - Spec/docs: `/features/20260119_workitem_validation.md`, `/VALIDATION_SYSTEM_REPORT.md`
+- **What exists today**
+  - `SI-1`: done parent with unfinished descendants
+  - `SI-2`: removed parent with non-removed descendants
+  - `SI-3`: new parent with in-progress or done descendants
+  - All three are recursive tree rules and produce `BacklogHealthProblem`.
+- **Duplication**
+  - Rule execution is centralized in Core.
+  - Display titles are duplicated in `/PoTool.Shared/WorkItems/ValidationRuleDescriptions.cs`.
+  - Category inference is duplicated outside the validator in `/PoTool.Core/WorkItems/Filtering/WorkItemFilterer.cs` and `/PoTool.Client/Services/TreeBuilderService.cs`.
+  - `GetValidationImpactAnalysisQueryHandler` reinterprets integrity findings as generic `"ParentProgress"` violations instead of consuming richer domain output, so impact semantics are duplicated in a weaker form.
+- **Extraction readiness**
+  - **High** for the rules and validator. They are deterministic, named, tested, and already independent of UI and persistence.
+  - **Lower** for impact-analysis logic because it still works through legacy `ValidationIssue` output and local hierarchy heuristics.
+- **Recommended ownership**
+  - Core structural integrity rules belong in a future backlog-quality domain package.
+  - Triage, queue, and impact-analysis handlers should remain API/application adapters.
+
+## Refinement Readiness Rules
+- **Locations**
+  - Executable rules: `/PoTool.Core/WorkItems/Validators/Rules/EpicDescriptionEmptyRule.cs`, `/FeatureDescriptionEmptyRule.cs`, `/EpicWithoutFeaturesRule.cs`
+  - Shared threshold: `/PoTool.Core/WorkItems/Validators/Rules/ValidationRuleConstants.cs`
+  - Suppression behavior: `/PoTool.Core/WorkItems/Validators/HierarchicalWorkItemValidator.cs`
+  - Readiness scoring spec and consumers: `/PoTool.Core/Health/BacklogStateComputationService.cs`, `/PoTool.Api/Handlers/WorkItems/GetProductBacklogStateQueryHandler.cs`, `/PoTool.Api/Handlers/WorkItems/GetHealthWorkspaceProductSummaryQueryHandler.cs`
+  - UI display: `/PoTool.Client/Pages/Home/BacklogOverviewPage.razor`
+- **What exists today**
+  - `RR-1`: Epic description must be present and at least 10 characters
+  - `RR-2`: Feature description must be present and at least 10 characters
+  - `RR-3`: Epic must have at least one Feature child
+  - Any RR violation suppresses refinement-completeness evaluation for the tree.
+  - The backlog-overview scoring model mirrors this family: Epic score `0` for missing description, `30` for no Features; Feature score `0` for missing description, `25` for no PBIs.
+- **Duplication**
+  - Core execution is centralized, but thresholds and meanings are repeated in XML comments in `/PoTool.Shared/Health/BacklogStateDtos.cs` and again in `/features/02032026_backlog_health.md`.
+  - Queue/triage code re-categorizes these rules by `RR-` prefix instead of relying on a single domain classification source.
+- **Extraction readiness**
+  - **High.** This is already close to domain-package shape: stable thresholds, explicit rules, no infrastructure coupling, clear tests, and consistent terminology across code and specs.
+- **Recommended ownership**
+  - The RR rules and their suppression semantics should move into the future backlog-quality domain slice.
+  - DTO comments, queue grouping, and page-level wording should remain Shared/UI concerns.
+
+## Ready-to-Implement Rules
+- **Locations**
+  - Executable rules: `/PoTool.Core/WorkItems/Validators/Rules/PbiDescriptionEmptyRule.cs`, `/FeatureWithoutChildrenRule.cs`, `/PbiEffortEmptyRule.cs`
+  - Readiness result contract: `/PoTool.Shared/WorkItems/HierarchicalValidationResult.cs`
+  - Backlog-readiness scoring: `/PoTool.Core/Health/BacklogStateComputationService.cs`
+  - Product backlog and health summary handlers: `/PoTool.Api/Handlers/WorkItems/GetProductBacklogStateQueryHandler.cs`, `/GetHealthWorkspaceProductSummaryQueryHandler.cs`
+  - Legacy overlap: `/PoTool.Core/WorkItems/Validators/WorkItemInProgressWithoutEffortValidator.cs`
+  - Queue/triage/filter categorization: `/PoTool.Api/Handlers/WorkItems/GetValidationTriageSummaryQueryHandler.cs`, `/GetValidationQueueQueryHandler.cs`, `/PoTool.Core/WorkItems/Filtering/WorkItemFilterer.cs`, `/PoTool.Client/Services/TreeBuilderService.cs`
+- **What exists today**
+  - `RC-1`: PBI description is empty
+  - `RC-3`: Feature has no PBI children
+  - `RC-2`: missing effort, but implemented as category `MissingEffort` and evaluated independently of RR suppression
+  - `HierarchicalValidationResult.IsReadyForImplementation` defines implementation readiness as: ready for refinement, no incomplete refinement issues, and no missing-effort issues.
+  - `BacklogStateComputationService` adds a score-oriented view of the same problem: PBI `0/75/100`, Feature owner `PO/Team/Ready`, Feature average from PBIs.
+- **Duplication**
+  - This is the most duplicated family.
+  - `RC-2` is the clearest example:
+    - rule ID remains `RC-2`
+    - executable category is `MissingEffort`
+    - triage splits it into `EFF`
+    - queue/filter/UI code special-case it repeatedly
+    - deprecated legacy validator still exists with the same rule ID
+  - There is also conceptual duplication between binary validation (`IsReadyForImplementation`) and percentage scoring (`0/75/100`, `0/25/avg`), although they complement each other rather than conflict.
+- **Extraction readiness**
+  - **Moderate to high** for the underlying rules.
+  - **Moderate** for the broader slice because naming and categorization still drift at the edges, especially around missing effort.
+  - This family is centralizable, but the extraction should normalize `RC-2` / `MissingEffort` ownership instead of copying today's split.
+- **Recommended ownership**
+  - Rule execution, readiness state, and scoring logic belong in the future domain slice.
+  - Queue grouping, fix-session flows, and page-specific prioritization should stay outside as application/UI adapters.
+
+## Health Scoring Rules
+- **Locations**
+  - Simple calculator: `/PoTool.Core/Health/BacklogHealthCalculator.cs`
+  - Iteration health handlers: `/PoTool.Api/Handlers/Metrics/GetBacklogHealthQueryHandler.cs`, `/GetMultiIterationBacklogHealthQueryHandler.cs`
+  - Health controller: `/PoTool.Api/Controllers/HealthCalculationController.cs`
+  - Discovery doc: `/docs/domain/REPOSITORY_DOMAIN_DISCOVERY.md`
+- **What exists today**
+  - `BacklogHealthCalculator` computes a numeric score from total items, missing effort, in-progress-without-effort, parent progress issues, and blocked items.
+  - The main health handlers do not use that calculator. They separately derive:
+    - structural integrity counts from hierarchical validation
+    - refinement-blocker and refinement-needed counts
+    - blocked-item counts via state-name string matching
+    - in-progress-at-end counts via state-name string matching
+  - This produces a health dashboard slice, but not one single canonical health formula.
+- **Duplication**
+  - `GetBacklogHealthQueryHandler` and `GetMultiIterationBacklogHealthQueryHandler` duplicate most of the per-iteration aggregation logic.
+  - The simple calculator exists beside, not inside, those handlers, so health scoring is split across two models.
+  - Blocked/in-progress heuristics are handler-owned and not reused by the calculator.
+- **Extraction readiness**
+  - **Low to moderate** as a standalone health-scoring package.
+  - The idea is domain-like, but the current implementation mixes canonical validation counts with ad hoc dashboard heuristics and legacy compatibility fields.
+  - This should follow the validation/readiness extraction, not lead it.
+- **Recommended ownership**
+  - Structural validation counts should be owned by the backlog-quality domain slice.
+  - Iteration health dashboards and trend windows should remain API/application concerns until one canonical health-scoring contract is agreed.
+
+## Conclusion
+Backlog quality **should** become the next domain slice after the current CDC, but the slice should be defined narrowly as **backlog validation + backlog readiness**, not as every current health/triage screen.
+
+Why this should be next:
+- the core rule engine already exists in `/PoTool.Core/WorkItems/Validators`
+- the readiness scoring model already exists in `/PoTool.Core/Health/BacklogStateComputationService.cs`
+- both areas are specification-backed, deterministic, and tested
+- they are reused across backlog overview, validation queue/triage, and sync-time computation
+
+Why the extraction should stay focused:
+- rule categorization is still duplicated outside the engine
+- `RC-2` / `MissingEffort` naming is inconsistent at the boundaries
+- health scoring is not yet one canonical model
+- impact analysis and queue/fix-session orchestration are still application-layer concerns
+
+**Recommendation:** make backlog quality the next domain package / CDC v2 candidate, with initial ownership over:
+- structural integrity rules
+- refinement readiness rules
+- implementation-readiness rules
+- backlog readiness scoring and ownership states
+
+Keep outside the first extraction:
+- UI pages and components
+- queue/triage/fix-session orchestration
+- multi-iteration health dashboards until their heuristics are canonicalized
