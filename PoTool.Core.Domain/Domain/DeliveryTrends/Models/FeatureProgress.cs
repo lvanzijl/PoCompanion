@@ -25,41 +25,26 @@ public sealed record FeatureProgress
         int sprintCompletedPbiCount,
         bool sprintCompletedInSprint)
     {
-        if (featureId <= 0)
+        DeliveryTrendModelValidation.ValidatePositiveId(featureId, nameof(featureId), "Feature ID");
+        DeliveryTrendModelValidation.ValidatePositiveId(productId, nameof(productId), "Product ID");
+        DeliveryTrendModelValidation.ValidateRequiredText(featureTitle, nameof(featureTitle), "Feature title");
+
+        if (epicId.HasValue)
         {
-            throw new ArgumentOutOfRangeException(nameof(featureId), "Feature ID must be greater than zero.");
+            DeliveryTrendModelValidation.ValidatePositiveId(epicId.Value, nameof(epicId), "Epic ID");
+            DeliveryTrendModelValidation.ValidateRequiredText(epicTitle, nameof(epicTitle), "Epic title");
+        }
+        else if (!string.IsNullOrWhiteSpace(epicTitle))
+        {
+            throw new ArgumentException("Epic title cannot be provided without an epic ID.", nameof(epicTitle));
         }
 
-        if (productId <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(productId), "Product ID must be greater than zero.");
-        }
-
-        if (string.IsNullOrWhiteSpace(featureTitle))
-        {
-            throw new ArgumentException("Feature title is required.", nameof(featureTitle));
-        }
-
-        if (epicId.HasValue && epicId.Value <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(epicId), "Epic ID must be greater than zero when provided.");
-        }
-
-        if (epicId.HasValue != !string.IsNullOrWhiteSpace(epicTitle))
-        {
-            throw new ArgumentException("Epic ID and epic title must either both be provided or both be omitted.", nameof(epicTitle));
-        }
-
-        if (progressPercent < 0 || progressPercent > 100)
-        {
-            throw new ArgumentOutOfRangeException(nameof(progressPercent), "Progress percent must fall within the range [0, 100].");
-        }
-
-        ValidateStoryPoints(totalScopeStoryPoints, nameof(totalScopeStoryPoints));
-        ValidateStoryPoints(deliveredStoryPoints, nameof(deliveredStoryPoints));
-        ValidateCount(donePbiCount, nameof(donePbiCount));
-        ValidateStoryPoints(sprintDeliveredStoryPoints, nameof(sprintDeliveredStoryPoints));
-        ValidateCount(sprintCompletedPbiCount, nameof(sprintCompletedPbiCount));
+        DeliveryTrendModelValidation.ValidateBoundedPercentage(progressPercent, nameof(progressPercent), "Progress percent");
+        DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(totalScopeStoryPoints, nameof(totalScopeStoryPoints), "Total scope story points");
+        DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(deliveredStoryPoints, nameof(deliveredStoryPoints), "Delivered story points");
+        DeliveryTrendModelValidation.ValidateCount(donePbiCount, nameof(donePbiCount), "Done PBI count");
+        DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(sprintDeliveredStoryPoints, nameof(sprintDeliveredStoryPoints), "Sprint delivered story points");
+        DeliveryTrendModelValidation.ValidateCount(sprintCompletedPbiCount, nameof(sprintCompletedPbiCount), "Sprint completed PBI count");
 
         FeatureId = featureId;
         FeatureTitle = featureTitle;
@@ -107,20 +92,4 @@ public sealed record FeatureProgress
     public int SprintCompletedPbiCount { get; }
 
     public bool SprintCompletedInSprint { get; }
-
-    private static void ValidateCount(int value, string paramName)
-    {
-        if (value < 0)
-        {
-            throw new ArgumentOutOfRangeException(paramName, "Counts must be zero or greater.");
-        }
-    }
-
-    private static void ValidateStoryPoints(double value, string paramName)
-    {
-        if (double.IsNaN(value) || double.IsInfinity(value) || value < 0)
-        {
-            throw new ArgumentOutOfRangeException(paramName, "Story-point values must be finite and zero or greater.");
-        }
-    }
 }

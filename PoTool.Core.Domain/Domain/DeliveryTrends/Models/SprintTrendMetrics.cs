@@ -15,16 +15,8 @@ public sealed record SprintTrendMetrics
         DateTimeOffset? endUtc,
         IReadOnlyList<SprintDeliveryProjection> productProjections)
     {
-        if (sprintId <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(sprintId), "Sprint ID must be greater than zero.");
-        }
-
-        if (string.IsNullOrWhiteSpace(sprintName))
-        {
-            throw new ArgumentException("Sprint name is required.", nameof(sprintName));
-        }
-
+        DeliveryTrendModelValidation.ValidatePositiveId(sprintId, nameof(sprintId), "Sprint ID");
+        DeliveryTrendModelValidation.ValidateRequiredText(sprintName, nameof(sprintName), "Sprint name");
         ArgumentNullException.ThrowIfNull(productProjections);
 
         if (startUtc.HasValue && endUtc.HasValue && endUtc.Value < startUtc.Value)

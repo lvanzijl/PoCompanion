@@ -11,11 +11,7 @@ public readonly record struct ProgressionDelta
     /// <param name="percentage">The bounded percentage value in the range [0, 100].</param>
     public ProgressionDelta(double percentage)
     {
-        if (double.IsNaN(percentage) || double.IsInfinity(percentage) || percentage < 0 || percentage > 100)
-        {
-            throw new ArgumentOutOfRangeException(nameof(percentage), "Progression delta must fall within the range [0, 100].");
-        }
-
+        DeliveryTrendModelValidation.ValidateBoundedPercentage(percentage, nameof(percentage), "Progression delta");
         Percentage = percentage;
     }
 

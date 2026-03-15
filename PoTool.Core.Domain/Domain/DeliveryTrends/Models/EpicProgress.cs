@@ -25,34 +25,18 @@ public sealed record EpicProgress
         int sprintCompletedPbiCount,
         int sprintCompletedFeatureCount)
     {
-        if (epicId <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(epicId), "Epic ID must be greater than zero.");
-        }
-
-        if (productId <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(productId), "Product ID must be greater than zero.");
-        }
-
-        if (string.IsNullOrWhiteSpace(epicTitle))
-        {
-            throw new ArgumentException("Epic title is required.", nameof(epicTitle));
-        }
-
-        if (progressPercent < 0 || progressPercent > 100)
-        {
-            throw new ArgumentOutOfRangeException(nameof(progressPercent), "Progress percent must fall within the range [0, 100].");
-        }
-
-        ValidateStoryPoints(totalScopeStoryPoints, nameof(totalScopeStoryPoints));
-        ValidateStoryPoints(deliveredStoryPoints, nameof(deliveredStoryPoints));
-        ValidateCount(featureCount, nameof(featureCount));
-        ValidateCount(doneFeatureCount, nameof(doneFeatureCount));
-        ValidateCount(donePbiCount, nameof(donePbiCount));
-        ValidateStoryPoints(sprintDeliveredStoryPoints, nameof(sprintDeliveredStoryPoints));
-        ValidateCount(sprintCompletedPbiCount, nameof(sprintCompletedPbiCount));
-        ValidateCount(sprintCompletedFeatureCount, nameof(sprintCompletedFeatureCount));
+        DeliveryTrendModelValidation.ValidatePositiveId(epicId, nameof(epicId), "Epic ID");
+        DeliveryTrendModelValidation.ValidatePositiveId(productId, nameof(productId), "Product ID");
+        DeliveryTrendModelValidation.ValidateRequiredText(epicTitle, nameof(epicTitle), "Epic title");
+        DeliveryTrendModelValidation.ValidateBoundedPercentage(progressPercent, nameof(progressPercent), "Progress percent");
+        DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(totalScopeStoryPoints, nameof(totalScopeStoryPoints), "Total scope story points");
+        DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(deliveredStoryPoints, nameof(deliveredStoryPoints), "Delivered story points");
+        DeliveryTrendModelValidation.ValidateCount(featureCount, nameof(featureCount), "Feature count");
+        DeliveryTrendModelValidation.ValidateCount(doneFeatureCount, nameof(doneFeatureCount), "Done feature count");
+        DeliveryTrendModelValidation.ValidateCount(donePbiCount, nameof(donePbiCount), "Done PBI count");
+        DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(sprintDeliveredStoryPoints, nameof(sprintDeliveredStoryPoints), "Sprint delivered story points");
+        DeliveryTrendModelValidation.ValidateCount(sprintCompletedPbiCount, nameof(sprintCompletedPbiCount), "Sprint completed PBI count");
+        DeliveryTrendModelValidation.ValidateCount(sprintCompletedFeatureCount, nameof(sprintCompletedFeatureCount), "Sprint completed feature count");
 
         EpicId = epicId;
         EpicTitle = epicTitle;
@@ -100,20 +84,4 @@ public sealed record EpicProgress
     public int SprintCompletedPbiCount { get; }
 
     public int SprintCompletedFeatureCount { get; }
-
-    private static void ValidateCount(int value, string paramName)
-    {
-        if (value < 0)
-        {
-            throw new ArgumentOutOfRangeException(paramName, "Counts must be zero or greater.");
-        }
-    }
-
-    private static void ValidateStoryPoints(double value, string paramName)
-    {
-        if (double.IsNaN(value) || double.IsInfinity(value) || value < 0)
-        {
-            throw new ArgumentOutOfRangeException(paramName, "Story-point values must be finite and zero or greater.");
-        }
-    }
 }

@@ -166,6 +166,38 @@ public sealed class DeliveryTrendDomainModelsTests
         Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new EpicProgress(1, "Epic A", 1, 101, 5, 2, 1, 1, 1, true, 1, new ProgressionDelta(5), 0, 1, 1));
     }
 
+    [TestMethod]
+    public void SprintTrendMetrics_RejectsEndDateBeforeStartDate()
+    {
+        var startUtc = new DateTimeOffset(2026, 3, 14, 0, 0, 0, TimeSpan.Zero);
+        var endUtc = startUtc.AddDays(-1);
+
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
+            new SprintTrendMetrics(42, "Sprint 42", startUtc, endUtc, [CreateProjection(sprintId: 42)]));
+    }
+
+    [TestMethod]
+    public void FeatureProgress_RejectsEpicTitleWithoutEpicId()
+    {
+        Assert.ThrowsExactly<ArgumentException>(() =>
+            new FeatureProgress(
+                1,
+                "Feature A",
+                1,
+                null,
+                "Epic A",
+                50,
+                5,
+                2,
+                1,
+                false,
+                1,
+                new ProgressionDelta(10),
+                0,
+                1,
+                false));
+    }
+
     private static SprintDeliveryProjection CreateProjection(
         int sprintId = 1,
         int productId = 1,

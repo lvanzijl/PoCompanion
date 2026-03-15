@@ -34,36 +34,28 @@ public sealed record SprintDeliveryProjection
         int unestimatedDeliveryCount,
         bool isApproximate)
     {
-        if (sprintId <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(sprintId), "Sprint ID must be greater than zero.");
-        }
-
-        if (productId <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(productId), "Product ID must be greater than zero.");
-        }
-
-        ValidateCount(plannedCount, nameof(plannedCount));
-        ValidateCount(plannedEffort, nameof(plannedEffort));
-        ValidateStoryPoints(plannedStoryPoints, nameof(plannedStoryPoints));
-        ValidateCount(workedCount, nameof(workedCount));
-        ValidateCount(workedEffort, nameof(workedEffort));
-        ValidateCount(bugsPlannedCount, nameof(bugsPlannedCount));
-        ValidateCount(bugsWorkedCount, nameof(bugsWorkedCount));
-        ValidateCount(completedPbiCount, nameof(completedPbiCount));
-        ValidateCount(completedPbiEffort, nameof(completedPbiEffort));
-        ValidateStoryPoints(completedPbiStoryPoints, nameof(completedPbiStoryPoints));
-        ValidateCount(spilloverCount, nameof(spilloverCount));
-        ValidateCount(spilloverEffort, nameof(spilloverEffort));
-        ValidateStoryPoints(spilloverStoryPoints, nameof(spilloverStoryPoints));
-        ValidateCount(bugsCreatedCount, nameof(bugsCreatedCount));
-        ValidateCount(bugsClosedCount, nameof(bugsClosedCount));
-        ValidateCount(missingEffortCount, nameof(missingEffortCount));
-        ValidateCount(missingStoryPointCount, nameof(missingStoryPointCount));
-        ValidateCount(derivedStoryPointCount, nameof(derivedStoryPointCount));
-        ValidateStoryPoints(derivedStoryPoints, nameof(derivedStoryPoints));
-        ValidateCount(unestimatedDeliveryCount, nameof(unestimatedDeliveryCount));
+        DeliveryTrendModelValidation.ValidatePositiveId(sprintId, nameof(sprintId), "Sprint ID");
+        DeliveryTrendModelValidation.ValidatePositiveId(productId, nameof(productId), "Product ID");
+        DeliveryTrendModelValidation.ValidateCount(plannedCount, nameof(plannedCount), "Planned count");
+        DeliveryTrendModelValidation.ValidateCount(plannedEffort, nameof(plannedEffort), "Planned effort");
+        DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(plannedStoryPoints, nameof(plannedStoryPoints), "Planned story points");
+        DeliveryTrendModelValidation.ValidateCount(workedCount, nameof(workedCount), "Worked count");
+        DeliveryTrendModelValidation.ValidateCount(workedEffort, nameof(workedEffort), "Worked effort");
+        DeliveryTrendModelValidation.ValidateCount(bugsPlannedCount, nameof(bugsPlannedCount), "Planned bug count");
+        DeliveryTrendModelValidation.ValidateCount(bugsWorkedCount, nameof(bugsWorkedCount), "Worked bug count");
+        DeliveryTrendModelValidation.ValidateCount(completedPbiCount, nameof(completedPbiCount), "Completed PBI count");
+        DeliveryTrendModelValidation.ValidateCount(completedPbiEffort, nameof(completedPbiEffort), "Completed PBI effort");
+        DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(completedPbiStoryPoints, nameof(completedPbiStoryPoints), "Completed PBI story points");
+        DeliveryTrendModelValidation.ValidateCount(spilloverCount, nameof(spilloverCount), "Spillover count");
+        DeliveryTrendModelValidation.ValidateCount(spilloverEffort, nameof(spilloverEffort), "Spillover effort");
+        DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(spilloverStoryPoints, nameof(spilloverStoryPoints), "Spillover story points");
+        DeliveryTrendModelValidation.ValidateCount(bugsCreatedCount, nameof(bugsCreatedCount), "Created bug count");
+        DeliveryTrendModelValidation.ValidateCount(bugsClosedCount, nameof(bugsClosedCount), "Closed bug count");
+        DeliveryTrendModelValidation.ValidateCount(missingEffortCount, nameof(missingEffortCount), "Missing effort count");
+        DeliveryTrendModelValidation.ValidateCount(missingStoryPointCount, nameof(missingStoryPointCount), "Missing story-point count");
+        DeliveryTrendModelValidation.ValidateCount(derivedStoryPointCount, nameof(derivedStoryPointCount), "Derived story-point count");
+        DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(derivedStoryPoints, nameof(derivedStoryPoints), "Derived story points");
+        DeliveryTrendModelValidation.ValidateCount(unestimatedDeliveryCount, nameof(unestimatedDeliveryCount), "Unestimated delivery count");
 
         SprintId = sprintId;
         ProductId = productId;
@@ -138,20 +130,4 @@ public sealed record SprintDeliveryProjection
     public int UnestimatedDeliveryCount { get; }
 
     public bool IsApproximate { get; }
-
-    private static void ValidateCount(int value, string paramName)
-    {
-        if (value < 0)
-        {
-            throw new ArgumentOutOfRangeException(paramName, "Counts and effort values must be zero or greater.");
-        }
-    }
-
-    private static void ValidateStoryPoints(double value, string paramName)
-    {
-        if (double.IsNaN(value) || double.IsInfinity(value) || value < 0)
-        {
-            throw new ArgumentOutOfRangeException(paramName, "Story-point values must be finite and zero or greater.");
-        }
-    }
 }
