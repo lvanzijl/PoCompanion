@@ -251,6 +251,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<BacklogStateComputationService>();
         services.AddSingleton<ICanonicalStoryPointResolutionService, CanonicalStoryPointResolutionService>();
         services.AddSingleton<IHierarchyRollupService, HierarchyRollupService>();
+        services.AddSingleton<IDeliveryProgressRollupService, DeliveryProgressRollupService>();
         services.AddSingleton<ISprintDeliveryProjectionService, SprintDeliveryProjectionService>();
         services.AddSingleton<ISprintExecutionMetricsCalculator, SprintExecutionMetricsCalculator>();
 

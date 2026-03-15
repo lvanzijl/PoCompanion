@@ -37,16 +37,19 @@ public sealed class SprintDeliveryProjectionService : ISprintDeliveryProjectionS
 
     private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
     private readonly IHierarchyRollupService _hierarchyRollupService;
+    private readonly IDeliveryProgressRollupService _deliveryProgressRollupService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SprintDeliveryProjectionService"/> class.
     /// </summary>
     public SprintDeliveryProjectionService(
         ICanonicalStoryPointResolutionService storyPointResolutionService,
-        IHierarchyRollupService hierarchyRollupService)
+        IHierarchyRollupService hierarchyRollupService,
+        IDeliveryProgressRollupService deliveryProgressRollupService)
     {
         _storyPointResolutionService = storyPointResolutionService ?? throw new ArgumentNullException(nameof(storyPointResolutionService));
         _hierarchyRollupService = hierarchyRollupService ?? throw new ArgumentNullException(nameof(hierarchyRollupService));
+        _deliveryProgressRollupService = deliveryProgressRollupService ?? throw new ArgumentNullException(nameof(deliveryProgressRollupService));
     }
 
     /// <inheritdoc />
@@ -81,7 +84,7 @@ public sealed class SprintDeliveryProjectionService : ISprintDeliveryProjectionS
 
         var productWorkItemIds = productResolved.Select(resolvedItem => resolvedItem.WorkItemId).ToHashSet();
 
-        var workedItemIds = PropagateActivityToAncestors(
+        var workedItemIds = DeliveryProgressRollupMath.PropagateActivityToAncestors(
             functionalActivityByWorkItem.Keys.Where(productWorkItemIds.Contains).ToHashSet(),
             productResolved,
             request.WorkItemsById);
@@ -181,7 +184,7 @@ public sealed class SprintDeliveryProjectionService : ISprintDeliveryProjectionS
             .Where(workItem => workItem != null)
             .ToList();
 
-        var progressionDelta = ComputeProgressionDelta(new SprintDeliveryProgressionRequest(
+        var progressionDelta = _deliveryProgressRollupService.ComputeProgressionDelta(new SprintDeliveryProgressionRequest(
             productResolved,
             request.WorkItemsById,
             functionalActivityByWorkItem,
@@ -297,63 +300,7 @@ public sealed class SprintDeliveryProjectionService : ISprintDeliveryProjectionS
     /// <inheritdoc />
     public ProgressionDelta ComputeProgressionDelta(SprintDeliveryProgressionRequest request)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        var featureResolved = request.ResolvedItems
-            .Where(resolvedItem => string.Equals(resolvedItem.WorkItemType, CanonicalWorkItemTypes.Feature, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-        if (featureResolved.Count == 0)
-        {
-            return new ProgressionDelta(0);
-        }
-
-        var totalFeatureProgression = 0.0;
-        var featureCount = 0;
-
-        foreach (var feature in featureResolved)
-        {
-            if (!request.WorkItemsById.TryGetValue(feature.WorkItemId, out var featureWorkItem))
-            {
-                continue;
-            }
-
-            var childPbis = request.ResolvedItems
-                .Where(resolvedItem => CanonicalWorkItemTypes.IsAuthoritativePbi(resolvedItem.WorkItemType) && resolvedItem.ResolvedFeatureId == feature.WorkItemId)
-                .Select(resolvedItem => request.WorkItemsById.GetValueOrDefault(resolvedItem.WorkItemId))
-                .OfType<DeliveryTrendWorkItem>()
-                .ToList();
-
-            if (childPbis.Count == 0)
-            {
-                continue;
-            }
-
-            var (canonicalFeatureWorkItem, canonicalFeatureWorkItems, doneByWorkItemId) = BuildFeatureRollupContext(
-                featureWorkItem,
-                childPbis,
-                request.StateLookup);
-            var scope = _hierarchyRollupService.RollupCanonicalScope(canonicalFeatureWorkItem, canonicalFeatureWorkItems, doneByWorkItemId);
-            if (scope.Total <= 0)
-            {
-                continue;
-            }
-
-            var featureHadProgress = childPbis.Any(childPbi =>
-                request.ActivityByWorkItem.TryGetValue(childPbi.WorkItemId, out var pbiEvents)
-                && pbiEvents.Any(activityEvent =>
-                    string.Equals(activityEvent.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase)
-                    && StateClassificationLookup.IsDone(request.StateLookup, childPbi.WorkItemType, activityEvent.NewValue)));
-
-            if (!featureHadProgress)
-            {
-                continue;
-            }
-
-            totalFeatureProgression += scope.Completed / scope.Total * 100;
-            featureCount++;
-        }
-
-        return new ProgressionDelta(featureCount > 0 ? Math.Round(totalFeatureProgression / featureCount, 2) : 0);
+        return _deliveryProgressRollupService.ComputeProgressionDelta(request);
     }
 
     private ResolvedStoryPointEstimate ResolvePbiStoryPointEstimate(
@@ -367,10 +314,11 @@ public sealed class SprintDeliveryProjectionService : ISprintDeliveryProjectionS
                 StateClassificationLookup.IsDone(stateLookup, candidate.WorkItemType, candidate.State)))
             .ToArray();
 
-        return _storyPointResolutionService.Resolve(new StoryPointResolutionRequest(
-            pbi.ToCanonicalWorkItem(),
-            StateClassificationLookup.IsDone(stateLookup, pbi.WorkItemType, pbi.State),
-            candidates));
+        return DeliveryProgressRollupMath.ResolvePbiStoryPointEstimate(
+            pbi,
+            featurePbis,
+            stateLookup,
+            _storyPointResolutionService);
     }
 
     private ProjectionStoryPointMetrics ResolveProjectionStoryPointMetrics(
@@ -396,60 +344,6 @@ public sealed class SprintDeliveryProjectionService : ISprintDeliveryProjectionS
         return estimate.HasValue
             && estimate.Source is not StoryPointEstimateSource.Missing
             && estimate.Source is not StoryPointEstimateSource.Derived;
-    }
-
-    private static (CanonicalWorkItem FeatureWorkItem, List<CanonicalWorkItem> FeatureWorkItems, Dictionary<int, bool> DoneByWorkItemId)
-        BuildFeatureRollupContext(
-            DeliveryTrendWorkItem featureWorkItem,
-            IReadOnlyList<DeliveryTrendWorkItem> childPbis,
-            IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup)
-    {
-        var canonicalFeatureWorkItem = featureWorkItem.ToCanonicalWorkItem();
-        var canonicalFeatureWorkItems = new List<CanonicalWorkItem>(childPbis.Count + 1) { canonicalFeatureWorkItem };
-        canonicalFeatureWorkItems.AddRange(childPbis.Select(childPbi => childPbi.ToCanonicalWorkItem()));
-        var doneByWorkItemId = new Dictionary<int, bool>
-        {
-            [featureWorkItem.WorkItemId] = StateClassificationLookup.IsDone(stateLookup, featureWorkItem.WorkItemType, featureWorkItem.State)
-        };
-
-        foreach (var childPbi in childPbis)
-        {
-            doneByWorkItemId[childPbi.WorkItemId] = StateClassificationLookup.IsDone(stateLookup, childPbi.WorkItemType, childPbi.State);
-        }
-
-        return (canonicalFeatureWorkItem, canonicalFeatureWorkItems, doneByWorkItemId);
-    }
-
-    private static HashSet<int> PropagateActivityToAncestors(
-        IReadOnlyCollection<int> activeWorkItemIds,
-        IReadOnlyCollection<DeliveryTrendResolvedWorkItem> resolvedItems,
-        IReadOnlyDictionary<int, DeliveryTrendWorkItem> workItemsById)
-    {
-        var resolvedWorkItemIds = resolvedItems
-            .Select(item => item.WorkItemId)
-            .ToHashSet();
-        var propagatedWorkItemIds = activeWorkItemIds
-            .Where(resolvedWorkItemIds.Contains)
-            .ToHashSet();
-        var queue = new Queue<int>(propagatedWorkItemIds);
-
-        while (queue.Count > 0)
-        {
-            var workItemId = queue.Dequeue();
-            if (!workItemsById.TryGetValue(workItemId, out var workItem)
-                || !workItem.ParentWorkItemId.HasValue
-                || !resolvedWorkItemIds.Contains(workItem.ParentWorkItemId.Value))
-            {
-                continue;
-            }
-
-            if (propagatedWorkItemIds.Add(workItem.ParentWorkItemId.Value))
-            {
-                queue.Enqueue(workItem.ParentWorkItemId.Value);
-            }
-        }
-
-        return propagatedWorkItemIds;
     }
 
     private static WorkItemSnapshot ToSnapshot(DeliveryTrendWorkItem workItem)

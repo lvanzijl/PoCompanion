@@ -25,6 +25,7 @@ public sealed record DeliveryTrendResolvedWorkItem(
     string WorkItemType,
     int? ResolvedProductId,
     int? ResolvedFeatureId,
+    int? ResolvedEpicId,
     int? ResolvedSprintId);
 
 /// <summary>
@@ -53,4 +54,25 @@ public sealed record SprintDeliveryProgressionRequest(
     IReadOnlyList<DeliveryTrendResolvedWorkItem> ResolvedItems,
     IReadOnlyDictionary<int, DeliveryTrendWorkItem> WorkItemsById,
     IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>> ActivityByWorkItem,
+    IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? StateLookup = null);
+
+/// <summary>
+/// Prepared domain inputs required to compute feature progress rollups.
+/// </summary>
+public sealed record DeliveryFeatureProgressRequest(
+    IReadOnlyList<DeliveryTrendResolvedWorkItem> ResolvedItems,
+    IReadOnlyDictionary<int, DeliveryTrendWorkItem> WorkItemsById,
+    IReadOnlyList<int> ProductIds,
+    IReadOnlyCollection<int>? ActiveWorkItemIds = null,
+    IReadOnlyCollection<int>? SprintCompletedPbiIds = null,
+    IReadOnlyDictionary<int, int>? SprintEffortDeltaByWorkItem = null,
+    IReadOnlyCollection<int>? SprintAssignedPbiIds = null,
+    IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? StateLookup = null);
+
+/// <summary>
+/// Prepared domain inputs required to compute epic progress rollups.
+/// </summary>
+public sealed record DeliveryEpicProgressRequest(
+    IReadOnlyList<FeatureProgress> FeatureProgress,
+    IReadOnlyDictionary<int, DeliveryTrendWorkItem> WorkItemsById,
     IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? StateLookup = null);

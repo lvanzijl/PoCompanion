@@ -27,6 +27,7 @@ internal static class DeliveryTrendProjectionInputMapper
             entity.WorkItemType,
             entity.ResolvedProductId,
             entity.ResolvedFeatureId,
+            entity.ResolvedEpicId,
             entity.ResolvedSprintId);
     }
 }
