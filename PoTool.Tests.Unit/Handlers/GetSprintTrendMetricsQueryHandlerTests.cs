@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -6,6 +7,8 @@ using PoTool.Api.Handlers.Metrics;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
+using PoTool.Core.Domain.Estimation;
+using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
 
@@ -18,46 +21,25 @@ namespace PoTool.Tests.Unit.Handlers;
 public class GetSprintTrendMetricsQueryHandlerTests
 {
     private PoToolDbContext _context = null!;
-    private Mock<SprintTrendProjectionService> _mockProjectionService = null!;
+    private TestSprintTrendProjectionService _projectionService = null!;
     private Mock<ILogger<GetSprintTrendMetricsQueryHandler>> _mockLogger = null!;
     private GetSprintTrendMetricsQueryHandler _handler = null!;
 
     [TestInitialize]
     public void Setup()
     {
-        // Create in-memory database
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
             .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
             .Options;
         _context = new PoToolDbContext(options);
 
-        _mockProjectionService = new Mock<SprintTrendProjectionService>(
-            MockBehavior.Loose,
-            null!,  // IServiceScopeFactory
-            null!   // ILogger
-        );
+        _projectionService = new TestSprintTrendProjectionService();
         _mockLogger = new Mock<ILogger<GetSprintTrendMetricsQueryHandler>>();
 
         _handler = new GetSprintTrendMetricsQueryHandler(
             _context,
-            _mockProjectionService.Object,
+            _projectionService,
             _mockLogger.Object);
-
-        _mockProjectionService
-            .Setup(p => p.ComputeFeatureProgressAsync(
-                It.IsAny<int>(),
-                It.IsAny<DateTime?>(),
-                It.IsAny<DateTime?>(),
-                It.IsAny<CancellationToken>(),
-                It.IsAny<int?>()))
-            .ReturnsAsync(Array.Empty<FeatureProgressDto>());
-
-        _mockProjectionService
-            .Setup(p => p.ComputeEpicProgressAsync(
-                It.IsAny<int>(),
-                It.IsAny<IReadOnlyList<FeatureProgressDto>>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<EpicProgressDto>());
     }
 
     [TestCleanup]
@@ -71,21 +53,15 @@ public class GetSprintTrendMetricsQueryHandlerTests
     [Description("Should return empty metrics when no projections exist")]
     public async Task Handle_NoProjections_ReturnsEmptyMetrics()
     {
-        // Arrange
         var query = new GetSprintTrendMetricsQuery(1, new[] { 1, 2, 3 }, false);
-        
-        _mockProjectionService
-            .Setup(p => p.GetProjectionsAsync(It.IsAny<int>(), It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SprintMetricsProjectionEntity>());
 
-        _mockProjectionService
-            .Setup(p => p.ComputeProjectionsAsync(It.IsAny<int>(), It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SprintMetricsProjectionEntity>());
+        _projectionService.GetProjectionsAsyncHandler = (_, _, _) =>
+            Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(Array.Empty<SprintMetricsProjectionEntity>());
+        _projectionService.ComputeProjectionsAsyncHandler = (_, _, _) =>
+            Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(Array.Empty<SprintMetricsProjectionEntity>());
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         Assert.IsTrue(result.Success);
         Assert.IsNotNull(result.Metrics);
         Assert.IsEmpty(result.Metrics);
@@ -95,17 +71,13 @@ public class GetSprintTrendMetricsQueryHandlerTests
     [Description("Should return success false when exception occurs")]
     public async Task Handle_Exception_ReturnsFailure()
     {
-        // Arrange
         var query = new GetSprintTrendMetricsQuery(1, new[] { 1 }, false);
-        
-        _mockProjectionService
-            .Setup(p => p.GetProjectionsAsync(It.IsAny<int>(), It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Test error"));
 
-        // Act
+        _projectionService.GetProjectionsAsyncHandler = (_, _, _) =>
+            throw new InvalidOperationException("Test error");
+
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         Assert.IsFalse(result.Success);
         Assert.IsNotNull(result.ErrorMessage);
         StringAssert.Contains(result.ErrorMessage, "Test error", "Error message should contain exception text");
@@ -115,66 +87,47 @@ public class GetSprintTrendMetricsQueryHandlerTests
     [Description("Should call ComputeProjectionsAsync when recompute is true")]
     public async Task Handle_RecomputeTrue_CallsComputeProjections()
     {
-        // Arrange
         var sprintIds = new[] { 1, 2 };
         var query = new GetSprintTrendMetricsQuery(1, sprintIds, true);
-        
-        _mockProjectionService
-            .Setup(p => p.ComputeProjectionsAsync(1, sprintIds, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SprintMetricsProjectionEntity>())
-            .Verifiable();
 
-        _mockProjectionService
-            .Setup(p => p.GetProjectionsAsync(1, sprintIds, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SprintMetricsProjectionEntity>());
+        _projectionService.ComputeProjectionsAsyncHandler = (_, _, _) =>
+            Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(Array.Empty<SprintMetricsProjectionEntity>());
+        _projectionService.GetProjectionsAsyncHandler = (_, _, _) =>
+            Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(Array.Empty<SprintMetricsProjectionEntity>());
 
-        // Act
         await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
-        _mockProjectionService.Verify(
-            p => p.ComputeProjectionsAsync(1, sprintIds, It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        _mockProjectionService.Verify(
-            p => p.GetProjectionsAsync(1, sprintIds, It.IsAny<CancellationToken>()),
-            Times.Never);
+        Assert.AreEqual(1, _projectionService.ComputeProjectionsCallCount);
+        Assert.AreEqual(0, _projectionService.GetProjectionsCallCount);
     }
 
     [TestMethod]
     [Description("Should not call ComputeProjectionsAsync when projections already exist and recompute is false")]
     public async Task Handle_RecomputeFalse_WithExistingProjections_DoesNotCallComputeProjections()
     {
-        // Arrange
         var query = new GetSprintTrendMetricsQuery(1, new[] { 1 }, false);
-        
-        _mockProjectionService
-            .Setup(p => p.GetProjectionsAsync(It.IsAny<int>(), It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SprintMetricsProjectionEntity>
-            {
-                new()
+
+        _projectionService.GetProjectionsAsyncHandler = (_, _, _) =>
+            Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(
+            [
+                new SprintMetricsProjectionEntity
                 {
                     SprintId = 1,
                     ProductId = 1,
                     LastComputedAt = DateTimeOffset.UtcNow,
                     IncludedUpToRevisionId = 1
                 }
-            });
+            ]);
 
-        // Act
         await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
-        _mockProjectionService.Verify(
-            p => p.ComputeProjectionsAsync(It.IsAny<int>(), It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        Assert.AreEqual(0, _projectionService.ComputeProjectionsCallCount);
     }
 
     [TestMethod]
     [Description("Should recompute projections when cached projections are missing")]
     public async Task Handle_RecomputeFalse_WithEmptyCachedProjections_RecomputesAndReturnsData()
     {
-        // Arrange
         var sprintIds = new[] { 1 };
         var query = new GetSprintTrendMetricsQuery(1, sprintIds, false);
 
@@ -212,43 +165,31 @@ public class GetSprintTrendMetricsQueryHandlerTests
             }
         };
 
-        _mockProjectionService
-            .Setup(p => p.GetProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SprintMetricsProjectionEntity>());
+        _projectionService.GetProjectionsAsyncHandler = (_, _, _) =>
+            Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(Array.Empty<SprintMetricsProjectionEntity>());
+        _projectionService.ComputeProjectionsAsyncHandler = (_, _, _) =>
+            Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(computedProjections);
 
-        _mockProjectionService
-            .Setup(p => p.ComputeProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(computedProjections);
-
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         Assert.IsTrue(result.Success);
         Assert.IsNotNull(result.Metrics);
         Assert.HasCount(1, result.Metrics);
-
-        _mockProjectionService.Verify(
-            p => p.ComputeProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        _mockProjectionService.Verify(
-            p => p.GetProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()),
-            Times.Once);
+        Assert.AreEqual(1, _projectionService.ComputeProjectionsCallCount);
+        Assert.AreEqual(1, _projectionService.GetProjectionsCallCount);
     }
 
     [TestMethod]
     [Description("Should aggregate metrics across products when multiple products exist")]
     public async Task Handle_MultipleProducts_AggregatesMetricsCorrectly()
     {
-        // Arrange - Set up sprint and products in database
         var team = new TeamEntity { Name = "Test Team", TeamAreaPath = "Project\\Team" };
         _context.Teams.Add(team);
         await _context.SaveChangesAsync();
 
-        var sprint = new SprintEntity 
-        { 
-            Name = "Sprint 1", 
+        var sprint = new SprintEntity
+        {
+            Name = "Sprint 1",
             Path = "Project\\Sprint 1",
             TeamId = team.Id,
             StartUtc = DateTimeOffset.UtcNow.AddDays(-14),
@@ -257,15 +198,15 @@ public class GetSprintTrendMetricsQueryHandlerTests
         _context.Sprints.Add(sprint);
         await _context.SaveChangesAsync();
 
-        var product1 = new ProductEntity 
-        { 
-            Name = "Product A", 
+        var product1 = new ProductEntity
+        {
+            Name = "Product A",
             BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 100 } },
             ProductOwnerId = 1
         };
-        var product2 = new ProductEntity 
-        { 
-            Name = "Product B", 
+        var product2 = new ProductEntity
+        {
+            Name = "Product B",
             BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 200 } },
             ProductOwnerId = 1
         };
@@ -274,13 +215,13 @@ public class GetSprintTrendMetricsQueryHandlerTests
 
         var projections = new List<SprintMetricsProjectionEntity>
         {
-            new() 
-            { 
-                SprintId = sprint.Id, 
+            new()
+            {
+                SprintId = sprint.Id,
                 ProductId = product1.Id,
                 Sprint = sprint,
                 Product = product1,
-                PlannedCount = 10, 
+                PlannedCount = 10,
                 PlannedEffort = 30,
                 PlannedStoryPoints = 13.5d,
                 WorkedCount = 8,
@@ -301,13 +242,13 @@ public class GetSprintTrendMetricsQueryHandlerTests
                 IncludedUpToRevisionId = 100,
                 IsApproximate = true
             },
-            new() 
-            { 
-                SprintId = sprint.Id, 
+            new()
+            {
+                SprintId = sprint.Id,
                 ProductId = product2.Id,
                 Sprint = sprint,
                 Product = product2,
-                PlannedCount = 5, 
+                PlannedCount = 5,
                 PlannedEffort = 15,
                 PlannedStoryPoints = 8,
                 WorkedCount = 4,
@@ -330,15 +271,12 @@ public class GetSprintTrendMetricsQueryHandlerTests
         };
 
         var query = new GetSprintTrendMetricsQuery(1, new[] { sprint.Id }, false);
-        
-        _mockProjectionService
-            .Setup(p => p.GetProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(projections);
 
-        // Act
+        _projectionService.GetProjectionsAsyncHandler = (_, _, _) =>
+            Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(projections);
+
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         Assert.IsTrue(result.Success);
         Assert.IsNotNull(result.Metrics);
         Assert.HasCount(1, result.Metrics);
@@ -346,8 +284,7 @@ public class GetSprintTrendMetricsQueryHandlerTests
         var sprintMetrics = result.Metrics[0];
         Assert.AreEqual(sprint.Id, sprintMetrics.SprintId);
         Assert.AreEqual("Sprint 1", sprintMetrics.SprintName);
-        
-        // Check aggregated totals
+
         Assert.AreEqual(15, sprintMetrics.TotalPlannedCount, "Total planned count should be 10 + 5");
         Assert.AreEqual(45, sprintMetrics.TotalPlannedEffort, "Total planned effort should be 30 + 15");
         Assert.AreEqual(21.5d, sprintMetrics.TotalPlannedStoryPoints, 0.001d, "Total planned story points should aggregate independently from effort.");
@@ -367,7 +304,6 @@ public class GetSprintTrendMetricsQueryHandlerTests
         Assert.AreEqual(1, sprintMetrics.TotalUnestimatedDeliveryCount, "Unestimated delivery counts should be preserved.");
         Assert.IsTrue(sprintMetrics.IsApproximate, "Approximation should remain true when any product used derived estimates.");
 
-        // Check product-level metrics
         Assert.HasCount(2, sprintMetrics.ProductMetrics);
         Assert.AreEqual(1, sprintMetrics.ProductMetrics[0].SpilloverCount);
         Assert.AreEqual(8, sprintMetrics.ProductMetrics[0].SpilloverEffort);
@@ -381,22 +317,21 @@ public class GetSprintTrendMetricsQueryHandlerTests
     [Description("Should return ordered metrics by sprint start date")]
     public async Task Handle_MultipleSprints_ReturnsOrderedByStartDate()
     {
-        // Arrange - Set up sprints in database
         var team = new TeamEntity { Name = "Test Team", TeamAreaPath = "Project\\Team" };
         _context.Teams.Add(team);
         await _context.SaveChangesAsync();
 
-        var sprint1 = new SprintEntity 
-        { 
-            Name = "Sprint 1", 
+        var sprint1 = new SprintEntity
+        {
+            Name = "Sprint 1",
             Path = "Project\\Sprint 1",
             TeamId = team.Id,
             StartUtc = DateTimeOffset.UtcNow.AddDays(-28),
             EndUtc = DateTimeOffset.UtcNow.AddDays(-14)
         };
-        var sprint2 = new SprintEntity 
-        { 
-            Name = "Sprint 2", 
+        var sprint2 = new SprintEntity
+        {
+            Name = "Sprint 2",
             Path = "Project\\Sprint 2",
             TeamId = team.Id,
             StartUtc = DateTimeOffset.UtcNow.AddDays(-14),
@@ -405,21 +340,20 @@ public class GetSprintTrendMetricsQueryHandlerTests
         _context.Sprints.AddRange(sprint1, sprint2);
         await _context.SaveChangesAsync();
 
-        var product = new ProductEntity 
-        { 
-            Name = "Product", 
+        var product = new ProductEntity
+        {
+            Name = "Product",
             BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 100 } },
             ProductOwnerId = 1
         };
         _context.Products.Add(product);
         await _context.SaveChangesAsync();
 
-        // Return sprint2 first (wrong order) to verify handler sorts them
         var projections = new List<SprintMetricsProjectionEntity>
         {
-            new() 
-            { 
-                SprintId = sprint2.Id, 
+            new()
+            {
+                SprintId = sprint2.Id,
                 ProductId = product.Id,
                 Sprint = sprint2,
                 Product = product,
@@ -427,9 +361,9 @@ public class GetSprintTrendMetricsQueryHandlerTests
                 LastComputedAt = DateTimeOffset.UtcNow,
                 IncludedUpToRevisionId = 100
             },
-            new() 
-            { 
-                SprintId = sprint1.Id, 
+            new()
+            {
+                SprintId = sprint1.Id,
                 ProductId = product.Id,
                 Sprint = sprint1,
                 Product = product,
@@ -440,20 +374,15 @@ public class GetSprintTrendMetricsQueryHandlerTests
         };
 
         var query = new GetSprintTrendMetricsQuery(1, new[] { sprint1.Id, sprint2.Id }, false);
-        
-        _mockProjectionService
-            .Setup(p => p.GetProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(projections);
 
-        // Act
+        _projectionService.GetProjectionsAsyncHandler = (_, _, _) =>
+            Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(projections);
+
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         Assert.IsTrue(result.Success);
         Assert.IsNotNull(result.Metrics);
         Assert.HasCount(2, result.Metrics);
-        
-        // Verify ordering by start date (sprint1 should come first)
         Assert.AreEqual(sprint1.Id, result.Metrics[0].SprintId, "Sprint 1 should be first (earlier start date)");
         Assert.AreEqual(sprint2.Id, result.Metrics[1].SprintId, "Sprint 2 should be second (later start date)");
     }
@@ -487,44 +416,31 @@ public class GetSprintTrendMetricsQueryHandlerTests
         _context.Products.Add(product);
         await _context.SaveChangesAsync();
 
-        _mockProjectionService
-            .Setup(p => p.GetProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SprintMetricsProjectionEntity>
-            {
-                new()
+        _projectionService.GetProjectionsAsyncHandler = (_, _, _) =>
+            Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(
+            [
+                new SprintMetricsProjectionEntity
                 {
                     SprintId = sprint.Id,
                     ProductId = product.Id,
                     LastComputedAt = DateTimeOffset.UtcNow,
                     IncludedUpToRevisionId = 1
                 }
-            });
-
-        _mockProjectionService
-            .Setup(p => p.ComputeFeatureProgressAsync(
-                1,
-                It.IsAny<DateTime?>(),
-                It.IsAny<DateTime?>(),
-                It.IsAny<CancellationToken>(),
-                sprint.Id))
-            .ReturnsAsync(new List<FeatureProgressDto>
-            {
-                new()
+            ]);
+        _projectionService.ComputeFeatureProgressAsyncHandler = (_, _, _, _, _) =>
+            Task.FromResult<IReadOnlyList<FeatureProgressDto>>(
+            [
+                new FeatureProgressDto
                 {
                     FeatureId = 200,
                     FeatureTitle = "Feature A",
                     ProductId = product.Id
                 }
-            });
-
-        _mockProjectionService
-            .Setup(p => p.ComputeEpicProgressAsync(
-                1,
-                It.IsAny<IReadOnlyList<FeatureProgressDto>>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<EpicProgressDto>
-            {
-                new()
+            ]);
+        _projectionService.ComputeEpicProgressAsyncHandler = (_, _, _) =>
+            Task.FromResult<IReadOnlyList<EpicProgressDto>>(
+            [
+                new EpicProgressDto
                 {
                     EpicId = 300,
                     EpicTitle = "Epic A",
@@ -532,7 +448,7 @@ public class GetSprintTrendMetricsQueryHandlerTests
                     SprintEffortDelta = 8,
                     SprintCompletedFeatureCount = 2
                 }
-            });
+            ]);
 
         var query = new GetSprintTrendMetricsQuery(1, new[] { sprint.Id }, false, false);
 
@@ -547,6 +463,113 @@ public class GetSprintTrendMetricsQueryHandlerTests
         Assert.IsEmpty(result.EpicProgress);
         Assert.AreEqual(8, result.Metrics[0].ProductMetrics[0].ScopeChangeEffort);
         Assert.AreEqual(2, result.Metrics[0].ProductMetrics[0].CompletedFeatureCount);
+    }
+
+    [TestMethod]
+    [Description("Should aggregate product delivery summaries from multiple epic progress outputs")]
+    public async Task Handle_IncludeDetailsFalse_AggregatesEpicSummariesPerProduct()
+    {
+        var team = new TeamEntity { Name = "Test Team", TeamAreaPath = "Project\\Team" };
+        _context.Teams.Add(team);
+        await _context.SaveChangesAsync();
+
+        var olderSprint = new SprintEntity
+        {
+            Name = "Sprint 0",
+            Path = "Project\\Sprint 0",
+            TeamId = team.Id,
+            StartUtc = DateTimeOffset.UtcNow.AddDays(-28),
+            StartDateUtc = DateTime.UtcNow.AddDays(-28),
+            EndUtc = DateTimeOffset.UtcNow.AddDays(-14),
+            EndDateUtc = DateTime.UtcNow.AddDays(-14)
+        };
+        var sprint = new SprintEntity
+        {
+            Name = "Sprint 1",
+            Path = "Project\\Sprint 1",
+            TeamId = team.Id,
+            StartUtc = DateTimeOffset.UtcNow.AddDays(-14),
+            StartDateUtc = DateTime.UtcNow.AddDays(-14),
+            EndUtc = DateTimeOffset.UtcNow,
+            EndDateUtc = DateTime.UtcNow
+        };
+        _context.Sprints.AddRange(olderSprint, sprint);
+
+        var product = new ProductEntity
+        {
+            Name = "Product A",
+            BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 100 } },
+            ProductOwnerId = 1
+        };
+        _context.Products.Add(product);
+        await _context.SaveChangesAsync();
+
+        _projectionService.GetProjectionsAsyncHandler = (_, _, _) =>
+            Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(
+            [
+                new SprintMetricsProjectionEntity
+                {
+                    SprintId = olderSprint.Id,
+                    ProductId = product.Id,
+                    LastComputedAt = DateTimeOffset.UtcNow,
+                    IncludedUpToRevisionId = 1
+                },
+                new SprintMetricsProjectionEntity
+                {
+                    SprintId = sprint.Id,
+                    ProductId = product.Id,
+                    LastComputedAt = DateTimeOffset.UtcNow,
+                    IncludedUpToRevisionId = 2
+                }
+            ]);
+        _projectionService.ComputeEpicProgressAsyncHandler = (_, _, _) =>
+            Task.FromResult<IReadOnlyList<EpicProgressDto>>(
+            [
+                new EpicProgressDto
+                {
+                    EpicId = 300,
+                    EpicTitle = "Epic A",
+                    ProductId = product.Id,
+                    ProgressPercent = 60,
+                    TotalEffort = 20,
+                    DoneEffort = 12,
+                    FeatureCount = 2,
+                    DoneFeatureCount = 1,
+                    DonePbiCount = 3,
+                    SprintCompletedEffort = 5,
+                    SprintProgressionDelta = 25,
+                    SprintEffortDelta = 8,
+                    SprintCompletedPbiCount = 1,
+                    SprintCompletedFeatureCount = 2
+                },
+                new EpicProgressDto
+                {
+                    EpicId = 301,
+                    EpicTitle = "Epic B",
+                    ProductId = product.Id,
+                    ProgressPercent = 40,
+                    TotalEffort = 10,
+                    DoneEffort = 4,
+                    FeatureCount = 1,
+                    DoneFeatureCount = 0,
+                    DonePbiCount = 1,
+                    SprintCompletedEffort = 2,
+                    SprintProgressionDelta = 20,
+                    SprintEffortDelta = -3,
+                    SprintCompletedPbiCount = 1,
+                    SprintCompletedFeatureCount = 1
+                }
+            ]);
+
+        var query = new GetSprintTrendMetricsQuery(1, new[] { olderSprint.Id, sprint.Id }, false, false);
+
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.IsNotNull(result.Metrics);
+        Assert.AreEqual(0, result.Metrics[0].ProductMetrics[0].ScopeChangeEffort, "Only the most recent sprint should receive progress summaries.");
+        Assert.AreEqual(5, result.Metrics[1].ProductMetrics[0].ScopeChangeEffort);
+        Assert.AreEqual(3, result.Metrics[1].ProductMetrics[0].CompletedFeatureCount);
     }
 
     [TestMethod]
@@ -598,34 +621,21 @@ public class GetSprintTrendMetricsQueryHandlerTests
             }
         };
 
-        _mockProjectionService
-            .Setup(p => p.GetProjectionsAsync(1, It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SprintMetricsProjectionEntity>
-            {
-                new()
+        _projectionService.GetProjectionsAsyncHandler = (_, _, _) =>
+            Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(
+            [
+                new SprintMetricsProjectionEntity
                 {
                     SprintId = sprint.Id,
                     ProductId = product.Id,
                     LastComputedAt = DateTimeOffset.UtcNow,
                     IncludedUpToRevisionId = 1
                 }
-            });
-
-        _mockProjectionService
-            .Setup(p => p.ComputeFeatureProgressAsync(
-                1,
-                It.IsAny<DateTime?>(),
-                It.IsAny<DateTime?>(),
-                It.IsAny<CancellationToken>(),
-                sprint.Id))
-            .ReturnsAsync(featureProgress);
-
-        _mockProjectionService
-            .Setup(p => p.ComputeEpicProgressAsync(
-                1,
-                It.IsAny<IReadOnlyList<FeatureProgressDto>>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(epicProgress);
+            ]);
+        _projectionService.ComputeFeatureProgressAsyncHandler = (_, _, _, _, _) =>
+            Task.FromResult<IReadOnlyList<FeatureProgressDto>>(featureProgress);
+        _projectionService.ComputeEpicProgressAsyncHandler = (_, _, _) =>
+            Task.FromResult<IReadOnlyList<EpicProgressDto>>(epicProgress);
 
         var query = new GetSprintTrendMetricsQuery(1, new[] { sprint.Id }, false, true);
 
@@ -636,5 +646,72 @@ public class GetSprintTrendMetricsQueryHandlerTests
         Assert.IsNotNull(result.EpicProgress);
         Assert.HasCount(1, result.FeatureProgress);
         Assert.HasCount(1, result.EpicProgress);
+    }
+
+    private sealed class TestSprintTrendProjectionService : SprintTrendProjectionService
+    {
+        private static readonly CanonicalStoryPointResolutionService StoryPointResolutionService = new();
+        private static readonly HierarchyRollupService HierarchyRollupService = new(StoryPointResolutionService);
+
+        public TestSprintTrendProjectionService()
+            : base(
+                new Mock<IServiceScopeFactory>().Object,
+                Mock.Of<ILogger<SprintTrendProjectionService>>(),
+                StoryPointResolutionService,
+                HierarchyRollupService)
+        {
+        }
+
+        public Func<int, IEnumerable<int>, CancellationToken, Task<IReadOnlyList<SprintMetricsProjectionEntity>>> GetProjectionsAsyncHandler { get; set; }
+            = (_, _, _) => Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(Array.Empty<SprintMetricsProjectionEntity>());
+
+        public Func<int, IEnumerable<int>, CancellationToken, Task<IReadOnlyList<SprintMetricsProjectionEntity>>> ComputeProjectionsAsyncHandler { get; set; }
+            = (_, _, _) => Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(Array.Empty<SprintMetricsProjectionEntity>());
+
+        public Func<int, DateTime?, DateTime?, CancellationToken, int?, Task<IReadOnlyList<FeatureProgressDto>>> ComputeFeatureProgressAsyncHandler { get; set; }
+            = (_, _, _, _, _) => Task.FromResult<IReadOnlyList<FeatureProgressDto>>(Array.Empty<FeatureProgressDto>());
+
+        public Func<int, IReadOnlyList<FeatureProgressDto>, CancellationToken, Task<IReadOnlyList<EpicProgressDto>>> ComputeEpicProgressAsyncHandler { get; set; }
+            = (_, _, _) => Task.FromResult<IReadOnlyList<EpicProgressDto>>(Array.Empty<EpicProgressDto>());
+
+        public int GetProjectionsCallCount { get; private set; }
+
+        public int ComputeProjectionsCallCount { get; private set; }
+
+        public override Task<IReadOnlyList<SprintMetricsProjectionEntity>> GetProjectionsAsync(
+            int productOwnerId,
+            IEnumerable<int> sprintIds,
+            CancellationToken cancellationToken = default)
+        {
+            GetProjectionsCallCount++;
+            return GetProjectionsAsyncHandler(productOwnerId, sprintIds, cancellationToken);
+        }
+
+        public override Task<IReadOnlyList<SprintMetricsProjectionEntity>> ComputeProjectionsAsync(
+            int productOwnerId,
+            IEnumerable<int> sprintIds,
+            CancellationToken cancellationToken = default)
+        {
+            ComputeProjectionsCallCount++;
+            return ComputeProjectionsAsyncHandler(productOwnerId, sprintIds, cancellationToken);
+        }
+
+        public override Task<IReadOnlyList<FeatureProgressDto>> ComputeFeatureProgressAsync(
+            int productOwnerId,
+            DateTime? sprintStartUtc = null,
+            DateTime? sprintEndUtc = null,
+            CancellationToken cancellationToken = default,
+            int? sprintId = null)
+        {
+            return ComputeFeatureProgressAsyncHandler(productOwnerId, sprintStartUtc, sprintEndUtc, cancellationToken, sprintId);
+        }
+
+        public override Task<IReadOnlyList<EpicProgressDto>> ComputeEpicProgressAsync(
+            int productOwnerId,
+            IReadOnlyList<FeatureProgressDto> featureProgress,
+            CancellationToken cancellationToken = default)
+        {
+            return ComputeEpicProgressAsyncHandler(productOwnerId, featureProgress, cancellationToken);
+        }
     }
 }

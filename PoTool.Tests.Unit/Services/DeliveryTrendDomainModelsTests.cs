@@ -156,6 +156,16 @@ public sealed class DeliveryTrendDomainModelsTests
     }
 
     [TestMethod]
+    public void ProductDeliveryProgressSummary_PreservesProductLevelSprintDiagnostics()
+    {
+        var summary = new ProductDeliveryProgressSummary(7, -3, 2);
+
+        Assert.AreEqual(7, summary.ProductId);
+        Assert.AreEqual(-3, summary.ScopeChangeEffort);
+        Assert.AreEqual(2, summary.CompletedFeatureCount);
+    }
+
+    [TestMethod]
     public void DeliveryTrendModels_RejectInvalidConstructionValues()
     {
         Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new ProgressionDelta(101));
@@ -164,6 +174,8 @@ public sealed class DeliveryTrendDomainModelsTests
         Assert.ThrowsExactly<ArgumentException>(() => new SprintTrendMetrics(1, " ", null, null, Array.Empty<SprintDeliveryProjection>()));
         Assert.ThrowsExactly<ArgumentException>(() => new FeatureProgress(1, "Feature A", 1, 10, null, 50, 5, 2, 1, false, 1, new ProgressionDelta(10), 0, 1, false));
         Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new EpicProgress(1, "Epic A", 1, 101, 5, 2, 1, 1, 1, true, 1, new ProgressionDelta(5), 0, 1, 1));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new ProductDeliveryProgressSummary(0, 1, 1));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new ProductDeliveryProgressSummary(1, 1, -1));
     }
 
     [TestMethod]

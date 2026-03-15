@@ -1,9 +1,11 @@
 using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using PoTool.Api.Adapters;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
+using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
 
@@ -97,7 +99,7 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
 
             IReadOnlyList<FeatureProgressDto> featureProgress = Array.Empty<FeatureProgressDto>();
             IReadOnlyList<EpicProgressDto> epicProgress = Array.Empty<EpicProgressDto>();
-            Dictionary<int, (int ScopeChangeEffort, int CompletedFeatureCount)> deliverySummaryByProduct = new();
+            IReadOnlyDictionary<int, ProductDeliveryProgressSummary> deliverySummaryByProduct = new Dictionary<int, ProductDeliveryProgressSummary>();
             int? mostRecentSprintId = null;
 
             if (query.SprintIds.Count > 0)
@@ -131,13 +133,7 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                     featureProgress,
                     cancellationToken);
 
-                deliverySummaryByProduct = epicProgress
-                    .GroupBy(epic => epic.ProductId)
-                    .ToDictionary(
-                        group => group.Key,
-                        group => (
-                            ScopeChangeEffort: group.Sum(epic => epic.SprintEffortDelta),
-                            CompletedFeatureCount: group.Sum(epic => epic.SprintCompletedFeatureCount)));
+                deliverySummaryByProduct = epicProgress.ToProductDeliveryProgressSummaries();
 
                 if (!query.IncludeDetails)
                 {
@@ -158,7 +154,7 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                     {
                         var deliverySummary = sprintId == mostRecentSprintId && deliverySummaryByProduct.TryGetValue(p.ProductId, out var summary)
                             ? summary
-                            : default;
+                            : null;
 
                         return new ProductSprintMetricsDto
                         {
@@ -186,8 +182,8 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                             DerivedStoryPoints = p.DerivedStoryPoints,
                             UnestimatedDeliveryCount = p.UnestimatedDeliveryCount,
                             IsApproximate = p.IsApproximate,
-                            ScopeChangeEffort = deliverySummary.ScopeChangeEffort,
-                            CompletedFeatureCount = deliverySummary.CompletedFeatureCount
+                            ScopeChangeEffort = deliverySummary?.ScopeChangeEffort ?? 0,
+                            CompletedFeatureCount = deliverySummary?.CompletedFeatureCount ?? 0
                         };
                     }).ToList();
 
