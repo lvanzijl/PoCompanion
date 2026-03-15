@@ -257,12 +257,12 @@ public class MetricsController : ControllerBase
 
     /// <summary>
     /// Gets effort imbalance analysis across teams and sprints.
-    /// Identifies disproportionate allocations and provides rebalancing recommendations.
+    /// Identifies disproportionate effort-hour allocations and provides rebalancing recommendations.
     /// </summary>
     /// <param name="areaPathFilter">Optional area path filter</param>
     /// <param name="maxIterations">Maximum number of iterations to include (default: 10)</param>
-    /// <param name="defaultCapacity">Default capacity per iteration for utilization calculations</param>
-    /// <param name="imbalanceThreshold">Threshold for imbalance detection (default: 0.3 = 30%)</param>
+    /// <param name="defaultCapacity">Default capacity per iteration for utilization context in sprint descriptions</param>
+    /// <param name="imbalanceThreshold">Base threshold for imbalance detection (default: 0.3 = 30%, with higher bands at 1.5x and 2.5x)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Effort imbalance analysis with recommendations</returns>
     [HttpGet("effort-imbalance")]
@@ -346,11 +346,11 @@ public class MetricsController : ControllerBase
 
     /// <summary>
     /// Gets effort concentration risk analysis.
-    /// Identifies scenarios where effort is concentrated in single features or areas.
+    /// Identifies scenarios where effort is concentrated in single areas or iterations.
     /// </summary>
     /// <param name="areaPathFilter">Optional area path filter</param>
     /// <param name="maxIterations">Maximum number of iterations to include (default: 10)</param>
-    /// <param name="concentrationThreshold">Threshold for concentration risk (default: 0.5 = 50%)</param>
+    /// <param name="concentrationThreshold">Legacy compatibility parameter. Stable concentration analysis uses fixed 25/40/60/80 share bands and ignores this value.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Concentration risk analysis with mitigation recommendations</returns>
     [HttpGet("effort-concentration-risk")]
@@ -365,11 +365,6 @@ public class MetricsController : ControllerBase
             if (maxIterations < 1 || maxIterations > 20)
             {
                 return BadRequest("MaxIterations must be between 1 and 20");
-            }
-
-            if (concentrationThreshold < 0 || concentrationThreshold > 1)
-            {
-                return BadRequest("ConcentrationThreshold must be between 0 and 1");
             }
 
             var risk = await _mediator.Send(

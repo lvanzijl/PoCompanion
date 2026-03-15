@@ -91,7 +91,8 @@ public class GetEffortConcentrationRiskQueryHandlerTests
 #pragma warning disable MSTEST0037 // Enum comparison not supported by Assert.IsLessThanOrEqualTo
         Assert.IsTrue(result.OverallRiskLevel <= ConcentrationRiskLevel.Medium);
 #pragma warning restore MSTEST0037
-        Assert.IsLessThan(result.ConcentrationIndex, 70);
+        Assert.IsGreaterThan(0d, result.ConcentrationIndex, "The concentration index should use the full distribution even when no bucket reaches the 25% visible-risk threshold.");
+        Assert.IsLessThan(70d, result.ConcentrationIndex);
     }
 
     [TestMethod]
@@ -118,7 +119,7 @@ public class GetEffortConcentrationRiskQueryHandlerTests
         Assert.IsNotEmpty(result.AreaPathRisks);
         var dominantArea = result.AreaPathRisks.First();
         Assert.AreEqual(ConcentrationRiskLevel.Critical, dominantArea.RiskLevel);
-        Assert.IsGreaterThan(dominantArea.PercentageOfTotal, 80);
+        Assert.IsGreaterThan(80d, dominantArea.PercentageOfTotal);
     }
 
     [TestMethod]
@@ -227,7 +228,7 @@ public class GetEffortConcentrationRiskQueryHandlerTests
         Assert.IsNotNull(result);
         var highRiskArea = result.AreaPathRisks.First();
         Assert.IsNotEmpty(highRiskArea.TopWorkItems);
-        Assert.IsLessThanOrEqualTo(highRiskArea.TopWorkItems.Count, 5);
+        Assert.IsLessThanOrEqualTo(5, highRiskArea.TopWorkItems.Count);
     }
 
     [TestMethod]
@@ -268,7 +269,37 @@ public class GetEffortConcentrationRiskQueryHandlerTests
 #pragma warning disable MSTEST0037 // Enum comparison not supported by Assert.IsGreaterThan
         Assert.IsTrue(result1.OverallRiskLevel > result2.OverallRiskLevel);
 #pragma warning restore MSTEST0037
-        Assert.IsGreaterThanOrEqualTo(result1.ConcentrationIndex, result2.ConcentrationIndex);
+        Assert.IsGreaterThanOrEqualTo(result2.ConcentrationIndex, result1.ConcentrationIndex);
+    }
+
+    [TestMethod]
+    public async Task Handle_ConcentrationThresholdCompatibilityParameter_DoesNotChangeStableClassification()
+    {
+        // Arrange
+        var workItems = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Area1", "Sprint 1", 70),
+            CreateWorkItem(2, "Area2", "Sprint 2", 20),
+            CreateWorkItem(3, "Area3", "Sprint 3", 10)
+        };
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workItems);
+
+        // Act
+        var lowThresholdResult = await _handler.Handle(
+            new GetEffortConcentrationRiskQuery(ConcentrationThreshold: 0.1),
+            CancellationToken.None);
+        var highThresholdResult = await _handler.Handle(
+            new GetEffortConcentrationRiskQuery(ConcentrationThreshold: 0.9),
+            CancellationToken.None);
+
+        // Assert
+        Assert.AreEqual(lowThresholdResult.OverallRiskLevel, highThresholdResult.OverallRiskLevel);
+        Assert.AreEqual(lowThresholdResult.ConcentrationIndex, highThresholdResult.ConcentrationIndex, 0.001);
+        CollectionAssert.AreEqual(
+            lowThresholdResult.AreaPathRisks.Select(r => r.RiskLevel).ToList(),
+            highThresholdResult.AreaPathRisks.Select(r => r.RiskLevel).ToList());
     }
 
     [TestMethod]

@@ -2,7 +2,8 @@ namespace PoTool.Shared.Metrics;
 
 /// <summary>
 /// DTO representing effort imbalance analysis across teams and sprints.
-/// Identifies disproportionate allocations and provides rebalancing recommendations.
+/// Identifies disproportionate effort-hour allocations by deviation from the mean
+/// and provides rebalancing recommendations.
 /// </summary>
 public sealed record EffortImbalanceDto(
     IReadOnlyList<TeamImbalance> TeamImbalances,
@@ -43,14 +44,14 @@ public sealed record SprintImbalance(
 /// </summary>
 public enum ImbalanceRiskLevel
 {
-    Low,      // Deviation < 30%
-    Medium,   // Deviation 30-50%
-    High,     // Deviation 50-80%
-    Critical  // Deviation > 80%
+    Low,      // Deviation below the configured threshold
+    Medium,   // Deviation from threshold up to < 1.5x threshold
+    High,     // Deviation from 1.5x threshold up to < 2.5x threshold
+    Critical  // Deviation at or above 2.5x threshold
 }
 
 /// <summary>
-/// Represents a recommendation for rebalancing effort distribution.
+/// Represents a recommendation for rebalancing effort-hour distribution.
 /// </summary>
 public sealed record RebalancingRecommendation(
     RecommendationType Type,

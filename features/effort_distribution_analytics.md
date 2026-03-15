@@ -56,7 +56,7 @@ This feature adds:
 
 ### Prerequisites
 
-1. **Cached Work Items** - Work items with effort/story points must be cached locally
+1. **Cached Work Items** - Work items with effort hours must be cached locally
 2. **Effort Estimates** - Work items must have effort field populated
 3. **Area Paths** - Work items must be assigned to area paths (teams)
 4. **Iteration Paths** - Work items must be assigned to iterations (sprints)
@@ -66,9 +66,9 @@ This feature adds:
 
 - **Area Path Filter** - Optional filter to scope analysis to specific team hierarchy
 - **Max Iterations** - Number of sprints to analyze (default: 10, range: 1-20)
-- **Default Capacity** - Capacity per iteration for utilization calculations (optional)
-- **Imbalance Threshold** - Threshold for imbalance detection (default: 0.3 = 30%)
-- **Concentration Threshold** - Threshold for concentration risk (default: 0.5 = 50%)
+- **Default Capacity** - Capacity per iteration for utilization context in sprint descriptions (optional)
+- **Imbalance Threshold** - Base threshold for imbalance detection (default: 0.3 = 30%; higher bands apply at 1.5x and 2.5x this threshold)
+- **Concentration Threshold** - Legacy compatibility query parameter; the stable subset uses fixed 25/40/60/80 concentration bands
 
 No global configuration required; all settings are per-analysis.
 
@@ -257,7 +257,7 @@ No global configuration required; all settings are per-analysis.
 #### Work Item Fields
 - **Area Path** - Team/component assignment (required)
 - **Iteration Path** - Sprint assignment (required)
-- **Effort/Story Points** - Numeric effort value (required)
+- **Effort** - Numeric effort-hour value (required)
 - **State** - Optional for filtering completed vs planned work
 - **Title** - For display in recommendations
 
@@ -286,7 +286,7 @@ Per `docs/ARCHITECTURE_RULES.md`:
 4. Frontend calls specific API endpoint with filters
 5. Handler queries local cache for work items
 6. Handler performs statistical analysis:
-   - **Imbalance**: Calculate mean, standard deviation, deviation percentage
+   - **Imbalance**: Calculate mean effort and deviation percentage
    - **Trends**: Linear regression, slope calculation, forecasting
    - **Concentration**: HHI calculation, risk thresholds
 7. DTO with results, metrics, and recommendations returned
@@ -301,7 +301,7 @@ Per `docs/ARCHITECTURE_RULES.md`:
 3. Calculate average effort across groups
 4. For each group:
    - Deviation = |Actual - Average| / Average
-   - Risk = Low (<30%), Medium (30-50%), High (50-80%), Critical (>80%)
+   - Risk = Low (< threshold), Medium (threshold to <1.5x threshold), High (1.5x to <2.5x threshold), Critical (≥2.5x threshold)
 5. Overall score = weighted average of max and mean deviation
 6. Generate recommendations:
    - Overloaded: Suggest moving effort to underloaded
@@ -335,7 +335,7 @@ Per `docs/ARCHITECTURE_RULES.md`:
    - Medium: 40-60%
    - High: 60-80%
    - Critical: > 80%
-3. Calculate Herfindahl-Hirschman Index (HHI):
+3. Calculate Herfindahl-Hirschman Index (HHI) from the full area and iteration distributions:
    - HHI = Σ(Percentage²)
    - Normalize to 0-100 scale
 4. Overall risk = max concentration percentage
@@ -403,7 +403,7 @@ Status Codes: Same as above
 Query Parameters:
 - `areaPathFilter` (optional)
 - `maxIterations` (default: 10)
-- `concentrationThreshold` (default: 0.5)
+- `concentrationThreshold` (legacy compatibility parameter; ignored by the stable subset)
 
 Response: `EffortConcentrationRiskDto`
 
