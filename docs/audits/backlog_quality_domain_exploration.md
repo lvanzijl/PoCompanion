@@ -274,3 +274,19 @@ Keep outside the first extraction:
     - the canonical domain package is already coherent and domain-owned
     - remaining issues are adapter/legacy cleanup items rather than CDC ownership blockers
     - extraction/integration can proceed, but the `RC-2` / `EFF` alias seam and remaining legacy adapter interpretations should be cleaned up as part of that extraction work
+
+## Backlog Quality CDC Cleanup — Adapter Normalization
+
+- `RC-2` / `EFF` aliasing is centralized in shared validation rule metadata via `PoTool.Shared/WorkItems/ValidationRuleCatalog.cs`.
+  - adapters and UI consumers now resolve the UI category from one rule-metadata seam instead of duplicating `RC-2` checks
+  - canonical rule identity remains `RC-2`; only the UI category alias becomes `EFF`
+- local rule inference has been removed from adapter consumers:
+  - `PoTool.Core/WorkItems/Filtering/WorkItemFilterer.cs` now resolves categories from canonical rule metadata instead of local maps or message parsing
+  - `PoTool.Client/Services/TreeBuilderService.cs` now determines highest validation category from canonical rule metadata instead of rule ID prefix parsing
+  - queue and triage handlers now group rules by canonical metadata instead of `SI-` / `RR-` / `RC-` string checks
+- impact analysis preserves rule identity:
+  - `PoTool.Api/Handlers/WorkItems/GetValidationImpactAnalysisQueryHandler.cs` now keeps the canonical `RuleId` visible in `ViolationType` instead of rewriting findings as generic `ParentProgress`
+- legacy validator duplication was reduced by downgrading the old `WorkItemInProgressWithoutEffortValidator` fallback to an explicitly hidden compatibility-only type while retaining the analyzer-backed execution path
+- canonical execution path remains unchanged:
+  - `BacklogQualityAnalyzer` stays the canonical evaluator
+  - `BacklogValidationService` stays the canonical rule orchestrator

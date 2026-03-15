@@ -13,7 +13,6 @@ public sealed class GetValidationTriageSummaryQueryHandler
     : IQueryHandler<GetValidationTriageSummaryQuery, ValidationTriageSummaryDto>
 {
     private const int TopRuleGroupCount = 3;
-    private const string EffortRuleIdPrefix = "RC-2";
 
     private readonly IMediator _mediator;
     private readonly ILogger<GetValidationTriageSummaryQueryHandler> _logger;
@@ -52,34 +51,32 @@ public sealed class GetValidationTriageSummaryQueryHandler
             {
                 if (string.IsNullOrEmpty(issue.RuleId)) continue;
 
-                if (issue.RuleId.StartsWith("SI-", StringComparison.OrdinalIgnoreCase))
+                var categoryKey = ValidationRuleCatalog.GetUiCategoryKey(issue.RuleId);
+                if (string.IsNullOrEmpty(categoryKey)) continue;
+
+                switch (categoryKey)
                 {
-                    AddItem(siItems, issue.RuleId, wi.TfsId);
-                }
-                else if (issue.RuleId.StartsWith("RR-", StringComparison.OrdinalIgnoreCase))
-                {
-                    AddItem(rrItems, issue.RuleId, wi.TfsId);
-                }
-                else if (issue.RuleId.StartsWith("RC-", StringComparison.OrdinalIgnoreCase))
-                {
-                    // EFF tile = RC-2 (missing effort) is a separate focus area, not in the RC tile
-                    if (issue.RuleId.Equals(EffortRuleIdPrefix, StringComparison.OrdinalIgnoreCase))
-                    {
-                        AddItem(effItems, issue.RuleId, wi.TfsId);
-                    }
-                    else
-                    {
+                    case "SI":
+                        AddItem(siItems, issue.RuleId, wi.TfsId);
+                        break;
+                    case "RR":
+                        AddItem(rrItems, issue.RuleId, wi.TfsId);
+                        break;
+                    case "RC":
                         AddItem(rcItems, issue.RuleId, wi.TfsId);
-                    }
+                        break;
+                    case "EFF":
+                        AddItem(effItems, issue.RuleId, wi.TfsId);
+                        break;
                 }
             }
         }
 
         return new ValidationTriageSummaryDto(
-            BuildCategory("SI", "Structural Integrity", siItems),
-            BuildCategory("RR", "Refinement Readiness", rrItems),
-            BuildCategory("RC", "Refinement Completeness", rcItems),
-            BuildCategory("EFF", "Missing Effort", effItems)
+            BuildCategory("SI", ValidationRuleCatalog.GetCategoryLabel("SI"), siItems),
+            BuildCategory("RR", ValidationRuleCatalog.GetCategoryLabel("RR"), rrItems),
+            BuildCategory("RC", ValidationRuleCatalog.GetCategoryLabel("RC"), rcItems),
+            BuildCategory("EFF", ValidationRuleCatalog.GetCategoryLabel("EFF"), effItems)
         );
     }
 

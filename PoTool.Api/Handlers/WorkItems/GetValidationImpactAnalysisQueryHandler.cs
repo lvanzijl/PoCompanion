@@ -114,7 +114,7 @@ public sealed class GetValidationImpactAnalysisQueryHandler
                     WorkItemId: workItemId,
                     WorkItemType: workItem.Type,
                     WorkItemTitle: workItem.Title,
-                    ViolationType: "ParentProgress",
+                    ViolationType: string.IsNullOrWhiteSpace(issue.RuleId) ? "ParentProgress" : issue.RuleId,
                     Severity: issue.Severity,
                     BlockedChildrenIds: blockedChildren,
                     BlockedDescendantIds: blockedDescendants

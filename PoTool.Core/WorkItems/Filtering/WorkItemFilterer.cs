@@ -9,25 +9,6 @@ namespace PoTool.Core.WorkItems.Filtering;
 public class WorkItemFilterer
 {
     /// <summary>
-    /// Maps rule IDs to validation categories.
-    /// </summary>
-    private static readonly Dictionary<string, ValidationCategory> RuleCategoryMap = new()
-    {
-        // Structural Integrity rules
-        { "SI-1", ValidationCategory.StructuralIntegrity },
-        { "SI-2", ValidationCategory.StructuralIntegrity },
-        { "SI-3", ValidationCategory.StructuralIntegrity },
-        
-        // Refinement Readiness rules
-        { "RR-1", ValidationCategory.RefinementReadiness },
-        { "RR-2", ValidationCategory.RefinementReadiness },
-        { "RR-3", ValidationCategory.RefinementReadiness },
-        
-        // Refinement Completeness rules
-        { "RC-1", ValidationCategory.RefinementCompleteness },
-        { "RC-2", ValidationCategory.MissingEffort },
-    };
-    /// <summary>
     /// Interface for work items that can be filtered.
     /// </summary>
     public interface IFilterableWorkItem
@@ -106,86 +87,16 @@ public class WorkItemFilterer
         IEnumerable<T> workItems,
         string filterId) where T : IFilterableWorkItem
     {
-        // Support category-based filtering
-        ValidationCategory? targetCategory = null;
-        
-        if (filterId == "StructuralIntegrity" || filterId == "1")
-        {
-            targetCategory = ValidationCategory.StructuralIntegrity;
-        }
-        else if (filterId == "RefinementReadiness" || filterId == "2")
-        {
-            targetCategory = ValidationCategory.RefinementReadiness;
-        }
-        else if (filterId == "RefinementCompleteness" || filterId == "3")
-        {
-            targetCategory = ValidationCategory.RefinementCompleteness;
-        }
-        
+        var targetCategory = ResolveFilterCategory(filterId);
+
         if (targetCategory.HasValue)
         {
             return workItems
-                .Where(wi => wi.ValidationIssues.Any(issue =>
-                {
-                    // Check if the issue has a RuleId that maps to the target category
-                    if (!string.IsNullOrEmpty(issue.RuleId) && RuleCategoryMap.TryGetValue(issue.RuleId, out var category))
-                    {
-                        return category == targetCategory.Value;
-                    }
-                    
-                    // Fallback: For legacy issues without RuleId, try to infer from message
-                    return InferCategoryFromMessage(issue.Message) == targetCategory.Value;
-                }))
+                .Where(wi => wi.ValidationIssues.Any(issue => ResolveIssueCategory(issue) == targetCategory.Value))
                 .Select(wi => wi.TfsId);
         }
-        
-        // Legacy rule-based filtering for backward compatibility
-        return filterId switch
-        {
-            "parentProgress" => workItems
-                .Where(wi => wi.ValidationIssues.Any(issue =>
-                    issue.Message.Contains("Parent") || issue.Message.Contains("Ancestor")))
-                .Select(wi => wi.TfsId),
-            "missingEffort" => workItems
-                .Where(wi => wi.ValidationIssues.Any(issue =>
-                    issue.Message.Contains("effort")))
-                .Select(wi => wi.TfsId),
-            _ => Enumerable.Empty<int>()
-        };
-    }
-    
-    /// <summary>
-    /// Infers the validation category from a validation message (for legacy issues without RuleId).
-    /// </summary>
-    private static ValidationCategory InferCategoryFromMessage(string message)
-    {
-        var lowerMessage = message.ToLowerInvariant();
-        
-        // Structural Integrity patterns
-        if (lowerMessage.Contains("done") && lowerMessage.Contains("unfinished") ||
-            lowerMessage.Contains("removed") && lowerMessage.Contains("unfinished") ||
-            lowerMessage.Contains("new") && lowerMessage.Contains("in progress"))
-        {
-            return ValidationCategory.StructuralIntegrity;
-        }
-        
-        // Refinement Readiness patterns
-        if (lowerMessage.Contains("epic") && lowerMessage.Contains("description") ||
-            lowerMessage.Contains("feature") && lowerMessage.Contains("description") ||
-            lowerMessage.Contains("pbi") && lowerMessage.Contains("description"))
-        {
-            return ValidationCategory.RefinementReadiness;
-        }
-        
-        // Refinement Completeness patterns
-        if (lowerMessage.Contains("pbi") && lowerMessage.Contains("effort") ||
-            lowerMessage.Contains("effort") && lowerMessage.Contains("empty"))
-        {
-            return ValidationCategory.RefinementCompleteness;
-        }
-        
-        // Default to Structural Integrity for unknown patterns
-        return ValidationCategory.StructuralIntegrity;
+
+        return Enumerable.Empty<int>();
     }
 
     /// <summary>
@@ -238,5 +149,27 @@ public class WorkItemFilterer
         }
 
         return false;
+    }
+
+    private static ValidationCategory? ResolveFilterCategory(string filterId)
+    {
+        return filterId switch
+        {
+            "StructuralIntegrity" or "1" or "parentProgress" => ValidationCategory.StructuralIntegrity,
+            "RefinementReadiness" or "2" => ValidationCategory.RefinementReadiness,
+            "RefinementCompleteness" or "3" => ValidationCategory.RefinementCompleteness,
+            "missingEffort" => ValidationCategory.MissingEffort,
+            _ => null
+        };
+    }
+
+    private static ValidationCategory? ResolveIssueCategory(IValidationIssue issue)
+    {
+        if (string.IsNullOrWhiteSpace(issue.RuleId))
+        {
+            return null;
+        }
+
+        return ValidationRuleCatalog.GetCategory(issue.RuleId);
     }
 }
