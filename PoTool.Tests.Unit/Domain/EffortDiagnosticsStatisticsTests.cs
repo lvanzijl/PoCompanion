@@ -14,7 +14,7 @@ public sealed class EffortDiagnosticsStatisticsTests
     }
 
     [TestMethod]
-    public void Median_ReturnsExpectedValue_ForOddAndEvenSamples()
+    public void Median_ReturnsExpectedValue_ForBothOddAndEvenSizedArrays()
     {
         var oddMedian = EffortDiagnosticsStatistics.Median(new[] { 7d, 1d, 4d });
         var evenMedian = EffortDiagnosticsStatistics.Median(new[] { 40d, 10d, 30d, 20d });
@@ -40,12 +40,25 @@ public sealed class EffortDiagnosticsStatisticsTests
     }
 
     [TestMethod]
-    public void HHI_ReturnsNormalizedAndCappedIndex()
+    public void HHI_ReturnsCalculatedIndex()
     {
         var normalizedResult = EffortDiagnosticsStatistics.HHI(new[] { 0.5d, 0.25d, 0.25d });
-        var cappedResult = EffortDiagnosticsStatistics.HHI(new[] { 1.5d });
 
         Assert.AreEqual(37.5d, normalizedResult, 0.001);
-        Assert.AreEqual(100d, cappedResult, 0.001);
+    }
+
+    [TestMethod]
+    public void HHI_CapsResultAt100()
+    {
+        var result = EffortDiagnosticsStatistics.HHI(new[] { 1.5d });
+
+        Assert.AreEqual(100d, result, 0.001);
+    }
+
+    [TestMethod]
+    public void HHI_WithNegativeShare_ThrowsArgumentOutOfRangeException()
+    {
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
+            EffortDiagnosticsStatistics.HHI(new[] { 0.5d, -0.1d, 0.6d }));
     }
 }

@@ -52,7 +52,7 @@ public static class EffortDiagnosticsStatistics
             return 0;
         }
 
-        var mean = Mean(materializedValues);
+        var mean = materializedValues.Average();
         return materializedValues.Average(value => Math.Pow(value - mean, 2));
     }
 
@@ -66,20 +66,28 @@ public static class EffortDiagnosticsStatistics
             return 0;
         }
 
-        var mean = Mean(materializedValues);
+        var mean = materializedValues.Average();
         if (mean <= 0)
         {
             return 0;
         }
 
-        return Math.Sqrt(Variance(materializedValues)) / mean;
+        var variance = materializedValues.Average(value => Math.Pow(value - mean, 2));
+        return Math.Sqrt(variance) / mean;
     }
 
     public static double HHI(IEnumerable<double> shares)
     {
         ArgumentNullException.ThrowIfNull(shares);
 
-        var hhi = shares.Sum(share => Math.Pow(Math.Max(0, share), 2));
+        var shareValues = shares.ToArray();
+        if (shareValues.Any(share => share < 0))
+        {
+            throw new ArgumentOutOfRangeException(nameof(shares), "Shares must be non-negative.");
+        }
+
+        // Herfindahl-Hirschman Index on normalized shares (0-1), scaled to a 0-100 score.
+        var hhi = shareValues.Sum(share => Math.Pow(share, 2));
         return Math.Min(100, hhi * 100);
     }
 
@@ -104,7 +112,7 @@ public static class EffortDiagnosticsStatistics
         }
 
         var maxDeviation = deviations.Max() / 100.0;
-        var averageDeviation = Mean(deviations) / 100.0;
+        var averageDeviation = deviations.Average() / 100.0;
         return (maxDeviation * 0.6 + averageDeviation * 0.4) * 100;
     }
 
