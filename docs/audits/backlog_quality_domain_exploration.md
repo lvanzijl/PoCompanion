@@ -212,3 +212,65 @@ Keep outside the first extraction:
   - `PoTool.Tests.Unit/Services/BacklogQualityAnalyzerTests.cs`
   - `PoTool.Tests.Unit/HierarchicalWorkItemValidatorTests.cs`
   - coverage includes coherent combined analyzer output, readiness/validation alignment, and preservation of adapted Core validator behavior
+
+## Re-Audit Results — Backlog Quality CDC v2
+
+- **What is now in CDC v2**
+  - `PoTool.Core.Domain/BacklogQuality` now owns the canonical backlog-quality slice:
+    - domain models: `BacklogGraph`, `WorkItemSnapshot`, `ReadinessScore`, `BacklogReadinessScore`, `ReadinessOwnerState`, and validation output records
+    - canonical rule metadata and families via `RuleMetadata`, `RuleFamily`, `RuleResponsibleParty`, `RuleFindingClass`, `IBacklogQualityRule`, and `RuleCatalog`
+    - executable canonical rules for structural integrity (`SI-1..SI-3`), refinement readiness (`RR-1..RR-3`), and implementation readiness (`RC-1..RC-3`) in `Rules/CanonicalBacklogQualityRules.cs`
+    - scoring logic in `Services/BacklogReadinessService.cs`
+    - binary implementation-readiness derivation in `Services/ImplementationReadinessService.cs`
+    - suppression-aware validation orchestration in `Services/BacklogValidationService.cs`
+    - one analyzer facade in `Services/BacklogQualityAnalyzer.cs`
+  - live implementation ownership now matches the intended CDC v2 scope:
+    - rule logic lives in `PoTool.Core.Domain`
+    - rule metadata is domain-owned
+    - scoring logic is domain-owned
+    - suppression semantics are service-owned inside the validation service
+
+- **What remains outside the CDC**
+  - adapters and legacy wrappers remain outside the domain:
+    - `PoTool.Core/BacklogQuality/BacklogQualityDomainAdapter.cs` maps domain outputs into legacy `PoTool.Shared` contracts
+    - `PoTool.Core/WorkItems/Validators/HierarchicalWorkItemValidator.cs` preserves legacy wrapper behavior when routing analyzer results back into old validation result shapes
+    - `PoTool.Core/Health/BacklogStateComputationService.cs` preserves existing Core return types while delegating canonical scoring to the analyzer
+  - API/application consumers remain outside the domain:
+    - `PoTool.Api/Handlers/WorkItems/GetValidationTriageSummaryQueryHandler.cs`
+    - `PoTool.Api/Handlers/WorkItems/GetValidationQueueQueryHandler.cs`
+    - `PoTool.Api/Handlers/WorkItems/GetValidationImpactAnalysisQueryHandler.cs`
+  - UI aliases remain outside domain ownership:
+    - `EFF` is still a queue/triage/UI category alias for `RC-2`
+    - client display metadata remains in `PoTool.Client/Models/ValidationCategoryMeta.cs`
+  - dashboard heuristics remain outside the CDC:
+    - `PoTool.Core/Health/BacklogHealthCalculator.cs` and handler-owned health heuristics are still separate from the canonical backlog-quality slice
+
+- **Remaining cleanup**
+  - **Blocking:** none found in the current CDC v2 ownership scan
+  - **Minor cleanup:**
+    - `RC-2` / `EFF` aliasing is still hardcoded in queue and triage adapters rather than being centralized at one adapter seam
+    - `PoTool.Core/WorkItems/Filtering/WorkItemFilterer.cs` still carries a local rule/category map plus message-based fallback inference
+    - `PoTool.Api/Handlers/WorkItems/GetValidationImpactAnalysisQueryHandler.cs` still reinterprets findings as generic `"ParentProgress"` impact records instead of preserving canonical rule identity
+    - legacy validator rule classes remain present as fallback/compatibility infrastructure even though the canonical rules now live in `PoTool.Core.Domain`
+  - **None:**
+    - no duplicated canonical rule execution was found outside `PoTool.Core.Domain`
+    - no duplicated scoring formulas were found outside the CDC
+    - no adapter or handler was found re-owning canonical rule metadata as a source of truth
+
+- **Test validation**
+  - focused re-audit validation passed after restore/build:
+    - `dotnet build PoTool.sln --no-restore`
+    - `dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --no-build --filter 'FullyQualifiedName~BacklogQualityAnalyzerTests|FullyQualifiedName~BacklogValidationServiceTests|FullyQualifiedName~BacklogReadinessServiceTests|FullyQualifiedName~ImplementationReadinessServiceTests|FullyQualifiedName~BacklogQualityCanonicalRulesTests|FullyQualifiedName~BacklogQualityDomainModelsTests|FullyQualifiedName~HierarchicalWorkItemValidatorTests|FullyQualifiedName~BacklogStateComputationServiceTests' --verbosity minimal`
+  - confirmed coverage includes:
+    - rule execution
+    - suppression behavior
+    - scoring formulas
+    - binary readiness derivation
+    - analyzer facade behavior
+
+- **Readiness verdict**
+  - **Backlog Quality CDC ready after minor cleanup**
+  - rationale:
+    - the canonical domain package is already coherent and domain-owned
+    - remaining issues are adapter/legacy cleanup items rather than CDC ownership blockers
+    - extraction/integration can proceed, but the `RC-2` / `EFF` alias seam and remaining legacy adapter interpretations should be cleaned up as part of that extraction work
