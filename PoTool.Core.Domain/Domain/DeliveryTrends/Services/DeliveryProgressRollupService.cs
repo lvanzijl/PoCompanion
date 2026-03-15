@@ -2,6 +2,8 @@ using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.WorkItems;
+using PoTool.Core.Domain.DeliveryTrends.Models;
+using PoTool.Core.Domain.Sprints;
 
 namespace PoTool.Core.Domain.DeliveryTrends.Services;
 

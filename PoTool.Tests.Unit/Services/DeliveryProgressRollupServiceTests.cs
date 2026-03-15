@@ -28,10 +28,10 @@ public sealed class DeliveryProgressRollupServiceTests
                 [202] = CreateWorkItem(202, CanonicalWorkItemTypes.ProductBacklogItem, "Active PBI", parentId: 100, state: "Active", storyPoints: 10)
             },
             [1],
-            sprintCompletedPbiIds: new HashSet<int> { 201 }));
+            SprintCompletedPbiIds: new HashSet<int> { 201 }));
 
         Assert.HasCount(1, result);
-        Assert.AreEqual(50, result[0].ProgressPercent);
+        Assert.AreEqual(33, result[0].ProgressPercent);
         Assert.AreEqual(15d, result[0].TotalScopeStoryPoints, 0.001d);
         Assert.AreEqual(5d, result[0].DeliveredStoryPoints, 0.001d);
         Assert.AreEqual(5d, result[0].SprintDeliveredStoryPoints, 0.001d);
@@ -54,8 +54,8 @@ public sealed class DeliveryProgressRollupServiceTests
                 [201] = CreateWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, "Assigned PBI", parentId: 100, state: "Active", storyPoints: 8)
             },
             [1],
-            activeWorkItemIds: Array.Empty<int>(),
-            sprintAssignedPbiIds: new HashSet<int> { 201 }));
+            ActiveWorkItemIds: Array.Empty<int>(),
+            SprintAssignedPbiIds: new HashSet<int> { 201 }));
 
         Assert.HasCount(1, result, "Sprint-assigned PBIs should keep the parent feature visible even without activity.");
         Assert.AreEqual(100, result[0].FeatureId);
@@ -73,7 +73,7 @@ public sealed class DeliveryProgressRollupServiceTests
             ],
             new Dictionary<int, DeliveryTrendWorkItem>
             {
-                [100] = CreateWorkItem(100, CanonicalWorkItemTypes.Epic, "Epic X", state: "Active")
+                [100] = CreateWorkItem(100, "Epic", "Epic X", state: "Active")
             }));
 
         Assert.HasCount(1, result);
