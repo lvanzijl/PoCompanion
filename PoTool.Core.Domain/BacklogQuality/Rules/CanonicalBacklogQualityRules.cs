@@ -3,6 +3,9 @@ using StateClassification = PoTool.Core.Domain.Models.StateClassification;
 
 namespace PoTool.Core.Domain.BacklogQuality.Rules;
 
+/// <summary>
+/// Shared thresholds used by canonical backlog-quality rules.
+/// </summary>
 internal static class BacklogQualityRuleThresholds
 {
     public const int MinimumDescriptionLength = 10;
@@ -57,6 +60,9 @@ public abstract class BacklogQualityRuleBase : IBacklogQualityRule
         return workItem.Effort is > 0;
     }
 
+    /// <summary>
+    /// Collects all descendants of the specified work item using breadth-first traversal.
+    /// </summary>
     protected static IReadOnlyList<WorkItemSnapshot> GetDescendants(BacklogGraph backlogGraph, int workItemId)
     {
         var descendants = new List<WorkItemSnapshot>();
@@ -76,6 +82,9 @@ public abstract class BacklogQualityRuleBase : IBacklogQualityRule
         return descendants;
     }
 
+    /// <summary>
+    /// Returns the immediate children whose work item types match the allowed set.
+    /// </summary>
     protected static IReadOnlyList<WorkItemSnapshot> GetChildrenOfTypes(
         BacklogGraph backlogGraph,
         int workItemId,
@@ -89,6 +98,21 @@ public abstract class BacklogQualityRuleBase : IBacklogQualityRule
             .ToArray();
     }
 
+    /// <summary>
+    /// Determines whether the specified work item has at least one active direct child of an allowed type.
+    /// </summary>
+    protected static bool HasActiveChildOfTypes(
+        BacklogGraph backlogGraph,
+        int workItemId,
+        IReadOnlyList<string> workItemTypes)
+    {
+        return GetChildrenOfTypes(backlogGraph, workItemId, workItemTypes)
+            .Any(IsActive);
+    }
+
+    /// <summary>
+    /// Creates a standard validation finding for the specified work item.
+    /// </summary>
     protected ValidationRuleResult CreateFinding(WorkItemSnapshot workItem, string? message = null)
     {
         return new ValidationRuleResult(
@@ -98,6 +122,9 @@ public abstract class BacklogQualityRuleBase : IBacklogQualityRule
             message ?? Metadata.Description);
     }
 
+    /// <summary>
+    /// Creates a structural-integrity finding with deterministic conflicting descendant context.
+    /// </summary>
     protected BacklogIntegrityFinding CreateIntegrityFinding(
         WorkItemSnapshot workItem,
         IReadOnlyList<int> conflictingDescendantIds,
@@ -288,7 +315,7 @@ public sealed class EpicMissingChildrenRule : BacklogQualityRuleBase
     {
         return GetApplicableItems(backlogGraph)
             .Where(IsActive)
-            .Where(item => GetChildrenOfTypes(backlogGraph, item.WorkItemId, [BacklogWorkItemTypes.Feature]).All(child => !IsActive(child)))
+            .Where(item => !HasActiveChildOfTypes(backlogGraph, item.WorkItemId, [BacklogWorkItemTypes.Feature]))
             .Select(item => CreateFinding(item))
             .ToArray();
     }
@@ -360,7 +387,7 @@ public sealed class FeatureMissingChildrenRule : BacklogQualityRuleBase
     {
         return GetApplicableItems(backlogGraph)
             .Where(IsActive)
-            .Where(item => GetChildrenOfTypes(backlogGraph, item.WorkItemId, BacklogWorkItemTypes.PbiTypes).All(child => !IsActive(child)))
+            .Where(item => !HasActiveChildOfTypes(backlogGraph, item.WorkItemId, BacklogWorkItemTypes.PbiTypes))
             .Select(item => CreateFinding(item))
             .ToArray();
     }
