@@ -1,4 +1,5 @@
 using Mediator;
+using EffortDiagnosticsAnalyzer = PoTool.Core.Metrics.EffortDiagnostics.EffortDiagnosticsAnalyzer;
 using PoTool.Core.Contracts;
 using PoTool.Core.Metrics;
 using PoTool.Shared.Metrics;
@@ -16,7 +17,7 @@ namespace PoTool.Api.Handlers.Metrics;
 public sealed class GetEffortConcentrationRiskQueryHandler
     : IQueryHandler<GetEffortConcentrationRiskQuery, EffortConcentrationRiskDto>
 {
-    private static readonly PoTool.Core.Metrics.EffortDiagnostics.EffortDiagnosticsAnalyzer Analyzer = new();
+    private static readonly EffortDiagnosticsAnalyzer Analyzer = new();
     private readonly IWorkItemRepository _repository;
     private readonly IProductRepository _productRepository;
     private readonly IMediator _mediator;

@@ -1,5 +1,6 @@
 using DomainConcentrationCanonicalRules = PoTool.Core.Domain.EffortDiagnostics.EffortConcentrationCanonicalRules;
 using DomainConcentrationRiskLevel = PoTool.Core.Domain.EffortDiagnostics.ConcentrationRiskLevel;
+using DomainCanonicalEffortDiagnosticsStatistics = PoTool.Core.Domain.EffortDiagnostics.CanonicalEffortDiagnosticsStatistics;
 using DomainEffortDiagnosticsStatistics = PoTool.Core.Domain.EffortDiagnostics.EffortDiagnosticsStatistics;
 using DomainImbalanceCanonicalRules = PoTool.Core.Domain.EffortDiagnostics.EffortImbalanceCanonicalRules;
 using DomainImbalanceRiskLevel = PoTool.Core.Domain.EffortDiagnostics.ImbalanceRiskLevel;
@@ -17,7 +18,7 @@ public sealed class EffortDiagnosticsAnalyzer
     /// Initializes a new instance of the <see cref="EffortDiagnosticsAnalyzer"/> class.
     /// </summary>
     public EffortDiagnosticsAnalyzer()
-        : this(new PoTool.Core.Domain.EffortDiagnostics.CanonicalEffortDiagnosticsStatistics())
+        : this(new DomainCanonicalEffortDiagnosticsStatistics())
     {
     }
 
