@@ -58,6 +58,7 @@ public sealed class SprintExecutionMetricsCalculatorTests
             DeliveredFromAddedSP: 0d,
             SpilloverSP: 2d));
 
+        Assert.AreEqual(5d / 13d, result.ChurnRate, 1e-9);
         Assert.AreEqual(4d / 8d, result.CommitmentCompletion, 1e-9);
         Assert.AreEqual(2d / 8d, result.SpilloverRate, 1e-9);
     }
@@ -75,5 +76,20 @@ public sealed class SprintExecutionMetricsCalculatorTests
 
         Assert.AreEqual(6d / 15d, result.ChurnRate, 1e-9);
         Assert.AreEqual(2d / 5d, result.AddedDeliveryRate, 1e-9);
+    }
+
+    [TestMethod]
+    public void Calculate_ReturnsZeroAddedDeliveryRate_WhenAddedScopeIsNotDelivered()
+    {
+        var result = _calculator.Calculate(new SprintExecutionMetricsInput(
+            CommittedSP: 10d,
+            AddedSP: 4d,
+            RemovedSP: 0d,
+            DeliveredSP: 6d,
+            DeliveredFromAddedSP: 0d,
+            SpilloverSP: 1d));
+
+        Assert.AreEqual(4d / 14d, result.ChurnRate, 1e-9);
+        Assert.AreEqual(0d, result.AddedDeliveryRate);
     }
 }
