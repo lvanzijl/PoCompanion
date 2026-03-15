@@ -312,8 +312,8 @@ public static class ApiServiceCollectionExtensions
         // Register Work Item Relationship Snapshot Service (for building relationship edges)
         services.AddSingleton<WorkItemRelationshipSnapshotService>();
 
-        // Register Sprint Trend Projection Service (for sprint metrics computation)
-        services.AddSingleton<SprintTrendProjectionService>();
+        // Register scoped Sprint Trend Projection Service (for sprint metrics computation)
+        services.AddScoped<SprintTrendProjectionService>();
 
         // Register background services
         services.AddHostedService<EffortEstimationNotificationService>();

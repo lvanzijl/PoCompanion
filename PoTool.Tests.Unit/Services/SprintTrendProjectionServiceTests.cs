@@ -17,13 +17,8 @@ public class SprintTrendProjectionServiceTests
     [TestMethod]
     public async Task ComputeProjectionsAsync_ReturnsEmpty_WhenNoSprintIds()
     {
-        var serviceProvider = new ServiceCollection().BuildServiceProvider();
         using var defaultServices = CreateDefaultServices();
-        var service = new SprintTrendProjectionService(
-            serviceProvider.GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<SprintTrendProjectionService>.Instance,
-            defaultServices.GetRequiredService<ICanonicalStoryPointResolutionService>(),
-            defaultServices.GetRequiredService<IHierarchyRollupService>());
+        var service = CreateProjectionService(defaultServices);
 
         var projections = await service.ComputeProjectionsAsync(1, Array.Empty<int>());
 
@@ -47,11 +42,7 @@ public class SprintTrendProjectionServiceTests
         IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? iterationEventsByWorkItem = null)
     {
         using var services = CreateDefaultServices();
-        var service = new SprintTrendProjectionService(
-            services.GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<SprintTrendProjectionService>.Instance,
-            services.GetRequiredService<ICanonicalStoryPointResolutionService>(),
-            services.GetRequiredService<IHierarchyRollupService>());
+        var service = CreateProjectionService(services);
 
         return service.ComputeProductSprintProjection(
             sprint,
@@ -77,11 +68,7 @@ public class SprintTrendProjectionServiceTests
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
     {
         using var services = CreateDefaultServices();
-        var service = new SprintTrendProjectionService(
-            services.GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<SprintTrendProjectionService>.Instance,
-            services.GetRequiredService<ICanonicalStoryPointResolutionService>(),
-            services.GetRequiredService<IHierarchyRollupService>());
+        var service = CreateProjectionService(services);
 
         return service.ComputeProgressionDelta(
             productResolved,
@@ -135,13 +122,32 @@ public class SprintTrendProjectionServiceTests
     {
         var storyPointResolutionService = new CanonicalStoryPointResolutionService();
         var hierarchyRollupService = new HierarchyRollupService(storyPointResolutionService);
+        var deliveryProgressRollupService = new DeliveryProgressRollupService(
+            storyPointResolutionService,
+            hierarchyRollupService);
+        var sprintDeliveryProjectionService = new SprintDeliveryProjectionService(
+            storyPointResolutionService,
+            hierarchyRollupService,
+            deliveryProgressRollupService);
+
         return new ServiceCollection()
             .AddSingleton<ICanonicalStoryPointResolutionService>(storyPointResolutionService)
             .AddSingleton<IHierarchyRollupService>(hierarchyRollupService)
-            .AddSingleton<IDeliveryProgressRollupService>(new DeliveryProgressRollupService(
-                storyPointResolutionService,
-                hierarchyRollupService))
+            .AddSingleton<IDeliveryProgressRollupService>(deliveryProgressRollupService)
+            .AddSingleton<ISprintDeliveryProjectionService>(sprintDeliveryProjectionService)
             .BuildServiceProvider();
+    }
+
+    private static SprintTrendProjectionService CreateProjectionService(ServiceProvider services)
+    {
+        return new SprintTrendProjectionService(
+            services.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<SprintTrendProjectionService>.Instance,
+            stateClassificationService: null,
+            services.GetRequiredService<ICanonicalStoryPointResolutionService>(),
+            services.GetRequiredService<IHierarchyRollupService>(),
+            services.GetRequiredService<IDeliveryProgressRollupService>(),
+            services.GetRequiredService<ISprintDeliveryProjectionService>());
     }
 
     [TestMethod]

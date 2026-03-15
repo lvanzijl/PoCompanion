@@ -30,64 +30,6 @@ public class SprintTrendProjectionService
     public SprintTrendProjectionService(
         IServiceScopeFactory scopeFactory,
         ILogger<SprintTrendProjectionService> logger,
-        ICanonicalStoryPointResolutionService storyPointResolutionService,
-        IHierarchyRollupService hierarchyRollupService)
-        : this(
-            scopeFactory,
-            logger,
-            null,
-            storyPointResolutionService,
-            hierarchyRollupService)
-    {
-    }
-
-    public SprintTrendProjectionService(
-        IServiceScopeFactory scopeFactory,
-        ILogger<SprintTrendProjectionService> logger,
-        IWorkItemStateClassificationService? stateClassificationService,
-        ICanonicalStoryPointResolutionService storyPointResolutionService,
-        IHierarchyRollupService hierarchyRollupService)
-    {
-        ArgumentNullException.ThrowIfNull(scopeFactory);
-        ArgumentNullException.ThrowIfNull(logger);
-        ArgumentNullException.ThrowIfNull(storyPointResolutionService);
-        ArgumentNullException.ThrowIfNull(hierarchyRollupService);
-
-        var deliveryProgressRollupService = new DeliveryProgressRollupService(storyPointResolutionService, hierarchyRollupService);
-
-        _scopeFactory = scopeFactory;
-        _logger = logger;
-        _stateClassificationService = stateClassificationService;
-        _storyPointResolutionService = storyPointResolutionService;
-        _hierarchyRollupService = hierarchyRollupService;
-        _deliveryProgressRollupService = deliveryProgressRollupService;
-        _deliveryTrendProjectionService = new SprintDeliveryProjectionService(
-            storyPointResolutionService,
-            hierarchyRollupService,
-            deliveryProgressRollupService);
-    }
-
-    public SprintTrendProjectionService(
-        IServiceScopeFactory scopeFactory,
-        ILogger<SprintTrendProjectionService> logger,
-        IWorkItemStateClassificationService? stateClassificationService,
-        ICanonicalStoryPointResolutionService storyPointResolutionService,
-        IHierarchyRollupService hierarchyRollupService,
-        ISprintDeliveryProjectionService deliveryTrendProjectionService)
-        : this(
-            scopeFactory,
-            logger,
-            stateClassificationService,
-            storyPointResolutionService,
-            hierarchyRollupService,
-            new DeliveryProgressRollupService(storyPointResolutionService, hierarchyRollupService),
-            deliveryTrendProjectionService)
-    {
-    }
-
-    public SprintTrendProjectionService(
-        IServiceScopeFactory scopeFactory,
-        ILogger<SprintTrendProjectionService> logger,
         IWorkItemStateClassificationService? stateClassificationService,
         ICanonicalStoryPointResolutionService storyPointResolutionService,
         IHierarchyRollupService hierarchyRollupService,
