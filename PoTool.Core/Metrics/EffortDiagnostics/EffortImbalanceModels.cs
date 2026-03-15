@@ -6,9 +6,24 @@ namespace PoTool.Core.Metrics.EffortDiagnostics;
 /// </summary>
 public enum ImbalanceRiskLevel
 {
+    /// <summary>
+    /// Indicates that the bucket or analysis shows low imbalance risk.
+    /// </summary>
     Low,
+
+    /// <summary>
+    /// Indicates that the bucket or analysis shows medium imbalance risk.
+    /// </summary>
     Medium,
+
+    /// <summary>
+    /// Indicates that the bucket or analysis shows high imbalance risk.
+    /// </summary>
     High,
+
+    /// <summary>
+    /// Indicates that the bucket or analysis shows critical imbalance risk.
+    /// </summary>
     Critical
 }
 

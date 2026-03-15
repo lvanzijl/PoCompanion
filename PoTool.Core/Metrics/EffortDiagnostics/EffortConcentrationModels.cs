@@ -6,10 +6,29 @@ namespace PoTool.Core.Metrics.EffortDiagnostics;
 /// </summary>
 public enum ConcentrationRiskLevel
 {
+    /// <summary>
+    /// Indicates that the bucket or analysis shows no concentration risk.
+    /// </summary>
     None,
+
+    /// <summary>
+    /// Indicates that the bucket or analysis shows low concentration risk.
+    /// </summary>
     Low,
+
+    /// <summary>
+    /// Indicates that the bucket or analysis shows medium concentration risk.
+    /// </summary>
     Medium,
+
+    /// <summary>
+    /// Indicates that the bucket or analysis shows high concentration risk.
+    /// </summary>
     High,
+
+    /// <summary>
+    /// Indicates that the bucket or analysis shows critical concentration risk.
+    /// </summary>
     Critical
 }
 
