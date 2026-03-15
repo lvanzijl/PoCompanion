@@ -1,45 +1,62 @@
 namespace PoTool.Core.Metrics;
 
 /// <summary>
-/// Shared statistical helpers for the stable effort diagnostics subset.
+/// Backwards-compatible forwarding wrapper for effort diagnostics statistical helpers.
 /// </summary>
 public static class EffortDiagnosticsStatistics
 {
+    public static double Mean(IEnumerable<double> values)
+    {
+        return EffortDiagnostics.EffortDiagnosticsStatistics.Mean(values);
+    }
+
+    public static double DeviationFromMean(double value, double mean)
+    {
+        return EffortDiagnostics.EffortDiagnosticsStatistics.DeviationFromMean(value, mean);
+    }
+
+    public static double ShareOfTotal(double value, double total)
+    {
+        return EffortDiagnostics.EffortDiagnosticsStatistics.ShareOfTotal(value, total);
+    }
+
+    public static double Median(IEnumerable<double> values)
+    {
+        return EffortDiagnostics.EffortDiagnosticsStatistics.Median(values);
+    }
+
+    public static double Variance(IEnumerable<double> values)
+    {
+        return EffortDiagnostics.EffortDiagnosticsStatistics.Variance(values);
+    }
+
+    public static double CoefficientOfVariation(IEnumerable<double> values)
+    {
+        return EffortDiagnostics.EffortDiagnosticsStatistics.CoefficientOfVariation(values);
+    }
+
+    public static double HHI(IEnumerable<double> shares)
+    {
+        return EffortDiagnostics.EffortDiagnosticsStatistics.HHI(shares);
+    }
+
     public static double CalculateDeviationFromMean(double value, double mean)
     {
-        return mean > 0 ? Math.Abs(value - mean) / mean : 0;
+        return EffortDiagnostics.EffortDiagnosticsStatistics.CalculateDeviationFromMean(value, mean);
     }
 
     public static double CalculateShareOfTotal(double value, double total)
     {
-        return total > 0 ? value / total : 0;
+        return EffortDiagnostics.EffortDiagnosticsStatistics.CalculateShareOfTotal(value, total);
     }
 
     public static double CalculateWeightedDeviationScore(IEnumerable<double> deviationPercentages)
     {
-        var deviations = deviationPercentages.ToList();
-        if (deviations.Count == 0)
-        {
-            return 0;
-        }
-
-        var maxDeviation = deviations.Max() / 100.0;
-        var averageDeviation = deviations.Average() / 100.0;
-        return (maxDeviation * 0.6 + averageDeviation * 0.4) * 100;
+        return EffortDiagnostics.EffortDiagnosticsStatistics.CalculateWeightedDeviationScore(deviationPercentages);
     }
 
     public static double CalculateNormalizedHerfindahlIndex(IEnumerable<double> percentageShares)
     {
-        var shares = percentageShares
-            .Select(share => share / 100.0)
-            .ToList();
-
-        if (shares.Count == 0)
-        {
-            return 0;
-        }
-
-        var hhi = shares.Sum(share => Math.Pow(share, 2)) * 10000;
-        return Math.Min(100, hhi / 100);
+        return EffortDiagnostics.EffortDiagnosticsStatistics.CalculateNormalizedHerfindahlIndex(percentageShares);
     }
 }
