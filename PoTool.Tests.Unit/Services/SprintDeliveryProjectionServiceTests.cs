@@ -23,14 +23,14 @@ public sealed class SprintDeliveryProjectionServiceTests
             1,
             [
                 CreateResolvedWorkItem(100, CanonicalWorkItemTypes.Feature, resolvedFeatureId: null),
-                CreateResolvedWorkItem(201, CanonicalWorkItemTypes.PbiShort, resolvedFeatureId: 100),
-                CreateResolvedWorkItem(202, CanonicalWorkItemTypes.PbiShort, resolvedFeatureId: 100)
+                CreateResolvedWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, resolvedFeatureId: 100),
+                CreateResolvedWorkItem(202, CanonicalWorkItemTypes.ProductBacklogItem, resolvedFeatureId: 100)
             ],
             new Dictionary<int, DeliveryTrendWorkItem>
             {
                 [100] = CreateWorkItem(100, CanonicalWorkItemTypes.Feature, "Feature A", state: "Active"),
-                [201] = CreateWorkItem(201, CanonicalWorkItemTypes.PbiShort, "Estimated PBI", parentId: 100, state: "Done", effort: 50, storyPoints: 5),
-                [202] = CreateWorkItem(202, CanonicalWorkItemTypes.PbiShort, "Derived PBI", parentId: 100, state: "Done")
+                [201] = CreateWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, "Estimated PBI", parentId: 100, state: "Done", effort: 50, storyPoints: 5),
+                [202] = CreateWorkItem(202, CanonicalWorkItemTypes.ProductBacklogItem, "Derived PBI", parentId: 100, state: "Done")
             },
             new Dictionary<int, IReadOnlyList<FieldChangeEvent>>
             {
@@ -64,14 +64,14 @@ public sealed class SprintDeliveryProjectionServiceTests
             1,
             [
                 CreateResolvedWorkItem(100, CanonicalWorkItemTypes.Feature, resolvedFeatureId: null),
-                CreateResolvedWorkItem(201, CanonicalWorkItemTypes.PbiShort, resolvedFeatureId: 100),
-                CreateResolvedWorkItem(202, CanonicalWorkItemTypes.PbiShort, resolvedFeatureId: 100)
+                CreateResolvedWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, resolvedFeatureId: 100),
+                CreateResolvedWorkItem(202, CanonicalWorkItemTypes.ProductBacklogItem, resolvedFeatureId: 100)
             ],
             new Dictionary<int, DeliveryTrendWorkItem>
             {
                 [100] = CreateWorkItem(100, CanonicalWorkItemTypes.Feature, "Feature A", state: "Active", iterationPath: sprintPath),
-                [201] = CreateWorkItem(201, CanonicalWorkItemTypes.PbiShort, "Delivered PBI", parentId: 100, state: "Done", iterationPath: sprintPath, effort: 20, storyPoints: 3),
-                [202] = CreateWorkItem(202, CanonicalWorkItemTypes.PbiShort, "Spillover PBI", parentId: 100, state: "Active", iterationPath: nextSprintPath, effort: 30, storyPoints: 5)
+                [201] = CreateWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, "Delivered PBI", parentId: 100, state: "Done", iterationPath: sprintPath, effort: 20, storyPoints: 3),
+                [202] = CreateWorkItem(202, CanonicalWorkItemTypes.ProductBacklogItem, "Spillover PBI", parentId: 100, state: "Active", iterationPath: nextSprintPath, effort: 30, storyPoints: 5)
             },
             new Dictionary<int, IReadOnlyList<FieldChangeEvent>>
             {
@@ -80,16 +80,16 @@ public sealed class SprintDeliveryProjectionServiceTests
             },
             sprintStart,
             sprintEnd,
-            committedWorkItemIds: new HashSet<int> { 201, 202 },
-            nextSprintPath: nextSprintPath,
-            workItemSnapshotsById: new Dictionary<int, WorkItemSnapshot>
+            CommittedWorkItemIds: new HashSet<int> { 201, 202 },
+            NextSprintPath: nextSprintPath,
+            WorkItemSnapshotsById: new Dictionary<int, WorkItemSnapshot>
             {
                 [100] = new(100, CanonicalWorkItemTypes.Feature, "Active", sprintPath),
-                [201] = new(201, CanonicalWorkItemTypes.PbiShort, "Done", sprintPath),
-                [202] = new(202, CanonicalWorkItemTypes.PbiShort, "Active", nextSprintPath)
+                [201] = new(201, CanonicalWorkItemTypes.ProductBacklogItem, "Done", sprintPath),
+                [202] = new(202, CanonicalWorkItemTypes.ProductBacklogItem, "Active", nextSprintPath)
             },
-            stateEventsByWorkItem: new Dictionary<int, IReadOnlyList<FieldChangeEvent>>(),
-            iterationEventsByWorkItem: new Dictionary<int, IReadOnlyList<FieldChangeEvent>>
+            StateEventsByWorkItem: new Dictionary<int, IReadOnlyList<FieldChangeEvent>>(),
+            IterationEventsByWorkItem: new Dictionary<int, IReadOnlyList<FieldChangeEvent>>
             {
                 [202] = [CreateFieldChangeEvent(202, "System.IterationPath", sprintEnd.AddHours(1), sprintPath, nextSprintPath)]
             }));
@@ -111,19 +111,19 @@ public sealed class SprintDeliveryProjectionServiceTests
             [
                 CreateResolvedWorkItem(100, CanonicalWorkItemTypes.Feature, resolvedFeatureId: null),
                 CreateResolvedWorkItem(101, CanonicalWorkItemTypes.Feature, resolvedFeatureId: null),
-                CreateResolvedWorkItem(201, CanonicalWorkItemTypes.PbiShort, resolvedFeatureId: 100),
-                CreateResolvedWorkItem(202, CanonicalWorkItemTypes.PbiShort, resolvedFeatureId: 100),
-                CreateResolvedWorkItem(301, CanonicalWorkItemTypes.PbiShort, resolvedFeatureId: 101),
-                CreateResolvedWorkItem(302, CanonicalWorkItemTypes.PbiShort, resolvedFeatureId: 101)
+                CreateResolvedWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, resolvedFeatureId: 100),
+                CreateResolvedWorkItem(202, CanonicalWorkItemTypes.ProductBacklogItem, resolvedFeatureId: 100),
+                CreateResolvedWorkItem(301, CanonicalWorkItemTypes.ProductBacklogItem, resolvedFeatureId: 101),
+                CreateResolvedWorkItem(302, CanonicalWorkItemTypes.ProductBacklogItem, resolvedFeatureId: 101)
             ],
             new Dictionary<int, DeliveryTrendWorkItem>
             {
                 [100] = CreateWorkItem(100, CanonicalWorkItemTypes.Feature, "Feature A", state: "Active"),
                 [101] = CreateWorkItem(101, CanonicalWorkItemTypes.Feature, "Feature B", state: "Active"),
-                [201] = CreateWorkItem(201, CanonicalWorkItemTypes.PbiShort, "Feature A Done", parentId: 100, state: "Done", storyPoints: 5),
-                [202] = CreateWorkItem(202, CanonicalWorkItemTypes.PbiShort, "Feature A Active", parentId: 100, state: "Active", storyPoints: 5),
-                [301] = CreateWorkItem(301, CanonicalWorkItemTypes.PbiShort, "Feature B Done", parentId: 101, state: "Done", storyPoints: 5),
-                [302] = CreateWorkItem(302, CanonicalWorkItemTypes.PbiShort, "Feature B Active", parentId: 101, state: "Active", storyPoints: 5)
+                [201] = CreateWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, "Feature A Done", parentId: 100, state: "Done", storyPoints: 5),
+                [202] = CreateWorkItem(202, CanonicalWorkItemTypes.ProductBacklogItem, "Feature A Active", parentId: 100, state: "Active", storyPoints: 5),
+                [301] = CreateWorkItem(301, CanonicalWorkItemTypes.ProductBacklogItem, "Feature B Done", parentId: 101, state: "Done", storyPoints: 5),
+                [302] = CreateWorkItem(302, CanonicalWorkItemTypes.ProductBacklogItem, "Feature B Active", parentId: 101, state: "Active", storyPoints: 5)
             },
             new Dictionary<int, IReadOnlyList<FieldChangeEvent>>
             {
@@ -135,9 +135,10 @@ public sealed class SprintDeliveryProjectionServiceTests
 
     private static ISprintDeliveryProjectionService CreateService()
     {
+        var storyPointResolutionService = new CanonicalStoryPointResolutionService();
         return new SprintDeliveryProjectionService(
-            new CanonicalStoryPointResolutionService(),
-            new HierarchyRollupService());
+            storyPointResolutionService,
+            new HierarchyRollupService(storyPointResolutionService));
     }
 
     private static SprintDefinition CreateSprint()

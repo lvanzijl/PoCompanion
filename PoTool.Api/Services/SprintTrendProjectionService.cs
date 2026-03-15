@@ -268,7 +268,7 @@ public class SprintTrendProjectionService
         return results;
     }
 
-    internal static SprintMetricsProjectionEntity ComputeProductSprintProjection(
+    internal SprintMetricsProjectionEntity ComputeProductSprintProjection(
         SprintEntity sprint,
         int productId,
         IReadOnlyList<ResolvedWorkItemEntity> resolvedItems,
@@ -276,8 +276,6 @@ public class SprintTrendProjectionService
         IReadOnlyDictionary<int, List<ActivityEventLedgerEntryEntity>> activityByWorkItem,
         DateTimeOffset sprintStart,
         DateTimeOffset sprintEnd,
-        ICanonicalStoryPointResolutionService storyPointResolutionService,
-        IHierarchyRollupService hierarchyRollupService,
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null,
         IReadOnlyDictionary<int, DateTimeOffset>? firstDoneByWorkItem = null,
         IReadOnlySet<int>? committedWorkItemIds = null,
@@ -286,12 +284,7 @@ public class SprintTrendProjectionService
         IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? stateEventsByWorkItem = null,
         IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? iterationEventsByWorkItem = null)
     {
-        ArgumentNullException.ThrowIfNull(storyPointResolutionService);
-        ArgumentNullException.ThrowIfNull(hierarchyRollupService);
-        var deliveryTrendProjectionService = new SprintDeliveryProjectionService(
-            storyPointResolutionService,
-            hierarchyRollupService);
-        var projection = deliveryTrendProjectionService.Compute(new SprintDeliveryProjectionRequest(
+        var projection = _deliveryTrendProjectionService.Compute(new SprintDeliveryProjectionRequest(
             sprint.ToDefinition(),
             productId,
             resolvedItems.Select(resolvedItem => resolvedItem.ToDeliveryTrendResolvedWorkItem()).ToList(),
@@ -312,20 +305,13 @@ public class SprintTrendProjectionService
         return ToProjectionEntity(projection);
     }
 
-    internal static double ComputeProgressionDelta(
+    internal double ComputeProgressionDelta(
         IReadOnlyList<ResolvedWorkItemEntity> productResolved,
         IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
         IReadOnlyDictionary<int, List<ActivityEventLedgerEntryEntity>> activityByWorkItem,
-        IHierarchyRollupService hierarchyRollupService,
-        ICanonicalStoryPointResolutionService storyPointResolutionService,
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
     {
-        ArgumentNullException.ThrowIfNull(hierarchyRollupService);
-        ArgumentNullException.ThrowIfNull(storyPointResolutionService);
-        var deliveryTrendProjectionService = new SprintDeliveryProjectionService(
-            storyPointResolutionService,
-            hierarchyRollupService);
-        var progressionDelta = deliveryTrendProjectionService.ComputeProgressionDelta(new SprintDeliveryProgressionRequest(
+        var progressionDelta = _deliveryTrendProjectionService.ComputeProgressionDelta(new SprintDeliveryProgressionRequest(
             productResolved.Select(resolvedItem => resolvedItem.ToDeliveryTrendResolvedWorkItem()).ToList(),
             workItemsByTfsId.ToDictionary(pair => pair.Key, pair => pair.Value.ToDeliveryTrendWorkItem()),
             activityByWorkItem.ToDictionary(

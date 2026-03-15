@@ -46,8 +46,14 @@ public class SprintTrendProjectionServiceTests
         IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? iterationEventsByWorkItem = null)
     {
         using var services = CreateDefaultServices();
+        var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        var service = new SprintTrendProjectionService(
+            serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<SprintTrendProjectionService>.Instance,
+            services.GetRequiredService<ICanonicalStoryPointResolutionService>(),
+            services.GetRequiredService<IHierarchyRollupService>());
 
-        return SprintTrendProjectionService.ComputeProductSprintProjection(
+        return service.ComputeProductSprintProjection(
             sprint,
             productId,
             resolvedItems,
@@ -55,8 +61,6 @@ public class SprintTrendProjectionServiceTests
             activityByWorkItem,
             sprintStart,
             sprintEnd,
-            services.GetRequiredService<ICanonicalStoryPointResolutionService>(),
-            services.GetRequiredService<IHierarchyRollupService>(),
             stateLookup,
             firstDoneByWorkItem,
             committedWorkItemIds,
@@ -73,13 +77,17 @@ public class SprintTrendProjectionServiceTests
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
     {
         using var services = CreateDefaultServices();
+        var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        var service = new SprintTrendProjectionService(
+            serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<SprintTrendProjectionService>.Instance,
+            services.GetRequiredService<ICanonicalStoryPointResolutionService>(),
+            services.GetRequiredService<IHierarchyRollupService>());
 
-        return SprintTrendProjectionService.ComputeProgressionDelta(
+        return service.ComputeProgressionDelta(
             productResolved,
             workItemsByTfsId,
             activityByWorkItem,
-            services.GetRequiredService<IHierarchyRollupService>(),
-            services.GetRequiredService<ICanonicalStoryPointResolutionService>(),
             stateLookup);
     }
 
