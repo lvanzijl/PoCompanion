@@ -3,14 +3,20 @@
 ## Summary
 - **Rule families found:** five primary effort-related families exist today in active code: effort imbalance, effort concentration risk, estimation quality, estimation suggestions, and sprint capacity planning. A closely related sixth family, capacity calibration, also exists but is more tightly coupled to canonical sprint/story-point metrics than to effort-hour diagnostics.
 - **Where they live:** executable logic is concentrated in `/PoTool.Api/Handlers/Metrics/GetEffortImbalanceQueryHandler.cs`, `/GetEffortConcentrationRiskQueryHandler.cs`, `/GetEffortEstimationQualityQueryHandler.cs`, `/GetEffortEstimationSuggestionsQueryHandler.cs`, `/GetSprintCapacityPlanQueryHandler.cs`, and adjacent `/GetCapacityCalibrationQueryHandler.cs`. Query contracts live in `/PoTool.Core/Metrics/Queries`. DTOs, enums, and settings live in `/PoTool.Shared/Metrics` and `/PoTool.Shared/Settings/EffortEstimationSettingsDto.cs`.
-- **Stability assessment:** the most stable families are **effort imbalance** and **effort concentration risk**. They have explicit thresholds, DTO contracts, feature documentation in `/features/effort_distribution_analytics.md`, and focused tests. **Estimation quality** and **estimation suggestions** are less stable because they are heuristic, share no canonical domain contract, and their current comments overstate certainty. **Sprint capacity planning** is the least mature because `/GetSprintCapacityPlanQueryHandler.cs` still uses placeholder team-member grouping and default-capacity assumptions.
+- **Stability assessment:**
+  - **Most stable:** effort imbalance and effort concentration risk. They have explicit thresholds, DTO contracts, feature documentation in `/features/effort_distribution_analytics.md`, and focused tests.
+  - **Less stable:** estimation quality and estimation suggestions. They are heuristic, share no canonical domain contract, and their current comments overstate certainty.
+  - **Least mature:** sprint capacity planning. `/GetSprintCapacityPlanQueryHandler.cs` still uses placeholder team-member grouping and default-capacity assumptions.
 - **Duplication assessment:** duplication is structural rather than formula-for-formula. The same product-scoped loading, area-path filtering, effort-only filtering, sprint-name extraction, and local statistical helpers are repeated across multiple handlers. Estimation quality and suggestion handlers also duplicate variance-based heuristics separately.
+- **Contract drift summary:**
+  - `/PoTool.Core/Metrics/Queries/GetEffortConcentrationRiskQuery.cs` exposes `ConcentrationThreshold`, but `/PoTool.Api/Handlers/Metrics/GetEffortConcentrationRiskQueryHandler.cs` does not use it in the risk calculation.
+  - `/PoTool.Core/Metrics/Queries/GetEffortEstimationQualityQuery.cs` and `/PoTool.Api/Handlers/Metrics/GetEffortEstimationQualityQueryHandler.cs` describe estimate-vs-actual analysis, but the current implementation measures consistency of effort values within groups instead.
 - **Recommendation:** **do not extract one broad `EffortDiagnostics` CDC next in its current shape.** A future effort-diagnostics slice is viable, but only part of it is stable enough now. If this area is chosen next, the first extraction should be narrowly scoped to **effort imbalance + effort concentration risk**, with shared statistical helpers. Estimation suggestions, estimation quality semantics, and sprint capacity planning should remain outside until their heuristics are canonicalized. Capacity calibration should remain aligned with sprint analytics.
 
 ## Effort Imbalance Rules
 - **Locations**
-  - Executable logic: `/PoTool.Api/Handlers/Metrics/GetEffortImbalanceQueryHandler.cs`
-  - Query contract: `/PoTool.Core/Metrics/Queries/GetEffortImbalanceQuery.cs`
+  - Executable logic: `/PoTool.Api/Handlers/Metrics/GetEffortImbalanceQueryHandler.cs`.
+  - Query contract: `/PoTool.Core/Metrics/Queries/GetEffortImbalanceQuery.cs`.
   - DTOs/enums: `/PoTool.Shared/Metrics/EffortImbalanceDto.cs`
   - Feature/spec narrative: `/features/effort_distribution_analytics.md`
   - Focused tests: `/PoTool.Tests.Unit/Handlers/GetEffortImbalanceQueryHandlerTests.cs`
@@ -98,6 +104,8 @@
     - contracts and tests are dedicated
   - Instability signals:
     - the public query exposes `ConcentrationThreshold = 0.5` in `/PoTool.Core/Metrics/Queries/GetEffortConcentrationRiskQuery.cs:11-15`, but the handler does not use that parameter anywhere in its risk calculation. That suggests the API contract and executable semantics are not fully aligned yet.
+- **Known contract drift**
+  - The query contract implies caller-tunable concentration thresholds, but the executable risk bands are hard-coded to `25/40/60/80` in `/GetEffortConcentrationRiskQueryHandler.cs:213-223`.
 - **Recommended ownership**
   - Future domain ownership:
     - concentration-per-bucket calculation
@@ -140,6 +148,8 @@
     - “quality” is heuristic consistency, not a confirmed canonical business definition
     - the code has no explicit actual-vs-estimate model despite comments claiming one
     - the same statistical primitives are duplicated instead of owned by one shared service
+- **Known contract drift**
+  - The public contract describes estimate-vs-actual accuracy, but the current handler computes within-group consistency of effort values. That mismatch should be resolved before any domain extraction treats this as canonical estimation-quality logic.
 - **Recommended ownership**
   - Future domain ownership:
     - variance / coefficient-of-variation helpers
@@ -239,12 +249,12 @@
       - member-level warning for any over-capacity entries
       - info when total effort `< 50%`
   - `/GetCapacityCalibrationQueryHandler.cs` is adjacent rather than the same family:
-    - committed story points = `PlannedStoryPoints - DerivedStoryPoints`
+    - current implementation committed story points = `PlannedStoryPoints - DerivedStoryPoints`, because the handler explicitly removes derived estimates from committed scope before calculating predictability.
     - delivered story points = `CompletedPbiStoryPoints`
     - hours per SP = `DeliveredEffort / DeliveredStoryPoints`
     - predictability ratio = `Done / Committed`
-    - percentile method uses linear interpolation for P10/P25/P50/P75/P90 in `/GetCapacityCalibrationQueryHandler.cs:181-196`
-    - outliers are outside P10/P90
+    - percentile method uses linear interpolation for P10/P25/P50/P75/P90 over the sorted per-sprint `DeliveredStoryPoints` values in `/GetCapacityCalibrationQueryHandler.cs:142-152` and `:181-196`
+    - outliers are sprints whose `DeliveredStoryPoints` fall outside P10/P90
 - **Duplication**
   - `GetSprintCapacityPlanQueryHandler.cs` shares the same product-scoped loading and sprint-name extraction pattern as imbalance/concentration handlers.
   - Warning/recommendation style is structurally similar to the other effort handlers.
