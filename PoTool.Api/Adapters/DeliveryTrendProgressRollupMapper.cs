@@ -1,4 +1,5 @@
 using PoTool.Core.Domain.DeliveryTrends.Models;
+using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Api.Adapters;
@@ -80,5 +81,34 @@ internal static class DeliveryTrendProgressRollupMapper
             SprintCompletedPbiCount = epicProgress.SprintCompletedPbiCount,
             SprintCompletedFeatureCount = epicProgress.SprintCompletedFeatureCount
         };
+    }
+
+    public static EpicProgress ToEpicProgress(this EpicProgressDto epicProgress)
+    {
+        return new EpicProgress(
+            epicProgress.EpicId,
+            epicProgress.EpicTitle,
+            epicProgress.ProductId,
+            epicProgress.ProgressPercent,
+            epicProgress.TotalEffort,
+            epicProgress.DoneEffort,
+            epicProgress.FeatureCount,
+            epicProgress.DoneFeatureCount,
+            epicProgress.DonePbiCount,
+            epicProgress.IsDone,
+            epicProgress.SprintCompletedEffort,
+            new ProgressionDelta(epicProgress.SprintProgressionDelta),
+            epicProgress.SprintEffortDelta,
+            epicProgress.SprintCompletedPbiCount,
+            epicProgress.SprintCompletedFeatureCount);
+    }
+
+    public static IReadOnlyDictionary<int, ProductDeliveryProgressSummary> ToProductDeliveryProgressSummaries(
+        this IReadOnlyList<EpicProgressDto> epicProgress)
+    {
+        ArgumentNullException.ThrowIfNull(epicProgress);
+
+        return DeliveryProgressSummaryCalculator.ComputeProductSummaries(
+            epicProgress.Select(progress => progress.ToEpicProgress()).ToList());
     }
 }

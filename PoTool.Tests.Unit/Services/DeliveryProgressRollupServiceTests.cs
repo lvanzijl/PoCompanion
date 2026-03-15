@@ -86,6 +86,25 @@ public sealed class DeliveryProgressRollupServiceTests
     }
 
     [TestMethod]
+    public void ComputeProductSummaries_AggregatesEpicOutputsByProduct()
+    {
+        var result = DeliveryProgressSummaryCalculator.ComputeProductSummaries(
+        [
+            new EpicProgress(100, "Epic X", 1, 50, 40, 20, 2, 1, 2, false, 10, new ProgressionDelta(25), 4, 1, 1),
+            new EpicProgress(101, "Epic Y", 1, 70, 60, 42, 3, 2, 4, false, 12, new ProgressionDelta(20), -1, 2, 0),
+            new EpicProgress(200, "Epic Z", 2, 80, 50, 40, 2, 1, 3, false, 8, new ProgressionDelta(16), 6, 2, 2)
+        ]);
+
+        Assert.HasCount(2, result);
+        Assert.IsTrue(result.ContainsKey(1));
+        Assert.IsTrue(result.ContainsKey(2));
+        Assert.AreEqual(3, result[1].ScopeChangeEffort);
+        Assert.AreEqual(1, result[1].CompletedFeatureCount);
+        Assert.AreEqual(6, result[2].ScopeChangeEffort);
+        Assert.AreEqual(2, result[2].CompletedFeatureCount);
+    }
+
+    [TestMethod]
     public void ComputeProgressionDelta_ReturnsZero_WhenNoFeaturesExist()
     {
         var service = CreateService();

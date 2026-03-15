@@ -39,6 +39,10 @@ public sealed class TrendDeliveryAnalyticsExplorationDocumentTests
         StringAssert.Contains(report, "epic progress calculation");
         StringAssert.Contains(report, "progression delta calculation");
         StringAssert.Contains(report, "preserving completed-PBI drill-down output shape");
+        StringAssert.Contains(report, "## Delivery Trend Analytics CDC Progress — Metrics Retrieval Aligned");
+        StringAssert.Contains(report, "ProductDeliveryProgressSummary");
+        StringAssert.Contains(report, "the handler no longer owns the per-product epic rollup semantics locally");
+        StringAssert.Contains(report, "per-product progress summaries aggregate multiple epic outputs without semantic drift");
         StringAssert.Contains(report, "Velocity7d");
         StringAssert.Contains(report, "confidence");
         StringAssert.Contains(report, "A — ready candidate for CDC slice");

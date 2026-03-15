@@ -265,3 +265,28 @@ Focused tests were added for the extracted progress rollups to verify:
 - epic progress aggregation from feature rollups
 - progression delta averaging for active sprint progress
 - sprint-assigned feature visibility without direct activity
+
+## Delivery Trend Analytics CDC Progress — Metrics Retrieval Aligned
+
+`PoTool.Api/Handlers/Metrics/GetSprintTrendMetricsQueryHandler.cs` now stays on the orchestration side of the CDC boundary.
+
+Handler responsibilities confirmed/reduced to:
+
+- loading cached or recomputed sprint projection rows
+- loading sprint/product metadata needed for DTO shaping
+- asking the delivery-trend path for progress outputs
+- grouping stored projections by sprint and mapping response DTOs
+- exposing cache staleness metadata
+
+CDC output usage is now aligned for the sprint-progress summary fields:
+
+- feature and epic progress still come from the delivery-trend projection path
+- product-level `ScopeChangeEffort` and `CompletedFeatureCount` summaries are derived from CDC-owned `EpicProgress` outputs via `ProductDeliveryProgressSummary`
+- the handler no longer owns the per-product epic rollup semantics locally
+
+Focused tests were added or updated to verify:
+
+- recompute orchestration still uses the projection service as before
+- cached retrieval still preserves grouped sprint/product DTO output
+- include-details false still returns summary rollups without drill-down payloads
+- per-product progress summaries aggregate multiple epic outputs without semantic drift
