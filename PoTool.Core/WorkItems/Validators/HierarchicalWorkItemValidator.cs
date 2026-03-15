@@ -1,3 +1,7 @@
+using PoTool.Core.BacklogQuality;
+using PoTool.Core.Contracts;
+using PoTool.Core.Domain.BacklogQuality.Rules;
+using PoTool.Core.Domain.BacklogQuality.Services;
 using PoTool.Shared.WorkItems;
 
 namespace PoTool.Core.WorkItems.Validators;
@@ -13,21 +17,34 @@ namespace PoTool.Core.WorkItems.Validators;
 public sealed class HierarchicalWorkItemValidator : IHierarchicalWorkItemValidator
 {
     private readonly IReadOnlyList<IHierarchicalValidationRule> _rules;
+    private readonly IWorkItemStateClassificationService? _stateClassificationService;
+    private readonly BacklogQualityAnalyzer? _backlogQualityAnalyzer;
+    private readonly RuleCatalog _ruleCatalog = new();
 
     /// <summary>
     /// Creates a new hierarchical validator with the specified rules.
     /// </summary>
     /// <param name="rules">All validation rules to apply.</param>
-    public HierarchicalWorkItemValidator(IEnumerable<IHierarchicalValidationRule> rules)
+    public HierarchicalWorkItemValidator(
+        IEnumerable<IHierarchicalValidationRule> rules,
+        IWorkItemStateClassificationService? stateClassificationService = null,
+        BacklogQualityAnalyzer? backlogQualityAnalyzer = null)
     {
         ArgumentNullException.ThrowIfNull(rules);
         _rules = rules.ToList();
+        _stateClassificationService = stateClassificationService;
+        _backlogQualityAnalyzer = backlogQualityAnalyzer ?? (stateClassificationService is null ? null : new BacklogQualityAnalyzer());
     }
 
     /// <inheritdoc />
     public IReadOnlyList<HierarchicalValidationResult> ValidateWorkItems(IEnumerable<WorkItemDto> workItems)
     {
         var itemsList = workItems as List<WorkItemDto> ?? workItems.ToList();
+        if (_stateClassificationService is not null && _backlogQualityAnalyzer is not null)
+        {
+            return ValidateWithAnalyzer(itemsList);
+        }
+
         var results = new List<HierarchicalValidationResult>();
 
         // Find all root items (items with no parent or parent not in the dataset)
@@ -47,6 +64,14 @@ public sealed class HierarchicalWorkItemValidator : IHierarchicalWorkItemValidat
     public HierarchicalValidationResult ValidateTree(int rootWorkItemId, IEnumerable<WorkItemDto> workItems)
     {
         var itemsList = workItems as List<WorkItemDto> ?? workItems.ToList();
+        if (_stateClassificationService is not null && _backlogQualityAnalyzer is not null)
+        {
+            var graph = BacklogQualityDomainAdapter.CreateGraph(
+                itemsList,
+                item => BacklogQualityDomainAdapter.Classify(_stateClassificationService, item));
+            var analysis = _backlogQualityAnalyzer.Analyze(graph);
+            return CreateAnalyzerResult(rootWorkItemId, itemsList, graph, analysis);
+        }
 
         // Get all items in this tree
         var treeItems = GetTreeItems(rootWorkItemId, itemsList);
@@ -97,6 +122,137 @@ public sealed class HierarchicalWorkItemValidator : IHierarchicalWorkItemValidat
             wasSuppressed,
             missingEffortIssues
         );
+    }
+
+    private IReadOnlyList<HierarchicalValidationResult> ValidateWithAnalyzer(List<WorkItemDto> itemsList)
+    {
+        var graph = BacklogQualityDomainAdapter.CreateGraph(
+            itemsList,
+            item => BacklogQualityDomainAdapter.Classify(_stateClassificationService!, item));
+        var analysis = _backlogQualityAnalyzer!.Analyze(graph);
+
+        return graph.RootItems
+            .Select(root => CreateAnalyzerResult(root.WorkItemId, itemsList, graph, analysis))
+            .ToArray();
+    }
+
+    private HierarchicalValidationResult CreateAnalyzerResult(
+        int rootWorkItemId,
+        IReadOnlyList<WorkItemDto> itemsList,
+        PoTool.Core.Domain.BacklogQuality.Models.BacklogGraph graph,
+        PoTool.Core.Domain.BacklogQuality.Models.BacklogQualityAnalysisResult analysis)
+    {
+        var treeIds = CollectTreeIds(graph, rootWorkItemId);
+        var backlogHealthProblems = analysis.IntegrityFindings
+            .Where(finding => treeIds.Contains(finding.WorkItemId))
+            .Select(finding => BacklogQualityDomainAdapter.ToLegacyValidationResult(
+                finding,
+                finding.ConflictingDescendantIds.Count == 0
+                    ? null
+                    : $"Conflicting descendants: {string.Join(", ", finding.ConflictingDescendantIds.Select(id => $"#{id}"))}"))
+            .ToArray();
+        var refinementBlockers = analysis.Findings
+            .Where(finding => finding.Rule.Family == RuleFamily.RefinementReadiness)
+            .Where(finding => treeIds.Contains(finding.WorkItemId))
+            .Select(finding => BacklogQualityDomainAdapter.ToLegacyValidationResult(finding))
+            .ToArray();
+
+        var wasSuppressed = refinementBlockers.Length > 0;
+        var incompleteRefinementIssues = wasSuppressed
+            ? Array.Empty<ValidationRuleResult>()
+            : analysis.Findings
+                .Where(finding => finding.Rule.Family == RuleFamily.ImplementationReadiness)
+                .Where(finding => !string.Equals(finding.Rule.SemanticTag, "MissingEffort", StringComparison.Ordinal))
+                .Where(finding => treeIds.Contains(finding.WorkItemId))
+                .Select(finding => BacklogQualityDomainAdapter.ToLegacyValidationResult(finding))
+                .ToArray();
+
+        var missingEffortIssues = BuildLegacyMissingEffortIssues(itemsList, treeIds, analysis);
+
+        return new HierarchicalValidationResult(
+            rootWorkItemId,
+            backlogHealthProblems,
+            refinementBlockers,
+            incompleteRefinementIssues,
+            wasSuppressed,
+            missingEffortIssues);
+    }
+
+    private IReadOnlyList<ValidationRuleResult> BuildLegacyMissingEffortIssues(
+        IReadOnlyList<WorkItemDto> itemsList,
+        IReadOnlySet<int> treeIds,
+        PoTool.Core.Domain.BacklogQuality.Models.BacklogQualityAnalysisResult analysis)
+    {
+        var results = new List<ValidationRuleResult>();
+        var seenWorkItemIds = new HashSet<int>();
+
+        foreach (var finding in analysis.ImplementationStates
+                     .Where(state => treeIds.Contains(state.WorkItemId) && state.HasMissingEffort)
+                     .SelectMany(state => state.BlockingFindings)
+                     .Where(finding => string.Equals(finding.Rule.SemanticTag, "MissingEffort", StringComparison.Ordinal))
+                     .OrderBy(finding => finding.WorkItemId))
+        {
+            if (seenWorkItemIds.Add(finding.WorkItemId))
+            {
+                results.Add(BacklogQualityDomainAdapter.ToLegacyValidationResult(finding));
+            }
+        }
+
+        if (!_ruleCatalog.TryGetRule("RC-2", out var missingEffortRule) || missingEffortRule is null)
+        {
+            throw new InvalidOperationException("Canonical backlog-quality rule 'RC-2' is not registered.");
+        }
+
+        foreach (var item in itemsList
+                     .Where(item => treeIds.Contains(item.TfsId))
+                     .Where(item => string.Equals(item.Type, WorkItemType.Epic, StringComparison.OrdinalIgnoreCase) ||
+                                    string.Equals(item.Type, WorkItemType.Feature, StringComparison.OrdinalIgnoreCase))
+                     .Where(item => !IsFinished(item))
+                     .Where(item => item.Effort is not > 0)
+                     .OrderBy(item => item.TfsId))
+        {
+            if (seenWorkItemIds.Add(item.TfsId))
+            {
+                results.Add(new ValidationRuleResult(
+                    BacklogQualityDomainAdapter.CreateLegacyRule(missingEffortRule.Metadata, missingEffortRule.Metadata.Description),
+                    item.TfsId,
+                    IsViolated: true));
+            }
+        }
+
+        return results;
+    }
+
+    private static IReadOnlySet<int> CollectTreeIds(
+        PoTool.Core.Domain.BacklogQuality.Models.BacklogGraph graph,
+        int rootWorkItemId)
+    {
+        var treeIds = new HashSet<int>();
+        var queue = new Queue<int>();
+        queue.Enqueue(rootWorkItemId);
+
+        while (queue.Count > 0)
+        {
+            var currentId = queue.Dequeue();
+            if (!treeIds.Add(currentId))
+            {
+                continue;
+            }
+
+            foreach (var child in graph.GetChildren(currentId))
+            {
+                queue.Enqueue(child.WorkItemId);
+            }
+        }
+
+        return treeIds;
+    }
+
+    private bool IsFinished(WorkItemDto item)
+    {
+        return _stateClassificationService is not null &&
+               BacklogQualityDomainAdapter.Classify(_stateClassificationService, item) is
+                   PoTool.Core.Domain.Models.StateClassification.Done or PoTool.Core.Domain.Models.StateClassification.Removed;
     }
 
     /// <summary>

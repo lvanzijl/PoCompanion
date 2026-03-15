@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems.Validators.Rules;
+using PoTool.Core.Domain.BacklogQuality.Services;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
@@ -300,6 +301,52 @@ public class HierarchicalWorkItemValidatorTests
 
         Assert.IsFalse(tree1.HasRefinementBlockers, "Tree 1 should be clean");
         Assert.IsTrue(tree2.HasRefinementBlockers, "Tree 2 should have refinement blocker");
+    }
+
+    [TestMethod]
+    public void AnalyzerBackedValidation_PreservesLegacySuppressionAndMissingEffort()
+    {
+        var validator = new HierarchicalWorkItemValidator(
+            Array.Empty<IHierarchicalValidationRule>(),
+            CreateMockStateClassificationService(),
+            new BacklogQualityAnalyzer());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "", null),
+            CreateWorkItem(2, "Feature", "New", 1, "Feature description", null),
+            CreateWorkItem(3, "Product Backlog Item", "New", 2, "", null)
+        };
+
+        var result = validator.ValidateTree(1, items);
+
+        Assert.IsTrue(result.HasRefinementBlockers);
+        Assert.IsFalse(result.HasIncompleteRefinement);
+        Assert.IsTrue(result.WasSuppressed);
+        Assert.IsTrue(result.MissingEffortIssues.Any(issue => issue.WorkItemId == 1 && issue.Rule.RuleId == "RC-2"));
+        Assert.IsTrue(result.MissingEffortIssues.Any(issue => issue.WorkItemId == 2 && issue.Rule.RuleId == "RC-2"));
+        Assert.IsTrue(result.MissingEffortIssues.Any(issue => issue.WorkItemId == 3 && issue.Rule.RuleId == "RC-2"));
+    }
+
+    [TestMethod]
+    public void AnalyzerBackedValidation_MultipleRootsRemainIndependent()
+    {
+        var validator = new HierarchicalWorkItemValidator(
+            Array.Empty<IHierarchicalValidationRule>(),
+            CreateMockStateClassificationService(),
+            new BacklogQualityAnalyzer());
+        var items = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Epic", "New", null, "Epic description", null),
+            CreateWorkItem(2, "Feature", "New", 1, "Feature description", null),
+            CreateWorkItem(10, "Epic", "New", null, "", null),
+            CreateWorkItem(11, "Feature", "New", 10, "Feature description", null)
+        };
+
+        var results = validator.ValidateWorkItems(items);
+
+        Assert.HasCount(2, results);
+        Assert.IsFalse(results.Single(result => result.RootWorkItemId == 1).HasRefinementBlockers);
+        Assert.IsTrue(results.Single(result => result.RootWorkItemId == 10).HasRefinementBlockers);
     }
 
     #endregion

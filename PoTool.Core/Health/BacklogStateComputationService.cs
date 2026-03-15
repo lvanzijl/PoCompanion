@@ -1,5 +1,9 @@
+using PoTool.Core.BacklogQuality;
+using PoTool.Core.Domain.BacklogQuality.Models;
+using PoTool.Core.Domain.BacklogQuality.Services;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.WorkItems;
+using DomainStateClassification = PoTool.Core.Domain.Models.StateClassification;
 
 namespace PoTool.Core.Health;
 
@@ -20,6 +24,13 @@ namespace PoTool.Core.Health;
 public sealed class BacklogStateComputationService
 {
     private static readonly IReadOnlySet<int> EmptyDoneIds = new HashSet<int>();
+    private readonly BacklogQualityAnalyzer _backlogQualityAnalyzer;
+
+    public BacklogStateComputationService(BacklogQualityAnalyzer? backlogQualityAnalyzer = null)
+    {
+        _backlogQualityAnalyzer = backlogQualityAnalyzer ?? new BacklogQualityAnalyzer();
+    }
+
     /// <summary>
     /// Computes the readiness score for a single PBI.
     /// </summary>
@@ -28,18 +39,9 @@ public sealed class BacklogStateComputationService
     public PbiReadinessScore ComputePbiScore(WorkItemDto pbi)
     {
         ArgumentNullException.ThrowIfNull(pbi);
-
-        if (string.IsNullOrWhiteSpace(pbi.Description))
-        {
-            return new PbiReadinessScore(pbi.TfsId, 0);
-        }
-
-        if (!pbi.Effort.HasValue || pbi.Effort.Value <= 0)
-        {
-            return new PbiReadinessScore(pbi.TfsId, 75);
-        }
-
-        return new PbiReadinessScore(pbi.TfsId, 100);
+        var analysis = Analyze([pbi]);
+        var score = analysis.ReadinessScores.Single(item => item.WorkItemId == pbi.TfsId);
+        return new PbiReadinessScore(score.WorkItemId, score.Score.Value);
     }
 
     /// <summary>
@@ -58,27 +60,17 @@ public sealed class BacklogStateComputationService
         ArgumentNullException.ThrowIfNull(feature);
         ArgumentNullException.ThrowIfNull(allItems);
         ArgumentNullException.ThrowIfNull(doneItemIds);
-
-        if (string.IsNullOrWhiteSpace(feature.Description))
+        if (doneItemIds.Contains(feature.TfsId))
         {
-            return new FeatureRefinementScore(feature.TfsId, 0, FeatureOwnerState.PO);
+            return new FeatureRefinementScore(feature.TfsId, 100, FeatureOwnerState.Ready);
         }
 
-        var pbis = allItems
-            .Where(w => w.ParentTfsId == feature.TfsId &&
-                        string.Equals(w.Type, WorkItemType.Pbi, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        if (pbis.Count == 0)
-        {
-            return new FeatureRefinementScore(feature.TfsId, 25, FeatureOwnerState.Team);
-        }
-
-        var averageScore = (int)Math.Round(
-            pbis.Average(pbi => doneItemIds.Contains(pbi.TfsId) ? 100.0 : ComputePbiScore(pbi).Score));
-        var ownerState = averageScore == 100 ? FeatureOwnerState.Ready : FeatureOwnerState.Team;
-
-        return new FeatureRefinementScore(feature.TfsId, averageScore, ownerState);
+        var analysis = Analyze(EnsureIncluded(feature, allItems), doneItemIds);
+        var score = analysis.ReadinessScores.Single(item => item.WorkItemId == feature.TfsId);
+        return new FeatureRefinementScore(
+            score.WorkItemId,
+            score.Score.Value,
+            BacklogQualityDomainAdapter.ToFeatureOwnerState(score.OwnerState ?? ReadinessOwnerState.Team));
     }
 
     /// <summary>
@@ -106,29 +98,14 @@ public sealed class BacklogStateComputationService
         ArgumentNullException.ThrowIfNull(epic);
         ArgumentNullException.ThrowIfNull(allItems);
         ArgumentNullException.ThrowIfNull(doneItemIds);
-
-        if (string.IsNullOrWhiteSpace(epic.Description))
+        if (doneItemIds.Contains(epic.TfsId))
         {
-            return new EpicRefinementScore(epic.TfsId, 0);
+            return new EpicRefinementScore(epic.TfsId, 100);
         }
 
-        var itemsList = allItems as IList<WorkItemDto> ?? allItems.ToList();
-
-        var features = itemsList
-            .Where(w => w.ParentTfsId == epic.TfsId &&
-                        string.Equals(w.Type, WorkItemType.Feature, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        if (features.Count == 0)
-        {
-            return new EpicRefinementScore(epic.TfsId, 30);
-        }
-
-        var averageScore = (int)Math.Round(
-            features.Average(f =>
-                doneItemIds.Contains(f.TfsId) ? 100.0 : ComputeFeatureScore(f, itemsList, doneItemIds).Score));
-
-        return new EpicRefinementScore(epic.TfsId, averageScore);
+        var analysis = Analyze(EnsureIncluded(epic, allItems), doneItemIds);
+        var score = analysis.ReadinessScores.Single(item => item.WorkItemId == epic.TfsId);
+        return new EpicRefinementScore(score.WorkItemId, score.Score.Value);
     }
 
     /// <summary>
@@ -139,4 +116,26 @@ public sealed class BacklogStateComputationService
     /// <returns>Score for the Epic.</returns>
     public EpicRefinementScore ComputeEpicScore(WorkItemDto epic, IEnumerable<WorkItemDto> allItems)
         => ComputeEpicScore(epic, allItems, EmptyDoneIds);
+
+    private BacklogQualityAnalysisResult Analyze(
+        IEnumerable<WorkItemDto> workItems,
+        IReadOnlySet<int>? doneItemIds = null)
+    {
+        doneItemIds ??= EmptyDoneIds;
+        var graph = BacklogQualityDomainAdapter.CreateGraph(
+            workItems,
+            item => doneItemIds.Contains(item.TfsId)
+                ? DomainStateClassification.Done
+                : DomainStateClassification.New);
+
+        return _backlogQualityAnalyzer.Analyze(graph);
+    }
+
+    private static IEnumerable<WorkItemDto> EnsureIncluded(WorkItemDto targetItem, IEnumerable<WorkItemDto> workItems)
+    {
+        var items = workItems as IList<WorkItemDto> ?? workItems.ToList();
+        return items.Any(item => item.TfsId == targetItem.TfsId)
+            ? items
+            : items.Concat([targetItem]);
+    }
 }
