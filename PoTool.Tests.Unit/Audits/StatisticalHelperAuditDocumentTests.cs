@@ -40,7 +40,10 @@ public sealed class StatisticalHelperAuditDocumentTests
 
         StringAssert.Contains(report, "# Statistical Core Cleanup Report");
         StringAssert.Contains(report, "## EffortDiagnostics Statistics Ownership Consolidation");
+        StringAssert.Contains(report, "## Shared Pure-Math Statistics Core Introduced");
         StringAssert.Contains(report, "PoTool.Core.Domain/Domain/EffortDiagnostics");
+        StringAssert.Contains(report, "PoTool.Core.Domain/Domain/Statistics/StatisticsMath.cs");
+        StringAssert.Contains(report, "StandardDeviation");
         StringAssert.Contains(report, "PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsStatistics.cs");
     }
 
