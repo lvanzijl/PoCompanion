@@ -37,12 +37,7 @@ public class SprintTrendProjectionService
             logger,
             null,
             storyPointResolutionService,
-            hierarchyRollupService,
-            new DeliveryProgressRollupService(storyPointResolutionService, hierarchyRollupService),
-            new SprintDeliveryProjectionService(
-                storyPointResolutionService,
-                hierarchyRollupService,
-                new DeliveryProgressRollupService(storyPointResolutionService, hierarchyRollupService)))
+            hierarchyRollupService)
     {
     }
 
@@ -52,18 +47,24 @@ public class SprintTrendProjectionService
         IWorkItemStateClassificationService? stateClassificationService,
         ICanonicalStoryPointResolutionService storyPointResolutionService,
         IHierarchyRollupService hierarchyRollupService)
-        : this(
-            scopeFactory,
-            logger,
-            stateClassificationService,
+    {
+        ArgumentNullException.ThrowIfNull(scopeFactory);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(storyPointResolutionService);
+        ArgumentNullException.ThrowIfNull(hierarchyRollupService);
+
+        var deliveryProgressRollupService = new DeliveryProgressRollupService(storyPointResolutionService, hierarchyRollupService);
+
+        _scopeFactory = scopeFactory;
+        _logger = logger;
+        _stateClassificationService = stateClassificationService;
+        _storyPointResolutionService = storyPointResolutionService;
+        _hierarchyRollupService = hierarchyRollupService;
+        _deliveryProgressRollupService = deliveryProgressRollupService;
+        _deliveryTrendProjectionService = new SprintDeliveryProjectionService(
             storyPointResolutionService,
             hierarchyRollupService,
-            new DeliveryProgressRollupService(storyPointResolutionService, hierarchyRollupService),
-            new SprintDeliveryProjectionService(
-                storyPointResolutionService,
-                hierarchyRollupService,
-                new DeliveryProgressRollupService(storyPointResolutionService, hierarchyRollupService)))
-    {
+            deliveryProgressRollupService);
     }
 
     public SprintTrendProjectionService(
@@ -612,8 +613,8 @@ public class SprintTrendProjectionService
             resolvedItems,
             workItemsByTfsId,
             productIds,
+            _deliveryProgressRollupService,
             _storyPointResolutionService,
-            _hierarchyRollupService,
             activeWorkItemIds,
             sprintCompletedPbiIds,
             sprintEffortDeltaByWorkItem,
@@ -627,27 +628,26 @@ public class SprintTrendProjectionService
         IReadOnlyList<ResolvedWorkItemEntity> resolvedItems,
         IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
         IReadOnlyList<int> productIds,
+        IDeliveryProgressRollupService deliveryProgressRollupService,
         ICanonicalStoryPointResolutionService storyPointResolutionService,
-        IHierarchyRollupService hierarchyRollupService,
         IReadOnlyCollection<int>? activeWorkItemIds = null,
         IReadOnlyCollection<int>? sprintCompletedPbiIds = null,
         IReadOnlyDictionary<int, int>? sprintEffortDeltaByWorkItem = null,
         IReadOnlyCollection<int>? sprintAssignedPbiIds = null,
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
     {
+        ArgumentNullException.ThrowIfNull(deliveryProgressRollupService);
         ArgumentNullException.ThrowIfNull(storyPointResolutionService);
-        ArgumentNullException.ThrowIfNull(hierarchyRollupService);
         var deliveryTrendWorkItems = workItemsByTfsId.ToDictionary(pair => pair.Key, pair => pair.Value.ToDeliveryTrendWorkItem());
-        var featureProgress = new DeliveryProgressRollupService(storyPointResolutionService, hierarchyRollupService)
-            .ComputeFeatureProgress(new DeliveryFeatureProgressRequest(
-                resolvedItems.Select(resolvedItem => resolvedItem.ToDeliveryTrendResolvedWorkItem()).ToList(),
-                deliveryTrendWorkItems,
-                productIds,
-                activeWorkItemIds,
-                sprintCompletedPbiIds,
-                sprintEffortDeltaByWorkItem,
-                sprintAssignedPbiIds,
-                stateLookup));
+        var featureProgress = deliveryProgressRollupService.ComputeFeatureProgress(new DeliveryFeatureProgressRequest(
+            resolvedItems.Select(resolvedItem => resolvedItem.ToDeliveryTrendResolvedWorkItem()).ToList(),
+            deliveryTrendWorkItems,
+            productIds,
+            activeWorkItemIds,
+            sprintCompletedPbiIds,
+            sprintEffortDeltaByWorkItem,
+            sprintAssignedPbiIds,
+            stateLookup));
 
         return featureProgress
             .Select(progress => progress.ToFeatureProgressDto(BuildCompletedPbis(
@@ -669,16 +669,15 @@ public class SprintTrendProjectionService
         IReadOnlyList<FeatureProgressDto> featureProgress,
         IReadOnlyList<ResolvedWorkItemEntity> resolvedItems,
         IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
+        IDeliveryProgressRollupService deliveryProgressRollupService,
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
     {
+        ArgumentNullException.ThrowIfNull(deliveryProgressRollupService);
         var deliveryTrendWorkItems = workItemsByTfsId.ToDictionary(pair => pair.Key, pair => pair.Value.ToDeliveryTrendWorkItem());
-        var epicProgress = new DeliveryProgressRollupService(
-                new CanonicalStoryPointResolutionService(),
-                new HierarchyRollupService(new CanonicalStoryPointResolutionService()))
-            .ComputeEpicProgress(new DeliveryEpicProgressRequest(
-                featureProgress.Select(progress => progress.ToFeatureProgress(deliveryTrendWorkItems)).ToList(),
-                deliveryTrendWorkItems,
-                stateLookup));
+        var epicProgress = deliveryProgressRollupService.ComputeEpicProgress(new DeliveryEpicProgressRequest(
+            featureProgress.Select(progress => progress.ToFeatureProgress(deliveryTrendWorkItems)).ToList(),
+            deliveryTrendWorkItems,
+            stateLookup));
 
         return epicProgress
             .Select(progress => progress.ToEpicProgressDto())
@@ -719,7 +718,7 @@ public class SprintTrendProjectionService
         var workItemsByTfsId = workItems.ToDictionary(w => w.TfsId, w => w);
 
         var stateLookup = await GetStateLookupAsync(cancellationToken);
-        return ComputeEpicProgress(featureProgress, resolvedItems, workItemsByTfsId, stateLookup);
+        return ComputeEpicProgress(featureProgress, resolvedItems, workItemsByTfsId, _deliveryProgressRollupService, stateLookup);
     }
 
     private async Task<IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>> GetStateLookupAsync(
