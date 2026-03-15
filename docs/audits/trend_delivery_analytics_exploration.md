@@ -240,3 +240,28 @@ Focused tests were added for the extracted projection core to verify:
 - derived-story-point and unestimated-delivery semantics
 - commitment plus spillover handling
 - progression delta averaging based on sprint progress activity
+
+## Delivery Trend Analytics CDC Progress — Progress Rollups Extracted
+
+The canonical progress rollups have now been moved into `PoTool.Core.Domain/Domain/DeliveryTrends/Services/DeliveryProgressRollupService.cs`.
+
+Rollups moved into the CDC service:
+
+- feature progress calculation
+- epic progress calculation
+- progression delta calculation
+- sprint activity-aware feature visibility and sprint progress semantics
+
+`PoTool.Api/Services/SprintTrendProjectionService.cs` is now reduced to orchestration and mapping responsibilities for progress rollups:
+
+- loading products, resolved hierarchy, work items, and sprint activity inputs
+- preparing domain requests for feature, epic, and progression calculations
+- mapping CDC outputs back to the existing trend DTO contracts
+- preserving completed-PBI drill-down output shape for the API
+
+Focused tests were added for the extracted progress rollups to verify:
+
+- feature progress rollup and sprint progress change semantics
+- epic progress aggregation from feature rollups
+- progression delta averaging for active sprint progress
+- sprint-assigned feature visibility without direct activity

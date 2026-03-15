@@ -33,6 +33,12 @@ public sealed class TrendDeliveryAnalyticsExplorationDocumentTests
         StringAssert.Contains(report, "PoTool.Core.Domain/Domain/DeliveryTrends/Services/SprintDeliveryProjectionService.cs");
         StringAssert.Contains(report, "projection core");
         StringAssert.Contains(report, "reduced to orchestration responsibilities");
+        StringAssert.Contains(report, "## Delivery Trend Analytics CDC Progress — Progress Rollups Extracted");
+        StringAssert.Contains(report, "PoTool.Core.Domain/Domain/DeliveryTrends/Services/DeliveryProgressRollupService.cs");
+        StringAssert.Contains(report, "feature progress calculation");
+        StringAssert.Contains(report, "epic progress calculation");
+        StringAssert.Contains(report, "progression delta calculation");
+        StringAssert.Contains(report, "preserving completed-PBI drill-down output shape");
         StringAssert.Contains(report, "Velocity7d");
         StringAssert.Contains(report, "confidence");
         StringAssert.Contains(report, "A — ready candidate for CDC slice");

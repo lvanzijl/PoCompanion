@@ -136,9 +136,11 @@ public sealed class SprintDeliveryProjectionServiceTests
     private static ISprintDeliveryProjectionService CreateService()
     {
         var storyPointResolutionService = new CanonicalStoryPointResolutionService();
+        var hierarchyRollupService = new HierarchyRollupService(storyPointResolutionService);
         return new SprintDeliveryProjectionService(
             storyPointResolutionService,
-            new HierarchyRollupService(storyPointResolutionService));
+            hierarchyRollupService,
+            new DeliveryProgressRollupService(storyPointResolutionService, hierarchyRollupService));
     }
 
     private static SprintDefinition CreateSprint()
@@ -156,6 +158,7 @@ public sealed class SprintDeliveryProjectionServiceTests
         int workItemId,
         string workItemType,
         int? resolvedFeatureId,
+        int? resolvedEpicId = null,
         int? resolvedProductId = 1,
         int? resolvedSprintId = 1)
     {
@@ -164,6 +167,7 @@ public sealed class SprintDeliveryProjectionServiceTests
             workItemType,
             resolvedProductId,
             resolvedFeatureId,
+            resolvedEpicId,
             resolvedSprintId);
     }
 

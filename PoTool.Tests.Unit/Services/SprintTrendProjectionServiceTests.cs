@@ -4,6 +4,7 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Estimation;
+using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
@@ -105,8 +106,8 @@ public class SprintTrendProjectionServiceTests
             resolvedItems,
             workItemsByTfsId,
             productIds,
+            services.GetRequiredService<IDeliveryProgressRollupService>(),
             services.GetRequiredService<ICanonicalStoryPointResolutionService>(),
-            services.GetRequiredService<IHierarchyRollupService>(),
             activeWorkItemIds,
             sprintCompletedPbiIds,
             sprintEffortDeltaByWorkItem,
@@ -114,11 +115,32 @@ public class SprintTrendProjectionServiceTests
             stateLookup);
     }
 
+    private static IReadOnlyList<EpicProgressDto> ComputeEpicProgress(
+        IReadOnlyList<FeatureProgressDto> featureProgress,
+        IReadOnlyList<ResolvedWorkItemEntity> resolvedItems,
+        IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
+    {
+        using var services = CreateDefaultServices();
+
+        return SprintTrendProjectionService.ComputeEpicProgress(
+            featureProgress,
+            resolvedItems,
+            workItemsByTfsId,
+            services.GetRequiredService<IDeliveryProgressRollupService>(),
+            stateLookup);
+    }
+
     private static ServiceProvider CreateDefaultServices()
     {
+        var storyPointResolutionService = new CanonicalStoryPointResolutionService();
+        var hierarchyRollupService = new HierarchyRollupService(storyPointResolutionService);
         return new ServiceCollection()
-            .AddSingleton<ICanonicalStoryPointResolutionService, CanonicalStoryPointResolutionService>()
-            .AddSingleton<IHierarchyRollupService, HierarchyRollupService>()
+            .AddSingleton<ICanonicalStoryPointResolutionService>(storyPointResolutionService)
+            .AddSingleton<IHierarchyRollupService>(hierarchyRollupService)
+            .AddSingleton<IDeliveryProgressRollupService>(new DeliveryProgressRollupService(
+                storyPointResolutionService,
+                hierarchyRollupService))
             .BuildServiceProvider();
     }
 
@@ -1147,7 +1169,7 @@ public class SprintTrendProjectionServiceTests
         };
         var resolvedItems = new List<ResolvedWorkItemEntity>();
 
-        var result = SprintTrendProjectionService.ComputeEpicProgress(featureProgress, resolvedItems, workItems);
+        var result = ComputeEpicProgress(featureProgress, resolvedItems, workItems);
 
         Assert.HasCount(1, result);
         Assert.AreEqual(100, result[0].EpicId);
@@ -1185,7 +1207,7 @@ public class SprintTrendProjectionServiceTests
         };
         var resolvedItems = new List<ResolvedWorkItemEntity>();
 
-        var result = SprintTrendProjectionService.ComputeEpicProgress(featureProgress, resolvedItems, workItems);
+        var result = ComputeEpicProgress(featureProgress, resolvedItems, workItems);
 
         Assert.HasCount(1, result);
         Assert.AreEqual(100, result[0].ProgressPercent, "Canonically done epic should show 100%");
@@ -1216,7 +1238,7 @@ public class SprintTrendProjectionServiceTests
             [100] = CreateWorkItem(100, WorkItemType.Epic, "Resolved Epic", state: "Resolved"),
         };
 
-        var result = SprintTrendProjectionService.ComputeEpicProgress(
+        var result = ComputeEpicProgress(
             featureProgress,
             new List<ResolvedWorkItemEntity>(),
             workItems,
@@ -1252,7 +1274,7 @@ public class SprintTrendProjectionServiceTests
         };
         var resolvedItems = new List<ResolvedWorkItemEntity>();
 
-        var result = SprintTrendProjectionService.ComputeEpicProgress(featureProgress, resolvedItems, workItems);
+        var result = ComputeEpicProgress(featureProgress, resolvedItems, workItems);
 
         Assert.HasCount(1, result);
         Assert.AreEqual(90, result[0].ProgressPercent, "Non-done epic should be capped at 90%");
@@ -1282,7 +1304,7 @@ public class SprintTrendProjectionServiceTests
         var workItems = new Dictionary<int, WorkItemEntity>();
         var resolvedItems = new List<ResolvedWorkItemEntity>();
 
-        var result = SprintTrendProjectionService.ComputeEpicProgress(featureProgress, resolvedItems, workItems);
+        var result = ComputeEpicProgress(featureProgress, resolvedItems, workItems);
 
         Assert.IsEmpty(result, "Features without epics should not produce epic progress");
     }
@@ -1900,7 +1922,7 @@ public class SprintTrendProjectionServiceTests
         };
         var resolvedItems = new List<ResolvedWorkItemEntity>();
 
-        var result = SprintTrendProjectionService.ComputeEpicProgress(featureProgress, resolvedItems, workItems);
+        var result = ComputeEpicProgress(featureProgress, resolvedItems, workItems);
 
         Assert.HasCount(1, result);
         Assert.AreEqual(30, result[0].SprintCompletedEffort, "Epic sprint scored effort should aggregate from child features (10+20=30)");
@@ -1935,7 +1957,7 @@ public class SprintTrendProjectionServiceTests
         };
         var resolvedItems = new List<ResolvedWorkItemEntity>();
 
-        var result = SprintTrendProjectionService.ComputeEpicProgress(featureProgress, resolvedItems, workItems);
+        var result = ComputeEpicProgress(featureProgress, resolvedItems, workItems);
 
         Assert.HasCount(1, result);
         Assert.AreEqual(0.0, result[0].SprintProgressionDelta, "Sprint delta should be 0 when total effort is 0");
@@ -2070,7 +2092,7 @@ public class SprintTrendProjectionServiceTests
         };
         var resolvedItems = new List<ResolvedWorkItemEntity>();
 
-        var result = SprintTrendProjectionService.ComputeEpicProgress(featureProgress, resolvedItems, workItems);
+        var result = ComputeEpicProgress(featureProgress, resolvedItems, workItems);
 
         Assert.HasCount(1, result);
         Assert.AreEqual(3, result[0].SprintCompletedPbiCount, "Epic SprintCompletedPbiCount should sum child feature counts (2+1=3)");
@@ -2113,7 +2135,7 @@ public class SprintTrendProjectionServiceTests
             activeWorkItemIds: activeWorkItemIds,
             sprintCompletedPbiIds: new HashSet<int>());
 
-        var epicProgress = SprintTrendProjectionService.ComputeEpicProgress(
+        var epicProgress = ComputeEpicProgress(
             featureProgress, resolved, workItems);
 
         // Verify feature is included (non-noise activity gate passes)
@@ -2161,7 +2183,7 @@ public class SprintTrendProjectionServiceTests
             activeWorkItemIds: activeWorkItemIds,
             sprintCompletedPbiIds: new HashSet<int>());
 
-        var epicProgress = SprintTrendProjectionService.ComputeEpicProgress(
+        var epicProgress = ComputeEpicProgress(
             featureProgress, resolved, workItems);
 
         Assert.HasCount(1, epicProgress,
@@ -2197,7 +2219,7 @@ public class SprintTrendProjectionServiceTests
             activeWorkItemIds: activeWorkItemIds,
             sprintAssignedPbiIds: new HashSet<int>());
 
-        var epicProgress = SprintTrendProjectionService.ComputeEpicProgress(
+        var epicProgress = ComputeEpicProgress(
             featureProgress, resolved, workItems);
 
         Assert.IsEmpty(featureProgress, "Feature F must be excluded when PBI has only noise-field activity");
@@ -2233,7 +2255,7 @@ public class SprintTrendProjectionServiceTests
             activeWorkItemIds: activeWorkItemIds,
             sprintAssignedPbiIds: sprintAssignedPbiIds);
 
-        var epicProgress = SprintTrendProjectionService.ComputeEpicProgress(
+        var epicProgress = ComputeEpicProgress(
             featureProgress, resolved, workItems);
 
         Assert.IsEmpty(epicProgress, "Epic E must NOT appear when it and all descendants have no revisions during the sprint");
