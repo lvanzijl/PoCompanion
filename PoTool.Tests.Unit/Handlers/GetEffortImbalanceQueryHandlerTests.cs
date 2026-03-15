@@ -93,6 +93,39 @@ public class GetEffortImbalanceQueryHandlerTests
     }
 
     [TestMethod]
+    public async Task Handle_UsesAnalyzerDerivedBucketValues_ForImbalanceOutput()
+    {
+        // Arrange - matches the canonical analyzer scenario for area buckets while keeping sprint totals balanced.
+        var workItems = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Area A", "Sprint 1", 15),
+            CreateWorkItem(2, "Area A", "Sprint 2", 15),
+            CreateWorkItem(3, "Area B", "Sprint 1", 10),
+            CreateWorkItem(4, "Area C", "Sprint 2", 10)
+        };
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workItems);
+
+        // Act
+        var result = await _handler.Handle(
+            new GetEffortImbalanceQuery(ImbalanceThreshold: 0.3),
+            CancellationToken.None);
+
+        // Assert
+        Assert.AreEqual(ImbalanceRiskLevel.High, result.OverallRiskLevel);
+        Assert.AreEqual(60.8d, result.ImbalanceScore, 0.001);
+        Assert.IsEmpty(result.SprintImbalances);
+
+        var dominantTeam = result.TeamImbalances[0];
+        Assert.AreEqual("Area A", dominantTeam.AreaPath);
+        Assert.AreEqual(30, dominantTeam.TotalEffort);
+        Assert.AreEqual(16, dominantTeam.AverageEffortAcrossTeams);
+        Assert.AreEqual(80d, dominantTeam.DeviationPercentage, 0.001);
+        Assert.AreEqual(ImbalanceRiskLevel.Critical, dominantTeam.RiskLevel);
+    }
+
+    [TestMethod]
     public async Task Handle_WithImbalancedTeams_DetectsHighRisk()
     {
         // Arrange - Team1 has 5x more effort than others
