@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Core.PullRequests.Queries;
 using PoTool.Shared.PullRequests;
+using PoTool.Shared.Statistics;
 
 namespace PoTool.Api.Handlers.PullRequests;
 
@@ -204,7 +205,7 @@ public sealed class GetPullRequestInsightsQueryHandler
             AbandonRatePct          = total > 0 ? Math.Round(100.0 * abandoned / total, 1) : 0,
             ChangesRequestedRatePct = total > 0 ? Math.Round(100.0 * rework / total, 1)    : 0,
             MedianLifetimeHours     = Median(lifetimes),
-            P90LifetimeHours        = lifetimes.Count >= 3 ? Percentile(lifetimes, 0.90) : null
+            P90LifetimeHours        = lifetimes.Count >= 3 ? PercentileMath.LinearInterpolation(lifetimes, 90) : null
         };
 
         // ── 6. Scatter points ──────────────────────────────────────────────────
@@ -273,7 +274,7 @@ public sealed class GetPullRequestInsightsQueryHandler
                     MergePct           = repoTotal > 0 ? Math.Round(100.0 * repoMerged / repoTotal, 1)    : 0,
                     AbandonPct         = repoTotal > 0 ? Math.Round(100.0 * repoAbandoned / repoTotal, 1) : 0,
                     MedianLifetimeHours = Median(completedLifetimes),
-                    P90LifetimeHours    = completedLifetimes.Count >= 3 ? Percentile(completedLifetimes, 0.90) : null,
+                    P90LifetimeHours    = completedLifetimes.Count >= 3 ? PercentileMath.LinearInterpolation(completedLifetimes, 90) : null,
                     AvgReviewCycles     = allCycles.Count > 0 ? Math.Round(allCycles.Average(), 2) : null
                 };
             })
@@ -399,14 +400,6 @@ public sealed class GetPullRequestInsightsQueryHandler
         return sorted.Count % 2 == 1
             ? sorted[mid]
             : (sorted[mid - 1] + sorted[mid]) / 2.0;
-    }
-
-    private static double Percentile(List<double> sorted, double p)
-    {
-        // Nearest-rank method
-        int idx = (int)Math.Ceiling(p * sorted.Count) - 1;
-        idx = Math.Clamp(idx, 0, sorted.Count - 1);
-        return sorted[idx];
     }
 
     private static PullRequestInsightsDto EmptyResult(

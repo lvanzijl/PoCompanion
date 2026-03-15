@@ -45,3 +45,31 @@
 - behavior preserved:
   - the handlers still calculate the same exact population variance values for quality accuracy and suggestion confidence
   - focused handler and audit coverage now verifies preserved outputs plus the absence of local variance helpers
+
+## Percentile Semantics Standardized
+
+- previous percentile variants found:
+  - linear interpolation in `GetCapacityCalibrationQueryHandler`, `GetPipelineInsightsQueryHandler`, `GetPrSprintTrendsQueryHandler`, and the client calculators
+  - nearest-rank in `GetPullRequestInsightsQueryHandler` and `GetPrDeliveryInsightsQueryHandler`
+- chosen canonical algorithm:
+  - `PoTool.Shared/Statistics/PercentileMath.cs` now defines repository-default percentile semantics as Linear interpolation on pre-sorted ascending samples
+  - contract:
+    - sorted vs unsorted input: callers must provide values already sorted ascending
+    - empty input: returns `0`
+    - one-sample input: returns that only sample value
+    - percentile range: inclusive `[0, 100]`, otherwise throws `ArgumentOutOfRangeException`
+- files migrated:
+  - `PoTool.Api/Handlers/Metrics/GetCapacityCalibrationQueryHandler.cs`
+  - `PoTool.Api/Handlers/Pipelines/GetPipelineInsightsQueryHandler.cs`
+  - `PoTool.Api/Handlers/PullRequests/GetPrSprintTrendsQueryHandler.cs`
+  - `PoTool.Api/Handlers/PullRequests/GetPullRequestInsightsQueryHandler.cs`
+  - `PoTool.Api/Handlers/PullRequests/GetPrDeliveryInsightsQueryHandler.cs`
+  - `PoTool.Client/Services/PullRequestInsightsCalculator.cs`
+  - `PoTool.Client/Services/PipelineInsightsCalculator.cs`
+  - `PoTool.Client/Services/BugInsightsCalculator.cs`
+  - `PoTool.Tests.Unit/Shared/PercentileMathTests.cs`
+  - `PoTool.Tests.Unit/Handlers/GetPullRequestInsightsQueryHandlerTests.cs`
+  - `PoTool.Tests.Unit/Handlers/GetPrDeliveryInsightsQueryHandlerTests.cs`
+  - `PoTool.Tests.Unit/Audits/StatisticalHelperAuditDocumentTests.cs`
+- intentionally local exceptions:
+  - none

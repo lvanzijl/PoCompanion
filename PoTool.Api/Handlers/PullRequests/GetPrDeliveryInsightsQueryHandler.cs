@@ -5,6 +5,7 @@ using PoTool.Api.Persistence;
 using PoTool.Core.PullRequests.Queries;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.PullRequests;
+using PoTool.Shared.Statistics;
 
 namespace PoTool.Api.Handlers.PullRequests;
 
@@ -405,7 +406,7 @@ public sealed class GetPrDeliveryInsightsQueryHandler
                     PrCount            = epicPrCount,
                     MedianLifetimeHours = Median(lifetimesSorted),
                     P90LifetimeHours   = lifetimesSorted.Count >= 3
-                        ? Percentile(lifetimesSorted, 0.90)
+                        ? PercentileMath.LinearInterpolation(lifetimesSorted, 90)
                         : null,
                     AbandonedPct       = epicPrCount > 0
                         ? Math.Round(100.0 * abandoned / epicPrCount, 1)
@@ -705,13 +706,6 @@ public sealed class GetPrDeliveryInsightsQueryHandler
         return sorted.Count % 2 == 1
             ? sorted[mid]
             : (sorted[mid - 1] + sorted[mid]) / 2.0;
-    }
-
-    private static double Percentile(List<double> sorted, double p)
-    {
-        int idx = (int)Math.Ceiling(p * sorted.Count) - 1;
-        idx = Math.Clamp(idx, 0, sorted.Count - 1);
-        return sorted[idx];
     }
 
     private UnresolvedPrWorkItemDiagnostic CreateNoRelationsDiagnostic(

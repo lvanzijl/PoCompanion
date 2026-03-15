@@ -387,6 +387,33 @@ public class GetPrDeliveryInsightsQueryHandlerTests
     }
 
     [TestMethod]
+    public async Task Handle_EpicBreakdown_P90Lifetime_UsesLinearInterpolation()
+    {
+        await AddWorkItemAsync(100, WorkItemType.Epic, "Epic A");
+        await AddWorkItemAsync(200, WorkItemType.Feature, "Feature", parentTfsId: 100);
+        await AddWorkItemAsync(300, WorkItemType.Pbi, "PBI 1", parentTfsId: 200);
+        await AddWorkItemAsync(301, WorkItemType.Pbi, "PBI 2", parentTfsId: 200);
+        await AddWorkItemAsync(302, WorkItemType.Pbi, "PBI 3", parentTfsId: 200);
+
+        var created = RangeFrom.AddDays(1);
+        await AddPrAsync(1, status: "completed", createdDate: created, completedDate: created.AddDays(1));
+        await AddWorkItemLinkAsync(1, 300);
+        await AddPrAsync(2, status: "completed", createdDate: created, completedDate: created.AddDays(2));
+        await AddWorkItemLinkAsync(2, 301);
+        await AddPrAsync(3, status: "completed", createdDate: created, completedDate: created.AddDays(3));
+        await AddWorkItemLinkAsync(3, 302);
+
+        var result = await _handler.Handle(
+            new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo),
+            CancellationToken.None);
+
+        var epic = result.EpicBreakdown.Single();
+        Assert.IsNotNull(epic.P90LifetimeHours);
+        Assert.AreEqual(67.2, epic.P90LifetimeHours!.Value, 0.001,
+            "Epic P90 lifetime should use linear interpolation, not nearest-rank.");
+    }
+
+    [TestMethod]
     public async Task Handle_FeatureBreakdown_ContainsPrPerPbiRatio()
     {
         await AddWorkItemAsync(100, WorkItemType.Epic, "Epic");

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Core.PullRequests.Queries;
 using PoTool.Shared.PullRequests;
+using PoTool.Shared.Statistics;
 
 namespace PoTool.Api.Handlers.PullRequests;
 
@@ -286,7 +287,7 @@ public sealed class GetPrSprintTrendsQueryHandler
                 dto.MedianTimeToMergeHours = Median(timeToMergeValues);
                 if (timeToMergeValues.Count >= 3)
                 {
-                    dto.P90TimeToMergeHours = Percentile(timeToMergeValues, 90);
+                    dto.P90TimeToMergeHours = PercentileMath.LinearInterpolation(timeToMergeValues, 90);
                 }
             }
 
@@ -308,12 +309,4 @@ public sealed class GetPrSprintTrendsQueryHandler
             : sorted[mid];
     }
 
-    private static double Percentile(List<double> sorted, int p)
-    {
-        double rank = (p / 100.0) * (sorted.Count - 1);
-        int lo = (int)Math.Floor(rank);
-        int hi = (int)Math.Ceiling(rank);
-        if (lo == hi) return sorted[lo];
-        return sorted[lo] + (sorted[hi] - sorted[lo]) * (rank - lo);
-    }
 }

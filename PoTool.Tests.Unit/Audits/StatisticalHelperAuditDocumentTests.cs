@@ -46,6 +46,9 @@ public sealed class StatisticalHelperAuditDocumentTests
         StringAssert.Contains(report, "StandardDeviation");
         StringAssert.Contains(report, "PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsStatistics.cs");
         StringAssert.Contains(report, "## Variance Duplication Removed from Estimation Handlers");
+        StringAssert.Contains(report, "## Percentile Semantics Standardized");
+        StringAssert.Contains(report, "Linear interpolation");
+        StringAssert.Contains(report, "PoTool.Shared/Statistics/PercentileMath.cs");
         StringAssert.Contains(report, "handlers updated");
         StringAssert.Contains(report, "local helpers removed");
         StringAssert.Contains(report, "behavior preserved");
@@ -65,6 +68,44 @@ public sealed class StatisticalHelperAuditDocumentTests
         Assert.IsFalse(suggestionsHandler.Contains("private double CalculateVariance", StringComparison.Ordinal));
         StringAssert.Contains(qualityHandler, "StatisticsMath.Variance");
         StringAssert.Contains(suggestionsHandler, "StatisticsMath.Variance");
+    }
+
+    [TestMethod]
+    public void PercentileConsumers_UseSharedLinearInterpolationHelper()
+    {
+        var repositoryRoot = GetRepositoryRoot();
+        var prInsightsHandlerPath = Path.Combine(repositoryRoot, "PoTool.Api", "Handlers", "PullRequests", "GetPullRequestInsightsQueryHandler.cs");
+        var prDeliveryHandlerPath = Path.Combine(repositoryRoot, "PoTool.Api", "Handlers", "PullRequests", "GetPrDeliveryInsightsQueryHandler.cs");
+        var pipelineHandlerPath = Path.Combine(repositoryRoot, "PoTool.Api", "Handlers", "Pipelines", "GetPipelineInsightsQueryHandler.cs");
+        var capacityHandlerPath = Path.Combine(repositoryRoot, "PoTool.Api", "Handlers", "Metrics", "GetCapacityCalibrationQueryHandler.cs");
+        var prSprintHandlerPath = Path.Combine(repositoryRoot, "PoTool.Api", "Handlers", "PullRequests", "GetPrSprintTrendsQueryHandler.cs");
+        var prCalculatorPath = Path.Combine(repositoryRoot, "PoTool.Client", "Services", "PullRequestInsightsCalculator.cs");
+        var pipelineCalculatorPath = Path.Combine(repositoryRoot, "PoTool.Client", "Services", "PipelineInsightsCalculator.cs");
+        var bugCalculatorPath = Path.Combine(repositoryRoot, "PoTool.Client", "Services", "BugInsightsCalculator.cs");
+
+        var prInsightsHandler = File.ReadAllText(prInsightsHandlerPath);
+        var prDeliveryHandler = File.ReadAllText(prDeliveryHandlerPath);
+        var pipelineHandler = File.ReadAllText(pipelineHandlerPath);
+        var capacityHandler = File.ReadAllText(capacityHandlerPath);
+        var prSprintHandler = File.ReadAllText(prSprintHandlerPath);
+        var prCalculator = File.ReadAllText(prCalculatorPath);
+        var pipelineCalculator = File.ReadAllText(pipelineCalculatorPath);
+        var bugCalculator = File.ReadAllText(bugCalculatorPath);
+
+        Assert.IsFalse(prInsightsHandler.Contains("private static double Percentile(", StringComparison.Ordinal));
+        Assert.IsFalse(prDeliveryHandler.Contains("private static double Percentile(", StringComparison.Ordinal));
+        Assert.IsFalse(pipelineHandler.Contains("private static double Percentile(", StringComparison.Ordinal));
+        Assert.IsFalse(capacityHandler.Contains("private static double Percentile(", StringComparison.Ordinal));
+        Assert.IsFalse(prSprintHandler.Contains("private static double Percentile(", StringComparison.Ordinal));
+
+        StringAssert.Contains(prInsightsHandler, "PercentileMath.LinearInterpolation");
+        StringAssert.Contains(prDeliveryHandler, "PercentileMath.LinearInterpolation");
+        StringAssert.Contains(pipelineHandler, "PercentileMath.LinearInterpolation");
+        StringAssert.Contains(capacityHandler, "PercentileMath.LinearInterpolation");
+        StringAssert.Contains(prSprintHandler, "PercentileMath.LinearInterpolation");
+        StringAssert.Contains(prCalculator, "PercentileMath.LinearInterpolation");
+        StringAssert.Contains(pipelineCalculator, "PercentileMath.LinearInterpolation");
+        StringAssert.Contains(bugCalculator, "PercentileMath.LinearInterpolation");
     }
 
     private static string GetRepositoryRoot()

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
+using PoTool.Shared.Statistics;
 
 namespace PoTool.Api.Handlers.Metrics;
 
@@ -142,13 +143,13 @@ public sealed class GetCapacityCalibrationQueryHandler
         // Velocity distribution (sorted ascending for percentile computation)
         var velocities = entries.Select(e => e.DeliveredStoryPoints).OrderBy(v => v).ToList();
 
-        var medianVelocity = Percentile(velocities, 50);
-        var p25Velocity = Percentile(velocities, 25);
-        var p75Velocity = Percentile(velocities, 75);
+        var medianVelocity = PercentileMath.LinearInterpolation(velocities, 50);
+        var p25Velocity = PercentileMath.LinearInterpolation(velocities, 25);
+        var p75Velocity = PercentileMath.LinearInterpolation(velocities, 75);
 
         // Outliers: sprints whose velocity falls below P10 or above P90
-        var p10 = Percentile(velocities, 10);
-        var p90 = Percentile(velocities, 90);
+        var p10 = PercentileMath.LinearInterpolation(velocities, 10);
+        var p90 = PercentileMath.LinearInterpolation(velocities, 90);
         var outlierNames = entries
             .Where(e => e.DeliveredStoryPoints < p10 || e.DeliveredStoryPoints > p90)
             .Select(e => e.SprintName)
@@ -162,7 +163,7 @@ public sealed class GetCapacityCalibrationQueryHandler
             .ToList();
 
         var medianPredictability = predictabilityValues.Count > 0
-            ? Percentile(predictabilityValues, 50)
+            ? PercentileMath.LinearInterpolation(predictabilityValues, 50)
             : 0.0;
 
         _logger.LogInformation(
@@ -176,23 +177,6 @@ public sealed class GetCapacityCalibrationQueryHandler
             P75Velocity: Math.Round(p75Velocity, 1),
             MedianPredictability: Math.Round(medianPredictability, 3),
             OutlierSprintNames: outlierNames.AsReadOnly());
-    }
-
-    /// <summary>
-    /// Computes the p-th percentile of a pre-sorted ascending list using linear interpolation.
-    /// Returns 0.0 for empty lists.
-    /// </summary>
-    private static double Percentile(IList<double> sorted, double p)
-    {
-        if (sorted.Count == 0) return 0.0;
-        if (sorted.Count == 1) return sorted[0];
-
-        var index = (p / 100.0) * (sorted.Count - 1);
-        var lower = (int)Math.Floor(index);
-        var upper = (int)Math.Ceiling(index);
-        var frac = index - lower;
-
-        return sorted[lower] + frac * (sorted[upper] - sorted[lower]);
     }
 
     private static CapacityCalibrationDto Empty() =>

@@ -417,8 +417,8 @@ public class GetPullRequestInsightsQueryHandlerTests
     }
 
     [TestMethod]
-    [Description("P90 lifetime is populated when 3 or more PRs have a positive lifetime")]
-    public async Task Handle_P90Lifetime_PopulatedWhen3OrMorePrs()
+    [Description("P90 lifetime uses linear interpolation when 3 or more PRs have a positive lifetime")]
+    public async Task Handle_P90Lifetime_UsesLinearInterpolationWhen3OrMorePrs()
     {
         var d = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
         await AddPrAsync(1, "completed", d, d.AddDays(1));
@@ -428,7 +428,8 @@ public class GetPullRequestInsightsQueryHandlerTests
         var result = await _handler.Handle(MakeQuery(), CancellationToken.None);
 
         Assert.IsNotNull(result.Summary.P90LifetimeHours, "P90 must be non-null with ≥3 PRs");
-        Assert.IsGreaterThan(0.0, result.Summary.P90LifetimeHours!.Value);
+        Assert.AreEqual(67.2, result.Summary.P90LifetimeHours!.Value, 0.001,
+            "P90 of [24, 48, 72] hours should use linear interpolation, not nearest-rank.");
     }
 
     [TestMethod]
