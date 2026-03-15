@@ -183,7 +183,7 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
         var maxEffort = efforts.Max();
 
         // Calculate confidence based on variance and sample size
-        var variance = CalculateVariance(efforts);
+        var variance = StatisticsMath.Variance(efforts.Select(static value => (double)value));
         var confidence = CalculateConfidence(scoredWorkItems.Count, variance);
 
         // Build rationale
@@ -283,12 +283,6 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
     {
         return (int)StatisticsMath.Median(values.Select(static value => (double)value));
     }
-
-    private double CalculateVariance(List<int> values)
-    {
-        return StatisticsMath.Variance(values.Select(static value => (double)value));
-    }
-
     private double CalculateConfidence(int sampleSize, double variance)
     {
         // Base confidence on sample size and variance

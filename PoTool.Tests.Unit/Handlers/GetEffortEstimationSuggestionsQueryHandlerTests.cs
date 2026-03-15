@@ -211,6 +211,36 @@ public class GetEffortEstimationSuggestionsQueryHandlerTests
     }
 
     [TestMethod]
+    public async Task Handle_WithVariableHistoricalEfforts_UsesPopulationVarianceForConfidence()
+    {
+        // Arrange
+        var workItems = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Task", "Done", "Sprint 1", 2),
+            CreateWorkItem(2, "Task", "Done", "Sprint 1", 4),
+            CreateWorkItem(3, "Task", "Done", "Sprint 1", 8),
+            CreateWorkItem(4, "Task", "In Progress", "Sprint 2", null)
+        };
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workItems);
+        var query = new GetEffortEstimationSuggestionsQuery();
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        var expectedVariance = ((2d - (14d / 3d)) * (2d - (14d / 3d)) +
+            (4d - (14d / 3d)) * (4d - (14d / 3d)) +
+            (8d - (14d / 3d)) * (8d - (14d / 3d))) / 3d;
+        var expectedVarianceConfidence = Math.Max(0.3d, 1d - (expectedVariance / 100d));
+        var expectedConfidence = (Math.Min(1d, 3d / 10d) + expectedVarianceConfidence) / 2d;
+
+        Assert.AreEqual(4, result[0].SuggestedEffort);
+        Assert.AreEqual(expectedConfidence, result[0].Confidence, 0.0001);
+    }
+
+    [TestMethod]
     public async Task Handle_WithAreaPathFilter_FiltersCorrectly()
     {
         // Arrange
