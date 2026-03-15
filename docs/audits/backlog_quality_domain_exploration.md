@@ -181,3 +181,21 @@ Keep outside the first extraction:
 - **Tests added:**
   - `PoTool.Tests.Unit/Services/BacklogValidationServiceTests.cs`
   - coverage includes canonical family execution order, suppression beneath refinement blockers, structural reporting, aggregate output shape, and deterministic mixed-tree behavior
+
+## Backlog Quality CDC Progress — Readiness Services Implemented
+
+- **Readiness scoring implemented in `PoTool.Core.Domain/BacklogQuality`:**
+  - `Models/BacklogReadinessScore.cs`
+  - `Services/BacklogReadinessService.cs`
+  - scores are computed directly from canonical graph semantics for active Epics, Features, and PBIs
+  - removed descendants are excluded, done descendants contribute `100`, and child averages use midpoint-to-even rounding
+  - Feature owner-state semantics remain canonical: `PO`, `Team`, `Ready`
+- **Binary readiness implemented in `PoTool.Core.Domain/BacklogQuality/Services/ImplementationReadinessService.cs`:**
+  - derives `ImplementationReadinessState` from canonical readiness scoring and direct rule semantics
+  - preserves binary ready/not-ready interpretation without introducing a competing rule system
+  - `BacklogValidationService` now delegates readiness-state derivation to the canonical implementation-readiness service
+- **Tests added/updated:**
+  - `PoTool.Tests.Unit/Services/BacklogReadinessServiceTests.cs`
+  - `PoTool.Tests.Unit/Services/ImplementationReadinessServiceTests.cs`
+  - `PoTool.Tests.Unit/Services/BacklogValidationServiceTests.cs`
+  - coverage includes PBI/Feature/Epic score rules, done descendant contribution, removed descendant exclusion, midpoint-to-even rounding, owner-state semantics, binary readiness derivation, and the contradiction case where an Epic score is blocked while mature descendants still retain their own scores

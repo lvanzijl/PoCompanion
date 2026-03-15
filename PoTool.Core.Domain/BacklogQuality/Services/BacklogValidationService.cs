@@ -9,20 +9,23 @@ namespace PoTool.Core.Domain.BacklogQuality.Services;
 /// </summary>
 public sealed class BacklogValidationService
 {
-    private const string MissingEffortSemanticTag = "MissingEffort";
     private readonly RuleCatalog _ruleCatalog;
+    private readonly ImplementationReadinessService _implementationReadinessService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BacklogValidationService"/> class.
     /// </summary>
     public BacklogValidationService()
-        : this(new RuleCatalog())
+        : this(new RuleCatalog(), new ImplementationReadinessService())
     {
     }
 
-    internal BacklogValidationService(RuleCatalog ruleCatalog)
+    internal BacklogValidationService(
+        RuleCatalog ruleCatalog,
+        ImplementationReadinessService implementationReadinessService)
     {
         _ruleCatalog = ruleCatalog ?? throw new ArgumentNullException(nameof(ruleCatalog));
+        _implementationReadinessService = implementationReadinessService ?? throw new ArgumentNullException(nameof(implementationReadinessService));
     }
 
     /// <summary>
@@ -37,7 +40,7 @@ public sealed class BacklogValidationService
         var implementationFindings = ExecuteFamily(backlogGraph, RuleFamily.ImplementationReadiness);
 
         var refinementStates = BuildRefinementStates(backlogGraph, refinementFindings);
-        var implementationStates = BuildImplementationStates(backlogGraph, implementationFindings);
+        var implementationStates = _implementationReadinessService.Compute(backlogGraph);
         var suppressedImplementationIds = GetSuppressedImplementationIds(backlogGraph, refinementStates);
         var reportedImplementationFindings = implementationFindings
             .Where(finding => !suppressedImplementationIds.Contains(finding.WorkItemId))
@@ -100,36 +103,6 @@ public sealed class BacklogValidationService
             .ToArray();
     }
 
-    private static IReadOnlyList<ImplementationReadinessState> BuildImplementationStates(
-        BacklogGraph backlogGraph,
-        IReadOnlyList<ValidationRuleResult> implementationFindings)
-    {
-        var findingsByWorkItemId = implementationFindings
-            .GroupBy(finding => finding.WorkItemId)
-            .ToDictionary(group => group.Key, group => (IReadOnlyList<ValidationRuleResult>)group.ToArray());
-
-        return backlogGraph.Items
-            .Where(IsImplementationScope)
-            .Where(IsActive)
-            .OrderBy(item => item.WorkItemId)
-            .Select(item =>
-            {
-                var blockingFindings = findingsByWorkItemId.TryGetValue(item.WorkItemId, out var findings)
-                    ? findings
-                    : Array.Empty<ValidationRuleResult>();
-                var isReady = blockingFindings.Count == 0;
-
-                return new ImplementationReadinessState(
-                    item.WorkItemId,
-                    item.WorkItemType,
-                    new ReadinessScore(isReady ? 100 : 0),
-                    isReady,
-                    blockingFindings.Any(finding => string.Equals(finding.Rule.SemanticTag, MissingEffortSemanticTag, StringComparison.Ordinal)),
-                    blockingFindings);
-            })
-            .ToArray();
-    }
-
     private static HashSet<int> GetSuppressedImplementationIds(
         BacklogGraph backlogGraph,
         IReadOnlyList<RefinementReadinessState> refinementStates)
@@ -167,9 +140,4 @@ public sealed class BacklogValidationService
                string.Equals(item.WorkItemType, BacklogWorkItemTypes.Feature, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsImplementationScope(WorkItemSnapshot item)
-    {
-        return string.Equals(item.WorkItemType, BacklogWorkItemTypes.Feature, StringComparison.OrdinalIgnoreCase) ||
-               BacklogWorkItemTypes.PbiTypes.Contains(item.WorkItemType, StringComparer.OrdinalIgnoreCase);
-    }
 }

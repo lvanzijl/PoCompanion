@@ -30,7 +30,7 @@ public sealed class BacklogValidationServiceTests
     {
         var service = new BacklogValidationService();
         var graph = CreateGraph(
-            Snapshot(1, BacklogWorkItemTypes.Epic, null, "short", null, StateClassification.New),
+            Snapshot(1, BacklogWorkItemTypes.Epic, null, null, null, StateClassification.New),
             Snapshot(2, BacklogWorkItemTypes.Feature, 1, "Valid feature description", null, StateClassification.New),
             Snapshot(3, BacklogWorkItemTypes.ProductBacklogItem, 2, null, null, StateClassification.New));
 
@@ -40,9 +40,16 @@ public sealed class BacklogValidationServiceTests
             new[] { "RR-1" },
             result.Findings.Select(finding => finding.Rule.RuleId).ToArray());
 
-        Assert.HasCount(2, result.ImplementationStates);
+        Assert.HasCount(3, result.ImplementationStates);
+        var epicImplementationState = result.ImplementationStates.Single(state => state.WorkItemId == 1);
+        Assert.IsFalse(epicImplementationState.IsReady);
+        CollectionAssert.AreEqual(
+            new[] { "RR-1" },
+            epicImplementationState.BlockingFindings.Select(finding => finding.Rule.RuleId).ToArray());
+
         var featureState = result.ImplementationStates.Single(state => state.WorkItemId == 2);
-        Assert.IsTrue(featureState.IsReady);
+        Assert.IsFalse(featureState.IsReady);
+        Assert.AreEqual(0, featureState.Score.Value);
         Assert.HasCount(0, featureState.BlockingFindings);
 
         var pbiState = result.ImplementationStates.Single(state => state.WorkItemId == 3);
@@ -94,7 +101,7 @@ public sealed class BacklogValidationServiceTests
             "(1,True,False),(2,True,False)",
             string.Join(",", result.RefinementStates.Select(state => $"({state.WorkItemId},{state.IsReady},{state.SuppressesImplementationReadiness})")));
         Assert.AreEqual(
-            "(2,True,100,False),(3,True,100,False)",
+            "(1,True,100,False),(2,True,100,False),(3,True,100,False)",
             string.Join(",", result.ImplementationStates.Select(state => $"({state.WorkItemId},{state.IsReady},{state.Score.Value},{state.HasMissingEffort})")));
     }
 
