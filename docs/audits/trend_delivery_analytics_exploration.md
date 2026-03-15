@@ -183,3 +183,34 @@ Then treat the nearby families separately:
 4. **Keep portfolio flow analytics as a later follow-up** after deciding whether the target slice should stay effort-oriented or be re-grounded in canonical story-point churn semantics.
 
 In short: a coherent slice exists, but it is the **delivery trend analytics core**, not the entire current trend/forecast/reporting surface.
+
+## Delivery Trend Analytics CDC Progress — Domain Models Added
+
+The canonical delivery-trend domain slice now includes the following domain-only models under `PoTool.Core.Domain/Domain/DeliveryTrends/Models`:
+
+- `SprintDeliveryProjection`
+- `SprintTrendMetrics`
+- `FeatureProgress`
+- `EpicProgress`
+- `ProgressionDelta`
+
+The scope was kept intentionally narrow:
+
+- only sprint delivery projections
+- only sprint trend metrics
+- only feature progress rollups
+- only epic progress rollups
+- no epic completion forecasting
+- no capacity calibration
+- no effort distribution trend
+- no portfolio flow analytics
+- no PR/pipeline analytics
+
+The models preserve canonical units by naming story-point fields as story points while keeping actual effort deltas explicitly effort-based.
+
+Focused MSTest coverage was added for:
+
+- canonical construction of the new delivery-trend domain models
+- bounded progression delta semantics
+- aggregation of sprint totals from per-product projections
+- construction-time invariant validation only
