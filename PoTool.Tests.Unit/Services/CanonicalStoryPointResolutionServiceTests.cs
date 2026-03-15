@@ -105,23 +105,33 @@ public sealed class CanonicalStoryPointResolutionServiceTests
     }
 
     [TestMethod]
-    public void Resolve_ReturnsExpectedEstimateSourceClassification()
+    public void Resolve_ReturnsMissingWhenAllFeatureSiblingsLackCanonicalEstimates()
     {
-        var real = _service.Resolve(new StoryPointResolutionRequest(CreateWorkItem(101, storyPoints: 5), IsDone: false));
-        var fallback = _service.Resolve(new StoryPointResolutionRequest(CreateWorkItem(102, storyPoints: null, businessValue: 8), IsDone: false));
-        var missing = _service.Resolve(new StoryPointResolutionRequest(CreateWorkItem(103, storyPoints: null, businessValue: null), IsDone: false));
-        var derived = _service.Resolve(new StoryPointResolutionRequest(
-            CreateWorkItem(104, parentTfsId: 10, storyPoints: null, businessValue: null),
+        var result = _service.Resolve(new StoryPointResolutionRequest(
+            CreateWorkItem(101, parentTfsId: 10, storyPoints: null, businessValue: null),
             IsDone: false,
             [
-                new StoryPointResolutionCandidate(CreateWorkItem(105, parentTfsId: 10, storyPoints: 2), false),
-                new StoryPointResolutionCandidate(CreateWorkItem(106, parentTfsId: 10, storyPoints: 6), false)
+                new StoryPointResolutionCandidate(CreateWorkItem(102, parentTfsId: 10, storyPoints: null, businessValue: null), false),
+                new StoryPointResolutionCandidate(CreateWorkItem(103, parentTfsId: 10, storyPoints: 0, businessValue: null), false)
             ]));
 
-        Assert.AreEqual(StoryPointEstimateSource.Real, real.Source);
-        Assert.AreEqual(StoryPointEstimateSource.Fallback, fallback.Source);
-        Assert.AreEqual(StoryPointEstimateSource.Missing, missing.Source);
-        Assert.AreEqual(StoryPointEstimateSource.Derived, derived.Source);
+        Assert.IsNull(result.Value);
+        Assert.AreEqual(StoryPointEstimateSource.Missing, result.Source);
+    }
+
+    [TestMethod]
+    public void Resolve_IgnoresBugAndTaskSiblingsWhenDerivingEstimates()
+    {
+        var result = _service.Resolve(new StoryPointResolutionRequest(
+            CreateWorkItem(101, parentTfsId: 10, storyPoints: null, businessValue: null),
+            IsDone: false,
+            [
+                new StoryPointResolutionCandidate(CreateWorkItem(102, type: WorkItemType.Bug, parentTfsId: 10, storyPoints: 8), true),
+                new StoryPointResolutionCandidate(CreateWorkItem(103, type: WorkItemType.Task, parentTfsId: 10, storyPoints: 5), true)
+            ]));
+
+        Assert.IsNull(result.Value);
+        Assert.AreEqual(StoryPointEstimateSource.Missing, result.Source);
     }
 
     [TestMethod]

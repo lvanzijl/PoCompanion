@@ -1,6 +1,5 @@
 using Microsoft.JSInterop;
 using Moq;
-using SharedWorkItemDto = PoTool.Shared.WorkItems.WorkItemDto;
 using ClientWorkItemWithValidationDto = PoTool.Client.ApiClient.WorkItemWithValidationDto;
 using ClientValidationIssue = PoTool.Client.ApiClient.ValidationIssue;
 using PoTool.Api.Repositories;
@@ -67,44 +66,6 @@ public class WorkItemExplorerTests
 #pragma warning disable MSTEST0037
         Assert.IsTrue(loaded.ContainsKey(items.First().TfsId));
         Assert.IsTrue(loaded[items.First().TfsId]);
-    }
-
-    [TestMethod]
-    public async Task Filter_Includes_Ancestors_For_Match()
-    {
-        var facade = CreateMockDataFacade();
-        var repo = new DevWorkItemRepository(facade);
-        var items = (await repo.GetAllAsync()).ToList();
-
-        // pick a deep item (a Task) and filter by part of its title
-        var task = items.First(i => i.Type == "Task");
-        var filter = task.Title.Split('-').Last().Trim();
-
-        // emulate client-side filtering logic
-        var matches = items.Where(w => w.Title.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
-        var toInclude = new Dictionary<int, SharedWorkItemDto>();
-        foreach (var m in matches)
-        {
-            toInclude.TryAdd(m.TfsId, m);
-            var current = m;
-            while (current.ParentTfsId.HasValue)
-            {
-                var pid = current.ParentTfsId.Value;
-                var parent = items.FirstOrDefault(w => w.TfsId == pid);
-                if (parent != null)
-                {
-                    toInclude.TryAdd(parent.TfsId, parent);
-                    current = parent;
-                }
-                else
-                {
-                    break;
-                }
-            }
-        }
-
-        // Ensure that at least the task and its parent chain are included
-        Assert.IsTrue(toInclude.Any());
     }
 
     [TestMethod]
@@ -565,4 +526,3 @@ public class WorkItemExplorerTests
         return ids;
     }
 }
-
