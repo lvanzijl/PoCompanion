@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using System.Linq;
 using PoTool.Api.Handlers.Metrics;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
@@ -76,22 +77,6 @@ public class GetEpicCompletionForecastQueryHandlerTests
             _mockStateService.Object,
             _hierarchyRollupService,
             _mockLogger.Object);
-    }
-
-    [TestMethod]
-    public void Constructor_AllowsInjectedHierarchyRollupDouble()
-    {
-        var hierarchyRollupService = new Mock<IHierarchyRollupService>();
-
-        var handler = new GetEpicCompletionForecastQueryHandler(
-            _mockRepository.Object,
-            _mockProductRepository.Object,
-            _mockMediator.Object,
-            _mockStateService.Object,
-            hierarchyRollupService.Object,
-            _mockLogger.Object);
-
-        Assert.IsNotNull(handler);
     }
 
     [TestMethod]
@@ -281,75 +266,27 @@ public class GetEpicCompletionForecastQueryHandlerTests
     }
 
     [TestMethod]
-    public async Task Handle_WithLowHistoricalData_ReturnsLowConfidence()
+    [DataRow(1, ForecastConfidence.Low)]
+    [DataRow(3, ForecastConfidence.Medium)]
+    [DataRow(5, ForecastConfidence.High)]
+    public async Task Handle_WithHistoricalDataThresholds_ReturnsExpectedConfidence(int historicalSprintCount, ForecastConfidence expectedConfidence)
     {
-        // Arrange
         var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-        var child = CreateWorkItem(2, "PBI", "New", "TestArea", "Sprint 1", 1, 10);
 
         _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(epic);
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto> { epic, child });
+            .ReturnsAsync(
+            [
+                epic,
+                .. Enumerable.Range(1, historicalSprintCount).Select(index =>
+                    CreateWorkItem(index + 1, "PBI", "New", "TestArea", $"Sprint {index}", 1, 10))
+            ]);
 
-        var query = new GetEpicCompletionForecastQuery(1);
+        var result = await _handler.Handle(new GetEpicCompletionForecastQuery(1), CancellationToken.None);
 
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(ForecastConfidence.Low, result.Confidence);
-    }
-
-    [TestMethod]
-    public async Task Handle_WithMediumHistoricalData_ReturnsMediumConfidence()
-    {
-        // Arrange: 3 distinct iteration paths → count = 3 → Medium confidence
-        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-        var child1 = CreateWorkItem(2, "PBI", "New", "TestArea", "Sprint 1", 1, 10);
-        var child2 = CreateWorkItem(3, "PBI", "New", "TestArea", "Sprint 2", 1, 10);
-        var child3 = CreateWorkItem(4, "PBI", "New", "TestArea", "Sprint 3", 1, 10);
-
-        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(epic);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto> { epic, child1, child2, child3 });
-
-        var query = new GetEpicCompletionForecastQuery(1);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(ForecastConfidence.Medium, result.Confidence);
-    }
-
-    [TestMethod]
-    public async Task Handle_WithHighHistoricalData_ReturnsHighConfidence()
-    {
-        // Arrange: 5 distinct iteration paths → count = 5 → High confidence
-        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-        var child1 = CreateWorkItem(2, "PBI", "New", "TestArea", "Sprint 1", 1, 10);
-        var child2 = CreateWorkItem(3, "PBI", "New", "TestArea", "Sprint 2", 1, 10);
-        var child3 = CreateWorkItem(4, "PBI", "New", "TestArea", "Sprint 3", 1, 10);
-        var child4 = CreateWorkItem(5, "PBI", "New", "TestArea", "Sprint 4", 1, 10);
-        var child5 = CreateWorkItem(6, "PBI", "New", "TestArea", "Sprint 5", 1, 10);
-
-        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(epic);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto> { epic, child1, child2, child3, child4, child5 });
-
-        var query = new GetEpicCompletionForecastQuery(1);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(ForecastConfidence.High, result.Confidence);
+        Assert.AreEqual(expectedConfidence, result.Confidence);
     }
 
     [TestMethod]

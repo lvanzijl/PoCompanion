@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Domain.Models;
@@ -24,23 +23,6 @@ public class SprintTrendProjectionServiceTests
             NullLogger<SprintTrendProjectionService>.Instance,
             defaultServices.GetRequiredService<ICanonicalStoryPointResolutionService>(),
             defaultServices.GetRequiredService<IHierarchyRollupService>());
-
-        var projections = await service.ComputeProjectionsAsync(1, Array.Empty<int>());
-
-        Assert.HasCount(0, projections);
-    }
-
-    [TestMethod]
-    public async Task ComputeProjectionsAsync_AllowsInjectedCanonicalServiceDoubles()
-    {
-        var serviceProvider = new ServiceCollection().BuildServiceProvider();
-        var storyPointResolutionService = new Mock<ICanonicalStoryPointResolutionService>();
-        var hierarchyRollupService = new Mock<IHierarchyRollupService>();
-        var service = new SprintTrendProjectionService(
-            serviceProvider.GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<SprintTrendProjectionService>.Instance,
-            storyPointResolutionService.Object,
-            hierarchyRollupService.Object);
 
         var projections = await service.ComputeProjectionsAsync(1, Array.Empty<int>());
 

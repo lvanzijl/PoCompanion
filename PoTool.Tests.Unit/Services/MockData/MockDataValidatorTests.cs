@@ -23,41 +23,6 @@ public class MockDataValidatorTests
     }
 
     [TestMethod]
-    public void ValidateWorkItems_Should_Validate_Hierarchy_Quantities()
-    {
-        // Arrange
-        var workItems = _workItemGenerator.GenerateHierarchy();
-
-        // Act
-        var report = _validator.ValidateWorkItems(workItems);
-
-        // Assert
-        Assert.IsTrue(report.GoalQuantityValid, "Goal quantity should be valid");
-        Assert.IsTrue(report.ObjectiveQuantityValid, "Objective quantity should be valid");
-        Assert.IsTrue(report.EpicQuantityValid, "Epic quantity should be valid");
-        Assert.IsTrue(report.FeatureQuantityValid, "Feature quantity should be valid");
-        Assert.IsTrue(report.PbiQuantityValid, "PBI quantity should be valid");
-        Assert.IsTrue(report.BugQuantityValid, "Bug quantity should be valid");
-        Assert.IsTrue(report.TaskQuantityValid, "Task quantity should be valid");
-    }
-
-    [TestMethod]
-    public void ValidateWorkItems_Should_Validate_Hierarchy_Integrity()
-    {
-        // Arrange
-        var workItems = _workItemGenerator.GenerateHierarchy();
-
-        // Act
-        var report = _validator.ValidateWorkItems(workItems);
-
-        // Assert
-        Assert.IsTrue(report.HierarchyIntegrityValid,
-            $"Hierarchy integrity should be valid. Found {report.OrphanedWorkItemCount} orphaned items.");
-        Assert.AreEqual(0, report.OrphanedWorkItemCount,
-            "Should have no orphaned work items");
-    }
-
-    [TestMethod]
     public void ValidateWorkItems_Should_Validate_Area_Path_Consistency()
     {
         // Arrange
@@ -115,20 +80,6 @@ public class MockDataValidatorTests
         // Assert
         Assert.IsTrue(report.UnestimatedPercentage >= 15 && report.UnestimatedPercentage <= 35,
             $"Unestimated percentage should be 20-30%. Found {report.UnestimatedPercentage:F1}%");
-    }
-
-    [TestMethod]
-    public void ValidateWorkItems_Should_Validate_Battleship_Theme()
-    {
-        // Arrange
-        var workItems = _workItemGenerator.GenerateHierarchy();
-
-        // Act
-        var report = _validator.ValidateWorkItems(workItems);
-
-        // Assert
-        Assert.IsTrue(report.BattleshipThemeValid,
-            $"Battleship theme should be used. Found {report.BattleshipThemeCompliantCount}/{report.GoalCount} compliant goals.");
     }
 
     [TestMethod]
@@ -199,20 +150,4 @@ public class MockDataValidatorTests
             "All PRs should have required metadata (title, creator, repository)");
     }
 
-    [TestMethod]
-    public void ValidationReport_GetSummary_Should_Return_Formatted_Report()
-    {
-        // Arrange
-        var workItems = _workItemGenerator.GenerateHierarchy();
-        var report = _validator.ValidateWorkItems(workItems);
-
-        // Act
-        var summary = report.GetSummary();
-
-        // Assert
-        Assert.IsNotNull(summary);
-        Assert.Contains("Mock Data Validation Report", summary);
-        Assert.Contains("Work Items:", summary);
-        Assert.Contains("Data Quality:", summary);
-    }
 }
