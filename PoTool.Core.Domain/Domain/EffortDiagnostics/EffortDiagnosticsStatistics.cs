@@ -1,3 +1,5 @@
+using PoTool.Core.Domain.Statistics;
+
 namespace PoTool.Core.Domain.EffortDiagnostics;
 
 /// <summary>
@@ -49,10 +51,7 @@ public sealed class CanonicalEffortDiagnosticsStatistics : EffortDiagnosticsStat
     /// <inheritdoc />
     public double Mean(IEnumerable<double> values)
     {
-        ArgumentNullException.ThrowIfNull(values);
-
-        var materializedValues = values.ToArray();
-        return materializedValues.Length == 0 ? 0 : materializedValues.Average();
+        return StatisticsMath.Mean(values);
     }
 
     /// <inheritdoc />
@@ -70,36 +69,13 @@ public sealed class CanonicalEffortDiagnosticsStatistics : EffortDiagnosticsStat
     /// <inheritdoc />
     public double Median(IEnumerable<double> values)
     {
-        ArgumentNullException.ThrowIfNull(values);
-
-        var orderedValues = values
-            .OrderBy(value => value)
-            .ToArray();
-
-        if (orderedValues.Length == 0)
-        {
-            return 0;
-        }
-
-        var midpoint = orderedValues.Length / 2;
-        return orderedValues.Length % 2 == 0
-            ? (orderedValues[midpoint - 1] + orderedValues[midpoint]) / 2.0
-            : orderedValues[midpoint];
+        return StatisticsMath.Median(values);
     }
 
     /// <inheritdoc />
     public double Variance(IEnumerable<double> values)
     {
-        ArgumentNullException.ThrowIfNull(values);
-
-        var materializedValues = values.ToArray();
-        if (materializedValues.Length == 0)
-        {
-            return 0;
-        }
-
-        var mean = Mean(materializedValues);
-        return materializedValues.Average(value => Math.Pow(value - mean, 2));
+        return StatisticsMath.Variance(values);
     }
 
     /// <inheritdoc />

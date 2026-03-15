@@ -1,5 +1,6 @@
 using Mediator;
 using PoTool.Core.Contracts;
+using PoTool.Core.Domain.Statistics;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
@@ -315,14 +316,7 @@ public sealed class GetEffortDistributionTrendQueryHandler
 
     private static double CalculateStandardDeviation(List<int> values)
     {
-        if (values.Count < 2)
-        {
-            return 0;
-        }
-
-        var avg = values.Average();
-        var sumOfSquares = values.Sum(v => Math.Pow(v - avg, 2));
-        return Math.Sqrt(sumOfSquares / values.Count);
+        return StatisticsMath.StandardDeviation(values.Select(static value => (double)value));
     }
 
     private static double CalculateLinearRegressionSlope(List<int> values)

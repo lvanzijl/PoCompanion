@@ -1,5 +1,6 @@
 using Mediator;
 using PoTool.Core.Contracts;
+using PoTool.Core.Domain.Statistics;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
@@ -280,26 +281,12 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
 
     private int CalculateMedian(List<int> values)
     {
-        if (values.Count == 0)
-            return 0;
-
-        var sorted = values.OrderBy(x => x).ToList();
-        var mid = sorted.Count / 2;
-
-        if (sorted.Count % 2 == 0)
-            return (sorted[mid - 1] + sorted[mid]) / 2;
-        else
-            return sorted[mid];
+        return (int)StatisticsMath.Median(values.Select(static value => (double)value));
     }
 
     private double CalculateVariance(List<int> values)
     {
-        if (values.Count <= 1)
-            return 0.0;
-
-        var mean = values.Average();
-        var sumOfSquaredDifferences = values.Sum(val => Math.Pow(val - mean, 2));
-        return sumOfSquaredDifferences / values.Count;
+        return StatisticsMath.Variance(values.Select(static value => (double)value));
     }
 
     private double CalculateConfidence(int sampleSize, double variance)
