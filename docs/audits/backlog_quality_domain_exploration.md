@@ -153,3 +153,17 @@ Keep outside the first extraction:
 - **Tests added:**
   - `PoTool.Tests.Unit/Services/BacklogQualityDomainModelsTests.cs`
   - coverage includes backlog-graph construction/invariants, readiness-score semantics, rule metadata shape, and stable manual rule registration order
+
+## Backlog Quality CDC Progress — Canonical Rules Extracted
+
+- **Rules extracted into executable canonical rule objects in `PoTool.Core.Domain/BacklogQuality/Rules`:**
+  - Structural Integrity: `SI-1`, `SI-2`, `SI-3`
+  - Refinement Readiness: `RR-1`, `RR-2`, `RR-3`
+  - Implementation Readiness: `RC-1`, `RC-2`, `RC-3`
+- **RC-2 ownership normalized:**
+  - canonical rule ID remains `RC-2`
+  - canonical semantic tag remains `MissingEffort`
+  - canonical applicability is limited to PBI work item types; adapter/UI aliases such as `EFF` remain outside the CDC domain rule definition
+- **Tests added/updated:**
+  - `PoTool.Tests.Unit/Services/BacklogQualityCanonicalRulesTests.cs`
+  - coverage includes per-rule firing behavior, canonical metadata/family assertions, deterministic family ordering, and explicit `RC-2` identity preservation

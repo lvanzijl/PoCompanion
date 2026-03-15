@@ -15,4 +15,11 @@ public sealed class PlaceholderBacklogQualityRule : IBacklogQualityRule
 
     /// <inheritdoc />
     public RuleMetadata Metadata { get; }
+
+    /// <inheritdoc />
+    public IReadOnlyList<Models.ValidationRuleResult> Evaluate(Models.BacklogGraph backlogGraph)
+    {
+        ArgumentNullException.ThrowIfNull(backlogGraph);
+        return Array.Empty<Models.ValidationRuleResult>();
+    }
 }
