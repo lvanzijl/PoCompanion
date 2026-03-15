@@ -1,6 +1,6 @@
 # Backlog Quality Domain Model
 
-Status: Draft  
+Status: Canonical definition for CDC v2 planning  
 Purpose: Define the canonical current-state domain semantics for backlog validation and backlog readiness before any CDC v2 extraction or implementation refactor.
 
 This document is the authoritative domain definition for the backlog quality slice.
@@ -566,6 +566,8 @@ Current implementation differs from the canonical model in several places:
 - some handlers combine canonical findings with string-based health heuristics
 
 These are extraction follow-ups, not reasons to change the canonical domain definition.
+
+They should be addressed incrementally during the later backlog-quality CDC v2 extraction and adapter-alignment PRs that implement this model.
 
 ---
 
