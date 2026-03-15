@@ -114,7 +114,7 @@ public sealed class CanonicalEffortDiagnosticsStatistics : EffortDiagnosticsStat
         ArgumentNullException.ThrowIfNull(shares);
 
         var shareValues = shares.ToArray();
-        if (shareValues.Any(share => share < 0 || share > 1))
+        if (shareValues.Any(share => share is < 0 or > 1))
         {
             throw new ArgumentOutOfRangeException(nameof(shares), "Shares must fall within the range [0, 1].");
         }
