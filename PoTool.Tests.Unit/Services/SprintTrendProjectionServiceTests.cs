@@ -46,9 +46,8 @@ public class SprintTrendProjectionServiceTests
         IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? iterationEventsByWorkItem = null)
     {
         using var services = CreateDefaultServices();
-        var serviceProvider = new ServiceCollection().BuildServiceProvider();
         var service = new SprintTrendProjectionService(
-            serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+            services.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<SprintTrendProjectionService>.Instance,
             services.GetRequiredService<ICanonicalStoryPointResolutionService>(),
             services.GetRequiredService<IHierarchyRollupService>());
@@ -77,9 +76,8 @@ public class SprintTrendProjectionServiceTests
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
     {
         using var services = CreateDefaultServices();
-        var serviceProvider = new ServiceCollection().BuildServiceProvider();
         var service = new SprintTrendProjectionService(
-            serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+            services.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<SprintTrendProjectionService>.Instance,
             services.GetRequiredService<ICanonicalStoryPointResolutionService>(),
             services.GetRequiredService<IHierarchyRollupService>());
