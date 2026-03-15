@@ -95,19 +95,21 @@ public sealed class GetEffortConcentrationRiskQueryHandler
             );
         }
 
-        // Get recent iterations
-        var iterationPaths = workItemsWithEffort
+        // Get recent iterations for display while keeping full iteration distribution for analysis
+        var allIterationPaths = workItemsWithEffort
             .Where(wi => !string.IsNullOrWhiteSpace(wi.IterationPath))
             .Select(wi => wi.IterationPath)
             .Distinct()
             .OrderByDescending(path => path)
-            .Take(query.MaxIterations)
             .ToList();
+        var visibleIterationPaths = allIterationPaths
+            .Take(query.MaxIterations)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var areaBuckets = workItemsWithEffort
             .GroupBy(wi => wi.AreaPath)
             .ToDictionary(group => group.Key, group => group.Sum(wi => wi.Effort ?? 0));
-        var iterationBuckets = iterationPaths.ToDictionary(
+        var iterationBuckets = allIterationPaths.ToDictionary(
             iterationPath => iterationPath,
             iterationPath => workItemsWithEffort
                 .Where(wi => wi.IterationPath.Equals(iterationPath, StringComparison.OrdinalIgnoreCase))
@@ -117,7 +119,9 @@ public sealed class GetEffortConcentrationRiskQueryHandler
         var allAreaPathRisks = MapAreaPathRisks(workItemsWithEffort, analysis.AreaBuckets);
         var areaPathRisks = FilterVisibleRisks(allAreaPathRisks);
         var allIterationRisks = MapIterationRisks(workItemsWithEffort, analysis.IterationBuckets);
-        var iterationRisks = FilterVisibleRisks(allIterationRisks);
+        var iterationRisks = FilterVisibleRisks(allIterationRisks
+            .Where(risk => visibleIterationPaths.Contains(risk.Path))
+            .ToList());
         var overallRisk = MapConcentrationRiskLevel(analysis.OverallRiskLevel);
         var concentrationIndex = analysis.ConcentrationIndex;
 

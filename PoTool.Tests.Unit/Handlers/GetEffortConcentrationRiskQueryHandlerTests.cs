@@ -327,6 +327,34 @@ public class GetEffortConcentrationRiskQueryHandlerTests
     }
 
     [TestMethod]
+    public async Task Handle_WithMoreIterationsThanMaxIterations_UsesFullDistributionAndLimitsVisibleIterations()
+    {
+        // Arrange
+        var workItems = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Area1", "Sprint 3", 60),
+            CreateWorkItem(2, "Area2", "Sprint 2", 25),
+            CreateWorkItem(3, "Area3", "Sprint 1", 15)
+        };
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workItems);
+
+        // Act
+        var result = await _handler.Handle(
+            new GetEffortConcentrationRiskQuery(MaxIterations: 2),
+            CancellationToken.None);
+
+        // Assert
+        Assert.IsNotNull(result);
+        CollectionAssert.AreEquivalent(
+            new[] { "Sprint 3", "Sprint 2" },
+            result.IterationRisks.Select(r => r.Path).ToList());
+        Assert.IsFalse(result.IterationRisks.Any(r => r.Path == "Sprint 1"));
+        Assert.IsGreaterThan(0d, result.ConcentrationIndex);
+    }
+
+    [TestMethod]
     public async Task Handle_CriticalRisk_IncludesUrgentRecommendation()
     {
         // Arrange - extremely concentrated (95%+ in one area)
