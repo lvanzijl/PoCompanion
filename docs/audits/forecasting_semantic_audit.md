@@ -43,6 +43,7 @@ Canonical forecasting velocity is story-point delivery, not effort-hours.
 - `GetCapacityCalibrationQueryHandler` uses persisted `CompletedPbiStoryPoints` as the delivered-story-point basis for velocity bands.
 
 This is semantically aligned with the domain model: velocity is PBI story-point delivery, excluding bugs, tasks, removed items, and derived estimates from the velocity-grade signal.
+Story-point delivery is the correct canonical forecasting unit because the domain model treats story points as the planning, velocity, delivery-analytics, and forecasting measure, while effort-hours remain diagnostic calibration data rather than the primary throughput signal.
 
 ### Throughput
 
@@ -124,6 +125,7 @@ This is the strongest semantic conflict for CDC extraction: the codebase uses th
 `PoTool.Shared/Metrics/EpicCompletionForecastDto.cs` documents that `TotalEffort`, `CompletedEffort`, and `RemainingEffort` are legacy contract names for story-point scope.
 
 That preserves API compatibility, but it also means the main completion forecast surface still uses effort-shaped names for story-point semantics. This is a documentation-backed mismatch rather than a hidden bug, but it remains semantic debt.
+The recommended reconciliation path is to keep the legacy names only at the current transport boundary, explicitly document them as story-point fields in the DTO, and rename them to story-point terminology if the forecast contract is versioned or otherwise revised in a future API cleanup.
 
 ### Contradiction 3 — derived estimates in scope vs velocity
 
