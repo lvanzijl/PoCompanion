@@ -179,6 +179,11 @@ Refinement-readiness thresholds are domain semantics:
 - minimum description length = `10`
 - empty and too-short descriptions are the same canonical failure
 
+Rationale:
+
+- the existing validation specification and implementation already use `10` as the shared threshold
+- the threshold is high enough to reject placeholder text while remaining a lightweight intent check rather than a documentation-quality review
+
 If a subtree has refinement-readiness violations:
 
 - the subtree is not ready for refinement
@@ -193,9 +198,9 @@ For compatibility, the existing rule IDs remain `RC-*`.
 
 | Rule ID | Canonical semantic tag | Rule | Inputs | Output | Responsible party | Canonical owner |
 | --- | --- | --- | --- | --- | --- | --- |
-| `RC-1` | `MissingPbiDescription` | PBI description must be present. | PBI snapshot | `ValidationRuleResult` + PBI readiness state | Development Team | BacklogValidationService |
+| `RC-1` | `MissingDescription` | PBI description must be present. | PBI snapshot | `ValidationRuleResult` + PBI readiness state | Development Team | BacklogValidationService |
 | `RC-2` | `MissingEffort` | PBI effort must be present and greater than zero. | PBI snapshot | `ValidationRuleResult` + PBI readiness state | Development Team | BacklogValidationService |
-| `RC-3` | `MissingPbiChildren` | Feature must have at least one active PBI child. | Feature snapshot + child relations | `ValidationRuleResult` + Feature readiness state | Development Team | BacklogValidationService |
+| `RC-3` | `MissingChildren` | Feature must have at least one active PBI child. | Feature snapshot + child relations | `ValidationRuleResult` + Feature readiness state | Development Team | BacklogValidationService |
 
 Canonical decisions:
 
@@ -203,6 +208,11 @@ Canonical decisions:
 - `MissingEffort` is the canonical semantic tag for that rule
 - `EFF` is **not** a canonical domain category; it is an adapter/UI grouping alias only
 - implementation-readiness findings are suppressed beneath refinement-readiness blockers
+
+Why `EFF` stays outside the domain:
+
+- promoting `EFF` into a domain category would duplicate the meaning already carried by `RC-2` and `MissingEffort`
+- the domain needs one canonical rule identity, while adapters remain free to group or highlight that rule separately for triage
 
 Parent effort semantics:
 
@@ -224,6 +234,12 @@ It is not about enforcing effort completeness on every hierarchy level.
 Scoring formulas are canonical domain rules, but they are **not** validation-rule IDs.
 
 They produce `BacklogReadinessScore` outputs rather than validation findings.
+
+#### Common scoring conventions
+
+- removed descendants are excluded from active backlog scoring
+- done descendants contribute `100` to parent maturity
+- average scores are rounded to the nearest whole number using midpoint-to-even rounding, matching the current scoring implementation
 
 #### PBI scoring
 
@@ -282,9 +298,6 @@ Rules:
 Epic effort does not influence score.
 
 Done and removed semantics:
-
-- removed descendants are excluded from active backlog scoring
-- done descendants contribute `100` to parent maturity
 - done items may be hidden by adapters, but their maturity still counts
 
 ---
