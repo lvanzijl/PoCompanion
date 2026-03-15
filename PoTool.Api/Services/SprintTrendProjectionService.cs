@@ -5,10 +5,12 @@ using PoTool.Api.Adapters;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
+using PoTool.Core.Domain.DeliveryTrends.Models;
+using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Hierarchy;
-using PoTool.Core.Domain.Sprints;
 using PoTool.Core.Domain.Models;
+using PoTool.Core.Domain.Sprints;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.WorkItems;
 using PoTool.Shared.Metrics;
@@ -17,24 +19,25 @@ namespace PoTool.Api.Services;
 
 public class SprintTrendProjectionService
 {
-    private static readonly HashSet<string> ExcludedActivityFields = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "System.ChangedBy",
-        "System.ChangedDate"
-    };
-
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<SprintTrendProjectionService> _logger;
     private readonly IWorkItemStateClassificationService? _stateClassificationService;
     private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
     private readonly IHierarchyRollupService _hierarchyRollupService;
+    private readonly ISprintDeliveryProjectionService _deliveryTrendProjectionService;
 
     public SprintTrendProjectionService(
         IServiceScopeFactory scopeFactory,
         ILogger<SprintTrendProjectionService> logger,
         ICanonicalStoryPointResolutionService storyPointResolutionService,
         IHierarchyRollupService hierarchyRollupService)
-        : this(scopeFactory, logger, null, storyPointResolutionService, hierarchyRollupService)
+        : this(
+            scopeFactory,
+            logger,
+            null,
+            storyPointResolutionService,
+            hierarchyRollupService,
+            new SprintDeliveryProjectionService(storyPointResolutionService, hierarchyRollupService))
     {
     }
 
@@ -44,17 +47,36 @@ public class SprintTrendProjectionService
         IWorkItemStateClassificationService? stateClassificationService,
         ICanonicalStoryPointResolutionService storyPointResolutionService,
         IHierarchyRollupService hierarchyRollupService)
+        : this(
+            scopeFactory,
+            logger,
+            stateClassificationService,
+            storyPointResolutionService,
+            hierarchyRollupService,
+            new SprintDeliveryProjectionService(storyPointResolutionService, hierarchyRollupService))
+    {
+    }
+
+    public SprintTrendProjectionService(
+        IServiceScopeFactory scopeFactory,
+        ILogger<SprintTrendProjectionService> logger,
+        IWorkItemStateClassificationService? stateClassificationService,
+        ICanonicalStoryPointResolutionService storyPointResolutionService,
+        IHierarchyRollupService hierarchyRollupService,
+        ISprintDeliveryProjectionService deliveryTrendProjectionService)
     {
         ArgumentNullException.ThrowIfNull(scopeFactory);
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(storyPointResolutionService);
         ArgumentNullException.ThrowIfNull(hierarchyRollupService);
+        ArgumentNullException.ThrowIfNull(deliveryTrendProjectionService);
 
         _scopeFactory = scopeFactory;
         _logger = logger;
         _stateClassificationService = stateClassificationService;
         _storyPointResolutionService = storyPointResolutionService;
         _hierarchyRollupService = hierarchyRollupService;
+        _deliveryTrendProjectionService = deliveryTrendProjectionService;
     }
 
     public virtual async Task<IReadOnlyList<SprintMetricsProjectionEntity>> ComputeProjectionsAsync(
@@ -171,6 +193,11 @@ public class SprintTrendProjectionService
         var firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(stateFieldChanges, workItemSnapshotsById, stateLookup);
         var sprintDefinitionsById = validSprints.ToDictionary(sprint => sprint.Id, sprint => sprint.ToDefinition());
         var teamSprintDefinitions = teamSprints.Select(teamSprint => teamSprint.ToDefinition()).ToList();
+        var deliveryTrendResolvedItems = resolvedItems
+            .Select(resolvedItem => resolvedItem.ToDeliveryTrendResolvedWorkItem())
+            .ToList();
+        var deliveryTrendWorkItemsById = workItemsByTfsId
+            .ToDictionary(pair => pair.Key, pair => pair.Value.ToDeliveryTrendWorkItem());
         var results = new List<SprintMetricsProjectionEntity>();
 
         foreach (var sprint in validSprints)
@@ -198,45 +225,36 @@ public class SprintTrendProjectionService
 
             foreach (var productId in productIds)
             {
-                var projection = ComputeProductSprintProjection(
-                    sprint, productId,
-                    resolvedItems, workItemsByTfsId,
-                    activityByWorkItem, sprintStart, sprintEnd, _storyPointResolutionService, _hierarchyRollupService,
-                    stateLookup, firstDoneByWorkItem, committedWorkItemIds,
-                    nextSprintPath, workItemSnapshotsById, stateEventsByWorkItem, iterationEventsByWorkItem);
+                var projection = _deliveryTrendProjectionService.Compute(new SprintDeliveryProjectionRequest(
+                    sprintDefinition,
+                    productId,
+                    deliveryTrendResolvedItems,
+                    deliveryTrendWorkItemsById,
+                    activityByWorkItem.ToDictionary(
+                        pair => pair.Key,
+                        pair => (IReadOnlyList<FieldChangeEvent>)pair.Value.ToFieldChangeEvents()),
+                    sprintStart,
+                    sprintEnd,
+                    stateLookup,
+                    firstDoneByWorkItem,
+                    committedWorkItemIds,
+                    nextSprintPath,
+                    workItemSnapshotsById,
+                    stateEventsByWorkItem,
+                    iterationEventsByWorkItem));
+                var projectionEntity = ToProjectionEntity(projection);
 
                 if (existingByKey.TryGetValue((sprint.Id, productId), out var existing))
                 {
-                    existing.PlannedCount = projection.PlannedCount;
-                    existing.PlannedEffort = projection.PlannedEffort;
-                    existing.PlannedStoryPoints = projection.PlannedStoryPoints;
-                    existing.WorkedCount = projection.WorkedCount;
-                    existing.WorkedEffort = projection.WorkedEffort;
-                    existing.BugsPlannedCount = projection.BugsPlannedCount;
-                    existing.BugsWorkedCount = projection.BugsWorkedCount;
-                    existing.CompletedPbiCount = projection.CompletedPbiCount;
-                    existing.CompletedPbiEffort = projection.CompletedPbiEffort;
-                    existing.CompletedPbiStoryPoints = projection.CompletedPbiStoryPoints;
-                    existing.SpilloverCount = projection.SpilloverCount;
-                    existing.SpilloverEffort = projection.SpilloverEffort;
-                    existing.SpilloverStoryPoints = projection.SpilloverStoryPoints;
-                    existing.ProgressionDelta = projection.ProgressionDelta;
-                    existing.BugsCreatedCount = projection.BugsCreatedCount;
-                    existing.BugsClosedCount = projection.BugsClosedCount;
-                    existing.MissingEffortCount = projection.MissingEffortCount;
-                    existing.MissingStoryPointCount = projection.MissingStoryPointCount;
-                    existing.DerivedStoryPointCount = projection.DerivedStoryPointCount;
-                    existing.DerivedStoryPoints = projection.DerivedStoryPoints;
-                    existing.UnestimatedDeliveryCount = projection.UnestimatedDeliveryCount;
-                    existing.IsApproximate = projection.IsApproximate;
+                    ApplyProjection(existing, projectionEntity);
                     existing.LastComputedAt = DateTimeOffset.UtcNow;
                     results.Add(existing);
                 }
                 else
                 {
-                    projection.LastComputedAt = DateTimeOffset.UtcNow;
-                    context.SprintMetricsProjections.Add(projection);
-                    results.Add(projection);
+                    projectionEntity.LastComputedAt = DateTimeOffset.UtcNow;
+                    context.SprintMetricsProjections.Add(projectionEntity);
+                    results.Add(projectionEntity);
                 }
             }
         }
@@ -270,250 +288,28 @@ public class SprintTrendProjectionService
     {
         ArgumentNullException.ThrowIfNull(storyPointResolutionService);
         ArgumentNullException.ThrowIfNull(hierarchyRollupService);
-        var effectiveWorkItemSnapshotsById = workItemSnapshotsById
-            ?? workItemsByTfsId.Values.ToSnapshotDictionary();
-        var effectiveFirstDoneByWorkItem = firstDoneByWorkItem
-            ?? FirstDoneDeliveryLookup.Build(
-                activityByWorkItem.Values.SelectMany(events => events).ToFieldChangeEvents(),
-                effectiveWorkItemSnapshotsById,
-                stateLookup);
-
-        var functionalActivityByWorkItem = activityByWorkItem
-            .Select(pair => new
-            {
-                pair.Key,
-                Events = pair.Value
-                    .Where(e =>
-                    {
-                        var eventTimestamp = e.EventTimestamp != default
-                            ? e.EventTimestamp
-                            : new DateTimeOffset(DateTime.SpecifyKind(e.EventTimestampUtc, DateTimeKind.Utc));
-                        return eventTimestamp >= sprintStart && eventTimestamp <= sprintEnd;
-                    })
-                    .Where(e => !string.IsNullOrWhiteSpace(e.FieldRefName)
-                        && !ExcludedActivityFields.Contains(e.FieldRefName))
-                    .ToList()
-            })
-            .Where(x => x.Events.Count > 0)
-            .ToDictionary(x => x.Key, x => x.Events);
-
-        var productResolved = resolvedItems
-            .Where(r => r.ResolvedProductId == productId)
-            .ToList();
-
-        var productWorkItemIds = productResolved.Select(r => r.WorkItemId).ToHashSet();
-
-        var workedItemIds = PropagateActivityToAncestors(
-            functionalActivityByWorkItem.Keys.Where(productWorkItemIds.Contains).ToHashSet(),
-            productResolved,
-            workItemsByTfsId);
-
-        // PBI metrics
-        var pbiResolved = productResolved.Where(r => r.WorkItemType == WorkItemType.Pbi).ToList();
-        var completedPbiCount = 0;
-        var completedPbiEffort = 0;
-        var missingEffortCount = 0;
-        var isApproximate = false;
-        var completedPbiStoryPoints = 0d;
-        var unestimatedDeliveryCount = 0;
-        var usedDerivedDeliveryEstimate = false;
-
-        foreach (var pbi in pbiResolved)
-        {
-            if (!workItemsByTfsId.TryGetValue(pbi.WorkItemId, out var wi))
-                continue;
-
-            var deliveredInSprint = effectiveFirstDoneByWorkItem.TryGetValue(pbi.WorkItemId, out var firstDoneTimestamp)
-                && firstDoneTimestamp >= sprintStart
-                && firstDoneTimestamp <= sprintEnd;
-
-            if (deliveredInSprint)
-            {
-                completedPbiCount++;
-                completedPbiEffort += wi.Effort ?? 0;
-
-                var deliveredEstimate = ResolvePbiStoryPointEstimate(
-                    wi,
-                    pbiResolved
-                        .Where(r => r.ResolvedFeatureId == pbi.ResolvedFeatureId)
-                        .Select(r => workItemsByTfsId.GetValueOrDefault(r.WorkItemId))
-                        .OfType<WorkItemEntity>()
-                        .ToList(),
-                    stateLookup,
-                    storyPointResolutionService);
-
-                if (IsVelocityStoryPointEstimate(deliveredEstimate))
-                {
-                    completedPbiStoryPoints += deliveredEstimate.Value ?? 0d;
-                }
-                else
-                {
-                    unestimatedDeliveryCount++;
-                    usedDerivedDeliveryEstimate |= deliveredEstimate.Source == StoryPointEstimateSource.Derived;
-                }
-            }
-
-            if (wi.Effort == null)
-            {
-                missingEffortCount++;
-            }
-        }
-
-        // Check if sibling-average approximation would be used
-        if (missingEffortCount > 0)
-        {
-            var siblingEfforts = pbiResolved
-                .Select(r => workItemsByTfsId.GetValueOrDefault(r.WorkItemId))
-                .Where(w => w?.Effort != null)
-                .Select(w => w!.Effort!.Value)
-                .ToList();
-
-            if (siblingEfforts.Count > 0)
-            {
-                isApproximate = true;
-            }
-        }
-
-        var effectiveCommittedWorkItemIds = committedWorkItemIds
-            ?? productResolved
-                .Where(r => r.ResolvedSprintId == sprint.Id)
-                .Select(r => r.WorkItemId)
-                .ToHashSet();
-        var effectiveStateEventsByWorkItem = stateEventsByWorkItem
-            ?? activityByWorkItem
-                .SelectMany(pair => pair.Value
-                    .Where(e => string.Equals(e.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase)))
-                .ToFieldChangeEvents()
-                .GroupByWorkItemId();
-        var effectiveIterationEventsByWorkItem = iterationEventsByWorkItem
-            ?? activityByWorkItem
-                .SelectMany(pair => pair.Value
-                    .Where(e => string.Equals(e.FieldRefName, "System.IterationPath", StringComparison.OrdinalIgnoreCase)))
-                .ToFieldChangeEvents()
-                .GroupByWorkItemId();
-        var spilloverWorkItemIds = SprintSpilloverLookup.BuildSpilloverWorkItemIds(
-            effectiveCommittedWorkItemIds,
-            effectiveWorkItemSnapshotsById,
-            effectiveStateEventsByWorkItem,
-            effectiveIterationEventsByWorkItem,
-            stateLookup,
+        var deliveryTrendProjectionService = new SprintDeliveryProjectionService(
+            storyPointResolutionService,
+            hierarchyRollupService);
+        var projection = deliveryTrendProjectionService.Compute(new SprintDeliveryProjectionRequest(
             sprint.ToDefinition(),
+            productId,
+            resolvedItems.Select(resolvedItem => resolvedItem.ToDeliveryTrendResolvedWorkItem()).ToList(),
+            workItemsByTfsId.ToDictionary(pair => pair.Key, pair => pair.Value.ToDeliveryTrendWorkItem()),
+            activityByWorkItem.ToDictionary(
+                pair => pair.Key,
+                pair => (IReadOnlyList<FieldChangeEvent>)pair.Value.ToFieldChangeEvents()),
+            sprintStart,
+            sprintEnd,
+            stateLookup,
+            firstDoneByWorkItem,
+            committedWorkItemIds,
             nextSprintPath,
-            sprintEnd);
-        var spilloverPbis = pbiResolved
-            .Where(r => spilloverWorkItemIds.Contains(r.WorkItemId))
-            .Select(r => workItemsByTfsId.GetValueOrDefault(r.WorkItemId))
-            .Where(w => w != null)
-            .ToList();
+            workItemSnapshotsById,
+            stateEventsByWorkItem,
+            iterationEventsByWorkItem));
 
-        // Feature/Epic progression delta
-        var progressionDelta = ComputeProgressionDelta(
-            productResolved, workItemsByTfsId, functionalActivityByWorkItem, hierarchyRollupService, storyPointResolutionService, stateLookup);
-
-        // Bug metrics
-        var bugResolved = productResolved.Where(r => r.WorkItemType == WorkItemType.Bug).ToList();
-        var bugsCreated = 0;
-        var bugsWorkedOn = 0;
-        var bugsClosed = 0;
-
-        foreach (var bug in bugResolved)
-        {
-            if (!workItemsByTfsId.TryGetValue(bug.WorkItemId, out var bugWi))
-                continue;
-
-            if (bugWi.CreatedDate.HasValue && bugWi.CreatedDate.Value >= sprintStart && bugWi.CreatedDate.Value <= sprintEnd)
-            {
-                bugsCreated++;
-            }
-
-            var bugClosedInSprint = effectiveFirstDoneByWorkItem.TryGetValue(bug.WorkItemId, out var bugFirstDoneTimestamp)
-                && bugFirstDoneTimestamp >= sprintStart
-                && bugFirstDoneTimestamp <= sprintEnd;
-
-            if (bugClosedInSprint)
-            {
-                bugsClosed++;
-            }
-
-            // Bug worked on = any child task had a state change during sprint
-            var childTaskHadStateChange = productResolved
-                .Where(r => r.WorkItemType == WorkItemType.Task)
-                .Where(r =>
-                {
-                    if (!workItemsByTfsId.TryGetValue(r.WorkItemId, out var taskWi))
-                        return false;
-                    return taskWi.ParentTfsId == bug.WorkItemId;
-                })
-                .Any(ct => functionalActivityByWorkItem.GetValueOrDefault(ct.WorkItemId)
-                    ?.Any(e => string.Equals(e.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase)) == true);
-
-            if (childTaskHadStateChange)
-            {
-                bugsWorkedOn++;
-            }
-        }
-
-        // Planned counts
-        var plannedPbis = productResolved
-            .Where(r => r.WorkItemType == WorkItemType.Pbi
-                && (committedWorkItemIds?.Contains(r.WorkItemId) ?? r.ResolvedSprintId == sprint.Id))
-            .Select(r => workItemsByTfsId.GetValueOrDefault(r.WorkItemId))
-            .Where(w => w != null)
-            .ToList();
-        var plannedStoryPointMetrics = plannedPbis
-            .Select(w => ResolveProjectionStoryPointMetrics(w!, pbiResolved, workItemsByTfsId, stateLookup, storyPointResolutionService))
-            .ToList();
-        var spilloverStoryPoints = spilloverPbis
-            .Select(w => ResolveProjectionStoryPointMetrics(w!, pbiResolved, workItemsByTfsId, stateLookup, storyPointResolutionService))
-            .Where(metric => metric.Estimate.HasValue)
-            .Sum(metric => metric.Estimate.Value ?? 0d);
-        var plannedBugs = productResolved
-            .Count(r => r.WorkItemType == WorkItemType.Bug
-                && (committedWorkItemIds?.Contains(r.WorkItemId) ?? r.ResolvedSprintId == sprint.Id));
-
-        var derivedStoryPointCount = plannedStoryPointMetrics.Count(metric => metric.Estimate.Source == StoryPointEstimateSource.Derived);
-        var derivedStoryPoints = plannedStoryPointMetrics
-            .Where(metric => metric.Estimate.Source == StoryPointEstimateSource.Derived)
-            .Sum(metric => metric.Estimate.Value ?? 0d);
-        var missingStoryPointCount = plannedStoryPointMetrics.Count(metric => metric.Estimate.Source == StoryPointEstimateSource.Missing);
-        var plannedStoryPoints = plannedStoryPointMetrics
-            .Where(metric => metric.Estimate.HasValue)
-            .Sum(metric => metric.Estimate.Value ?? 0d);
-        isApproximate = isApproximate
-            || derivedStoryPointCount > 0
-            || usedDerivedDeliveryEstimate;
-
-        return new SprintMetricsProjectionEntity
-        {
-            SprintId = sprint.Id,
-            ProductId = productId,
-            PlannedCount = plannedPbis.Count,
-            PlannedEffort = plannedPbis.Sum(w => w!.Effort ?? 0),
-            PlannedStoryPoints = plannedStoryPoints,
-            WorkedCount = workedItemIds.Count,
-            WorkedEffort = workedItemIds
-                .Select(id => workItemsByTfsId.GetValueOrDefault(id))
-                .Where(w => w != null)
-                .Sum(w => w!.Effort ?? 0),
-            BugsPlannedCount = plannedBugs,
-            BugsWorkedCount = bugsWorkedOn,
-            CompletedPbiCount = completedPbiCount,
-            CompletedPbiEffort = completedPbiEffort,
-            CompletedPbiStoryPoints = completedPbiStoryPoints,
-            SpilloverCount = spilloverPbis.Count,
-            SpilloverEffort = spilloverPbis.Sum(w => w!.Effort ?? 0),
-            SpilloverStoryPoints = spilloverStoryPoints,
-            ProgressionDelta = progressionDelta,
-            BugsCreatedCount = bugsCreated,
-            BugsClosedCount = bugsClosed,
-            MissingEffortCount = missingEffortCount,
-            MissingStoryPointCount = missingStoryPointCount,
-            DerivedStoryPointCount = derivedStoryPointCount,
-            DerivedStoryPoints = derivedStoryPoints,
-            UnestimatedDeliveryCount = unestimatedDeliveryCount,
-            IsApproximate = isApproximate,
-            IncludedUpToRevisionId = 0
-        };
+        return ToProjectionEntity(projection);
     }
 
     internal static double ComputeProgressionDelta(
@@ -524,49 +320,80 @@ public class SprintTrendProjectionService
         ICanonicalStoryPointResolutionService storyPointResolutionService,
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null)
     {
-        var featureResolved = productResolved.Where(r => r.WorkItemType == WorkItemType.Feature).ToList();
-        if (featureResolved.Count == 0) return 0;
-
         ArgumentNullException.ThrowIfNull(hierarchyRollupService);
         ArgumentNullException.ThrowIfNull(storyPointResolutionService);
-        var totalFeatureProgression = 0.0;
-        var featureCount = 0;
+        var deliveryTrendProjectionService = new SprintDeliveryProjectionService(
+            storyPointResolutionService,
+            hierarchyRollupService);
+        var progressionDelta = deliveryTrendProjectionService.ComputeProgressionDelta(new SprintDeliveryProgressionRequest(
+            productResolved.Select(resolvedItem => resolvedItem.ToDeliveryTrendResolvedWorkItem()).ToList(),
+            workItemsByTfsId.ToDictionary(pair => pair.Key, pair => pair.Value.ToDeliveryTrendWorkItem()),
+            activityByWorkItem.ToDictionary(
+                pair => pair.Key,
+                pair => (IReadOnlyList<FieldChangeEvent>)pair.Value.ToFieldChangeEvents()),
+            stateLookup));
 
-        foreach (var feature in featureResolved)
+        return progressionDelta.Percentage;
+    }
+
+    private static SprintMetricsProjectionEntity ToProjectionEntity(SprintDeliveryProjection projection)
+    {
+        return new SprintMetricsProjectionEntity
         {
-            if (!workItemsByTfsId.TryGetValue(feature.WorkItemId, out var featureWi))
-            {
-                continue;
-            }
+            SprintId = projection.SprintId,
+            ProductId = projection.ProductId,
+            PlannedCount = projection.PlannedCount,
+            PlannedEffort = projection.PlannedEffort,
+            PlannedStoryPoints = projection.PlannedStoryPoints,
+            WorkedCount = projection.WorkedCount,
+            WorkedEffort = projection.WorkedEffort,
+            BugsPlannedCount = projection.BugsPlannedCount,
+            BugsWorkedCount = projection.BugsWorkedCount,
+            CompletedPbiCount = projection.CompletedPbiCount,
+            CompletedPbiEffort = projection.CompletedPbiEffort,
+            CompletedPbiStoryPoints = projection.CompletedPbiStoryPoints,
+            SpilloverCount = projection.SpilloverCount,
+            SpilloverEffort = projection.SpilloverEffort,
+            SpilloverStoryPoints = projection.SpilloverStoryPoints,
+            ProgressionDelta = projection.ProgressionDelta.Percentage,
+            BugsCreatedCount = projection.BugsCreatedCount,
+            BugsClosedCount = projection.BugsClosedCount,
+            MissingEffortCount = projection.MissingEffortCount,
+            MissingStoryPointCount = projection.MissingStoryPointCount,
+            DerivedStoryPointCount = projection.DerivedStoryPointCount,
+            DerivedStoryPoints = projection.DerivedStoryPoints,
+            UnestimatedDeliveryCount = projection.UnestimatedDeliveryCount,
+            IsApproximate = projection.IsApproximate,
+            IncludedUpToRevisionId = 0
+        };
+    }
 
-            var childPbis = productResolved
-                .Where(r => r.WorkItemType == WorkItemType.Pbi && r.ResolvedFeatureId == feature.WorkItemId)
-                .Select(r => workItemsByTfsId.GetValueOrDefault(r.WorkItemId))
-                .OfType<WorkItemEntity>()
-                .ToList();
-
-            if (childPbis.Count == 0) continue;
-
-            var (featureWorkItem, featureWorkItems, doneByWorkItemId) = BuildFeatureRollupContext(featureWi, childPbis, stateLookup);
-            var scope = hierarchyRollupService.RollupCanonicalScope(featureWorkItem, featureWorkItems, doneByWorkItemId);
-            if (scope.Total > 0)
-            {
-                var featureHadProgress = childPbis.Any(p =>
-                    activityByWorkItem.TryGetValue(p.TfsId, out var pbiEvents)
-                    && pbiEvents.Any(e =>
-                        string.Equals(e.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase)
-                        && StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, e.NewValue)));
-
-                if (featureHadProgress)
-                {
-                    var featurePercent = scope.Completed / scope.Total * 100;
-                    totalFeatureProgression += featurePercent;
-                    featureCount++;
-                }
-            }
-        }
-
-        return featureCount > 0 ? Math.Round(totalFeatureProgression / featureCount, 2) : 0;
+    private static void ApplyProjection(
+        SprintMetricsProjectionEntity target,
+        SprintMetricsProjectionEntity source)
+    {
+        target.PlannedCount = source.PlannedCount;
+        target.PlannedEffort = source.PlannedEffort;
+        target.PlannedStoryPoints = source.PlannedStoryPoints;
+        target.WorkedCount = source.WorkedCount;
+        target.WorkedEffort = source.WorkedEffort;
+        target.BugsPlannedCount = source.BugsPlannedCount;
+        target.BugsWorkedCount = source.BugsWorkedCount;
+        target.CompletedPbiCount = source.CompletedPbiCount;
+        target.CompletedPbiEffort = source.CompletedPbiEffort;
+        target.CompletedPbiStoryPoints = source.CompletedPbiStoryPoints;
+        target.SpilloverCount = source.SpilloverCount;
+        target.SpilloverEffort = source.SpilloverEffort;
+        target.SpilloverStoryPoints = source.SpilloverStoryPoints;
+        target.ProgressionDelta = source.ProgressionDelta;
+        target.BugsCreatedCount = source.BugsCreatedCount;
+        target.BugsClosedCount = source.BugsClosedCount;
+        target.MissingEffortCount = source.MissingEffortCount;
+        target.MissingStoryPointCount = source.MissingStoryPointCount;
+        target.DerivedStoryPointCount = source.DerivedStoryPointCount;
+        target.DerivedStoryPoints = source.DerivedStoryPoints;
+        target.UnestimatedDeliveryCount = source.UnestimatedDeliveryCount;
+        target.IsApproximate = source.IsApproximate;
     }
 
     private static ResolvedStoryPointEstimate ResolvePbiStoryPointEstimate(
@@ -585,32 +412,6 @@ public class SprintTrendProjectionService
             pbi.ToCanonicalWorkItem(),
             StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, pbi.State),
             candidates));
-    }
-
-    private static ProjectionStoryPointMetrics ResolveProjectionStoryPointMetrics(
-        WorkItemEntity pbi,
-        IReadOnlyList<ResolvedWorkItemEntity> pbiResolved,
-        IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
-        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
-        ICanonicalStoryPointResolutionService storyPointResolutionService)
-    {
-        var resolvedPbi = pbiResolved.FirstOrDefault(r => r.WorkItemId == pbi.TfsId);
-        var featureId = resolvedPbi?.ResolvedFeatureId ?? pbi.ParentTfsId;
-        var featurePbis = pbiResolved
-            .Where(r => r.ResolvedFeatureId == featureId)
-            .Select(r => workItemsByTfsId.GetValueOrDefault(r.WorkItemId))
-            .OfType<WorkItemEntity>()
-            .ToList();
-
-        return new ProjectionStoryPointMetrics(
-            ResolvePbiStoryPointEstimate(pbi, featurePbis, stateLookup, storyPointResolutionService));
-    }
-
-    private static bool IsVelocityStoryPointEstimate(ResolvedStoryPointEstimate estimate)
-    {
-        return estimate.HasValue
-            && estimate.Source is not StoryPointEstimateSource.Missing
-            && estimate.Source is not StoryPointEstimateSource.Derived;
     }
 
     private static (CanonicalWorkItem FeatureWorkItem, List<CanonicalWorkItem> FeatureWorkItems, Dictionary<int, bool> DoneByWorkItemId)
@@ -634,9 +435,6 @@ public class SprintTrendProjectionService
 
         return (featureWorkItem, featureWorkItems, doneByWorkItemId);
     }
-
-    private readonly record struct ProjectionStoryPointMetrics(
-        ResolvedStoryPointEstimate Estimate);
 
     private static HashSet<int> PropagateActivityToAncestors(
         IReadOnlyCollection<int> activeWorkItemIds,

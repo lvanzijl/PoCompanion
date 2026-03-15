@@ -14,6 +14,7 @@ using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems.Validators.Rules;
 using PoTool.Core.WorkItems.Filtering;
 using PoTool.Core.Health;
+using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.Domain.Metrics;
@@ -250,6 +251,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<BacklogStateComputationService>();
         services.AddSingleton<ICanonicalStoryPointResolutionService, CanonicalStoryPointResolutionService>();
         services.AddSingleton<IHierarchyRollupService, HierarchyRollupService>();
+        services.AddSingleton<ISprintDeliveryProjectionService, SprintDeliveryProjectionService>();
         services.AddSingleton<ISprintExecutionMetricsCalculator, SprintExecutionMetricsCalculator>();
 
         // Register TFS configuration and client
