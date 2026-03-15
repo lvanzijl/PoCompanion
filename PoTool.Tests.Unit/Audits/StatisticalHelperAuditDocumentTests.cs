@@ -45,6 +45,26 @@ public sealed class StatisticalHelperAuditDocumentTests
         StringAssert.Contains(report, "PoTool.Core.Domain/Domain/Statistics/StatisticsMath.cs");
         StringAssert.Contains(report, "StandardDeviation");
         StringAssert.Contains(report, "PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsStatistics.cs");
+        StringAssert.Contains(report, "## Variance Duplication Removed from Estimation Handlers");
+        StringAssert.Contains(report, "handlers updated");
+        StringAssert.Contains(report, "local helpers removed");
+        StringAssert.Contains(report, "behavior preserved");
+    }
+
+    [TestMethod]
+    public void EstimationHandlers_DoNotRetainLocalVarianceHelpers()
+    {
+        var repositoryRoot = GetRepositoryRoot();
+        var qualityHandlerPath = Path.Combine(repositoryRoot, "PoTool.Api", "Handlers", "Metrics", "GetEffortEstimationQualityQueryHandler.cs");
+        var suggestionsHandlerPath = Path.Combine(repositoryRoot, "PoTool.Api", "Handlers", "Metrics", "GetEffortEstimationSuggestionsQueryHandler.cs");
+
+        var qualityHandler = File.ReadAllText(qualityHandlerPath);
+        var suggestionsHandler = File.ReadAllText(suggestionsHandlerPath);
+
+        Assert.IsFalse(qualityHandler.Contains("private double CalculateVariance", StringComparison.Ordinal));
+        Assert.IsFalse(suggestionsHandler.Contains("private double CalculateVariance", StringComparison.Ordinal));
+        StringAssert.Contains(qualityHandler, "StatisticsMath.Variance");
+        StringAssert.Contains(suggestionsHandler, "StatisticsMath.Variance");
     }
 
     private static string GetRepositoryRoot()

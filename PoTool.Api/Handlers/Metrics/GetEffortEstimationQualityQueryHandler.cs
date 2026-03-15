@@ -144,7 +144,7 @@ public sealed class GetEffortEstimationQualityQueryHandler
 
             // Calculate consistency as accuracy metric
             // Lower variance = higher accuracy/consistency
-            var variance = CalculateVariance(efforts);
+            var variance = StatisticsMath.Variance(efforts.Select(static value => (double)value));
             var coefficientOfVariation = avg > 0 ? Math.Sqrt(variance) / avg : 0;
 
             // Convert to accuracy score (0-1, where 1 is perfect consistency)
@@ -179,7 +179,7 @@ public sealed class GetEffortEstimationQualityQueryHandler
                 continue;
 
             var avg = efforts.Average();
-            var variance = CalculateVariance(efforts);
+            var variance = StatisticsMath.Variance(efforts.Select(static value => (double)value));
             var coefficientOfVariation = avg > 0 ? Math.Sqrt(variance) / avg : 0;
             var accuracy = Math.Max(0, 1.0 - Math.Min(1.0, coefficientOfVariation));
 
@@ -214,7 +214,7 @@ public sealed class GetEffortEstimationQualityQueryHandler
         {
             var efforts = group.Select(wi => wi.Effort!.Value).ToList();
             var avg = efforts.Average();
-            var variance = CalculateVariance(efforts);
+            var variance = StatisticsMath.Variance(efforts.Select(static value => (double)value));
             var coefficientOfVariation = avg > 0 ? Math.Sqrt(variance) / avg : 0;
             var accuracy = Math.Max(0, 1.0 - Math.Min(1.0, coefficientOfVariation));
 
@@ -223,10 +223,5 @@ public sealed class GetEffortEstimationQualityQueryHandler
         }
 
         return weightedAccuracySum;
-    }
-
-    private double CalculateVariance(List<int> values)
-    {
-        return StatisticsMath.Variance(values.Select(static value => (double)value));
     }
 }

@@ -214,6 +214,36 @@ public class GetEffortEstimationQualityQueryHandlerTests
     }
 
     [TestMethod]
+    public async Task Handle_WithVariableEfforts_UsesPopulationVarianceForAccuracy()
+    {
+        // Arrange
+        var workItems = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Task", "Done", "Sprint 1", 2),
+            CreateWorkItem(2, "Task", "Done", "Sprint 1", 4),
+            CreateWorkItem(3, "Task", "Done", "Sprint 1", 8)
+        };
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workItems);
+        var query = new GetEffortEstimationQualityQuery();
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        var taskQuality = result.QualityByType[0];
+        var expectedVariance = ((2d - (14d / 3d)) * (2d - (14d / 3d)) +
+            (4d - (14d / 3d)) * (4d - (14d / 3d)) +
+            (8d - (14d / 3d)) * (8d - (14d / 3d))) / 3d;
+        var expectedTypeAccuracy = 1d - Math.Min(1d, Math.Sqrt(expectedVariance) / 5d);
+        var expectedOverallAccuracy = 1d - Math.Min(1d, Math.Sqrt(expectedVariance) / (14d / 3d));
+
+        Assert.AreEqual(expectedTypeAccuracy, taskQuality.AverageAccuracy, 0.0001);
+        Assert.AreEqual(expectedOverallAccuracy, result.AverageEstimationAccuracy, 0.0001);
+    }
+
+    [TestMethod]
     public async Task Handle_WithMaxIterationsLimit_RespectsLimit()
     {
         // Arrange

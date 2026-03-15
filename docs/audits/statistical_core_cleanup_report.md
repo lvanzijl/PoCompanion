@@ -34,3 +34,14 @@
 - Tests added:
   - `PoTool.Tests.Unit/Domain/StatisticsMathTests.cs`
   - `PoTool.Tests.Unit/Audits/StatisticalHelperAuditDocumentTests.cs`
+
+## Variance Duplication Removed from Estimation Handlers
+
+- handlers updated:
+  - `PoTool.Api/Handlers/Metrics/GetEffortEstimationQualityQueryHandler.cs`
+  - `PoTool.Api/Handlers/Metrics/GetEffortEstimationSuggestionsQueryHandler.cs`
+- local helpers removed:
+  - removed each handler-local `CalculateVariance` wrapper and routed the existing variance call sites directly to `PoTool.Core.Domain/Domain/Statistics/StatisticsMath.cs`
+- behavior preserved:
+  - the handlers still calculate the same exact population variance values for quality accuracy and suggestion confidence
+  - focused handler and audit coverage now verifies preserved outputs plus the absence of local variance helpers
