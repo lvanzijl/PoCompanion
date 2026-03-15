@@ -4,7 +4,7 @@
 - Duplicated helper families still exist after the stable EffortDiagnostics core was introduced in `PoTool.Core/Metrics/EffortDiagnostics`.
 - The most important exact-duplicate pure-math family is **population variance** in the estimation handlers; the most important broader duplication family is **percentile/median** logic spread across metrics, PR, pipeline, and client calculators.
 - Semantically different helpers were also found:
-  - `confidence` means three different things depending on the slice
+  - `confidence` means three different things depending on the slice (feature/domain family)
   - `accuracy` sometimes means statistical consistency and sometimes means data completeness
   - `percentile` uses both **linear interpolation** and **nearest-rank** algorithms
   - `utilization` is sometimes descriptive context and sometimes a status-driving decision metric
@@ -24,6 +24,12 @@
 
 These are the current reference implementations for the stable EffortDiagnostics subset and are the baseline used for A/B/C/D classification below.
 
+Classification legend used below:
+- **A** — exact duplicate of existing stable helper logic
+- **B** — similar but semantically different
+- **C** — domain-specific and should remain local
+- **D** — candidate for a future shared statistical core
+
 | File | Class | Method | Concept | Local or centralized | Classification | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | `PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsStatistics.cs` | `EffortDiagnosticsStatistics` | `Mean`, `DeviationFromMean`, `ShareOfTotal`, `Median`, `Variance`, `CoefficientOfVariation`, `HHI` | Stable EffortDiagnostics statistical primitives | Centralized stable core | Reference baseline | Repository issue statement identifies this folder as the stable statistical core. |
@@ -36,7 +42,7 @@ These are the current reference implementations for the stable EffortDiagnostics
 | File | Class | Method | Concept | Local or centralized | Classification | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | `PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsStatistics.cs` | `CanonicalEffortDiagnosticsStatistics` | `Mean`, `DeviationFromMean`, `ShareOfTotal`, `Median`, `Variance` | Parallel EffortDiagnostics primitives | Parallel centralized implementation | B | Same formulas as the stable core, but duplicated in another layer. |
-| `PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsStatistics.cs` | `CanonicalEffortDiagnosticsStatistics` | `CoefficientOfVariation`, `Hhi` | Coefficient of variation / HHI | Parallel centralized implementation | B | Same concepts, but the contracts differ: `CoefficientOfVariation` takes `(variance, mean)` and `Hhi` returns raw `Σ(share²)` before later scaling. |
+| `PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsStatistics.cs` | `CanonicalEffortDiagnosticsStatistics` | `CoefficientOfVariation`, `Hhi` | Coefficient of variation / HHI | Parallel centralized implementation | B | Same concepts, but the contracts differ: `CoefficientOfVariation` takes `(variance, mean)` and the method is named `Hhi` (not `HHI`) while returning raw `Σ(share²)` before later scaling. |
 | `PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsCanonicalRules.cs` | `EffortImbalanceCanonicalRules` | `ComputeImbalanceScore` | Weighted deviation score | Slice-specific canonical rule | C | Stable EffortDiagnostics domain math, not a broad repository-wide statistic. |
 | `PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsCanonicalRules.cs` | `EffortConcentrationCanonicalRules` | `ComputeConcentrationIndex` | Normalized HHI concentration index | Slice-specific canonical rule | C | Stable EffortDiagnostics domain math over normalized shares. |
 | `PoTool.Api/Handlers/Metrics/GetEffortEstimationQualityQueryHandler.cs` | `GetEffortEstimationQualityQueryHandler` | `CalculateVariance` | Population variance | Local helper | A | Same population-variance formula as the stable EffortDiagnostics core. |
