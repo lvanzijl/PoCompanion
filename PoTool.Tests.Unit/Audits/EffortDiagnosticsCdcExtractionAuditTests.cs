@@ -18,10 +18,23 @@ public sealed class EffortDiagnosticsCdcExtractionAuditTests
     {
         var repositoryRoot = GetRepositoryRoot();
         var legacyWrapperPath = Path.Combine(repositoryRoot, "PoTool.Core", "Metrics", "EffortDiagnosticsStatistics.cs");
-        var stableHelpersPath = Path.Combine(repositoryRoot, "PoTool.Core", "Metrics", "EffortDiagnostics", "EffortDiagnosticsStatistics.cs");
+        var duplicateOwnerPath = Path.Combine(repositoryRoot, "PoTool.Core", "Metrics", "EffortDiagnostics", "EffortDiagnosticsStatistics.cs");
+        var canonicalOwnerPath = Path.Combine(repositoryRoot, "PoTool.Core.Domain", "Domain", "EffortDiagnostics", "EffortDiagnosticsStatistics.cs");
 
         Assert.IsFalse(File.Exists(legacyWrapperPath), "The legacy wrapper outside the CDC slice should be removed.");
-        Assert.IsTrue(File.Exists(stableHelpersPath), "The stable CDC helper file should remain in PoTool.Core/Metrics/EffortDiagnostics.");
+        Assert.IsFalse(File.Exists(duplicateOwnerPath), "The duplicate Core/Metrics EffortDiagnostics statistics owner should be removed.");
+        Assert.IsTrue(File.Exists(canonicalOwnerPath), "The canonical EffortDiagnostics statistics owner should live in PoTool.Core.Domain.");
+    }
+
+    [TestMethod]
+    public void StableEffortDiagnostics_AnalyzerUsesDomainOwnedStatistics()
+    {
+        var repositoryRoot = GetRepositoryRoot();
+        var analyzerPath = Path.Combine(repositoryRoot, "PoTool.Core", "Metrics", "EffortDiagnostics", "EffortDiagnosticsAnalyzer.cs");
+        var analyzer = File.ReadAllText(analyzerPath);
+
+        StringAssert.Contains(analyzer, "PoTool.Core.Domain.EffortDiagnostics.CanonicalEffortDiagnosticsStatistics");
+        Assert.IsFalse(analyzer.Contains("PoTool.Core.Metrics.EffortDiagnostics.EffortDiagnosticsStatistics", StringComparison.Ordinal));
     }
 
     [TestMethod]

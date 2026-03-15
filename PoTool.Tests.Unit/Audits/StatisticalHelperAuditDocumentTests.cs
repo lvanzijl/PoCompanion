@@ -28,6 +28,22 @@ public sealed class StatisticalHelperAuditDocumentTests
         StringAssert.Contains(audit, "percentile");
     }
 
+    [TestMethod]
+    public void StatisticalCoreCleanupReport_ExistsWithOwnershipConsolidationSection()
+    {
+        var repositoryRoot = GetRepositoryRoot();
+        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "statistical_core_cleanup_report.md");
+
+        Assert.IsTrue(File.Exists(reportPath), "The statistical core cleanup report should exist under docs/audits.");
+
+        var report = File.ReadAllText(reportPath);
+
+        StringAssert.Contains(report, "# Statistical Core Cleanup Report");
+        StringAssert.Contains(report, "## EffortDiagnostics Statistics Ownership Consolidation");
+        StringAssert.Contains(report, "PoTool.Core.Domain/Domain/EffortDiagnostics");
+        StringAssert.Contains(report, "PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsStatistics.cs");
+    }
+
     private static string GetRepositoryRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);

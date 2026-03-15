@@ -38,7 +38,7 @@ public interface EffortDiagnosticsStatistics
     /// <summary>
     /// Calculates the Herfindahl-Hirschman Index from normalized shares in the range [0, 1].
     /// </summary>
-    double Hhi(IEnumerable<double> shares);
+    double HHI(IEnumerable<double> shares);
 }
 
 /// <summary>
@@ -109,10 +109,16 @@ public sealed class CanonicalEffortDiagnosticsStatistics : EffortDiagnosticsStat
     }
 
     /// <inheritdoc />
-    public double Hhi(IEnumerable<double> shares)
+    public double HHI(IEnumerable<double> shares)
     {
         ArgumentNullException.ThrowIfNull(shares);
 
-        return shares.Sum(share => Math.Pow(Math.Max(0, share), 2));
+        var shareValues = shares.ToArray();
+        if (shareValues.Any(share => share is < 0 or > 1))
+        {
+            throw new ArgumentOutOfRangeException(nameof(shares), "Shares must fall within the range [0, 1].");
+        }
+
+        return shareValues.Sum(share => Math.Pow(share, 2));
     }
 }

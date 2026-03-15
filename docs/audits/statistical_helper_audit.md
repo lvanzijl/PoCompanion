@@ -1,7 +1,7 @@
 # Statistical Helper Audit
 
 ## Summary
-- Duplicated helper families still exist after the stable EffortDiagnostics core was introduced in `PoTool.Core/Metrics/EffortDiagnostics`.
+- Duplicated helper families still exist in the repository, but the stable EffortDiagnostics primitive ownership has now been consolidated into `PoTool.Core.Domain`.
 - The most important exact-duplicate pure-math family is **population variance** in the estimation handlers; the most important broader duplication family is **percentile/median** logic spread across metrics, PR, pipeline, and client calculators.
 - Semantically different helpers were also found:
   - `confidence` means three different things depending on the slice (feature/domain family)
@@ -32,17 +32,16 @@ Classification legend used below:
 
 | File | Class | Method | Concept | Local or centralized | Classification | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| `PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsStatistics.cs` | `EffortDiagnosticsStatistics` | `Mean`, `DeviationFromMean`, `ShareOfTotal`, `Median`, `Variance`, `CoefficientOfVariation`, `HHI` | Stable EffortDiagnostics statistical primitives | Centralized stable core | Reference baseline | Repository issue statement identifies this folder as the stable statistical core. |
-| `PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsStatistics.cs` | `EffortDiagnosticsStatistics` | `CalculateWeightedDeviationScore` | Weighted deviation score | Centralized stable-slice helper | Reference baseline | Stable EffortDiagnostics-only portfolio scoring helper. |
-| `PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsStatistics.cs` | `EffortDiagnosticsStatistics` | `CalculateNormalizedHerfindahlIndex` | Normalized concentration index | Centralized stable-slice helper | Reference baseline | Stable EffortDiagnostics-only HHI convenience helper. |
+| `PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsStatistics.cs` | `CanonicalEffortDiagnosticsStatistics` | `Mean`, `DeviationFromMean`, `ShareOfTotal`, `Median`, `Variance`, `CoefficientOfVariation`, `HHI` | Stable EffortDiagnostics statistical primitives | Canonical domain owner | Reference baseline | Confirmed canonical owner for the stable EffortDiagnostics primitive helper surface. |
+| `PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsCanonicalRules.cs` | `EffortImbalanceCanonicalRules` | `ComputeImbalanceScore` | Weighted deviation score | Canonical domain rule | Reference baseline | Stable EffortDiagnostics-only portfolio scoring helper owned by the domain slice. |
+| `PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsCanonicalRules.cs` | `EffortConcentrationCanonicalRules` | `ComputeConcentrationIndex` | Normalized concentration index | Canonical domain rule | Reference baseline | Stable EffortDiagnostics-only normalized HHI helper owned by the domain slice. |
 | `PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsAnalyzer.cs` | `EffortDiagnosticsAnalyzer` | `AnalyzeImbalance`, `AnalyzeConcentration` | Centralized consumption of stable math | Centralized stable consumer | Reference baseline | Uses the stable helpers instead of re-implementing formulas in API handlers. |
 
 ### Classified occurrences
 
 | File | Class | Method | Concept | Local or centralized | Classification | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| `PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsStatistics.cs` | `CanonicalEffortDiagnosticsStatistics` | `Mean`, `DeviationFromMean`, `ShareOfTotal`, `Median`, `Variance` | Parallel EffortDiagnostics primitives | Parallel centralized implementation | B | Same formulas as the stable core, but duplicated in another layer. |
-| `PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsStatistics.cs` | `CanonicalEffortDiagnosticsStatistics` | `CoefficientOfVariation`, `Hhi` | Coefficient of variation / HHI | Parallel centralized implementation | B | Same concepts, but the contracts differ: `CoefficientOfVariation` takes `(variance, mean)` and the method is named `Hhi` (not `HHI`) while returning raw `Σ(share²)` before later scaling. |
+| `PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsStatistics.cs` | `EffortDiagnosticsStatistics` | `Mean`, `DeviationFromMean`, `ShareOfTotal`, `Median`, `Variance`, `CoefficientOfVariation`, `HHI`, `CalculateWeightedDeviationScore`, `CalculateNormalizedHerfindahlIndex` | Former parallel EffortDiagnostics owner | Removed duplicate production owner | B (resolved) | This duplicate Core helper surface was removed so the domain slice is the only production owner. |
 | `PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsCanonicalRules.cs` | `EffortImbalanceCanonicalRules` | `ComputeImbalanceScore` | Weighted deviation score | Slice-specific canonical rule | C | Stable EffortDiagnostics domain math, not a broad repository-wide statistic. |
 | `PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsCanonicalRules.cs` | `EffortConcentrationCanonicalRules` | `ComputeConcentrationIndex` | Normalized HHI concentration index | Slice-specific canonical rule | C | Stable EffortDiagnostics domain math over normalized shares. |
 | `PoTool.Api/Handlers/Metrics/GetEffortEstimationQualityQueryHandler.cs` | `GetEffortEstimationQualityQueryHandler` | `CalculateVariance` | Population variance | Local helper | A | Same population-variance formula as the stable EffortDiagnostics core. |
@@ -128,10 +127,7 @@ Result: utilization is a reused ratio, but not a reusable statistical helper wit
   - empty/tiny-sample behavior
 
 ### Reusable domain math
-- A later consolidation prompt could align the duplicated EffortDiagnostics math now split between:
-  - `PoTool.Core/Metrics/EffortDiagnostics`
-  - `PoTool.Core.Domain/Domain/EffortDiagnostics`
-- That consolidation should stay inside an **EffortDiagnostics-owned** domain surface, because:
+- EffortDiagnostics primitive ownership should remain inside the **EffortDiagnostics-owned** domain surface, because:
   - deviation-from-mean
   - share-of-total concentration bands
   - weighted imbalance score
@@ -148,7 +144,6 @@ Result: utilization is a reused ratio, but not a reusable statistical helper wit
 These should not be pulled into a broad shared statistical core unless a later semantic audit proves that multiple slices truly mean the same thing.
 
 ## Keep Local
-- `PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsStatistics.cs` convenience helpers for weighted deviation and normalized concentration index should remain owned by the EffortDiagnostics slice unless broader reuse appears.
 - `PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsCanonicalRules.cs` should remain EffortDiagnostics-specific domain math.
 - `PoTool.Api/Handlers/Metrics/GetEffortEstimationSuggestionsQueryHandler.cs`
   - `CalculateConfidence`
@@ -166,8 +161,7 @@ These should not be pulled into a broad shared statistical core unless a later s
 
 ## Recommended Next Step
 - **Next step: targeted consolidation prompt**
-- Scope that prompt narrowly to semantically aligned pure-math duplication only:
-  - choose one owner for the stable EffortDiagnostics primitive helpers duplicated across `PoTool.Core/Metrics/EffortDiagnostics` and `PoTool.Core.Domain/Domain/EffortDiagnostics`
+- Scope that prompt narrowly to the remaining semantically aligned pure-math duplication only:
   - consolidate the population-variance family
   - decide whether standard deviation should join that same shared surface
 - Explicitly exclude percentile and confidence families from that prompt until a separate semantic decision is made for those unstable terms.

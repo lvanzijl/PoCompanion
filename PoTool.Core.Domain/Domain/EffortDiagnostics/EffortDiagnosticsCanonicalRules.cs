@@ -118,7 +118,7 @@ public static class EffortConcentrationCanonicalRules
             throw new ArgumentOutOfRangeException(nameof(sharesOfTotal), "Shares must fall within the range [0, 1].");
         }
 
-        return Math.Min(100, statistics.Hhi(shares) * 100);
+        return Math.Min(100, statistics.HHI(shares) * 100);
     }
 
     /// <summary>

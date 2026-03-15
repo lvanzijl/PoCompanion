@@ -17,7 +17,7 @@ public sealed class EffortDiagnosticsDomainModelsTests
         var median = statistics.Median(values);
         var variance = statistics.Variance(values);
         var coefficientOfVariation = statistics.CoefficientOfVariation(variance, mean);
-        var hhi = statistics.Hhi(new[] { 0.5d, 0.25d, 0.25d });
+        var hhi = statistics.HHI(new[] { 0.5d, 0.25d, 0.25d });
 
         Assert.AreEqual(25d, mean, 0.001);
         Assert.AreEqual(0.6d, deviation, 0.001);
