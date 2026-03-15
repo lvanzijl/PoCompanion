@@ -1,5 +1,6 @@
 using Mediator;
 using PoTool.Core.Contracts;
+using PoTool.Core.Metrics;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
@@ -9,7 +10,7 @@ namespace PoTool.Api.Handlers.Metrics;
 
 /// <summary>
 /// Handler for GetEffortConcentrationRiskQuery.
-/// Identifies concentration risks where effort is focused in single features or areas.
+/// Identifies fixed-band concentration risks where effort hours are focused in single areas or iterations.
 /// Uses product-scoped hierarchical loading when products are configured.
 /// </summary>
 public sealed class GetEffortConcentrationRiskQueryHandler
@@ -37,7 +38,7 @@ public sealed class GetEffortConcentrationRiskQueryHandler
         CancellationToken cancellationToken)
     {
         _logger.LogDebug(
-            "Handling GetEffortConcentrationRiskQuery with AreaPathFilter: {AreaPathFilter}, Threshold: {Threshold}",
+            "Handling GetEffortConcentrationRiskQuery with AreaPathFilter: {AreaPathFilter}, LegacyThresholdIgnored: {Threshold}",
             query.AreaPathFilter ?? "All",
             query.ConcentrationThreshold);
 
@@ -104,15 +105,17 @@ public sealed class GetEffortConcentrationRiskQueryHandler
             .ToList();
 
         // Analyze area path concentration
-        var areaPathRisks = AnalyzeAreaPathConcentration(workItemsWithEffort, totalEffort);
+        var allAreaPathRisks = AnalyzeAreaPathConcentration(workItemsWithEffort, totalEffort);
+        var areaPathRisks = FilterVisibleRisks(allAreaPathRisks);
 
         // Analyze iteration concentration
-        var iterationRisks = AnalyzeIterationConcentration(workItemsWithEffort, iterationPaths, totalEffort);
+        var allIterationRisks = AnalyzeIterationConcentration(workItemsWithEffort, iterationPaths, totalEffort);
+        var iterationRisks = FilterVisibleRisks(allIterationRisks);
 
         // Calculate overall concentration risk
         var (overallRisk, concentrationIndex) = CalculateOverallConcentrationRisk(
-            areaPathRisks,
-            iterationRisks);
+            allAreaPathRisks,
+            allIterationRisks);
 
         // Generate mitigation recommendations
         var recommendations = GenerateMitigationRecommendations(
@@ -139,12 +142,12 @@ public sealed class GetEffortConcentrationRiskQueryHandler
             .Select(group =>
             {
                 var effortAmount = group.Sum(wi => wi.Effort ?? 0);
-                var percentage = totalEffort > 0 ? (double)effortAmount / totalEffort : 0;
+                var percentage = EffortDiagnosticsStatistics.CalculateShareOfTotal(effortAmount, totalEffort);
                 var riskLevel = DetermineConcentrationRisk(percentage);
                 var topWorkItems = group
                     .OrderByDescending(wi => wi.Effort ?? 0)
                     .Take(5)
-                    .Select(wi => $"#{wi.TfsId}: {wi.Title} ({wi.Effort} pts)")
+                    .Select(wi => $"#{wi.TfsId}: {wi.Title} ({wi.Effort} effort hours)")
                     .ToList();
 
                 var description = GenerateConcentrationDescription(
@@ -163,7 +166,6 @@ public sealed class GetEffortConcentrationRiskQueryHandler
                     TopWorkItems: topWorkItems
                 );
             })
-            .Where(r => r.RiskLevel != ConcentrationRiskLevel.None)
             .OrderByDescending(r => r.PercentageOfTotal)
             .ToList();
     }
@@ -181,12 +183,12 @@ public sealed class GetEffortConcentrationRiskQueryHandler
                     .ToList();
 
                 var effortAmount = itemsInIteration.Sum(wi => wi.Effort ?? 0);
-                var percentage = totalEffort > 0 ? (double)effortAmount / totalEffort : 0;
+                var percentage = EffortDiagnosticsStatistics.CalculateShareOfTotal(effortAmount, totalEffort);
                 var riskLevel = DetermineConcentrationRisk(percentage);
                 var topWorkItems = itemsInIteration
                     .OrderByDescending(wi => wi.Effort ?? 0)
                     .Take(5)
-                    .Select(wi => $"#{wi.TfsId}: {wi.Title} ({wi.Effort} pts)")
+                    .Select(wi => $"#{wi.TfsId}: {wi.Title} ({wi.Effort} effort hours)")
                     .ToList();
 
                 var description = GenerateConcentrationDescription(
@@ -205,8 +207,14 @@ public sealed class GetEffortConcentrationRiskQueryHandler
                     TopWorkItems: topWorkItems
                 );
             })
-            .Where(r => r.RiskLevel != ConcentrationRiskLevel.None)
             .OrderByDescending(r => r.PercentageOfTotal)
+            .ToList();
+    }
+
+    private static List<ConcentrationRisk> FilterVisibleRisks(List<ConcentrationRisk> risks)
+    {
+        return risks
+            .Where(r => r.RiskLevel != ConcentrationRiskLevel.None)
             .ToList();
     }
 
@@ -234,24 +242,9 @@ public sealed class GetEffortConcentrationRiskQueryHandler
         }
 
         var maxConcentration = allRisks.Max(r => r.PercentageOfTotal);
-
-        // Herfindahl-Hirschman Index (HHI) for concentration
-        // HHI = Σ(market share as decimal)² × 10,000
-        // Convert percentages to decimals (0-1 range) before squaring
-        var hhi = allRisks.Sum(r => Math.Pow(r.PercentageOfTotal / 100.0, 2)) * 10000;
-
-        // HHI ranges: 0-1500 (unconcentrated), 1500-2500 (moderate), 2500+ (high concentration)
-        // Normalize to 0-100 scale for UI display
-        var concentrationIndex = Math.Min(100, hhi / 100);
-
-        var overallRisk = maxConcentration switch
-        {
-            < 25 => ConcentrationRiskLevel.None,
-            >= 25 and < 40 => ConcentrationRiskLevel.Low,
-            >= 40 and < 60 => ConcentrationRiskLevel.Medium,
-            >= 60 and < 80 => ConcentrationRiskLevel.High,
-            _ => ConcentrationRiskLevel.Critical
-        };
+        var concentrationIndex = EffortDiagnosticsStatistics.CalculateNormalizedHerfindahlIndex(
+            allRisks.Select(r => r.PercentageOfTotal));
+        var overallRisk = DetermineConcentrationRisk(maxConcentration / 100.0);
 
         return (overallRisk, concentrationIndex);
     }
@@ -276,7 +269,7 @@ public sealed class GetEffortConcentrationRiskQueryHandler
                 Strategy: MitigationStrategy.DiversifyAcrossAreas,
                 Title: $"Diversify effort from {risk.Name}",
                 Description: $"Area has {risk.PercentageOfTotal:F1}% of total effort. " +
-                            $"Consider moving ~{effortToRedistribute} points to other areas to reduce concentration risk.",
+                            $"Consider moving ~{effortToRedistribute} effort hours to other areas to reduce concentration risk.",
                 Priority: risk.RiskLevel,
                 TargetPath: risk.Path,
                 EffortToRedistribute: effortToRedistribute
@@ -296,7 +289,7 @@ public sealed class GetEffortConcentrationRiskQueryHandler
                 Strategy: MitigationStrategy.SpreadAcrossSprints,
                 Title: $"Spread effort from {risk.Name}",
                 Description: $"Sprint has {risk.PercentageOfTotal:F1}% of total effort. " +
-                            $"Consider deferring ~{effortToRedistribute} points to adjacent sprints.",
+                            $"Consider deferring ~{effortToRedistribute} effort hours to adjacent sprints.",
                 Priority: risk.RiskLevel,
                 TargetPath: risk.Path,
                 EffortToRedistribute: effortToRedistribute
@@ -368,7 +361,7 @@ public sealed class GetEffortConcentrationRiskQueryHandler
             _ => "Normal distribution"
         };
 
-        return $"{riskDesc}: {effortAmount} points ({percentage * 100:F1}%) in this {entityType}";
+        return $"{riskDesc}: {effortAmount} effort hours ({percentage * 100:F1}%) in this {entityType}";
     }
 
     private static string ExtractSprintName(string iterationPath)

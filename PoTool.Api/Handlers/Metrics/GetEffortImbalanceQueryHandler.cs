@@ -1,5 +1,6 @@
 using Mediator;
 using PoTool.Core.Contracts;
+using PoTool.Core.Metrics;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
@@ -9,7 +10,8 @@ namespace PoTool.Api.Handlers.Metrics;
 
 /// <summary>
 /// Handler for GetEffortImbalanceQuery.
-/// Detects disproportionate effort allocations across teams and sprints.
+/// Detects disproportionate effort-hour allocations across teams and sprints
+/// using deviation from the mean effort per bucket.
 /// Uses product-scoped hierarchical loading when products are configured.
 /// </summary>
 public sealed class GetEffortImbalanceQueryHandler
@@ -158,7 +160,7 @@ public sealed class GetEffortImbalanceQueryHandler
         return effortByArea
             .Select(e =>
             {
-                var deviation = Math.Abs(e.TotalEffort - averageEffort) / (averageEffort > 0 ? averageEffort : 1);
+                var deviation = EffortDiagnosticsStatistics.CalculateDeviationFromMean(e.TotalEffort, averageEffort);
                 var riskLevel = DetermineImbalanceRisk(deviation, threshold);
                 var description = GenerateTeamImbalanceDescription(e.TotalEffort, averageEffort, deviation);
 
@@ -198,7 +200,7 @@ public sealed class GetEffortImbalanceQueryHandler
         return effortBySprint
             .Select(e =>
             {
-                var deviation = Math.Abs(e.TotalEffort - averageEffort) / (averageEffort > 0 ? averageEffort : 1);
+                var deviation = EffortDiagnosticsStatistics.CalculateDeviationFromMean(e.TotalEffort, averageEffort);
                 var riskLevel = DetermineImbalanceRisk(deviation, threshold);
                 var description = GenerateSprintImbalanceDescription(
                     e.TotalEffort,
@@ -248,10 +250,7 @@ public sealed class GetEffortImbalanceQueryHandler
         }
 
         var maxDeviation = allDeviations.Max() / 100.0;
-        var avgDeviation = allDeviations.Average() / 100.0;
-
-        // Imbalance score: weighted average of max and mean deviation
-        var imbalanceScore = (maxDeviation * 0.6 + avgDeviation * 0.4) * 100;
+        var imbalanceScore = EffortDiagnosticsStatistics.CalculateWeightedDeviationScore(allDeviations);
 
         var overallRisk = maxDeviation switch
         {
@@ -284,7 +283,7 @@ public sealed class GetEffortImbalanceQueryHandler
                 Type: RecommendationType.ReduceTeamLoad,
                 Title: $"Reduce load for {GetShortPath(team.AreaPath)}",
                 Description: $"Team has {team.DeviationPercentage:F1}% more effort than average. " +
-                            $"Consider moving {effortToMove} points to underutilized teams.",
+                            $"Consider moving {effortToMove} effort hours to underutilized teams.",
                 Priority: team.RiskLevel,
                 TargetAreaPath: team.AreaPath,
                 SuggestedEffortChange: -effortToMove
@@ -304,7 +303,7 @@ public sealed class GetEffortImbalanceQueryHandler
                 Type: RecommendationType.IncreaseTeamLoad,
                 Title: $"Increase load for {GetShortPath(team.AreaPath)}",
                 Description: $"Team has {team.DeviationPercentage:F1}% less effort than average. " +
-                            $"Consider adding {effortToAdd} points from overloaded teams.",
+                            $"Consider adding {effortToAdd} effort hours from overloaded teams.",
                 Priority: ImbalanceRiskLevel.Low,
                 TargetAreaPath: team.AreaPath,
                 SuggestedEffortChange: effortToAdd
@@ -324,7 +323,7 @@ public sealed class GetEffortImbalanceQueryHandler
                 Type: RecommendationType.LevelSprintLoad,
                 Title: $"Level load for {sprint.SprintName}",
                 Description: $"Sprint has {sprint.DeviationPercentage:F1}% more effort than average. " +
-                            $"Consider deferring {effortToMove} points to future sprints.",
+                            $"Consider deferring {effortToMove} effort hours to future sprints.",
                 Priority: sprint.RiskLevel,
                 TargetIterationPath: sprint.IterationPath,
                 SuggestedEffortChange: -effortToMove
@@ -355,11 +354,11 @@ public sealed class GetEffortImbalanceQueryHandler
     {
         if (actualEffort > averageEffort)
         {
-            return $"Team has {actualEffort} points vs average of {averageEffort:F0} ({deviation * 100:F1}% overload)";
+            return $"Team has {actualEffort} effort hours vs average of {averageEffort:F0} ({deviation * 100:F1}% overload)";
         }
         else
         {
-            return $"Team has {actualEffort} points vs average of {averageEffort:F0} ({deviation * 100:F1}% underload)";
+            return $"Team has {actualEffort} effort hours vs average of {averageEffort:F0} ({deviation * 100:F1}% underload)";
         }
     }
 
@@ -370,8 +369,8 @@ public sealed class GetEffortImbalanceQueryHandler
         int? capacity)
     {
         var baseDesc = actualEffort > averageEffort
-            ? $"Sprint has {actualEffort} points vs average of {averageEffort:F0} ({deviation * 100:F1}% overload)"
-            : $"Sprint has {actualEffort} points vs average of {averageEffort:F0} ({deviation * 100:F1}% underload)";
+            ? $"Sprint has {actualEffort} effort hours vs average of {averageEffort:F0} ({deviation * 100:F1}% overload)"
+            : $"Sprint has {actualEffort} effort hours vs average of {averageEffort:F0} ({deviation * 100:F1}% underload)";
 
         if (capacity.HasValue && capacity.Value > 0)
         {

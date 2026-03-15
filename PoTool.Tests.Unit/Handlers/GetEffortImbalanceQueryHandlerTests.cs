@@ -89,7 +89,7 @@ public class GetEffortImbalanceQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(ImbalanceRiskLevel.Low, result.OverallRiskLevel);
-        Assert.IsLessThan(result.ImbalanceScore, 30); // Less than 30% imbalance
+        Assert.IsLessThan(30d, result.ImbalanceScore, "Balanced distributions should keep the imbalance score below the default threshold.");
     }
 
     [TestMethod]
@@ -213,9 +213,43 @@ public class GetEffortImbalanceQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        // Sprint 1 has 50 points with 40 capacity = over capacity
-        Assert.IsTrue(result.SprintImbalances.Any(s =>
-            s.IterationPath == "Sprint 1" && s.TotalEffort > s.AverageEffortAcrossSprints));
+        var sprint = result.SprintImbalances.Single(s => s.IterationPath == "Sprint 1");
+        StringAssert.Contains(sprint.Description, "capacity utilization");
+    }
+
+    [TestMethod]
+    public async Task Handle_DefaultCapacityOnlyAddsDescriptionContext()
+    {
+        // Arrange
+        var workItems = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "Team1", "Sprint 1", 50),
+            CreateWorkItem(2, "Team1", "Sprint 2", 20)
+        };
+
+        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workItems);
+
+        // Act
+        var withoutCapacity = await _handler.Handle(
+            new GetEffortImbalanceQuery(DefaultCapacityPerIteration: null),
+            CancellationToken.None);
+        var withCapacity = await _handler.Handle(
+            new GetEffortImbalanceQuery(DefaultCapacityPerIteration: 40),
+            CancellationToken.None);
+
+        // Assert
+        Assert.AreEqual(withoutCapacity.OverallRiskLevel, withCapacity.OverallRiskLevel);
+        Assert.AreEqual(withoutCapacity.ImbalanceScore, withCapacity.ImbalanceScore, 0.001);
+
+        var sprintWithoutCapacity = withoutCapacity.SprintImbalances.Single(s => s.IterationPath == "Sprint 1");
+        var sprintWithCapacity = withCapacity.SprintImbalances.Single(s => s.IterationPath == "Sprint 1");
+
+        Assert.AreEqual(sprintWithoutCapacity.RiskLevel, sprintWithCapacity.RiskLevel);
+        Assert.IsFalse(
+            sprintWithoutCapacity.Description.Contains("capacity utilization", StringComparison.Ordinal),
+            "Descriptions without default capacity should not include utilization context.");
+        StringAssert.Contains(sprintWithCapacity.Description, "capacity utilization");
     }
 
     private static WorkItemDto CreateWorkItem(int id, string areaPath, string iterationPath, int effort)

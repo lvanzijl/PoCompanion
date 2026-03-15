@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-15",
+    "type": "Changed",
+    "title": "Effort diagnostics now use stable effort-hour rules",
+    "impact": "Effort imbalance and concentration analytics now describe fixed stable semantics, keep concentration bands deterministic, and label effort values consistently as effort hours instead of points.",
+    "area": "Planning",
+    "link": "/effort-distribution"
+  },
+  {
     "date": "2026-03-14",
     "type": "Changed",
     "title": "Sprint execution now reports canonical SP rates",

@@ -6,7 +6,8 @@ namespace PoTool.Core.Metrics.Queries;
 
 /// <summary>
 /// Query to detect effort imbalance across teams and sprints.
-/// Identifies disproportionate allocations that may lead to bottlenecks.
+/// Uses deviation from mean effort per bucket, with threshold-relative risk bands.
+/// DefaultCapacityPerIteration adds sprint utilization context only and does not change classification.
 /// </summary>
 public sealed record GetEffortImbalanceQuery(
     string? AreaPathFilter = null,
