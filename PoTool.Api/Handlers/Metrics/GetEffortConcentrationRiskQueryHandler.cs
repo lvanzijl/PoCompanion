@@ -1,4 +1,5 @@
 using Mediator;
+using EffortDiagnosticsAnalyzer = PoTool.Core.Metrics.EffortDiagnostics.EffortDiagnosticsAnalyzer;
 using PoTool.Core.Contracts;
 using PoTool.Core.Metrics;
 using PoTool.Shared.Metrics;
@@ -16,6 +17,7 @@ namespace PoTool.Api.Handlers.Metrics;
 public sealed class GetEffortConcentrationRiskQueryHandler
     : IQueryHandler<GetEffortConcentrationRiskQuery, EffortConcentrationRiskDto>
 {
+    private static readonly EffortDiagnosticsAnalyzer Analyzer = new();
     private readonly IWorkItemRepository _repository;
     private readonly IProductRepository _productRepository;
     private readonly IMediator _mediator;
@@ -93,8 +95,6 @@ public sealed class GetEffortConcentrationRiskQueryHandler
             );
         }
 
-        var totalEffort = workItemsWithEffort.Sum(wi => wi.Effort ?? 0);
-
         // Get recent iterations
         var iterationPaths = workItemsWithEffort
             .Where(wi => !string.IsNullOrWhiteSpace(wi.IterationPath))
@@ -104,18 +104,22 @@ public sealed class GetEffortConcentrationRiskQueryHandler
             .Take(query.MaxIterations)
             .ToList();
 
-        // Analyze area path concentration
-        var allAreaPathRisks = AnalyzeAreaPathConcentration(workItemsWithEffort, totalEffort);
+        var areaBuckets = workItemsWithEffort
+            .GroupBy(wi => wi.AreaPath)
+            .ToDictionary(group => group.Key, group => group.Sum(wi => wi.Effort ?? 0));
+        var iterationBuckets = iterationPaths.ToDictionary(
+            iterationPath => iterationPath,
+            iterationPath => workItemsWithEffort
+                .Where(wi => wi.IterationPath.Equals(iterationPath, StringComparison.OrdinalIgnoreCase))
+                .Sum(wi => wi.Effort ?? 0));
+
+        var analysis = Analyzer.AnalyzeConcentration(areaBuckets, iterationBuckets);
+        var allAreaPathRisks = MapAreaPathRisks(workItemsWithEffort, analysis.AreaBuckets);
         var areaPathRisks = FilterVisibleRisks(allAreaPathRisks);
-
-        // Analyze iteration concentration
-        var allIterationRisks = AnalyzeIterationConcentration(workItemsWithEffort, iterationPaths, totalEffort);
+        var allIterationRisks = MapIterationRisks(workItemsWithEffort, analysis.IterationBuckets);
         var iterationRisks = FilterVisibleRisks(allIterationRisks);
-
-        // Calculate overall concentration risk
-        var (overallRisk, concentrationIndex) = CalculateOverallConcentrationRisk(
-            allAreaPathRisks,
-            allIterationRisks);
+        var overallRisk = MapConcentrationRiskLevel(analysis.OverallRiskLevel);
+        var concentrationIndex = analysis.ConcentrationIndex;
 
         // Generate mitigation recommendations
         var recommendations = GenerateMitigationRecommendations(
@@ -133,18 +137,15 @@ public sealed class GetEffortConcentrationRiskQueryHandler
         );
     }
 
-    private static List<ConcentrationRisk> AnalyzeAreaPathConcentration(
+    private static List<ConcentrationRisk> MapAreaPathRisks(
         List<WorkItemDto> workItems,
-        int totalEffort)
+        IReadOnlyList<PoTool.Core.Metrics.EffortDiagnostics.EffortConcentrationBucket> areaBuckets)
     {
-        return workItems
-            .GroupBy(wi => wi.AreaPath)
-            .Select(group =>
+        return areaBuckets
+            .Select(bucket =>
             {
-                var effortAmount = group.Sum(wi => wi.Effort ?? 0);
-                var percentage = EffortDiagnosticsStatistics.CalculateShareOfTotal(effortAmount, totalEffort);
-                var riskLevel = DetermineConcentrationRisk(percentage);
-                var topWorkItems = group
+                var topWorkItems = workItems
+                    .Where(wi => wi.AreaPath.Equals(bucket.BucketKey, StringComparison.OrdinalIgnoreCase))
                     .OrderByDescending(wi => wi.Effort ?? 0)
                     .Take(5)
                     .Select(wi => $"#{wi.TfsId}: {wi.Title} ({wi.Effort} effort hours)")
@@ -152,16 +153,16 @@ public sealed class GetEffortConcentrationRiskQueryHandler
 
                 var description = GenerateConcentrationDescription(
                     "area path",
-                    effortAmount,
-                    percentage,
-                    riskLevel);
+                    (int)bucket.EffortAmount,
+                    bucket.EffortShare,
+                    MapConcentrationRiskLevel(bucket.RiskLevel));
 
                 return new ConcentrationRisk(
-                    Name: GetShortPath(group.Key),
-                    Path: group.Key,
-                    EffortAmount: effortAmount,
-                    PercentageOfTotal: percentage * 100,
-                    RiskLevel: riskLevel,
+                    Name: GetShortPath(bucket.BucketKey),
+                    Path: bucket.BucketKey,
+                    EffortAmount: (int)bucket.EffortAmount,
+                    PercentageOfTotal: bucket.EffortShare * 100,
+                    RiskLevel: MapConcentrationRiskLevel(bucket.RiskLevel),
                     Description: description,
                     TopWorkItems: topWorkItems
                 );
@@ -170,21 +171,17 @@ public sealed class GetEffortConcentrationRiskQueryHandler
             .ToList();
     }
 
-    private static List<ConcentrationRisk> AnalyzeIterationConcentration(
+    private static List<ConcentrationRisk> MapIterationRisks(
         List<WorkItemDto> workItems,
-        List<string> iterationPaths,
-        int totalEffort)
+        IReadOnlyList<PoTool.Core.Metrics.EffortDiagnostics.EffortConcentrationBucket> iterationBuckets)
     {
-        return iterationPaths
-            .Select(iterationPath =>
+        return iterationBuckets
+            .Select(bucket =>
             {
                 var itemsInIteration = workItems
-                    .Where(wi => wi.IterationPath.Equals(iterationPath, StringComparison.OrdinalIgnoreCase))
+                    .Where(wi => wi.IterationPath.Equals(bucket.BucketKey, StringComparison.OrdinalIgnoreCase))
                     .ToList();
 
-                var effortAmount = itemsInIteration.Sum(wi => wi.Effort ?? 0);
-                var percentage = EffortDiagnosticsStatistics.CalculateShareOfTotal(effortAmount, totalEffort);
-                var riskLevel = DetermineConcentrationRisk(percentage);
                 var topWorkItems = itemsInIteration
                     .OrderByDescending(wi => wi.Effort ?? 0)
                     .Take(5)
@@ -193,16 +190,16 @@ public sealed class GetEffortConcentrationRiskQueryHandler
 
                 var description = GenerateConcentrationDescription(
                     "iteration",
-                    effortAmount,
-                    percentage,
-                    riskLevel);
+                    (int)bucket.EffortAmount,
+                    bucket.EffortShare,
+                    MapConcentrationRiskLevel(bucket.RiskLevel));
 
                 return new ConcentrationRisk(
-                    Name: ExtractSprintName(iterationPath),
-                    Path: iterationPath,
-                    EffortAmount: effortAmount,
-                    PercentageOfTotal: percentage * 100,
-                    RiskLevel: riskLevel,
+                    Name: ExtractSprintName(bucket.BucketKey),
+                    Path: bucket.BucketKey,
+                    EffortAmount: (int)bucket.EffortAmount,
+                    PercentageOfTotal: bucket.EffortShare * 100,
+                    RiskLevel: MapConcentrationRiskLevel(bucket.RiskLevel),
                     Description: description,
                     TopWorkItems: topWorkItems
                 );
@@ -218,35 +215,18 @@ public sealed class GetEffortConcentrationRiskQueryHandler
             .ToList();
     }
 
-    private static ConcentrationRiskLevel DetermineConcentrationRisk(double percentage)
+    private static ConcentrationRiskLevel MapConcentrationRiskLevel(
+        PoTool.Core.Metrics.EffortDiagnostics.ConcentrationRiskLevel riskLevel)
     {
-        return percentage switch
+        return riskLevel switch
         {
-            < 0.25 => ConcentrationRiskLevel.None,
-            >= 0.25 and < 0.40 => ConcentrationRiskLevel.Low,
-            >= 0.40 and < 0.60 => ConcentrationRiskLevel.Medium,
-            >= 0.60 and < 0.80 => ConcentrationRiskLevel.High,
-            _ => ConcentrationRiskLevel.Critical
+            PoTool.Core.Metrics.EffortDiagnostics.ConcentrationRiskLevel.None => ConcentrationRiskLevel.None,
+            PoTool.Core.Metrics.EffortDiagnostics.ConcentrationRiskLevel.Low => ConcentrationRiskLevel.Low,
+            PoTool.Core.Metrics.EffortDiagnostics.ConcentrationRiskLevel.Medium => ConcentrationRiskLevel.Medium,
+            PoTool.Core.Metrics.EffortDiagnostics.ConcentrationRiskLevel.High => ConcentrationRiskLevel.High,
+            PoTool.Core.Metrics.EffortDiagnostics.ConcentrationRiskLevel.Critical => ConcentrationRiskLevel.Critical,
+            _ => throw new ArgumentOutOfRangeException(nameof(riskLevel), riskLevel, null)
         };
-    }
-
-    private static (ConcentrationRiskLevel, double) CalculateOverallConcentrationRisk(
-        List<ConcentrationRisk> areaPathRisks,
-        List<ConcentrationRisk> iterationRisks)
-    {
-        var allRisks = areaPathRisks.Concat(iterationRisks).ToList();
-
-        if (!allRisks.Any())
-        {
-            return (ConcentrationRiskLevel.None, 0);
-        }
-
-        var maxConcentration = allRisks.Max(r => r.PercentageOfTotal);
-        var concentrationIndex = EffortDiagnosticsStatistics.CalculateNormalizedHerfindahlIndex(
-            allRisks.Select(r => r.PercentageOfTotal));
-        var overallRisk = DetermineConcentrationRisk(maxConcentration / 100.0);
-
-        return (overallRisk, concentrationIndex);
     }
 
     private static List<RiskMitigationRecommendation> GenerateMitigationRecommendations(
