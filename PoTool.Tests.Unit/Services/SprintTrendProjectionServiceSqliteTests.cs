@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
+using PoTool.Core.Contracts;
+using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.WorkItems;
@@ -26,6 +28,10 @@ public class SprintTrendProjectionServiceSqliteTests
         var services = new ServiceCollection();
         services.AddDbContext<PoToolDbContext>(options => options.UseSqlite(_connection));
         services.AddLogging();
+        services.AddSingleton<ICanonicalStoryPointResolutionService, CanonicalStoryPointResolutionService>();
+        services.AddSingleton<IHierarchyRollupService, HierarchyRollupService>();
+        services.AddSingleton<IDeliveryProgressRollupService, DeliveryProgressRollupService>();
+        services.AddSingleton<ISprintDeliveryProjectionService, SprintDeliveryProjectionService>();
 
         _serviceProvider = services.BuildServiceProvider();
 
@@ -125,8 +131,11 @@ public class SprintTrendProjectionServiceSqliteTests
         var service = new SprintTrendProjectionService(
             _serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<SprintTrendProjectionService>.Instance,
-            new CanonicalStoryPointResolutionService(),
-            new HierarchyRollupService(new CanonicalStoryPointResolutionService()));
+            stateClassificationService: null,
+            _serviceProvider.GetRequiredService<ICanonicalStoryPointResolutionService>(),
+            _serviceProvider.GetRequiredService<IHierarchyRollupService>(),
+            _serviceProvider.GetRequiredService<IDeliveryProgressRollupService>(),
+            _serviceProvider.GetRequiredService<ISprintDeliveryProjectionService>());
 
         var projections = await service.ComputeProjectionsAsync(productOwnerId, new[] { sprintId });
 

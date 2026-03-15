@@ -116,7 +116,7 @@ Classification: **minor cleanup**
 
 Remaining cleanup items:
 
-1. `PoTool.Api/Services/SprintTrendProjectionService.cs` still has convenience constructors that instantiate CDC services directly instead of relying exclusively on injected abstractions. This is a composition concern, not a formula-ownership problem.
+1. The re-audit identified one API composition cleanup item in `PoTool.Api/Services/SprintTrendProjectionService.cs`: convenience constructors instantiated CDC services directly instead of relying exclusively on injected abstractions.
 2. API adapters still translate between canonical CDC models and legacy DTO field names such as `*Effort`. This is acceptable transport compatibility, but it means the API boundary still carries some legacy naming debt outside the CDC.
 
 Neither item blocks CDC ownership for the audited slice.
@@ -145,6 +145,12 @@ These tests protect:
 - rollup semantics
 - handler orchestration
 - recompute path
+
+## CDC Minor Cleanup Completed
+
+- CDC services are now injected via DI in `PoTool.Api/Services/SprintTrendProjectionService.cs`; the API service no longer constructs `DeliveryProgressRollupService` or `SprintDeliveryProjectionService` via convenience constructors.
+- API orchestration responsibilities remain unchanged: EF loading, request assembly, persistence, and DTO/entity mapping still stay in `PoTool.Api`.
+- delivery trend formulas, rollups, and progression logic remain exclusively in `PoTool.Core.Domain`.
 
 ## Final verdict
 

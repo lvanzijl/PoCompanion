@@ -21,6 +21,7 @@ public sealed class DeliveryTrendAnalyticsCdcSummaryDocumentTests
         StringAssert.Contains(report, "## Implementation audit");
         StringAssert.Contains(report, "## Remaining issues");
         StringAssert.Contains(report, "## Test validation");
+        StringAssert.Contains(report, "## CDC Minor Cleanup Completed");
         StringAssert.Contains(report, "## Final verdict");
 
         StringAssert.Contains(report, "PoTool.Core.Domain/Domain/DeliveryTrends/Services/SprintDeliveryProjectionService.cs");
@@ -30,6 +31,9 @@ public sealed class DeliveryTrendAnalyticsCdcSummaryDocumentTests
         StringAssert.Contains(report, "PoTool.Api/Handlers/Metrics/GetSprintTrendMetricsQueryHandler.cs");
         StringAssert.Contains(report, "no local formula duplication remains");
         StringAssert.Contains(report, "Classification: **minor cleanup**");
+        StringAssert.Contains(report, "CDC services are now injected via DI");
+        StringAssert.Contains(report, "API orchestration responsibilities remain unchanged");
+        StringAssert.Contains(report, "remain exclusively in `PoTool.Core.Domain`");
         StringAssert.Contains(report, "Delivery Trend Analytics CDC ready after minor cleanup");
     }
 
