@@ -635,27 +635,9 @@ public class TreeBuilderService : ITreeBuilderService
         
         foreach (var issue in issues)
         {
-            SharedValidation.ValidationCategory? category = null;
-            
-            // Use RuleId directly to determine category
-            if (!string.IsNullOrEmpty(issue.RuleId))
-            {
-                if (issue.RuleId.StartsWith("SI-"))
-                {
-                    category = SharedValidation.ValidationCategory.StructuralIntegrity;
-                }
-                else if (issue.RuleId.StartsWith("RR-"))
-                {
-                    category = SharedValidation.ValidationCategory.RefinementReadiness;
-                }
-                else if (issue.RuleId.StartsWith("RC-"))
-                {
-                    // RC-2 (missing effort) has its own category; all other RC rules are RefinementCompleteness
-                    category = issue.RuleId.Equals("RC-2", StringComparison.OrdinalIgnoreCase)
-                        ? SharedValidation.ValidationCategory.MissingEffort
-                        : SharedValidation.ValidationCategory.RefinementCompleteness;
-                }
-            }
+            var category = string.IsNullOrEmpty(issue.RuleId)
+                ? null
+                : SharedValidation.ValidationRuleCatalog.GetCategory(issue.RuleId);
             
             // Only process issues with valid RuleId - skip issues without proper category
             if (!category.HasValue)

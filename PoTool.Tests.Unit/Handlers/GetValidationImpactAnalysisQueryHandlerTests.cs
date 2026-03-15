@@ -130,6 +130,7 @@ public class GetValidationImpactAnalysisQueryHandlerTests
         Assert.HasCount(1, result.Violations);
         Assert.AreEqual(1, result.Violations[0].WorkItemId);
         Assert.AreEqual("Goal", result.Violations[0].WorkItemType);
+        Assert.AreEqual("SI-1", result.Violations[0].ViolationType);
         Assert.AreEqual("Error", result.Violations[0].Severity);
         // Verify that blocked items are counted (should be > 0 since Goal has descendants)
         Assert.IsGreaterThanOrEqualTo(0, result.TotalBlockedItems);

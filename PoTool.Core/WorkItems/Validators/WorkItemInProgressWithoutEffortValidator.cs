@@ -1,6 +1,7 @@
 using PoTool.Shared.WorkItems;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
+using System.ComponentModel;
 
 namespace PoTool.Core.WorkItems.Validators;
 
@@ -11,6 +12,7 @@ namespace PoTool.Core.WorkItems.Validators;
 /// 
 /// This class is kept for backwards compatibility but is no longer registered in the DI container.
 /// </summary>
+[EditorBrowsable(EditorBrowsableState.Never)]
 [Obsolete("This validator has been replaced by the hierarchical RC-2 rule (PbiEffortEmptyRule). Use the hierarchical validation system instead.")]
 public class WorkItemInProgressWithoutEffortValidator : IWorkItemValidator
 {

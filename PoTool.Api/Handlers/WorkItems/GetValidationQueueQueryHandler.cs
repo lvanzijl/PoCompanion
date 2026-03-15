@@ -33,7 +33,7 @@ public sealed class GetValidationQueueQueryHandler
             query.CategoryKey,
             query.ProductIds != null ? string.Join(", ", query.ProductIds) : "null (all products)");
 
-        var (categoryLabel, ruleIdFilter) = ResolveCategoryMeta(query.CategoryKey);
+        var categoryLabel = ValidationRuleCatalog.GetCategoryLabel(query.CategoryKey);
 
         // Reuse existing validated work-item loading to avoid duplication
         var workItems = await _mediator.Send(
@@ -50,7 +50,7 @@ public sealed class GetValidationQueueQueryHandler
             foreach (var issue in wi.ValidationIssues)
             {
                 if (string.IsNullOrEmpty(issue.RuleId)) continue;
-                if (!ruleIdFilter(issue.RuleId)) continue;
+                if (!ValidationRuleCatalog.MatchesUiCategory(issue.RuleId, query.CategoryKey)) continue;
 
                 if (!ruleItemSets.TryGetValue(issue.RuleId, out var set))
                 {
@@ -73,21 +73,4 @@ public sealed class GetValidationQueueQueryHandler
 
         return new ValidationQueueDto(query.CategoryKey, categoryLabel, allAffected.Count, ruleGroups);
     }
-
-    /// <summary>
-    /// Returns the human-readable category label and a predicate that decides
-    /// which rule IDs belong to the requested category.
-    /// </summary>
-    private static (string Label, Func<string, bool> Filter) ResolveCategoryMeta(string categoryKey)
-    {
-        return categoryKey.ToUpperInvariant() switch
-        {
-            "SI"  => (ValidationRuleDescriptions.GetCategoryLabel("SI"),  ruleId => ruleId.StartsWith("SI-",  StringComparison.OrdinalIgnoreCase)),
-            "RR"  => (ValidationRuleDescriptions.GetCategoryLabel("RR"),  ruleId => ruleId.StartsWith("RR-",  StringComparison.OrdinalIgnoreCase)),
-            "RC"  => (ValidationRuleDescriptions.GetCategoryLabel("RC"),  ruleId => ruleId.StartsWith("RC-",  StringComparison.OrdinalIgnoreCase)),
-            "EFF" => (ValidationRuleDescriptions.GetCategoryLabel("EFF"), ruleId => ruleId.Equals("RC-2",    StringComparison.OrdinalIgnoreCase)),
-            _     => (categoryKey,                                         ruleId => ruleId.StartsWith(categoryKey + "-", StringComparison.OrdinalIgnoreCase))
-        };
-    }
 }
-
