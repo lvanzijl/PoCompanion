@@ -99,6 +99,8 @@ public class GetSprintTrendMetricsQueryHandlerTests
 
         Assert.AreEqual(1, _projectionService.ComputeProjectionsCallCount);
         Assert.AreEqual(0, _projectionService.GetProjectionsCallCount);
+        Assert.AreEqual(1, _projectionService.LastComputeProductOwnerId);
+        CollectionAssert.AreEqual(sprintIds, _projectionService.LastComputeSprintIds.ToArray());
     }
 
     [TestMethod]
@@ -567,6 +569,7 @@ public class GetSprintTrendMetricsQueryHandlerTests
 
         Assert.IsTrue(result.Success);
         Assert.IsNotNull(result.Metrics);
+        // Product-level progress summaries should only decorate the most recent sprint in the response.
         Assert.AreEqual(0, result.Metrics[0].ProductMetrics[0].ScopeChangeEffort, "Only the most recent sprint should receive progress summaries.");
         Assert.AreEqual(5, result.Metrics[1].ProductMetrics[0].ScopeChangeEffort);
         Assert.AreEqual(3, result.Metrics[1].ProductMetrics[0].CompletedFeatureCount);
@@ -678,6 +681,10 @@ public class GetSprintTrendMetricsQueryHandlerTests
 
         public int ComputeProjectionsCallCount { get; private set; }
 
+        public int? LastComputeProductOwnerId { get; private set; }
+
+        public IReadOnlyList<int> LastComputeSprintIds { get; private set; } = Array.Empty<int>();
+
         public override Task<IReadOnlyList<SprintMetricsProjectionEntity>> GetProjectionsAsync(
             int productOwnerId,
             IEnumerable<int> sprintIds,
@@ -693,6 +700,8 @@ public class GetSprintTrendMetricsQueryHandlerTests
             CancellationToken cancellationToken = default)
         {
             ComputeProjectionsCallCount++;
+            LastComputeProductOwnerId = productOwnerId;
+            LastComputeSprintIds = sprintIds.ToList();
             return ComputeProjectionsAsyncHandler(productOwnerId, sprintIds, cancellationToken);
         }
 

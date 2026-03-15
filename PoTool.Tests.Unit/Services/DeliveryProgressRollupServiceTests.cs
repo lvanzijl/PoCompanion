@@ -96,6 +96,8 @@ public sealed class DeliveryProgressRollupServiceTests
         ]);
 
         Assert.HasCount(2, result);
+        Assert.IsTrue(result.ContainsKey(1));
+        Assert.IsTrue(result.ContainsKey(2));
         Assert.AreEqual(3, result[1].ScopeChangeEffort);
         Assert.AreEqual(1, result[1].CompletedFeatureCount);
         Assert.AreEqual(6, result[2].ScopeChangeEffort);
