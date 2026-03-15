@@ -2,6 +2,13 @@
   {
     "date": "2026-03-15",
     "type": "Changed",
+    "title": "Percentile metrics now use one interpolation rule",
+    "impact": "Planning, pipeline, pull request, and bug percentile metrics now use the same linear-interpolation percentile semantics so percentile-based summaries stay consistent across views.",
+    "area": "Trends"
+  },
+  {
+    "date": "2026-03-15",
+    "type": "Changed",
     "title": "Effort diagnostics now use stable effort-hour rules",
     "impact": "Effort imbalance and concentration analytics now describe fixed stable semantics, keep concentration bands deterministic, and label effort values consistently as effort hours instead of points.",
     "area": "Planning",

@@ -5,6 +5,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Pipelines.Queries;
 using PoTool.Shared.Pipelines;
+using PoTool.Shared.Statistics;
 
 namespace PoTool.Api.Handlers.Pipelines;
 
@@ -196,7 +197,7 @@ public sealed class GetPipelineInsightsQueryHandler
 
         var globalDurations = GetDurationsMinutes(currentRuns);
         double? globalP90 = globalDurations.Count >= 3
-            ? Percentile(globalDurations, 90) : null;
+            ? PercentileMath.LinearInterpolation(globalDurations, 90) : null;
 
         return new PipelineInsightsDto
         {
@@ -305,7 +306,7 @@ public sealed class GetPipelineInsightsQueryHandler
 
         var durations = GetDurationsMinutes(currentRuns);
         double? median = durations.Count > 0 ? Median(durations) : null;
-        double? p90    = durations.Count >= 3 ? Percentile(durations, 90) : null;
+        double? p90    = durations.Count >= 3 ? PercentileMath.LinearInterpolation(durations, 90) : null;
 
         // Group runs by pipeline for top-3 and breakdown
         var currentByDef  = currentRuns .GroupBy(r => r.DefId).ToDictionary(g => g.Key, g => g.ToList());
@@ -555,7 +556,7 @@ public sealed class GetPipelineInsightsQueryHandler
                 FailureRate           = Math.Round(failureRate,  1),
                 WarningRate           = Math.Round(warningRate,  1),
                 MedianDurationMinutes = durations.Count > 0    ? Math.Round(Median(durations),              1) : null,
-                P90DurationMinutes    = durations.Count >= 3   ? Math.Round(Percentile(durations, 90),      1) : null,
+                P90DurationMinutes    = durations.Count >= 3   ? Math.Round(PercentileMath.LinearInterpolation(durations, 90),      1) : null,
                 DeltaFailureRate      = deltaFailureRate,
                 HalfSprintTrend       = trend,
                 FirstHalfFailureRate  = firstHalfFailureRate,
@@ -640,15 +641,6 @@ public sealed class GetPipelineInsightsQueryHandler
         return sorted.Count % 2 == 0
             ? (sorted[mid - 1] + sorted[mid]) / 2.0
             : sorted[mid];
-    }
-
-    private static double Percentile(List<double> sorted, int p)
-    {
-        double rank = (p / 100.0) * (sorted.Count - 1);
-        int lo = (int)Math.Floor(rank);
-        int hi = (int)Math.Ceiling(rank);
-        if (lo == hi) return sorted[lo];
-        return sorted[lo] + (sorted[hi] - sorted[lo]) * (rank - lo);
     }
 
     private static PipelineInsightsDto EmptyResult(int sprintId, string sprintName)

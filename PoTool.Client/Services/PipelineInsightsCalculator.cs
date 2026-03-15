@@ -1,4 +1,5 @@
 using PoTool.Client.ApiClient;
+using PoTool.Shared.Statistics;
 
 namespace PoTool.Client.Services;
 
@@ -249,19 +250,6 @@ public class PipelineInsightsCalculator
         if (sortedValues.Count == 0)
             return null;
 
-        double rank = (percentile / 100.0) * (sortedValues.Count - 1);
-        int lowerIndex = (int)Math.Floor(rank);
-        int upperIndex = (int)Math.Ceiling(rank);
-
-        if (lowerIndex == upperIndex)
-        {
-            return sortedValues[lowerIndex];
-        }
-
-        double lowerValue = sortedValues[lowerIndex];
-        double upperValue = sortedValues[upperIndex];
-        double fraction = rank - lowerIndex;
-
-        return lowerValue + (upperValue - lowerValue) * fraction;
+        return PercentileMath.LinearInterpolation(sortedValues, percentile);
     }
 }
