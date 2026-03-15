@@ -55,6 +55,30 @@ public sealed class StatisticalHelperAuditDocumentTests
     }
 
     [TestMethod]
+    public void StatisticalCoreCleanupReport_ContainsReauditResultsAndFinalVerdict()
+    {
+        var repositoryRoot = GetRepositoryRoot();
+        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "statistical_core_cleanup_report.md");
+
+        Assert.IsTrue(File.Exists(reportPath), "The statistical core cleanup report should exist under docs/audits.");
+
+        var report = File.ReadAllText(reportPath);
+
+        StringAssert.Contains(report, "## Re-Audit Results — Statistical Core Cleanup");
+        StringAssert.Contains(report, "what is now centralized");
+        StringAssert.Contains(report, "what intentionally remains local");
+        StringAssert.Contains(report, "any remaining duplication");
+        StringAssert.Contains(report, "final assessment");
+        StringAssert.Contains(report, "PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsStatistics.cs");
+        StringAssert.Contains(report, "PoTool.Core.Domain/Domain/Statistics/StatisticsMath.cs");
+        StringAssert.Contains(report, "PoTool.Shared/Statistics/PercentileMath.cs");
+        StringAssert.Contains(report, "confidence stays slice-specific");
+        StringAssert.Contains(report, "utilization stays slice-specific");
+        StringAssert.Contains(report, "local median helpers remain");
+        StringAssert.Contains(report, "Statistical core clean with minor cleanup");
+    }
+
+    [TestMethod]
     public void EstimationHandlers_DoNotRetainLocalVarianceHelpers()
     {
         var repositoryRoot = GetRepositoryRoot();

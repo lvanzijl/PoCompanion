@@ -73,3 +73,32 @@
   - `PoTool.Tests.Unit/Audits/StatisticalHelperAuditDocumentTests.cs`
 - intentionally local exceptions:
   - none
+
+## Re-Audit Results — Statistical Core Cleanup
+
+- what is now centralized:
+  - `PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsStatistics.cs` is the single production owner for stable EffortDiagnostics primitives: `Mean`, `Median`, `Variance`, `DeviationFromMean`, `ShareOfTotal`, `HHI`, and coefficient-of-variation support.
+  - `PoTool.Core.Domain/Domain/Statistics/StatisticsMath.cs` is the shared pure-math owner for repository-wide `Mean`, `Median`, `Variance`, and `StandardDeviation`.
+  - `PoTool.Shared/Statistics/PercentileMath.cs` is the shared percentile owner, and the active percentile consumers now use `PercentileMath.LinearInterpolation(...)`.
+- what intentionally remains local:
+  - confidence stays slice-specific:
+    - `GetEffortEstimationSuggestionsQueryHandler` blends sample size with variance damping
+    - `GetEffortDistributionTrendQueryHandler` derives forecast confidence from coefficient-of-variation bands
+    - `GetEpicCompletionForecastQueryHandler` maps historical sprint depth to low/medium/high confidence
+  - utilization stays slice-specific:
+    - `GetEffortDistributionQueryHandler`, `GetEffortDistributionTrendQueryHandler`, and `GetEffortImbalanceQueryHandler` use utilization as descriptive capacity context
+    - `GetSprintCapacityPlanQueryHandler` uses utilization to drive under/normal/near-capacity/over-capacity status bands
+  - local median helpers remain in PR and pipeline slices because their empty-sample and nullable-result contracts are slice-specific and do not match the repository-wide `StatisticsMath.Median(...)` contract.
+  - `GetEffortDistributionTrendQueryHandler.CalculateStandardDeviation(...)` remains as a type-conversion wrapper over `StatisticsMath.StandardDeviation(...)`, not as a duplicate implementation.
+- any remaining duplication:
+  - no exact production duplication remains for percentile or variance logic.
+  - the remaining duplication is minor and localized to median wrappers in:
+    - `PoTool.Api/Handlers/PullRequests/GetPrSprintTrendsQueryHandler.cs`
+    - `PoTool.Api/Handlers/PullRequests/GetPullRequestInsightsQueryHandler.cs`
+    - `PoTool.Api/Handlers/PullRequests/GetPrDeliveryInsightsQueryHandler.cs`
+    - `PoTool.Api/Handlers/Pipelines/GetPipelineInsightsQueryHandler.cs`
+  - this is acceptable because those call sites intentionally preserve pre-sorted and/or nullable semantics instead of broad over-centralization.
+- final assessment:
+  - Statistical core clean with minor cleanup
+  - The shared statistical core is now coherent, minimal, and semantically aligned for reusable pure math.
+  - Confidence and utilization remain appropriately local, and the remaining local median wrappers are acceptable unless a future audit chooses one repository-wide nullable/empty median contract.
