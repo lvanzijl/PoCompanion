@@ -14,6 +14,7 @@ using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems.Validators.Rules;
 using PoTool.Core.WorkItems.Filtering;
 using PoTool.Core.Health;
+using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Forecasting.Services;
@@ -250,6 +251,10 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<WorkItemFilterer>();
         services.AddScoped<BacklogHealthCalculator>();
         services.AddScoped<BacklogStateComputationService>();
+        services.AddSingleton<ISprintCommitmentService, SprintCommitmentService>();
+        services.AddSingleton<ISprintScopeChangeService, SprintScopeChangeService>();
+        services.AddSingleton<ISprintCompletionService, SprintCompletionService>();
+        services.AddSingleton<ISprintSpilloverService, SprintSpilloverService>();
         services.AddSingleton<ICanonicalStoryPointResolutionService, CanonicalStoryPointResolutionService>();
         services.AddSingleton<IHierarchyRollupService, HierarchyRollupService>();
         services.AddSingleton<IDeliveryProgressRollupService, DeliveryProgressRollupService>();
@@ -257,7 +262,9 @@ public static class ApiServiceCollectionExtensions
         services.AddSingleton<ICompletionForecastService, CompletionForecastService>();
         services.AddSingleton<IVelocityCalibrationService, VelocityCalibrationService>();
         services.AddSingleton<IEffortTrendForecastService, EffortTrendForecastService>();
-        services.AddSingleton<ISprintExecutionMetricsCalculator, SprintExecutionMetricsCalculator>();
+        services.AddSingleton<PoTool.Core.Domain.Cdc.Sprints.ISprintExecutionMetricsCalculator, PoTool.Core.Domain.Cdc.Sprints.SprintExecutionMetricsCalculator>();
+        services.AddSingleton<PoTool.Core.Domain.Metrics.ISprintExecutionMetricsCalculator>(sp =>
+            (PoTool.Core.Domain.Cdc.Sprints.SprintExecutionMetricsCalculator)sp.GetRequiredService<PoTool.Core.Domain.Cdc.Sprints.ISprintExecutionMetricsCalculator>());
 
         // Register TFS configuration and client
         services.AddDataProtection();

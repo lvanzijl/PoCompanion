@@ -5,6 +5,7 @@ using PoTool.Api.Adapters;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
+using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Estimation;
@@ -26,6 +27,9 @@ public class SprintTrendProjectionService
     private readonly IHierarchyRollupService _hierarchyRollupService;
     private readonly ISprintDeliveryProjectionService _deliveryTrendProjectionService;
     private readonly IDeliveryProgressRollupService _deliveryProgressRollupService;
+    private readonly ISprintCommitmentService _sprintCommitmentService;
+    private readonly ISprintCompletionService _sprintCompletionService;
+    private readonly ISprintSpilloverService _sprintSpilloverService;
     private readonly PortfolioFlowProjectionService? _portfolioFlowProjectionService;
 
     public SprintTrendProjectionService(
@@ -35,6 +39,9 @@ public class SprintTrendProjectionService
         ICanonicalStoryPointResolutionService storyPointResolutionService,
         IHierarchyRollupService hierarchyRollupService,
         IDeliveryProgressRollupService deliveryProgressRollupService,
+        ISprintCommitmentService sprintCommitmentService,
+        ISprintCompletionService sprintCompletionService,
+        ISprintSpilloverService sprintSpilloverService,
         ISprintDeliveryProjectionService deliveryTrendProjectionService,
         PortfolioFlowProjectionService? portfolioFlowProjectionService = null)
     {
@@ -43,6 +50,9 @@ public class SprintTrendProjectionService
         ArgumentNullException.ThrowIfNull(storyPointResolutionService);
         ArgumentNullException.ThrowIfNull(hierarchyRollupService);
         ArgumentNullException.ThrowIfNull(deliveryProgressRollupService);
+        ArgumentNullException.ThrowIfNull(sprintCommitmentService);
+        ArgumentNullException.ThrowIfNull(sprintCompletionService);
+        ArgumentNullException.ThrowIfNull(sprintSpilloverService);
         ArgumentNullException.ThrowIfNull(deliveryTrendProjectionService);
 
         _scopeFactory = scopeFactory;
@@ -51,6 +61,9 @@ public class SprintTrendProjectionService
         _storyPointResolutionService = storyPointResolutionService;
         _hierarchyRollupService = hierarchyRollupService;
         _deliveryProgressRollupService = deliveryProgressRollupService;
+        _sprintCommitmentService = sprintCommitmentService;
+        _sprintCompletionService = sprintCompletionService;
+        _sprintSpilloverService = sprintSpilloverService;
         _deliveryTrendProjectionService = deliveryTrendProjectionService;
         _portfolioFlowProjectionService = portfolioFlowProjectionService;
     }
@@ -166,7 +179,7 @@ public class SprintTrendProjectionService
         var iterationFieldChanges = allIterationEvents.ToFieldChangeEvents();
         var stateEventsByWorkItem = stateFieldChanges.GroupByWorkItemId();
         var iterationEventsByWorkItem = iterationFieldChanges.GroupByWorkItemId();
-        var firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(stateFieldChanges, workItemSnapshotsById, stateLookup);
+        var firstDoneByWorkItem = _sprintCompletionService.BuildFirstDoneByWorkItem(stateFieldChanges, workItemSnapshotsById, stateLookup);
         var sprintDefinitionsById = validSprints.ToDictionary(sprint => sprint.Id, sprint => sprint.ToDefinition());
         var teamSprintDefinitions = teamSprints.Select(teamSprint => teamSprint.ToDefinition()).ToList();
         var deliveryTrendResolvedItems = resolvedItems
@@ -183,12 +196,12 @@ public class SprintTrendProjectionService
             var sprintStart = new DateTimeOffset(sprintStartUtc, TimeSpan.Zero);
             var sprintEnd = new DateTimeOffset(sprintEndUtc, TimeSpan.Zero);
             var sprintDefinition = sprintDefinitionsById[sprint.Id];
-            var nextSprintPath = SprintSpilloverLookup.GetNextSprintPath(sprintDefinition, teamSprintDefinitions);
-            var committedWorkItemIds = SprintCommitmentLookup.BuildCommittedWorkItemIds(
+            var nextSprintPath = _sprintSpilloverService.GetNextSprintPath(sprintDefinition, teamSprintDefinitions);
+            var committedWorkItemIds = _sprintCommitmentService.BuildCommittedWorkItemIds(
                 workItemSnapshotsById,
                 iterationEventsByWorkItem,
                 sprintDefinition.Path,
-                SprintCommitmentLookup.GetCommitmentTimestamp(sprintStart));
+                _sprintCommitmentService.GetCommitmentTimestamp(sprintStart));
 
             // Filter the pre-loaded activity events to this sprint's date range
             var sprintActivity = allActivityEvents
@@ -211,9 +224,9 @@ public class SprintTrendProjectionService
                         pair => (IReadOnlyList<FieldChangeEvent>)pair.Value.ToFieldChangeEvents()),
                     sprintStart,
                     sprintEnd,
+                    committedWorkItemIds,
                     stateLookup,
                     firstDoneByWorkItem,
-                    committedWorkItemIds,
                     nextSprintPath,
                     workItemSnapshotsById,
                     stateEventsByWorkItem,
@@ -265,6 +278,22 @@ public class SprintTrendProjectionService
         IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? stateEventsByWorkItem = null,
         IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? iterationEventsByWorkItem = null)
     {
+        var effectiveWorkItemSnapshotsById = workItemSnapshotsById
+            ?? workItemsByTfsId.Values.ToSnapshotDictionary();
+        var effectiveIterationEventsByWorkItem = iterationEventsByWorkItem
+            ?? activityByWorkItem.ToDictionary(
+                pair => pair.Key,
+                pair => (IReadOnlyList<FieldChangeEvent>)pair.Value
+                    .ToFieldChangeEvents()
+                    .Where(change => string.Equals(change.FieldRefName, "System.IterationPath", StringComparison.OrdinalIgnoreCase))
+                    .ToList());
+        var effectiveCommittedWorkItemIds = committedWorkItemIds
+            ?? _sprintCommitmentService.BuildCommittedWorkItemIds(
+                effectiveWorkItemSnapshotsById,
+                effectiveIterationEventsByWorkItem,
+                sprint.Path,
+                _sprintCommitmentService.GetCommitmentTimestamp(sprintStart));
+
         var projection = _deliveryTrendProjectionService.Compute(new SprintDeliveryProjectionRequest(
             sprint.ToDefinition(),
             productId,
@@ -275,13 +304,13 @@ public class SprintTrendProjectionService
                 pair => (IReadOnlyList<FieldChangeEvent>)pair.Value.ToFieldChangeEvents()),
             sprintStart,
             sprintEnd,
+            effectiveCommittedWorkItemIds,
             stateLookup,
             firstDoneByWorkItem,
-            committedWorkItemIds,
             nextSprintPath,
-            workItemSnapshotsById,
+            effectiveWorkItemSnapshotsById,
             stateEventsByWorkItem,
-            iterationEventsByWorkItem));
+            effectiveIterationEventsByWorkItem));
 
         return ToProjectionEntity(projection);
     }

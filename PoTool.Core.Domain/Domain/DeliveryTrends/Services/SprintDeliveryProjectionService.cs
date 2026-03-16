@@ -2,6 +2,7 @@ using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Sprints;
+using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.WorkItems;
 using BacklogWorkItemTypes = PoTool.Core.Domain.BacklogQuality.Models.BacklogWorkItemTypes;
@@ -38,6 +39,8 @@ public sealed class SprintDeliveryProjectionService : ISprintDeliveryProjectionS
     private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
     private readonly IHierarchyRollupService _hierarchyRollupService;
     private readonly IDeliveryProgressRollupService _deliveryProgressRollupService;
+    private readonly ISprintCompletionService _sprintCompletionService;
+    private readonly ISprintSpilloverService _sprintSpilloverService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SprintDeliveryProjectionService"/> class.
@@ -45,22 +48,27 @@ public sealed class SprintDeliveryProjectionService : ISprintDeliveryProjectionS
     public SprintDeliveryProjectionService(
         ICanonicalStoryPointResolutionService storyPointResolutionService,
         IHierarchyRollupService hierarchyRollupService,
-        IDeliveryProgressRollupService deliveryProgressRollupService)
+        IDeliveryProgressRollupService deliveryProgressRollupService,
+        ISprintCompletionService sprintCompletionService,
+        ISprintSpilloverService sprintSpilloverService)
     {
         _storyPointResolutionService = storyPointResolutionService ?? throw new ArgumentNullException(nameof(storyPointResolutionService));
         _hierarchyRollupService = hierarchyRollupService ?? throw new ArgumentNullException(nameof(hierarchyRollupService));
         _deliveryProgressRollupService = deliveryProgressRollupService ?? throw new ArgumentNullException(nameof(deliveryProgressRollupService));
+        _sprintCompletionService = sprintCompletionService ?? throw new ArgumentNullException(nameof(sprintCompletionService));
+        _sprintSpilloverService = sprintSpilloverService ?? throw new ArgumentNullException(nameof(sprintSpilloverService));
     }
 
     /// <inheritdoc />
     public SprintDeliveryProjection Compute(SprintDeliveryProjectionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.CommittedWorkItemIds);
 
         var effectiveWorkItemSnapshotsById = request.WorkItemSnapshotsById
             ?? request.WorkItemsById.Values.ToDictionary(workItem => workItem.WorkItemId, ToSnapshot);
         var effectiveFirstDoneByWorkItem = request.FirstDoneByWorkItem
-            ?? FirstDoneDeliveryLookup.Build(
+            ?? _sprintCompletionService.BuildFirstDoneByWorkItem(
                 request.ActivityByWorkItem.Values.SelectMany(events => events),
                 effectiveWorkItemSnapshotsById,
                 request.StateLookup);
@@ -154,11 +162,6 @@ public sealed class SprintDeliveryProjectionService : ISprintDeliveryProjectionS
             }
         }
 
-        var effectiveCommittedWorkItemIds = request.CommittedWorkItemIds
-            ?? productResolved
-                .Where(resolvedItem => resolvedItem.ResolvedSprintId == request.Sprint.SprintId)
-                .Select(resolvedItem => resolvedItem.WorkItemId)
-                .ToHashSet();
         var effectiveStateEventsByWorkItem = request.StateEventsByWorkItem
             ?? request.ActivityByWorkItem
                 .SelectMany(pair => pair.Value
@@ -169,8 +172,8 @@ public sealed class SprintDeliveryProjectionService : ISprintDeliveryProjectionS
                 .SelectMany(pair => pair.Value
                     .Where(activityEvent => string.Equals(activityEvent.FieldRefName, "System.IterationPath", StringComparison.OrdinalIgnoreCase)))
                 .GroupByWorkItemId();
-        var spilloverWorkItemIds = SprintSpilloverLookup.BuildSpilloverWorkItemIds(
-            effectiveCommittedWorkItemIds,
+        var spilloverWorkItemIds = _sprintSpilloverService.BuildSpilloverWorkItemIds(
+            request.CommittedWorkItemIds,
             effectiveWorkItemSnapshotsById,
             effectiveStateEventsByWorkItem,
             effectiveIterationEventsByWorkItem,
@@ -240,7 +243,7 @@ public sealed class SprintDeliveryProjectionService : ISprintDeliveryProjectionS
 
         var plannedPbis = productResolved
             .Where(resolvedItem => CanonicalWorkItemTypes.IsAuthoritativePbi(resolvedItem.WorkItemType)
-                && effectiveCommittedWorkItemIds.Contains(resolvedItem.WorkItemId))
+                && request.CommittedWorkItemIds.Contains(resolvedItem.WorkItemId))
             .Select(resolvedItem => request.WorkItemsById.GetValueOrDefault(resolvedItem.WorkItemId))
             .Where(workItem => workItem != null)
             .ToList();
@@ -253,7 +256,7 @@ public sealed class SprintDeliveryProjectionService : ISprintDeliveryProjectionS
             .Sum(metric => metric.Estimate.Value ?? 0d);
         var plannedBugs = productResolved
             .Count(resolvedItem => string.Equals(resolvedItem.WorkItemType, BacklogWorkItemTypes.Bug, StringComparison.OrdinalIgnoreCase)
-                && effectiveCommittedWorkItemIds.Contains(resolvedItem.WorkItemId));
+                && request.CommittedWorkItemIds.Contains(resolvedItem.WorkItemId));
 
         var derivedStoryPointCount = plannedStoryPointMetrics.Count(metric => metric.Estimate.Source == StoryPointEstimateSource.Derived);
         var derivedStoryPoints = plannedStoryPointMetrics

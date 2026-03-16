@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Domain.Models;
+using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Hierarchy;
@@ -125,12 +126,19 @@ public class SprintTrendProjectionServiceTests
         var deliveryProgressRollupService = new DeliveryProgressRollupService(
             storyPointResolutionService,
             hierarchyRollupService);
+        var sprintCompletionService = new SprintCompletionService();
+        var sprintSpilloverService = new SprintSpilloverService();
         var sprintDeliveryProjectionService = new SprintDeliveryProjectionService(
             storyPointResolutionService,
             hierarchyRollupService,
-            deliveryProgressRollupService);
+            deliveryProgressRollupService,
+            sprintCompletionService,
+            sprintSpilloverService);
 
         return new ServiceCollection()
+            .AddSingleton<ISprintCommitmentService, SprintCommitmentService>()
+            .AddSingleton<ISprintCompletionService>(sprintCompletionService)
+            .AddSingleton<ISprintSpilloverService>(sprintSpilloverService)
             .AddSingleton<ICanonicalStoryPointResolutionService>(storyPointResolutionService)
             .AddSingleton<IHierarchyRollupService>(hierarchyRollupService)
             .AddSingleton<IDeliveryProgressRollupService>(deliveryProgressRollupService)
@@ -147,6 +155,9 @@ public class SprintTrendProjectionServiceTests
             services.GetRequiredService<ICanonicalStoryPointResolutionService>(),
             services.GetRequiredService<IHierarchyRollupService>(),
             services.GetRequiredService<IDeliveryProgressRollupService>(),
+            services.GetRequiredService<ISprintCommitmentService>(),
+            services.GetRequiredService<ISprintCompletionService>(),
+            services.GetRequiredService<ISprintSpilloverService>(),
             services.GetRequiredService<ISprintDeliveryProjectionService>());
     }
 
@@ -1447,7 +1458,7 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
-    public void ComputeProductSprintProjection_PlannedCount_MatchesResolvedSprint()
+    public void ComputeProductSprintProjection_PlannedCount_UsesCommittedSprintMembership()
     {
         var sprint = CreateSprint(1, "Sprint 1");
         var sprintStart = new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero);
@@ -1469,13 +1480,14 @@ public class SprintTrendProjectionServiceTests
             [203] = CreateWorkItem(203, WorkItemType.Pbi, "PBI 3", effort: 10, state: "Active"),
             [204] = CreateWorkItem(204, WorkItemType.Bug, "Bug 1", state: "Active"),
         };
+        workItems[203].IterationPath = "\\Project\\Sprint 2";
 
         var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>();
 
         var result = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);
 
-        Assert.AreEqual(2, result.PlannedCount, "PlannedCount should be 2 (only PBIs resolved to sprint 1)");
+        Assert.AreEqual(2, result.PlannedCount, "PlannedCount should use committed sprint membership rather than ResolvedSprintId fallback.");
         Assert.AreEqual(50, result.PlannedEffort, "PlannedEffort should be 30+20=50");
         Assert.AreEqual(1, result.BugsPlannedCount, "BugsPlannedCount should be 1 (bug resolved to sprint 1)");
     }
