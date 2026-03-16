@@ -196,6 +196,11 @@ public class PoToolDbContext : DbContext
     public DbSet<SprintMetricsProjectionEntity> SprintMetricsProjections => Set<SprintMetricsProjectionEntity>();
 
     /// <summary>
+    /// Pre-computed canonical PortfolioFlow projections.
+    /// </summary>
+    public DbSet<PortfolioFlowProjectionEntity> PortfolioFlowProjections => Set<PortfolioFlowProjectionEntity>();
+
+    /// <summary>
     /// Roadmap snapshots — point-in-time captures of roadmap state.
     /// Stored application-side. Never modifies TFS.
     /// </summary>
@@ -617,6 +622,25 @@ public class PoToolDbContext : DbContext
 
         // Sprint metrics projections
         modelBuilder.Entity<SprintMetricsProjectionEntity>(entity =>
+        {
+            entity.HasIndex(e => new { e.SprintId, e.ProductId })
+                .IsUnique();
+
+            entity.HasIndex(e => e.SprintId);
+            entity.HasIndex(e => e.ProductId);
+
+            entity.HasOne(e => e.Sprint)
+                .WithMany()
+                .HasForeignKey(e => e.SprintId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Product)
+                .WithMany()
+                .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PortfolioFlowProjectionEntity>(entity =>
         {
             entity.HasIndex(e => new { e.SprintId, e.ProductId })
                 .IsUnique();
