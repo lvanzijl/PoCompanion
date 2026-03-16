@@ -10,9 +10,9 @@ namespace PoTool.Shared.Metrics;
 /// <param name="EpicId">TFS ID of the requested epic or feature.</param>
 /// <param name="Title">Display title of the requested work item.</param>
 /// <param name="Type">Work item type of the requested item.</param>
-/// <param name="TotalEffort">Legacy contract name for total canonical story-point scope.</param>
-/// <param name="CompletedEffort">Legacy contract name for completed canonical story-point scope.</param>
-/// <param name="RemainingEffort">Legacy contract name for remaining canonical story-point scope.</param>
+/// <param name="TotalEffort">Legacy contract name for total canonical story-point scope. Compatibility alias; deprecated in future contract revision.</param>
+/// <param name="CompletedEffort">Legacy contract name for completed canonical story-point scope. Compatibility alias; deprecated in future contract revision.</param>
+/// <param name="RemainingEffort">Legacy contract name for remaining canonical story-point scope. Compatibility alias; deprecated in future contract revision.</param>
 /// <param name="EstimatedVelocity">Average delivered story points across the sampled historical sprints.</param>
 /// <param name="SprintsRemaining">Forecasted sprint count required to finish the remaining scope.</param>
 /// <param name="EstimatedCompletionDate">Projected completion date using the estimated velocity.</param>
@@ -34,7 +34,20 @@ public sealed record EpicCompletionForecastDto(
     IReadOnlyList<SprintForecast> ForecastByDate,
     string AreaPath,
     DateTimeOffset AnalysisTimestamp
-);
+)
+{
+    /// <summary>
+    /// Canonical alias for completed canonical story-point scope.
+    /// Maps to the same internal value as CompletedEffort.
+    /// </summary>
+    public double DeliveredStoryPoints => CompletedEffort;
+
+    /// <summary>
+    /// Canonical alias for remaining canonical story-point scope.
+    /// Maps to the same internal value as RemainingEffort.
+    /// </summary>
+    public double RemainingStoryPoints => RemainingEffort;
+}
 
 /// <summary>
 /// Sprint-by-sprint forecast showing predicted progress.
@@ -43,8 +56,8 @@ public sealed record EpicCompletionForecastDto(
 /// <param name="IterationPath">Synthetic iteration path used for the forecast bucket.</param>
 /// <param name="SprintStartDate">Forecast sprint start date.</param>
 /// <param name="SprintEndDate">Forecast sprint end date.</param>
-/// <param name="ExpectedCompletedEffort">Legacy contract name for expected completed scope in story points.</param>
-/// <param name="RemainingEffortAfterSprint">Legacy contract name for remaining scope after the sprint, in story points.</param>
+/// <param name="ExpectedCompletedEffort">Legacy contract name for expected completed scope in story points. Compatibility alias; deprecated in future contract revision.</param>
+/// <param name="RemainingEffortAfterSprint">Legacy contract name for remaining scope after the sprint, in story points. Compatibility alias; deprecated in future contract revision.</param>
 /// <param name="ProgressPercentage">Cumulative completion percentage after this forecast sprint.</param>
 public sealed record SprintForecast(
     string SprintName,

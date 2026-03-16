@@ -392,6 +392,7 @@ public record FeatureProgressDto
     /// Total canonical story-point scope of all PBIs under this feature.
     /// Domain meaning: TotalScope.
     /// The legacy property name is retained for API compatibility and values may be fractional.
+    /// Compatibility alias; deprecated in future contract revision.
     /// </summary>
     public double TotalEffort { get; init; }
 
@@ -399,8 +400,15 @@ public record FeatureProgressDto
     /// Canonical story-point scope of done PBIs under this feature.
     /// Domain meaning: DeliveredScope.
     /// The legacy property name is retained for API compatibility and values may be fractional.
+    /// Compatibility alias; deprecated in future contract revision.
     /// </summary>
     public double DoneEffort { get; init; }
+
+    /// <summary>
+    /// Canonical delivered story points under this feature.
+    /// Maps to the same internal value as DoneEffort.
+    /// </summary>
+    public double DeliveredStoryPoints => DoneEffort;
 
     /// <summary>
     /// Number of PBIs in Done state under this feature.
@@ -416,6 +424,7 @@ public record FeatureProgressDto
     /// Canonical story-point scope of PBIs that closed (transitioned to Done) during the selected sprint.
     /// Domain meaning: SprintDeliveredScope.
     /// The legacy property name is retained for API compatibility and values may be fractional.
+    /// Compatibility alias; deprecated in future contract revision.
     /// Zero when not in single-sprint view.
     /// </summary>
     public double SprintCompletedEffort { get; init; }
@@ -485,6 +494,7 @@ public record EpicProgressDto
     /// Total canonical story-point scope of all PBIs under this epic's features.
     /// Domain meaning: TotalScope.
     /// The legacy property name is retained for API compatibility and values may be fractional.
+    /// Compatibility alias; deprecated in future contract revision.
     /// </summary>
     public double TotalEffort { get; init; }
 
@@ -492,8 +502,15 @@ public record EpicProgressDto
     /// Canonical story-point scope of done PBIs under this epic's features.
     /// Domain meaning: DeliveredScope.
     /// The legacy property name is retained for API compatibility and values may be fractional.
+    /// Compatibility alias; deprecated in future contract revision.
     /// </summary>
     public double DoneEffort { get; init; }
+
+    /// <summary>
+    /// Canonical delivered story points under this epic's features.
+    /// Maps to the same internal value as DoneEffort.
+    /// </summary>
+    public double DeliveredStoryPoints => DoneEffort;
 
     /// <summary>
     /// Number of child features under this epic.
@@ -519,6 +536,7 @@ public record EpicProgressDto
     /// Canonical story-point scope of PBIs that closed (transitioned to Done) during the selected sprint across this epic's features.
     /// Domain meaning: SprintDeliveredScope.
     /// The legacy property name is retained for API compatibility and values may be fractional.
+    /// Compatibility alias; deprecated in future contract revision.
     /// Zero when not in single-sprint view.
     /// </summary>
     public double SprintCompletedEffort { get; init; }
@@ -569,6 +587,7 @@ public record CompletedPbiDto
     /// <summary>
     /// Canonical story-point scope of this PBI.
     /// The legacy property name is retained for API compatibility and values may be fractional.
+    /// Compatibility alias; deprecated in future contract revision.
     /// </summary>
     public double Effort { get; init; }
 

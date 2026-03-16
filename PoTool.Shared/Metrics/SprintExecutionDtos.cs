@@ -134,13 +134,15 @@ public record SprintExecutionSummaryDto
     public int SpilloverEffort { get; init; }
 
     /// <summary>
-    /// Canonical committed story points at the sprint commitment timestamp.
+    /// Legacy abbreviated contract name for canonical committed story points at the sprint commitment timestamp.
     /// Derived estimates are excluded from sprint commitment.
+    /// Compatibility alias; deprecated in future contract revision.
     /// </summary>
     public double CommittedSP { get; init; }
 
     /// <summary>
-    /// Canonical story points added to the sprint after commitment.
+    /// Legacy abbreviated contract name for canonical story points added to the sprint after commitment.
+    /// Compatibility alias; deprecated in future contract revision.
     /// </summary>
     public double AddedSP { get; init; }
 
@@ -150,8 +152,9 @@ public record SprintExecutionSummaryDto
     public double RemovedSP { get; init; }
 
     /// <summary>
-    /// Canonical delivered story points whose first Done transition occurred during the sprint.
+    /// Legacy abbreviated contract name for canonical delivered story points whose first Done transition occurred during the sprint.
     /// Derived estimates are excluded from delivered velocity.
+    /// Compatibility alias; deprecated in future contract revision.
     /// </summary>
     public double DeliveredSP { get; init; }
 
@@ -162,9 +165,40 @@ public record SprintExecutionSummaryDto
     public double DeliveredFromAddedSP { get; init; }
 
     /// <summary>
-    /// Canonical story points that spilled from committed scope into the next sprint.
+    /// Legacy abbreviated contract name for canonical story points that spilled from committed scope into the next sprint.
+    /// Compatibility alias; deprecated in future contract revision.
     /// </summary>
     public double SpilloverSP { get; init; }
+
+    /// <summary>
+    /// Canonical committed story points at the sprint commitment timestamp.
+    /// Maps to the same internal value as CommittedSP.
+    /// </summary>
+    public double CommittedStoryPoints => CommittedSP;
+
+    /// <summary>
+    /// Canonical story points added to the sprint after commitment.
+    /// Maps to the same internal value as AddedSP.
+    /// </summary>
+    public double AddedStoryPoints => AddedSP;
+
+    /// <summary>
+    /// Canonical delivered story points whose first Done transition occurred during the sprint.
+    /// Maps to the same internal value as DeliveredSP.
+    /// </summary>
+    public double DeliveredStoryPoints => DeliveredSP;
+
+    /// <summary>
+    /// Canonical remaining story points after sprint delivery and scope changes.
+    /// Computed from the same internal committed, added, removed, and delivered values already exposed by this DTO.
+    /// </summary>
+    public double RemainingStoryPoints => CommittedSP + AddedSP - RemovedSP - DeliveredSP;
+
+    /// <summary>
+    /// Canonical story points that spilled from committed scope into the next sprint.
+    /// Maps to the same internal value as SpilloverSP.
+    /// </summary>
+    public double SpilloverStoryPoints => SpilloverSP;
 
     /// <summary>
     /// Canonical scope churn rate: (AddedSP + RemovedSP) / (CommittedSP + AddedSP).
