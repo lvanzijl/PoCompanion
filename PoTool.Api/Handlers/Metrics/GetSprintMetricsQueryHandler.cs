@@ -203,14 +203,16 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         var sprintName = string.IsNullOrWhiteSpace(matchingSprint.Name)
             ? query.IterationPath
             : matchingSprint.Name;
+        var completedStoryPoints = (int)Math.Round(sprintFact.DeliveredStoryPoints, MidpointRounding.AwayFromZero);
+        var plannedStoryPoints = (int)Math.Round(sprintFact.CommittedStoryPoints, MidpointRounding.AwayFromZero);
 
         var metrics = new SprintMetricsDto(
             IterationPath: query.IterationPath,
             SprintName: sprintName,
             StartDate: sprintStart,
             EndDate: sprintEnd,
-            CompletedStoryPoints: (int)sprintFact.DeliveredStoryPoints,
-            PlannedStoryPoints: (int)sprintFact.CommittedStoryPoints,
+            CompletedStoryPoints: completedStoryPoints,
+            PlannedStoryPoints: plannedStoryPoints,
             CompletedWorkItemCount: completedItems.Count,
             TotalWorkItemCount: sprintScopeWorkItems.Count,
             CompletedPBIs: completedPBIs,

@@ -426,6 +426,9 @@ public sealed class SprintFactService : ISprintFactService
     private readonly ISprintSpilloverService _sprintSpilloverService;
     private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SprintFactService"/> class.
+    /// </summary>
     public SprintFactService(
         ISprintCommitmentService sprintCommitmentService,
         ISprintScopeChangeService sprintScopeChangeService,
@@ -589,6 +592,11 @@ public sealed class SprintFactService : ISprintFactService
         return estimate.Value.Value;
     }
 
+    /// <summary>
+    /// Builds sibling PBI candidates for feature-level derived estimate resolution.
+    /// Only sibling PBIs under the same parent are considered, and their canonical Done state
+    /// is resolved from the supplied snapshots and state lookup.
+    /// </summary>
     private static IReadOnlyCollection<StoryPointResolutionCandidate> BuildFeaturePbiCandidates(
         CanonicalWorkItem workItem,
         IReadOnlyDictionary<int, CanonicalWorkItem> canonicalWorkItemsById,

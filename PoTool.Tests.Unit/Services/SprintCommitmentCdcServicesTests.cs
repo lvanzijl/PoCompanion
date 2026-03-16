@@ -188,6 +188,9 @@ public sealed class SprintCommitmentCdcServicesTests
             stateLookup,
             nextSprintPath);
 
+        // Committed = 101 + 103 + 104 = 5 + 2 + 8.
+        // Added/delivered-from-added = 102 = 3.
+        // Removed = 103 = 2, spillover = 104 = 8, and delivered excludes bug 105.
         Assert.AreEqual(15d, result.CommittedStoryPoints, 0.001);
         Assert.AreEqual(3d, result.AddedStoryPoints, 0.001);
         Assert.AreEqual(2d, result.RemovedStoryPoints, 0.001);
