@@ -255,6 +255,7 @@ public class SprintTrendProjectionServiceSqliteTests
             _serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<PortfolioFlowProjectionService>.Instance,
             stateClassificationService: null,
+            _serviceProvider.GetRequiredService<ISprintCompletionService>(),
             _serviceProvider.GetRequiredService<ICanonicalStoryPointResolutionService>());
         var service = new SprintTrendProjectionService(
             _serviceProvider.GetRequiredService<IServiceScopeFactory>(),
@@ -548,6 +549,7 @@ public class SprintTrendProjectionServiceSqliteTests
             _serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<PortfolioFlowProjectionService>.Instance,
             stateClassificationService: null,
+            _serviceProvider.GetRequiredService<ISprintCompletionService>(),
             _serviceProvider.GetRequiredService<ICanonicalStoryPointResolutionService>());
     }
 

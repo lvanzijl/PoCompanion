@@ -5,11 +5,13 @@ using PoTool.Api.Handlers.Metrics;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
+using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Settings;
+using CdcModels = PoTool.Core.Domain.Models;
 
 namespace PoTool.Tests.Unit.Handlers;
 
@@ -43,7 +45,7 @@ public sealed class GetSprintExecutionQueryHandlerTests
 
         _stateClassificationService
             .Setup(service => service.GetClassificationsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(BuildStateClassificationsResponse((WorkItemType.Pbi, "Resolved", StateClassification.Done)));
+            .ReturnsAsync(BuildStateClassificationsResponse((WorkItemType.Pbi, "Resolved", PoTool.Shared.Settings.StateClassification.Done)));
 
         var handler = CreateHandler();
 
@@ -98,7 +100,7 @@ public sealed class GetSprintExecutionQueryHandlerTests
 
         _stateClassificationService
             .Setup(service => service.GetClassificationsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(BuildStateClassificationsResponse((WorkItemType.Pbi, "Resolved", StateClassification.Done)));
+            .ReturnsAsync(BuildStateClassificationsResponse((WorkItemType.Pbi, "Resolved", PoTool.Shared.Settings.StateClassification.Done)));
 
         var handler = CreateHandler();
 
@@ -123,7 +125,7 @@ public sealed class GetSprintExecutionQueryHandlerTests
 
         _stateClassificationService
             .Setup(service => service.GetClassificationsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(BuildStateClassificationsResponse((WorkItemType.Pbi, "Resolved", StateClassification.Done)));
+            .ReturnsAsync(BuildStateClassificationsResponse((WorkItemType.Pbi, "Resolved", PoTool.Shared.Settings.StateClassification.Done)));
 
         var handler = CreateHandler();
 
@@ -165,6 +167,86 @@ public sealed class GetSprintExecutionQueryHandlerTests
         Assert.HasCount(1, result.AddedDuringSprint);
         Assert.AreEqual(101, result.AddedDuringSprint[0].TfsId);
         Assert.AreEqual(sprintStart.AddDays(3), result.AddedDuringSprint[0].EnteredSprintDate);
+    }
+
+    [TestMethod]
+    public async Task Handle_UsesCdcSprintServices_ForExecutionReconstruction()
+    {
+        await SeedSprintExecutionScenarioAsync("Active", stateTransitions: [], iterationTransitions: []);
+
+        _stateClassificationService
+            .Setup(service => service.GetClassificationsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildStateClassificationsResponse());
+
+        var commitmentService = new Mock<ISprintCommitmentService>(MockBehavior.Strict);
+        var scopeChangeService = new Mock<ISprintScopeChangeService>(MockBehavior.Strict);
+        var completionService = new Mock<ISprintCompletionService>(MockBehavior.Strict);
+        var spilloverService = new Mock<ISprintSpilloverService>(MockBehavior.Strict);
+        var sprintStart = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        commitmentService
+            .Setup(service => service.GetCommitmentTimestamp(sprintStart))
+            .Returns(sprintStart.AddDays(1));
+        commitmentService
+            .Setup(service => service.BuildCommittedWorkItemIds(
+                It.IsAny<IReadOnlyDictionary<int, CdcModels.WorkItemSnapshot>>(),
+                It.IsAny<IReadOnlyDictionary<int, IReadOnlyList<CdcModels.FieldChangeEvent>>>(),
+                "\\Project\\Sprint 1",
+                sprintStart.AddDays(1)))
+            .Returns(new HashSet<int>());
+        scopeChangeService
+            .Setup(service => service.DetectScopeAdded(
+                It.IsAny<CdcModels.SprintDefinition>(),
+                It.IsAny<IReadOnlyDictionary<int, IReadOnlyList<CdcModels.FieldChangeEvent>>>()))
+            .Returns(Array.Empty<SprintScopeAdded>());
+        scopeChangeService
+            .Setup(service => service.DetectScopeRemoved(
+                It.IsAny<CdcModels.SprintDefinition>(),
+                It.IsAny<IReadOnlyDictionary<int, IReadOnlyList<CdcModels.FieldChangeEvent>>>()))
+            .Returns(Array.Empty<SprintScopeRemoved>());
+        completionService
+            .Setup(service => service.BuildFirstDoneByWorkItem(
+                It.IsAny<IEnumerable<CdcModels.FieldChangeEvent>>(),
+                It.IsAny<IReadOnlyDictionary<int, CdcModels.WorkItemSnapshot>>(),
+                It.IsAny<IReadOnlyDictionary<(string WorkItemType, string StateName), PoTool.Core.Domain.Models.StateClassification>?>()))
+            .Returns(new Dictionary<int, DateTimeOffset>());
+        spilloverService
+            .Setup(service => service.GetNextSprintPath(
+                It.IsAny<CdcModels.SprintDefinition>(),
+                It.IsAny<IEnumerable<CdcModels.SprintDefinition>>()))
+            .Returns((string?)null);
+        spilloverService
+            .Setup(service => service.BuildSpilloverWorkItemIds(
+                It.IsAny<IReadOnlySet<int>>(),
+                It.IsAny<IReadOnlyDictionary<int, CdcModels.WorkItemSnapshot>>(),
+                It.IsAny<IReadOnlyDictionary<int, IReadOnlyList<CdcModels.FieldChangeEvent>>>(),
+                It.IsAny<IReadOnlyDictionary<int, IReadOnlyList<CdcModels.FieldChangeEvent>>>(),
+                It.IsAny<IReadOnlyDictionary<(string WorkItemType, string StateName), PoTool.Core.Domain.Models.StateClassification>?>(),
+                It.IsAny<CdcModels.SprintDefinition>(),
+                It.IsAny<string?>(),
+                It.IsAny<DateTimeOffset>()))
+            .Returns(new HashSet<int>());
+
+        var handler = new GetSprintExecutionQueryHandler(
+            _context,
+            _stateClassificationService.Object,
+            commitmentService.Object,
+            scopeChangeService.Object,
+            completionService.Object,
+            spilloverService.Object,
+            new CanonicalStoryPointResolutionService(),
+            new PoTool.Core.Domain.Metrics.SprintExecutionMetricsCalculator(),
+            NullLogger<GetSprintExecutionQueryHandler>.Instance);
+
+        var result = await handler.Handle(new GetSprintExecutionQuery(1, 1, 1), CancellationToken.None);
+
+        Assert.IsTrue(result.HasData);
+        Assert.AreEqual(0, result.Summary.InitialScopeCount);
+        Assert.AreEqual(1, result.Summary.UnfinishedCount);
+        commitmentService.VerifyAll();
+        scopeChangeService.VerifyAll();
+        completionService.VerifyAll();
+        spilloverService.VerifyAll();
     }
 
     [TestMethod]
@@ -383,9 +465,9 @@ public sealed class GetSprintExecutionQueryHandlerTests
         _stateClassificationService
             .Setup(service => service.GetClassificationsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(BuildStateClassificationsResponse(
-                (WorkItemType.Pbi, "Resolved", StateClassification.Done),
-                (WorkItemType.Bug, "Resolved", StateClassification.Done),
-                (WorkItemType.Task, "Resolved", StateClassification.Done)));
+                (WorkItemType.Pbi, "Resolved", PoTool.Shared.Settings.StateClassification.Done),
+                (WorkItemType.Bug, "Resolved", PoTool.Shared.Settings.StateClassification.Done),
+                (WorkItemType.Task, "Resolved", PoTool.Shared.Settings.StateClassification.Done)));
 
         var handler = CreateHandler();
 
@@ -488,8 +570,8 @@ public sealed class GetSprintExecutionQueryHandlerTests
         _stateClassificationService
             .Setup(service => service.GetClassificationsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(BuildStateClassificationsResponse(
-                (WorkItemType.Pbi, "Resolved", StateClassification.Done),
-                (WorkItemType.Bug, "Resolved", StateClassification.Done)));
+                (WorkItemType.Pbi, "Resolved", PoTool.Shared.Settings.StateClassification.Done),
+                (WorkItemType.Bug, "Resolved", PoTool.Shared.Settings.StateClassification.Done)));
 
         var handler = CreateHandler();
 
@@ -512,8 +594,12 @@ public sealed class GetSprintExecutionQueryHandlerTests
         return new GetSprintExecutionQueryHandler(
             _context,
             _stateClassificationService.Object,
+            new SprintCommitmentService(),
+            new SprintScopeChangeService(),
+            new SprintCompletionService(),
+            new SprintSpilloverService(),
             new CanonicalStoryPointResolutionService(),
-            new SprintExecutionMetricsCalculator(),
+            new PoTool.Core.Domain.Metrics.SprintExecutionMetricsCalculator(),
             NullLogger<GetSprintExecutionQueryHandler>.Instance);
     }
 
@@ -709,7 +795,7 @@ public sealed class GetSprintExecutionQueryHandlerTests
     }
 
     private static GetStateClassificationsResponse BuildStateClassificationsResponse(
-        params (string WorkItemType, string StateName, StateClassification Classification)[] classifications)
+        params (string WorkItemType, string StateName, PoTool.Shared.Settings.StateClassification Classification)[] classifications)
     {
         return new GetStateClassificationsResponse
         {

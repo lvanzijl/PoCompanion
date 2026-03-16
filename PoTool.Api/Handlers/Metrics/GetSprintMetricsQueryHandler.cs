@@ -5,9 +5,10 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
-using PoTool.Core.Domain.Sprints;
+using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Estimation;
+using PoTool.Core.Domain.Sprints;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
 using PoTool.Shared.WorkItems;
@@ -34,6 +35,9 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
     private readonly IProductRepository _productRepository;
     private readonly ISprintRepository _sprintRepository;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
+    private readonly ISprintCommitmentService _sprintCommitmentService;
+    private readonly ISprintScopeChangeService _sprintScopeChangeService;
+    private readonly ISprintCompletionService _sprintCompletionService;
     private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
     private readonly IMediator _mediator;
     private readonly PoToolDbContext _context;
@@ -44,6 +48,9 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         IProductRepository productRepository,
         ISprintRepository sprintRepository,
         IWorkItemStateClassificationService stateClassificationService,
+        ISprintCommitmentService sprintCommitmentService,
+        ISprintScopeChangeService sprintScopeChangeService,
+        ISprintCompletionService sprintCompletionService,
         ICanonicalStoryPointResolutionService storyPointResolutionService,
         IMediator mediator,
         PoToolDbContext context,
@@ -53,6 +60,9 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         _productRepository = productRepository;
         _sprintRepository = sprintRepository;
         _stateClassificationService = stateClassificationService;
+        _sprintCommitmentService = sprintCommitmentService;
+        _sprintScopeChangeService = sprintScopeChangeService;
+        _sprintCompletionService = sprintCompletionService;
         _storyPointResolutionService = storyPointResolutionService;
         _mediator = mediator;
         _context = context;
@@ -111,7 +121,7 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         var sprintEnd = matchingSprint.EndUtc.Value;
         var sprintDefinition = matchingSprint.ToDefinition();
         var workItemSnapshotsById = relevantWorkItems.ToSnapshotDictionary();
-        var commitmentTimestamp = SprintCommitmentLookup.GetCommitmentTimestamp(sprintStart);
+        var commitmentTimestamp = _sprintCommitmentService.GetCommitmentTimestamp(sprintStart);
         var iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>();
         var firstDoneByWorkItem = new Dictionary<int, DateTimeOffset>();
         var addedWorkItemIds = new HashSet<int>();
@@ -135,21 +145,16 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
 
             var classifications = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
             stateLookup = StateClassificationLookup.Create(classifications.Classifications.ToDomainStateClassifications());
-            firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(allHistoryFieldChanges, workItemSnapshotsById, stateLookup)
+            firstDoneByWorkItem = _sprintCompletionService.BuildFirstDoneByWorkItem(allHistoryFieldChanges, workItemSnapshotsById, stateLookup)
                 .ToDictionary(pair => pair.Key, pair => pair.Value);
 
-            addedWorkItemIds = iterationEvents
-                .Where(e => string.Equals(e.NewValue, sprintDefinition.Path, StringComparison.OrdinalIgnoreCase))
-                .Where(e =>
-                {
-                    var eventTimestamp = FirstDoneDeliveryLookup.GetEventTimestamp(e);
-                    return eventTimestamp > commitmentTimestamp && eventTimestamp <= sprintEnd;
-                })
-                .Select(e => e.WorkItemId)
+            addedWorkItemIds = _sprintScopeChangeService
+                .DetectScopeAdded(sprintDefinition, iterationEventsByWorkItem)
+                .Select(scopeChange => scopeChange.WorkItemId)
                 .ToHashSet();
         }
 
-        var committedWorkItemIds = SprintCommitmentLookup.BuildCommittedWorkItemIds(
+        var committedWorkItemIds = _sprintCommitmentService.BuildCommittedWorkItemIds(
                 workItemSnapshotsById,
                 iterationEventsByWorkItem,
                 sprintDefinition.Path,

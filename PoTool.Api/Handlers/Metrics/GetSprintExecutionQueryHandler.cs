@@ -6,14 +6,15 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.Estimation;
-using PoTool.Core.Domain.Metrics;
-using PoTool.Core.Domain.Sprints;
 using PoTool.Core.Domain.Models;
+using PoTool.Core.Domain.Sprints;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
 using PoTool.Shared.WorkItems;
+using SprintMetrics = PoTool.Core.Domain.Metrics;
 
 namespace PoTool.Api.Handlers.Metrics;
 
@@ -33,19 +34,31 @@ public sealed class GetSprintExecutionQueryHandler
 
     private readonly PoToolDbContext _context;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
+    private readonly ISprintCommitmentService _sprintCommitmentService;
+    private readonly ISprintScopeChangeService _sprintScopeChangeService;
+    private readonly ISprintCompletionService _sprintCompletionService;
+    private readonly ISprintSpilloverService _sprintSpilloverService;
     private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
-    private readonly ISprintExecutionMetricsCalculator _sprintExecutionMetricsCalculator;
+    private readonly SprintMetrics.ISprintExecutionMetricsCalculator _sprintExecutionMetricsCalculator;
     private readonly ILogger<GetSprintExecutionQueryHandler> _logger;
 
     public GetSprintExecutionQueryHandler(
         PoToolDbContext context,
         IWorkItemStateClassificationService stateClassificationService,
+        ISprintCommitmentService sprintCommitmentService,
+        ISprintScopeChangeService sprintScopeChangeService,
+        ISprintCompletionService sprintCompletionService,
+        ISprintSpilloverService sprintSpilloverService,
         ICanonicalStoryPointResolutionService storyPointResolutionService,
-        ISprintExecutionMetricsCalculator sprintExecutionMetricsCalculator,
+        SprintMetrics.ISprintExecutionMetricsCalculator sprintExecutionMetricsCalculator,
         ILogger<GetSprintExecutionQueryHandler> logger)
     {
         _context = context;
         _stateClassificationService = stateClassificationService;
+        _sprintCommitmentService = sprintCommitmentService;
+        _sprintScopeChangeService = sprintScopeChangeService;
+        _sprintCompletionService = sprintCompletionService;
+        _sprintSpilloverService = sprintSpilloverService;
         _storyPointResolutionService = storyPointResolutionService;
         _sprintExecutionMetricsCalculator = sprintExecutionMetricsCalculator;
         _logger = logger;
@@ -132,14 +145,13 @@ public sealed class GetSprintExecutionQueryHandler
         var sprintStart = sprint.StartUtc;
         var sprintEnd = sprint.EndUtc;
         var commitmentTimestamp = sprintStart.HasValue
-            ? SprintCommitmentLookup.GetCommitmentTimestamp(sprintStart.Value)
+            ? _sprintCommitmentService.GetCommitmentTimestamp(sprintStart.Value)
             : (DateTimeOffset?)null;
         var firstDoneByWorkItem = new Dictionary<int, DateTimeOffset>();
         var committedWorkItemIds = new HashSet<int>();
-
+        var addedEntries = new List<SprintScopeAdded>();
         var addedWorkItemIds = new HashSet<int>();
         var removedEntries = new List<(int WorkItemId, DateTimeOffset Timestamp)>();
-        var iterationEvents = new List<FieldChangeEvent>();
         var iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>();
         var stateEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>();
         var stateHistoryCutoffUtc = DateTime.UtcNow;
@@ -157,7 +169,7 @@ public sealed class GetSprintExecutionQueryHandler
 
             stateEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>(stateFieldChanges.GroupByWorkItemId());
 
-            firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(
+            firstDoneByWorkItem = _sprintCompletionService.BuildFirstDoneByWorkItem(
                     stateFieldChanges,
                     workItemSnapshotsById,
                     stateLookup)
@@ -175,13 +187,12 @@ public sealed class GetSprintExecutionQueryHandler
                 .ToListAsync(cancellationToken);
             var iterationFieldChanges = rawIterationEvents.ToFieldChangeEvents();
 
-            iterationEvents = iterationFieldChanges.ToList();
             iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>(iterationFieldChanges.GroupByWorkItemId());
         }
 
         if (commitmentTimestamp.HasValue)
         {
-            committedWorkItemIds = SprintCommitmentLookup.BuildCommittedWorkItemIds(
+            committedWorkItemIds = _sprintCommitmentService.BuildCommittedWorkItemIds(
                     workItemSnapshotsById,
                     iterationEventsByWorkItem,
                     sprintDefinition.Path,
@@ -197,21 +208,15 @@ public sealed class GetSprintExecutionQueryHandler
 
         if (commitmentTimestamp.HasValue && sprintEnd.HasValue)
         {
-            foreach (var evt in iterationEvents
-                         .Where(e => string.Equals(e.NewValue, sprint.Path, StringComparison.OrdinalIgnoreCase)
-                                     && FirstDoneDeliveryLookup.GetEventTimestamp(e) > commitmentTimestamp.Value
-                                     && FirstDoneDeliveryLookup.GetEventTimestamp(e) <= sprintEnd.Value))
-            {
-                addedWorkItemIds.Add(evt.WorkItemId);
-            }
+            addedEntries = _sprintScopeChangeService.DetectScopeAdded(sprintDefinition, iterationEventsByWorkItem).ToList();
+            addedWorkItemIds = addedEntries
+                .Select(entry => entry.WorkItemId)
+                .ToHashSet();
 
-            foreach (var evt in iterationEvents
-                         .Where(e => string.Equals(e.OldValue, sprint.Path, StringComparison.OrdinalIgnoreCase)
-                                     && FirstDoneDeliveryLookup.GetEventTimestamp(e) > commitmentTimestamp.Value
-                                     && FirstDoneDeliveryLookup.GetEventTimestamp(e) <= sprintEnd.Value))
-            {
-                removedEntries.Add((evt.WorkItemId, FirstDoneDeliveryLookup.GetEventTimestamp(evt)));
-            }
+            removedEntries = _sprintScopeChangeService
+                .DetectScopeRemoved(sprintDefinition, iterationEventsByWorkItem)
+                .Select(entry => (entry.WorkItemId, entry.RemovedAt))
+                .ToList();
         }
 
         var nextSprintPath = await ResolveNextSprintPathAsync(sprintDefinition, cancellationToken);
@@ -245,7 +250,7 @@ public sealed class GetSprintExecutionQueryHandler
 
         var initialScopeIds = committedWorkItemIds;
         IReadOnlySet<int> spilloverWorkItemIds = sprintEnd.HasValue
-            ? SprintSpilloverLookup.BuildSpilloverWorkItemIds(
+            ? _sprintSpilloverService.BuildSpilloverWorkItemIds(
                 committedWorkItemIds,
                 workItemSnapshotsById,
                 stateEventsByWorkItem,
@@ -270,16 +275,12 @@ public sealed class GetSprintExecutionQueryHandler
         var enteredSprintDates = new Dictionary<int, DateTimeOffset>();
         if (commitmentTimestamp.HasValue && sprintEnd.HasValue)
         {
-            foreach (var entry in iterationEvents
-                         .Where(e => string.Equals(e.NewValue, sprint.Path, StringComparison.OrdinalIgnoreCase)
-                                     && addedWorkItemIds.Contains(e.WorkItemId)
-                                     && FirstDoneDeliveryLookup.GetEventTimestamp(e) > commitmentTimestamp.Value
-                                     && FirstDoneDeliveryLookup.GetEventTimestamp(e) <= sprintEnd.Value)
-                         .GroupBy(e => e.WorkItemId)
-                         .Select(g => new
+            foreach (var entry in addedEntries
+                         .GroupBy(scopeChange => scopeChange.WorkItemId)
+                         .Select(group => new
                          {
-                             WorkItemId = g.Key,
-                             EnteredDate = g.Min(e => FirstDoneDeliveryLookup.GetEventTimestamp(e))
+                             WorkItemId = group.Key,
+                             EnteredDate = group.Min(scopeChange => scopeChange.AddedAt)
                          }))
             {
                 enteredSprintDates[entry.WorkItemId] = entry.EnteredDate;
@@ -388,7 +389,7 @@ public sealed class GetSprintExecutionQueryHandler
             stateLookup,
             relevantWorkItemsById,
             excludeDerived: true);
-        var metrics = _sprintExecutionMetricsCalculator.Calculate(new SprintExecutionMetricsInput(
+        var metrics = _sprintExecutionMetricsCalculator.Calculate(new SprintMetrics.SprintExecutionMetricsInput(
             committedSp,
             addedSp,
             removedSp,
@@ -480,7 +481,7 @@ public sealed class GetSprintExecutionQueryHandler
             .Where(candidate => candidate.TeamId == sprint.TeamId)
             .ToListAsync(cancellationToken);
 
-        return SprintSpilloverLookup.GetNextSprintPath(
+        return _sprintSpilloverService.GetNextSprintPath(
             sprint,
             teamSprints.Select(candidate => candidate.ToDefinition()));
     }

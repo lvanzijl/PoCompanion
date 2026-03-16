@@ -6,6 +6,7 @@ using PoTool.Api.Adapters;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Contracts;
+using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Portfolio;
@@ -22,21 +23,25 @@ public class PortfolioFlowProjectionService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<PortfolioFlowProjectionService> _logger;
     private readonly IWorkItemStateClassificationService? _stateClassificationService;
+    private readonly ISprintCompletionService _sprintCompletionService;
     private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
 
     public PortfolioFlowProjectionService(
         IServiceScopeFactory scopeFactory,
         ILogger<PortfolioFlowProjectionService> logger,
         IWorkItemStateClassificationService? stateClassificationService,
+        ISprintCompletionService sprintCompletionService,
         ICanonicalStoryPointResolutionService storyPointResolutionService)
     {
         ArgumentNullException.ThrowIfNull(scopeFactory);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(sprintCompletionService);
         ArgumentNullException.ThrowIfNull(storyPointResolutionService);
 
         _scopeFactory = scopeFactory;
         _logger = logger;
         _stateClassificationService = stateClassificationService;
+        _sprintCompletionService = sprintCompletionService;
         _storyPointResolutionService = storyPointResolutionService;
     }
 
@@ -169,7 +174,7 @@ public class PortfolioFlowProjectionService
         var storyPointEventsByWorkItem = storyPointEventEntities.ToFieldChangeEvents().GroupByWorkItemId();
         var businessValueEventsByWorkItem = businessValueEventEntities.ToFieldChangeEvents().GroupByWorkItemId();
         var membershipEventsByWorkItem = membershipEventEntities.ToFieldChangeEvents().GroupByWorkItemId();
-        var firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(
+        var firstDoneByWorkItem = _sprintCompletionService.BuildFirstDoneByWorkItem(
             stateEventEntities.ToFieldChangeEvents(),
             workItems.ToSnapshotDictionary(),
             stateLookup);
@@ -495,7 +500,7 @@ public class PortfolioFlowProjectionService
                          activityEvent.FieldRefName,
                          PortfolioEntryLookup.ResolvedProductIdFieldRefName,
                          StringComparison.OrdinalIgnoreCase))
-                     .Where(activityEvent => FirstDoneDeliveryLookup.GetEventTimestamp(activityEvent) > targetTimestamp)
+                     .Where(activityEvent => activityEvent.Timestamp > targetTimestamp)
                      .OrderByDescending(activityEvent => activityEvent.TimestampUtc)
                      .ThenByDescending(activityEvent => activityEvent.EventId)
                      .ThenByDescending(activityEvent => activityEvent.UpdateId))
@@ -521,7 +526,7 @@ public class PortfolioFlowProjectionService
 
         foreach (var fieldEvent in fieldEvents
                      .Where(activityEvent => string.Equals(activityEvent.FieldRefName, fieldRefName, StringComparison.OrdinalIgnoreCase))
-                     .Where(activityEvent => FirstDoneDeliveryLookup.GetEventTimestamp(activityEvent) > targetTimestamp)
+                     .Where(activityEvent => activityEvent.Timestamp > targetTimestamp)
                      .OrderByDescending(activityEvent => activityEvent.TimestampUtc)
                      .ThenByDescending(activityEvent => activityEvent.EventId)
                      .ThenByDescending(activityEvent => activityEvent.UpdateId))
