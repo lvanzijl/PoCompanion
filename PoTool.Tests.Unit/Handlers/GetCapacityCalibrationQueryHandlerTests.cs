@@ -5,6 +5,7 @@ using Moq;
 using PoTool.Api.Handlers.Metrics;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Core.Domain.Forecasting.Services;
 using PoTool.Core.Metrics.Queries;
 
 namespace PoTool.Tests.Unit.Handlers;
@@ -18,6 +19,7 @@ public class GetCapacityCalibrationQueryHandlerTests
 {
     private PoToolDbContext _context = null!;
     private Mock<ILogger<GetCapacityCalibrationQueryHandler>> _mockLogger = null!;
+    private IVelocityCalibrationService _velocityCalibrationService = null!;
     private GetCapacityCalibrationQueryHandler _handler = null!;
 
     [TestInitialize]
@@ -28,7 +30,8 @@ public class GetCapacityCalibrationQueryHandlerTests
             .Options;
         _context = new PoToolDbContext(options);
         _mockLogger = new Mock<ILogger<GetCapacityCalibrationQueryHandler>>();
-        _handler = new GetCapacityCalibrationQueryHandler(_context, _mockLogger.Object);
+        _velocityCalibrationService = new VelocityCalibrationService();
+        _handler = new GetCapacityCalibrationQueryHandler(_context, _velocityCalibrationService, _mockLogger.Object);
     }
 
     [TestCleanup]

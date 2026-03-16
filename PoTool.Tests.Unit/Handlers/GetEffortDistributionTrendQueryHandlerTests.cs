@@ -5,6 +5,7 @@ using Moq;
 using PoTool.Api.Handlers.Metrics;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Domain.Forecasting.Services;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems.Queries;
@@ -22,6 +23,7 @@ public class GetEffortDistributionTrendQueryHandlerTests
     private Mock<IProductRepository> _mockProductRepository = null!;
     private Mock<IMediator> _mockMediator = null!;
     private Mock<ILogger<GetEffortDistributionTrendQueryHandler>> _mockLogger = null!;
+    private IEffortTrendForecastService _effortTrendForecastService = null!;
     private GetEffortDistributionTrendQueryHandler _handler = null!;
 
     [TestInitialize]
@@ -31,6 +33,7 @@ public class GetEffortDistributionTrendQueryHandlerTests
         _mockProductRepository = new Mock<IProductRepository>();
         _mockMediator = new Mock<IMediator>();
         _mockLogger = new Mock<ILogger<GetEffortDistributionTrendQueryHandler>>();
+        _effortTrendForecastService = new EffortTrendForecastService();
 
         // Setup default mock behaviors
         _mockProductRepository.Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
@@ -42,6 +45,7 @@ public class GetEffortDistributionTrendQueryHandlerTests
             _mockRepository.Object,
             _mockProductRepository.Object,
             _mockMediator.Object,
+            _effortTrendForecastService,
             _mockLogger.Object);
     }
 
@@ -87,7 +91,7 @@ public class GetEffortDistributionTrendQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(EffortTrendDirection.Increasing, result.OverallTrend);
-        Assert.IsGreaterThan(result.TrendSlope, 0);
+        Assert.IsGreaterThan(0d, result.TrendSlope);
         Assert.HasCount(4, result.TrendBySprint);
     }
 
@@ -113,7 +117,7 @@ public class GetEffortDistributionTrendQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(EffortTrendDirection.Decreasing, result.OverallTrend);
-        Assert.IsLessThan(result.TrendSlope, 0);
+        Assert.IsLessThan(0d, result.TrendSlope);
     }
 
     [TestMethod]
@@ -138,7 +142,7 @@ public class GetEffortDistributionTrendQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(EffortTrendDirection.Stable, result.OverallTrend);
-        Assert.IsLessThan(Math.Abs(result.TrendSlope), 1); // Near zero
+        Assert.IsLessThan(1d, Math.Abs(result.TrendSlope)); // Near zero
     }
 
     [TestMethod]

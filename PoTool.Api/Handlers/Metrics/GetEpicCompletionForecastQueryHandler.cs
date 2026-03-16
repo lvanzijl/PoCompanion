@@ -2,6 +2,8 @@ using Mediator;
 using PoTool.Api.Adapters;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Domain.Forecasting.Models;
+using PoTool.Core.Domain.Forecasting.Services;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
@@ -31,6 +33,7 @@ public sealed class GetEpicCompletionForecastQueryHandler
     private readonly IMediator _mediator;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly IHierarchyRollupService _hierarchyRollupService;
+    private readonly ICompletionForecastService _completionForecastService;
     private readonly ILogger<GetEpicCompletionForecastQueryHandler> _logger;
 
     public GetEpicCompletionForecastQueryHandler(
@@ -39,6 +42,7 @@ public sealed class GetEpicCompletionForecastQueryHandler
         IMediator mediator,
         IWorkItemStateClassificationService stateClassificationService,
         IHierarchyRollupService hierarchyRollupService,
+        ICompletionForecastService completionForecastService,
         ILogger<GetEpicCompletionForecastQueryHandler> logger)
     {
         _repository = repository;
@@ -46,6 +50,7 @@ public sealed class GetEpicCompletionForecastQueryHandler
         _mediator = mediator;
         _stateClassificationService = stateClassificationService;
         _hierarchyRollupService = hierarchyRollupService;
+        _completionForecastService = completionForecastService;
         _logger = logger;
     }
 
@@ -103,7 +108,6 @@ public sealed class GetEpicCompletionForecastQueryHandler
 
         var totalScopeStoryPoints = scope.Total;
         var completedScopeStoryPoints = scope.Completed;
-        var remainingScopeStoryPoints = totalScopeStoryPoints - completedScopeStoryPoints;
 
         // Compute velocity inline from the distinct iteration paths of the epic's work items.
         // Avoids a dependency on a separate velocity query handler.
@@ -113,48 +117,37 @@ public sealed class GetEpicCompletionForecastQueryHandler
             query.MaxSprintsForVelocity ?? 5,
             cancellationToken);
 
-        var estimatedVelocity = sprintMetricsList.Count > 0
-            ? sprintMetricsList.Average(s => (double)s.CompletedStoryPoints)
-            : 0.0;
-
-        // Calculate forecast
-        var sprintsRemaining = estimatedVelocity > 0
-            ? (int)Math.Ceiling(remainingScopeStoryPoints / estimatedVelocity)
-            : 0;
-
-        // Determine confidence based on data availability
-        var confidence = DetermineConfidence(sprintMetricsList.Count);
-
-        // Build sprint-by-sprint forecast
-        var forecastByDate = BuildSprintForecast(
-            sprintMetricsList,
-            remainingScopeStoryPoints,
-            estimatedVelocity);
-
-        // Estimate completion date based on last sprint end date + remaining sprints
-        DateTimeOffset? estimatedCompletionDate = null;
-        if (sprintMetricsList.Any() && sprintsRemaining > 0)
-        {
-            var lastSprint = sprintMetricsList.OrderBy(s => s.EndDate).Last();
-            // Assume 2-week sprints (14 days)
-            if (lastSprint.EndDate.HasValue)
-            {
-                estimatedCompletionDate = lastSprint.EndDate.Value.AddDays(sprintsRemaining * 14);
-            }
-        }
+        var forecast = _completionForecastService.Forecast(
+            totalScopeStoryPoints,
+            completedScopeStoryPoints,
+            sprintMetricsList
+                .Select(sprint => new HistoricalVelocitySample(
+                    sprint.SprintName,
+                    sprint.EndDate,
+                    sprint.CompletedStoryPoints))
+                .ToList());
 
         return new EpicCompletionForecastDto(
             EpicId: epic.TfsId,
             Title: epic.Title,
             Type: epic.Type,
-            TotalEffort: totalScopeStoryPoints,
-            CompletedEffort: completedScopeStoryPoints,
-            RemainingEffort: remainingScopeStoryPoints,
-            EstimatedVelocity: estimatedVelocity,
-            SprintsRemaining: sprintsRemaining,
-            EstimatedCompletionDate: estimatedCompletionDate,
-            Confidence: confidence,
-            ForecastByDate: forecastByDate,
+            TotalEffort: forecast.TotalScopeStoryPoints,
+            CompletedEffort: forecast.CompletedScopeStoryPoints,
+            RemainingEffort: forecast.RemainingScopeStoryPoints,
+            EstimatedVelocity: forecast.EstimatedVelocity,
+            SprintsRemaining: forecast.SprintsRemaining,
+            EstimatedCompletionDate: forecast.EstimatedCompletionDate,
+            Confidence: MapConfidence(forecast.Confidence),
+            ForecastByDate: forecast.Projections
+                .Select(projection => new SprintForecast(
+                    projection.SprintName,
+                    projection.IterationPath,
+                    projection.SprintStartDate,
+                    projection.SprintEndDate,
+                    projection.ExpectedCompletedStoryPoints,
+                    projection.RemainingStoryPointsAfterSprint,
+                    projection.ProgressPercentage))
+                .ToList(),
             AreaPath: epic.AreaPath ?? "Unknown",
             AnalysisTimestamp: DateTimeOffset.UtcNow
         );
@@ -225,59 +218,13 @@ public sealed class GetEpicCompletionForecastQueryHandler
         return results;
     }
 
-    private static ForecastConfidence DetermineConfidence(int sprintCount)
+    private static ForecastConfidence MapConfidence(ForecastConfidenceLevel confidence)
     {
-        if (sprintCount < 3)
-            return ForecastConfidence.Low;
-
-        if (sprintCount < 5)
-            return ForecastConfidence.Medium;
-
-        return ForecastConfidence.High;
-    }
-
-    private static List<SprintForecast> BuildSprintForecast(
-        IReadOnlyList<SprintMetricsDto> historicalSprints,
-        double remainingScopeStoryPoints,
-        double estimatedVelocity)
-    {
-        var forecasts = new List<SprintForecast>();
-
-        if (!historicalSprints.Any() || estimatedVelocity <= 0)
-            return forecasts;
-
-        var lastSprint = historicalSprints.OrderBy(s => s.EndDate).Last();
-        if (!lastSprint.EndDate.HasValue)
-            return forecasts;
-
-        var currentRemaining = remainingScopeStoryPoints;
-        var sprintNumber = 1;
-
-        while (currentRemaining > 0 && sprintNumber <= 20) // Cap at 20 sprints
+        return confidence switch
         {
-            var sprintStart = lastSprint.EndDate.Value.AddDays((sprintNumber - 1) * 14);
-            var sprintEnd = sprintStart.AddDays(14);
-
-            var expectedCompleted = Math.Min(currentRemaining, estimatedVelocity);
-            currentRemaining = Math.Max(0d, currentRemaining - expectedCompleted);
-
-            var progressPercentage = remainingScopeStoryPoints > 0
-                ? ((double)(remainingScopeStoryPoints - currentRemaining) / remainingScopeStoryPoints) * 100
-                : 100;
-
-            forecasts.Add(new SprintForecast(
-                SprintName: $"Sprint +{sprintNumber}",
-                IterationPath: $"Forecast/{sprintNumber}",
-                SprintStartDate: sprintStart,
-                SprintEndDate: sprintEnd,
-                ExpectedCompletedEffort: expectedCompleted,
-                RemainingEffortAfterSprint: currentRemaining,
-                ProgressPercentage: progressPercentage
-            ));
-
-            sprintNumber++;
-        }
-
-        return forecasts;
+            ForecastConfidenceLevel.Low => ForecastConfidence.Low,
+            ForecastConfidenceLevel.Medium => ForecastConfidence.Medium,
+            _ => ForecastConfidence.High
+        };
     }
 }

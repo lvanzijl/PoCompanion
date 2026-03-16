@@ -7,4 +7,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\PoTool.Shared\PoTool.Shared.csproj" />
+  </ItemGroup>
+
 </Project>

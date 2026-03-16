@@ -2,9 +2,10 @@ using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
+using PoTool.Core.Domain.Forecasting.Models;
+using PoTool.Core.Domain.Forecasting.Services;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
-using PoTool.Shared.Statistics;
 
 namespace PoTool.Api.Handlers.Metrics;
 
@@ -31,13 +32,16 @@ public sealed class GetCapacityCalibrationQueryHandler
     : IQueryHandler<GetCapacityCalibrationQuery, CapacityCalibrationDto>
 {
     private readonly PoToolDbContext _context;
+    private readonly IVelocityCalibrationService _velocityCalibrationService;
     private readonly ILogger<GetCapacityCalibrationQueryHandler> _logger;
 
     public GetCapacityCalibrationQueryHandler(
         PoToolDbContext context,
+        IVelocityCalibrationService velocityCalibrationService,
         ILogger<GetCapacityCalibrationQueryHandler> logger)
     {
         _context = context;
+        _velocityCalibrationService = velocityCalibrationService;
         _logger = logger;
     }
 
@@ -96,87 +100,43 @@ public sealed class GetCapacityCalibrationQueryHandler
             .Where(p => sprintIdList.Contains(p.SprintId) && productIds.Contains(p.ProductId))
             .ToListAsync(cancellationToken);
 
-        // PlannedStoryPoints includes derived estimates for aggregation scenarios.
-        // Capacity calibration must exclude derived points from committed scope.
-        var committedStoryPointsBySprint = projections
-            .GroupBy(p => p.SprintId)
-            .ToDictionary(g => g.Key, g => g.Sum(p => Math.Max(0d, p.PlannedStoryPoints - p.DerivedStoryPoints)));
+        var projectionsBySprintId = projections
+            .GroupBy(projection => projection.SprintId)
+            .ToDictionary(group => group.Key, group => group.ToList());
 
-        // CompletedPbiStoryPoints already uses canonical delivery semantics:
-        // PBIs only, bugs/tasks excluded, BusinessValue fallback allowed, derived estimates excluded.
-        var deliveredStoryPointsBySprint = projections
-            .GroupBy(p => p.SprintId)
-            .ToDictionary(g => g.Key, g => g.Sum(p => p.CompletedPbiStoryPoints));
-
-        var deliveredEffortBySprint = projections
-            .GroupBy(p => p.SprintId)
-            .ToDictionary(g => g.Key, g => g.Sum(p => p.CompletedPbiEffort));
-
-        // Build per-sprint calibration entries
-        var entries = new List<SprintCalibrationEntry>(sprints.Count);
-        foreach (var sprint in sprints)
-        {
-            var committedStoryPoints = committedStoryPointsBySprint.TryGetValue(sprint.Id, out var committed) ? committed : 0d;
-            var deliveredStoryPoints = deliveredStoryPointsBySprint.TryGetValue(sprint.Id, out var delivered) ? delivered : 0d;
-            var deliveredEffort = deliveredEffortBySprint.TryGetValue(sprint.Id, out var effort) ? effort : 0;
-            var hoursPerSp = deliveredStoryPoints > 0
-                ? (double)deliveredEffort / deliveredStoryPoints
-                : 0d;
-
-            // Predictability: how much of the commitment was delivered (0 when uncommitted)
-            var predictability = committedStoryPoints > 0 ? deliveredStoryPoints / committedStoryPoints : 0d;
-
-            entries.Add(new SprintCalibrationEntry(
-                SprintName: sprint.Name,
-                CommittedStoryPoints: Math.Round(committedStoryPoints, 3),
-                DeliveredStoryPoints: Math.Round(deliveredStoryPoints, 3),
-                DeliveredEffort: deliveredEffort,
-                HoursPerSP: Math.Round(hoursPerSp, 3),
-                PredictabilityRatio: predictability));
-        }
-
-        if (entries.Count == 0)
-        {
-            return Empty();
-        }
-
-        // Velocity distribution (sorted ascending for percentile computation)
-        var velocities = entries.Select(e => e.DeliveredStoryPoints).OrderBy(v => v).ToList();
-
-        var medianVelocity = PercentileMath.LinearInterpolation(velocities, 50);
-        var p25Velocity = PercentileMath.LinearInterpolation(velocities, 25);
-        var p75Velocity = PercentileMath.LinearInterpolation(velocities, 75);
-
-        // Outliers: sprints whose velocity falls below P10 or above P90
-        var p10 = PercentileMath.LinearInterpolation(velocities, 10);
-        var p90 = PercentileMath.LinearInterpolation(velocities, 90);
-        var outlierNames = entries
-            .Where(e => e.DeliveredStoryPoints < p10 || e.DeliveredStoryPoints > p90)
-            .Select(e => e.SprintName)
-            .ToList();
-
-        // Predictability aggregate: only sprints with a non-zero commitment
-        var predictabilityValues = entries
-            .Where(e => e.CommittedStoryPoints > 0)
-            .Select(e => e.PredictabilityRatio)
-            .OrderBy(v => v)
-            .ToList();
-
-        var medianPredictability = predictabilityValues.Count > 0
-            ? PercentileMath.LinearInterpolation(predictabilityValues, 50)
-            : 0.0;
+        var calibration = _velocityCalibrationService.Calibrate(
+            sprints
+                .Select(sprint =>
+                {
+                    var sprintProjections = projectionsBySprintId.GetValueOrDefault(sprint.Id) ?? [];
+                    return new VelocityCalibrationSample(
+                        sprint.Name,
+                        sprintProjections.Sum(static projection => projection.PlannedStoryPoints),
+                        sprintProjections.Sum(static projection => projection.DerivedStoryPoints),
+                        sprintProjections.Sum(static projection => projection.CompletedPbiStoryPoints),
+                        sprintProjections.Sum(static projection => projection.CompletedPbiEffort));
+                })
+                .ToList());
 
         _logger.LogInformation(
             "Capacity calibration computed: {Sprints} sprints, median={Median}, P25={P25}, P75={P75}, predictability={Pred:P1}",
-            entries.Count, medianVelocity, p25Velocity, p75Velocity, medianPredictability);
+            calibration.Entries.Count, calibration.MedianVelocity, calibration.P25Velocity, calibration.P75Velocity, calibration.MedianPredictability);
 
         return new CapacityCalibrationDto(
-            Sprints: entries.AsReadOnly(),
-            MedianVelocity: Math.Round(medianVelocity, 1),
-            P25Velocity: Math.Round(p25Velocity, 1),
-            P75Velocity: Math.Round(p75Velocity, 1),
-            MedianPredictability: Math.Round(medianPredictability, 3),
-            OutlierSprintNames: outlierNames.AsReadOnly());
+            Sprints: calibration.Entries
+                .Select(entry => new SprintCalibrationEntry(
+                    entry.SprintName,
+                    entry.CommittedStoryPoints,
+                    entry.DeliveredStoryPoints,
+                    entry.DeliveredEffort,
+                    entry.HoursPerStoryPoint,
+                    entry.PredictabilityRatio))
+                .ToList(),
+            MedianVelocity: calibration.MedianVelocity,
+            P25Velocity: calibration.P25Velocity,
+            P75Velocity: calibration.P75Velocity,
+            MedianPredictability: calibration.MedianPredictability,
+            OutlierSprintNames: calibration.OutlierSprintNames);
     }
 
     private static CapacityCalibrationDto Empty() =>

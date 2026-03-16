@@ -12,6 +12,7 @@ using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Estimation;
+using PoTool.Core.Domain.Forecasting.Services;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.Domain.Metrics;
 
@@ -103,12 +104,18 @@ public class ServiceCollectionTests
         var hierarchyRollupService = scope.ServiceProvider.GetService<IHierarchyRollupService>();
         var deliveryProgressRollupService = scope.ServiceProvider.GetService<IDeliveryProgressRollupService>();
         var sprintDeliveryProjectionService = scope.ServiceProvider.GetService<ISprintDeliveryProjectionService>();
+        var completionForecastService = scope.ServiceProvider.GetService<ICompletionForecastService>();
+        var velocityCalibrationService = scope.ServiceProvider.GetService<IVelocityCalibrationService>();
+        var effortTrendForecastService = scope.ServiceProvider.GetService<IEffortTrendForecastService>();
         var projectionService = scope.ServiceProvider.GetService<SprintTrendProjectionService>();
 
         Assert.IsNotNull(storyPointResolutionService, "Canonical story-point resolution service should be registered.");
         Assert.IsNotNull(hierarchyRollupService, "Hierarchy rollup service should be registered.");
         Assert.IsNotNull(deliveryProgressRollupService, "Delivery progress rollup service should be registered.");
         Assert.IsNotNull(sprintDeliveryProjectionService, "Sprint delivery projection service should be registered.");
+        Assert.IsNotNull(completionForecastService, "Completion forecast service should be registered.");
+        Assert.IsNotNull(velocityCalibrationService, "Velocity calibration service should be registered.");
+        Assert.IsNotNull(effortTrendForecastService, "Effort trend forecast service should be registered.");
         Assert.IsNotNull(projectionService, "SprintTrendProjectionService should be resolvable from DI.");
     }
 
