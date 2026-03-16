@@ -270,14 +270,16 @@ public class SprintTrendProjectionService
         IReadOnlyDictionary<int, List<ActivityEventLedgerEntryEntity>> activityByWorkItem,
         DateTimeOffset sprintStart,
         DateTimeOffset sprintEnd,
+        IReadOnlySet<int> committedWorkItemIds,
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null,
         IReadOnlyDictionary<int, DateTimeOffset>? firstDoneByWorkItem = null,
-        IReadOnlySet<int>? committedWorkItemIds = null,
         string? nextSprintPath = null,
         IReadOnlyDictionary<int, WorkItemSnapshot>? workItemSnapshotsById = null,
         IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? stateEventsByWorkItem = null,
         IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? iterationEventsByWorkItem = null)
     {
+        ArgumentNullException.ThrowIfNull(committedWorkItemIds);
+
         var effectiveActivityByWorkItem = activityByWorkItem.ToDictionary(
             pair => pair.Key,
             pair => (IReadOnlyList<FieldChangeEvent>)pair.Value.ToFieldChangeEvents());
@@ -289,12 +291,6 @@ public class SprintTrendProjectionService
                 pair => (IReadOnlyList<FieldChangeEvent>)pair.Value
                     .Where(change => string.Equals(change.FieldRefName, "System.IterationPath", StringComparison.OrdinalIgnoreCase))
                     .ToList());
-        var effectiveCommittedWorkItemIds = committedWorkItemIds
-            ?? _sprintCommitmentService.BuildCommittedWorkItemIds(
-                effectiveWorkItemSnapshotsById,
-                effectiveIterationEventsByWorkItem,
-                sprint.Path,
-                _sprintCommitmentService.GetCommitmentTimestamp(sprintStart));
 
         var projection = _deliveryTrendProjectionService.Compute(new SprintDeliveryProjectionRequest(
             sprint.ToDefinition(),
@@ -304,7 +300,7 @@ public class SprintTrendProjectionService
             effectiveActivityByWorkItem,
             sprintStart,
             sprintEnd,
-            effectiveCommittedWorkItemIds,
+            committedWorkItemIds,
             stateLookup,
             firstDoneByWorkItem,
             nextSprintPath,

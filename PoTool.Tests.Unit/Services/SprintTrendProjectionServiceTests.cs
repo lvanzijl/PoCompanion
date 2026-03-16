@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using PoTool.Api.Adapters;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Domain.Models;
@@ -44,6 +45,21 @@ public class SprintTrendProjectionServiceTests
     {
         using var services = CreateDefaultServices();
         var service = CreateProjectionService(services);
+        var effectiveWorkItemSnapshotsById = workItemSnapshotsById
+            ?? workItemsByTfsId.Values.ToSnapshotDictionary();
+        var effectiveIterationEventsByWorkItem = iterationEventsByWorkItem
+            ?? activityByWorkItem.ToDictionary(
+                pair => pair.Key,
+                pair => (IReadOnlyList<FieldChangeEvent>)pair.Value
+                    .ToFieldChangeEvents()
+                    .Where(change => string.Equals(change.FieldRefName, "System.IterationPath", StringComparison.OrdinalIgnoreCase))
+                    .ToList());
+        var effectiveCommittedWorkItemIds = committedWorkItemIds
+            ?? services.GetRequiredService<ISprintCommitmentService>().BuildCommittedWorkItemIds(
+                effectiveWorkItemSnapshotsById,
+                effectiveIterationEventsByWorkItem,
+                sprint.Path,
+                services.GetRequiredService<ISprintCommitmentService>().GetCommitmentTimestamp(sprintStart));
 
         return service.ComputeProductSprintProjection(
             sprint,
@@ -53,13 +69,13 @@ public class SprintTrendProjectionServiceTests
             activityByWorkItem,
             sprintStart,
             sprintEnd,
+            effectiveCommittedWorkItemIds,
             stateLookup,
             firstDoneByWorkItem,
-            committedWorkItemIds,
             nextSprintPath,
-            workItemSnapshotsById,
+            effectiveWorkItemSnapshotsById,
             stateEventsByWorkItem,
-            iterationEventsByWorkItem);
+            effectiveIterationEventsByWorkItem);
     }
 
     private static double ComputeProgressionDelta(
@@ -1482,7 +1498,13 @@ public class SprintTrendProjectionServiceTests
         };
         workItems[203].IterationPath = "\\Project\\Sprint 2";
 
-        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>();
+        var activity = new Dictionary<int, List<ActivityEventLedgerEntryEntity>>
+        {
+            [203] = new()
+            {
+                CreateIterationPathActivity(203, sprintStart.AddHours(12), sprint.Path, "\\Project\\Sprint 2")
+            }
+        };
 
         var result = ComputeProductSprintProjection(
             sprint, 1, resolved, workItems, activity, sprintStart, sprintEnd);

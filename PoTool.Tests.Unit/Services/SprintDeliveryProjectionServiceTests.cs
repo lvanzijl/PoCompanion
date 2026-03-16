@@ -105,14 +105,14 @@ public sealed class SprintDeliveryProjectionServiceTests
     }
 
     [TestMethod]
-    public void Compute_RequiresCommittedWorkItemIds()
+    public void Compute_ThrowsArgumentNullException_WhenCommittedWorkItemIdsIsNull()
     {
         var service = CreateService();
         var sprint = CreateSprint();
         var sprintStart = sprint.StartUtc!.Value;
         var sprintEnd = sprint.EndUtc!.Value;
 
-        Assert.ThrowsExactly<ArgumentNullException>(() => service.Compute(new SprintDeliveryProjectionRequest(
+        var exception = Assert.ThrowsExactly<ArgumentNullException>(() => service.Compute(new SprintDeliveryProjectionRequest(
             sprint,
             1,
             [
@@ -129,6 +129,8 @@ public sealed class SprintDeliveryProjectionServiceTests
             sprintStart,
             sprintEnd,
             null!)));
+
+        Assert.AreEqual("request.CommittedWorkItemIds", exception.ParamName);
     }
 
     [TestMethod]
