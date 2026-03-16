@@ -190,9 +190,9 @@ public record SprintExecutionSummaryDto
 
     /// <summary>
     /// Canonical remaining story points after sprint delivery and scope changes.
-    /// Computed from the same internal committed, added, removed, and delivered values already exposed by this DTO.
+    /// Mapped from the canonical SprintCommitment CDC result.
     /// </summary>
-    public double RemainingStoryPoints => CommittedSP + AddedSP - RemovedSP - DeliveredSP;
+    public double RemainingStoryPoints { get; init; }
 
     /// <summary>
     /// Canonical story points that spilled from committed scope into the next sprint.

@@ -7,7 +7,6 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Domain.Cdc.Sprints;
-using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Sprints;
 using PoTool.Core.Metrics.Queries;
@@ -38,7 +37,7 @@ public sealed class GetSprintExecutionQueryHandler
     private readonly ISprintScopeChangeService _sprintScopeChangeService;
     private readonly ISprintCompletionService _sprintCompletionService;
     private readonly ISprintSpilloverService _sprintSpilloverService;
-    private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
+    private readonly ISprintFactService _sprintFactService;
     private readonly SprintMetrics.ISprintExecutionMetricsCalculator _sprintExecutionMetricsCalculator;
     private readonly ILogger<GetSprintExecutionQueryHandler> _logger;
 
@@ -49,7 +48,7 @@ public sealed class GetSprintExecutionQueryHandler
         ISprintScopeChangeService sprintScopeChangeService,
         ISprintCompletionService sprintCompletionService,
         ISprintSpilloverService sprintSpilloverService,
-        ICanonicalStoryPointResolutionService storyPointResolutionService,
+        ISprintFactService sprintFactService,
         SprintMetrics.ISprintExecutionMetricsCalculator sprintExecutionMetricsCalculator,
         ILogger<GetSprintExecutionQueryHandler> logger)
     {
@@ -59,7 +58,7 @@ public sealed class GetSprintExecutionQueryHandler
         _sprintScopeChangeService = sprintScopeChangeService;
         _sprintCompletionService = sprintCompletionService;
         _sprintSpilloverService = sprintSpilloverService;
-        _storyPointResolutionService = storyPointResolutionService;
+        _sprintFactService = sprintFactService;
         _sprintExecutionMetricsCalculator = sprintExecutionMetricsCalculator;
         _logger = logger;
     }
@@ -124,8 +123,8 @@ public sealed class GetSprintExecutionQueryHandler
                         && resolvedWorkItemIds.Contains(w.TfsId))
             .ToListAsync(cancellationToken);
 
-        var relevantWorkItemsById = relevantWorkItems.ToDictionary(w => w.TfsId, w => w);
         var workItemSnapshotsById = relevantWorkItems.ToSnapshotDictionary();
+        var canonicalWorkItemsById = relevantWorkItems.ToDictionary(workItem => workItem.TfsId, workItem => workItem.ToCanonicalWorkItem());
         var currentSprintItems = relevantWorkItems
             .Where(w => w.IterationPath == sprint.Path)
             .ToList();
@@ -263,6 +262,14 @@ public sealed class GetSprintExecutionQueryHandler
         var spilloverItems = relevantWorkItems
             .Where(w => w.Type == PbiType && spilloverWorkItemIds.Contains(w.TfsId))
             .ToList();
+        var sprintFact = _sprintFactService.BuildSprintFactResult(
+            sprintDefinition,
+            canonicalWorkItemsById,
+            workItemSnapshotsById,
+            iterationEventsByWorkItem,
+            stateEventsByWorkItem,
+            stateLookup,
+            nextSprintPath);
 
         // ── Step 10: Detect starved work ──────────────────────────────────────
         // Starved = items in initial scope that are unfinished, while items added later completed
@@ -365,37 +372,13 @@ public sealed class GetSprintExecutionQueryHandler
             ProductName = ResolveProductName(w.TfsId)
         }).ToList();
 
-        var committedSp = SumStoryPoints(
-            relevantWorkItems.Where(w => initialScopeIds.Contains(w.TfsId)),
-            stateLookup,
-            relevantWorkItemsById,
-            excludeDerived: true);
-        var addedSp = SumStoryPoints(
-            relevantWorkItems.Where(w => addedWorkItemIds.Contains(w.TfsId)),
-            stateLookup,
-            relevantWorkItemsById,
-            excludeDerived: false);
-        var removedSp = SumStoryPoints(
-            removedWorkItems,
-            stateLookup,
-            relevantWorkItemsById,
-            excludeDerived: false);
-        var deliveredSp = SumDeliveredStoryPoints(completedItems, relevantWorkItemsById);
-        var deliveredFromAddedSp = SumDeliveredStoryPoints(
-            completedItems.Where(w => addedWorkItemIds.Contains(w.TfsId)),
-            relevantWorkItemsById);
-        var spilloverSp = SumStoryPoints(
-            spilloverItems,
-            stateLookup,
-            relevantWorkItemsById,
-            excludeDerived: true);
         var metrics = _sprintExecutionMetricsCalculator.Calculate(new SprintMetrics.SprintExecutionMetricsInput(
-            committedSp,
-            addedSp,
-            removedSp,
-            deliveredSp,
-            deliveredFromAddedSp,
-            spilloverSp));
+            sprintFact.CommittedStoryPoints,
+            sprintFact.AddedStoryPoints,
+            sprintFact.RemovedStoryPoints,
+            sprintFact.DeliveredStoryPoints,
+            sprintFact.DeliveredFromAddedStoryPoints,
+            sprintFact.SpilloverStoryPoints));
 
         var summary = new SprintExecutionSummaryDto
         {
@@ -415,12 +398,13 @@ public sealed class GetSprintExecutionQueryHandler
             UnfinishedEffort = unfinishedItems.Sum(w => w.Effort ?? 0),
             SpilloverCount = spilloverItems.Count,
             SpilloverEffort = spilloverItems.Sum(w => w.Effort ?? 0),
-            CommittedSP = metrics.CommittedSP,
-            AddedSP = metrics.AddedSP,
-            RemovedSP = metrics.RemovedSP,
-            DeliveredSP = metrics.DeliveredSP,
-            DeliveredFromAddedSP = metrics.DeliveredFromAddedSP,
-            SpilloverSP = metrics.SpilloverSP,
+            CommittedSP = sprintFact.CommittedStoryPoints,
+            AddedSP = sprintFact.AddedStoryPoints,
+            RemovedSP = sprintFact.RemovedStoryPoints,
+            DeliveredSP = sprintFact.DeliveredStoryPoints,
+            DeliveredFromAddedSP = sprintFact.DeliveredFromAddedStoryPoints,
+            SpilloverSP = sprintFact.SpilloverStoryPoints,
+            RemainingStoryPoints = sprintFact.RemainingStoryPoints,
             ChurnRate = metrics.ChurnRate,
             CommitmentCompletion = metrics.CommitmentCompletion,
             SpilloverRate = metrics.SpilloverRate,
@@ -484,90 +468,6 @@ public sealed class GetSprintExecutionQueryHandler
         return _sprintSpilloverService.GetNextSprintPath(
             sprint,
             teamSprints.Select(candidate => candidate.ToDefinition()));
-    }
-
-    private double SumStoryPoints(
-        IEnumerable<WorkItemEntity> workItems,
-        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
-        IReadOnlyDictionary<int, WorkItemEntity> workItemsById,
-        bool excludeDerived)
-    {
-        return workItems
-            .Select(workItem => ResolveStoryPointEstimate(workItem, stateLookup, workItemsById, excludeDerived))
-            .Where(estimate => estimate.HasValue)
-            .Select(estimate => estimate!.Value)
-            .Sum();
-    }
-
-    private double SumDeliveredStoryPoints(
-        IEnumerable<WorkItemEntity> workItems,
-        IReadOnlyDictionary<int, WorkItemEntity> workItemsById)
-    {
-        return workItems
-            .Select(workItem => ResolveDeliveredStoryPointEstimate(workItem, workItemsById))
-            .Where(estimate => estimate.HasValue)
-            .Select(estimate => estimate!.Value)
-            .Sum();
-    }
-
-    private double? ResolveStoryPointEstimate(
-        WorkItemEntity workItem,
-        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
-        IReadOnlyDictionary<int, WorkItemEntity> workItemsById,
-        bool excludeDerived)
-    {
-        var estimate = _storyPointResolutionService.Resolve(new StoryPointResolutionRequest(
-            workItem.ToCanonicalWorkItem(),
-            StateClassificationLookup.IsDone(stateLookup, workItem.Type, workItem.State),
-            BuildFeaturePbiCandidates(workItem, stateLookup, workItemsById)));
-
-        if (!estimate.Value.HasValue || estimate.Source == StoryPointEstimateSource.Missing)
-        {
-            return null;
-        }
-
-        if (excludeDerived && estimate.Source == StoryPointEstimateSource.Derived)
-        {
-            return null;
-        }
-
-        return estimate.Value.Value;
-    }
-
-    private double? ResolveDeliveredStoryPointEstimate(
-        WorkItemEntity workItem,
-        IReadOnlyDictionary<int, WorkItemEntity> workItemsById)
-    {
-        var estimate = _storyPointResolutionService.Resolve(new StoryPointResolutionRequest(
-            workItem.ToCanonicalWorkItem(),
-            IsDone: true,
-            BuildFeaturePbiCandidates(workItem, stateLookup: null, workItemsById)));
-
-        if (!estimate.Value.HasValue || estimate.Source is StoryPointEstimateSource.Missing or StoryPointEstimateSource.Derived)
-        {
-            return null;
-        }
-
-        return estimate.Value.Value;
-    }
-
-    private static IReadOnlyCollection<StoryPointResolutionCandidate> BuildFeaturePbiCandidates(
-        WorkItemEntity workItem,
-        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
-        IReadOnlyDictionary<int, WorkItemEntity> workItemsById)
-    {
-        if (workItem.ParentTfsId == null)
-        {
-            return [];
-        }
-
-        return workItemsById.Values
-            .Where(candidate => candidate.ParentTfsId == workItem.ParentTfsId)
-            .Where(candidate => IsPbiType(candidate.Type))
-            .Select(candidate => new StoryPointResolutionCandidate(
-                candidate.ToCanonicalWorkItem(),
-                StateClassificationLookup.IsDone(stateLookup, candidate.Type, candidate.State)))
-            .ToList();
     }
 
     private static bool IsPbiType(string workItemType)

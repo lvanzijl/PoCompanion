@@ -40,10 +40,10 @@ public sealed class ApplicationSimplificationPlanDocumentTests
         StringAssert.Contains(report, "compute rollups");
         StringAssert.Contains(report, "compute velocity or flow metrics");
 
-        StringAssert.Contains(report, "Step 1: redirect calculation to the `SprintCommitment` slice");
-        StringAssert.Contains(report, "Step 2: remove duplicated service logic");
-        StringAssert.Contains(report, "Step 3: simplify DTO builders");
-        StringAssert.Contains(report, "Step 4: remove unused helper utilities");
+        StringAssert.Contains(report, "Step 1: keep `SprintFactResult` as the single application-facing result");
+        StringAssert.Contains(report, "Step 2: route any future sprint-total consumer through `ISprintFactService`");
+        StringAssert.Contains(report, "Step 3: keep sprint metrics and sprint execution responses as mapping layers");
+        StringAssert.Contains(report, "Step 4: prevent transport formulas from reappearing in DTOs");
 
         StringAssert.Contains(report, "RoadmapAnalyticsService.cs");
         StringAssert.Contains(report, "GetSprintExecutionQueryHandler.cs");
@@ -51,6 +51,7 @@ public sealed class ApplicationSimplificationPlanDocumentTests
         StringAssert.Contains(report, "GetPortfolioProgressTrendQueryHandler.cs");
         StringAssert.Contains(report, "GetPortfolioDeliveryQueryHandler.cs");
         StringAssert.Contains(report, "SprintExecutionDtos.cs");
+        StringAssert.Contains(report, "SprintFactResult");
         StringAssert.Contains(report, "DeliveryTrendProgressRollupMapper.cs");
         StringAssert.Contains(report, "150–250 lines");
         StringAssert.Contains(report, "GetEffortDistributionQueryHandler");

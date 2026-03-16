@@ -182,6 +182,7 @@ public sealed class GetSprintExecutionQueryHandlerTests
         var scopeChangeService = new Mock<ISprintScopeChangeService>(MockBehavior.Strict);
         var completionService = new Mock<ISprintCompletionService>(MockBehavior.Strict);
         var spilloverService = new Mock<ISprintSpilloverService>(MockBehavior.Strict);
+        var sprintFactService = new Mock<ISprintFactService>(MockBehavior.Strict);
         var sprintStart = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
 
         commitmentService
@@ -226,6 +227,23 @@ public sealed class GetSprintExecutionQueryHandlerTests
                 It.IsAny<string?>(),
                 It.IsAny<DateTimeOffset>()))
             .Returns(new HashSet<int>());
+        sprintFactService
+            .Setup(service => service.BuildSprintFactResult(
+                It.IsAny<CdcModels.SprintDefinition>(),
+                It.IsAny<IReadOnlyDictionary<int, CdcModels.CanonicalWorkItem>>(),
+                It.IsAny<IReadOnlyDictionary<int, CdcModels.WorkItemSnapshot>>(),
+                It.IsAny<IReadOnlyDictionary<int, IReadOnlyList<CdcModels.FieldChangeEvent>>>(),
+                It.IsAny<IReadOnlyDictionary<int, IReadOnlyList<CdcModels.FieldChangeEvent>>>(),
+                It.IsAny<IReadOnlyDictionary<(string WorkItemType, string StateName), PoTool.Core.Domain.Models.StateClassification>?>(),
+                It.IsAny<string?>()))
+            .Returns(new SprintFactResult(
+                CommittedStoryPoints: 5,
+                AddedStoryPoints: 0,
+                RemovedStoryPoints: 0,
+                DeliveredStoryPoints: 0,
+                DeliveredFromAddedStoryPoints: 0,
+                SpilloverStoryPoints: 0,
+                RemainingStoryPoints: 5));
 
         var handler = new GetSprintExecutionQueryHandler(
             _context,
@@ -234,7 +252,7 @@ public sealed class GetSprintExecutionQueryHandlerTests
             scopeChangeService.Object,
             completionService.Object,
             spilloverService.Object,
-            new CanonicalStoryPointResolutionService(),
+            sprintFactService.Object,
             new PoTool.Core.Domain.Metrics.SprintExecutionMetricsCalculator(),
             NullLogger<GetSprintExecutionQueryHandler>.Instance);
 
@@ -247,6 +265,7 @@ public sealed class GetSprintExecutionQueryHandlerTests
         scopeChangeService.VerifyAll();
         completionService.VerifyAll();
         spilloverService.VerifyAll();
+        sprintFactService.VerifyAll();
     }
 
     [TestMethod]
@@ -598,7 +617,12 @@ public sealed class GetSprintExecutionQueryHandlerTests
             new SprintScopeChangeService(),
             new SprintCompletionService(),
             new SprintSpilloverService(),
-            new CanonicalStoryPointResolutionService(),
+            new SprintFactService(
+                new SprintCommitmentService(),
+                new SprintScopeChangeService(),
+                new SprintCompletionService(),
+                new SprintSpilloverService(),
+                new CanonicalStoryPointResolutionService()),
             new PoTool.Core.Domain.Metrics.SprintExecutionMetricsCalculator(),
             NullLogger<GetSprintExecutionQueryHandler>.Instance);
     }

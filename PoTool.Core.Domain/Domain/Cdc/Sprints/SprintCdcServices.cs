@@ -1,3 +1,4 @@
+using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Sprints;
 using Metrics = PoTool.Core.Domain.Metrics;
@@ -122,6 +123,24 @@ public interface ISprintExecutionMetricsCalculator
     /// Calculates canonical sprint execution metrics from reconstructed story-point totals.
     /// </summary>
     Metrics.SprintExecutionMetricsResult Calculate(Metrics.SprintExecutionMetricsInput input);
+}
+
+/// <summary>
+/// Builds canonical sprint story-point totals from SprintCommitment CDC inputs.
+/// </summary>
+public interface ISprintFactService
+{
+    /// <summary>
+    /// Builds the canonical sprint story-point totals for the supplied sprint inputs.
+    /// </summary>
+    SprintFactResult BuildSprintFactResult(
+        SprintDefinition sprint,
+        IReadOnlyDictionary<int, CanonicalWorkItem> canonicalWorkItemsById,
+        IReadOnlyDictionary<int, WorkItemSnapshot> workItemSnapshotsById,
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>> iterationEventsByWorkItem,
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>> stateEventsByWorkItem,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
+        string? nextSprintPath);
 }
 
 /// <summary>
@@ -393,5 +412,200 @@ public sealed class SprintExecutionMetricsCalculator : ISprintExecutionMetricsCa
     public Metrics.SprintExecutionMetricsResult Calculate(Metrics.SprintExecutionMetricsInput input)
     {
         return _innerCalculator.Calculate(input);
+    }
+}
+
+/// <summary>
+/// Default CDC implementation for canonical sprint story-point totals.
+/// </summary>
+public sealed class SprintFactService : ISprintFactService
+{
+    private readonly ISprintCommitmentService _sprintCommitmentService;
+    private readonly ISprintScopeChangeService _sprintScopeChangeService;
+    private readonly ISprintCompletionService _sprintCompletionService;
+    private readonly ISprintSpilloverService _sprintSpilloverService;
+    private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
+
+    public SprintFactService(
+        ISprintCommitmentService sprintCommitmentService,
+        ISprintScopeChangeService sprintScopeChangeService,
+        ISprintCompletionService sprintCompletionService,
+        ISprintSpilloverService sprintSpilloverService,
+        ICanonicalStoryPointResolutionService storyPointResolutionService)
+    {
+        _sprintCommitmentService = sprintCommitmentService ?? throw new ArgumentNullException(nameof(sprintCommitmentService));
+        _sprintScopeChangeService = sprintScopeChangeService ?? throw new ArgumentNullException(nameof(sprintScopeChangeService));
+        _sprintCompletionService = sprintCompletionService ?? throw new ArgumentNullException(nameof(sprintCompletionService));
+        _sprintSpilloverService = sprintSpilloverService ?? throw new ArgumentNullException(nameof(sprintSpilloverService));
+        _storyPointResolutionService = storyPointResolutionService ?? throw new ArgumentNullException(nameof(storyPointResolutionService));
+    }
+
+    public SprintFactResult BuildSprintFactResult(
+        SprintDefinition sprint,
+        IReadOnlyDictionary<int, CanonicalWorkItem> canonicalWorkItemsById,
+        IReadOnlyDictionary<int, WorkItemSnapshot> workItemSnapshotsById,
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>> iterationEventsByWorkItem,
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>> stateEventsByWorkItem,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
+        string? nextSprintPath)
+    {
+        ArgumentNullException.ThrowIfNull(sprint);
+        ArgumentNullException.ThrowIfNull(canonicalWorkItemsById);
+        ArgumentNullException.ThrowIfNull(workItemSnapshotsById);
+        ArgumentNullException.ThrowIfNull(iterationEventsByWorkItem);
+        ArgumentNullException.ThrowIfNull(stateEventsByWorkItem);
+
+        var commitmentTimestamp = sprint.StartUtc.HasValue
+            ? _sprintCommitmentService.GetCommitmentTimestamp(sprint.StartUtc.Value)
+            : (DateTimeOffset?)null;
+
+        var committedWorkItemIds = commitmentTimestamp.HasValue
+            ? _sprintCommitmentService.BuildCommittedWorkItemIds(
+                workItemSnapshotsById,
+                iterationEventsByWorkItem,
+                sprint.Path,
+                commitmentTimestamp.Value)
+            : workItemSnapshotsById.Values
+                .Where(workItem => string.Equals(workItem.CurrentIterationPath, sprint.Path, StringComparison.OrdinalIgnoreCase))
+                .Select(workItem => workItem.WorkItemId)
+                .ToHashSet();
+
+        var addedWorkItemIds = sprint.StartUtc.HasValue && sprint.EndUtc.HasValue
+            ? _sprintScopeChangeService
+                .DetectScopeAdded(sprint, iterationEventsByWorkItem)
+                .Select(entry => entry.WorkItemId)
+                .ToHashSet()
+            : new HashSet<int>();
+
+        var currentSprintItemIds = workItemSnapshotsById.Values
+            .Where(workItem => string.Equals(workItem.CurrentIterationPath, sprint.Path, StringComparison.OrdinalIgnoreCase))
+            .Select(workItem => workItem.WorkItemId)
+            .ToHashSet();
+
+        var removedWorkItemIds = sprint.StartUtc.HasValue && sprint.EndUtc.HasValue
+            ? _sprintScopeChangeService
+                .DetectScopeRemoved(sprint, iterationEventsByWorkItem)
+                .Select(entry => entry.WorkItemId)
+                .Distinct()
+                .Except(currentSprintItemIds)
+                .ToHashSet()
+            : new HashSet<int>();
+
+        var firstDoneByWorkItem = sprint.EndUtc.HasValue
+            ? _sprintCompletionService.BuildFirstDoneByWorkItem(
+                stateEventsByWorkItem.Values.SelectMany(events => events),
+                workItemSnapshotsById,
+                stateLookup)
+            : new Dictionary<int, DateTimeOffset>();
+
+        var deliveredWorkItemIds = sprint.StartUtc.HasValue && sprint.EndUtc.HasValue
+            ? firstDoneByWorkItem
+                .Where(pair => pair.Value >= sprint.StartUtc.Value && pair.Value <= sprint.EndUtc.Value)
+                .Select(pair => pair.Key)
+                .ToHashSet()
+            : new HashSet<int>();
+
+        var spilloverWorkItemIds = sprint.EndUtc.HasValue
+            ? _sprintSpilloverService.BuildSpilloverWorkItemIds(
+                committedWorkItemIds,
+                workItemSnapshotsById,
+                stateEventsByWorkItem,
+                iterationEventsByWorkItem,
+                stateLookup,
+                sprint,
+                nextSprintPath,
+                sprint.EndUtc.Value)
+            : new HashSet<int>();
+
+        var committedStoryPoints = SumStoryPoints(committedWorkItemIds, canonicalWorkItemsById, workItemSnapshotsById, stateLookup, excludeDerived: true);
+        var addedStoryPoints = SumStoryPoints(addedWorkItemIds, canonicalWorkItemsById, workItemSnapshotsById, stateLookup, excludeDerived: false);
+        var removedStoryPoints = SumStoryPoints(removedWorkItemIds, canonicalWorkItemsById, workItemSnapshotsById, stateLookup, excludeDerived: false);
+        var deliveredStoryPoints = SumStoryPoints(deliveredWorkItemIds, canonicalWorkItemsById, workItemSnapshotsById, stateLookup, excludeDerived: true, forceDone: true);
+        var deliveredFromAddedStoryPoints = SumStoryPoints(deliveredWorkItemIds.Intersect(addedWorkItemIds), canonicalWorkItemsById, workItemSnapshotsById, stateLookup, excludeDerived: true, forceDone: true);
+        var spilloverStoryPoints = SumStoryPoints(spilloverWorkItemIds, canonicalWorkItemsById, workItemSnapshotsById, stateLookup, excludeDerived: true);
+        var remainingStoryPoints = committedStoryPoints + addedStoryPoints - removedStoryPoints - deliveredStoryPoints;
+
+        return new SprintFactResult(
+            committedStoryPoints,
+            addedStoryPoints,
+            removedStoryPoints,
+            deliveredStoryPoints,
+            deliveredFromAddedStoryPoints,
+            spilloverStoryPoints,
+            remainingStoryPoints);
+    }
+
+    private double SumStoryPoints(
+        IEnumerable<int> workItemIds,
+        IReadOnlyDictionary<int, CanonicalWorkItem> canonicalWorkItemsById,
+        IReadOnlyDictionary<int, WorkItemSnapshot> workItemSnapshotsById,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
+        bool excludeDerived,
+        bool forceDone = false)
+    {
+        return workItemIds
+            .Select(workItemId => ResolveStoryPointEstimate(
+                workItemId,
+                canonicalWorkItemsById,
+                workItemSnapshotsById,
+                stateLookup,
+                excludeDerived,
+                forceDone))
+            .Where(estimate => estimate.HasValue)
+            .Select(estimate => estimate!.Value)
+            .Sum();
+    }
+
+    private double? ResolveStoryPointEstimate(
+        int workItemId,
+        IReadOnlyDictionary<int, CanonicalWorkItem> canonicalWorkItemsById,
+        IReadOnlyDictionary<int, WorkItemSnapshot> workItemSnapshotsById,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup,
+        bool excludeDerived,
+        bool forceDone)
+    {
+        if (!canonicalWorkItemsById.TryGetValue(workItemId, out var workItem))
+        {
+            return null;
+        }
+
+        workItemSnapshotsById.TryGetValue(workItemId, out var snapshot);
+        var isDone = forceDone || StateClassificationLookup.IsDone(stateLookup, workItem.WorkItemType, snapshot?.CurrentState);
+        var estimate = _storyPointResolutionService.Resolve(new StoryPointResolutionRequest(
+            workItem,
+            isDone,
+            BuildFeaturePbiCandidates(workItem, canonicalWorkItemsById, workItemSnapshotsById, stateLookup)));
+
+        if (!estimate.Value.HasValue || estimate.Source == StoryPointEstimateSource.Missing)
+        {
+            return null;
+        }
+
+        if (excludeDerived && estimate.Source == StoryPointEstimateSource.Derived)
+        {
+            return null;
+        }
+
+        return estimate.Value.Value;
+    }
+
+    private static IReadOnlyCollection<StoryPointResolutionCandidate> BuildFeaturePbiCandidates(
+        CanonicalWorkItem workItem,
+        IReadOnlyDictionary<int, CanonicalWorkItem> canonicalWorkItemsById,
+        IReadOnlyDictionary<int, WorkItemSnapshot> workItemSnapshotsById,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup)
+    {
+        if (workItem.ParentWorkItemId == null)
+        {
+            return [];
+        }
+
+        return canonicalWorkItemsById.Values
+            .Where(candidate => candidate.ParentWorkItemId == workItem.ParentWorkItemId && candidate.WorkItemId != workItem.WorkItemId)
+            .Select(candidate => new StoryPointResolutionCandidate(
+                candidate,
+                workItemSnapshotsById.TryGetValue(candidate.WorkItemId, out var snapshot)
+                    && StateClassificationLookup.IsDone(stateLookup, candidate.WorkItemType, snapshot.CurrentState)))
+            .ToList();
     }
 }

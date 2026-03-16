@@ -69,8 +69,8 @@ Classification key:
 
 | Handler | Service dependencies | Calculator dependencies | Calculation origin | Classification |
 | --- | --- | --- | --- | --- |
-| `GetSprintMetricsQueryHandler` | `IWorkItemRepository`, `IProductRepository`, `ISprintRepository`, `IWorkItemStateClassificationService`, `ISprintCommitmentService`, `ISprintScopeChangeService`, `ISprintCompletionService`, `ICanonicalStoryPointResolutionService`, `IMediator`, `PoToolDbContext` | none | Commitment membership and first-Done attribution come from CDC services (`BuildCommittedWorkItemIds`, `BuildFirstDoneByWorkItem`, `DetectScopeAdded`), but the handler still recomputes `plannedStoryPoints` and `completedStoryPoints` locally via `ResolveSprintStoryPoints(...)` and local sums. | `CDC bypass` |
-| `GetSprintExecutionQueryHandler` | `PoToolDbContext`, `IWorkItemStateClassificationService`, `ISprintCommitmentService`, `ISprintScopeChangeService`, `ISprintCompletionService`, `ISprintSpilloverService`, `ICanonicalStoryPointResolutionService` | `SprintMetrics.ISprintExecutionMetricsCalculator` | Sprint fact reconstruction is CDC-backed (`BuildCommittedWorkItemIds`, `BuildFirstDoneByWorkItem`, `DetectScopeAdded`, `DetectScopeRemoved`, `BuildSpilloverWorkItemIds`), but the handler still rebuilds the derived story-point totals locally through `SumStoryPoints(...)` and `SumDeliveredStoryPoints(...)` before calling the calculator. | `CDC bypass` |
+| `GetSprintMetricsQueryHandler` | `IWorkItemRepository`, `IProductRepository`, `ISprintRepository`, `IWorkItemStateClassificationService`, `ISprintCommitmentService`, `ISprintScopeChangeService`, `ISprintCompletionService`, `ISprintFactService`, `IMediator`, `PoToolDbContext` | none | Commitment membership and first-Done attribution still come from CDC services, and story-point totals now come from `ISprintFactService.BuildSprintFactResult(...)` instead of handler-local summation. The handler remains a thin adapter for counts and DTO mapping. | `CDC compliant` |
+| `GetSprintExecutionQueryHandler` | `PoToolDbContext`, `IWorkItemStateClassificationService`, `ISprintCommitmentService`, `ISprintScopeChangeService`, `ISprintCompletionService`, `ISprintSpilloverService`, `ISprintFactService` | `SprintMetrics.ISprintExecutionMetricsCalculator` | Sprint fact reconstruction stays CDC-backed (`BuildCommittedWorkItemIds`, `BuildFirstDoneByWorkItem`, `DetectScopeAdded`, `DetectScopeRemoved`, `BuildSpilloverWorkItemIds`), and the canonical story-point totals now come from `ISprintFactService.BuildSprintFactResult(...)` before the handler maps counts and execution-specific heuristics. | `CDC compliant` |
 
 ### Trend analytics handlers
 
@@ -82,7 +82,7 @@ Classification key:
 
 | Handler | Service dependencies | Calculator dependencies | Calculation origin | Classification |
 | --- | --- | --- | --- | --- |
-| `GetEpicCompletionForecastQueryHandler` | `IWorkItemRepository`, `IProductRepository`, `IMediator`, `IWorkItemStateClassificationService`, `IHierarchyRollupService` | `ICompletionForecastService` | Total and completed scope come from `IHierarchyRollupService.RollupCanonicalScope(...)`; forecast projection comes from `ICompletionForecastService.Forecast(...)`. Historical velocity is loaded indirectly by chaining `GetSprintMetricsQuery`, so the handler consumes forecast CDC logic but inherits the current sprint-metrics aggregation seam. | `CDC compliant` |
+| `GetEpicCompletionForecastQueryHandler` | `IWorkItemRepository`, `IProductRepository`, `IMediator`, `IWorkItemStateClassificationService`, `IHierarchyRollupService` | `ICompletionForecastService` | Total and completed scope come from `IHierarchyRollupService.RollupCanonicalScope(...)`; forecast projection comes from `ICompletionForecastService.Forecast(...)`. Historical velocity is loaded indirectly by chaining `GetSprintMetricsQuery`, which now reads sprint totals from the CDC-owned sprint fact seam. | `CDC compliant` |
 | `GetCapacityCalibrationQueryHandler` | `PoToolDbContext` | `IVelocityCalibrationService` | The handler reads `SprintMetricsProjectionEntity` rows and delegates percentile and predictability math to `IVelocityCalibrationService.Calibrate(...)`. | `CDC compliant` |
 | `GetEffortDistributionTrendQueryHandler` | `IWorkItemRepository`, `IProductRepository`, `IMediator` | `IEffortTrendForecastService` | Forecast slope, volatility, and confidence bands come from `IEffortTrendForecastService.Analyze(...)` in the Forecasting CDC. The handler limits itself to loading, optional filtering, and DTO mapping. | `CDC compliant` |
 
@@ -107,6 +107,14 @@ Classification key:
 
 Handlers that are fully powered by CDC outputs or CDC-owned domain services:
 
+- `GetSprintMetricsQueryHandler`
+  - reconstructs membership and first-Done attribution through CDC services
+  - reads committed and delivered story-point totals from `ISprintFactService.BuildSprintFactResult(...)`
+  - handler work is retrieval, scope-count shaping, and DTO mapping
+- `GetSprintExecutionQueryHandler`
+  - reconstructs membership, churn, completion, and spillover through CDC services
+  - reads committed, added, removed, delivered, delivered-from-added, spillover, and remaining story points from `ISprintFactService.BuildSprintFactResult(...)`
+  - delegates rates to `SprintMetrics.ISprintExecutionMetricsCalculator` and keeps only presentation-oriented counts / heuristics locally
 - `GetSprintTrendMetricsQueryHandler`
   - reads `SprintMetricsProjectionEntity` rows produced by `SprintTrendProjectionService`
   - feature and epic rollups come from `ComputeFeatureProgressAsync(...)` and `ComputeEpicProgressAsync(...)`
@@ -136,17 +144,6 @@ Supporting CDC-backed materialization seams confirmed during the audit:
 ## CDC Bypass Findings
 
 Handlers that still compute delivery analytics locally instead of consuming already-owned CDC outputs:
-
-### Sprint commitment totals and velocity
-
-- `GetSprintMetricsQueryHandler`
-  - uses CDC services to reconstruct membership and completion
-  - still sums `plannedStoryPoints` and `completedStoryPoints` locally through `ResolveSprintStoryPoints(...)`
-  - bypass type: recomputes commitment and delivery totals instead of consuming a CDC-owned sprint fact result
-- `GetSprintExecutionQueryHandler`
-  - uses CDC services for commitment, scope change, completion, and spillover
-  - still derives `CommittedSP`, `AddedSP`, `RemovedSP`, `DeliveredSP`, `DeliveredFromAddedSP`, and `SpilloverSP` locally through `SumStoryPoints(...)` and `SumDeliveredStoryPoints(...)`
-  - bypass type: handler-owned story-point total reconstruction before calculator invocation
 
 ### Portfolio progress rollups
 
@@ -196,9 +193,10 @@ These seams are acceptable adapters because the formulas themselves are no longe
 
 ## Migration Opportunities
 
-- **Promote CDC sprint fact outputs into a single application-facing result**
-  - target consumers: `GetSprintMetricsQueryHandler`, `GetSprintExecutionQueryHandler`, and the velocity-sampling path used by `GetEpicCompletionForecastQueryHandler`
-  - expected simplification: remove handler-owned recomputation of committed, added, removed, delivered, and spillover story-point totals
+- **Adopt the CDC sprint fact result as the canonical sprint-total seam**
+  - completed for: `GetSprintMetricsQueryHandler` and `GetSprintExecutionQueryHandler`
+  - new seam: `ISprintFactService.BuildSprintFactResult(...)` returning `SprintFactResult`
+  - follow-up consumer: keep the velocity-sampling path used by `GetEpicCompletionForecastQueryHandler` aligned to this seam
 - **Promote portfolio summary rollups into CDC-backed outputs**
   - target consumers: `GetPortfolioProgressTrendQueryHandler` and `GetPortfolioDeliveryQueryHandler`
   - expected simplification: map `CompletionPercent`, `NetFlowStoryPoints`, trajectory, product delivery totals, and contribution shares directly from canonical outputs instead of re-aggregating projection rows

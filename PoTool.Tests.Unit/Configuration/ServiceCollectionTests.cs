@@ -108,6 +108,7 @@ public class ServiceCollectionTests
         var sprintScopeChangeService = scope.ServiceProvider.GetService<ISprintScopeChangeService>();
         var sprintCompletionService = scope.ServiceProvider.GetService<ISprintCompletionService>();
         var sprintSpilloverService = scope.ServiceProvider.GetService<ISprintSpilloverService>();
+        var sprintFactService = scope.ServiceProvider.GetService<ISprintFactService>();
         var sprintDeliveryProjectionService = scope.ServiceProvider.GetService<ISprintDeliveryProjectionService>();
         var sprintExecutionMetricsCalculator = scope.ServiceProvider.GetService<PoTool.Core.Domain.Cdc.Sprints.ISprintExecutionMetricsCalculator>();
         var completionForecastService = scope.ServiceProvider.GetService<ICompletionForecastService>();
@@ -122,6 +123,7 @@ public class ServiceCollectionTests
         Assert.IsNotNull(sprintScopeChangeService, "Sprint scope-change CDC service should be registered.");
         Assert.IsNotNull(sprintCompletionService, "Sprint completion CDC service should be registered.");
         Assert.IsNotNull(sprintSpilloverService, "Sprint spillover CDC service should be registered.");
+        Assert.IsNotNull(sprintFactService, "Sprint fact CDC service should be registered.");
         Assert.IsNotNull(sprintDeliveryProjectionService, "Sprint delivery projection service should be registered.");
         Assert.IsNotNull(sprintExecutionMetricsCalculator, "Sprint execution metrics CDC service should be registered.");
         Assert.IsNotNull(completionForecastService, "Completion forecast service should be registered.");

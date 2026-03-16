@@ -72,12 +72,13 @@ public sealed class CdcUsageCoverageDocumentTests
         StringAssert.Contains(sprintMetrics, "ISprintCommitmentService");
         StringAssert.Contains(sprintMetrics, "_sprintCommitmentService.BuildCommittedWorkItemIds");
         StringAssert.Contains(sprintMetrics, "_sprintCompletionService.BuildFirstDoneByWorkItem");
-        StringAssert.Contains(sprintMetrics, "ResolveSprintStoryPoints");
+        StringAssert.Contains(sprintMetrics, "ISprintFactService");
+        StringAssert.Contains(sprintMetrics, "_sprintFactService.BuildSprintFactResult");
 
         StringAssert.Contains(sprintExecution, "ISprintExecutionMetricsCalculator");
         StringAssert.Contains(sprintExecution, "_sprintSpilloverService.BuildSpilloverWorkItemIds");
-        StringAssert.Contains(sprintExecution, "SumStoryPoints(");
-        StringAssert.Contains(sprintExecution, "SumDeliveredStoryPoints(");
+        StringAssert.Contains(sprintExecution, "ISprintFactService");
+        StringAssert.Contains(sprintExecution, "_sprintFactService.BuildSprintFactResult");
 
         StringAssert.Contains(sprintTrend, "ComputeFeatureProgressAsync");
         StringAssert.Contains(sprintTrend, "ComputeEpicProgressAsync");

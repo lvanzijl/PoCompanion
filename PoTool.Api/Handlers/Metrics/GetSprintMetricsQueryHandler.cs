@@ -38,7 +38,7 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
     private readonly ISprintCommitmentService _sprintCommitmentService;
     private readonly ISprintScopeChangeService _sprintScopeChangeService;
     private readonly ISprintCompletionService _sprintCompletionService;
-    private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
+    private readonly ISprintFactService _sprintFactService;
     private readonly IMediator _mediator;
     private readonly PoToolDbContext _context;
     private readonly ILogger<GetSprintMetricsQueryHandler> _logger;
@@ -51,7 +51,7 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         ISprintCommitmentService sprintCommitmentService,
         ISprintScopeChangeService sprintScopeChangeService,
         ISprintCompletionService sprintCompletionService,
-        ICanonicalStoryPointResolutionService storyPointResolutionService,
+        ISprintFactService sprintFactService,
         IMediator mediator,
         PoToolDbContext context,
         ILogger<GetSprintMetricsQueryHandler> logger)
@@ -63,7 +63,7 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         _sprintCommitmentService = sprintCommitmentService;
         _sprintScopeChangeService = sprintScopeChangeService;
         _sprintCompletionService = sprintCompletionService;
-        _storyPointResolutionService = storyPointResolutionService;
+        _sprintFactService = sprintFactService;
         _mediator = mediator;
         _context = context;
         _logger = logger;
@@ -121,8 +121,10 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         var sprintEnd = matchingSprint.EndUtc.Value;
         var sprintDefinition = matchingSprint.ToDefinition();
         var workItemSnapshotsById = relevantWorkItems.ToSnapshotDictionary();
+        var canonicalWorkItemsById = relevantWorkItems.ToDictionary(workItem => workItem.TfsId, workItem => workItem.ToCanonicalWorkItem());
         var commitmentTimestamp = _sprintCommitmentService.GetCommitmentTimestamp(sprintStart);
         var iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>();
+        var stateEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>();
         var firstDoneByWorkItem = new Dictionary<int, DateTimeOffset>();
         var addedWorkItemIds = new HashSet<int>();
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup = null;
@@ -140,8 +142,12 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
                 .Where(e => string.Equals(e.FieldRefName, IterationPathFieldRefName, StringComparison.OrdinalIgnoreCase))
                 .Where(e => e.TimestampUtc >= sprintStart.UtcDateTime)
                 .ToList();
+            var stateEvents = allHistoryFieldChanges
+                .Where(e => string.Equals(e.FieldRefName, StateFieldRefName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
             iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>(iterationEvents.GroupByWorkItemId());
+            stateEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>(stateEvents.GroupByWorkItemId());
 
             var classifications = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
             stateLookup = StateClassificationLookup.Create(classifications.Classifications.ToDomainStateClassifications());
@@ -153,6 +159,15 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
                 .Select(scopeChange => scopeChange.WorkItemId)
                 .ToHashSet();
         }
+
+        var sprintFact = _sprintFactService.BuildSprintFactResult(
+            sprintDefinition,
+            canonicalWorkItemsById,
+            workItemSnapshotsById,
+            iterationEventsByWorkItem,
+            stateEventsByWorkItem,
+            stateLookup,
+            nextSprintPath: null);
 
         var committedWorkItemIds = _sprintCommitmentService.BuildCommittedWorkItemIds(
                 workItemSnapshotsById,
@@ -176,27 +191,6 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
                          && firstDoneTimestamp <= sprintEnd)
             .ToList();
 
-        if (stateLookup == null)
-        {
-            var classificationsResponse = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
-            stateLookup = StateClassificationLookup.Create(classificationsResponse.Classifications.ToDomainStateClassifications());
-        }
-
-        var completedStoryPoints = completedItems
-            .Select(wi => ResolveSprintStoryPoints(wi, isDone: true))
-            .Where(resolution => resolution.HasValue)
-            .Select(resolution => resolution!.Value)
-            .Sum();
-
-        var plannedStoryPoints = sprintScopeWorkItems
-            .Where(wi => committedWorkItemIds.Contains(wi.TfsId))
-            .Select(wi => ResolveSprintStoryPoints(
-                wi,
-                StateClassificationLookup.IsDone(stateLookup, wi.Type, wi.State)))
-            .Where(resolution => resolution.HasValue)
-            .Select(resolution => resolution!.Value)
-            .Sum();
-
         var completedPBIs = completedItems.Count(wi =>
             IsPbiType(wi.Type));
 
@@ -215,8 +209,8 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
             SprintName: sprintName,
             StartDate: sprintStart,
             EndDate: sprintEnd,
-            CompletedStoryPoints: completedStoryPoints,
-            PlannedStoryPoints: plannedStoryPoints,
+            CompletedStoryPoints: (int)sprintFact.DeliveredStoryPoints,
+            PlannedStoryPoints: (int)sprintFact.CommittedStoryPoints,
             CompletedWorkItemCount: completedItems.Count,
             TotalWorkItemCount: sprintScopeWorkItems.Count,
             CompletedPBIs: completedPBIs,
@@ -227,22 +221,11 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         _logger.LogInformation(
             "Sprint metrics calculated for {IterationPath}: delivered {CompletedPoints} story points from {CompletedCount} scope items against {PlannedPoints} committed story points",
             query.IterationPath,
-            completedStoryPoints,
+            sprintFact.DeliveredStoryPoints,
             completedItems.Count,
-            plannedStoryPoints);
+            sprintFact.CommittedStoryPoints);
 
         return metrics;
-    }
-
-    private int? ResolveSprintStoryPoints(WorkItemDto workItem, bool isDone)
-    {
-        var estimate = _storyPointResolutionService.Resolve(new StoryPointResolutionRequest(workItem.ToCanonicalWorkItem(), isDone));
-        if (estimate.Source is StoryPointEstimateSource.Missing or StoryPointEstimateSource.Derived || !estimate.Value.HasValue)
-        {
-            return null;
-        }
-
-        return (int)estimate.Value.Value;
     }
 
     private static bool IsPbiType(string workItemType)

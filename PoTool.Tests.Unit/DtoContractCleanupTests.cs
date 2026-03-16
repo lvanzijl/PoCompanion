@@ -15,6 +15,7 @@ public sealed class DtoContractCleanupTests
             AddedSP = 5,
             RemovedSP = 2,
             DeliveredSP = 9,
+            RemainingStoryPoints = 9,
             SpilloverSP = 4
         };
 

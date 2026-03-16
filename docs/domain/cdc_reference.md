@@ -123,7 +123,7 @@ Canonical outputs:
 - `SprintScopeRemoved`
 - `SprintCompletion`
 - `SprintSpillover`
-- derived story-point totals for commitment, added scope, removed scope, delivered scope, delivered-from-added scope, and spillover
+- `SprintFactResult` for commitment, added scope, removed scope, delivered scope, delivered-from-added scope, spillover, and remaining story points
 
 Downstream consumers:
 
