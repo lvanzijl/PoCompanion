@@ -135,22 +135,7 @@ public sealed class GetEffortEstimationSuggestionsQueryHandler
                 workItem.ToEffortPlanningWorkItem(),
                 historicalInputs,
                 settings);
-            suggestions.Add(new EffortEstimationSuggestionDto(
-                suggestion.WorkItemId,
-                suggestion.WorkItemTitle,
-                suggestion.WorkItemType,
-                suggestion.CurrentEffort,
-                suggestion.SuggestedEffort,
-                suggestion.Confidence,
-                suggestion.Rationale,
-                suggestion.SimilarWorkItems
-                    .Select(static example => new HistoricalEffortExample(
-                        example.WorkItemId,
-                        example.Title,
-                        example.Effort,
-                        example.State,
-                        example.SimilarityScore))
-                    .ToList()));
+            suggestions.Add(suggestion.ToDto());
         }
 
         _logger.LogInformation("Generated {Count} effort estimation suggestions", suggestions.Count);

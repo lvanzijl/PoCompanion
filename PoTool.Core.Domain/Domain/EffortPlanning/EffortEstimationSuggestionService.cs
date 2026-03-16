@@ -56,7 +56,9 @@ public sealed class EffortEstimationSuggestionService : IEffortEstimationSuggest
                 workItem.Effort,
                 defaultEffort,
                 MinConfidenceWithNoData,
-                $"No historical data available. Using configured default {workItem.WorkItemType} estimate.",
+                0,
+                defaultEffort,
+                defaultEffort,
                 Array.Empty<EffortHistoricalExampleResult>());
         }
 
@@ -83,7 +85,9 @@ public sealed class EffortEstimationSuggestionService : IEffortEstimationSuggest
             workItem.Effort,
             suggestedEffort,
             CalculateConfidence(scoredWorkItems.Count, variance),
-            BuildRationale(workItem.WorkItemType, suggestedEffort, efforts.Min(), efforts.Max(), scoredWorkItems.Count),
+            scoredWorkItems.Count,
+            efforts.Min(),
+            efforts.Max(),
             scoredWorkItems
                 .Select(item => new EffortHistoricalExampleResult(
                     item.WorkItem.WorkItemId,
@@ -169,12 +173,5 @@ public sealed class EffortEstimationSuggestionService : IEffortEstimationSuggest
             : Math.Max(MinConfidenceWithNoData, 1d - (variance / VarianceScalingFactor));
 
         return (sampleConfidence + varianceConfidence) / 2d;
-    }
-
-    private static string BuildRationale(string type, int suggested, int min, int max, int sampleCount)
-    {
-        return min == max
-            ? $"{type} items typically have {suggested} points (based on {sampleCount} completed items)"
-            : $"{type} items typically range from {min}-{max} points, median {suggested} (based on {sampleCount} completed items)";
     }
 }
