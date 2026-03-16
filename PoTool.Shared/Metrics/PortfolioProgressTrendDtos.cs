@@ -89,22 +89,40 @@ public record PortfolioSprintProgressDto
     /// <summary>Whether this sprint has any measurable trend data.</summary>
     public bool HasData { get; init; }
 
-    /// <summary>Compatibility alias for CompletionPercent.</summary>
+    /// <summary>
+    /// Compatibility alias for CompletionPercent.
+    /// Retained for legacy consumers and intended for removal after the canonical field migration.
+    /// </summary>
     public double? PercentDone => CompletionPercent;
 
-    /// <summary>Compatibility alias for StockStoryPoints.</summary>
+    /// <summary>
+    /// Compatibility alias for StockStoryPoints.
+    /// Retained for legacy consumers and intended for removal after the canonical field migration.
+    /// </summary>
     public double? TotalScopeEffort => StockStoryPoints;
 
-    /// <summary>Compatibility alias for RemainingScopeStoryPoints.</summary>
+    /// <summary>
+    /// Compatibility alias for RemainingScopeStoryPoints.
+    /// Retained for legacy consumers and intended for removal after the canonical field migration.
+    /// </summary>
     public double? RemainingEffort => RemainingScopeStoryPoints;
 
-    /// <summary>Compatibility alias for ThroughputStoryPoints.</summary>
+    /// <summary>
+    /// Compatibility alias for ThroughputStoryPoints.
+    /// Retained for legacy consumers and intended for removal after the canonical field migration.
+    /// </summary>
     public double? ThroughputEffort => ThroughputStoryPoints;
 
-    /// <summary>Compatibility alias for InflowStoryPoints.</summary>
+    /// <summary>
+    /// Compatibility alias for InflowStoryPoints.
+    /// Retained for legacy consumers and intended for removal after the canonical field migration.
+    /// </summary>
     public double? AddedEffort => InflowStoryPoints;
 
-    /// <summary>Compatibility alias for NetFlowStoryPoints.</summary>
+    /// <summary>
+    /// Compatibility alias for NetFlowStoryPoints.
+    /// Retained for legacy consumers and intended for removal after the canonical field migration.
+    /// </summary>
     public double? NetFlow => NetFlowStoryPoints;
 }
 
@@ -139,10 +157,16 @@ public record PortfolioProgressSummaryDto
     /// <summary>Overall stock-and-flow classification for the selected range.</summary>
     public PortfolioTrajectory Trajectory { get; init; }
 
-    /// <summary>Compatibility alias for TotalScopeChangeStoryPoints.</summary>
+    /// <summary>
+    /// Compatibility alias for TotalScopeChangeStoryPoints.
+    /// Retained for legacy consumers and intended for removal after the canonical field migration.
+    /// </summary>
     public double? TotalScopeChangePts => TotalScopeChangeStoryPoints;
 
-    /// <summary>Compatibility alias for RemainingScopeChangeStoryPoints.</summary>
+    /// <summary>
+    /// Compatibility alias for RemainingScopeChangeStoryPoints.
+    /// Retained for legacy consumers and intended for removal after the canonical field migration.
+    /// </summary>
     public double? RemainingEffortChangePts => RemainingScopeChangeStoryPoints;
 }
 

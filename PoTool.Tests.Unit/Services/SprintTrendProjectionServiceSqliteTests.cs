@@ -388,7 +388,7 @@ public class SprintTrendProjectionServiceSqliteTests
 
         PortfolioProgressTrendDto trend;
 
-        using (var scope = _serviceProvider.CreateScope())
+        await using (var scope = _serviceProvider.CreateAsyncScope())
         {
             var handler = new GetPortfolioProgressTrendQueryHandler(
                 scope.ServiceProvider.GetRequiredService<PoToolDbContext>(),
