@@ -7,6 +7,7 @@ using PoTool.Api.Handlers.Metrics;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
+using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Hierarchy;
@@ -657,10 +658,15 @@ public class GetSprintTrendMetricsQueryHandlerTests
         private static readonly CanonicalStoryPointResolutionService StoryPointResolutionService = new();
         private static readonly HierarchyRollupService HierarchyRollupService = new(StoryPointResolutionService);
         private static readonly DeliveryProgressRollupService DeliveryProgressRollupService = new(StoryPointResolutionService, HierarchyRollupService);
+        private static readonly SprintCommitmentService SprintCommitmentService = new();
+        private static readonly SprintCompletionService SprintCompletionService = new();
+        private static readonly SprintSpilloverService SprintSpilloverService = new();
         private static readonly SprintDeliveryProjectionService SprintDeliveryProjectionService = new(
             StoryPointResolutionService,
             HierarchyRollupService,
-            DeliveryProgressRollupService);
+            DeliveryProgressRollupService,
+            SprintCompletionService,
+            SprintSpilloverService);
 
         public TestSprintTrendProjectionService()
             : base(
@@ -670,6 +676,9 @@ public class GetSprintTrendMetricsQueryHandlerTests
                 StoryPointResolutionService,
                 HierarchyRollupService,
                 DeliveryProgressRollupService,
+                SprintCommitmentService,
+                SprintCompletionService,
+                SprintSpilloverService,
                 SprintDeliveryProjectionService)
         {
         }

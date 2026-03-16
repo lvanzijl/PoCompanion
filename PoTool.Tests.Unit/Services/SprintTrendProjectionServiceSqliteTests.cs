@@ -7,6 +7,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.Portfolio;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Estimation;
@@ -32,6 +33,10 @@ public class SprintTrendProjectionServiceSqliteTests
         var services = new ServiceCollection();
         services.AddDbContext<PoToolDbContext>(options => options.UseSqlite(_connection));
         services.AddLogging();
+        services.AddSingleton<ISprintCommitmentService, SprintCommitmentService>();
+        services.AddSingleton<ISprintScopeChangeService, SprintScopeChangeService>();
+        services.AddSingleton<ISprintCompletionService, SprintCompletionService>();
+        services.AddSingleton<ISprintSpilloverService, SprintSpilloverService>();
         services.AddSingleton<ICanonicalStoryPointResolutionService, CanonicalStoryPointResolutionService>();
         services.AddSingleton<IHierarchyRollupService, HierarchyRollupService>();
         services.AddSingleton<IDeliveryProgressRollupService, DeliveryProgressRollupService>();
@@ -139,6 +144,9 @@ public class SprintTrendProjectionServiceSqliteTests
             _serviceProvider.GetRequiredService<ICanonicalStoryPointResolutionService>(),
             _serviceProvider.GetRequiredService<IHierarchyRollupService>(),
             _serviceProvider.GetRequiredService<IDeliveryProgressRollupService>(),
+            _serviceProvider.GetRequiredService<ISprintCommitmentService>(),
+            _serviceProvider.GetRequiredService<ISprintCompletionService>(),
+            _serviceProvider.GetRequiredService<ISprintSpilloverService>(),
             _serviceProvider.GetRequiredService<ISprintDeliveryProjectionService>());
 
         var projections = await service.ComputeProjectionsAsync(productOwnerId, new[] { sprintId });
@@ -255,6 +263,9 @@ public class SprintTrendProjectionServiceSqliteTests
             _serviceProvider.GetRequiredService<ICanonicalStoryPointResolutionService>(),
             _serviceProvider.GetRequiredService<IHierarchyRollupService>(),
             _serviceProvider.GetRequiredService<IDeliveryProgressRollupService>(),
+            _serviceProvider.GetRequiredService<ISprintCommitmentService>(),
+            _serviceProvider.GetRequiredService<ISprintCompletionService>(),
+            _serviceProvider.GetRequiredService<ISprintSpilloverService>(),
             _serviceProvider.GetRequiredService<ISprintDeliveryProjectionService>(),
             portfolioFlowProjectionService);
 

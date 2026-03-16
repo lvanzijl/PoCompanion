@@ -1,3 +1,4 @@
+using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Estimation;
@@ -38,7 +39,8 @@ public sealed class SprintDeliveryProjectionServiceTests
                 [202] = [CreateFieldChangeEvent(202, "System.State", sprintStart.AddDays(2), "Active", "Done")]
             },
             sprintStart,
-            sprintEnd));
+            sprintEnd,
+            new HashSet<int> { 201, 202 }));
 
         Assert.AreEqual(10d, result.PlannedStoryPoints, 0.001d);
         Assert.AreEqual(1, result.DerivedStoryPointCount);
@@ -80,7 +82,7 @@ public sealed class SprintDeliveryProjectionServiceTests
             },
             sprintStart,
             sprintEnd,
-            CommittedWorkItemIds: new HashSet<int> { 201, 202 },
+            new HashSet<int> { 201, 202 },
             NextSprintPath: nextSprintPath,
             WorkItemSnapshotsById: new Dictionary<int, WorkItemSnapshot>
             {
@@ -100,6 +102,35 @@ public sealed class SprintDeliveryProjectionServiceTests
         Assert.AreEqual(1, result.SpilloverCount);
         Assert.AreEqual(30, result.SpilloverEffort);
         Assert.AreEqual(5d, result.SpilloverStoryPoints, 0.001d);
+    }
+
+    [TestMethod]
+    public void Compute_ThrowsArgumentNullException_WhenCommittedWorkItemIdsIsNull()
+    {
+        var service = CreateService();
+        var sprint = CreateSprint();
+        var sprintStart = sprint.StartUtc!.Value;
+        var sprintEnd = sprint.EndUtc!.Value;
+
+        var exception = Assert.ThrowsExactly<ArgumentNullException>(() => service.Compute(new SprintDeliveryProjectionRequest(
+            sprint,
+            1,
+            [
+                CreateResolvedWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, resolvedFeatureId: 100)
+            ],
+            new Dictionary<int, DeliveryTrendWorkItem>
+            {
+                [201] = CreateWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, "Delivered PBI", parentId: 100, state: "Done", effort: 20, storyPoints: 3)
+            },
+            new Dictionary<int, IReadOnlyList<FieldChangeEvent>>
+            {
+                [201] = [CreateFieldChangeEvent(201, "System.State", sprintStart.AddDays(1), "Active", "Done")]
+            },
+            sprintStart,
+            sprintEnd,
+            null!)));
+
+        Assert.AreEqual("request.CommittedWorkItemIds", exception.ParamName);
     }
 
     [TestMethod]
@@ -137,10 +168,14 @@ public sealed class SprintDeliveryProjectionServiceTests
     {
         var storyPointResolutionService = new CanonicalStoryPointResolutionService();
         var hierarchyRollupService = new HierarchyRollupService(storyPointResolutionService);
+        var sprintCompletionService = new SprintCompletionService();
+        var sprintSpilloverService = new SprintSpilloverService();
         return new SprintDeliveryProjectionService(
             storyPointResolutionService,
             hierarchyRollupService,
-            new DeliveryProgressRollupService(storyPointResolutionService, hierarchyRollupService));
+            new DeliveryProgressRollupService(storyPointResolutionService, hierarchyRollupService),
+            sprintCompletionService,
+            sprintSpilloverService);
     }
 
     private static SprintDefinition CreateSprint()
