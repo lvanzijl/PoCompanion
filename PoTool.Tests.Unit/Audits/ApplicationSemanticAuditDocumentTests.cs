@@ -7,7 +7,7 @@ public sealed class ApplicationSemanticAuditDocumentTests
     public void ApplicationSemanticAudit_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "application_semantic_audit.md");
+        var reportPath = $"{repositoryRoot}/docs/audits/application_semantic_audit.md";
 
         Assert.IsTrue(File.Exists(reportPath), "The application semantic audit report should exist under docs/audits.");
 
@@ -51,7 +51,7 @@ public sealed class ApplicationSemanticAuditDocumentTests
 
         while (current is not null)
         {
-            if (File.Exists(Path.Combine(current.FullName, "PoTool.sln")))
+            if (File.Exists($"{current.FullName}/PoTool.sln"))
             {
                 return current.FullName;
             }
