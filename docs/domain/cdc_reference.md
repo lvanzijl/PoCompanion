@@ -1,187 +1,438 @@
-# CDC Reference
+# Canonical Domain Core Reference
 
-Status: Authoritative cross-slice CDC reference  
-Purpose: Provide one canonical navigation and boundary document for the delivery-domain CDC slices without restating each slice's full semantics.
+Status: Authoritative CDC consolidation  
+Purpose: Describe the stable Canonical Domain Core (CDC) as the single human-readable reference for slice ownership, boundaries, and dependency direction.
 
-This document is the single authoritative CDC reference for cross-slice ownership, dependencies, and navigation.
+The CDC is the canonical analytics interpretation for PoTool. It defines the domain meaning of story points, effort hours, commitment, spillover, delivery trend, stock, inflow, throughput, remaining scope, and forecast without coupling those concepts to handlers, DTO names, or persistence details.
 
-Detailed formulas, rule thresholds, and slice-specific semantics remain in the linked domain model and audit documents. To avoid duplicated semantic descriptions, this reference summarizes ownership and signal boundaries only and links to the canonical source material for the full definitions.
+This document consolidates what is already established in the slice domain models and audit reports. It does not redesign semantics. When a detailed rule or formula is needed, the linked slice references remain authoritative.
 
-## CDC Overview
+## Purpose of the CDC
 
-The canonical delivery-domain CDC is organized around eight slices:
+The CDC exists to keep every delivery-facing analytic slice aligned to one domain vocabulary and one ownership model.
 
-- estimation semantics
-- backlog quality
-- effort diagnostics
-- statistical helpers
-- delivery trends
-- forecasting
-- portfolio flow
-- sprint commitment
+It provides:
 
-These slices share one domain baseline:
+- one canonical interpretation of work-item hierarchy, state, estimation, sprint timing, and source truth
+- one stable inventory of completed slices and their boundaries
+- one explanation of which domain outputs belong inside the CDC versus in application adapters
+- one dependency map so future work does not reintroduce duplicated semantics
 
-- canonical work-item hierarchy and product scope live in [`docs/domain/domain_model.md`](./domain_model.md)
-- primitive hierarchy rules live in [`docs/domain/rules/hierarchy_rules.md`](./rules/hierarchy_rules.md)
-- primitive state rules live in [`docs/domain/rules/state_rules.md`](./rules/state_rules.md)
-- primitive estimation rules live in [`docs/domain/rules/estimation_rules.md`](./rules/estimation_rules.md)
-- primitive sprint rules live in [`docs/domain/rules/sprint_rules.md`](./rules/sprint_rules.md)
-- primitive propagation rules live in [`docs/domain/rules/propagation_rules.md`](./rules/propagation_rules.md)
-- primitive metrics rules live in [`docs/domain/rules/metrics_rules.md`](./rules/metrics_rules.md)
-- primitive source-truth rules live in [`docs/domain/rules/source_rules.md`](./rules/source_rules.md)
+Authoritative foundations:
 
-If a slice summary, audit, projection report, or application adapter disagrees with those primitives, the primitive domain documents remain authoritative.
+- `docs/domain/domain_model.md`
+- `docs/domain/rules/hierarchy_rules.md`
+- `docs/domain/rules/estimation_rules.md`
+- `docs/domain/rules/state_rules.md`
+- `docs/domain/rules/sprint_rules.md`
+- `docs/domain/rules/propagation_rules.md`
+- `docs/domain/rules/metrics_rules.md`
+- `docs/domain/rules/source_rules.md`
 
-## Core primitives
+## Slice Overview
 
-| Primitive | Canonical role | Authoritative references |
-| --- | --- | --- |
-| Hierarchy and product scope | Defines the product boundary, operational hierarchy, and PBI as the delivery unit. | [`docs/domain/domain_model.md`](./domain_model.md), [`docs/domain/rules/hierarchy_rules.md`](./rules/hierarchy_rules.md) |
-| Estimation semantics | Defines story-point origin, effort rollup, derived-estimate behavior, and forecasting-safe aggregation rules. | [`docs/domain/rules/estimation_rules.md`](./rules/estimation_rules.md), [`docs/audits/estimation_audit.md`](../audits/estimation_audit.md) |
-| State semantics | Defines canonical `New`, `InProgress`, `Done`, and `Removed` mapping plus first-Done delivery rules. | [`docs/domain/rules/state_rules.md`](./rules/state_rules.md) |
-| Sprint and metric semantics | Defines `SprintWindow`, `CommitmentTimestamp`, velocity, churn, spillover, and remaining-scope formulas. | [`docs/domain/rules/sprint_rules.md`](./rules/sprint_rules.md), [`docs/domain/rules/metrics_rules.md`](./rules/metrics_rules.md) |
-| Source-truth semantics | Defines when snapshots answer current-state questions and when update history answers historical questions. | [`docs/domain/rules/source_rules.md`](./rules/source_rules.md) |
-| Propagation semantics | Defines which signals propagate upward and which remain state-driven at their own level. | [`docs/domain/rules/propagation_rules.md`](./rules/propagation_rules.md) |
-| Shared statistics primitives | Defines the repository-wide reusable math boundary and the distinction between shared math and slice-local heuristics. | [`docs/audits/statistical_helper_audit.md`](../audits/statistical_helper_audit.md) |
+### Core Concepts
 
-These primitives must be referenced, not redefined, by the slices below.
+Purpose:
 
-## Event signals
+- define the shared domain primitives used by every CDC slice
 
-The delivery CDC slices depend on a small set of recurring signal families:
+Canonical inputs:
 
-| Signal family | What it provides | Primary consumers | References |
-| --- | --- | --- | --- |
-| Current snapshots | Current hierarchy, current state, current estimate values, and current product membership. | backlog quality, forecasting remaining scope, portfolio flow context | [`docs/domain/rules/source_rules.md`](./rules/source_rules.md), [`docs/domain/backlog_quality_domain_model.md`](./backlog_quality_domain_model.md) |
-| `System.IterationPath` history | Historical sprint membership, post-commitment adds/removes, and next-sprint moves. | sprint commitment, delivery trends | [`docs/domain/sprint_commitment_domain_model.md`](./sprint_commitment_domain_model.md), [`docs/exploration/sprint_commitment_domain_exploration.md`](../exploration/sprint_commitment_domain_exploration.md) |
-| `System.State` history plus canonical mapping | First-Done delivery attribution, reopen handling, historical end-state reconstruction. | sprint commitment, delivery trends, portfolio flow | [`docs/domain/rules/state_rules.md`](./rules/state_rules.md), [`docs/domain/sprint_commitment_domain_model.md`](./sprint_commitment_domain_model.md), [`docs/domain/portfolio_flow_model.md`](./portfolio_flow_model.md) |
-| Story-point and estimate history | Point-in-time story-point scope used for throughput, stock, inflow, and forecast inputs. | estimation semantics, forecasting, portfolio flow, sprint metrics | [`docs/domain/rules/estimation_rules.md`](./rules/estimation_rules.md), [`docs/audits/portfolio_flow_projection.md`](../audits/portfolio_flow_projection.md) |
-| Resolved portfolio membership transitions | Historical portfolio-entry facts distinct from sprint commitment proxies. | portfolio flow | [`docs/audits/portfolio_flow_projection.md`](../audits/portfolio_flow_projection.md), [`docs/audits/portfolio_flow_projection_validation.md`](../audits/portfolio_flow_projection_validation.md) |
-| Sprint metadata and ordering | Sprint window boundaries, commitment boundary, and next-sprint resolution. | sprint commitment, delivery trends, forecasting | [`docs/domain/rules/sprint_rules.md`](./rules/sprint_rules.md), [`docs/audits/delivery_trend_analytics_cdc_summary.md`](../audits/delivery_trend_analytics_cdc_summary.md), [`docs/domain/forecasting_domain_model.md`](./forecasting_domain_model.md) |
+- work-item hierarchy and product scope from `docs/domain/domain_model.md`
+- canonical estimation semantics from `docs/domain/rules/estimation_rules.md`
+- canonical state semantics from `docs/domain/rules/state_rules.md`
+- sprint windows and commitment timing from `docs/domain/rules/sprint_rules.md`
+- source-truth and propagation rules from `docs/domain/rules/source_rules.md` and `docs/domain/rules/propagation_rules.md`
 
-## Domain slices
+Canonical outputs:
 
-### Estimation semantics
+- shared meaning of product scope, delivery unit, story points, effort hours, sprint window, commitment timestamp, canonical Done, Removed, and first-Done attribution
 
-Estimation semantics own the canonical meaning of story points, effort, rollups, and derived estimates used by downstream delivery slices.
+Downstream consumers:
 
-Authoritative references:
+- BacklogQuality
+- SprintCommitment
+- DeliveryTrends
+- Forecasting
+- EffortDiagnostics
+- PortfolioFlow
+- Shared Statistics
 
-- [`docs/domain/rules/estimation_rules.md`](./rules/estimation_rules.md)
-- [`docs/domain/domain_model.md`](./domain_model.md)
-- [`docs/audits/estimation_audit.md`](../audits/estimation_audit.md)
+What remains outside the slice:
 
-### Backlog quality
+- handler orchestration
+- DTO shaping
+- persistence entities
+- UI labels and compatibility aliases
 
-Backlog quality owns current-state backlog validation, readiness scoring, structural integrity, refinement readiness, and implementation readiness. It is a snapshot-driven slice and does not own historical delivery reconstruction.
+### BacklogQuality
 
-Authoritative references:
+Purpose:
 
-- [`docs/domain/backlog_quality_domain_model.md`](./backlog_quality_domain_model.md)
-- [`docs/audits/backlog_quality_domain_exploration.md`](../audits/backlog_quality_domain_exploration.md)
-- [`docs/audits/backlog_quality_cdc_summary.md`](../audits/backlog_quality_cdc_summary.md)
+- own current-state backlog validation, readiness scoring, and implementation readiness without historical sprint reconstruction
 
-### Effort diagnostics
+Canonical inputs:
 
-Effort diagnostics own the stable effort-imbalance and effort-concentration subset plus the EffortDiagnostics-owned statistics surface. Estimation suggestions, capacity planning, and other heuristic families remain outside this stable CDC subset unless separately audited.
+- current work-item snapshots
+- canonical hierarchy and product scope
+- canonical estimation and state semantics
+- backlog validation rules cataloged in `docs/audits/backlog_quality_cdc_summary.md`
 
-Authoritative references:
+Canonical outputs:
 
-- [`docs/domain/effort_diagnostics_domain_model.md`](./effort_diagnostics_domain_model.md)
-- [`docs/audits/effort_diagnostics_domain_exploration.md`](../audits/effort_diagnostics_domain_exploration.md)
-- [`docs/audits/effort_diagnostics_semantic_audit.md`](../audits/effort_diagnostics_semantic_audit.md)
-- [`docs/audits/effort_diagnostics_cdc_extraction_report.md`](../audits/effort_diagnostics_cdc_extraction_report.md)
+- canonical validation findings for `SI`, `RR`, and `RC` rule families
+- backlog readiness scores
+- implementation readiness scores
 
-### Statistical helpers
+Downstream consumers:
 
-Statistical helpers own only repository-wide reusable pure math that has one agreed semantic contract. Slice-specific confidence, volatility, utilization, and similarly named heuristics stay local to their owning slice until a separate semantic decision standardizes them.
+- validation triage handlers
+- validation queue handlers
+- validation impact-analysis handlers
 
-Authoritative references:
+What remains outside the slice:
 
-- [`docs/audits/statistical_helper_audit.md`](../audits/statistical_helper_audit.md)
-- [`docs/domain/forecasting_domain_model.md`](./forecasting_domain_model.md)
-- [`docs/audits/trend_delivery_analytics_exploration.md`](../audits/trend_delivery_analytics_exploration.md)
+- queue composition and triage orchestration
+- dashboard health heuristics
+- compatibility aliases such as `RC-2` and `EFF`
+- display metadata and rule-description presentation
 
-### Delivery trends
+Primary references:
 
-Delivery trends own historical sprint-delivery projections, feature and epic progress rollups, progression deltas, and the canonical delivery-trend models built from sprint facts. Delivery trends consume sprint commitment outputs and do not redefine commitment semantics.
+- `docs/audits/backlog_quality_cdc_summary.md`
 
-Authoritative references:
+### SprintCommitment
 
-- [`docs/audits/trend_delivery_analytics_exploration.md`](../audits/trend_delivery_analytics_exploration.md)
-- [`docs/audits/delivery_trend_analytics_cdc_summary.md`](../audits/delivery_trend_analytics_cdc_summary.md)
-- [`docs/domain/sprint_commitment_domain_model.md`](./sprint_commitment_domain_model.md)
+Purpose:
+
+- reconstruct historical sprint commitment, post-commitment scope movement, first-Done completion, and spillover
+
+Canonical inputs:
+
+- sprint metadata and sprint ordering
+- `System.IterationPath` history
+- `System.State` history
+- canonical state mapping
+- current snapshots used only as reconstruction anchors and current-state cache
+
+Canonical outputs:
+
+- `SprintCommitment`
+- `SprintScopeAdded`
+- `SprintScopeRemoved`
+- `SprintCompletion`
+- `SprintSpillover`
+- derived story-point totals for commitment, added scope, removed scope, delivered scope, delivered-from-added scope, and spillover
+
+Downstream consumers:
+
+- DeliveryTrends
+- PortfolioFlow throughput attribution
+- sprint metrics and sprint execution handlers
+
+What remains outside the slice:
+
+- handler-specific presentation models
+- sprint execution UI heuristics
+- compatibility naming at transport boundaries
+
+Primary references:
+
+- `docs/domain/sprint_commitment_domain_model.md`
+- `docs/domain/sprint_commitment_cdc_summary.md`
+- `docs/audits/sprint_commitment_application_alignment.md`
+- `docs/audits/cdc_coverage_audit.md`
+
+### DeliveryTrends
+
+Purpose:
+
+- own historical delivery-trend projections, feature and epic progress rollups, progression deltas, and product-level delivery summaries built from sprint facts
+
+Canonical inputs:
+
+- SprintCommitment outputs
+- canonical hierarchy resolution
+- first-Done delivery attribution
+- spillover results
+
+Canonical outputs:
+
+- sprint delivery projections
+- sprint trend metrics
+- feature progress
+- epic progress
+- progression deltas
+- product delivery progress summaries
+
+Downstream consumers:
+
+- trend-focused API handlers
+- trend dashboards
+- Forecasting
+
+What remains outside the slice:
+
+- backlog loading and filtering orchestration
+- forecast confidence semantics
+- portfolio stock and inflow semantics
+
+Primary references:
+
+- `docs/audits/delivery_trend_analytics_cdc_summary.md`
 
 ### Forecasting
 
-Forecasting owns future-looking delivery forecasts, completion projections, calibration bands, and forecast confidence/distribution outputs. It consumes historical delivery facts and shared math rather than reconstructing sprint history itself.
+Purpose:
 
-Authoritative references:
+- own future-looking forecast semantics derived from historical delivery facts
 
-- [`docs/domain/forecasting_domain_model.md`](./forecasting_domain_model.md)
-- [`docs/audits/forecasting_domain_exploration.md`](../audits/forecasting_domain_exploration.md)
-- [`docs/audits/forecasting_semantic_audit.md`](../audits/forecasting_semantic_audit.md)
-- [`docs/audits/forecasting_cdc_summary.md`](../audits/forecasting_cdc_summary.md)
+Canonical inputs:
 
-### Portfolio flow
+- delivery-trend history and sprint delivery summaries
+- remaining scope in story points
+- sprint-window semantics
+- shared statistical helpers used for distribution and percentile calculations
 
-Portfolio flow owns canonical portfolio stock, inflow, throughput, remaining scope, net flow, and completion semantics in story-point scope. Projection materialization and application migration are documented separately so the semantic model stays distinct from the persistence and consumer path.
+Canonical outputs:
 
-Authoritative references:
+- delivery forecast
+- completion projection
+- velocity calibration
+- forecast distribution and planning bands
 
-- [`docs/domain/portfolio_flow_model.md`](./portfolio_flow_model.md)
-- [`docs/audits/portfolio_flow_domain_exploration.md`](../audits/portfolio_flow_domain_exploration.md)
-- [`docs/audits/portfolio_flow_semantic_audit.md`](../audits/portfolio_flow_semantic_audit.md)
-- [`docs/audits/portfolio_flow_projection.md`](../audits/portfolio_flow_projection.md)
-- [`docs/audits/portfolio_flow_projection_validation.md`](../audits/portfolio_flow_projection_validation.md)
-- [`docs/audits/portfolio_flow_consumers_audit.md`](../audits/portfolio_flow_consumers_audit.md)
-- [`docs/audits/portfolio_flow_application_migration.md`](../audits/portfolio_flow_application_migration.md)
+Downstream consumers:
 
-### Sprint commitment
+- roadmap and forecast handlers
+- forecast-oriented UI surfaces
 
-Sprint commitment owns commitment reconstruction, post-commitment scope changes, first-Done completion facts, spillover, and the execution metrics derived from those signals. Delivery trends and forecasting are downstream consumers of these outputs.
+What remains outside the slice:
 
-Authoritative references:
+- historical sprint reconstruction
+- backlog retrieval and filtering
+- UI risk labels and page composition
+- transport-specific response shapes
 
-- [`docs/domain/sprint_commitment_domain_model.md`](./sprint_commitment_domain_model.md)
-- [`docs/domain/sprint_commitment_cdc_summary.md`](./sprint_commitment_cdc_summary.md)
-- [`docs/exploration/sprint_commitment_domain_exploration.md`](../exploration/sprint_commitment_domain_exploration.md)
-- [`docs/audits/sprint_commitment_cdc_extraction.md`](../audits/sprint_commitment_cdc_extraction.md)
-- [`docs/audits/sprint_commitment_application_alignment.md`](../audits/sprint_commitment_application_alignment.md)
+Primary references:
 
-## Projection consumers
+- `docs/domain/forecasting_domain_model.md`
+- `docs/audits/forecasting_cdc_summary.md`
 
-The projection and consumer documents below are the canonical cross-links for read-model and downstream-consumer behavior:
+### EffortDiagnostics
 
-- Sprint commitment -> delivery trends consumer chain:
-  - [`docs/domain/sprint_commitment_domain_model.md`](./sprint_commitment_domain_model.md)
-  - [`docs/audits/delivery_trend_analytics_cdc_summary.md`](../audits/delivery_trend_analytics_cdc_summary.md)
-- Delivery trends -> forecasting consumer chain:
-  - [`docs/domain/forecasting_domain_model.md`](./forecasting_domain_model.md)
-  - [`docs/audits/forecasting_cdc_summary.md`](../audits/forecasting_cdc_summary.md)
-- Portfolio flow projection summaries and validation:
-  - [`docs/audits/portfolio_flow_projection.md`](../audits/portfolio_flow_projection.md)
-  - [`docs/audits/portfolio_flow_projection_validation.md`](../audits/portfolio_flow_projection_validation.md)
-  - [`docs/audits/portfolio_flow_consumers_audit.md`](../audits/portfolio_flow_consumers_audit.md)
-  - [`docs/audits/portfolio_flow_application_migration.md`](../audits/portfolio_flow_application_migration.md)
+Purpose:
 
-Projection reports document materialization, validation, and consumer migration. They must not replace the owning slice's semantic definition.
+- own the stable effort-diagnostics formulas for effort imbalance and concentration risk
 
-## Application boundaries
+Canonical inputs:
 
-The application boundary for CDC documentation is:
+- effort hours resolved from current work-item data
+- shared pure-math statistics where the contract is repository-wide
 
-- domain model and rule documents define canonical meaning
-- slice audits document extraction status, ownership verification, and migration sequencing
-- projection summaries document persisted read models and downstream consumer paths
-- API handlers and services own data loading, orchestration, persistence, and DTO mapping
-- client/UI surfaces may keep compatibility naming, but canonical semantics remain anchored in the CDC references above
+Canonical outputs:
 
-Application-facing semantic cleanup and compatibility debt are tracked in:
+- imbalance metrics
+- concentration-risk metrics
+- reusable domain statistics for effort diagnostics
 
-- [`docs/audits/application_semantic_audit.md`](../audits/application_semantic_audit.md)
-- [`docs/audits/portfolio_flow_consumers_audit.md`](../audits/portfolio_flow_consumers_audit.md)
-- [`docs/audits/portfolio_flow_application_migration.md`](../audits/portfolio_flow_application_migration.md)
+Downstream consumers:
 
-When a new CDC slice document is added, extend this reference with links and ownership notes instead of duplicating full semantic descriptions here.
+- effort imbalance handlers
+- effort concentration handlers
+
+What remains outside the slice:
+
+- estimation suggestions
+- capacity planning
+- capacity calibration
+- handler-owned grouping, filtering, and recommendation text
+
+Primary references:
+
+- `docs/audits/effort_diagnostics_cdc_extraction_report.md`
+
+### PortfolioFlow
+
+Purpose:
+
+- own canonical portfolio stock, inflow, throughput, remaining scope, net flow, and completion semantics in story points
+
+Canonical inputs:
+
+- hierarchy and portfolio membership resolution
+- canonical story-point resolution
+- canonical state mapping
+- sprint windows
+- first-Done delivery attribution
+- resolved portfolio-entry transitions
+
+Canonical outputs:
+
+- portfolio stock per sprint
+- portfolio inflow per sprint
+- portfolio throughput per sprint
+- remaining scope per sprint
+- completion percent and net flow per sprint
+
+Downstream consumers:
+
+- portfolio projection materialization
+- portfolio trend handlers and adapters
+
+What remains outside the slice:
+
+- ranking and portfolio UI composition
+- legacy effort-based transport contracts
+- non-canonical compatibility summaries preserved for current clients
+
+Primary references:
+
+- `docs/domain/portfolio_flow_model.md`
+- `docs/audits/portfolio_flow_projection.md`
+- `docs/audits/portfolio_flow_projection_validation.md`
+
+### Shared Statistics
+
+Purpose:
+
+- own repository-wide pure math with one agreed semantic contract and support CDC slices that rely on reusable statistical primitives
+
+Canonical inputs:
+
+- numeric samples already prepared by owning slices
+
+Canonical outputs:
+
+- shared mean, median, variance, standard deviation, and percentile semantics
+- stable effort-diagnostics support primitives where their ownership is explicitly centralized
+
+Downstream consumers:
+
+- Forecasting
+- EffortDiagnostics
+- other slices only when the statistical contract is truly shared rather than slice-local
+
+What remains outside the slice:
+
+- slice-specific confidence heuristics
+- slice-specific utilization bands
+- local nullable or empty-sample contracts intentionally preserved for isolated consumers
+
+Primary references:
+
+- `docs/audits/statistical_core_cleanup_report.md`
+
+## Cross-Slice Dependencies
+
+Dependency direction is intentionally one-way:
+
+1. Core Concepts feed every other slice.
+2. BacklogQuality depends on Core Concepts only.
+3. SprintCommitment depends on Core Concepts only and provides historical sprint facts.
+4. DeliveryTrends depends on SprintCommitment plus Core Concepts.
+5. Forecasting depends on DeliveryTrends, Core Concepts, and Shared Statistics.
+6. EffortDiagnostics depends on Core Concepts and Shared Statistics.
+7. PortfolioFlow depends on SprintCommitment outputs plus Core Concepts.
+
+In shorthand:
+
+- Core Concepts -> BacklogQuality
+- Core Concepts -> SprintCommitment
+- SprintCommitment -> DeliveryTrends
+- SprintCommitment -> PortfolioFlow
+- DeliveryTrends -> Forecasting
+- Shared Statistics -> Forecasting
+- Shared Statistics -> EffortDiagnostics
+
+No CDC slice should depend on handlers, DTOs, UI pages, or persistence entities for its semantics.
+
+For the redrawable map of nodes and edges, see:
+
+- `docs/domain/cdc_domain_map.md`
+
+## What Stays Outside the CDC
+
+The CDC is not the owner of:
+
+- API handler orchestration, request assembly, filtering, and DTO mapping
+- UI page composition, chart layout, labels, and display metadata
+- transport compatibility aliases preserved for current clients
+- persistence entity design and read-model materialization mechanics
+- dashboard-only heuristics that have not been canonically adopted
+- ranking, queue composition, recommendation copy, and other workflow-specific presentation concerns
+
+These concerns may consume CDC outputs, but they must not redefine CDC semantics.
+
+## Application Boundary
+
+The application boundary is the seam where handlers and services load data, call CDC slices, and shape results for current clients.
+
+Inside the CDC:
+
+- canonical records
+- canonical formulas
+- canonical state, estimation, sprint, source-truth, and propagation semantics
+
+Outside the CDC but allowed to consume it:
+
+- `PoTool.Api` handlers and services
+- compatibility adapters that preserve older response shapes
+- UI-facing view models and labels
+
+Application alignment references:
+
+- `docs/audits/sprint_commitment_application_alignment.md`
+- `docs/audits/cdc_coverage_audit.md`
+
+## Persistence Boundary
+
+Persistence is downstream from CDC semantics, not the source of those semantics.
+
+The CDC defines what must be calculated. Projection entities and tables define how selected outputs are materialized for application use.
+
+Current persistence facts described by the CDC documentation:
+
+- raw current-state work-item snapshots remain the base input for snapshot-driven slices
+- raw work-item history remains the source of truth for historical reconstruction
+- sprint metrics and portfolio flow projections materialize selected CDC outputs for downstream consumption
+
+Persistence references:
+
+- `docs/audits/portfolio_flow_projection.md`
+- `docs/audits/portfolio_flow_projection_validation.md`
+
+## Future Architecture Directions
+
+The completed CDC is stable enough to support structural work that was intentionally deferred until semantic ownership settled.
+
+Established future directions already implied by the existing documents:
+
+- keep migrating application consumers from compatibility wrappers toward direct CDC-backed projections
+- isolate or retire remaining snapshot-style wording where historical replay is now canonical
+- finish adapter cleanup for backlog-quality aliases and category inference
+- preserve Shared Statistics as the reusable pure-math core while leaving slice-specific confidence heuristics local
+- use the stable CDC as the foundation for persistence abstraction, optional hexagonal architecture, and later API contract cleanup
+
+Completion summary reference:
+
+- `docs/audits/cdc_completion_summary.md`
+
+## Compatibility Debt Still Present
+
+The remaining debt is application and transport debt, not CDC semantic debt.
+
+Documented examples:
+
+- legacy `*Effort` DTO names still appear at transport boundaries even where canonical semantics are story points
+- compatibility aliases such as `RC-2` and `EFF` remain in backlog-quality adapters and UI metadata
+- pages and handlers still preserve older response shapes for clients during migration
+- portfolio consumers still carry legacy effort-oriented compatibility surfaces while canonical stock, inflow, throughput, and remaining scope semantics are story-point based
+
+Compatibility references:
+
+- `docs/audits/application_semantic_audit.md`
+- `docs/audits/portfolio_flow_projection.md`
+- `docs/audits/portfolio_flow_projection_validation.md`
+- `docs/audits/portfolio_flow_consumers_audit.md`
+- `docs/audits/backlog_quality_cdc_summary.md`

@@ -13,29 +13,28 @@ public sealed class CdcReferenceDocumentTests
 
         var report = File.ReadAllText(reportPath);
 
-        StringAssert.Contains(report, "# CDC Reference");
-        StringAssert.Contains(report, "## CDC Overview");
-        StringAssert.Contains(report, "## Core primitives");
-        StringAssert.Contains(report, "## Event signals");
-        StringAssert.Contains(report, "## Domain slices");
-        StringAssert.Contains(report, "## Projection consumers");
-        StringAssert.Contains(report, "## Application boundaries");
+        StringAssert.Contains(report, "# Canonical Domain Core Reference");
+        StringAssert.Contains(report, "## Purpose of the CDC");
+        StringAssert.Contains(report, "## Slice Overview");
+        StringAssert.Contains(report, "## Cross-Slice Dependencies");
+        StringAssert.Contains(report, "## What Stays Outside the CDC");
+        StringAssert.Contains(report, "## Application Boundary");
+        StringAssert.Contains(report, "## Persistence Boundary");
+        StringAssert.Contains(report, "## Future Architecture Directions");
+        StringAssert.Contains(report, "## Compatibility Debt Still Present");
 
-        StringAssert.Contains(report, "### Estimation semantics");
-        StringAssert.Contains(report, "### Backlog quality");
-        StringAssert.Contains(report, "### Effort diagnostics");
-        StringAssert.Contains(report, "### Statistical helpers");
-        StringAssert.Contains(report, "### Delivery trends");
+        StringAssert.Contains(report, "### Core Concepts");
+        StringAssert.Contains(report, "### BacklogQuality");
+        StringAssert.Contains(report, "### SprintCommitment");
+        StringAssert.Contains(report, "### DeliveryTrends");
         StringAssert.Contains(report, "### Forecasting");
-        StringAssert.Contains(report, "### Portfolio flow");
-        StringAssert.Contains(report, "### Sprint commitment");
+        StringAssert.Contains(report, "### EffortDiagnostics");
+        StringAssert.Contains(report, "### PortfolioFlow");
+        StringAssert.Contains(report, "### Shared Statistics");
 
-        StringAssert.Contains(report, "single authoritative CDC reference");
-        StringAssert.Contains(report, "To avoid duplicated semantic descriptions");
+        StringAssert.Contains(report, "Authoritative CDC consolidation");
         StringAssert.Contains(report, "docs/domain/domain_model.md");
         StringAssert.Contains(report, "docs/domain/rules/estimation_rules.md");
-        StringAssert.Contains(report, "docs/domain/backlog_quality_domain_model.md");
-        StringAssert.Contains(report, "docs/domain/effort_diagnostics_domain_model.md");
         StringAssert.Contains(report, "docs/domain/forecasting_domain_model.md");
         StringAssert.Contains(report, "docs/domain/portfolio_flow_model.md");
         StringAssert.Contains(report, "docs/domain/sprint_commitment_domain_model.md");
@@ -47,8 +46,21 @@ public sealed class CdcReferenceDocumentTests
         StringAssert.Contains(report, "docs/audits/portfolio_flow_projection_validation.md");
         StringAssert.Contains(report, "docs/audits/portfolio_flow_consumers_audit.md");
         StringAssert.Contains(report, "docs/audits/application_semantic_audit.md");
-        StringAssert.Contains(report, "docs/exploration/sprint_commitment_domain_exploration.md");
-        StringAssert.Contains(report, "Projection reports document materialization, validation, and consumer migration.");
+        StringAssert.Contains(report, "docs/audits/statistical_core_cleanup_report.md");
+        StringAssert.Contains(report, "docs/domain/cdc_domain_map.md");
+        StringAssert.Contains(report, "docs/audits/cdc_completion_summary.md");
+        StringAssert.Contains(report, "story points");
+        StringAssert.Contains(report, "effort hours");
+        StringAssert.Contains(report, "stock");
+        StringAssert.Contains(report, "inflow");
+        StringAssert.Contains(report, "throughput");
+        StringAssert.Contains(report, "remaining scope");
+        StringAssert.Contains(report, "commitment");
+        StringAssert.Contains(report, "spillover");
+        StringAssert.Contains(report, "delivery trend");
+        StringAssert.Contains(report, "forecast");
+        StringAssert.Contains(report, "legacy `*Effort` DTO names");
+        StringAssert.Contains(report, "compatibility aliases");
     }
 
     private static string GetRepositoryRoot()
