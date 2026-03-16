@@ -328,3 +328,48 @@ The clean boundary is:
 - **UI** only renders or labels forecast outputs
 
 That boundary captures the true forecasting logic already present, avoids absorbing non-forecast historical projection code, and leaves room for future burn-up/burn-down prediction without diluting the delivery-trend CDC.
+
+## Extraction outcome
+
+The forecasting extraction now lives under `PoTool.Core.Domain/Domain/Forecasting` with dedicated `Models` and `Services` folders.
+
+Extracted domain models:
+
+- `PoTool.Core.Domain/Domain/Forecasting/Models/DeliveryForecast.cs`
+- `PoTool.Core.Domain/Domain/Forecasting/Models/CompletionProjection.cs`
+- `PoTool.Core.Domain/Domain/Forecasting/Models/VelocityCalibration.cs`
+- `PoTool.Core.Domain/Domain/Forecasting/Models/EffortDistributionAnalysis.cs`
+- `PoTool.Core.Domain/Domain/Forecasting/Models/ForecastingModelValidation.cs`
+
+Extracted domain services:
+
+- `PoTool.Core.Domain/Domain/Forecasting/Services/CompletionForecastService.cs`
+- `PoTool.Core.Domain/Domain/Forecasting/Services/VelocityCalibrationService.cs`
+- `PoTool.Core.Domain/Domain/Forecasting/Services/EffortTrendForecastService.cs`
+
+Behavior-preserving handler orchestration remains in:
+
+- `PoTool.Api/Handlers/Metrics/GetEpicCompletionForecastQueryHandler.cs`
+- `PoTool.Api/Handlers/Metrics/GetCapacityCalibrationQueryHandler.cs`
+- `PoTool.Api/Handlers/Metrics/GetEffortDistributionTrendQueryHandler.cs`
+
+The handlers now:
+
+- load repository and EF data
+- scope the requested dataset
+- delegate forecasting formulas to the Forecasting CDC services
+- map domain outputs back to the existing shared DTO contracts
+
+Compatibility notes:
+
+- `EpicCompletionForecastDto` still keeps the legacy `*Effort` property names for API compatibility
+- capacity calibration still exposes the same `CapacityCalibrationDto` fields and percentile semantics
+- effort distribution trend still exposes the same `EffortDistributionTrendDto` shape and confidence buckets
+
+Focused verification added for the extracted slice:
+
+- `PoTool.Tests.Unit/Services/ForecastingDomainServicesTests.cs`
+- `PoTool.Tests.Unit/Handlers/GetEpicCompletionForecastQueryHandlerTests.cs`
+- `PoTool.Tests.Unit/Handlers/GetCapacityCalibrationQueryHandlerTests.cs`
+- `PoTool.Tests.Unit/Handlers/GetEffortDistributionTrendQueryHandlerTests.cs`
+- `PoTool.Tests.Unit/Configuration/ServiceCollectionTests.cs`

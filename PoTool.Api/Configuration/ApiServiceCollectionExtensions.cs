@@ -16,6 +16,7 @@ using PoTool.Core.WorkItems.Filtering;
 using PoTool.Core.Health;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Estimation;
+using PoTool.Core.Domain.Forecasting.Services;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.Domain.Metrics;
 using PoTool.Client.Services;
@@ -253,6 +254,9 @@ public static class ApiServiceCollectionExtensions
         services.AddSingleton<IHierarchyRollupService, HierarchyRollupService>();
         services.AddSingleton<IDeliveryProgressRollupService, DeliveryProgressRollupService>();
         services.AddSingleton<ISprintDeliveryProjectionService, SprintDeliveryProjectionService>();
+        services.AddSingleton<ICompletionForecastService, CompletionForecastService>();
+        services.AddSingleton<IVelocityCalibrationService, VelocityCalibrationService>();
+        services.AddSingleton<IEffortTrendForecastService, EffortTrendForecastService>();
         services.AddSingleton<ISprintExecutionMetricsCalculator, SprintExecutionMetricsCalculator>();
 
         // Register TFS configuration and client
