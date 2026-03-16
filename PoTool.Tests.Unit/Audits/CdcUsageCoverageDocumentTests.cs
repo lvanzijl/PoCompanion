@@ -128,7 +128,11 @@ public sealed class CdcUsageCoverageDocumentTests
 
     private static string ReadRepositoryFile(string repositoryRoot, string relativePath)
     {
-        return File.ReadAllText(Path.Combine(repositoryRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+        var pathSegments = new[] { repositoryRoot }
+            .Concat(relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries))
+            .ToArray();
+
+        return File.ReadAllText(Path.Combine(pathSegments));
     }
 
     private static string GetRepositoryRoot()
