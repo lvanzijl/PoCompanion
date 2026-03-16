@@ -99,7 +99,7 @@ public static class SprintSpilloverLookup
 
         var firstPostSprintMove = iterationEvents
             .Where(IsIterationPathEvent)
-            .Where(iterationEvent => FirstDoneDeliveryLookup.GetEventTimestamp(iterationEvent) >= sprintEnd)
+            .Where(iterationEvent => iterationEvent.Timestamp >= sprintEnd)
             .OrderBy(GetOrderingTimestampUtc)
             .ThenBy(iterationEvent => iterationEvent.EventId)
             .ThenBy(iterationEvent => iterationEvent.UpdateId)
