@@ -215,8 +215,8 @@
                     </MudItem>
                     <MudItem xs="6" sm="4" md="2">
                         <MudPaper Outlined="true" Class="pa-2 text-center">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Effort Delivered</MudText>
-                            <MudText Typo="Typo.h5">@_data.Summary.TotalCompletedEffort<MudText Typo="Typo.caption" Color="Color.Secondary" Inline="true"> pts</MudText></MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Delivered Effort (hours)</MudText>
+                            <MudText Typo="Typo.h5">@_data.Summary.TotalCompletedEffort</MudText>
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="6" sm="4" md="2">
@@ -253,8 +253,8 @@
                     <MudPaper Elevation="2" Class="pa-3" Style="height: 100%;">
                         <MudText Typo="Typo.subtitle1" Class="mb-2">
                             <MudIcon Icon="@Icons.Material.Filled.PieChart" Class="mr-1" Size="Size.Small" />
-                            Product Contribution
-                            <MudTooltip Text="Share of delivered effort per product across the selected sprint range.">
+                            Product Contribution (Hours)
+                            <MudTooltip Text="Share of delivered effort hours per product across the selected sprint range.">
                                 <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" Class="ml-1" />
                             </MudTooltip>
                         </MudText>
@@ -273,7 +273,7 @@
                                             @product.ProductName
                                         </MudText>
                                         <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                            @product.CompletedEffort pts &nbsp; @product.EffortShare.ToString("F0")%
+                                            @product.CompletedEffort &nbsp; @product.EffortShare.ToString("F0")%
                                         </MudText>
                                     </MudStack>
                                     <MudProgressLinear Value="@product.EffortShare" Max="100"
@@ -289,8 +289,8 @@
                     <MudPaper Elevation="2" Class="pa-3" Style="height: 100%;">
                         <MudText Typo="Typo.subtitle1" Class="mb-2">
                             <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="mr-1" Size="Size.Small" />
-                            Feature Contribution
-                            <MudTooltip Text="Top features by delivered effort. Share is relative to total portfolio delivered effort.">
+                            Feature Contribution (Story Points)
+                            <MudTooltip Text="Top features by delivered story points. Share is relative to total feature delivered story points.">
                                 <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" Class="ml-1" />
                             </MudTooltip>
                         </MudText>
@@ -320,7 +320,7 @@
                                             }
                                         </MudStack>
                                         <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                            @feature.SprintCompletedEffort pts &nbsp; @feature.EffortShare.ToString("F0")%
+                                            @FormatStoryPoints(feature.SprintCompletedEffort) &nbsp; @feature.EffortShare.ToString("F0")%
                                         </MudText>
                                     </MudStack>
                                     <MudProgressLinear Value="@feature.EffortShare" Max="100"
@@ -679,5 +679,6 @@
             new("Portfolio Delivery", null, disabled: true, icon: Icons.Material.Filled.Inventory2)
         };
     }
-}
 
+    private static string FormatStoryPoints(double storyPoints) => storyPoints.ToString("0.##");
+}

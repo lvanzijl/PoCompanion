@@ -181,11 +181,11 @@
                 @* Row 2 — Secondary Visualizations: 3 equal columns *@
                 <SecondaryVisualizationGrid Columns="3">
 
-                    @* Cell 1 — Effort Throughput Trend *@
+                    @* Cell 1 — Story Point Delivery Trend *@
                     <MudPaper Elevation="2" Class="pa-3 analytical-secondary-cell">
                         <MudStack Spacing="0" Class="mb-2">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudText Typo="Typo.subtitle2">Effort Throughput Trend</MudText>
+                                <MudText Typo="Typo.subtitle2">Story Point Delivery Trend</MudText>
                                 <TrendSlopeBadge StartValue="@_effortThroughputStart"
                                                  EndValue="@_effortThroughputEnd"
                                                  LowerIsBetter="false"
@@ -259,8 +259,8 @@
                             <tr>
                                 <th>Sprint</th>
                                 <th>Completed PBIs</th>
-                                <th>Completed Effort (pts)</th>
-                                <th>Planned Effort (pts)</th>
+                                <th>Completed Effort (hours)</th>
+                                <th>Planned Effort (hours)</th>
                                 <th>Completion %</th>
                                 <th>Bugs Created</th>
                                 <th>Bugs Closed</th>
@@ -486,11 +486,11 @@
 
         // Chart 2: Effort Throughput
         var effortData = _trendMetrics
-            .Select(m => GetMetricValue(m, pm => (double)pm.CompletedPbiEffort, m.TotalCompletedPbiEffort))
+            .Select(m => GetMetricValue(m, pm => pm.CompletedPbiStoryPoints, m.TotalCompletedPbiStoryPoints))
             .ToArray();
         _effortThroughputSeries = new List<ChartSeries>
         {
-            new() { Name = "Completed Effort (pts)", Data = effortData }
+            new() { Name = "Delivered Story Points", Data = effortData }
         };
         (_effortThroughputStart, _effortThroughputEnd) = FirstLastNonZero(effortData);
 

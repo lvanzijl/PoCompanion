@@ -195,10 +195,10 @@
                                                     <MudStack Spacing="0" Class="mt-1">
                                                         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                                @epic.DeliveredEffort / @epic.TotalEffort SP (@epic.ProgressPercent%)
+                                                                Delivered Story Points: @epic.DeliveredEffort / @epic.TotalEffort (@epic.ProgressPercent%)
                                                             </MudText>
                                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                                Remaining: @epic.RemainingEffort
+                                                                Remaining Story Points: @epic.RemainingEffort
                                                             </MudText>
                                                         </MudStack>
                                                         <MudProgressLinear Value="@epic.ProgressPercent"
@@ -210,9 +210,9 @@
                                                 }
                                                 else
                                                 {
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                                                        No effort estimated
-                                                    </MudText>
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                                            No story points estimated
+                                                        </MudText>
                                                 }
 
                                                 @* Analytics indicators *@

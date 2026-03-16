@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-16",
+    "type": "Changed",
+    "title": "Delivery labels now separate story points and hours",
+    "impact": "Forecast, sprint delivery, roadmap, and portfolio views now label story-point metrics separately from effort hours so delivery summaries no longer present hours as points.",
+    "area": "Trends",
+    "link": "/home/delivery/sprint"
+  },
+  {
     "date": "2026-03-15",
     "type": "Changed",
     "title": "Percentile metrics now use one interpolation rule",
