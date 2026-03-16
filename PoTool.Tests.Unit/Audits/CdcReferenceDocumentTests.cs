@@ -29,6 +29,7 @@ public sealed class CdcReferenceDocumentTests
         StringAssert.Contains(report, "### DeliveryTrends");
         StringAssert.Contains(report, "### Forecasting");
         StringAssert.Contains(report, "### EffortDiagnostics");
+        StringAssert.Contains(report, "### EffortPlanning");
         StringAssert.Contains(report, "### PortfolioFlow");
         StringAssert.Contains(report, "### Shared Statistics");
 
@@ -40,6 +41,7 @@ public sealed class CdcReferenceDocumentTests
         StringAssert.Contains(report, "docs/domain/sprint_commitment_domain_model.md");
         StringAssert.Contains(report, "docs/audits/backlog_quality_cdc_summary.md");
         StringAssert.Contains(report, "docs/audits/effort_diagnostics_cdc_extraction_report.md");
+        StringAssert.Contains(report, "docs/audits/effort_planning_cdc_extraction.md");
         StringAssert.Contains(report, "docs/audits/delivery_trend_analytics_cdc_summary.md");
         StringAssert.Contains(report, "docs/audits/forecasting_cdc_summary.md");
         StringAssert.Contains(report, "docs/audits/portfolio_flow_projection.md");

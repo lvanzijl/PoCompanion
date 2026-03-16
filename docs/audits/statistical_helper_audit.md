@@ -44,11 +44,9 @@ Classification legend used below:
 | `PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsStatistics.cs` | `EffortDiagnosticsStatistics` | `Mean`, `DeviationFromMean`, `ShareOfTotal`, `Median`, `Variance`, `CoefficientOfVariation`, `HHI`, `CalculateWeightedDeviationScore`, `CalculateNormalizedHerfindahlIndex` | Former parallel EffortDiagnostics owner | Removed duplicate production owner | B (resolved) | This duplicate Core helper surface was removed so the domain slice is the only production owner. |
 | `PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsCanonicalRules.cs` | `EffortImbalanceCanonicalRules` | `ComputeImbalanceScore` | Weighted deviation score | Slice-specific canonical rule | C | Stable EffortDiagnostics domain math, not a broad repository-wide statistic. |
 | `PoTool.Core.Domain/Domain/EffortDiagnostics/EffortDiagnosticsCanonicalRules.cs` | `EffortConcentrationCanonicalRules` | `ComputeConcentrationIndex` | Normalized HHI concentration index | Slice-specific canonical rule | C | Stable EffortDiagnostics domain math over normalized shares. |
-| `PoTool.Api/Handlers/Metrics/GetEffortEstimationQualityQueryHandler.cs` | `GetEffortEstimationQualityQueryHandler` | `CalculateVariance` | Population variance | Local helper | A | Same population-variance formula as the stable EffortDiagnostics core. |
-| `PoTool.Api/Handlers/Metrics/GetEffortEstimationQualityQueryHandler.cs` | `GetEffortEstimationQualityQueryHandler` | inline in `CalculateQualityByType`, `CalculateTrendOverTime`, `CalculateOverallAccuracy` | Coefficient of variation | Local inline formula | B | Same spread formula as the stable core, but it is re-labeled as estimation `accuracy` / consistency. |
-| `PoTool.Api/Handlers/Metrics/GetEffortEstimationSuggestionsQueryHandler.cs` | `GetEffortEstimationSuggestionsQueryHandler` | `CalculateMedian` | Median | Local helper | B | Similar to the stable median, but integer return type truncates even-sample medians. |
-| `PoTool.Api/Handlers/Metrics/GetEffortEstimationSuggestionsQueryHandler.cs` | `GetEffortEstimationSuggestionsQueryHandler` | `CalculateVariance` | Population variance | Local helper | A | Same population-variance formula as the stable EffortDiagnostics core. |
-| `PoTool.Api/Handlers/Metrics/GetEffortEstimationSuggestionsQueryHandler.cs` | `GetEffortEstimationSuggestionsQueryHandler` | `CalculateConfidence` | Confidence scoring | Local helper | C | Sample-size-plus-variance heuristic for suggestion confidence; not general-purpose repository math. |
+| `PoTool.Core.Domain/Domain/EffortPlanning/EffortEstimationQualityService.cs` | `EffortEstimationQualityService` | `CalculateAccuracy` | Population variance and coefficient of variation | Centralized CDC helper usage | A | The EffortPlanning slice now uses `StatisticsMath.Variance(...)` and derives coefficient of variation inside the CDC service instead of inside handlers. |
+| `PoTool.Core.Domain/Domain/EffortPlanning/EffortEstimationSuggestionService.cs` | `EffortEstimationSuggestionService` | `CalculateMedian` | Median | Centralized CDC helper usage | B | Median selection now runs inside the EffortPlanning slice while preserving the integer truncation used by the handler path. |
+| `PoTool.Core.Domain/Domain/EffortPlanning/EffortEstimationSuggestionService.cs` | `EffortEstimationSuggestionService` | `CalculateConfidence` | Confidence scoring | Slice-local helper | C | Sample-size-plus-variance heuristic remains slice-specific, but it is now centralized in the EffortPlanning CDC service. |
 | `PoTool.Api/Handlers/Metrics/GetEffortDistributionTrendQueryHandler.cs` | `GetEffortDistributionTrendQueryHandler` | `CalculateStandardDeviation` | Population standard deviation | Local helper | D | Pure math helper derived from variance; good future shared-core candidate if semantics are standardized. |
 | `PoTool.Api/Handlers/Metrics/GetEffortDistributionTrendQueryHandler.cs` | `GetEffortDistributionTrendQueryHandler` | inline in `GenerateForecasts` | Confidence scoring | Local inline formula | C | Maps coefficient of variation to forecast confidence levels; trend-specific heuristic. |
 | `PoTool.Api/Handlers/Metrics/GetEffortDistributionTrendQueryHandler.cs` | `GetEffortDistributionTrendQueryHandler` | inline in `DetermineEffortTrendDirectionFromSlope` | Coefficient of variation / volatility | Local inline formula | B | Same relative-spread idea, but used to classify volatility rather than to report statistical spread directly. |
@@ -56,7 +54,7 @@ Classification legend used below:
 | `PoTool.Api/Handlers/Metrics/GetCapacityCalibrationQueryHandler.cs` | `GetCapacityCalibrationQueryHandler` | `Percentile` | Percentile / quantile | Local helper | D | Pure reusable percentile math, but there is no single repository-wide percentile contract yet. |
 | `PoTool.Api/Handlers/Metrics/GetEpicCompletionForecastQueryHandler.cs` | `GetEpicCompletionForecastQueryHandler` | `DetermineConfidence` | Confidence scoring | Local helper | C | Confidence is driven only by historical sprint-count depth. |
 | `PoTool.Api/Handlers/Metrics/GetSprintCapacityPlanQueryHandler.cs` | `GetSprintCapacityPlanQueryHandler` | `CalculateTeamCapacities`, `DetermineCapacityStatus` | Utilization percentage and utilization bands | Local helper | C | Operational planning logic tied to sprint-capacity semantics. |
-| `PoTool.Api/Handlers/Metrics/GetEffortDistributionQueryHandler.cs` | `GetEffortDistributionQueryHandler` | inline in `CalculateEffortByIteration` | Utilization percentage | Local inline formula | C | Uses `totalEffort / defaultCapacity * 100` as descriptive capacity context. |
+| `PoTool.Core.Domain/Domain/EffortPlanning/EffortDistributionService.cs` | `EffortDistributionService` | inline in `CalculateEffortByIteration` | Utilization percentage | Slice-local helper | C | Uses `totalEffort / defaultCapacity * 100` as descriptive capacity context inside the EffortPlanning CDC slice. |
 | `PoTool.Api/Handlers/Pipelines/GetPipelineInsightsQueryHandler.cs` | `GetPipelineInsightsQueryHandler` | `Median` | Median | Local helper | B | Same median formula family, but assumes pre-sorted doubles and a different empty-input contract. |
 | `PoTool.Api/Handlers/Pipelines/GetPipelineInsightsQueryHandler.cs` | `GetPipelineInsightsQueryHandler` | `Percentile` | Percentile / quantile | Local helper | D | Linear interpolation percentile; duplicated with other handlers and client calculators. |
 | `PoTool.Api/Handlers/PullRequests/GetPrSprintTrendsQueryHandler.cs` | `GetPrSprintTrendsQueryHandler` | `Median` | Median | Local helper | B | Same median family, but assumes pre-sorted doubles and a PR-specific empty-input contract. |
@@ -75,7 +73,7 @@ Classification legend used below:
 ## Semantic Drift
 
 ### Confidence
-- `PoTool.Api/Handlers/Metrics/GetEffortEstimationSuggestionsQueryHandler.cs` computes confidence as a blend of **sample size** and **variance dampening**.
+- `PoTool.Core.Domain/Domain/EffortPlanning/EffortEstimationSuggestionService.cs` computes confidence as a blend of **sample size** and **variance dampening**.
 - `PoTool.Api/Handlers/Metrics/GetEffortDistributionTrendQueryHandler.cs` computes confidence from **coefficient-of-variation bands**.
 - `PoTool.Api/Handlers/Metrics/GetEpicCompletionForecastQueryHandler.cs` computes confidence from **historical sprint count only**.
 - `PoTool.Shared/Metrics/CapacityCalibrationDto.cs` uses “high-confidence capacity” as planning shorthand for **P25 velocity**, which is not a confidence score at all.
@@ -84,14 +82,14 @@ Result: `confidence` is not a shared statistical term in this repository today; 
 
 ### Accuracy
 - `PoTool.Core/Metrics/Queries/GetEffortEstimationQualityQuery.cs` and `PoTool.Shared/Metrics/EffortEstimationQualityDto.cs` describe estimate-vs-actual `accuracy`.
-- `PoTool.Api/Handlers/Metrics/GetEffortEstimationQualityQueryHandler.cs` actually computes **inverse coefficient of variation**, which measures **consistency/stability** rather than estimate-vs-actual correctness.
+- `PoTool.Core.Domain/Domain/EffortPlanning/EffortEstimationQualityService.cs` actually computes **inverse coefficient of variation**, which measures **consistency/stability** rather than estimate-vs-actual correctness.
 - `PoTool.Shared/Metrics/PortfolioProgressTrendDtos.cs` also uses `Accuracy`, but there it means **historical data completeness / best-effort approximation quality**, not a statistical measure.
 
 Result: `accuracy` currently has at least two meanings: statistical consistency and data-fidelity confidence.
 
 ### Variance and coefficient of variation
 - In the stable EffortDiagnostics core, variance and coefficient of variation are pure spread helpers.
-- In `GetEffortEstimationQualityQueryHandler`, the same spread formula is converted into `accuracy`.
+- In `EffortEstimationQualityService`, the same spread formula is converted into `accuracy`.
 - In `GetEffortDistributionTrendQueryHandler`, the same spread formula drives **forecast confidence** and **volatile/stable** direction classification.
 
 Result: the underlying math is similar, but the domain meaning attached to it changes by slice.
@@ -104,7 +102,7 @@ Result: the underlying math is similar, but the domain meaning attached to it ch
 Result: percentile semantics are unstable across the repository and need a separate contract decision before consolidation.
 
 ### Utilization
-- `GetEffortDistributionQueryHandler` and `GetEffortImbalanceQueryHandler` use utilization as **descriptive context** relative to a default capacity.
+- `EffortDistributionService` and `GetEffortImbalanceQueryHandler` use utilization as **descriptive context** relative to a default capacity.
 - `GetSprintCapacityPlanQueryHandler` uses utilization as a **decision-driving operational status** with explicit under/near/over-capacity bands.
 - `PoTool.Shared/Metrics/EffortDistributionTrendDto.cs` and `PoTool.Shared/Metrics/SprintCapacityPlanDto.cs` expose utilization percentages without a single shared meaning beyond “effort ÷ capacity”.
 
@@ -113,8 +111,8 @@ Result: utilization is a reused ratio, but not a reusable statistical helper wit
 ## Consolidation Opportunities
 
 ### Reusable pure math
-- **Population variance** can safely move to a broader shared statistics core now.
-  - Current duplicates: `GetEffortEstimationQualityQueryHandler.CalculateVariance`, `GetEffortEstimationSuggestionsQueryHandler.CalculateVariance`.
+- **Population variance** is now centralized behind the shared statistics core for the EffortPlanning CDC slice.
+  - Current CDC consumers: `EffortEstimationQualityService.CalculateAccuracy`, `EffortEstimationSuggestionService.GenerateSuggestion`.
 - **Population standard deviation** is a natural follow-on candidate once variance ownership is settled.
   - Current local copy: `GetEffortDistributionTrendQueryHandler.CalculateStandardDeviation`.
 - **Median** is a future candidate only after one contract is chosen for:

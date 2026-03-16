@@ -12,6 +12,7 @@ using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.DeliveryTrends.Services;
+using PoTool.Core.Domain.EffortPlanning;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Forecasting.Services;
 using PoTool.Core.Domain.Hierarchy;
@@ -117,6 +118,9 @@ public class ServiceCollectionTests
         var completionForecastService = scope.ServiceProvider.GetService<ICompletionForecastService>();
         var velocityCalibrationService = scope.ServiceProvider.GetService<IVelocityCalibrationService>();
         var effortTrendForecastService = scope.ServiceProvider.GetService<IEffortTrendForecastService>();
+        var effortDistributionService = scope.ServiceProvider.GetService<IEffortDistributionService>();
+        var effortEstimationQualityService = scope.ServiceProvider.GetService<IEffortEstimationQualityService>();
+        var effortEstimationSuggestionService = scope.ServiceProvider.GetService<IEffortEstimationSuggestionService>();
         var projectionService = scope.ServiceProvider.GetService<SprintTrendProjectionService>();
 
         Assert.IsNotNull(storyPointResolutionService, "Canonical story-point resolution service should be registered.");
@@ -134,6 +138,9 @@ public class ServiceCollectionTests
         Assert.IsNotNull(completionForecastService, "Completion forecast service should be registered.");
         Assert.IsNotNull(velocityCalibrationService, "Velocity calibration service should be registered.");
         Assert.IsNotNull(effortTrendForecastService, "Effort trend forecast service should be registered.");
+        Assert.IsNotNull(effortDistributionService, "Effort distribution CDC service should be registered.");
+        Assert.IsNotNull(effortEstimationQualityService, "Effort estimation quality CDC service should be registered.");
+        Assert.IsNotNull(effortEstimationSuggestionService, "Effort estimation suggestion CDC service should be registered.");
         Assert.IsNotNull(projectionService, "SprintTrendProjectionService should be resolvable from DI.");
     }
 

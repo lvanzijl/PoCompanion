@@ -18,6 +18,7 @@ using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Forecasting.Services;
+using PoTool.Core.Domain.EffortPlanning;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.Domain.Metrics;
 using PoTool.Core.Domain.Portfolio;
@@ -266,6 +267,9 @@ public static class ApiServiceCollectionExtensions
         services.AddSingleton<ICompletionForecastService, CompletionForecastService>();
         services.AddSingleton<IVelocityCalibrationService, VelocityCalibrationService>();
         services.AddSingleton<IEffortTrendForecastService, EffortTrendForecastService>();
+        services.AddSingleton<IEffortDistributionService, EffortDistributionService>();
+        services.AddSingleton<IEffortEstimationQualityService, EffortEstimationQualityService>();
+        services.AddSingleton<IEffortEstimationSuggestionService, EffortEstimationSuggestionService>();
         services.AddSingleton<PoTool.Core.Domain.Cdc.Sprints.SprintExecutionMetricsCalculator>();
         services.AddSingleton<PoTool.Core.Domain.Cdc.Sprints.ISprintExecutionMetricsCalculator>(sp =>
             sp.GetRequiredService<PoTool.Core.Domain.Cdc.Sprints.SprintExecutionMetricsCalculator>());

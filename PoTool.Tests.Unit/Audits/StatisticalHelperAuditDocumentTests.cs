@@ -22,7 +22,7 @@ public sealed class StatisticalHelperAuditDocumentTests
         StringAssert.Contains(audit, "## Recommended Next Step");
 
         StringAssert.Contains(audit, "PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsStatistics.cs");
-        StringAssert.Contains(audit, "PoTool.Api/Handlers/Metrics/GetEffortEstimationQualityQueryHandler.cs");
+        StringAssert.Contains(audit, "PoTool.Core.Domain/Domain/EffortPlanning/EffortEstimationQualityService.cs");
         StringAssert.Contains(audit, "PoTool.Api/Handlers/PullRequests/GetPullRequestInsightsQueryHandler.cs");
         StringAssert.Contains(audit, "confidence");
         StringAssert.Contains(audit, "percentile");
@@ -84,14 +84,20 @@ public sealed class StatisticalHelperAuditDocumentTests
         var repositoryRoot = GetRepositoryRoot();
         var qualityHandlerPath = Path.Combine(repositoryRoot, "PoTool.Api", "Handlers", "Metrics", "GetEffortEstimationQualityQueryHandler.cs");
         var suggestionsHandlerPath = Path.Combine(repositoryRoot, "PoTool.Api", "Handlers", "Metrics", "GetEffortEstimationSuggestionsQueryHandler.cs");
+        var qualityServicePath = Path.Combine(repositoryRoot, "PoTool.Core.Domain", "Domain", "EffortPlanning", "EffortEstimationQualityService.cs");
+        var suggestionServicePath = Path.Combine(repositoryRoot, "PoTool.Core.Domain", "Domain", "EffortPlanning", "EffortEstimationSuggestionService.cs");
 
         var qualityHandler = File.ReadAllText(qualityHandlerPath);
         var suggestionsHandler = File.ReadAllText(suggestionsHandlerPath);
+        var qualityService = File.ReadAllText(qualityServicePath);
+        var suggestionService = File.ReadAllText(suggestionServicePath);
 
         Assert.IsFalse(qualityHandler.Contains("private double CalculateVariance", StringComparison.Ordinal));
         Assert.IsFalse(suggestionsHandler.Contains("private double CalculateVariance", StringComparison.Ordinal));
-        StringAssert.Contains(qualityHandler, "StatisticsMath.Variance");
-        StringAssert.Contains(suggestionsHandler, "StatisticsMath.Variance");
+        Assert.IsFalse(qualityHandler.Contains("StatisticsMath.Variance", StringComparison.Ordinal));
+        Assert.IsFalse(suggestionsHandler.Contains("StatisticsMath.Variance", StringComparison.Ordinal));
+        StringAssert.Contains(qualityService, "StatisticsMath.Variance");
+        StringAssert.Contains(suggestionService, "StatisticsMath.Variance");
     }
 
     [TestMethod]
@@ -102,6 +108,7 @@ public sealed class StatisticalHelperAuditDocumentTests
         var prDeliveryHandlerPath = Path.Combine(repositoryRoot, "PoTool.Api", "Handlers", "PullRequests", "GetPrDeliveryInsightsQueryHandler.cs");
         var pipelineHandlerPath = Path.Combine(repositoryRoot, "PoTool.Api", "Handlers", "Pipelines", "GetPipelineInsightsQueryHandler.cs");
         var capacityHandlerPath = Path.Combine(repositoryRoot, "PoTool.Api", "Handlers", "Metrics", "GetCapacityCalibrationQueryHandler.cs");
+        var velocityCalibrationServicePath = Path.Combine(repositoryRoot, "PoTool.Core.Domain", "Domain", "Forecasting", "Services", "VelocityCalibrationService.cs");
         var prSprintHandlerPath = Path.Combine(repositoryRoot, "PoTool.Api", "Handlers", "PullRequests", "GetPrSprintTrendsQueryHandler.cs");
         var prCalculatorPath = Path.Combine(repositoryRoot, "PoTool.Client", "Services", "PullRequestInsightsCalculator.cs");
         var pipelineCalculatorPath = Path.Combine(repositoryRoot, "PoTool.Client", "Services", "PipelineInsightsCalculator.cs");
@@ -111,6 +118,7 @@ public sealed class StatisticalHelperAuditDocumentTests
         var prDeliveryHandler = File.ReadAllText(prDeliveryHandlerPath);
         var pipelineHandler = File.ReadAllText(pipelineHandlerPath);
         var capacityHandler = File.ReadAllText(capacityHandlerPath);
+        var velocityCalibrationService = File.ReadAllText(velocityCalibrationServicePath);
         var prSprintHandler = File.ReadAllText(prSprintHandlerPath);
         var prCalculator = File.ReadAllText(prCalculatorPath);
         var pipelineCalculator = File.ReadAllText(pipelineCalculatorPath);
@@ -125,7 +133,8 @@ public sealed class StatisticalHelperAuditDocumentTests
         StringAssert.Contains(prInsightsHandler, "PercentileMath.LinearInterpolation");
         StringAssert.Contains(prDeliveryHandler, "PercentileMath.LinearInterpolation");
         StringAssert.Contains(pipelineHandler, "PercentileMath.LinearInterpolation");
-        StringAssert.Contains(capacityHandler, "PercentileMath.LinearInterpolation");
+        StringAssert.Contains(capacityHandler, "_velocityCalibrationService.Calibrate");
+        StringAssert.Contains(velocityCalibrationService, "PercentileMath.LinearInterpolation");
         StringAssert.Contains(prSprintHandler, "PercentileMath.LinearInterpolation");
         StringAssert.Contains(prCalculator, "PercentileMath.LinearInterpolation");
         StringAssert.Contains(pipelineCalculator, "PercentileMath.LinearInterpolation");

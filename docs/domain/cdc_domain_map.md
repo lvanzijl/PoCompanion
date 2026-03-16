@@ -49,32 +49,36 @@ Use these nodes in the diagram:
    - velocity calibration
    - forecast distribution
 9. EffortDiagnostics
-   - effort imbalance
-   - concentration risk
-10. PortfolioFlow
-    - stock
-    - inflow
-    - throughput
-    - remaining scope
-    - completion percent
-11. Shared Statistics
-    - mean
-    - median
-    - variance
-    - standard deviation
-    - percentile semantics
-12. Application Adapters
-    - handlers
-    - DTO mappers
-    - compatibility adapters
-13. Projection Persistence
-    - sprint metrics projections
-    - portfolio flow projections
-14. UI and Client Consumers
-    - dashboards
-    - portfolio pages
-    - trend pages
-    - forecast pages
+    - effort imbalance
+    - concentration risk
+10. EffortPlanning
+    - effort distribution
+    - effort estimation quality
+    - effort estimation suggestions
+11. PortfolioFlow
+     - stock
+     - inflow
+     - throughput
+     - remaining scope
+     - completion percent
+12. Shared Statistics
+     - mean
+     - median
+     - variance
+     - standard deviation
+     - percentile semantics
+13. Application Adapters
+     - handlers
+     - DTO mappers
+     - compatibility adapters
+14. Projection Persistence
+     - sprint metrics projections
+     - portfolio flow projections
+15. UI and Client Consumers
+     - dashboards
+     - portfolio pages
+     - trend pages
+     - forecast pages
 
 ## Edges
 
@@ -95,6 +99,9 @@ Draw the following required edges:
 - Raw Work-Item Snapshots -> EffortDiagnostics
 - Core Concepts -> EffortDiagnostics
 - Shared Statistics -> EffortDiagnostics
+- Raw Work-Item Snapshots -> EffortPlanning
+- Core Concepts -> EffortPlanning
+- Shared Statistics -> EffortPlanning
 - Raw Work-Item Snapshots -> PortfolioFlow
 - Raw Work-Item History -> PortfolioFlow
 - Sprint Metadata -> PortfolioFlow
@@ -105,6 +112,7 @@ Draw the following required edges:
 - DeliveryTrends -> Application Adapters
 - Forecasting -> Application Adapters
 - EffortDiagnostics -> Application Adapters
+- EffortPlanning -> Application Adapters
 - PortfolioFlow -> Application Adapters
 - SprintCommitment -> Projection Persistence
 - DeliveryTrends -> Projection Persistence
@@ -131,6 +139,7 @@ The map should be drawn in five layers from bottom to top:
    - DeliveryTrends
    - Forecasting
    - EffortDiagnostics
+   - EffortPlanning
    - PortfolioFlow
 4. Application materialization layer
    - Projection Persistence
@@ -147,6 +156,7 @@ The diagram must preserve these rules:
 - SprintCommitment is the historical sprint-facts provider and must not depend on DeliveryTrends, Forecasting, or PortfolioFlow
 - DeliveryTrends may consume SprintCommitment but must not redefine commitment or spillover
 - Forecasting may consume delivery-trend history but must not reconstruct sprint history itself
+- EffortPlanning may consume shared statistical helpers but must not leave effort analytics formulas in handlers
 - PortfolioFlow may consume first-Done completion and sprint windows but owns stock, inflow, throughput, and remaining scope semantics
 - BacklogQuality remains snapshot-driven and does not depend on historical delivery slices
 - application, persistence, and UI layers consume CDC outputs and must not feed semantics back into the CDC
@@ -164,8 +174,9 @@ Interpretation from raw work-item history to portfolio insight must be read in t
 6. transform delivery-trend history into forecast outputs in Forecasting
 7. combine hierarchy, state, story-point scope, portfolio-entry transitions, sprint windows, and completion attribution into PortfolioFlow stock, inflow, throughput, and remaining scope
 8. compute effort imbalance and concentration in EffortDiagnostics when effort-hour diagnostics are needed
-9. materialize selected outputs in Projection Persistence where downstream consumers need stable read models
-10. expose CDC-backed outputs through Application Adapters to UI and Client Consumers without changing CDC meaning
+9. compute effort distribution, effort-quality, and effort-suggestion outputs in EffortPlanning when effort-hour planning analytics are needed
+10. materialize selected outputs in Projection Persistence where downstream consumers need stable read models
+11. expose CDC-backed outputs through Application Adapters to UI and Client Consumers without changing CDC meaning
 
 ## Diagram Notes
 

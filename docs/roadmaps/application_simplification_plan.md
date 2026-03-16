@@ -16,7 +16,8 @@ The goal is to simplify the application layer by turning analytics handlers into
 | `SprintCommitment` | `GetSprintMetricsQueryHandler`, `GetSprintExecutionQueryHandler` | `CDC compliant` after `SprintFactResult` extraction | Keep the new CDC-backed sprint fact seam stable and route any remaining sprint-total consumers through `ISprintFactService`. |
 | `DeliveryTrends` | `GetSprintTrendMetricsQueryHandler`, `GetPortfolioDeliveryQueryHandler`, `SprintTrendProjectionService` | mixed: trend handler already compliant; portfolio delivery still `CDC bypass` | Keep the valid projection seam and move portfolio delivery summaries / contribution rollups behind CDC-backed delivery outputs. |
 | `Forecasting` | `GetEpicCompletionForecastQueryHandler`, `GetCapacityCalibrationQueryHandler`, `GetEffortDistributionTrendQueryHandler` | `CDC compliant` | Preserve the thin-adapter pattern and remove any remaining dependency on handler-rebuilt sprint totals. |
-| `EffortDiagnostics` | `GetEffortImbalanceQueryHandler`, `GetEffortConcentrationRiskQueryHandler`, `GetEffortDistributionQueryHandler`, `GetEffortEstimationQualityQueryHandler`, `GetEffortEstimationSuggestionsQueryHandler` | mixed: two handlers are acceptable adapters; three remain local calculations | Keep the already-thin diagnostics handlers stable, and separately decide whether the non-CDC effort-planning formulas should move into a slice or remain explicitly outside this roadmap. |
+| `EffortDiagnostics` | `GetEffortImbalanceQueryHandler`, `GetEffortConcentrationRiskQueryHandler` | `unavoidable adapter logic` | Keep the already-thin diagnostics handlers stable and avoid pulling recommendation wording into the CDC. |
+| `EffortPlanning` | `GetEffortDistributionQueryHandler`, `GetEffortEstimationQualityQueryHandler`, `GetEffortEstimationSuggestionsQueryHandler` | `CDC compliant` after EffortPlanning extraction | Keep the new effort-planning service seams stable and prevent handler-owned effort formulas from reappearing. |
 | `PortfolioFlow` | `GetPortfolioProgressTrendQueryHandler`, `PortfolioFlowProjectionService` | `CDC bypass` in the handler; projection service is a valid adapter seam | Move completion, net-flow, remaining-scope change, and trajectory rollups behind CDC-backed portfolio outputs so the handler becomes read-and-map only. |
 
 ### Group notes
@@ -48,8 +49,12 @@ The goal is to simplify the application layer by turning analytics handlers into
 #### EffortDiagnostics
 
 - `GetEffortImbalanceQueryHandler` and `GetEffortConcentrationRiskQueryHandler` are already acceptable adapters because the formulas are delegated to `EffortDiagnosticsAnalyzer`.
-- `GetEffortDistributionQueryHandler`, `GetEffortEstimationQualityQueryHandler`, and `GetEffortEstimationSuggestionsQueryHandler` remain local calculations; the coverage audit explicitly frames them as a separate migration decision.
-- This plan should not silently pull those three handlers into the CDC without an explicit slice decision.
+
+#### EffortPlanning
+
+- `GetEffortDistributionQueryHandler`, `GetEffortEstimationQualityQueryHandler`, and `GetEffortEstimationSuggestionsQueryHandler` now delegate to the EffortPlanning CDC slice.
+- The remaining goal is to keep handlers limited to filtering, settings lookup, and DTO mapping.
+- Future changes should extend the EffortPlanning slice instead of reintroducing formulas in handlers.
 
 #### PortfolioFlow
 
@@ -116,10 +121,17 @@ Step 4: remove unused helper utilities that were only needed to compensate for n
 
 #### EffortDiagnostics
 
-Step 1: preserve the current thin-adapter path for `GetEffortImbalanceQueryHandler` and `GetEffortConcentrationRiskQueryHandler`, and explicitly decide whether the three non-CDC effort-planning handlers should migrate into a dedicated slice or remain outside this roadmap.  
-Step 2: remove duplicated service logic only for any effort-planning handlers that are explicitly pulled behind a CDC contract; do not mix that decision into the already-stable imbalance / concentration adapters.  
-Step 3: simplify DTO builders for whichever effort handlers move behind a canonical contract, keeping recommendation text and visibility shaping outside the CDC.  
-Step 4: remove unused helper utilities and local statistics wrappers only after the slice-boundary decision is made and the migrated handlers no longer depend on them.
+Step 1: preserve the current thin-adapter path for `GetEffortImbalanceQueryHandler` and `GetEffortConcentrationRiskQueryHandler`.  
+Step 2: keep recommendation text and visibility shaping outside the CDC.  
+Step 3: prevent new diagnostics formulas from bypassing `EffortDiagnosticsAnalyzer`.  
+Step 4: remove any future compatibility code only if it does not change recommendation semantics.
+
+#### EffortPlanning
+
+Step 1: keep `EffortDistributionResult`, `EffortEstimationQualityResult`, and `EffortEstimationSuggestionResult` as the application-facing seams for effort planning.  
+Step 2: route any future effort-distribution, quality, or suggestion consumer through `IEffortDistributionService`, `IEffortEstimationQualityService`, or `IEffortEstimationSuggestionService`.  
+Step 3: keep the three effort-planning handlers as mapping layers over canonical results.  
+Step 4: prevent transport formulas and local statistics from reappearing in handlers or DTO builders.
 
 #### PortfolioFlow
 
@@ -178,6 +190,7 @@ The migration should consolidate calculation ownership into the existing CDC sli
 | product delivery summaries and contribution rollups | `DeliveryTrends` | portfolio delivery totals, effort shares, and feature contribution math in `GetPortfolioDeliveryQueryHandler` |
 | forecast projection, calibration, trend forecasting | `Forecasting` | indirect dependence on handler-owned sprint totals rather than direct CDC-backed summaries |
 | effort imbalance and concentration formulas | `EffortDiagnostics` | none for the two compliant handlers; keep outside-slice effort-planning formulas as a separate scope decision |
+| effort distribution, effort quality, effort suggestions | `EffortPlanning` | none for the three extracted handlers; keep future effort-planning formulas behind canonical services |
 | stock, inflow, throughput, completion, net flow, trajectory | `PortfolioFlow` | progress-summary rollups in `GetPortfolioProgressTrendQueryHandler` |
 
 ## Expected Codebase Impact
@@ -202,5 +215,5 @@ Expected impact from the audits if this roadmap is executed incrementally:
   - Compatibility adapters such as `DeliveryTrendProgressRollupMapper` should remain until transport versioning decisions are made.
 - **Client dependency risk**
   - `RoadmapAnalyticsService` should not be simplified until the API exposes the CDC-backed totals the client currently recomputes.
-- **Scope-boundary risk**
-  - The non-CDC effort-planning handlers (`GetEffortDistributionQueryHandler`, `GetEffortEstimationQualityQueryHandler`, `GetEffortEstimationSuggestionsQueryHandler`) require an explicit slice decision before migration work starts.
+- **Slice-regression risk**
+  - The extracted effort-planning handlers should remain thin adapters; new effort formulas must extend the EffortPlanning CDC slice rather than returning to handlers.

@@ -95,10 +95,9 @@ public sealed class CdcUsageCoverageDocumentTests
         StringAssert.Contains(effortImbalance, "Analyzer.AnalyzeImbalance");
         StringAssert.Contains(effortConcentration, "Analyzer.AnalyzeConcentration");
         StringAssert.Contains(effortDistributionTrend, "_effortTrendForecastService.Analyze");
-        StringAssert.Contains(effortDistribution, "CalculateHeatMapCells");
-        StringAssert.Contains(effortQuality, "StatisticsMath.Variance");
-        StringAssert.Contains(effortSuggestions, "CalculateSimilarity");
-        StringAssert.Contains(effortSuggestions, "CalculateConfidence");
+        StringAssert.Contains(effortDistribution, "_effortDistributionService.Analyze");
+        StringAssert.Contains(effortQuality, "_effortEstimationQualityService.Analyze");
+        StringAssert.Contains(effortSuggestions, "_effortEstimationSuggestionService.GenerateSuggestion");
     }
 
     [TestMethod]

@@ -30,6 +30,7 @@ public sealed class CdcDomainMapDocumentTests
         StringAssert.Contains(report, "DeliveryTrends");
         StringAssert.Contains(report, "Forecasting");
         StringAssert.Contains(report, "EffortDiagnostics");
+        StringAssert.Contains(report, "EffortPlanning");
         StringAssert.Contains(report, "PortfolioFlow");
         StringAssert.Contains(report, "Shared Statistics");
         StringAssert.Contains(report, "Application Adapters");
@@ -38,6 +39,7 @@ public sealed class CdcDomainMapDocumentTests
 
         StringAssert.Contains(report, "SprintCommitment -> DeliveryTrends");
         StringAssert.Contains(report, "DeliveryTrends -> Forecasting");
+        StringAssert.Contains(report, "EffortPlanning -> Application Adapters");
         StringAssert.Contains(report, "SprintCommitment -> PortfolioFlow");
         StringAssert.Contains(report, "application, persistence, and UI layers consume CDC outputs and must not feed semantics back into the CDC");
         StringAssert.Contains(report, "stock, inflow, throughput, and remaining scope");
