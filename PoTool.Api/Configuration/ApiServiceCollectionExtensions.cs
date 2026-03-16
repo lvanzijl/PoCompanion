@@ -262,9 +262,11 @@ public static class ApiServiceCollectionExtensions
         services.AddSingleton<ICompletionForecastService, CompletionForecastService>();
         services.AddSingleton<IVelocityCalibrationService, VelocityCalibrationService>();
         services.AddSingleton<IEffortTrendForecastService, EffortTrendForecastService>();
-        services.AddSingleton<PoTool.Core.Domain.Cdc.Sprints.ISprintExecutionMetricsCalculator, PoTool.Core.Domain.Cdc.Sprints.SprintExecutionMetricsCalculator>();
+        services.AddSingleton<PoTool.Core.Domain.Cdc.Sprints.SprintExecutionMetricsCalculator>();
+        services.AddSingleton<PoTool.Core.Domain.Cdc.Sprints.ISprintExecutionMetricsCalculator>(sp =>
+            sp.GetRequiredService<PoTool.Core.Domain.Cdc.Sprints.SprintExecutionMetricsCalculator>());
         services.AddSingleton<PoTool.Core.Domain.Metrics.ISprintExecutionMetricsCalculator>(sp =>
-            (PoTool.Core.Domain.Cdc.Sprints.SprintExecutionMetricsCalculator)sp.GetRequiredService<PoTool.Core.Domain.Cdc.Sprints.ISprintExecutionMetricsCalculator>());
+            sp.GetRequiredService<PoTool.Core.Domain.Cdc.Sprints.SprintExecutionMetricsCalculator>());
 
         // Register TFS configuration and client
         services.AddDataProtection();

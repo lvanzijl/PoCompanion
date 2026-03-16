@@ -278,13 +278,15 @@ public class SprintTrendProjectionService
         IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? stateEventsByWorkItem = null,
         IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>>? iterationEventsByWorkItem = null)
     {
+        var effectiveActivityByWorkItem = activityByWorkItem.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<FieldChangeEvent>)pair.Value.ToFieldChangeEvents());
         var effectiveWorkItemSnapshotsById = workItemSnapshotsById
             ?? workItemsByTfsId.Values.ToSnapshotDictionary();
         var effectiveIterationEventsByWorkItem = iterationEventsByWorkItem
-            ?? activityByWorkItem.ToDictionary(
+            ?? effectiveActivityByWorkItem.ToDictionary(
                 pair => pair.Key,
                 pair => (IReadOnlyList<FieldChangeEvent>)pair.Value
-                    .ToFieldChangeEvents()
                     .Where(change => string.Equals(change.FieldRefName, "System.IterationPath", StringComparison.OrdinalIgnoreCase))
                     .ToList());
         var effectiveCommittedWorkItemIds = committedWorkItemIds
@@ -299,9 +301,7 @@ public class SprintTrendProjectionService
             productId,
             resolvedItems.Select(resolvedItem => resolvedItem.ToDeliveryTrendResolvedWorkItem()).ToList(),
             workItemsByTfsId.ToDictionary(pair => pair.Key, pair => pair.Value.ToDeliveryTrendWorkItem()),
-            activityByWorkItem.ToDictionary(
-                pair => pair.Key,
-                pair => (IReadOnlyList<FieldChangeEvent>)pair.Value.ToFieldChangeEvents()),
+            effectiveActivityByWorkItem,
             sprintStart,
             sprintEnd,
             effectiveCommittedWorkItemIds,

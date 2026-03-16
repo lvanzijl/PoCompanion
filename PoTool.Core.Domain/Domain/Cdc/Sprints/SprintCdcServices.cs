@@ -113,7 +113,8 @@ public interface ISprintSpilloverService
 }
 
 /// <summary>
-/// CDC wrapper for canonical sprint execution metrics formulas.
+/// CDC wrapper contract for canonical sprint execution metrics formulas.
+/// New CDC consumers should depend on this interface.
 /// </summary>
 public interface ISprintExecutionMetricsCalculator
 {
@@ -382,6 +383,8 @@ public sealed class SprintSpilloverService : ISprintSpilloverService
 
 /// <summary>
 /// Default CDC wrapper for canonical sprint execution metric formulas.
+/// This type also implements the legacy metrics interface so existing application handlers can migrate
+/// to the CDC namespace incrementally without duplicating the underlying formula implementation.
 /// </summary>
 public sealed class SprintExecutionMetricsCalculator : ISprintExecutionMetricsCalculator, Metrics.ISprintExecutionMetricsCalculator
 {
