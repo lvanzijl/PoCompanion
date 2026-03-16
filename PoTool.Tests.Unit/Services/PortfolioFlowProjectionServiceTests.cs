@@ -186,6 +186,39 @@ public sealed class PortfolioFlowProjectionServiceTests
         Assert.AreEqual(75d, projection.CompletionPercent.Value, 0.001d);
     }
 
+    [TestMethod]
+    public void ComputeProductSprintProjection_TreatsResolvedProductChangeAsPortfolioInflow_WhenPbiMovesIntoPortfolio()
+    {
+        var sprint = CreateSprint();
+        var movedIntoPortfolioAt = SprintStart(sprint).AddDays(3);
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [101] = CreateWorkItem(101, storyPoints: 8, state: "Active")
+        };
+        var resolvedItems = new Dictionary<int, ResolvedWorkItemEntity>
+        {
+            [101] = CreateResolvedWorkItem(101, resolvedProductId: 1)
+        };
+        var membershipEvents = BuildEventsByWorkItem(
+            CreateFieldChange(101, PortfolioEntryLookup.ResolvedProductIdFieldRefName, movedIntoPortfolioAt, "2", "1"));
+
+        var projection = CreateService().ComputeProductSprintProjection(
+            sprint,
+            1,
+            new[] { 101 },
+            resolvedItems,
+            workItems,
+            firstDoneByWorkItem: new Dictionary<int, DateTimeOffset>(),
+            membershipEventsByWorkItem: membershipEvents);
+
+        Assert.AreEqual(8d, projection.StockStoryPoints, 0.001d);
+        Assert.AreEqual(8d, projection.RemainingScopeStoryPoints, 0.001d);
+        Assert.AreEqual(8d, projection.InflowStoryPoints, 0.001d);
+        Assert.AreEqual(0d, projection.ThroughputStoryPoints, 0.001d);
+        Assert.IsNotNull(projection.CompletionPercent);
+        Assert.AreEqual(0d, projection.CompletionPercent.Value, 0.001d);
+    }
+
     private static PortfolioFlowProjectionService CreateService()
     {
         var services = new ServiceCollection().BuildServiceProvider();
