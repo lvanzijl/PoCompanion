@@ -61,7 +61,7 @@ public static class SprintCommitmentLookup
 
         foreach (var iterationEvent in iterationEvents
                      .Where(IsIterationPathEvent)
-                     .Where(iterationEvent => FirstDoneDeliveryLookup.GetEventTimestamp(iterationEvent) > targetTimestamp)
+                     .Where(iterationEvent => iterationEvent.Timestamp > targetTimestamp)
                      .OrderByDescending(GetOrderingTimestampUtc)
                      .ThenByDescending(iterationEvent => iterationEvent.EventId)
                      .ThenByDescending(iterationEvent => iterationEvent.UpdateId))

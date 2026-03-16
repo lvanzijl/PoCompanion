@@ -26,7 +26,7 @@ public static class StateReconstructionLookup
 
         foreach (var stateEvent in stateEvents
                      .Where(IsStateEvent)
-                     .Where(stateEvent => FirstDoneDeliveryLookup.GetEventTimestamp(stateEvent) > targetTimestamp)
+                     .Where(stateEvent => stateEvent.Timestamp > targetTimestamp)
                      .OrderByDescending(GetOrderingTimestampUtc)
                      .ThenByDescending(stateEvent => stateEvent.EventId)
                      .ThenByDescending(stateEvent => stateEvent.UpdateId))
