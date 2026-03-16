@@ -16,6 +16,7 @@ using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Forecasting.Services;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.Domain.Metrics;
+using PoTool.Core.Domain.Portfolio;
 
 namespace PoTool.Tests.Unit.Configuration;
 
@@ -104,12 +105,14 @@ public class ServiceCollectionTests
         var storyPointResolutionService = scope.ServiceProvider.GetService<ICanonicalStoryPointResolutionService>();
         var hierarchyRollupService = scope.ServiceProvider.GetService<IHierarchyRollupService>();
         var deliveryProgressRollupService = scope.ServiceProvider.GetService<IDeliveryProgressRollupService>();
+        var portfolioDeliverySummaryService = scope.ServiceProvider.GetService<IPortfolioDeliverySummaryService>();
         var sprintCommitmentService = scope.ServiceProvider.GetService<ISprintCommitmentService>();
         var sprintScopeChangeService = scope.ServiceProvider.GetService<ISprintScopeChangeService>();
         var sprintCompletionService = scope.ServiceProvider.GetService<ISprintCompletionService>();
         var sprintSpilloverService = scope.ServiceProvider.GetService<ISprintSpilloverService>();
         var sprintFactService = scope.ServiceProvider.GetService<ISprintFactService>();
         var sprintDeliveryProjectionService = scope.ServiceProvider.GetService<ISprintDeliveryProjectionService>();
+        var portfolioFlowSummaryService = scope.ServiceProvider.GetService<IPortfolioFlowSummaryService>();
         var sprintExecutionMetricsCalculator = scope.ServiceProvider.GetService<PoTool.Core.Domain.Cdc.Sprints.ISprintExecutionMetricsCalculator>();
         var completionForecastService = scope.ServiceProvider.GetService<ICompletionForecastService>();
         var velocityCalibrationService = scope.ServiceProvider.GetService<IVelocityCalibrationService>();
@@ -119,12 +122,14 @@ public class ServiceCollectionTests
         Assert.IsNotNull(storyPointResolutionService, "Canonical story-point resolution service should be registered.");
         Assert.IsNotNull(hierarchyRollupService, "Hierarchy rollup service should be registered.");
         Assert.IsNotNull(deliveryProgressRollupService, "Delivery progress rollup service should be registered.");
+        Assert.IsNotNull(portfolioDeliverySummaryService, "Portfolio delivery summary service should be registered.");
         Assert.IsNotNull(sprintCommitmentService, "Sprint commitment CDC service should be registered.");
         Assert.IsNotNull(sprintScopeChangeService, "Sprint scope-change CDC service should be registered.");
         Assert.IsNotNull(sprintCompletionService, "Sprint completion CDC service should be registered.");
         Assert.IsNotNull(sprintSpilloverService, "Sprint spillover CDC service should be registered.");
         Assert.IsNotNull(sprintFactService, "Sprint fact CDC service should be registered.");
         Assert.IsNotNull(sprintDeliveryProjectionService, "Sprint delivery projection service should be registered.");
+        Assert.IsNotNull(portfolioFlowSummaryService, "Portfolio flow summary service should be registered.");
         Assert.IsNotNull(sprintExecutionMetricsCalculator, "Sprint execution metrics CDC service should be registered.");
         Assert.IsNotNull(completionForecastService, "Completion forecast service should be registered.");
         Assert.IsNotNull(velocityCalibrationService, "Velocity calibration service should be registered.");

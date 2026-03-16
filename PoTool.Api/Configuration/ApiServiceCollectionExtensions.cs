@@ -20,6 +20,7 @@ using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Forecasting.Services;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.Domain.Metrics;
+using PoTool.Core.Domain.Portfolio;
 using PoTool.Client.Services;
 
 namespace PoTool.Api.Configuration;
@@ -259,7 +260,9 @@ public static class ApiServiceCollectionExtensions
         services.AddSingleton<ISprintFactService, SprintFactService>();
         services.AddSingleton<IHierarchyRollupService, HierarchyRollupService>();
         services.AddSingleton<IDeliveryProgressRollupService, DeliveryProgressRollupService>();
+        services.AddSingleton<IPortfolioDeliverySummaryService, PortfolioDeliverySummaryService>();
         services.AddSingleton<ISprintDeliveryProjectionService, SprintDeliveryProjectionService>();
+        services.AddSingleton<IPortfolioFlowSummaryService, PortfolioFlowSummaryService>();
         services.AddSingleton<ICompletionForecastService, CompletionForecastService>();
         services.AddSingleton<IVelocityCalibrationService, VelocityCalibrationService>();
         services.AddSingleton<IEffortTrendForecastService, EffortTrendForecastService>();

@@ -40,6 +40,7 @@ public class SprintTrendProjectionServiceSqliteTests
         services.AddSingleton<ICanonicalStoryPointResolutionService, CanonicalStoryPointResolutionService>();
         services.AddSingleton<IHierarchyRollupService, HierarchyRollupService>();
         services.AddSingleton<IDeliveryProgressRollupService, DeliveryProgressRollupService>();
+        services.AddSingleton<IPortfolioFlowSummaryService, PortfolioFlowSummaryService>();
         services.AddSingleton<ISprintDeliveryProjectionService, SprintDeliveryProjectionService>();
 
         _serviceProvider = services.BuildServiceProvider();
@@ -392,6 +393,7 @@ public class SprintTrendProjectionServiceSqliteTests
         {
             var handler = new GetPortfolioProgressTrendQueryHandler(
                 scope.ServiceProvider.GetRequiredService<PoToolDbContext>(),
+                scope.ServiceProvider.GetRequiredService<IPortfolioFlowSummaryService>(),
                 NullLogger<GetPortfolioProgressTrendQueryHandler>.Instance);
 
             trend = await handler.Handle(
