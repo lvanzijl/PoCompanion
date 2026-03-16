@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services;
+using PoTool.Core.Domain.DeliveryTrends.Models;
+using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
 
@@ -25,15 +27,18 @@ public sealed class GetPortfolioDeliveryQueryHandler
 
     private readonly PoToolDbContext _context;
     private readonly SprintTrendProjectionService _projectionService;
+    private readonly IPortfolioDeliverySummaryService _portfolioDeliverySummaryService;
     private readonly ILogger<GetPortfolioDeliveryQueryHandler> _logger;
 
     public GetPortfolioDeliveryQueryHandler(
         PoToolDbContext context,
         SprintTrendProjectionService projectionService,
+        IPortfolioDeliverySummaryService portfolioDeliverySummaryService,
         ILogger<GetPortfolioDeliveryQueryHandler> logger)
     {
         _context = context;
         _projectionService = projectionService;
+        _portfolioDeliverySummaryService = portfolioDeliverySummaryService;
         _logger = logger;
     }
 
@@ -76,45 +81,6 @@ public sealed class GetPortfolioDeliveryQueryHandler
             .Where(p => productIds.Contains(p.Id))
             .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
 
-        // Aggregate per product across all sprints
-        var byProduct = projections
-            .GroupBy(p => p.ProductId)
-            .Select(g => new ProductDeliveryDto
-            {
-                ProductId = g.Key,
-                ProductName = products.GetValueOrDefault(g.Key, "Unknown"),
-                CompletedPbis = g.Sum(p => p.CompletedPbiCount),
-                CompletedEffort = g.Sum(p => p.CompletedPbiEffort),
-                BugsCreated = g.Sum(p => p.BugsCreatedCount),
-                BugsWorked = g.Sum(p => p.BugsWorkedCount),
-                BugsClosed = g.Sum(p => p.BugsClosedCount),
-                ProgressionDelta = g.Sum(p => p.ProgressionDelta)
-            })
-            .ToList();
-
-        // Compute effort shares
-        var totalEffort = byProduct.Sum(p => p.CompletedEffort);
-        var productsWithShares = byProduct
-            .Select(p => p with
-            {
-                EffortShare = totalEffort > 0 ? p.CompletedEffort / (double)totalEffort * 100.0 : 0.0
-            })
-            .OrderByDescending(p => p.CompletedEffort)
-            .ToList();
-
-        // Build summary metrics
-        var summary = new PortfolioDeliverySummaryDto
-        {
-            TotalCompletedPbis = byProduct.Sum(p => p.CompletedPbis),
-            TotalCompletedEffort = totalEffort,
-            AverageProgressPercent = byProduct.Count > 0
-                ? byProduct.Sum(p => p.ProgressionDelta) / byProduct.Count
-                : 0.0,
-            TotalBugsCreated = byProduct.Sum(p => p.BugsCreated),
-            TotalBugsWorked = byProduct.Sum(p => p.BugsWorked),
-            TotalBugsClosed = byProduct.Sum(p => p.BugsClosed)
-        };
-
         // Load feature progress for the full sprint range (start of earliest sprint → end of latest)
         var sprints = await _context.Sprints
             .AsNoTracking()
@@ -135,36 +101,76 @@ public sealed class GetPortfolioDeliveryQueryHandler
             sprintRangeEnd,
             cancellationToken);
 
-        // Build top feature contributors ordered by delivered effort in the range
-        var topFeatures = featureProgress
-            .Where(f => f.SprintCompletedEffort > 0)
-            .OrderByDescending(f => f.SprintCompletedEffort)
-            .Take(TopFeatureLimit)
-            .Select(f => new FeatureDeliveryDto
-            {
-                FeatureId = f.FeatureId,
-                FeatureTitle = f.FeatureTitle,
-                EpicTitle = f.EpicTitle,
-                ProductId = f.ProductId,
-                ProductName = products.GetValueOrDefault(f.ProductId, "Unknown"),
-                SprintCompletedEffort = f.SprintCompletedEffort,
-                TotalEffort = f.TotalEffort,
-                EffortShare = totalEffort > 0
-                    ? f.SprintCompletedEffort / (double)totalEffort * 100.0
-                    : 0.0,
-                ProgressPercent = f.ProgressPercent
-            })
-            .ToList();
+        var deliverySummary = _portfolioDeliverySummaryService.BuildSummary(
+            new PortfolioDeliverySummaryRequest(
+                projections.Select(projection => new PortfolioDeliveryProductProjectionInput(
+                    projection.ProductId,
+                    products.GetValueOrDefault(projection.ProductId, "Unknown"),
+                    projection.CompletedPbiCount,
+                    projection.CompletedPbiStoryPoints,
+                    projection.BugsCreatedCount,
+                    projection.BugsWorkedCount,
+                    projection.BugsClosedCount,
+                    projection.ProgressionDelta))
+                    .ToList(),
+                featureProgress.Select(feature => new PortfolioFeatureContributionInput(
+                    feature.FeatureId,
+                    feature.FeatureTitle,
+                    feature.EpicTitle,
+                    feature.ProductId,
+                    products.GetValueOrDefault(feature.ProductId, "Unknown"),
+                    feature.SprintCompletedEffort,
+                    feature.TotalEffort,
+                    feature.ProgressPercent))
+                    .ToList(),
+                TopFeatureLimit));
 
         _logger.LogInformation(
             "Portfolio delivery snapshot for ProductOwner {ProductOwnerId}: {ProductCount} products, {FeatureCount} top features, total effort {TotalEffort}",
-            query.ProductOwnerId, productsWithShares.Count, topFeatures.Count, totalEffort);
+            query.ProductOwnerId,
+            deliverySummary.ProductSummaries.Count,
+            deliverySummary.FeatureContributionSummaries.Count,
+            deliverySummary.TotalDeliveredStoryPoints);
 
         return new PortfolioDeliveryDto
         {
-            Summary = summary,
-            Products = productsWithShares,
-            TopFeatures = topFeatures,
+            Summary = new PortfolioDeliverySummaryDto
+            {
+                TotalCompletedPbis = deliverySummary.TotalCompletedPbis,
+                TotalCompletedEffort = deliverySummary.TotalDeliveredStoryPoints,
+                AverageProgressPercent = deliverySummary.AverageProgressPercent,
+                TotalBugsCreated = deliverySummary.TotalBugsCreated,
+                TotalBugsWorked = deliverySummary.TotalBugsWorked,
+                TotalBugsClosed = deliverySummary.TotalBugsClosed
+            },
+            Products = deliverySummary.ProductSummaries
+                .Select(summary => new ProductDeliveryDto
+                {
+                    ProductId = summary.ProductId,
+                    ProductName = summary.ProductName,
+                    CompletedPbis = summary.CompletedPbis,
+                    CompletedEffort = summary.DeliveredStoryPoints,
+                    EffortShare = summary.DeliveredSharePercent,
+                    BugsCreated = summary.BugsCreated,
+                    BugsWorked = summary.BugsWorked,
+                    BugsClosed = summary.BugsClosed,
+                    ProgressionDelta = summary.ProgressionDelta
+                })
+                .ToList(),
+            TopFeatures = deliverySummary.FeatureContributionSummaries
+                .Select(summary => new FeatureDeliveryDto
+                {
+                    FeatureId = summary.WorkItemId,
+                    FeatureTitle = summary.Title,
+                    EpicTitle = summary.EpicTitle,
+                    ProductId = summary.ProductId,
+                    ProductName = summary.ProductName,
+                    SprintCompletedEffort = summary.DeliveredStoryPoints,
+                    TotalEffort = summary.TotalScopeStoryPoints,
+                    EffortShare = summary.DeliveredSharePercent,
+                    ProgressPercent = summary.ProgressPercent
+                })
+                .ToList(),
             SprintCount = query.SprintIds.Distinct().Count(),
             HasData = true
         };

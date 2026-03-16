@@ -90,8 +90,8 @@ Classification key:
 
 | Handler | Service dependencies | Calculator dependencies | Calculation origin | Classification |
 | --- | --- | --- | --- | --- |
-| `GetPortfolioProgressTrendQueryHandler` | `PoToolDbContext` | none | Stock, remaining scope, inflow, and throughput come from `PortfolioFlowProjectionEntity`, but `CompletionPercent`, `NetFlowStoryPoints`, cumulative net flow, scope-change percentages, and `Trajectory` are recomputed locally in `Handle(...)` and `ComputeSummary(...)`. | `CDC bypass` |
-| `GetPortfolioDeliveryQueryHandler` | `PoToolDbContext`, `SprintTrendProjectionService` | none | Product rows are built from `SprintMetricsProjectionEntity`, and feature progress comes from `SprintTrendProjectionService.ComputeFeatureProgressAsync(...)`, but summary totals, product effort shares, and top-feature contribution shares are re-aggregated in the handler. | `CDC bypass` |
+| `GetPortfolioProgressTrendQueryHandler` | `PoToolDbContext` | `IPortfolioFlowSummaryService` | The handler loads canonical `PortfolioFlowProjectionEntity` rows, delegates per-sprint and range rollups to `_portfolioFlowSummaryService.BuildTrend(...)`, and maps the CDC-owned outputs to `PortfolioProgressTrendDto`. | `CDC compliant` |
+| `GetPortfolioDeliveryQueryHandler` | `PoToolDbContext`, `SprintTrendProjectionService` | `IPortfolioDeliverySummaryService` | The handler loads `SprintMetricsProjectionEntity` rows plus feature progress, delegates totals and contribution shares to `_portfolioDeliverySummaryService.BuildSummary(...)`, and maps the canonical delivery summary to DTOs. | `CDC compliant` |
 
 ### Effort diagnostics handlers
 
@@ -129,6 +129,14 @@ Handlers that are fully powered by CDC outputs or CDC-owned domain services:
 - `GetEffortDistributionTrendQueryHandler`
   - delegates trend slope, volatility, and forecast bands to `IEffortTrendForecastService`
   - handler remains a thin adapter over a Forecasting CDC service
+- `GetPortfolioProgressTrendQueryHandler`
+  - reads `PortfolioFlowProjectionEntity` rows
+  - delegates completion percent, net flow, cumulative net flow, scope deltas, and trajectory to `IPortfolioFlowSummaryService`
+  - handler work is product filtering, sprint loading, and DTO mapping
+- `GetPortfolioDeliveryQueryHandler`
+  - reads `SprintMetricsProjectionEntity` rows plus `ComputeFeatureProgressAsync(...)` results
+  - delegates delivery totals, product shares, and feature contribution shares to `IPortfolioDeliverySummaryService`
+  - handler work is sprint-range loading, compatibility mapping, and DTO shaping
 
 Supporting CDC-backed materialization seams confirmed during the audit:
 
@@ -144,17 +152,6 @@ Supporting CDC-backed materialization seams confirmed during the audit:
 ## CDC Bypass Findings
 
 Handlers that still compute delivery analytics locally instead of consuming already-owned CDC outputs:
-
-### Portfolio progress rollups
-
-- `GetPortfolioProgressTrendQueryHandler`
-  - consumes canonical `PortfolioFlowProjectionEntity` rows
-  - still computes `CompletionPercent`, `NetFlowStoryPoints`, cumulative net flow, total scope change, remaining-scope change, and `Trajectory` in application code
-  - bypass type: local stock / inflow / throughput rollups on top of CDC projections
-- `GetPortfolioDeliveryQueryHandler`
-  - consumes `SprintMetricsProjectionEntity` rows and feature progress outputs
-  - still computes product totals, delivery shares, and feature contribution shares locally
-  - bypass type: local delivery-summary aggregation on top of DeliveryTrends projections
 
 ### Non-CDC effort calculations still living in handlers
 
@@ -198,8 +195,9 @@ These seams are acceptable adapters because the formulas themselves are no longe
   - new seam: `ISprintFactService.BuildSprintFactResult(...)` returning `SprintFactResult`
   - follow-up consumer: keep the velocity-sampling path used by `GetEpicCompletionForecastQueryHandler` aligned to this seam
 - **Promote portfolio summary rollups into CDC-backed outputs**
-  - target consumers: `GetPortfolioProgressTrendQueryHandler` and `GetPortfolioDeliveryQueryHandler`
-  - expected simplification: map `CompletionPercent`, `NetFlowStoryPoints`, trajectory, product delivery totals, and contribution shares directly from canonical outputs instead of re-aggregating projection rows
+  - completed for: `GetPortfolioProgressTrendQueryHandler` and `GetPortfolioDeliveryQueryHandler`
+  - new seams: `IPortfolioFlowSummaryService.BuildTrend(...)` and `IPortfolioDeliverySummaryService.BuildSummary(...)`
+  - result: handlers now map `CompletionPercent`, `NetFlowStoryPoints`, trajectory, product delivery totals, and contribution shares from canonical outputs instead of re-aggregating projection rows
 - **Decide whether effort distribution / quality / suggestion analytics belong in the CDC**
   - current status: `GetEffortDistributionQueryHandler`, `GetEffortEstimationQualityQueryHandler`, and `GetEffortEstimationSuggestionsQueryHandler` remain local calculations
   - migration option: either leave them explicitly outside the CDC or extract a new CDC-backed effort-planning slice so those formulas stop drifting in handlers
@@ -211,4 +209,4 @@ Net assessment:
 
 - CDC adoption is strong for trend projections, forecasting services, and effort-diagnostics formulas.
 - The main remaining non-CDC paths are not raw helper lookups anymore; they are handler-level rollups layered on top of CDC facts.
-- The highest-value cleanup targets are sprint totals and portfolio summaries, because those handlers already have the right CDC inputs but still rebuild the derived outputs locally.
+- The highest-value remaining cleanup targets are sprint-local effort analytics and backlog-health compatibility wrappers; portfolio summary rollups are now CDC-backed.

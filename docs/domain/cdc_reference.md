@@ -165,6 +165,7 @@ Canonical outputs:
 - epic progress
 - progression deltas
 - product delivery progress summaries
+- portfolio delivery composition summaries, including product shares and feature contribution shares
 
 Downstream consumers:
 
@@ -274,6 +275,7 @@ Canonical outputs:
 - portfolio throughput per sprint
 - remaining scope per sprint
 - completion percent and net flow per sprint
+- multi-sprint portfolio trend summaries, including cumulative net flow, scope change, remaining-scope change, and trajectory
 
 Downstream consumers:
 

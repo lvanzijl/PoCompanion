@@ -46,7 +46,7 @@ public record PortfolioDeliverySummaryDto
     /// <summary>
     /// Total story points delivered across all products and sprints.
     /// </summary>
-    public int TotalCompletedEffort { get; init; }
+    public double TotalCompletedEffort { get; init; }
 
     /// <summary>
     /// Average progression delta percentage across all products and sprints.
@@ -67,6 +67,17 @@ public record PortfolioDeliverySummaryDto
     /// Total bugs closed across all products and sprints.
     /// </summary>
     public int TotalBugsClosed { get; init; }
+
+    /// <summary>
+    /// Canonical delivered story points across all products and sprints.
+    /// Maps to the same internal value as TotalCompletedEffort.
+    /// </summary>
+    public double TotalDeliveredStoryPoints => TotalCompletedEffort;
+
+    /// <summary>
+    /// Compatibility alias for closed bugs when presented as completed bugs.
+    /// </summary>
+    public int TotalCompletedBugs => TotalBugsClosed;
 }
 
 /// <summary>
@@ -92,7 +103,7 @@ public record ProductDeliveryDto
     /// <summary>
     /// Total story points delivered for this product in the sprint range.
     /// </summary>
-    public int CompletedEffort { get; init; }
+    public double CompletedEffort { get; init; }
 
     /// <summary>
     /// Share of total portfolio delivered effort (0–100 percentage).
@@ -118,6 +129,18 @@ public record ProductDeliveryDto
     /// Cumulative progression delta for this product across the sprint range (0–100 scale).
     /// </summary>
     public double ProgressionDelta { get; init; }
+
+    /// <summary>
+    /// Canonical delivered story points for this product in the sprint range.
+    /// Maps to the same internal value as CompletedEffort.
+    /// </summary>
+    public double DeliveredStoryPoints => CompletedEffort;
+
+    /// <summary>
+    /// Canonical delivery-share percentage for this product in the sprint range.
+    /// Maps to the same internal value as EffortShare.
+    /// </summary>
+    public double DeliveredSharePercent => EffortShare;
 }
 
 /// <summary>
@@ -179,4 +202,10 @@ public record FeatureDeliveryDto
     /// Overall feature progress percentage (0–100).
     /// </summary>
     public int ProgressPercent { get; init; }
+
+    /// <summary>
+    /// Canonical delivery-share percentage for this feature in the sprint range.
+    /// Maps to the same internal value as EffortShare.
+    /// </summary>
+    public double DeliveredSharePercent => EffortShare;
 }

@@ -88,9 +88,9 @@ public sealed class CdcUsageCoverageDocumentTests
         StringAssert.Contains(capacityCalibration, "_velocityCalibrationService.Calibrate");
 
         StringAssert.Contains(portfolioProgress, "_context.PortfolioFlowProjections");
-        StringAssert.Contains(portfolioProgress, "ComputeSummary(");
+        StringAssert.Contains(portfolioProgress, "_portfolioFlowSummaryService.BuildTrend");
         StringAssert.Contains(portfolioDelivery, "_context.SprintMetricsProjections");
-        StringAssert.Contains(portfolioDelivery, "EffortShare");
+        StringAssert.Contains(portfolioDelivery, "_portfolioDeliverySummaryService.BuildSummary");
 
         StringAssert.Contains(effortImbalance, "Analyzer.AnalyzeImbalance");
         StringAssert.Contains(effortConcentration, "Analyzer.AnalyzeConcentration");
