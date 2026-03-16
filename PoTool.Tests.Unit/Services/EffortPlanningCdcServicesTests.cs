@@ -86,11 +86,12 @@ public sealed class EffortPlanningCdcServicesTests
         ];
 
         var result = SuggestionService.GenerateSuggestion(target, history, EffortEstimationSettingsDto.Default);
+        var similarityScores = result.SimilarWorkItems.Select(item => item.SimilarityScore).ToList();
 
         Assert.AreEqual(5, result.SuggestedEffort);
         Assert.HasCount(3, result.SimilarWorkItems);
         Assert.AreEqual(1, result.SimilarWorkItems[0].WorkItemId);
-        Assert.IsGreaterThanOrEqualTo(result.SimilarWorkItems[1].SimilarityScore, result.SimilarWorkItems[0].SimilarityScore);
+        CollectionAssert.AreEqual(similarityScores.OrderByDescending(score => score).ToList(), similarityScores);
     }
 
     [TestMethod]
