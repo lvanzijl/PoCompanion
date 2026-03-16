@@ -155,6 +155,7 @@ public class SprintTrendProjectionServiceTests
             .AddSingleton<ISprintCommitmentService, SprintCommitmentService>()
             .AddSingleton<ISprintCompletionService>(sprintCompletionService)
             .AddSingleton<ISprintSpilloverService>(sprintSpilloverService)
+            .AddSingleton<ISprintScopeChangeService, SprintScopeChangeService>()
             .AddSingleton<ICanonicalStoryPointResolutionService>(storyPointResolutionService)
             .AddSingleton<IHierarchyRollupService>(hierarchyRollupService)
             .AddSingleton<IDeliveryProgressRollupService>(deliveryProgressRollupService)

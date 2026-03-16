@@ -3,11 +3,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 using PoTool.Api.Adapters;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
+using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.WorkItems;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Portfolio;
-using PoTool.Core.Domain.Sprints;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -63,7 +63,7 @@ public sealed class PortfolioFlowProjectionServiceTests
             CreateFieldChange(101, "System.State", SprintStart(sprint).AddDays(4), "Active", "Done"));
         var membershipEvents = BuildEventsByWorkItem(
             CreateFieldChange(101, PortfolioEntryLookup.ResolvedProductIdFieldRefName, SprintStart(sprint).AddDays(1), null, "1"));
-        var firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(
+        var firstDoneByWorkItem = new SprintCompletionService().BuildFirstDoneByWorkItem(
             stateEvents.SelectMany(pair => pair.Value),
             workItems.Values.ToSnapshotDictionary());
 
@@ -100,7 +100,7 @@ public sealed class PortfolioFlowProjectionServiceTests
         var stateEvents = BuildEventsByWorkItem(
             CreateFieldChange(101, "System.State", SprintStart(sprint).AddDays(3), "Active", "Done"),
             CreateFieldChange(101, "System.State", SprintStart(sprint).AddDays(5), "Done", "Active"));
-        var firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(
+        var firstDoneByWorkItem = new SprintCompletionService().BuildFirstDoneByWorkItem(
             stateEvents.SelectMany(pair => pair.Value),
             workItems.Values.ToSnapshotDictionary());
 
@@ -138,7 +138,7 @@ public sealed class PortfolioFlowProjectionServiceTests
             CreateFieldChange(101, "Microsoft.VSTS.Scheduling.StoryPoints", SprintStart(sprint).AddDays(1), null, "3"),
             CreateFieldChange(101, "Microsoft.VSTS.Scheduling.StoryPoints", SprintStart(sprint).AddDays(3), "3", "5"),
             CreateFieldChange(101, "Microsoft.VSTS.Scheduling.StoryPoints", SprintStart(sprint).AddDays(6), "5", "8"));
-        var firstDoneByWorkItem = FirstDoneDeliveryLookup.Build(
+        var firstDoneByWorkItem = new SprintCompletionService().BuildFirstDoneByWorkItem(
             stateEvents.SelectMany(pair => pair.Value),
             workItems.Values.ToSnapshotDictionary());
 
@@ -227,6 +227,7 @@ public sealed class PortfolioFlowProjectionServiceTests
             services.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<PortfolioFlowProjectionService>.Instance,
             stateClassificationService: null,
+            new SprintCompletionService(),
             new CanonicalStoryPointResolutionService());
     }
 
