@@ -2,6 +2,14 @@
   {
     "date": "2026-03-16",
     "type": "Changed",
+    "title": "Portfolio flow now uses canonical story points",
+    "impact": "Portfolio flow trend now reads canonical stock, remaining scope, inflow, throughput, and completion from PortfolioFlow projections so the page no longer shows effort-based proxy semantics as points.",
+    "area": "Trends",
+    "link": "/home/portfolio-progress"
+  },
+  {
+    "date": "2026-03-16",
+    "type": "Changed",
     "title": "Delivery labels now separate story points and hours",
     "impact": "Forecast, sprint delivery, roadmap, and portfolio views now label story-point metrics separately from effort hours so delivery summaries no longer present hours as points.",
     "area": "Trends",
@@ -221,7 +229,7 @@
   {
     "date": "2026-03-10",
     "type": "Changed",
-    "title": "Home workspace tiles — interaction polish and micro-trend sparklines",
+    "title": "Home workspace tiles \u2014 interaction polish and micro-trend sparklines",
     "impact": "Workspace tiles now have a smooth hover lift (translateY -2px), a pressed feedback effect (translateY +1px), and a visible focus outline for keyboard navigation. Each tile may also display a small SVG sparkline indicator below the signal text when sufficient historical sprint data is available: the Delivery tile shows velocity trend (Done effort per sprint, up to 7 sprints), and the Trends tile shows bug-rate trend. Sparklines are amber-tinted when a deteriorating trend is detected. No axes, labels, or chart libraries are used.",
     "area": "Home",
     "link": "/home"
@@ -349,7 +357,7 @@
   {
     "date": "2026-03-07",
     "type": "Changed",
-    "title": "Roadmap Snapshots — Persistent Database Storage",
+    "title": "Roadmap Snapshots \u2014 Persistent Database Storage",
     "impact": "Roadmap snapshots are now stored in the application database instead of browser localStorage, making them durable across sessions and devices.",
     "area": "Planning",
     "link": "/planning/product-roadmaps"
@@ -366,14 +374,14 @@
     "date": "2026-03-07",
     "type": "New",
     "title": "Roadmap Reporting and Export",
-    "impact": "Product Roadmaps overview now offers reporting actions: visual Markdown roadmap, structured JSON export, and AI prompt templates for roadmap visualization — all copied to clipboard.",
+    "impact": "Product Roadmaps overview now offers reporting actions: visual Markdown roadmap, structured JSON export, and AI prompt templates for roadmap visualization \u2014 all copied to clipboard.",
     "area": "Planning",
     "link": "/planning/product-roadmaps"
   },
   {
     "date": "2026-03-07",
     "type": "Changed",
-    "title": "Product Roadmap Editor — UX Enhancements",
+    "title": "Product Roadmap Editor \u2014 UX Enhancements",
     "impact": "The Product Roadmap Editor now shows save feedback (Saving/Saved/Failed status chip), loading indicators during reload, improved empty roadmap guidance, roadmap size indicator, highlight animation for newly added epics, reserved metadata area on cards, and sticky column headers.",
     "area": "Planning",
     "link": "/planning/product-roadmaps"
@@ -381,7 +389,7 @@
   {
     "date": "2026-03-07",
     "type": "Changed",
-    "title": "Product Roadmap Editor — Drag-and-Drop Support",
+    "title": "Product Roadmap Editor \u2014 Drag-and-Drop Support",
     "impact": "The Product Roadmap Editor now supports drag-and-drop for adding, removing, and reordering roadmap epics using MudBlazor DropContainer. Each epic card has a dedicated drag handle to prevent accidental drags. Drop zones provide visual feedback during drag operations. All existing button-based controls remain fully functional. All drag-and-drop changes are persisted to TFS and refreshed through the cache.",
     "area": "Planning",
     "link": "/planning/product-roadmaps"
@@ -389,55 +397,55 @@
   {
     "date": "2026-03-05",
     "type": "Added",
-    "title": "Pull Request Insights — Deferred items: Azure DevOps deep-link + Sprint quick-select",
-    "impact": "Two deferred items from the original PR Insights implementation now resolved. (1) Azure DevOps deep-link: every PR scatter point, Top-3 friction card, and Longest-PR table row now includes a direct URL to the corresponding pull request in Azure DevOps/TFS. The URL is constructed server-side from TfsConfig.Url + TfsConfig.Project + RepositoryName + PrId (format: {url}/{project}/_git/{repo}/pullrequest/{id}). The PR Detail Drawer gains an “Open in Azure DevOps” button at the bottom. Top-3 cards show an “Open in Azure DevOps” inline link. Longest-PR table titles become clickable links. All links open in a new tab. The URL is null (and the button/link is hidden) when TFS config is unavailable — no breaking change for offline environments. New PrScatterPointDto.Url and PrProblematicEntryDto.Url properties added. 4 new unit tests covering: URL present with config, null without config, correct format, and trailing slash stripping. (2) Sprint quick-select: when a team is selected, a Sprint (optional) dropdown appears in the filter panel. Choosing a sprint sets the From/To date range to that sprint's boundaries and triggers a reload — equivalent to selecting the sprint as a custom date range. Selecting “Custom range” or manually editing the date pickers clears the sprint selection. The sprint list is loaded from the existing SprintService and sorted newest-first. No backend changes — pure UI enhancement that maps sprint boundaries to the existing date-range filter.",
+    "title": "Pull Request Insights \u2014 Deferred items: Azure DevOps deep-link + Sprint quick-select",
+    "impact": "Two deferred items from the original PR Insights implementation now resolved. (1) Azure DevOps deep-link: every PR scatter point, Top-3 friction card, and Longest-PR table row now includes a direct URL to the corresponding pull request in Azure DevOps/TFS. The URL is constructed server-side from TfsConfig.Url + TfsConfig.Project + RepositoryName + PrId (format: {url}/{project}/_git/{repo}/pullrequest/{id}). The PR Detail Drawer gains an \u201cOpen in Azure DevOps\u201d button at the bottom. Top-3 cards show an \u201cOpen in Azure DevOps\u201d inline link. Longest-PR table titles become clickable links. All links open in a new tab. The URL is null (and the button/link is hidden) when TFS config is unavailable \u2014 no breaking change for offline environments. New PrScatterPointDto.Url and PrProblematicEntryDto.Url properties added. 4 new unit tests covering: URL present with config, null without config, correct format, and trailing slash stripping. (2) Sprint quick-select: when a team is selected, a Sprint (optional) dropdown appears in the filter panel. Choosing a sprint sets the From/To date range to that sprint's boundaries and triggers a reload \u2014 equivalent to selecting the sprint as a custom date range. Selecting \u201cCustom range\u201d or manually editing the date pickers clears the sprint selection. The sprint list is loaded from the existing SprintService and sorted newest-first. No backend changes \u2014 pure UI enhancement that maps sprint boundaries to the existing date-range filter.",
     "area": "Trends / Pull Request Insights",
     "link": "/home/pull-requests"
   },
   {
     "date": "2026-03-05",
     "type": "Added",
-    "title": "Pull Request Insights — Phase 3: Author Drill-Down Filter + Date Quick-Presets",
-    "impact": "Two UX improvements to the Pull Request Insights page (/home/pull-requests). (1) Author drill-down filter: clicking any row in the Author Breakdown table (Section 6) now filters the PR scatter chart (Section 3) to show only that author's PRs. Non-matching points are heavily dimmed (opacity 0.12), providing immediate visual focus on the author's workflow pattern. An author-filter chip appears in the scatter chart header with a × close button. Clicking the same row again, the chip, or changing any server-side filter all clear the author filter. The active row in the Author Breakdown table is highlighted for clarity. PullRequestScatterSvg gains a new FilteredAuthor parameter that works independently of the existing HighlightedPrId parameter (both can be active at once: a point must match both to be fully opaque). (2) Date quick-presets: five chip buttons (1M / 3M / 6M / 1Y / 2Y) appear beneath the date pickers. Clicking a chip sets the From/To dates accordingly and triggers a reload. The active preset chip is highlighted in primary color. All changes are pure frontend — no backend or DTO changes.",
+    "title": "Pull Request Insights \u2014 Phase 3: Author Drill-Down Filter + Date Quick-Presets",
+    "impact": "Two UX improvements to the Pull Request Insights page (/home/pull-requests). (1) Author drill-down filter: clicking any row in the Author Breakdown table (Section 6) now filters the PR scatter chart (Section 3) to show only that author's PRs. Non-matching points are heavily dimmed (opacity 0.12), providing immediate visual focus on the author's workflow pattern. An author-filter chip appears in the scatter chart header with a \u00d7 close button. Clicking the same row again, the chip, or changing any server-side filter all clear the author filter. The active row in the Author Breakdown table is highlighted for clarity. PullRequestScatterSvg gains a new FilteredAuthor parameter that works independently of the existing HighlightedPrId parameter (both can be active at once: a point must match both to be fully opaque). (2) Date quick-presets: five chip buttons (1M / 3M / 6M / 1Y / 2Y) appear beneath the date pickers. Clicking a chip sets the From/To dates accordingly and triggers a reload. The active preset chip is highlighted in primary color. All changes are pure frontend \u2014 no backend or DTO changes.",
     "area": "Trends / Pull Request Insights",
     "link": "/home/pull-requests"
   },
   {
     "date": "2026-03-05",
     "type": "Added",
-    "title": "Pull Request Insights — Phase 2: PR Detail Drawer + Per-Author Breakdown",
-    "impact": "Two additions to the Pull Request Insights page (/home/pull-requests). (1) PR Detail Drawer: clicking a scatter point now opens a right-anchored MudDrawer showing full PR details — status chip (Merged clean / Merged rework / Abandoned / Active), PR title, author, repository, creation date, lifetime, review cycles (with 'rework' badge when > 1), files changed, and comment count. The drawer closes via the × button or automatically when filters change. This replaces the previous highlight-only click behaviour (highlight still works in parallel). (2) Author Breakdown: a new collapsible Section 6 shows per-author PR workflow statistics — PR count, merge %, abandon %, rework % (highlighted in orange > 30%), median lifetime, and average review cycles. Sorted by PR count descending. Answers the question: 'Which author's PRs show the most friction patterns?' Backend: new PrAuthorBreakdownDto added to PoTool.Shared.PullRequests; AuthorBreakdown list added to PullRequestInsightsDto; handler updated with author grouping (step 10). 3 new unit tests covering: breakdown sort order, rate computation, and empty state.",
-    "area": "Trends / Pull Request Insights",
-    "link": "/home/pull-requests"
-  },
-  {
-    "date": "2026-03-05",
-    "type": "Changed",
-    "title": "Pull Request Insights — Full overhaul: PO-first friction analysis page",
-    "impact": "The Pull Request Insights page (/home/pull-requests) has been completely overhauled into a team-centric, PO-focused PR workflow friction page. All data comes from the local cache only — no live Azure DevOps calls. The page answers the question: 'Which pull requests indicate delivery friction in the team?' New layout has five sections: (1) Global summary chips — Total PRs, Merge %, Abandon %, Rework %, Median lifetime, P90 lifetime. (2) Top 3 friction PRs — cards ranked by composite score (lifetime 40%, review cycles 30%, files changed 20%, comments 10%); clicking highlights the PR in the scatter chart. (3) PR scatter chart — new PullRequestScatterSvg component (pure SVG, no JavaScript); X = creation date, Y = lifetime in hours; color by outcome (green = merged clean, yellow = merged after rework, red = abandoned); shape by repository; hover tooltip; click to highlight/dim; median and P90 overlay lines. (4) Longest PR table — top 20 by lifetime descending with columns: title, repository, author, lifetime, review cycles, files changed, comments, status. (5) Repository breakdown — collapsible per-repository table with merge %, abandon %, median/P90 lifetime, and average review cycles. Filters: team selector (scopes to team-linked products), date range (default last 6 months), optional repository filter. Backend: new GET api/PullRequests/insights endpoint; new GetPullRequestInsightsQueryHandler with 13 unit tests. 'Changes requested' is a proxy: since reviewer vote history is not stored in the cache, IterationCount > 1 is used as the rework signal.",
+    "title": "Pull Request Insights \u2014 Phase 2: PR Detail Drawer + Per-Author Breakdown",
+    "impact": "Two additions to the Pull Request Insights page (/home/pull-requests). (1) PR Detail Drawer: clicking a scatter point now opens a right-anchored MudDrawer showing full PR details \u2014 status chip (Merged clean / Merged rework / Abandoned / Active), PR title, author, repository, creation date, lifetime, review cycles (with 'rework' badge when > 1), files changed, and comment count. The drawer closes via the \u00d7 button or automatically when filters change. This replaces the previous highlight-only click behaviour (highlight still works in parallel). (2) Author Breakdown: a new collapsible Section 6 shows per-author PR workflow statistics \u2014 PR count, merge %, abandon %, rework % (highlighted in orange > 30%), median lifetime, and average review cycles. Sorted by PR count descending. Answers the question: 'Which author's PRs show the most friction patterns?' Backend: new PrAuthorBreakdownDto added to PoTool.Shared.PullRequests; AuthorBreakdown list added to PullRequestInsightsDto; handler updated with author grouping (step 10). 3 new unit tests covering: breakdown sort order, rate computation, and empty state.",
     "area": "Trends / Pull Request Insights",
     "link": "/home/pull-requests"
   },
   {
     "date": "2026-03-05",
     "type": "Changed",
-    "title": "Pipeline Insights — Phase 4: Auto-Sprint Selection + Scroll-to-Product Navigation",
-    "impact": "Two UX improvements to the Pipeline Insights page. (1) Auto-sprint selection: when a team is selected, the current sprint (the sprint window covering today, or the most recently ended sprint as fallback) is automatically selected and insights are loaded immediately — no extra click required. (2) Scroll-to-product: clicking a card in the Global Top Pipelines In Trouble section now smoothly scrolls the page to the corresponding per-product section. A tooltip on each card hints at this interaction. Both changes are pure frontend (no backend or DTO changes).",
+    "title": "Pull Request Insights \u2014 Full overhaul: PO-first friction analysis page",
+    "impact": "The Pull Request Insights page (/home/pull-requests) has been completely overhauled into a team-centric, PO-focused PR workflow friction page. All data comes from the local cache only \u2014 no live Azure DevOps calls. The page answers the question: 'Which pull requests indicate delivery friction in the team?' New layout has five sections: (1) Global summary chips \u2014 Total PRs, Merge %, Abandon %, Rework %, Median lifetime, P90 lifetime. (2) Top 3 friction PRs \u2014 cards ranked by composite score (lifetime 40%, review cycles 30%, files changed 20%, comments 10%); clicking highlights the PR in the scatter chart. (3) PR scatter chart \u2014 new PullRequestScatterSvg component (pure SVG, no JavaScript); X = creation date, Y = lifetime in hours; color by outcome (green = merged clean, yellow = merged after rework, red = abandoned); shape by repository; hover tooltip; click to highlight/dim; median and P90 overlay lines. (4) Longest PR table \u2014 top 20 by lifetime descending with columns: title, repository, author, lifetime, review cycles, files changed, comments, status. (5) Repository breakdown \u2014 collapsible per-repository table with merge %, abandon %, median/P90 lifetime, and average review cycles. Filters: team selector (scopes to team-linked products), date range (default last 6 months), optional repository filter. Backend: new GET api/PullRequests/insights endpoint; new GetPullRequestInsightsQueryHandler with 13 unit tests. 'Changes requested' is a proxy: since reviewer vote history is not stored in the cache, IterationCount > 1 is used as the rework signal.",
+    "area": "Trends / Pull Request Insights",
+    "link": "/home/pull-requests"
+  },
+  {
+    "date": "2026-03-05",
+    "type": "Changed",
+    "title": "Pipeline Insights \u2014 Phase 4: Auto-Sprint Selection + Scroll-to-Product Navigation",
+    "impact": "Two UX improvements to the Pipeline Insights page. (1) Auto-sprint selection: when a team is selected, the current sprint (the sprint window covering today, or the most recently ended sprint as fallback) is automatically selected and insights are loaded immediately \u2014 no extra click required. (2) Scroll-to-product: clicking a card in the Global Top Pipelines In Trouble section now smoothly scrolls the page to the corresponding per-product section. A tooltip on each card hints at this interaction. Both changes are pure frontend (no backend or DTO changes).",
     "area": "Trends / Pipeline Insights",
     "link": "/home/pipeline-insights"
   },
   {
     "date": "2026-03-05",
     "type": "Added",
-    "title": "Pipeline Insights — Phase 3: Per-Pipeline Breakdown Table + Half-Sprint Trend",
-    "impact": "Per-product pipeline breakdown table added to the Pipeline Insights page. Each product section now renders a collapsible PipelineBreakdownTable component showing all pipelines (not just the top 3) with columns: Pipeline, Runs, Success%, Failure%, Median duration, P90, Δ Failure vs previous sprint, and a Half-Sprint Trend chip. Trend is computed by splitting the sprint at its midpoint and comparing failure rates: Improving (second half ≥ 10 pp better), Degrading (≥ 10 pp worse), Stable (< 10 pp difference), or Insufficient (< 2 completed runs in a half). Tooltips show actual first-half and second-half failure rates. Breakdown is ordered failure rate descending. Backend updated: PipelineBreakdownEntryDto and PipelineHalfSprintTrend enum added to PoTool.Shared.Pipelines; PipelineBreakdown list added to ProductPipelineInsightsDto; handler updated with BuildPipelineBreakdown helper. swagger.json + ApiClient.g.cs updated. 8 new unit tests covering: populated breakdown, correct metrics, failure-rate ordering, and all 4 half-sprint trend states.",
+    "title": "Pipeline Insights \u2014 Phase 3: Per-Pipeline Breakdown Table + Half-Sprint Trend",
+    "impact": "Per-product pipeline breakdown table added to the Pipeline Insights page. Each product section now renders a collapsible PipelineBreakdownTable component showing all pipelines (not just the top 3) with columns: Pipeline, Runs, Success%, Failure%, Median duration, P90, \u0394 Failure vs previous sprint, and a Half-Sprint Trend chip. Trend is computed by splitting the sprint at its midpoint and comparing failure rates: Improving (second half \u2265 10 pp better), Degrading (\u2265 10 pp worse), Stable (< 10 pp difference), or Insufficient (< 2 completed runs in a half). Tooltips show actual first-half and second-half failure rates. Breakdown is ordered failure rate descending. Backend updated: PipelineBreakdownEntryDto and PipelineHalfSprintTrend enum added to PoTool.Shared.Pipelines; PipelineBreakdown list added to ProductPipelineInsightsDto; handler updated with BuildPipelineBreakdown helper. swagger.json + ApiClient.g.cs updated. 8 new unit tests covering: populated breakdown, correct metrics, failure-rate ordering, and all 4 half-sprint trend states.",
     "area": "Trends / Pipeline Insights",
     "link": "/home/pipeline-insights"
   },
   {
     "date": "2026-03-05",
     "type": "Added",
-    "title": "Pipeline Insights — Phase 2: Pipeline Stability Scatter (TimeScatterSvg) + Build Summary Drawer",
+    "title": "Pipeline Insights \u2014 Phase 2: Pipeline Stability Scatter (TimeScatterSvg) + Build Summary Drawer",
     "impact": "Per-product pipeline build stability scatter chart added to the Pipeline Insights page. Each product section now renders a TimeScatterSvg component (Components/Charts/): X axis = build start time within the sprint, Y axis = build duration in minutes, dots colored by result (green=Succeeded, yellow=PartiallySucceeded, red=Failed, gray=Canceled). Overlay lines: Median duration (dashed blue), P90 duration (dashed amber), optional SLO line (solid red). Clicking a scatter dot opens a right-side Build Summary Drawer showing build number, pipeline name, result, start/finish time, duration, branch, and Azure DevOps link. Clicking a pipeline in the top-3 trouble list highlights its dots (dims others). A new optional 'SLO duration (min)' input in the context header applies a SLO line to all scatter charts. Backend updated: ProductPipelineInsightsDto now includes ScatterPoints (PipelineScatterPointDto list) and PipelineInsightsDto now includes SprintStart/SprintEnd boundaries. New DTOs, handler updates, swagger.json and ApiClient.g.cs updated. 5 new unit tests for scatter point generation.",
     "area": "Trends / Pipeline Insights",
     "link": "/home/pipeline-insights"
@@ -445,7 +453,7 @@
   {
     "date": "2026-03-05",
     "type": "Added",
-    "title": "Pipeline Insights — Phase 1: PO-first sprint stability overview per product",
+    "title": "Pipeline Insights \u2014 Phase 1: PO-first sprint stability overview per product",
     "impact": "New page at /home/pipeline-insights provides a PO-facing pipeline health view for a single sprint, using only cached data (no TFS calls). Delivers: global summary chips (total builds, failure rate, warning rate, P90 duration), global top-3 pipelines in trouble ranked by failure rate, per-product sections each showing a product-level top-3 in trouble and summary chips (failure rate, warning rate, success rate, median/P90 duration). Delta versus the immediately preceding sprint shown per pipeline (n/a when no previous sprint data). Two toggles: Include partial success (default ON) and Include canceled (default OFF). Accessible from the Trends (Past) workspace as a new 'Pipeline Insights' card. Backend: new GET api/Pipelines/insights endpoint, new GetPipelineInsightsQuery/Handler, new DTOs (PipelineInsightsDto, ProductPipelineInsightsDto, PipelineTroubleEntryDto).",
     "area": "Trends / Pipeline Insights",
     "link": "/home/pipeline-insights"
@@ -453,7 +461,7 @@
   {
     "date": "2026-03-05",
     "type": "Changed",
-    "title": "Sprint Activity — redesigned activity history page",
+    "title": "Sprint Activity \u2014 redesigned activity history page",
     "impact": "The Work Item Activity page is renamed to Sprint Activity and now classifies each event by change type (Workflow/Scope/Creation/Metadata/Structure), collapses creation events into a single row, groups events by work item with collapse/expand support, and shows an Activity Summary block with six sprint-level metrics at the top of the page.",
     "area": "Delivery / Sprint Activity",
     "link": "/home/delivery/sprint/activity"
@@ -461,36 +469,36 @@
   {
     "date": "2026-03-05",
     "type": "Changed",
-    "title": "Sprint Delivery — epic table and feature modal improvements",
-    "impact": "Sprint Delivery page now shows delivery signals clearly: products without activity are hidden; collapsed product sections show a compact summary (Delivered pts, Δ Effort pts, PBIs, Bugs); the epic table has new columns Delivered (pts) and Δ Effort (pts, absolute scope change) replacing Sprint Scored and Sprint Δ%; the feature drill-down modal also uses the same column structure; Sprint Δ% removed everywhere; feature progress bars are thinner and dimmer to reinforce the Epic → Feature → Activity hierarchy.",
+    "title": "Sprint Delivery \u2014 epic table and feature modal improvements",
+    "impact": "Sprint Delivery page now shows delivery signals clearly: products without activity are hidden; collapsed product sections show a compact summary (Delivered pts, \u0394 Effort pts, PBIs, Bugs); the epic table has new columns Delivered (pts) and \u0394 Effort (pts, absolute scope change) replacing Sprint Scored and Sprint \u0394%; the feature drill-down modal also uses the same column structure; Sprint \u0394% removed everywhere; feature progress bars are thinner and dimmer to reinforce the Epic \u2192 Feature \u2192 Activity hierarchy.",
     "area": "Delivery / Sprint Delivery",
     "link": "/home/delivery/sprint"
   },
   {
     "date": "2026-03-04",
     "type": "Added",
-    "title": "Portfolio Delivery — implemented aggregated delivery snapshot page",
-    "impact": "Implemented the Portfolio Delivery page at /home/delivery/portfolio (Delivery workspace). The placeholder has been replaced with a fully functional page: sprint range selector (team + From/To sprint popovers with 5-sprint auto-default), portfolio summary metrics (Completed PBIs, Effort Delivered, Avg. Progress %, Bugs Created/Worked/Closed), product contribution horizontal bar chart (effort share per product), feature contribution horizontal bar chart (top 10 features by delivered effort), and bug distribution table (Created/Worked/Closed/Net per product). Works for single sprint or multi-sprint aggregated snapshot. No time-series charts — all visualisations show composition or distribution. Backend: new GET api/Metrics/portfolio-delivery endpoint, GetPortfolioDeliveryQuery, GetPortfolioDeliveryQueryHandler, PortfolioDeliveryDto/PortfolioDeliverySummaryDto/ProductDeliveryDto/FeatureDeliveryDto DTOs. IMetricsClient.GetPortfolioDeliveryAsync added to ApiClient.g.cs. DeliveryWorkspace 'Coming soon' chip removed. NAVIGATION_MAP.md and GEBRUIKERSHANDLEIDING.md updated.",
+    "title": "Portfolio Delivery \u2014 implemented aggregated delivery snapshot page",
+    "impact": "Implemented the Portfolio Delivery page at /home/delivery/portfolio (Delivery workspace). The placeholder has been replaced with a fully functional page: sprint range selector (team + From/To sprint popovers with 5-sprint auto-default), portfolio summary metrics (Completed PBIs, Effort Delivered, Avg. Progress %, Bugs Created/Worked/Closed), product contribution horizontal bar chart (effort share per product), feature contribution horizontal bar chart (top 10 features by delivered effort), and bug distribution table (Created/Worked/Closed/Net per product). Works for single sprint or multi-sprint aggregated snapshot. No time-series charts \u2014 all visualisations show composition or distribution. Backend: new GET api/Metrics/portfolio-delivery endpoint, GetPortfolioDeliveryQuery, GetPortfolioDeliveryQueryHandler, PortfolioDeliveryDto/PortfolioDeliverySummaryDto/ProductDeliveryDto/FeatureDeliveryDto DTOs. IMetricsClient.GetPortfolioDeliveryAsync added to ApiClient.g.cs. DeliveryWorkspace 'Coming soon' chip removed. NAVIGATION_MAP.md and GEBRUIKERSHANDLEIDING.md updated.",
     "area": "Delivery / Portfolio Delivery",
     "link": "/home/delivery/portfolio"
   },
   {
     "date": "2026-03-04",
     "type": "Added",
-    "title": "Delivery Trends — new page for multi-sprint delivery analysis",
+    "title": "Delivery Trends \u2014 new page for multi-sprint delivery analysis",
     "impact": "Added a dedicated Delivery Trends page at /home/trends/delivery under the Trends workspace. The page provides four sprint-timeline charts: PBI Throughput Trend (completed PBIs per sprint, primary full-width bar chart), Effort Throughput Trend (story points delivered per sprint), Progress Trend (completed effort as % of planned effort per sprint), and Bug Trend (bugs created vs closed per sprint). All charts follow the AnalyticalPageLayout / PrimaryVisualizationSection / SecondaryVisualizationGrid pattern with TrendSlopeBadge slope indicators. A collapsible drill-down table shows per-sprint detail. A signal card for Delivery Trends has been added to the Trends workspace. NAVIGATION_MAP.md and GEBRUIKERSHANDLEIDING.md updated to include the new page.",
     "area": "Trends / Delivery Trends",
     "link": "/home/trends/delivery"
   },
   {
-    "impact": "PrOverview.razor (/home/pull-requests) migrated from inline 2×2 CSS grid to AnalyticalPageLayout / PrimaryVisualizationSection / SecondaryVisualizationGrid. Median PR Size per Sprint is now the full-width primary visualization (340px chart); Median Time to First Review, Median Time to Merge, and P90 Time to Merge are arranged in a 3-column secondary grid (260px each). Page-local .pr-trend-grid <style> block removed. No logic, data, or density changes.",
+    "impact": "PrOverview.razor (/home/pull-requests) migrated from inline 2\u00d72 CSS grid to AnalyticalPageLayout / PrimaryVisualizationSection / SecondaryVisualizationGrid. Median PR Size per Sprint is now the full-width primary visualization (340px chart); Median Time to First Review, Median Time to Merge, and P90 Time to Merge are arranged in a 3-column secondary grid (260px each). Page-local .pr-trend-grid <style> block removed. No logic, data, or density changes.",
     "area": "Layout / Pull Requests",
     "link": "/home/pull-requests"
   },
   {
     "date": "2026-03-04",
     "type": "Changed",
-    "title": "Sprint Trend and Pipeline Trend — migrated to Primary Visualization Pattern",
+    "title": "Sprint Trend and Pipeline Trend \u2014 migrated to Primary Visualization Pattern",
     "impact": "Sprint Trend (advanced/trend mode) and Pipeline Trend pages migrated from page-local inline CSS grids to the global AnalyticalPageLayout / PrimaryVisualizationSection / SecondaryVisualizationGrid components. Pipeline Trend: Reliability Trend is now the full-width primary visualization (340px chart); Time-to-Green, Tail Risk, and Flakiness are arranged in a 3-column secondary grid (260px each). Sprint Trend (trend mode): Progression per Sprint is the full-width primary visualization (340px); Completed PBIs Count, Completed PBI Effort, and Bug Activity are arranged in a 3-column secondary grid (260px each). Inline min-height pixel values and page-local grid CSS blocks removed. No logic, data, or density changes.",
     "area": "Layout / Trends",
     "link": "/home/pipelines"
@@ -498,23 +506,23 @@
   {
     "date": "2026-03-04",
     "type": "Added",
-    "title": "Primary Visualization Pattern — global analytical layout components and Portfolio Progress Trend refactor",
-    "impact": "Introduced three reusable Blazor components (AnalyticalPageLayout, PrimaryVisualizationSection, SecondaryVisualizationGrid) implementing the new Primary Visualization Pattern for analytical pages. CSS tokens --analytical-primary-height (400px) and --analytical-secondary-height (320px) added to app.css. Portfolio Progress Trend page refactored: Combined Flow is now a full-width primary visualization (Row 1, min 400px, chart 340px tall) and Total Scope / Remaining Effort / Throughput are arranged in a 3-column secondary grid (Row 2, min 320px, chart 260px each). The old 2×2 symmetric grid is removed. No density rules altered; filter collapse behaviour preserved. UI_RULES.md §16 documents the pattern as binding for all future analytical pages.",
+    "title": "Primary Visualization Pattern \u2014 global analytical layout components and Portfolio Progress Trend refactor",
+    "impact": "Introduced three reusable Blazor components (AnalyticalPageLayout, PrimaryVisualizationSection, SecondaryVisualizationGrid) implementing the new Primary Visualization Pattern for analytical pages. CSS tokens --analytical-primary-height (400px) and --analytical-secondary-height (320px) added to app.css. Portfolio Progress Trend page refactored: Combined Flow is now a full-width primary visualization (Row 1, min 400px, chart 340px tall) and Total Scope / Remaining Effort / Throughput are arranged in a 3-column secondary grid (Row 2, min 320px, chart 260px each). The old 2\u00d72 symmetric grid is removed. No density rules altered; filter collapse behaviour preserved. UI_RULES.md \u00a716 documents the pattern as binding for all future analytical pages.",
     "area": "Layout / Trends / Portfolio Progress",
     "link": "/home/portfolio-progress"
   },
   {
     "date": "2026-03-04",
     "type": "Changed",
-    "title": "Portfolio Progress Trend — graph semantics, neutral slope wording, and collapsible filters",
-    "impact": "Combined Flow chart changed from Line to Bar (flow metrics are discrete per-sprint quantities). Total Scope chart changed from Bar to Line (stock metric showing accumulated state). Slope badges now use neutral system-dynamics terminology: Net Flow → Contracting/Expanding/Balanced; Scope & Remaining → Decreasing/Increasing/Stable; Throughput → Rising/Falling/Stable. Filter panel is now collapsed by default; context chips (Product, Team, Sprint range, Custom Scope badge) are always visible under the header showing the active scope without needing to open filters. TrendSlopeBadge component extended with optional PositiveLabel/NegativeLabel/NeutralLabel parameters for per-metric custom wording (fully backward-compatible).",
+    "title": "Portfolio Progress Trend \u2014 graph semantics, neutral slope wording, and collapsible filters",
+    "impact": "Combined Flow chart changed from Line to Bar (flow metrics are discrete per-sprint quantities). Total Scope chart changed from Bar to Line (stock metric showing accumulated state). Slope badges now use neutral system-dynamics terminology: Net Flow \u2192 Contracting/Expanding/Balanced; Scope & Remaining \u2192 Decreasing/Increasing/Stable; Throughput \u2192 Rising/Falling/Stable. Filter panel is now collapsed by default; context chips (Product, Team, Sprint range, Custom Scope badge) are always visible under the header showing the active scope without needing to open filters. TrendSlopeBadge component extended with optional PositiveLabel/NegativeLabel/NeutralLabel parameters for per-metric custom wording (fully backward-compatible).",
     "area": "Trends / Portfolio Progress",
     "link": "/home/portfolio-progress"
   },
   {
     "date": "2026-03-04",
     "type": "Changed",
-    "title": "Portfolio Progress Trend — historical per-sprint scope tracking via activity ledger",
+    "title": "Portfolio Progress Trend \u2014 historical per-sprint scope tracking via activity ledger",
     "impact": "TotalScopeEffort is now computed historically for each sprint in the selected range instead of using a single current-state snapshot. The handler replays Microsoft.VSTS.Scheduling.Effort change events from the ActivityEventLedger to reconstruct the total backlog scope as it was at each sprint's end date. Items created after a sprint's end are excluded; items currently in 'Removed' state that were removed after a sprint's end are included. TotalScopeChangePts in the summary now reflects actual scope growth or contraction across the selected range. Accuracy improves as more history accumulates in the ledger.",
     "area": "Trends / Portfolio Progress",
     "link": "/home/portfolio-progress"
@@ -522,24 +530,24 @@
   {
     "date": "2026-03-04",
     "type": "Changed",
-    "title": "Portfolio Progress Trend — stock-and-flow model with Combined Flow graph",
-    "impact": "The Portfolio Progress Trend page has been refactored from a % Done / scope snapshot view into a stock-and-flow product-dynamics model. Graph 1 is now a Combined Flow chart showing Completed (green), Added (orange, proxy from PlannedEffort), and Net Flow (blue, dominant) per sprint — Net > 0 means the backlog is shrinking. Graphs 2–4 retain Total Scope (Stock), Remaining Effort (Stock), and Throughput Trend. The summary block now shows Cumulative Net Flow, Total Scope Change, Remaining Effort Change, and classifies the range as Contracting / Stable / Expanding. The page auto-loads with All Products, the first available team, and the current sprint + past 4 sprints (5 total) as the default selection. The % Done graph has been removed. A documented limitation note explains that Added Effort uses PlannedEffort as an inflow proxy and cannot distinguish newly created items from re-estimations.",
+    "title": "Portfolio Progress Trend \u2014 stock-and-flow model with Combined Flow graph",
+    "impact": "The Portfolio Progress Trend page has been refactored from a % Done / scope snapshot view into a stock-and-flow product-dynamics model. Graph 1 is now a Combined Flow chart showing Completed (green), Added (orange, proxy from PlannedEffort), and Net Flow (blue, dominant) per sprint \u2014 Net > 0 means the backlog is shrinking. Graphs 2\u20134 retain Total Scope (Stock), Remaining Effort (Stock), and Throughput Trend. The summary block now shows Cumulative Net Flow, Total Scope Change, Remaining Effort Change, and classifies the range as Contracting / Stable / Expanding. The page auto-loads with All Products, the first available team, and the current sprint + past 4 sprints (5 total) as the default selection. The % Done graph has been removed. A documented limitation note explains that Added Effort uses PlannedEffort as an inflow proxy and cannot distinguish newly created items from re-estimations.",
     "area": "Trends / Portfolio Progress",
     "link": "/home/portfolio-progress"
   },
   {
     "date": "2026-03-04",
     "type": "Changed",
-    "title": "Pipeline Trend — Sprint-based PO view replaces Pipeline Insights",
-    "impact": "The /home/pipelines page has been redesigned from an engineering telemetry table (single-sprint KPI tiles and stacked charts) into a sprint-bucketed PO trend page. It now shows 4 signals in a compact 2×2 grid: Reliability Trend (success rate %), Time-to-Green Trend (median build duration on main/master branch when data is available; otherwise all-branch fallback), Tail Risk Trend (P90 duration, gaps shown for fewer than 3 runs), and Flakiness/Instability Trend. Each chart includes a slope badge (Improving / Stable / Worsening). A sprint range selector (team, product, end sprint, count) replaces the single-sprint/multi-sprint toggle. A collapsed Advanced/Drill-down panel retains per-sprint detail including P75 and main-branch run counts.",
+    "title": "Pipeline Trend \u2014 Sprint-based PO view replaces Pipeline Insights",
+    "impact": "The /home/pipelines page has been redesigned from an engineering telemetry table (single-sprint KPI tiles and stacked charts) into a sprint-bucketed PO trend page. It now shows 4 signals in a compact 2\u00d72 grid: Reliability Trend (success rate %), Time-to-Green Trend (median build duration on main/master branch when data is available; otherwise all-branch fallback), Tail Risk Trend (P90 duration, gaps shown for fewer than 3 runs), and Flakiness/Instability Trend. Each chart includes a slope badge (Improving / Stable / Worsening). A sprint range selector (team, product, end sprint, count) replaces the single-sprint/multi-sprint toggle. A collapsed Advanced/Drill-down panel retains per-sprint detail including P75 and main-branch run counts.",
     "area": "Trends / Pipeline Trend",
     "link": "/home/pipelines"
   },
   {
     "date": "2026-03-04",
     "type": "Changed",
-    "title": "Velocity Trend cleanup — signals embedded in Sprint Trend & Planning",
-    "impact": "The standalone Velocity Trend tile has been removed from Trends. Velocity distribution (median, P25–P75 band) and predictability ratio are now embedded directly in Sprint Trend (Calibration panel, visible in advanced multi-sprint mode) and Planning (Capacity Confidence block). The Trends page is now more focused; calibration signals appear in their tactical and forecasting contexts.",
+    "title": "Velocity Trend cleanup \u2014 signals embedded in Sprint Trend & Planning",
+    "impact": "The standalone Velocity Trend tile has been removed from Trends. Velocity distribution (median, P25\u2013P75 band) and predictability ratio are now embedded directly in Sprint Trend (Calibration panel, visible in advanced multi-sprint mode) and Planning (Capacity Confidence block). The Trends page is now more focused; calibration signals appear in their tactical and forecasting contexts.",
     "area": "Trends / Sprint Trend / Planning",
     "link": "/home/sprint-trend"
   }

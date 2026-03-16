@@ -17,7 +17,8 @@ public sealed class UiSemanticCorrectionDocumentTests
         StringAssert.Contains(document, "Story points are the planning and delivery metric.");
         StringAssert.Contains(document, "Effort hours are the engineering workload metric.");
         StringAssert.Contains(document, "Never display effort hours with a `pts` suffix.");
-        StringAssert.Contains(document, "Portfolio flow remains effort-based until its model changes.");
+        StringAssert.Contains(document, "Portfolio flow uses canonical story-point scope.");
+        StringAssert.Contains(document, "Portfolio flow UI must label stock, inflow, throughput, remaining scope, and completion with story-point semantics.");
     }
 
     [TestMethod]
@@ -38,7 +39,8 @@ public sealed class UiSemanticCorrectionDocumentTests
         StringAssert.Contains(document, "ForecastPanel.razor");
         StringAssert.Contains(document, "SprintExecution.razor");
         StringAssert.Contains(document, "PortfolioDelivery.razor");
-        StringAssert.Contains(document, "Portfolio flow remains effort-based");
+        StringAssert.Contains(document, "PortfolioProgressPage.razor");
+        StringAssert.Contains(document, "canonical story-point PortfolioFlow metrics");
     }
 
     private static string GetRepositoryRoot()
