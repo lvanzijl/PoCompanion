@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Tools.TfsRetrievalVa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Core.Domain", "PoTool.Core.Domain\PoTool.Core.Domain.csproj", "{D6690720-E0AB-40F1-A17D-5FBF38088B8B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Core.Domain.Tests", "PoTool.Core.Domain.Tests\PoTool.Core.Domain.Tests.csproj", "{04A22563-FC86-4307-84C1-5E9EA8555635}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -125,6 +127,18 @@ Global
 		{D6690720-E0AB-40F1-A17D-5FBF38088B8B}.Release|x64.Build.0 = Release|Any CPU
 		{D6690720-E0AB-40F1-A17D-5FBF38088B8B}.Release|x86.ActiveCfg = Release|Any CPU
 		{D6690720-E0AB-40F1-A17D-5FBF38088B8B}.Release|x86.Build.0 = Release|Any CPU
+		{04A22563-FC86-4307-84C1-5E9EA8555635}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04A22563-FC86-4307-84C1-5E9EA8555635}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04A22563-FC86-4307-84C1-5E9EA8555635}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{04A22563-FC86-4307-84C1-5E9EA8555635}.Debug|x64.Build.0 = Debug|Any CPU
+		{04A22563-FC86-4307-84C1-5E9EA8555635}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{04A22563-FC86-4307-84C1-5E9EA8555635}.Debug|x86.Build.0 = Debug|Any CPU
+		{04A22563-FC86-4307-84C1-5E9EA8555635}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04A22563-FC86-4307-84C1-5E9EA8555635}.Release|Any CPU.Build.0 = Release|Any CPU
+		{04A22563-FC86-4307-84C1-5E9EA8555635}.Release|x64.ActiveCfg = Release|Any CPU
+		{04A22563-FC86-4307-84C1-5E9EA8555635}.Release|x64.Build.0 = Release|Any CPU
+		{04A22563-FC86-4307-84C1-5E9EA8555635}.Release|x86.ActiveCfg = Release|Any CPU
+		{04A22563-FC86-4307-84C1-5E9EA8555635}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
