@@ -48,6 +48,7 @@ public static class RevisionFieldWhitelist
         Navigation("System.ChangedBy", "ChangedBy", ["UserName", "UserEmail", "UserId"], readProperties: ["UserName", "UserEmail", "UserId"]),
         Scalar("Microsoft.VSTS.Common.ClosedDate", "ClosedDate"),
         Scalar("Microsoft.VSTS.Scheduling.Effort", "Effort"),
+        Scalar("Microsoft.VSTS.Scheduling.StoryPoints", "StoryPoints"),
         Scalar("Microsoft.VSTS.Common.BusinessValue", "BusinessValue"),
         Scalar("System.Tags", "TagNames"),
         Scalar("Microsoft.VSTS.Common.Severity", "Severity")

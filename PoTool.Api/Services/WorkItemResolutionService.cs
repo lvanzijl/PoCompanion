@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Core.Domain.Portfolio;
 using PoTool.Core.WorkItems;
 
 namespace PoTool.Api.Services;
@@ -79,6 +80,7 @@ public class WorkItemResolutionService
             .ToDictionary(g => g.Key, g => g.Select(w => w.TfsId).ToList());
 
         var resolvedEntities = new List<ResolvedWorkItemEntity>();
+        var resolvedProductByWorkItemId = new Dictionary<int, int?>();
         var now = DateTimeOffset.UtcNow;
 
         foreach (var product in products)
@@ -126,6 +128,7 @@ public class WorkItemResolutionService
                     LastResolvedAt = now,
                     ResolvedAtRevision = 0
                 });
+                resolvedProductByWorkItemId[tfsId] = product.Id;
 
                 // Push children
                 if (childrenByParent.TryGetValue(tfsId, out var children))
@@ -138,15 +141,47 @@ public class WorkItemResolutionService
             }
         }
 
-        // Remove existing resolved items for this PO's products and replace
         var productIds = products.Select(p => p.Id).ToList();
-        await context.ResolvedWorkItems
+        var previousResolvedItems = await context.ResolvedWorkItems
+            .AsNoTracking()
             .Where(r => r.ResolvedProductId != null && productIds.Contains(r.ResolvedProductId.Value))
-            .ExecuteDeleteAsync(cancellationToken);
+            .Select(r => new { r.WorkItemId, r.ResolvedProductId })
+            .ToListAsync(cancellationToken);
+        var previousResolvedProductByWorkItemId = previousResolvedItems
+            .ToDictionary(item => item.WorkItemId, item => item.ResolvedProductId);
+
+        var nextSyntheticUpdateId = await GetNextSyntheticUpdateIdAsync(context, cancellationToken);
+        var transitionEntries = BuildResolvedProductTransitionEntries(
+            productOwnerId,
+            now,
+            nextSyntheticUpdateId,
+            previousResolvedProductByWorkItemId,
+            resolvedProductByWorkItemId,
+            workItemsByTfsId);
+
+        // Remove existing resolved items for this PO's products and replace
+        var existingResolvedItemsQuery = context.ResolvedWorkItems
+            .Where(r => r.ResolvedProductId != null && productIds.Contains(r.ResolvedProductId.Value))
+            .AsQueryable();
+
+        if (context.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+        {
+            var existingResolvedItems = await existingResolvedItemsQuery.ToListAsync(cancellationToken);
+            context.ResolvedWorkItems.RemoveRange(existingResolvedItems);
+        }
+        else
+        {
+            await existingResolvedItemsQuery.ExecuteDeleteAsync(cancellationToken);
+        }
 
         if (resolvedEntities.Count > 0)
         {
             await context.ResolvedWorkItems.AddRangeAsync(resolvedEntities, cancellationToken);
+        }
+
+        if (transitionEntries.Count > 0)
+        {
+            await context.ActivityEventLedgerEntries.AddRangeAsync(transitionEntries, cancellationToken);
         }
 
         // Update cache state
@@ -234,6 +269,66 @@ public class WorkItemResolutionService
         }
 
         return (epicId, featureId);
+    }
+
+    private static async Task<int> GetNextSyntheticUpdateIdAsync(
+        PoToolDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var minimumExistingUpdateId = await context.ActivityEventLedgerEntries
+            .Where(entry => entry.FieldRefName == PortfolioEntryLookup.ResolvedProductIdFieldRefName)
+            .Select(entry => (int?)entry.UpdateId)
+            .MinAsync(cancellationToken);
+
+        return minimumExistingUpdateId.GetValueOrDefault(0) - 1;
+    }
+
+    private static List<ActivityEventLedgerEntryEntity> BuildResolvedProductTransitionEntries(
+        int productOwnerId,
+        DateTimeOffset eventTimestamp,
+        int nextSyntheticUpdateId,
+        IReadOnlyDictionary<int, int?> previousResolvedProductByWorkItemId,
+        IReadOnlyDictionary<int, int?> currentResolvedProductByWorkItemId,
+        IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId)
+    {
+        var transitionedWorkItemIds = previousResolvedProductByWorkItemId.Keys
+            .Union(currentResolvedProductByWorkItemId.Keys)
+            .OrderBy(workItemId => workItemId)
+            .ToList();
+
+        var entries = new List<ActivityEventLedgerEntryEntity>();
+
+        foreach (var workItemId in transitionedWorkItemIds)
+        {
+            previousResolvedProductByWorkItemId.TryGetValue(workItemId, out var previousResolvedProductId);
+            currentResolvedProductByWorkItemId.TryGetValue(workItemId, out var currentResolvedProductId);
+
+            if (previousResolvedProductId == currentResolvedProductId)
+            {
+                continue;
+            }
+
+            workItemsByTfsId.TryGetValue(workItemId, out var workItem);
+            var (epicId, featureId) = ResolveAncestry(workItemId, workItemsByTfsId);
+
+            entries.Add(new ActivityEventLedgerEntryEntity
+            {
+                ProductOwnerId = productOwnerId,
+                WorkItemId = workItemId,
+                UpdateId = nextSyntheticUpdateId--,
+                FieldRefName = PortfolioEntryLookup.ResolvedProductIdFieldRefName,
+                EventTimestamp = eventTimestamp,
+                EventTimestampUtc = eventTimestamp.UtcDateTime,
+                IterationPath = workItem?.IterationPath,
+                ParentId = workItem?.ParentTfsId,
+                FeatureId = featureId,
+                EpicId = epicId,
+                OldValue = previousResolvedProductId?.ToString(),
+                NewValue = currentResolvedProductId?.ToString()
+            });
+        }
+
+        return entries;
     }
 }
 
