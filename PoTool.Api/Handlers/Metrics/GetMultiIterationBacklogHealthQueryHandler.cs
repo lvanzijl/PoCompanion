@@ -1,5 +1,6 @@
 using Mediator;
 using PoTool.Api.Services;
+using PoTool.Core.BacklogQuality;
 using PoTool.Core.Contracts;
 using PoTool.Core.Metrics.Models;
 using PoTool.Core.Metrics.Services;
@@ -7,8 +8,6 @@ using PoTool.Shared.Metrics;
 using PoTool.Shared.Settings;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
-using PoTool.Core.WorkItems.Validators;
-using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Queries;
 
 namespace PoTool.Api.Handlers.Metrics;
@@ -26,7 +25,7 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
     private readonly IProductRepository _productRepository;
     private readonly ISprintRepository _sprintRepository;
     private readonly IMediator _mediator;
-    private readonly IHierarchicalWorkItemValidator _validator;
+    private readonly IBacklogQualityAnalysisService _backlogQualityAnalysisService;
     private readonly ILogger<GetMultiIterationBacklogHealthQueryHandler> _logger;
 
     public GetMultiIterationBacklogHealthQueryHandler(
@@ -34,14 +33,14 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
         IProductRepository productRepository,
         ISprintRepository sprintRepository,
         IMediator mediator,
-        IHierarchicalWorkItemValidator validator,
+        IBacklogQualityAnalysisService backlogQualityAnalysisService,
         ILogger<GetMultiIterationBacklogHealthQueryHandler> logger)
     {
         _workItemReadProvider = workItemReadProvider;
         _productRepository = productRepository;
         _sprintRepository = sprintRepository;
         _mediator = mediator;
-        _validator = validator;
+        _backlogQualityAnalysisService = backlogQualityAnalysisService;
         _logger = logger;
     }
 
@@ -299,46 +298,15 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
             return null;
         }
 
-        // Run validators
-        var validationResults = _validator.ValidateWorkItems(iterationWorkItems);
-
-        // Extract sprint metadata
-        var sprintName = ExtractSprintName(iterationPath);
         var (startDate, endDate) = ExtractSprintDates(iterationWorkItems);
+        var analysis = await _backlogQualityAnalysisService.AnalyzeAsync(iterationWorkItems, cancellationToken);
 
-        // Calculate metrics
-        var totalWorkItems = iterationWorkItems.Count;
-        var workItemsWithoutEffort = iterationWorkItems.Count(wi => !wi.Effort.HasValue);
-        var workItemsInProgressWithoutEffort = iterationWorkItems
-            .Count(wi => wi.State.Equals("In Progress", StringComparison.OrdinalIgnoreCase) && !wi.Effort.HasValue);
-
-        // Count refinement blockers and refinement needed from hierarchical validation
-        var refinementBlockers = validationResults.Sum(r => r.RefinementBlockers.Count);
-        var refinementNeeded = validationResults.Sum(r => r.IncompleteRefinementIssues.Count);
-
-        // Count structural integrity issues (for legacy compatibility)
-        var structuralIntegrityIssues = validationResults.Sum(r => r.BacklogHealthProblems.Count);
-        var parentProgressIssues = structuralIntegrityIssues;
-
-        var blockedItems = CountBlockedItems(iterationWorkItems);
-        var inProgressAtIterationEnd = CountInProgressAtEnd(iterationWorkItems, endDate);
-        var validationIssuesSummary = GroupValidationIssuesByConsequence(validationResults);
-
-        return new BacklogHealthDto(
-            IterationPath: iterationPath,
-            SprintName: sprintName,
-            TotalWorkItems: totalWorkItems,
-            WorkItemsWithoutEffort: workItemsWithoutEffort,
-            WorkItemsInProgressWithoutEffort: workItemsInProgressWithoutEffort,
-            ParentProgressIssues: parentProgressIssues,
-            BlockedItems: blockedItems,
-            InProgressAtIterationEnd: inProgressAtIterationEnd,
-            IterationStart: startDate,
-            IterationEnd: endDate,
-            ValidationIssues: validationIssuesSummary,
-            RefinementBlockers: refinementBlockers,
-            RefinementNeeded: refinementNeeded
-        );
+        return BacklogHealthDtoFactory.Create(
+            iterationPath,
+            iterationWorkItems,
+            analysis,
+            startDate,
+            endDate);
     }
 
     private static BacklogHealthTrend CalculateTrend(List<BacklogHealthDto> iterations)
@@ -440,66 +408,8 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
         }
     }
 
-    private static string ExtractSprintName(string iterationPath)
-    {
-        var parts = iterationPath.Split('\\', '/');
-        return parts.Length > 0 ? parts[^1] : iterationPath;
-    }
-
     private static (DateTimeOffset?, DateTimeOffset?) ExtractSprintDates(List<WorkItemDto> workItems)
     {
         return (null, null);
-    }
-
-    private static int CountBlockedItems(List<WorkItemDto> workItems)
-    {
-        return workItems.Count(wi =>
-            wi.State.Contains("Blocked", StringComparison.OrdinalIgnoreCase) ||
-            wi.State.Contains("On Hold", StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static int CountInProgressAtEnd(List<WorkItemDto> workItems, DateTimeOffset? endDate)
-    {
-        if (!endDate.HasValue || endDate.Value > DateTimeOffset.UtcNow)
-        {
-            return 0;
-        }
-
-        return workItems.Count(wi =>
-            wi.State.Equals("In Progress", StringComparison.OrdinalIgnoreCase) ||
-            wi.State.Equals("Active", StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static IReadOnlyList<ValidationIssueSummary> GroupValidationIssuesByConsequence(
-        IReadOnlyList<HierarchicalValidationResult> validationResults)
-    {
-        // Group by validation consequence
-        var issuesByConsequence = new Dictionary<string, HashSet<int>>();
-
-        foreach (var treeResult in validationResults)
-        {
-            // Group by consequence type
-            void AddIssues(string consequenceType, IEnumerable<ValidationRuleResult> violations)
-            {
-                foreach (var violation in violations)
-                {
-                    if (!issuesByConsequence.ContainsKey(consequenceType))
-                    {
-                        issuesByConsequence[consequenceType] = new HashSet<int>();
-                    }
-                    issuesByConsequence[consequenceType].Add(violation.WorkItemId);
-                }
-            }
-
-            AddIssues("Structural Integrity", treeResult.BacklogHealthProblems);
-            AddIssues("Refinement Blocker", treeResult.RefinementBlockers);
-            AddIssues("Refinement Needed", treeResult.IncompleteRefinementIssues);
-        }
-
-        return issuesByConsequence.Select(kvp => new ValidationIssueSummary(
-            ValidationType: kvp.Key,
-            Count: kvp.Value.Count,
-            AffectedWorkItemIds: kvp.Value.ToList()
-        )).ToList();
     }
 }

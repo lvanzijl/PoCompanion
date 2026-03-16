@@ -9,6 +9,7 @@ using Moq;
 using PoTool.Api.Configuration;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services;
+using PoTool.Core.BacklogQuality;
 using PoTool.Core.Contracts;
 using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.DeliveryTrends.Services;
@@ -121,6 +122,7 @@ public class ServiceCollectionTests
         var effortDistributionService = scope.ServiceProvider.GetService<IEffortDistributionService>();
         var effortEstimationQualityService = scope.ServiceProvider.GetService<IEffortEstimationQualityService>();
         var effortEstimationSuggestionService = scope.ServiceProvider.GetService<IEffortEstimationSuggestionService>();
+        var backlogQualityAnalysisService = scope.ServiceProvider.GetService<IBacklogQualityAnalysisService>();
         var projectionService = scope.ServiceProvider.GetService<SprintTrendProjectionService>();
 
         Assert.IsNotNull(storyPointResolutionService, "Canonical story-point resolution service should be registered.");
@@ -141,6 +143,7 @@ public class ServiceCollectionTests
         Assert.IsNotNull(effortDistributionService, "Effort distribution CDC service should be registered.");
         Assert.IsNotNull(effortEstimationQualityService, "Effort estimation quality CDC service should be registered.");
         Assert.IsNotNull(effortEstimationSuggestionService, "Effort estimation suggestion CDC service should be registered.");
+        Assert.IsNotNull(backlogQualityAnalysisService, "Backlog quality analysis service should be registered.");
         Assert.IsNotNull(projectionService, "SprintTrendProjectionService should be resolvable from DI.");
     }
 

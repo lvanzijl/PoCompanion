@@ -1,18 +1,18 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Api.Handlers.Metrics;
 using PoTool.Api.Services;
+using PoTool.Core.BacklogQuality;
 using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
+using PoTool.Core.Domain.BacklogQuality.Models;
+using PoTool.Core.Domain.BacklogQuality.Rules;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems.Queries;
+using PoTool.Shared.Metrics;
 using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
-using PoTool.Core.WorkItems.Validators;
-
-using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit.Handlers;
 
@@ -22,7 +22,7 @@ public class GetBacklogHealthQueryHandlerTests
     private Mock<IWorkItemReadProvider> _mockProvider = null!;
     private Mock<IProductRepository> _mockProductRepository = null!;
     private Mock<IMediator> _mockMediator = null!;
-    private Mock<IHierarchicalWorkItemValidator> _mockValidator = null!;
+    private Mock<IBacklogQualityAnalysisService> _mockBacklogQualityAnalysisService = null!;
     private Mock<ILogger<GetBacklogHealthQueryHandler>> _mockLogger = null!;
     private GetBacklogHealthQueryHandler _handler = null!;
 
@@ -32,7 +32,7 @@ public class GetBacklogHealthQueryHandlerTests
         _mockProvider = new Mock<IWorkItemReadProvider>();
         _mockProductRepository = new Mock<IProductRepository>();
         _mockMediator = new Mock<IMediator>();
-        _mockValidator = new Mock<IHierarchicalWorkItemValidator>();
+        _mockBacklogQualityAnalysisService = new Mock<IBacklogQualityAnalysisService>();
         _mockLogger = new Mock<ILogger<GetBacklogHealthQueryHandler>>();
 
         // Setup default mock behaviors
@@ -40,12 +40,14 @@ public class GetBacklogHealthQueryHandlerTests
             .ReturnsAsync(new List<ProductDto>());
         _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto>());
+        _mockBacklogQualityAnalysisService.Setup(service => service.AnalyzeAsync(It.IsAny<IEnumerable<WorkItemDto>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateAnalysis());
 
         _handler = new GetBacklogHealthQueryHandler(
             _mockProvider.Object,
             _mockProductRepository.Object,
             _mockMediator.Object,
-            _mockValidator.Object,
+            _mockBacklogQualityAnalysisService.Object,
             _mockLogger.Object);
     }
 
@@ -78,8 +80,6 @@ public class GetBacklogHealthQueryHandlerTests
 
         _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
-        _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(Array.Empty<HierarchicalValidationResult>());
 
         var query = new GetBacklogHealthQuery("Sprint 1");
 
@@ -108,8 +108,6 @@ public class GetBacklogHealthQueryHandlerTests
 
         _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
-        _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(Array.Empty<HierarchicalValidationResult>());
 
         var query = new GetBacklogHealthQuery("Sprint 1");
 
@@ -131,25 +129,10 @@ public class GetBacklogHealthQueryHandlerTests
             CreateWorkItem(2, "PBI", "Done", "Sprint 1", 5)
         };
 
-        var validationResults = new List<HierarchicalValidationResult>
-        {
-            new HierarchicalValidationResult(
-                RootWorkItemId: 1,
-                BacklogHealthProblems: Array.Empty<ValidationRuleResult>(),
-                RefinementBlockers: Array.Empty<ValidationRuleResult>(),
-                IncompleteRefinementIssues: new List<ValidationRuleResult>
-                {
-                    CreateValidationRuleResult(1, "RC-2", ValidationConsequence.IncompleteRefinement)
-                },
-                WasSuppressed: false,
-                MissingEffortIssues: Array.Empty<ValidationRuleResult>()
-            )
-        };
-
         _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
-        _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(validationResults);
+        _mockBacklogQualityAnalysisService.Setup(service => service.AnalyzeAsync(It.IsAny<IEnumerable<WorkItemDto>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateAnalysis(refinementNeededIds: [1]));
 
         var query = new GetBacklogHealthQuery("Sprint 1");
 
@@ -158,7 +141,9 @@ public class GetBacklogHealthQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.IsNotEmpty(result.ValidationIssues);
+        CollectionAssert.AreEquivalent(
+            new[] { "Refinement Needed" },
+            result.ValidationIssues.Select(issue => issue.ValidationType).ToArray());
     }
 
     [TestMethod]
@@ -171,26 +156,10 @@ public class GetBacklogHealthQueryHandlerTests
             CreateWorkItem(2, "Task", "Done", "Sprint 1", 3)
         };
 
-        var validationResults = new List<HierarchicalValidationResult>
-        {
-            new HierarchicalValidationResult(
-                RootWorkItemId: 1,
-                BacklogHealthProblems: new List<ValidationRuleResult>
-                {
-                    CreateValidationRuleResult(1, "SI-1", ValidationConsequence.BacklogHealthProblem),
-                    CreateValidationRuleResult(2, "SI-2", ValidationConsequence.BacklogHealthProblem)
-                },
-                RefinementBlockers: Array.Empty<ValidationRuleResult>(),
-                IncompleteRefinementIssues: Array.Empty<ValidationRuleResult>(),
-                WasSuppressed: false,
-                MissingEffortIssues: Array.Empty<ValidationRuleResult>()
-            )
-        };
-
         _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
-        _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(validationResults);
+        _mockBacklogQualityAnalysisService.Setup(service => service.AnalyzeAsync(It.IsAny<IEnumerable<WorkItemDto>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateAnalysis(integrityIds: [1, 2]));
 
         var query = new GetBacklogHealthQuery("Sprint 1");
 
@@ -215,8 +184,6 @@ public class GetBacklogHealthQueryHandlerTests
 
         _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
-        _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(Array.Empty<HierarchicalValidationResult>());
 
         var query = new GetBacklogHealthQuery("Sprint 1");
 
@@ -241,8 +208,6 @@ public class GetBacklogHealthQueryHandlerTests
 
         _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
-        _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(Array.Empty<HierarchicalValidationResult>());
 
         var query = new GetBacklogHealthQuery("sprint 1");
 
@@ -265,8 +230,6 @@ public class GetBacklogHealthQueryHandlerTests
 
         _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
-        _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(Array.Empty<HierarchicalValidationResult>());
 
         var query = new GetBacklogHealthQuery("Project\\Team A\\2024\\Sprint 5");
 
@@ -292,8 +255,6 @@ public class GetBacklogHealthQueryHandlerTests
 
         _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
-        _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
-            .Returns(Array.Empty<HierarchicalValidationResult>());
 
         var query = new GetBacklogHealthQuery("Sprint 1");
 
@@ -303,6 +264,27 @@ public class GetBacklogHealthQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(1, result.WorkItemsWithoutEffort); // Only item 3
+    }
+
+    [TestMethod]
+    public async Task Handle_UsesBacklogQualityAnalysisServiceForIterationItems()
+    {
+        var workItems = new List<WorkItemDto>
+        {
+            CreateWorkItem(1, "PBI", "Done", "Sprint 1", 5),
+            CreateWorkItem(2, "PBI", "Done", "Sprint 2", 8)
+        };
+
+        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workItems);
+
+        await _handler.Handle(new GetBacklogHealthQuery("Sprint 1"), CancellationToken.None);
+
+        _mockBacklogQualityAnalysisService.Verify(
+            service => service.AnalyzeAsync(
+                It.Is<IEnumerable<WorkItemDto>>(items => items.Select(item => item.TfsId).SequenceEqual(new[] { 1 })),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     private static WorkItemDto CreateWorkItem(
@@ -327,15 +309,67 @@ public class GetBacklogHealthQueryHandlerTests
         );
     }
 
-    private static ValidationRuleResult CreateValidationRuleResult(int workItemId, string ruleId, ValidationConsequence consequence)
+    private static BacklogQualityAnalysisResult CreateAnalysis(
+        IEnumerable<int>? integrityIds = null,
+        IEnumerable<int>? refinementBlockerIds = null,
+        IEnumerable<int>? refinementNeededIds = null,
+        IEnumerable<int>? missingEffortIds = null)
     {
-        var rule = new ValidationRule(
-            RuleId: ruleId,
-            Category: ValidationCategory.StructuralIntegrity,
-            Consequence: consequence,
-            ResponsibleParty: ResponsibleParty.ProductOwner,
-            Message: $"Test validation rule {ruleId}"
-        );
-        return new ValidationRuleResult(rule, workItemId, true);
+        var integrityFindings = (integrityIds ?? [])
+            .Select(id => new BacklogIntegrityFinding(
+                CreateMetadata("SI-1", RuleFamily.StructuralIntegrity, "ParentChildMismatch", RuleFindingClass.StructuralWarning),
+                id,
+                "Epic",
+                $"Integrity issue for {id}",
+                Array.Empty<int>()))
+            .ToArray();
+        var findings = (refinementBlockerIds ?? [])
+            .Select(id => CreateFinding(id, "RR-1", RuleFamily.RefinementReadiness, "MissingDescription"))
+            .Concat((refinementNeededIds ?? [])
+                .Select(id => CreateFinding(id, "RC-3", RuleFamily.ImplementationReadiness, "MissingChildren")))
+            .Concat((missingEffortIds ?? [])
+                .Select(id => CreateFinding(id, "RC-2", RuleFamily.ImplementationReadiness, "MissingEffort")))
+            .ToArray();
+
+        return new BacklogQualityAnalysisResult(
+            new BacklogValidationResult(
+                integrityFindings,
+                findings,
+                Array.Empty<RefinementReadinessState>(),
+                Array.Empty<ImplementationReadinessState>()),
+            Array.Empty<BacklogReadinessScore>());
+    }
+
+    private static PoTool.Core.Domain.BacklogQuality.Models.ValidationRuleResult CreateFinding(
+        int workItemId,
+        string ruleId,
+        RuleFamily family,
+        string semanticTag)
+    {
+        return new PoTool.Core.Domain.BacklogQuality.Models.ValidationRuleResult(
+            CreateMetadata(
+                ruleId,
+                family,
+                semanticTag,
+                family == RuleFamily.RefinementReadiness ? RuleFindingClass.RefinementBlocker : RuleFindingClass.ImplementationBlocker),
+            workItemId,
+            "PBI",
+            $"Finding {ruleId}");
+    }
+
+    private static RuleMetadata CreateMetadata(
+        string ruleId,
+        RuleFamily family,
+        string semanticTag,
+        RuleFindingClass findingClass)
+    {
+        return new RuleMetadata(
+            ruleId,
+            family,
+            semanticTag,
+            $"Rule {ruleId}",
+            RuleResponsibleParty.ProductOwner,
+            findingClass,
+            ["Epic", "Feature", "PBI", "Task", "Bug"]);
     }
 }

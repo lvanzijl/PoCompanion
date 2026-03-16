@@ -8,6 +8,7 @@ using PoTool.Api.Services.Configuration;
 using PoTool.Api.Services.MockData;
 using PoTool.Api.Services.Sync;
 using PoTool.Integrations.Tfs.Clients;
+using PoTool.Core.BacklogQuality;
 using PoTool.Core.Contracts;
 using PoTool.Core.Configuration;
 using PoTool.Core.WorkItems.Validators;
@@ -15,6 +16,7 @@ using PoTool.Core.WorkItems.Validators.Rules;
 using PoTool.Core.WorkItems.Filtering;
 using PoTool.Core.Health;
 using PoTool.Core.Domain.Cdc.Sprints;
+using PoTool.Core.Domain.BacklogQuality.Services;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Forecasting.Services;
@@ -248,6 +250,8 @@ public static class ApiServiceCollectionExtensions
 
         // Register hierarchical work item validator
         services.AddScoped<IHierarchicalWorkItemValidator, HierarchicalWorkItemValidator>();
+        services.AddSingleton<BacklogQualityAnalyzer>();
+        services.AddScoped<IBacklogQualityAnalysisService, BacklogQualityAnalysisService>();
 
         // Register Core business logic services
         services.AddScoped<WorkItemFilterer>();
