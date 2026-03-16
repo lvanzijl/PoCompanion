@@ -30,6 +30,6 @@
 
 ## Remaining Work Before PortfolioFlow Projection
 
-- Historical replay still needs to consume the new StoryPoints and resolved membership signals when the PortfolioFlow projection is implemented.
-- Current portfolio pages, current sprint analytics projections, and existing resolution flows remain unchanged.
-- No PortfolioFlow projection or portfolio page replacement was added in this change set.
+- The repository now contains `PortfolioFlowProjectionService` and `PortfolioFlowProjectionEntity`, so the new historical StoryPoints and resolved membership signals are consumed during sprint-projection rebuilds.
+- Current portfolio pages and legacy effort-based handlers remain unchanged until a later migration points them at the canonical projection.
+- PortfolioFlow CDC extraction and transport-contract cleanup are still future work.

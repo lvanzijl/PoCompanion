@@ -6,6 +6,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Domain.Portfolio;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Hierarchy;
@@ -140,6 +141,132 @@ public class SprintTrendProjectionServiceSqliteTests
         var projections = await service.ComputeProjectionsAsync(productOwnerId, new[] { sprintId });
 
         Assert.HasCount(1, projections);
+    }
+
+    [TestMethod]
+    public async Task ComputeProjectionsAsync_RebuildsPortfolioFlowProjectionInTheSprintPipeline()
+    {
+        int productOwnerId;
+        int sprintId;
+        int productId;
+
+        using (var scope = _serviceProvider.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+
+            var productOwner = new ProfileEntity { Name = "PO 1" };
+            context.Profiles.Add(productOwner);
+            await context.SaveChangesAsync();
+            productOwnerId = productOwner.Id;
+
+            var team = new TeamEntity { Name = "Team 1", TeamAreaPath = "\\Project\\Team 1" };
+            context.Teams.Add(team);
+
+            var product = new ProductEntity
+            {
+                ProductOwnerId = productOwner.Id,
+                Name = "Product 1",
+                BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 1000 } }
+            };
+            context.Products.Add(product);
+            await context.SaveChangesAsync();
+            productId = product.Id;
+
+            var sprintStartUtc = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+            var sprintEndUtc = new DateTime(2026, 2, 14, 23, 59, 59, DateTimeKind.Utc);
+            var sprint = new SprintEntity
+            {
+                TeamId = team.Id,
+                Name = "Sprint 2",
+                Path = "\\Project\\Sprint 2",
+                StartDateUtc = sprintStartUtc,
+                EndDateUtc = sprintEndUtc,
+                LastSyncedDateUtc = DateTime.UtcNow
+            };
+            context.Sprints.Add(sprint);
+            await context.SaveChangesAsync();
+            sprintId = sprint.Id;
+
+            context.WorkItems.Add(new WorkItemEntity
+            {
+                TfsId = 2001,
+                Type = WorkItemType.Pbi,
+                Title = "Portfolio flow PBI",
+                AreaPath = "Area",
+                IterationPath = sprint.Path,
+                State = "Done",
+                StoryPoints = 8,
+                RetrievedAt = DateTimeOffset.UtcNow,
+                TfsChangedDate = DateTimeOffset.UtcNow,
+                TfsChangedDateUtc = DateTime.UtcNow
+            });
+
+            context.ResolvedWorkItems.Add(new ResolvedWorkItemEntity
+            {
+                WorkItemId = 2001,
+                WorkItemType = WorkItemType.Pbi,
+                ResolvedProductId = product.Id,
+                ResolvedSprintId = sprint.Id,
+                ResolutionStatus = ResolutionStatus.Resolved,
+                ResolvedAtRevision = 1
+            });
+
+            var entryTimestamp = new DateTimeOffset(new DateTime(2026, 2, 2, 12, 0, 0, DateTimeKind.Utc));
+            var doneTimestamp = new DateTimeOffset(new DateTime(2026, 2, 4, 12, 0, 0, DateTimeKind.Utc));
+
+            context.ActivityEventLedgerEntries.AddRange(
+                new ActivityEventLedgerEntryEntity
+                {
+                    ProductOwnerId = productOwnerId,
+                    WorkItemId = 2001,
+                    UpdateId = 1,
+                    FieldRefName = PortfolioEntryLookup.ResolvedProductIdFieldRefName,
+                    EventTimestamp = entryTimestamp,
+                    EventTimestampUtc = entryTimestamp.UtcDateTime,
+                    NewValue = product.Id.ToString()
+                },
+                new ActivityEventLedgerEntryEntity
+                {
+                    ProductOwnerId = productOwnerId,
+                    WorkItemId = 2001,
+                    UpdateId = 2,
+                    FieldRefName = "System.State",
+                    EventTimestamp = doneTimestamp,
+                    EventTimestampUtc = doneTimestamp.UtcDateTime,
+                    OldValue = "Active",
+                    NewValue = "Done"
+                });
+
+            await context.SaveChangesAsync();
+        }
+
+        var portfolioFlowProjectionService = new PortfolioFlowProjectionService(
+            _serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<PortfolioFlowProjectionService>.Instance,
+            stateClassificationService: null,
+            _serviceProvider.GetRequiredService<ICanonicalStoryPointResolutionService>());
+        var service = new SprintTrendProjectionService(
+            _serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<SprintTrendProjectionService>.Instance,
+            stateClassificationService: null,
+            _serviceProvider.GetRequiredService<ICanonicalStoryPointResolutionService>(),
+            _serviceProvider.GetRequiredService<IHierarchyRollupService>(),
+            _serviceProvider.GetRequiredService<IDeliveryProgressRollupService>(),
+            _serviceProvider.GetRequiredService<ISprintDeliveryProjectionService>(),
+            portfolioFlowProjectionService);
+
+        await service.ComputeProjectionsAsync(productOwnerId, new[] { sprintId });
+
+        using var verificationScope = _serviceProvider.CreateScope();
+        var verificationContext = verificationScope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        var projection = await verificationContext.PortfolioFlowProjections.SingleAsync(
+            item => item.SprintId == sprintId && item.ProductId == productId);
+
+        Assert.AreEqual(8d, projection.StockStoryPoints, 0.001d);
+        Assert.AreEqual(8d, projection.InflowStoryPoints, 0.001d);
+        Assert.AreEqual(8d, projection.ThroughputStoryPoints, 0.001d);
+        Assert.IsNotNull(projection.CompletionPercent);
+        Assert.AreEqual(100d, projection.CompletionPercent.Value, 0.001d);
     }
 
     [TestMethod]

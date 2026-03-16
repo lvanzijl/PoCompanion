@@ -26,6 +26,7 @@ public class SprintTrendProjectionService
     private readonly IHierarchyRollupService _hierarchyRollupService;
     private readonly ISprintDeliveryProjectionService _deliveryTrendProjectionService;
     private readonly IDeliveryProgressRollupService _deliveryProgressRollupService;
+    private readonly PortfolioFlowProjectionService? _portfolioFlowProjectionService;
 
     public SprintTrendProjectionService(
         IServiceScopeFactory scopeFactory,
@@ -34,7 +35,8 @@ public class SprintTrendProjectionService
         ICanonicalStoryPointResolutionService storyPointResolutionService,
         IHierarchyRollupService hierarchyRollupService,
         IDeliveryProgressRollupService deliveryProgressRollupService,
-        ISprintDeliveryProjectionService deliveryTrendProjectionService)
+        ISprintDeliveryProjectionService deliveryTrendProjectionService,
+        PortfolioFlowProjectionService? portfolioFlowProjectionService = null)
     {
         ArgumentNullException.ThrowIfNull(scopeFactory);
         ArgumentNullException.ThrowIfNull(logger);
@@ -50,6 +52,7 @@ public class SprintTrendProjectionService
         _hierarchyRollupService = hierarchyRollupService;
         _deliveryProgressRollupService = deliveryProgressRollupService;
         _deliveryTrendProjectionService = deliveryTrendProjectionService;
+        _portfolioFlowProjectionService = portfolioFlowProjectionService;
     }
 
     public virtual async Task<IReadOnlyList<SprintMetricsProjectionEntity>> ComputeProjectionsAsync(
@@ -233,6 +236,11 @@ public class SprintTrendProjectionService
         }
 
         await context.SaveChangesAsync(cancellationToken);
+
+        if (_portfolioFlowProjectionService != null)
+        {
+            await _portfolioFlowProjectionService.ComputeProjectionsAsync(productOwnerId, sprintIdList, cancellationToken);
+        }
 
         _logger.LogInformation(
             "Computed {ProjectionCount} sprint trend projections for ProductOwner {ProductOwnerId}",

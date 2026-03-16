@@ -317,6 +317,7 @@ public static class ApiServiceCollectionExtensions
         services.AddSingleton<WorkItemRelationshipSnapshotService>();
 
         // Register scoped Sprint Trend Projection Service (for sprint metrics computation)
+        services.AddScoped<PortfolioFlowProjectionService>();
         services.AddScoped<SprintTrendProjectionService>();
 
         // Register background services
