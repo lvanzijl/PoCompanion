@@ -382,38 +382,40 @@ public class SprintTrendProjectionServiceSqliteTests
         }
 
         var portfolioFlowProjectionService = CreatePortfolioFlowProjectionService();
-        PortfolioProgressTrendDto legacy;
-
-        using (var scope = _serviceProvider.CreateScope())
-        {
-            var legacyHandler = new GetPortfolioProgressTrendQueryHandler(
-                scope.ServiceProvider.GetRequiredService<PoToolDbContext>(),
-                NullLogger<GetPortfolioProgressTrendQueryHandler>.Instance);
-
-            legacy = await legacyHandler.Handle(
-                new GetPortfolioProgressTrendQuery(productOwnerId, new[] { sprint1Id, sprint2Id }),
-                CancellationToken.None);
-        }
-
         var projections = (await portfolioFlowProjectionService.ComputeProjectionsAsync(productOwnerId, new[] { sprint1Id, sprint2Id }))
             .OrderBy(item => item.SprintId)
             .ToList();
 
-        Assert.AreEqual(PortfolioTrajectory.Expanding, legacy.Summary.Trajectory);
-        Assert.HasCount(2, legacy.Sprints);
+        PortfolioProgressTrendDto trend;
+
+        await using (var scope = _serviceProvider.CreateAsyncScope())
+        {
+            var handler = new GetPortfolioProgressTrendQueryHandler(
+                scope.ServiceProvider.GetRequiredService<PoToolDbContext>(),
+                NullLogger<GetPortfolioProgressTrendQueryHandler>.Instance);
+
+            trend = await handler.Handle(
+                new GetPortfolioProgressTrendQuery(productOwnerId, new[] { sprint1Id, sprint2Id }),
+                CancellationToken.None);
+        }
+
+        Assert.AreEqual(PortfolioTrajectory.Expanding, trend.Summary.Trajectory);
+        Assert.HasCount(2, trend.Sprints);
         Assert.HasCount(2, projections);
 
-        Assert.AreEqual(33d, legacy.Sprints[0].TotalScopeEffort!.Value, 0.001d);
-        Assert.AreEqual(13d, legacy.Sprints[0].RemainingEffort!.Value, 0.001d);
-        Assert.AreEqual(20d, legacy.Sprints[0].ThroughputEffort!.Value, 0.001d);
-        Assert.AreEqual(13d, legacy.Sprints[0].AddedEffort!.Value, 0.001d);
-        Assert.AreEqual(7d, legacy.Sprints[0].NetFlow!.Value, 0.001d);
+        Assert.AreEqual(13d, trend.Sprints[0].StockStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(5d, trend.Sprints[0].RemainingScopeStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(0d, trend.Sprints[0].InflowStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(8d, trend.Sprints[0].ThroughputStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(8d, trend.Sprints[0].NetFlowStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(61.538d, trend.Sprints[0].CompletionPercent!.Value, 0.001d);
 
-        Assert.AreEqual(62d, legacy.Sprints[1].TotalScopeEffort!.Value, 0.001d);
-        Assert.AreEqual(34d, legacy.Sprints[1].RemainingEffort!.Value, 0.001d);
-        Assert.AreEqual(8d, legacy.Sprints[1].ThroughputEffort!.Value, 0.001d);
-        Assert.AreEqual(34d, legacy.Sprints[1].AddedEffort!.Value, 0.001d);
-        Assert.AreEqual(-26d, legacy.Sprints[1].NetFlow!.Value, 0.001d);
+        Assert.AreEqual(28d, trend.Sprints[1].StockStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(17d, trend.Sprints[1].RemainingScopeStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(15d, trend.Sprints[1].InflowStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(3d, trend.Sprints[1].ThroughputStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(-12d, trend.Sprints[1].NetFlowStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(39.286d, trend.Sprints[1].CompletionPercent!.Value, 0.001d);
 
         Assert.AreEqual(13d, projections[0].StockStoryPoints, 0.001d);
         Assert.AreEqual(5d, projections[0].RemainingScopeStoryPoints, 0.001d);
@@ -427,10 +429,19 @@ public class SprintTrendProjectionServiceSqliteTests
         Assert.AreEqual(3d, projections[1].ThroughputStoryPoints, 0.001d);
         Assert.AreEqual(39.286d, projections[1].CompletionPercent!.Value, 0.001d);
 
-        var legacyCumulativeNet = legacy.Sprints.Sum(item => item.NetFlow ?? 0d);
+        Assert.AreEqual(projections[0].StockStoryPoints, trend.Sprints[0].StockStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(projections[0].RemainingScopeStoryPoints, trend.Sprints[0].RemainingScopeStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(projections[0].InflowStoryPoints, trend.Sprints[0].InflowStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(projections[0].ThroughputStoryPoints, trend.Sprints[0].ThroughputStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(projections[1].StockStoryPoints, trend.Sprints[1].StockStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(projections[1].RemainingScopeStoryPoints, trend.Sprints[1].RemainingScopeStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(projections[1].InflowStoryPoints, trend.Sprints[1].InflowStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(projections[1].ThroughputStoryPoints, trend.Sprints[1].ThroughputStoryPoints!.Value, 0.001d);
+
+        var trendCumulativeNet = trend.Sprints.Sum(item => item.NetFlowStoryPoints ?? 0d);
         var portfolioFlowCumulativeNet = projections.Sum(item => item.ThroughputStoryPoints - item.InflowStoryPoints);
 
-        Assert.IsLessThan(0d, legacyCumulativeNet);
+        Assert.IsLessThan(0d, trendCumulativeNet);
         Assert.IsLessThan(0d, portfolioFlowCumulativeNet);
     }
 

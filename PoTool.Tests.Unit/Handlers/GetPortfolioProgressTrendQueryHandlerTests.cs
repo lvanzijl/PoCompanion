@@ -1,338 +1,190 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using PoTool.Api.Handlers.Metrics;
+using PoTool.Api.Persistence;
+using PoTool.Api.Persistence.Entities;
+using PoTool.Core.Metrics.Queries;
+using PoTool.Shared.Metrics;
 
 namespace PoTool.Tests.Unit.Handlers;
 
-/// <summary>
-/// Unit tests for GetPortfolioProgressTrendQueryHandler.ComputeHistoricalScopeEffort.
-///
-/// These tests verify the event-replay algorithm that reconstructs total backlog scope
-/// at the end of each sprint by undoing future changes to the ActivityEventLedger.
-/// </summary>
 [TestClass]
-public class GetPortfolioProgressTrendQueryHandlerTests
+public sealed class GetPortfolioProgressTrendQueryHandlerTests
 {
-    private static readonly DateTimeOffset Sprint1End = new(2026, 1, 14, 0, 0, 0, TimeSpan.Zero);
-    private static readonly DateTimeOffset Sprint2End = new(2026, 1, 28, 0, 0, 0, TimeSpan.Zero);
-    private static readonly DateTimeOffset Sprint3End = new(2026, 2, 11, 0, 0, 0, TimeSpan.Zero);
-
-    // Helper to create PbiSnapshot
-    private static GetPortfolioProgressTrendQueryHandler.PbiSnapshot Pbi(
-        int id, int? effort, string state = "Active", DateTimeOffset? createdDate = null)
-        => new()
-        {
-            TfsId = id,
-            Effort = effort,
-            State = state,
-            CreatedDate = createdDate ?? Sprint1End.AddDays(-30)
-        };
-
-    // Helper to create ScopeEvent for effort changes
-    private static GetPortfolioProgressTrendQueryHandler.ScopeEvent EffortChange(
-        int workItemId, DateTimeOffset timestamp, string? oldValue, string? newValue)
-        => new()
-        {
-            WorkItemId = workItemId,
-            FieldRefName = "Microsoft.VSTS.Scheduling.Effort",
-            EventTimestamp = timestamp,
-            OldValue = oldValue,
-            NewValue = newValue
-        };
-
-    // Helper to create ScopeEvent for state changes
-    private static GetPortfolioProgressTrendQueryHandler.ScopeEvent StateChange(
-        int workItemId, DateTimeOffset timestamp, string? newValue)
-        => new()
-        {
-            WorkItemId = workItemId,
-            FieldRefName = "System.State",
-            EventTimestamp = timestamp,
-            OldValue = "Active",
-            NewValue = newValue
-        };
-
     [TestMethod]
-    public void ComputeHistoricalScopeEffort_NoEvents_ReturnsCurrentEffort()
+    public async Task Handle_AggregatesCanonicalProjectionIntoCanonicalFieldsAndCompatibilityAliases()
     {
-        // Arrange: 2 PBIs, no activity events
-        var pbis = new[] { 1, 2 };
-        var details = new Dictionary<int, GetPortfolioProgressTrendQueryHandler.PbiSnapshot>
-        {
-            [1] = Pbi(1, effort: 10),
-            [2] = Pbi(2, effort: 20),
-        };
+        await using var context = CreateContext();
 
-        // Act
-        var scope = GetPortfolioProgressTrendQueryHandler.ComputeHistoricalScopeEffort(
-            Sprint1End, pbis, details,
-            effortEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>(),
-            stateEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>());
+        var owner = new ProfileEntity { Name = "PO 1" };
+        context.Profiles.Add(owner);
 
-        // Assert: when no events exist, current effort is used as best-effort approximation
-        Assert.AreEqual(30.0, scope, "No events: current effort sum should be returned");
-    }
+        var team = new TeamEntity { Name = "Team 1", TeamAreaPath = "\\Project\\Team 1" };
+        context.Teams.Add(team);
+        await context.SaveChangesAsync();
 
-    [TestMethod]
-    public void ComputeHistoricalScopeEffort_UndoesFutureEffortChange()
-    {
-        // Arrange: PBI had effort 10 in sprint 1, then changed to 20 in sprint 2
-        // Current (sprint 3 end): effort = 20
-        var pbis = new[] { 1 };
-        var details = new Dictionary<int, GetPortfolioProgressTrendQueryHandler.PbiSnapshot>
-        {
-            [1] = Pbi(1, effort: 20)
-        };
-        var effortEvents = new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>
-        {
-            [1] = new()
+        var sprint = CreateSprint(team.Id, 101, "Sprint 1", new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var productA = new ProductEntity { ProductOwnerId = owner.Id, Name = "Product A" };
+        var productB = new ProductEntity { ProductOwnerId = owner.Id, Name = "Product B" };
+
+        context.Sprints.Add(sprint);
+        context.Products.AddRange(productA, productB);
+        await context.SaveChangesAsync();
+
+        context.PortfolioFlowProjections.AddRange(
+            new PortfolioFlowProjectionEntity
             {
-                // Changed from 10 to 20 during sprint 2 (after sprint 1 end)
-                EffortChange(1, Sprint1End.AddDays(10), oldValue: "10", newValue: "20")
-            }
-        };
-
-        // Act: historical scope at end of Sprint 1 (before the change)
-        var scopeAtSprint1 = GetPortfolioProgressTrendQueryHandler.ComputeHistoricalScopeEffort(
-            Sprint1End, pbis, details, effortEvents,
-            stateEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>());
-
-        // Act: historical scope at end of Sprint 2 (after the change)
-        var scopeAtSprint2 = GetPortfolioProgressTrendQueryHandler.ComputeHistoricalScopeEffort(
-            Sprint2End, pbis, details, effortEvents,
-            stateEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>());
-
-        Assert.AreEqual(10.0, scopeAtSprint1, "Scope at Sprint 1 end: 20 - (20-10) = 10");
-        Assert.AreEqual(20.0, scopeAtSprint2, "Scope at Sprint 2 end: no future changes, = 20");
-    }
-
-    [TestMethod]
-    public void ComputeHistoricalScopeEffort_UndoesMultipleFutureChanges()
-    {
-        // Arrange: PBI effort changed multiple times
-        // Sprint1 end: effort was 5 (original estimate)
-        // Sprint2 end: effort changed to 10
-        // Sprint3 end (current): effort = 15
-        var pbis = new[] { 1 };
-        var details = new Dictionary<int, GetPortfolioProgressTrendQueryHandler.PbiSnapshot>
-        {
-            [1] = Pbi(1, effort: 15)
-        };
-        var effortEvents = new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>
-        {
-            [1] = new()
+                SprintId = sprint.Id,
+                ProductId = productA.Id,
+                StockStoryPoints = 10,
+                RemainingScopeStoryPoints = 4,
+                InflowStoryPoints = 2,
+                ThroughputStoryPoints = 6,
+                CompletionPercent = 60,
+                ProjectionTimestamp = DateTimeOffset.UtcNow
+            },
+            new PortfolioFlowProjectionEntity
             {
-                EffortChange(1, Sprint1End.AddDays(5), oldValue: "5", newValue: "10"),  // sprint 1→2
-                EffortChange(1, Sprint2End.AddDays(5), oldValue: "10", newValue: "15"), // sprint 2→3
-            }
-        };
+                SprintId = sprint.Id,
+                ProductId = productB.Id,
+                StockStoryPoints = 20,
+                RemainingScopeStoryPoints = 6,
+                InflowStoryPoints = 3,
+                ThroughputStoryPoints = 6,
+                CompletionPercent = 70,
+                ProjectionTimestamp = DateTimeOffset.UtcNow
+            });
+        await context.SaveChangesAsync();
 
-        var scopeAtSprint1 = GetPortfolioProgressTrendQueryHandler.ComputeHistoricalScopeEffort(
-            Sprint1End, pbis, details, effortEvents,
-            stateEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>());
+        var handler = new GetPortfolioProgressTrendQueryHandler(
+            context,
+            NullLogger<GetPortfolioProgressTrendQueryHandler>.Instance);
 
-        var scopeAtSprint2 = GetPortfolioProgressTrendQueryHandler.ComputeHistoricalScopeEffort(
-            Sprint2End, pbis, details, effortEvents,
-            stateEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>());
+        var result = await handler.Handle(
+            new GetPortfolioProgressTrendQuery(owner.Id, new[] { sprint.Id }),
+            CancellationToken.None);
 
-        // Sprint1: undo both: 15 + (5-10) + (10-15) = 15 - 5 - 5 = 5
-        Assert.AreEqual(5.0, scopeAtSprint1, "Scope at Sprint 1: both future changes undone");
-        // Sprint2: undo only sprint 2→3 change: 15 + (10-15) = 10
-        Assert.AreEqual(10.0, scopeAtSprint2, "Scope at Sprint 2: only one future change undone");
+        Assert.HasCount(1, result.Sprints);
+        var sprintResult = result.Sprints[0];
+
+        Assert.IsTrue(sprintResult.HasData);
+        Assert.AreEqual(30d, sprintResult.StockStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(10d, sprintResult.RemainingScopeStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(5d, sprintResult.InflowStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(12d, sprintResult.ThroughputStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(7d, sprintResult.NetFlowStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(66.667d, sprintResult.CompletionPercent!.Value, 0.001d);
+
+        Assert.AreEqual(sprintResult.StockStoryPoints, sprintResult.TotalScopeEffort);
+        Assert.AreEqual(sprintResult.RemainingScopeStoryPoints, sprintResult.RemainingEffort);
+        Assert.AreEqual(sprintResult.InflowStoryPoints, sprintResult.AddedEffort);
+        Assert.AreEqual(sprintResult.ThroughputStoryPoints, sprintResult.ThroughputEffort);
+        Assert.AreEqual(sprintResult.NetFlowStoryPoints, sprintResult.NetFlow);
+        Assert.AreEqual(sprintResult.CompletionPercent, sprintResult.PercentDone);
+
+        Assert.AreEqual(PortfolioTrajectory.Contracting, result.Summary.Trajectory);
+        Assert.AreEqual(7d, result.Summary.CumulativeNetFlow!.Value, 0.001d);
+        Assert.AreEqual(0d, result.Summary.TotalScopeChangeStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(0d, result.Summary.RemainingScopeChangeStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(result.Summary.TotalScopeChangeStoryPoints, result.Summary.TotalScopeChangePts);
+        Assert.AreEqual(result.Summary.RemainingScopeChangeStoryPoints, result.Summary.RemainingEffortChangePts);
     }
 
     [TestMethod]
-    public void ComputeHistoricalScopeEffort_ExcludesItemsCreatedAfterSprintEnd()
+    public async Task Handle_UsesProductFilterAndLeavesMissingSprintRowsEmpty()
     {
-        // Arrange: PBI 1 existed at sprint 1 end; PBI 2 was created later
-        var pbis = new[] { 1, 2 };
-        var details = new Dictionary<int, GetPortfolioProgressTrendQueryHandler.PbiSnapshot>
-        {
-            [1] = Pbi(1, effort: 10, createdDate: Sprint1End.AddDays(-5)),    // existed before sprint 1 end
-            [2] = Pbi(2, effort: 20, createdDate: Sprint1End.AddDays(1)),     // created after sprint 1 end
-        };
+        await using var context = CreateContext();
 
-        var scopeAtSprint1 = GetPortfolioProgressTrendQueryHandler.ComputeHistoricalScopeEffort(
-            Sprint1End, pbis, details,
-            effortEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>(),
-            stateEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>());
+        var owner = new ProfileEntity { Name = "PO 1" };
+        context.Profiles.Add(owner);
 
-        var scopeAtSprint2 = GetPortfolioProgressTrendQueryHandler.ComputeHistoricalScopeEffort(
-            Sprint2End, pbis, details,
-            effortEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>(),
-            stateEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>());
+        var team = new TeamEntity { Name = "Team 1", TeamAreaPath = "\\Project\\Team 1" };
+        context.Teams.Add(team);
+        await context.SaveChangesAsync();
 
-        Assert.AreEqual(10.0, scopeAtSprint1, "Sprint 1: only PBI 1 existed; PBI 2 excluded");
-        Assert.AreEqual(30.0, scopeAtSprint2, "Sprint 2: both PBIs existed");
-    }
+        var sprint1 = CreateSprint(team.Id, 101, "Sprint 1", new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var sprint2 = CreateSprint(team.Id, 102, "Sprint 2", new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc));
+        var productA = new ProductEntity { ProductOwnerId = owner.Id, Name = "Product A" };
+        var productB = new ProductEntity { ProductOwnerId = owner.Id, Name = "Product B" };
 
-    [TestMethod]
-    public void ComputeHistoricalScopeEffort_ExcludesRemovedItemsAtSprintEnd()
-    {
-        // Arrange: PBI 1 was moved to Removed during sprint 1
-        var pbis = new[] { 1, 2 };
-        var details = new Dictionary<int, GetPortfolioProgressTrendQueryHandler.PbiSnapshot>
-        {
-            [1] = Pbi(1, effort: 10, state: "Removed"),  // currently Removed
-            [2] = Pbi(2, effort: 20),
-        };
-        var stateEvents = new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>
-        {
-            [1] = new()
+        context.Sprints.AddRange(sprint1, sprint2);
+        context.Products.AddRange(productA, productB);
+        await context.SaveChangesAsync();
+
+        context.PortfolioFlowProjections.AddRange(
+            new PortfolioFlowProjectionEntity
             {
-                // Was removed within sprint 1 (before sprint 1 end)
-                StateChange(1, Sprint1End.AddDays(-2), newValue: "Removed")
-            }
-        };
+                SprintId = sprint1.Id,
+                ProductId = productA.Id,
+                StockStoryPoints = 10,
+                RemainingScopeStoryPoints = 4,
+                InflowStoryPoints = 2,
+                ThroughputStoryPoints = 6,
+                CompletionPercent = 60,
+                ProjectionTimestamp = DateTimeOffset.UtcNow
+            },
+            new PortfolioFlowProjectionEntity
+            {
+                SprintId = sprint2.Id,
+                ProductId = productB.Id,
+                StockStoryPoints = 99,
+                RemainingScopeStoryPoints = 50,
+                InflowStoryPoints = 40,
+                ThroughputStoryPoints = 1,
+                CompletionPercent = 49.5,
+                ProjectionTimestamp = DateTimeOffset.UtcNow
+            });
+        await context.SaveChangesAsync();
 
-        var scopeAtSprint1 = GetPortfolioProgressTrendQueryHandler.ComputeHistoricalScopeEffort(
-            Sprint1End, pbis, details,
-            effortEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>(),
-            stateEventsByItem: stateEvents);
+        var handler = new GetPortfolioProgressTrendQueryHandler(
+            context,
+            NullLogger<GetPortfolioProgressTrendQueryHandler>.Instance);
 
-        Assert.AreEqual(20.0, scopeAtSprint1, "PBI 1 was already Removed at sprint 1 end; excluded");
+        var result = await handler.Handle(
+            new GetPortfolioProgressTrendQuery(owner.Id, new[] { sprint1.Id, sprint2.Id }, new[] { productA.Id }),
+            CancellationToken.None);
+
+        Assert.HasCount(2, result.Sprints);
+
+        Assert.IsTrue(result.Sprints[0].HasData);
+        Assert.AreEqual(10d, result.Sprints[0].StockStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(4d, result.Sprints[0].RemainingScopeStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(2d, result.Sprints[0].InflowStoryPoints!.Value, 0.001d);
+        Assert.AreEqual(6d, result.Sprints[0].ThroughputStoryPoints!.Value, 0.001d);
+
+        Assert.IsFalse(result.Sprints[1].HasData);
+        Assert.IsNull(result.Sprints[1].StockStoryPoints);
+        Assert.IsNull(result.Sprints[1].RemainingScopeStoryPoints);
+        Assert.IsNull(result.Sprints[1].InflowStoryPoints);
+        Assert.IsNull(result.Sprints[1].ThroughputStoryPoints);
+        Assert.IsNull(result.Sprints[1].CompletionPercent);
+        Assert.IsNull(result.Sprints[1].NetFlowStoryPoints);
     }
 
-    [TestMethod]
-    public void ComputeHistoricalScopeEffort_IncludesItemsRemovedAfterSprintEnd()
+    private static PoToolDbContext CreateContext()
     {
-        // Arrange: PBI 1 is currently Removed but was removed AFTER sprint 1 end
-        var pbis = new[] { 1, 2 };
-        var details = new Dictionary<int, GetPortfolioProgressTrendQueryHandler.PbiSnapshot>
-        {
-            [1] = Pbi(1, effort: 10, state: "Removed"),  // currently Removed
-            [2] = Pbi(2, effort: 20),
-        };
-        var stateEvents = new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>
-        {
-            [1] = new()
-            {
-                // Was removed after sprint 1 end (in sprint 2)
-                StateChange(1, Sprint1End.AddDays(5), newValue: "Removed")
-            }
-        };
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase($"PortfolioProgressTrend_{Guid.NewGuid()}")
+            .Options;
 
-        var scopeAtSprint1 = GetPortfolioProgressTrendQueryHandler.ComputeHistoricalScopeEffort(
-            Sprint1End, pbis, details,
-            effortEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>(),
-            stateEventsByItem: stateEvents);
-
-        Assert.AreEqual(30.0, scopeAtSprint1,
-            "PBI 1 was NOT yet removed at sprint 1 end; should be included in scope");
+        return new PoToolDbContext(options);
     }
 
-    [TestMethod]
-    public void ComputeHistoricalScopeEffort_HandlesNullEffortValues()
+    private static SprintEntity CreateSprint(int teamId, int suffix, string name, DateTime startUtc)
     {
-        // Arrange: PBI with no effort (null → 0)
-        var pbis = new[] { 1 };
-        var details = new Dictionary<int, GetPortfolioProgressTrendQueryHandler.PbiSnapshot>
+        var endUtc = startUtc.AddDays(13);
+
+        return new SprintEntity
         {
-            [1] = Pbi(1, effort: null)
+            TeamId = teamId,
+            Name = name,
+            Path = $"\\Project\\{name}_{suffix}",
+            StartUtc = new DateTimeOffset(startUtc, TimeSpan.Zero),
+            StartDateUtc = startUtc,
+            EndUtc = new DateTimeOffset(endUtc, TimeSpan.Zero),
+            EndDateUtc = endUtc,
+            LastSyncedUtc = DateTimeOffset.UtcNow,
+            LastSyncedDateUtc = DateTime.UtcNow
         };
-
-        var scope = GetPortfolioProgressTrendQueryHandler.ComputeHistoricalScopeEffort(
-            Sprint1End, pbis, details,
-            effortEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>(),
-            stateEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>());
-
-        Assert.AreEqual(0.0, scope, "Null effort should be treated as 0");
-    }
-
-    [TestMethod]
-    public void ComputeHistoricalScopeEffort_HandlesNullEventValues()
-    {
-        // Arrange: Effort changed from null (= 0) to 20 — undoing should give back 0
-        var pbis = new[] { 1 };
-        var details = new Dictionary<int, GetPortfolioProgressTrendQueryHandler.PbiSnapshot>
-        {
-            [1] = Pbi(1, effort: 20)
-        };
-        var effortEvents = new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>
-        {
-            [1] = new()
-            {
-                // Effort was set from null to 20 after sprint 1 end
-                EffortChange(1, Sprint1End.AddDays(1), oldValue: null, newValue: "20")
-            }
-        };
-
-        var scopeAtSprint1 = GetPortfolioProgressTrendQueryHandler.ComputeHistoricalScopeEffort(
-            Sprint1End, pbis, details, effortEvents,
-            stateEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>());
-
-        // historical = 20 + (0 - 20) = 0
-        Assert.AreEqual(0.0, scopeAtSprint1, "Undoing effort set-from-null should result in 0");
-    }
-
-    [TestMethod]
-    public void ComputeHistoricalScopeEffort_ClampsNegativeToZero()
-    {
-        // Arrange: data inconsistency (negative reconstructed effort) should be clamped to 0
-        var pbis = new[] { 1 };
-        var details = new Dictionary<int, GetPortfolioProgressTrendQueryHandler.PbiSnapshot>
-        {
-            [1] = Pbi(1, effort: 5)
-        };
-        var effortEvents = new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>
-        {
-            [1] = new()
-            {
-                // Effort went from 20 to 5 after sprint 1; reconstructing: 5 + (20 - 5) = 20... no.
-                // Let's force a scenario: a decrease from 5 to 0, and we check sprint before:
-                // Actually to get negative: current=5, event after sprint1: old=0, new=5
-                // Undo: 5 + (0 - 5) = 0 → not negative
-                // For truly negative: current=0, event after sprint1: old=10, new=0
-                EffortChange(1, Sprint1End.AddDays(1), oldValue: "0", newValue: "10")
-                // current=10, historical = 10 + (0 - 10) = 0; not negative either
-            }
-        };
-
-        // To hit negative: current=5, future event: old=null(0), new=10 → 5 + (0-10) = -5 → clamp to 0
-        var effortEvents2 = new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>
-        {
-            [1] = new()
-            {
-                EffortChange(1, Sprint1End.AddDays(1), oldValue: null, newValue: "10")
-            }
-        };
-
-        var scope = GetPortfolioProgressTrendQueryHandler.ComputeHistoricalScopeEffort(
-            Sprint1End, pbis, details, effortEvents2,
-            stateEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>());
-
-        // 5 + (0 - 10) = -5 → clamped to 0
-        Assert.AreEqual(0.0, scope, "Negative reconstructed effort should be clamped to 0");
-    }
-
-    [TestMethod]
-    public void ComputeHistoricalScopeEffort_SumsTotalScopeAcrossMultiplePbis()
-    {
-        // Arrange: 3 PBIs with different histories
-        var pbis = new[] { 1, 2, 3 };
-        var details = new Dictionary<int, GetPortfolioProgressTrendQueryHandler.PbiSnapshot>
-        {
-            [1] = Pbi(1, effort: 10),  // unchanged
-            [2] = Pbi(2, effort: 20),  // changed after sprint 1: was 15
-            [3] = Pbi(3, effort: 5),   // created after sprint 1: excluded
-        };
-        var effortEvents = new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>
-        {
-            [2] = new()
-            {
-                EffortChange(2, Sprint1End.AddDays(3), oldValue: "15", newValue: "20")
-            }
-        };
-        var pbi3CreatedAfterSprint1 = details.ToDictionary(
-            k => k.Key,
-            v => v.Key == 3
-                ? new GetPortfolioProgressTrendQueryHandler.PbiSnapshot
-                    { TfsId = 3, Effort = 5, State = "Active", CreatedDate = Sprint1End.AddDays(1) }
-                : v.Value);
-
-        var scope = GetPortfolioProgressTrendQueryHandler.ComputeHistoricalScopeEffort(
-            Sprint1End, pbis, pbi3CreatedAfterSprint1, effortEvents,
-            stateEventsByItem: new Dictionary<int, List<GetPortfolioProgressTrendQueryHandler.ScopeEvent>>());
-
-        // PBI 1: 10, PBI 2: 20 + (15-20) = 15, PBI 3: excluded (created after sprint 1)
-        Assert.AreEqual(25.0, scope, "Sprint 1: PBI1(10) + PBI2(15) = 25; PBI3 excluded");
     }
 }

@@ -7,6 +7,7 @@
 - `PoTool.Client/Pages/Home/DeliveryTrends.razor` now labels effort-hour drill-down columns as hours instead of points.
 - `PoTool.Client/Pages/Home/PortfolioDelivery.razor` now labels portfolio effort-hour summary and product contribution surfaces as hours.
 - `PoTool.Client/Pages/Home/SprintTrend.razor` now labels effort deltas as hours and story-point delivery surfaces as story points.
+- `PoTool.Client/Pages/Home/PortfolioProgressPage.razor` now labels portfolio stock, inflow, throughput, remaining scope, and completion as canonical story-point PortfolioFlow metrics.
 
 ## SP surfaces migrated
 
@@ -14,6 +15,7 @@
 - `PoTool.Client/Pages/Home/DeliveryTrends.razor` story-point delivery chart now reads `TotalCompletedPbiStoryPoints` / `CompletedPbiStoryPoints`.
 - `PoTool.Client/Pages/Home/SprintTrend.razor` product delivery summary and epic/feature delivery progress now display story-point delivery values.
 - `PoTool.Client/Pages/Home/PortfolioDelivery.razor` feature contribution remains on the canonical story-point surface behind legacy property names.
+- `PoTool.Client/Pages/Home/PortfolioProgressPage.razor` now reads canonical `StockStoryPoints`, `RemainingScopeStoryPoints`, `InflowStoryPoints`, and `ThroughputStoryPoints` values from the portfolio flow trend DTO.
 
 ## Effort-hour surfaces clarified
 
@@ -23,6 +25,6 @@
 
 ## Remaining semantic debt
 
-- `PoTool.Client/Pages/Home/PortfolioProgressPage.razor` still represents portfolio flow with effort-based proxy metrics and should stay effort-based until the model changes.
-- Legacy DTO and generated client property names such as `TotalEffort`, `CompletedEffort`, and `SprintCompletedEffort` remain in place for backward compatibility.
-- Portfolio flow remains effort-based until its model changes.
+- Legacy DTO and generated client property names such as `TotalEffort`, `CompletedEffort`, and `SprintCompletedEffort` remain in place on unrelated transport surfaces for backward compatibility.
+- Portfolio delivery still mixes effort-hour product summaries with story-point feature contribution views and remains outside this portfolio-flow migration scope.
+- Other portfolio analytics such as delivery distribution, ranking, and forecasting still require their own canonical migration work.

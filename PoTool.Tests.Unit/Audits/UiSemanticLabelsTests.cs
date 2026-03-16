@@ -31,6 +31,15 @@ public sealed class UiSemanticLabelsTests
         StringAssert.Contains(sprintTrend, "Delivered Story Points");
         StringAssert.Contains(sprintTrend, "Story point distribution by product");
         StringAssert.Contains(sprintTrend, "Story Points</th>");
+
+        var portfolioProgress = File.ReadAllText(Path.Combine(repositoryRoot, "PoTool.Client", "Pages", "Home", "PortfolioProgressPage.razor"));
+        StringAssert.Contains(portfolioProgress, "Portfolio Flow Trend");
+        StringAssert.Contains(portfolioProgress, "Portfolio Stock Trend");
+        StringAssert.Contains(portfolioProgress, "Remaining Scope Ratio");
+        StringAssert.Contains(portfolioProgress, "Story points delivered per sprint");
+        StringAssert.Contains(portfolioProgress, "Portfolio Stock (SP)");
+        StringAssert.Contains(portfolioProgress, "Inflow");
+        Assert.DoesNotContain(portfolioProgress, "Remaining Effort Ratio", "Portfolio flow should use remaining scope semantics.");
     }
 
     [TestMethod]
