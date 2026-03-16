@@ -18,6 +18,7 @@ public sealed class ApplicationSimplificationAuditDocumentTests
         StringAssert.Contains(report, "## Redundant Services");
         StringAssert.Contains(report, "## DTO Calculation Leakage");
         StringAssert.Contains(report, "## Safe Simplification Opportunities");
+        StringAssert.Contains(report, "## Resolved Sprint Commitment Simplifications");
         StringAssert.Contains(report, "## Estimated Impact");
         StringAssert.Contains(report, "No `PoTool.Application` project exists");
         StringAssert.Contains(report, "CDC duplication");
@@ -30,6 +31,7 @@ public sealed class ApplicationSimplificationAuditDocumentTests
         StringAssert.Contains(report, "GetPortfolioDeliveryQueryHandler.cs");
         StringAssert.Contains(report, "RoadmapAnalyticsService.cs");
         StringAssert.Contains(report, "SprintExecutionDtos.cs");
+        StringAssert.Contains(report, "SprintFactResult");
         StringAssert.Contains(report, "DeliveryTrendProgressRollupMapper.cs");
         StringAssert.Contains(report, "RemainingStoryPoints");
         StringAssert.Contains(report, "CompletionPercent");

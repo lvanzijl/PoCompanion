@@ -1,4 +1,5 @@
 using PoTool.Core.Domain.Cdc.Sprints;
+using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Sprints;
 using PoTool.Core.WorkItems;
@@ -109,6 +110,94 @@ public sealed class SprintCommitmentCdcServicesTests
 
         Assert.HasCount(1, spillover);
         Assert.AreEqual(iterationMoveTimestamp, spillover[0].SpilloverAt);
+    }
+
+    [TestMethod]
+    public void SprintFactService_BuildSprintFactResult_ReturnsCanonicalSprintTotals()
+    {
+        var sprint = CreateSprint();
+        var service = new SprintFactService(
+            new SprintCommitmentService(),
+            new SprintScopeChangeService(),
+            new SprintCompletionService(),
+            new SprintSpilloverService(),
+            new CanonicalStoryPointResolutionService());
+        var commitmentTimestamp = SprintCommitmentLookup.GetCommitmentTimestamp(sprint.StartUtc!.Value);
+        var sprintEnd = sprint.EndUtc!.Value;
+        var nextSprintPath = "\\Project\\Sprint 2";
+
+        IReadOnlyDictionary<int, CanonicalWorkItem> canonicalWorkItemsById = new Dictionary<int, CanonicalWorkItem>
+        {
+            [101] = new(101, WorkItemType.Pbi, 900, null, 5),
+            [102] = new(102, WorkItemType.Pbi, 901, null, 3),
+            [103] = new(103, WorkItemType.Pbi, 902, null, 2),
+            [104] = new(104, WorkItemType.Pbi, 903, null, 8),
+            [105] = new(105, WorkItemType.Bug, 904, null, 13)
+        };
+        IReadOnlyDictionary<int, WorkItemSnapshot> workItemsById = new Dictionary<int, WorkItemSnapshot>
+        {
+            [101] = new(101, WorkItemType.Pbi, "Resolved", sprint.Path),
+            [102] = new(102, WorkItemType.Pbi, "Resolved", sprint.Path),
+            [103] = new(103, WorkItemType.Pbi, "Active", "\\Project\\Backlog"),
+            [104] = new(104, WorkItemType.Pbi, "Active", nextSprintPath),
+            [105] = new(105, WorkItemType.Bug, "Resolved", sprint.Path)
+        };
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>> iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>
+        {
+            [102] =
+            [
+                CreateFieldChangeEvent(102, "System.IterationPath", commitmentTimestamp.AddHours(2), "\\Project\\Backlog", sprint.Path)
+            ],
+            [103] =
+            [
+                CreateFieldChangeEvent(103, "System.IterationPath", commitmentTimestamp.AddHours(3), sprint.Path, "\\Project\\Backlog")
+            ],
+            [104] =
+            [
+                CreateFieldChangeEvent(104, "System.IterationPath", sprintEnd.AddHours(1), sprint.Path, nextSprintPath)
+            ]
+        };
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>> stateEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>
+        {
+            [101] =
+            [
+                CreateFieldChangeEvent(101, "System.State", sprint.StartUtc.Value.AddDays(2), "Active", "Resolved")
+            ],
+            [102] =
+            [
+                CreateFieldChangeEvent(102, "System.State", sprint.StartUtc.Value.AddDays(4), "Active", "Resolved")
+            ],
+            [105] =
+            [
+                CreateFieldChangeEvent(105, "System.State", sprint.StartUtc.Value.AddDays(5), "Active", "Resolved")
+            ]
+        };
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification> stateLookup =
+            new Dictionary<(string WorkItemType, string StateName), StateClassification>
+            {
+                [(WorkItemType.Pbi, "Resolved")] = StateClassification.Done,
+                [(WorkItemType.Bug, "Resolved")] = StateClassification.Done
+            };
+
+        var result = service.BuildSprintFactResult(
+            sprint,
+            canonicalWorkItemsById,
+            workItemsById,
+            iterationEventsByWorkItem,
+            stateEventsByWorkItem,
+            stateLookup,
+            nextSprintPath);
+
+        // Committed = 101 + 103 + 104 = 5 + 2 + 8.
+        // Added/delivered-from-added = 102 = 3.
+        // Removed = 103 = 2, spillover = 104 = 8, and delivered excludes bug 105.
+        Assert.AreEqual(15d, result.CommittedStoryPoints, 0.001);
+        Assert.AreEqual(3d, result.AddedStoryPoints, 0.001);
+        Assert.AreEqual(2d, result.RemovedStoryPoints, 0.001);
+        Assert.AreEqual(8d, result.DeliveredStoryPoints, 0.001);
+        Assert.AreEqual(3d, result.DeliveredFromAddedStoryPoints, 0.001);
+        Assert.AreEqual(8d, result.SpilloverStoryPoints, 0.001);
+        Assert.AreEqual(8d, result.RemainingStoryPoints, 0.001);
     }
 
     private static SprintDefinition CreateSprint()

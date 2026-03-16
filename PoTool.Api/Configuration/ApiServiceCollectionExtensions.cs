@@ -256,6 +256,7 @@ public static class ApiServiceCollectionExtensions
         services.AddSingleton<ISprintCompletionService, SprintCompletionService>();
         services.AddSingleton<ISprintSpilloverService, SprintSpilloverService>();
         services.AddSingleton<ICanonicalStoryPointResolutionService, CanonicalStoryPointResolutionService>();
+        services.AddSingleton<ISprintFactService, SprintFactService>();
         services.AddSingleton<IHierarchyRollupService, HierarchyRollupService>();
         services.AddSingleton<IDeliveryProgressRollupService, DeliveryProgressRollupService>();
         services.AddSingleton<ISprintDeliveryProjectionService, SprintDeliveryProjectionService>();

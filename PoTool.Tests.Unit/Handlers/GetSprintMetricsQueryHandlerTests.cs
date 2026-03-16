@@ -27,6 +27,7 @@ public sealed class GetSprintMetricsQueryHandlerTests
     private ISprintCommitmentService _sprintCommitmentService = null!;
     private ISprintScopeChangeService _sprintScopeChangeService = null!;
     private ISprintCompletionService _sprintCompletionService = null!;
+    private ISprintFactService _sprintFactService = null!;
     private Mock<IMediator> _mediator = null!;
     private GetSprintMetricsQueryHandler _handler = null!;
 
@@ -44,6 +45,12 @@ public sealed class GetSprintMetricsQueryHandlerTests
         _sprintCommitmentService = new SprintCommitmentService();
         _sprintScopeChangeService = new SprintScopeChangeService();
         _sprintCompletionService = new SprintCompletionService();
+        _sprintFactService = new SprintFactService(
+            _sprintCommitmentService,
+            _sprintScopeChangeService,
+            _sprintCompletionService,
+            new SprintSpilloverService(),
+            new CanonicalStoryPointResolutionService());
         _mediator = new Mock<IMediator>();
 
         _productRepository
@@ -68,7 +75,7 @@ public sealed class GetSprintMetricsQueryHandlerTests
             _sprintCommitmentService,
             _sprintScopeChangeService,
             _sprintCompletionService,
-            new CanonicalStoryPointResolutionService(),
+            _sprintFactService,
             _mediator.Object,
             _context,
             NullLogger<GetSprintMetricsQueryHandler>.Instance);
@@ -152,6 +159,7 @@ public sealed class GetSprintMetricsQueryHandlerTests
         var commitmentService = new Mock<ISprintCommitmentService>(MockBehavior.Strict);
         var scopeChangeService = new Mock<ISprintScopeChangeService>(MockBehavior.Strict);
         var completionService = new Mock<ISprintCompletionService>(MockBehavior.Strict);
+        var sprintFactService = new Mock<ISprintFactService>(MockBehavior.Strict);
 
         commitmentService
             .Setup(service => service.GetCommitmentTimestamp(sprintStart))
@@ -174,6 +182,23 @@ public sealed class GetSprintMetricsQueryHandlerTests
                 It.IsAny<IReadOnlyDictionary<int, CdcModels.WorkItemSnapshot>>(),
                 It.IsAny<IReadOnlyDictionary<(string WorkItemType, string StateName), PoTool.Core.Domain.Models.StateClassification>?>()))
             .Returns(new Dictionary<int, DateTimeOffset>());
+        sprintFactService
+            .Setup(service => service.BuildSprintFactResult(
+                It.IsAny<CdcModels.SprintDefinition>(),
+                It.IsAny<IReadOnlyDictionary<int, CdcModels.CanonicalWorkItem>>(),
+                It.IsAny<IReadOnlyDictionary<int, CdcModels.WorkItemSnapshot>>(),
+                It.IsAny<IReadOnlyDictionary<int, IReadOnlyList<CdcModels.FieldChangeEvent>>>(),
+                It.IsAny<IReadOnlyDictionary<int, IReadOnlyList<CdcModels.FieldChangeEvent>>>(),
+                It.IsAny<IReadOnlyDictionary<(string WorkItemType, string StateName), PoTool.Core.Domain.Models.StateClassification>?>(),
+                null))
+            .Returns(new SprintFactResult(
+                CommittedStoryPoints: 5,
+                AddedStoryPoints: 0,
+                RemovedStoryPoints: 0,
+                DeliveredStoryPoints: 3,
+                DeliveredFromAddedStoryPoints: 0,
+                SpilloverStoryPoints: 0,
+                RemainingStoryPoints: 2));
 
         var handler = new GetSprintMetricsQueryHandler(
             new WorkItemRepository(_context),
@@ -183,7 +208,7 @@ public sealed class GetSprintMetricsQueryHandlerTests
             commitmentService.Object,
             scopeChangeService.Object,
             completionService.Object,
-            new CanonicalStoryPointResolutionService(),
+            sprintFactService.Object,
             _mediator.Object,
             _context,
             NullLogger<GetSprintMetricsQueryHandler>.Instance);
@@ -191,12 +216,13 @@ public sealed class GetSprintMetricsQueryHandlerTests
         var result = await handler.Handle(new GetSprintMetricsQuery(sprintPath), CancellationToken.None);
 
         Assert.IsNotNull(result);
-        Assert.AreEqual(0, result.PlannedStoryPoints);
-        Assert.AreEqual(0, result.CompletedStoryPoints);
+        Assert.AreEqual(5, result.PlannedStoryPoints);
+        Assert.AreEqual(3, result.CompletedStoryPoints);
         Assert.AreEqual(0, result.TotalWorkItemCount);
         commitmentService.VerifyAll();
         scopeChangeService.VerifyAll();
         completionService.VerifyAll();
+        sprintFactService.VerifyAll();
     }
 
     [TestMethod]

@@ -13,7 +13,7 @@ The goal is to simplify the application layer by turning analytics handlers into
 | Slice | Current handlers / consumers | Current status from audits | Simplification target |
 | --- | --- | --- | --- |
 | `BacklogQuality` | `GetBacklogHealthQueryHandler`, `GetMultiIterationBacklogHealthQueryHandler` | `legacy compatibility path` | Replace wrapper-plus-heuristic composition with direct mapping over BacklogQuality outputs when direct contracts are available. |
-| `SprintCommitment` | `GetSprintMetricsQueryHandler`, `GetSprintExecutionQueryHandler` | `CDC bypass` | Stop rebuilding committed, added, removed, delivered, spillover, and remaining sprint totals inside handlers. |
+| `SprintCommitment` | `GetSprintMetricsQueryHandler`, `GetSprintExecutionQueryHandler` | `CDC compliant` after `SprintFactResult` extraction | Keep the new CDC-backed sprint fact seam stable and route any remaining sprint-total consumers through `ISprintFactService`. |
 | `DeliveryTrends` | `GetSprintTrendMetricsQueryHandler`, `GetPortfolioDeliveryQueryHandler`, `SprintTrendProjectionService` | mixed: trend handler already compliant; portfolio delivery still `CDC bypass` | Keep the valid projection seam and move portfolio delivery summaries / contribution rollups behind CDC-backed delivery outputs. |
 | `Forecasting` | `GetEpicCompletionForecastQueryHandler`, `GetCapacityCalibrationQueryHandler`, `GetEffortDistributionTrendQueryHandler` | `CDC compliant` | Preserve the thin-adapter pattern and remove any remaining dependency on handler-rebuilt sprint totals. |
 | `EffortDiagnostics` | `GetEffortImbalanceQueryHandler`, `GetEffortConcentrationRiskQueryHandler`, `GetEffortDistributionQueryHandler`, `GetEffortEstimationQualityQueryHandler`, `GetEffortEstimationSuggestionsQueryHandler` | mixed: two handlers are acceptable adapters; three remain local calculations | Keep the already-thin diagnostics handlers stable, and separately decide whether the non-CDC effort-planning formulas should move into a slice or remain explicitly outside this roadmap. |
@@ -29,9 +29,9 @@ The goal is to simplify the application layer by turning analytics handlers into
 
 #### SprintCommitment
 
-- `docs/audits/application_simplification_audit.md` identifies `GetSprintMetricsQueryHandler` and `GetSprintExecutionQueryHandler` as the highest-value cleanup targets in the sprint space.
 - `docs/domain/cdc_reference.md` already assigns these outputs to `SprintCommitment`: `SprintCommitment`, `SprintScopeAdded`, `SprintScopeRemoved`, `SprintCompletion`, `SprintSpillover`, and derived story-point totals for commitment, added scope, removed scope, delivered scope, delivered-from-added scope, and spillover.
-- The plan is not to change sprint semantics, only to stop handlers from recomputing them.
+- `SprintFactResult` now provides the application-facing seam for those totals.
+- The remaining goal is to keep future consumers aligned to that seam without reintroducing handler-level recomputation.
 
 #### DeliveryTrends
 
@@ -95,10 +95,10 @@ Step 4: remove unused helper utilities and compatibility-only code paths once di
 
 #### SprintCommitment
 
-Step 1: redirect calculation to the `SprintCommitment` slice by exposing one application-facing result that already contains committed, added, removed, delivered, delivered-from-added, spillover, and remaining totals.  
-Step 2: remove duplicated service logic from `GetSprintMetricsQueryHandler` and `GetSprintExecutionQueryHandler`, including handler-owned story-point summation and local sprint-total reconstruction.  
-Step 3: simplify DTO builders so sprint metrics and sprint execution responses map canonical sprint facts instead of re-deriving them in builders or DTOs.  
-Step 4: remove unused helper utilities and transport formulas, including the `RemainingStoryPoints` formula currently encoded in `PoTool.Shared/Metrics/SprintExecutionDtos.cs`.
+Step 1: keep `SprintFactResult` as the single application-facing result for committed, added, removed, delivered, delivered-from-added, spillover, and remaining totals.  
+Step 2: route any future sprint-total consumer through `ISprintFactService` instead of adding handler-owned summation logic.  
+Step 3: keep sprint metrics and sprint execution responses as mapping layers over canonical sprint facts.  
+Step 4: prevent transport formulas from reappearing in DTOs, including `RemainingStoryPoints`.
 
 #### DeliveryTrends
 

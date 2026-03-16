@@ -53,12 +53,9 @@ Classification key:
 
 | File | Function | CDC slice that should own it | Classification | Reason it is duplicated |
 | --- | --- | --- | --- | --- |
-| `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs` | `Handle`, `SumStoryPoints`, `SumDeliveredStoryPoints` | `SprintCommitment` | `CDC duplication` | The handler correctly uses `ISprintCommitmentService`, `ISprintScopeChangeService`, `ISprintCompletionService`, and `ISprintSpilloverService` to reconstruct sprint facts, but it still recomputes the derived story-point totals (`CommittedSP`, `AddedSP`, `RemovedSP`, `DeliveredSP`, `DeliveredFromAddedSP`, `SpilloverSP`) locally before calling the CDC metrics calculator. `docs/domain/cdc_reference.md` already lists those derived totals as `SprintCommitment` outputs. |
-| `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs` | `Handle` | `SprintCommitment` | `CDC duplication` | The handler replays iteration and state history, rebuilds committed and added scope, and then re-sums planned/completed story points for a sprint-level summary. This is a smaller reimplementation of sprint fact reconstruction that now belongs behind CDC-backed sprint fact outputs instead of inside the query handler. |
 | `PoTool.Api/Handlers/Metrics/GetPortfolioProgressTrendQueryHandler.cs` | `Handle`, `ComputeSummary` | `PortfolioFlow` | `CDC duplication` | The handler reads canonical `PortfolioFlowProjectionEntity` rows, but then recomputes `CompletionPercent`, `NetFlowStoryPoints`, cumulative net flow, total scope change, remaining-scope change, and trajectory classification in application code. Those stock / inflow / throughput / completion semantics now belong to the `PortfolioFlow` slice and should be surfaced as CDC-backed rollups rather than re-derived in the handler. |
 | `PoTool.Api/Handlers/Metrics/GetPortfolioDeliveryQueryHandler.cs` | `Handle` | `DeliveryTrends` | `CDC duplication` | Product delivery totals, delivered-effort shares, and feature contribution shares are re-aggregated in the handler from `SprintMetricsProjectionEntity` plus feature progress rows. `docs/domain/cdc_reference.md` already describes product delivery progress summaries as `DeliveryTrends` outputs, so this handler is still assembling slice-level delivery summaries that could be mapped instead. |
 | `PoTool.Client/Services/RoadmapAnalyticsService.cs` | `ComputeLocalAnalytics` | `Core Concepts` / `DeliveryTrends` | `CDC duplication` | The client traverses descendants, hardcodes terminal-state semantics (`Closed`, `Done`, `Removed`), and recomputes delivered vs remaining scope totals from cached work items. That duplicates hierarchy, state, and scope semantics on the client instead of consuming CDC-backed outputs. |
-| `PoTool.Shared/Metrics/SprintExecutionDtos.cs` | `SprintExecutionSummaryDto.RemainingStoryPoints` | `SprintCommitment` | `CDC duplication` | The DTO itself encodes `RemainingStoryPoints = CommittedSP + AddedSP - RemovedSP - DeliveredSP`. That is a direct slice formula in a transport type, not a mapped CDC output. |
 
 ## Redundant Services
 
@@ -86,24 +83,31 @@ Services and helpers reviewed but currently valid:
 
 | File | DTO or builder location | Classification | Leakage |
 | --- | --- | --- | --- |
-| `PoTool.Shared/Metrics/SprintExecutionDtos.cs` | `SprintExecutionSummaryDto.RemainingStoryPoints` | `CDC duplication` | Encodes the canonical remaining-scope formula directly in the DTO instead of mapping a CDC-produced value. |
 | `PoTool.Api/Handlers/Metrics/GetPortfolioProgressTrendQueryHandler.cs` | `Handle`, `ComputeSummary` | `CDC duplication` | Builds `PortfolioSprintProgressDto` and `PortfolioProgressSummaryDto` with new arithmetic for `CompletionPercent`, `NetFlowStoryPoints`, cumulative net flow, scope deltas, and trajectory. |
 | `PoTool.Api/Handlers/Metrics/GetPortfolioDeliveryQueryHandler.cs` | `Handle` | `CDC duplication` | Builds `PortfolioDeliverySummaryDto`, `ProductDeliveryDto`, and `FeatureDeliveryDto` with derived totals and `EffortShare` calculations instead of mapping CDC summary outputs. |
 | `PoTool.Api/Handlers/Metrics/GetSprintTrendMetricsQueryHandler.cs` | `Handle` | `adapter logic (valid)` but still DTO calculation leakage | The handler is mostly consuming projection rows, but the DTO-building phase recomputes many cross-product totals (`TotalPlannedEffort`, `TotalCompletedPbiEffort`, `TotalSpilloverStoryPoints`, etc.). These are safe to keep temporarily, yet they are structural aggregation in the DTO assembly layer rather than pure mapping. |
-| `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs` | `Handle` when building `SprintExecutionSummaryDto` | mixed: `presentation logic (valid)` for counts, `CDC duplication` for story-point totals | Count and effort-hour surfaces are presentation-oriented, but the story-point summary fields are computed in the builder from locally summed totals that already belong to `SprintCommitment`. |
+| `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs` | `Handle` when building `SprintExecutionSummaryDto` | `presentation logic (valid)` | Count and effort-hour surfaces remain presentation-oriented, while the story-point summary fields are now mapped from the CDC-owned `SprintFactResult`. |
 
 ## Safe Simplification Opportunities
 
 | Location | Current classification | Safe simplification |
 | --- | --- | --- |
-| `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs` | `CDC duplication` | Introduce a CDC-backed sprint fact/result object that already includes committed, added, removed, delivered, delivered-from-added, spillover, and remaining story points so the handler only maps lists and execution-specific UI heuristics such as starved work. |
-| `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs` | `CDC duplication` | Replace handler-level sprint reconstruction with a thin read over CDC-backed sprint summary outputs or projection rows. |
 | `PoTool.Api/Handlers/Metrics/GetPortfolioProgressTrendQueryHandler.cs` | `CDC duplication` | Push portfolio-level completion / net-flow / trajectory rollups behind `PortfolioFlow` outputs, then map them directly into `PortfolioProgressTrendDto`. |
 | `PoTool.Api/Handlers/Metrics/GetPortfolioDeliveryQueryHandler.cs` | `CDC duplication` | Promote portfolio delivery summaries and contribution rollups to a CDC-backed `DeliveryTrends` output so this handler becomes sorting/filtering plus transport mapping. |
 | `PoTool.Client/Services/RoadmapAnalyticsService.cs` | `CDC duplication` | Remove `ComputeLocalAnalytics` or reduce it to pure presentation shaping once the API exposes CDC-backed scope totals for roadmap cards. |
-| `PoTool.Shared/Metrics/SprintExecutionDtos.cs` | `CDC duplication` | Replace `RemainingStoryPoints` with a mapped field sourced from the CDC or from the handler’s already materialized CDC summary object. |
 | `PoTool.Api/Adapters/DeliveryTrendProgressRollupMapper.cs` | `transport compatibility` | Keep as-is until DTO versioning is approved; it is already a thin mapping seam and is not a simplification target yet. |
 | `PoTool.Api/Services/SprintTrendProjectionService.cs` and `PoTool.Api/Services/PortfolioFlowProjectionService.cs` | `adapter logic (valid)` | Keep as canonical materialization seams. The opportunity here is not removal, but making downstream consumers read their CDC-backed outputs more directly. |
+
+## Resolved Sprint Commitment Simplifications
+
+- `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs`
+  - now reads committed and delivered story-point totals from `ISprintFactService.BuildSprintFactResult(...)`
+  - no longer sums sprint story points through `ResolveSprintStoryPoints(...)`
+- `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs`
+  - now maps `CommittedSP`, `AddedSP`, `RemovedSP`, `DeliveredSP`, `DeliveredFromAddedSP`, `SpilloverSP`, and `RemainingStoryPoints` from `SprintFactResult`
+  - no longer reconstructs those totals through `SumStoryPoints(...)` or `SumDeliveredStoryPoints(...)`
+- `PoTool.Shared/Metrics/SprintExecutionDtos.cs`
+  - `RemainingStoryPoints` is now a mapped field instead of a transport-level formula
 
 ## Estimated Impact
 
