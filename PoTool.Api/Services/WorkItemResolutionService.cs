@@ -160,19 +160,7 @@ public class WorkItemResolutionService
             workItemsByTfsId);
 
         // Remove existing resolved items for this PO's products and replace
-        var existingResolvedItemsQuery = context.ResolvedWorkItems
-            .Where(r => r.ResolvedProductId != null && productIds.Contains(r.ResolvedProductId.Value))
-            .AsQueryable();
-
-        if (context.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
-        {
-            var existingResolvedItems = await existingResolvedItemsQuery.ToListAsync(cancellationToken);
-            context.ResolvedWorkItems.RemoveRange(existingResolvedItems);
-        }
-        else
-        {
-            await existingResolvedItemsQuery.ExecuteDeleteAsync(cancellationToken);
-        }
+        await DeleteExistingResolvedItemsAsync(context, productIds, cancellationToken);
 
         if (resolvedEntities.Count > 0)
         {
@@ -281,6 +269,24 @@ public class WorkItemResolutionService
             .MinAsync(cancellationToken);
 
         return minimumExistingUpdateId.GetValueOrDefault(0) - 1;
+    }
+
+    private static async Task DeleteExistingResolvedItemsAsync(
+        PoToolDbContext context,
+        IReadOnlyCollection<int> productIds,
+        CancellationToken cancellationToken)
+    {
+        var existingResolvedItemsQuery = context.ResolvedWorkItems
+            .Where(r => r.ResolvedProductId != null && productIds.Contains(r.ResolvedProductId.Value));
+
+        if (context.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+        {
+            var existingResolvedItems = await existingResolvedItemsQuery.ToListAsync(cancellationToken);
+            context.ResolvedWorkItems.RemoveRange(existingResolvedItems);
+            return;
+        }
+
+        await existingResolvedItemsQuery.ExecuteDeleteAsync(cancellationToken);
     }
 
     private static List<ActivityEventLedgerEntryEntity> BuildResolvedProductTransitionEntries(
