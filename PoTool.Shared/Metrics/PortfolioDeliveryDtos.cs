@@ -153,12 +153,20 @@ public record FeatureDeliveryDto
     /// <summary>
     /// Canonical story-point scope delivered for this feature in the sprint range.
     /// The legacy property name is retained for API compatibility and values may be fractional.
+    /// Compatibility alias; deprecated in future contract revision.
     /// </summary>
     public double SprintCompletedEffort { get; init; }
 
     /// <summary>
+    /// Canonical delivered story points for this feature in the sprint range.
+    /// Maps to the same internal value as SprintCompletedEffort.
+    /// </summary>
+    public double DeliveredStoryPoints => SprintCompletedEffort;
+
+    /// <summary>
     /// Total canonical story-point scope of all PBIs under this feature.
     /// The legacy property name is retained for API compatibility and values may be fractional.
+    /// Compatibility alias; deprecated in future contract revision.
     /// </summary>
     public double TotalEffort { get; init; }
 
