@@ -82,7 +82,9 @@ public sealed class GetEffortEstimationSuggestionsQueryHandlerTests
                 CurrentEffort: null,
                 SuggestedEffort: 4,
                 Confidence: 0.65d,
-                Rationale: "Task items typically range from 3-5 points, median 4 (based on 2 completed items)",
+                HistoricalMatchCount: 2,
+                HistoricalEffortMin: 3,
+                HistoricalEffortMax: 5,
                 SimilarWorkItems:
                 [
                     new EffortHistoricalExampleResult(2, "Work item 2", 5, "Closed", 0.9d)
@@ -94,8 +96,46 @@ public sealed class GetEffortEstimationSuggestionsQueryHandlerTests
         Assert.AreEqual(4, result[0].WorkItemId);
         Assert.AreEqual(4, result[0].SuggestedEffort);
         Assert.AreEqual(0.65d, result[0].Confidence, 0.001d);
+        Assert.AreEqual("Task items typically range from 3-5 points, median 4 (based on 2 completed items)", result[0].Rationale);
         Assert.HasCount(1, result[0].SimilarWorkItems);
         Assert.AreEqual(2, result[0].SimilarWorkItems[0].WorkItemId);
+
+        _effortEstimationSuggestionService.VerifyAll();
+    }
+
+    [TestMethod]
+    public async Task Handle_MapsConfiguredDefaultSuggestionToFallbackRationale()
+    {
+        var now = DateTimeOffset.UtcNow;
+        List<WorkItemDto> workItems =
+        [
+            CreateWorkItem(1, "Epic", "In Progress", "Team\\A", "Sprint 2", null, now)
+        ];
+
+        _repository
+            .Setup(repository => repository.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workItems);
+        _effortEstimationSuggestionService
+            .Setup(service => service.GenerateSuggestion(
+                It.Is<EffortPlanningWorkItem>(item => item.WorkItemId == 1 && item.WorkItemType == "Epic"),
+                It.Is<IReadOnlyList<EffortPlanningWorkItem>>(history => history.Count == 0),
+                It.Is<EffortEstimationSettingsDto>(settings => settings.DefaultEffortEpic == EffortEstimationSettingsDto.Default.DefaultEffortEpic)))
+            .Returns(new EffortEstimationSuggestionResult(
+                WorkItemId: 1,
+                WorkItemTitle: "Work item 1",
+                WorkItemType: "Epic",
+                CurrentEffort: null,
+                SuggestedEffort: EffortEstimationSettingsDto.Default.DefaultEffortEpic,
+                Confidence: 0.3d,
+                HistoricalMatchCount: 0,
+                HistoricalEffortMin: EffortEstimationSettingsDto.Default.DefaultEffortEpic,
+                HistoricalEffortMax: EffortEstimationSettingsDto.Default.DefaultEffortEpic,
+                SimilarWorkItems: []));
+
+        var result = await _handler.Handle(new GetEffortEstimationSuggestionsQuery(), CancellationToken.None);
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual("No historical data available. Using configured default Epic estimate.", result[0].Rationale);
 
         _effortEstimationSuggestionService.VerifyAll();
     }

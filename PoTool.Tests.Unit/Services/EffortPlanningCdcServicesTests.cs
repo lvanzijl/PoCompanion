@@ -89,6 +89,9 @@ public sealed class EffortPlanningCdcServicesTests
         var similarityScores = result.SimilarWorkItems.Select(item => item.SimilarityScore).ToList();
 
         Assert.AreEqual(5, result.SuggestedEffort);
+        Assert.AreEqual(3, result.HistoricalMatchCount);
+        Assert.AreEqual(3, result.HistoricalEffortMin);
+        Assert.AreEqual(8, result.HistoricalEffortMax);
         Assert.HasCount(3, result.SimilarWorkItems);
         Assert.AreEqual(1, result.SimilarWorkItems[0].WorkItemId);
         CollectionAssert.AreEqual(similarityScores.OrderByDescending(score => score).ToList(), similarityScores);
@@ -106,7 +109,9 @@ public sealed class EffortPlanningCdcServicesTests
 
         Assert.AreEqual(EffortEstimationSettingsDto.Default.DefaultEffortEpic, result.SuggestedEffort);
         Assert.AreEqual(0.3d, result.Confidence, 0.0001d);
-        StringAssert.Contains(result.Rationale, "No historical data available.");
+        Assert.AreEqual(0, result.HistoricalMatchCount);
+        Assert.AreEqual(EffortEstimationSettingsDto.Default.DefaultEffortEpic, result.HistoricalEffortMin);
+        Assert.AreEqual(EffortEstimationSettingsDto.Default.DefaultEffortEpic, result.HistoricalEffortMax);
     }
 
     private static EffortPlanningWorkItem CreateWorkItem(

@@ -95,7 +95,9 @@ public sealed record EffortEstimationSuggestionResult(
     int? CurrentEffort,
     int SuggestedEffort,
     double Confidence,
-    string Rationale,
+    int HistoricalMatchCount,
+    int HistoricalEffortMin,
+    int HistoricalEffortMax,
     IReadOnlyList<EffortHistoricalExampleResult> SimilarWorkItems);
 
 /// <summary>
