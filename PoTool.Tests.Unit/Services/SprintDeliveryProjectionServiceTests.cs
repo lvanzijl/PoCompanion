@@ -105,6 +105,57 @@ public sealed class SprintDeliveryProjectionServiceTests
     }
 
     [TestMethod]
+    public void Compute_RepeatedWithSameInputs_ProducesIdenticalProjection()
+    {
+        var service = CreateService();
+        var sprint = CreateSprint();
+        var sprintStart = sprint.StartUtc!.Value;
+        var sprintEnd = sprint.EndUtc!.Value;
+        const string sprintPath = "\\Project\\Sprint 1";
+        const string nextSprintPath = "\\Project\\Sprint 2";
+
+        var request = new SprintDeliveryProjectionRequest(
+            sprint,
+            1,
+            [
+                CreateResolvedWorkItem(100, CanonicalWorkItemTypes.Feature, resolvedFeatureId: null),
+                CreateResolvedWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, resolvedFeatureId: 100),
+                CreateResolvedWorkItem(202, CanonicalWorkItemTypes.ProductBacklogItem, resolvedFeatureId: 100)
+            ],
+            new Dictionary<int, DeliveryTrendWorkItem>
+            {
+                [100] = CreateWorkItem(100, CanonicalWorkItemTypes.Feature, "Feature A", state: "Active", iterationPath: sprintPath),
+                [201] = CreateWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, "Delivered PBI", parentId: 100, state: "Done", iterationPath: sprintPath, effort: 20, storyPoints: 3),
+                [202] = CreateWorkItem(202, CanonicalWorkItemTypes.ProductBacklogItem, "Spillover PBI", parentId: 100, state: "Active", iterationPath: nextSprintPath, effort: 30, storyPoints: 5)
+            },
+            new Dictionary<int, IReadOnlyList<FieldChangeEvent>>
+            {
+                [201] = [CreateFieldChangeEvent(201, "System.State", sprintStart.AddDays(1), "Active", "Done")],
+                [202] = [CreateFieldChangeEvent(202, "System.IterationPath", sprintEnd.AddHours(1), sprintPath, nextSprintPath)]
+            },
+            sprintStart,
+            sprintEnd,
+            new HashSet<int> { 201, 202 },
+            NextSprintPath: nextSprintPath,
+            WorkItemSnapshotsById: new Dictionary<int, WorkItemSnapshot>
+            {
+                [100] = new(100, CanonicalWorkItemTypes.Feature, "Active", sprintPath),
+                [201] = new(201, CanonicalWorkItemTypes.ProductBacklogItem, "Done", sprintPath),
+                [202] = new(202, CanonicalWorkItemTypes.ProductBacklogItem, "Active", nextSprintPath)
+            },
+            StateEventsByWorkItem: new Dictionary<int, IReadOnlyList<FieldChangeEvent>>(),
+            IterationEventsByWorkItem: new Dictionary<int, IReadOnlyList<FieldChangeEvent>>
+            {
+                [202] = [CreateFieldChangeEvent(202, "System.IterationPath", sprintEnd.AddHours(1), sprintPath, nextSprintPath)]
+            });
+
+        var first = service.Compute(request);
+        var second = service.Compute(request);
+
+        Assert.AreEqual(first, second);
+    }
+
+    [TestMethod]
     public void Compute_ThrowsArgumentNullException_WhenCommittedWorkItemIdsIsNull()
     {
         var service = CreateService();

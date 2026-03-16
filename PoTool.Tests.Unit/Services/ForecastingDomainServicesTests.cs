@@ -126,6 +126,81 @@ public sealed class ForecastingDomainServicesTests
     }
 
     [TestMethod]
+    public void ForecastingServices_RepeatedWithSameInputs_ProduceIdenticalOutputs()
+    {
+        ICompletionForecastService completionForecastService = new CompletionForecastService();
+        IVelocityCalibrationService velocityCalibrationService = new VelocityCalibrationService();
+        IEffortTrendForecastService effortTrendForecastService = new EffortTrendForecastService();
+
+        HistoricalVelocitySample[] historicalSprints =
+        [
+            new HistoricalVelocitySample("Sprint 1", new DateTimeOffset(2026, 1, 14, 0, 0, 0, TimeSpan.Zero), 10),
+            new HistoricalVelocitySample("Sprint 2", new DateTimeOffset(2026, 1, 28, 0, 0, 0, TimeSpan.Zero), 8),
+            new HistoricalVelocitySample("Sprint 3", new DateTimeOffset(2026, 2, 11, 0, 0, 0, TimeSpan.Zero), 12)
+        ];
+
+        VelocityCalibrationSample[] velocitySamples =
+        [
+            new VelocityCalibrationSample("Sprint 1", 12, 2, 10, 24),
+            new VelocityCalibrationSample("Sprint 2", 8, 0, 6, 16),
+            new VelocityCalibrationSample("Sprint 3", 13, 1, 9, 21)
+        ];
+
+        EffortDistributionWorkItem[] effortWorkItems =
+        [
+            new EffortDistributionWorkItem("TeamA", "Sprint 1", 10),
+            new EffortDistributionWorkItem("TeamA", "Sprint 2", 20),
+            new EffortDistributionWorkItem("TeamA", "Sprint 3", 30),
+            new EffortDistributionWorkItem("TeamB", "Sprint 1", 5),
+            new EffortDistributionWorkItem("TeamB", "Sprint 2", 15),
+            new EffortDistributionWorkItem("TeamB", "Sprint 3", 10)
+        ];
+
+        var firstForecast = completionForecastService.Forecast(34, 8, historicalSprints);
+        var secondForecast = completionForecastService.Forecast(34, 8, historicalSprints);
+        var firstCalibration = velocityCalibrationService.Calibrate(velocitySamples);
+        var secondCalibration = velocityCalibrationService.Calibrate(velocitySamples);
+        var firstEffortAnalysis = effortTrendForecastService.Analyze(effortWorkItems, maxIterations: 10, defaultCapacityPerIteration: 50);
+        var secondEffortAnalysis = effortTrendForecastService.Analyze(effortWorkItems, maxIterations: 10, defaultCapacityPerIteration: 50);
+
+        Assert.AreEqual(firstForecast.TotalScopeStoryPoints, secondForecast.TotalScopeStoryPoints, 0.001d);
+        Assert.AreEqual(firstForecast.CompletedScopeStoryPoints, secondForecast.CompletedScopeStoryPoints, 0.001d);
+        Assert.AreEqual(firstForecast.RemainingScopeStoryPoints, secondForecast.RemainingScopeStoryPoints, 0.001d);
+        Assert.AreEqual(firstForecast.EstimatedVelocity, secondForecast.EstimatedVelocity, 0.001d);
+        Assert.AreEqual(firstForecast.SprintsRemaining, secondForecast.SprintsRemaining);
+        Assert.AreEqual(firstForecast.EstimatedCompletionDate, secondForecast.EstimatedCompletionDate);
+        Assert.AreEqual(firstForecast.Confidence, secondForecast.Confidence);
+        CollectionAssert.AreEqual(firstForecast.Projections.ToList(), secondForecast.Projections.ToList());
+
+        Assert.AreEqual(firstCalibration.MedianVelocity, secondCalibration.MedianVelocity, 0.001d);
+        Assert.AreEqual(firstCalibration.P25Velocity, secondCalibration.P25Velocity, 0.001d);
+        Assert.AreEqual(firstCalibration.P75Velocity, secondCalibration.P75Velocity, 0.001d);
+        Assert.AreEqual(firstCalibration.MedianPredictability, secondCalibration.MedianPredictability, 0.001d);
+        CollectionAssert.AreEqual(firstCalibration.Entries.ToList(), secondCalibration.Entries.ToList());
+        CollectionAssert.AreEqual(firstCalibration.OutlierSprintNames.ToList(), secondCalibration.OutlierSprintNames.ToList());
+
+        Assert.AreEqual(firstEffortAnalysis.OverallTrend, secondEffortAnalysis.OverallTrend);
+        Assert.AreEqual(firstEffortAnalysis.TrendSlope, secondEffortAnalysis.TrendSlope, 0.001d);
+        CollectionAssert.AreEqual(firstEffortAnalysis.TrendBySprint.ToList(), secondEffortAnalysis.TrendBySprint.ToList());
+        CollectionAssert.AreEqual(firstEffortAnalysis.Forecasts.ToList(), secondEffortAnalysis.Forecasts.ToList());
+
+        Assert.HasCount(firstEffortAnalysis.TrendByAreaPath.Count, secondEffortAnalysis.TrendByAreaPath);
+
+        for (var index = 0; index < firstEffortAnalysis.TrendByAreaPath.Count; index++)
+        {
+            var firstAreaTrend = firstEffortAnalysis.TrendByAreaPath[index];
+            var secondAreaTrend = secondEffortAnalysis.TrendByAreaPath[index];
+
+            Assert.AreEqual(firstAreaTrend.AreaPath, secondAreaTrend.AreaPath);
+            CollectionAssert.AreEqual(firstAreaTrend.EffortBySprint.ToList(), secondAreaTrend.EffortBySprint.ToList());
+            Assert.AreEqual(firstAreaTrend.AverageEffort, secondAreaTrend.AverageEffort, 0.001d);
+            Assert.AreEqual(firstAreaTrend.StandardDeviation, secondAreaTrend.StandardDeviation, 0.001d);
+            Assert.AreEqual(firstAreaTrend.Direction, secondAreaTrend.Direction);
+            Assert.AreEqual(firstAreaTrend.TrendSlope, secondAreaTrend.TrendSlope, 0.001d);
+        }
+    }
+
+    [TestMethod]
     public void ForecastingDomainModels_RejectInvalidCanonicalValues()
     {
         Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
