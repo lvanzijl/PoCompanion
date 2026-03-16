@@ -76,8 +76,8 @@ public sealed class CdcCoverageAuditDocumentTests
             }
         }
 
-        Assert.IsEmpty(
-            violations,
+        Assert.IsFalse(
+            violations.Any(),
             "Legacy sprint helpers should be confined to the CDC adapter and their own definition files. Violations: "
             + string.Join("; ", violations));
     }
