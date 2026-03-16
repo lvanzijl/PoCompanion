@@ -154,52 +154,32 @@
             <MudGrid Spacing="2">
                 <MudItem xs="6" sm="4" md="2">
                     <MudPaper Elevation="1" Class="pa-3 text-center">
-                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-primary);">@_data.Summary.InitialScopeCount</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Initial Scope</MudText>
-                        @if (_data.Summary.InitialScopeEffort > 0)
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Tertiary">@_data.Summary.InitialScopeEffort pts</MudText>
-                        }
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-primary);">@FormatStoryPoints(_data.Summary.CommittedSP)</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Committed Story Points</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="6" sm="4" md="2">
                     <MudPaper Elevation="1" Class="pa-3 text-center">
-                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-warning);">@_data.Summary.AddedDuringSprintCount</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Added During Sprint</MudText>
-                        @if (_data.Summary.AddedDuringSprintEffort > 0)
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Tertiary">@_data.Summary.AddedDuringSprintEffort pts</MudText>
-                        }
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-warning);">@FormatStoryPoints(_data.Summary.AddedSP)</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Added Story Points</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="6" sm="4" md="2">
                     <MudPaper Elevation="1" Class="pa-3 text-center">
-                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-error);">@_data.Summary.RemovedDuringSprintCount</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Removed</MudText>
-                        @if (_data.Summary.RemovedDuringSprintEffort > 0)
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Tertiary">@_data.Summary.RemovedDuringSprintEffort pts</MudText>
-                        }
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-error);">@FormatStoryPoints(_data.Summary.RemovedSP)</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Removed Story Points</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="6" sm="4" md="2">
                     <MudPaper Elevation="1" Class="pa-3 text-center">
-                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-success);">@_data.Summary.CompletedCount</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Completed</MudText>
-                        @if (_data.Summary.CompletedEffort > 0)
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Tertiary">@_data.Summary.CompletedEffort pts</MudText>
-                        }
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-success);">@FormatStoryPoints(_data.Summary.DeliveredSP)</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Delivered Story Points</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="6" sm="4" md="2">
                     <MudPaper Elevation="1" Class="pa-3 text-center">
-                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-text-secondary);">@_data.Summary.UnfinishedCount</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Unfinished</MudText>
-                        @if (_data.Summary.UnfinishedEffort > 0)
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Tertiary">@_data.Summary.UnfinishedEffort pts</MudText>
-                        }
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-text-secondary);">@FormatStoryPoints(_data.Summary.SpilloverSP)</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Spillover Story Points</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="6" sm="4" md="2">
@@ -225,7 +205,7 @@
                             <th style="width: 50px;">#</th>
                             <th>Title</th>
                             <th style="width: 120px;">Product</th>
-                            <th style="width: 80px; text-align: right;">Effort</th>
+                            <th style="width: 100px; text-align: right;">Story Points</th>
                             <th style="width: 160px;">Completed</th>
                             <th style="width: 100px;">Origin</th>
                         </tr>
@@ -281,7 +261,7 @@
                         <tr>
                             <th>Title</th>
                             <th style="width: 120px;">Product</th>
-                            <th style="width: 80px; text-align: right;">Effort</th>
+                            <th style="width: 100px; text-align: right;">Story Points</th>
                             <th style="width: 100px;">State</th>
                         </tr>
                     </thead>
@@ -321,7 +301,7 @@
                         <tr>
                             <th>Title</th>
                             <th style="width: 120px;">Product</th>
-                            <th style="width: 80px; text-align: right;">Effort</th>
+                            <th style="width: 100px; text-align: right;">Story Points</th>
                             <th style="width: 100px;">State</th>
                             <th style="width: 100px;">Origin</th>
                         </tr>
@@ -372,7 +352,7 @@
                         <tr>
                             <th>Title</th>
                             <th style="width: 120px;">Product</th>
-                            <th style="width: 80px; text-align: right;">Effort</th>
+                            <th style="width: 100px; text-align: right;">Story Points</th>
                             <th style="width: 100px;">State</th>
                             <th style="width: 160px;">Entered Sprint</th>
                         </tr>
@@ -414,7 +394,7 @@
                         <tr>
                             <th>Title</th>
                             <th style="width: 120px;">Product</th>
-                            <th style="width: 80px; text-align: right;">Effort</th>
+                            <th style="width: 100px; text-align: right;">Story Points</th>
                             <th style="width: 100px;">State</th>
                             <th style="width: 160px;">Removed</th>
                         </tr>
@@ -653,4 +633,6 @@
             new("Sprint Execution", null, disabled: true, icon: Icons.Material.Filled.Analytics)
         };
     }
+
+    private static string FormatStoryPoints(double storyPoints) => storyPoints.ToString("0.##");
 }

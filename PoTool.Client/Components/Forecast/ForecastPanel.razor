@@ -60,17 +60,17 @@
 
     @* Progress Summary *@
     <MudGrid Class="mb-4">
-        <MetricSummaryCard Label="Total Effort"
+        <MetricSummaryCard Label="Total Story Points"
                           Value="@_forecastData.TotalEffort.ToString()"
                           Icon="@Icons.Material.Filled.Flag"
                           IconColor="Color.Primary" />
         
-        <MetricSummaryCard Label="Completed"
+        <MetricSummaryCard Label="Delivered Story Points"
                           Value="@_forecastData.CompletedEffort.ToString()"
                           Icon="@Icons.Material.Filled.CheckCircle"
                           IconColor="Color.Success" />
         
-        <MetricSummaryCard Label="Remaining"
+        <MetricSummaryCard Label="Remaining Story Points"
                           Value="@_forecastData.RemainingEffort.ToString()"
                           Icon="@Icons.Material.Filled.Schedule"
                           IconColor="Color.Warning" />
