@@ -76,6 +76,9 @@ Services and helpers reviewed but currently valid:
 - `PoTool.Api/Adapters/DeliveryTrendProgressRollupMapper.cs` — `transport compatibility`; it maps canonical fields onto legacy DTO names without recalculating the underlying progress metrics.
 - `PoTool.Api/Handlers/Metrics/GetEffortImbalanceQueryHandler.cs` — `presentation logic (valid)`; grouping, filtering, and recommendation text remain outside the CDC even though the formulas themselves already delegate to the CDC-backed analyzer.
 - `PoTool.Api/Handlers/Metrics/GetEffortConcentrationRiskQueryHandler.cs` — `presentation logic (valid)` for the same reason.
+- `PoTool.Api/Handlers/Metrics/GetEffortDistributionQueryHandler.cs` — `adapter logic (valid)`; effort totals, utilization, and heat-map math now delegate to the EffortPlanning CDC slice.
+- `PoTool.Api/Handlers/Metrics/GetEffortEstimationQualityQueryHandler.cs` — `adapter logic (valid)`; effort-quality rollups now delegate to the EffortPlanning CDC slice.
+- `PoTool.Api/Handlers/Metrics/GetEffortEstimationSuggestionsQueryHandler.cs` — `adapter logic (valid)`; suggestion similarity, medians, and confidence now delegate to the EffortPlanning CDC slice.
 - `PoTool.Api/Handlers/Metrics/GetCapacityCalibrationQueryHandler.cs` — `adapter logic (valid)`; percentile and predictability math are already delegated to `IVelocityCalibrationService`.
 - `PoTool.Api/Handlers/Metrics/GetEpicCompletionForecastQueryHandler.cs` — mixed but mostly `adapter logic (valid)`; the forecast calculation itself is delegated to `ICompletionForecastService`, although the handler still owns input selection heuristics for which sprints to sample.
 
@@ -108,6 +111,18 @@ Services and helpers reviewed but currently valid:
   - no longer reconstructs those totals through `SumStoryPoints(...)` or `SumDeliveredStoryPoints(...)`
 - `PoTool.Shared/Metrics/SprintExecutionDtos.cs`
   - `RemainingStoryPoints` is now a mapped field instead of a transport-level formula
+
+## Resolved EffortPlanning Simplifications
+
+- `PoTool.Api/Handlers/Metrics/GetEffortDistributionQueryHandler.cs`
+  - now maps `EffortDistributionResult` from `IEffortDistributionService.Analyze(...)`
+  - no longer calculates area totals, iteration totals, utilization percentages, or heat-map cells locally
+- `PoTool.Api/Handlers/Metrics/GetEffortEstimationQualityQueryHandler.cs`
+  - now maps `EffortEstimationQualityResult` from `IEffortEstimationQualityService.Analyze(...)`
+  - no longer calculates local variance, coefficient-of-variation accuracy, or iteration trends
+- `PoTool.Api/Handlers/Metrics/GetEffortEstimationSuggestionsQueryHandler.cs`
+  - now maps `EffortEstimationSuggestionResult` from `IEffortEstimationSuggestionService.GenerateSuggestion(...)`
+  - no longer calculates local similarity scores, medians, or confidence heuristics
 
 ## Estimated Impact
 

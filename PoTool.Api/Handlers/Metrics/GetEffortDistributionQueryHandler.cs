@@ -1,5 +1,7 @@
 using Mediator;
+using PoTool.Api.Adapters;
 using PoTool.Core.Contracts;
+using PoTool.Core.Domain.EffortPlanning;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
@@ -18,17 +20,20 @@ public sealed class GetEffortDistributionQueryHandler
     private readonly IWorkItemRepository _repository;
     private readonly IProductRepository _productRepository;
     private readonly IMediator _mediator;
+    private readonly IEffortDistributionService _effortDistributionService;
     private readonly ILogger<GetEffortDistributionQueryHandler> _logger;
 
     public GetEffortDistributionQueryHandler(
         IWorkItemRepository repository,
         IProductRepository productRepository,
         IMediator mediator,
+        IEffortDistributionService effortDistributionService,
         ILogger<GetEffortDistributionQueryHandler> logger)
     {
         _repository = repository;
         _productRepository = productRepository;
         _mediator = mediator;
+        _effortDistributionService = effortDistributionService;
         _logger = logger;
     }
 
@@ -80,153 +85,38 @@ public sealed class GetEffortDistributionQueryHandler
             .Where(wi => wi.Effort.HasValue && wi.Effort.Value > 0)
             .ToList();
 
-        // Get top area paths by work item count
-        var areaPathsByVolume = workItemsWithEffort
-            .GroupBy(wi => wi.AreaPath)
-            .OrderByDescending(g => g.Count())
-            .Take(10) // Limit to top 10 area paths for heat map clarity
-            .Select(g => g.Key)
-            .ToList();
-
-        // Get recent iterations
-        var iterationPaths = workItemsWithEffort
-            .Where(wi => !string.IsNullOrWhiteSpace(wi.IterationPath))
-            .Select(wi => wi.IterationPath)
-            .Distinct()
-            .OrderByDescending(path => path)
-            .Take(query.MaxIterations)
-            .ToList();
-
-        // Calculate effort by area path
-        var effortByArea = CalculateEffortByAreaPath(workItemsWithEffort, areaPathsByVolume);
-
-        // Calculate effort by iteration
-        var effortByIteration = CalculateEffortByIteration(
-            workItemsWithEffort,
-            iterationPaths,
+        var distribution = _effortDistributionService.Analyze(
+            workItemsWithEffort.Select(static wi => wi.ToEffortPlanningWorkItem()).ToList(),
+            query.MaxIterations,
             query.DefaultCapacityPerIteration);
-
-        // Calculate heat map cells
-        var heatMapData = CalculateHeatMapCells(
-            workItemsWithEffort,
-            areaPathsByVolume,
-            iterationPaths,
-            query.DefaultCapacityPerIteration);
-
-        var totalEffort = workItemsWithEffort.Sum(wi => wi.Effort ?? 0);
 
         return new EffortDistributionDto(
-            EffortByArea: effortByArea,
-            EffortByIteration: effortByIteration,
-            HeatMapData: heatMapData,
-            TotalEffort: totalEffort,
+            EffortByArea: distribution.EffortByArea
+                .Select(static area => new EffortByAreaPath(
+                    area.AreaPath,
+                    area.TotalEffort,
+                    area.WorkItemCount,
+                    area.AverageEffortPerItem))
+                .ToList(),
+            EffortByIteration: distribution.EffortByIteration
+                .Select(static iteration => new EffortByIteration(
+                    iteration.IterationPath,
+                    iteration.SprintName,
+                    iteration.TotalEffort,
+                    iteration.WorkItemCount,
+                    iteration.Capacity,
+                    iteration.UtilizationPercentage))
+                .ToList(),
+            HeatMapData: distribution.HeatMapData
+                .Select(static cell => new EffortHeatMapCell(
+                    cell.AreaPath,
+                    cell.IterationPath,
+                    cell.Effort,
+                    cell.WorkItemCount,
+                    cell.Status))
+                .ToList(),
+            TotalEffort: distribution.TotalEffort,
             AnalysisTimestamp: DateTimeOffset.UtcNow
         );
-    }
-
-    private static List<EffortByAreaPath> CalculateEffortByAreaPath(
-        List<WorkItemDto> workItems,
-        List<string> areaPathsToInclude)
-    {
-        return workItems
-            .Where(wi => areaPathsToInclude.Contains(wi.AreaPath))
-            .GroupBy(wi => wi.AreaPath)
-            .Select(group => new EffortByAreaPath(
-                AreaPath: group.Key,
-                TotalEffort: group.Sum(wi => wi.Effort ?? 0),
-                WorkItemCount: group.Count(),
-                AverageEffortPerItem: group.Average(wi => wi.Effort ?? 0)
-            ))
-            .OrderByDescending(e => e.TotalEffort)
-            .ToList();
-    }
-
-    private static List<EffortByIteration> CalculateEffortByIteration(
-        List<WorkItemDto> workItems,
-        List<string> iterationPaths,
-        int? defaultCapacity)
-    {
-        return iterationPaths
-            .Select(iterationPath =>
-            {
-                var itemsInIteration = workItems
-                    .Where(wi => wi.IterationPath.Equals(iterationPath, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-
-                var totalEffort = itemsInIteration.Sum(wi => wi.Effort ?? 0);
-                var sprintName = ExtractSprintName(iterationPath);
-
-                var utilization = defaultCapacity.HasValue && defaultCapacity.Value > 0
-                    ? (double)totalEffort / defaultCapacity.Value * 100
-                    : 0;
-
-                return new EffortByIteration(
-                    IterationPath: iterationPath,
-                    SprintName: sprintName,
-                    TotalEffort: totalEffort,
-                    WorkItemCount: itemsInIteration.Count,
-                    Capacity: defaultCapacity,
-                    UtilizationPercentage: utilization
-                );
-            })
-            .ToList();
-    }
-
-    private static List<EffortHeatMapCell> CalculateHeatMapCells(
-        List<WorkItemDto> workItems,
-        List<string> areaPaths,
-        List<string> iterationPaths,
-        int? defaultCapacity)
-    {
-        var cells = new List<EffortHeatMapCell>();
-
-        foreach (var areaPath in areaPaths)
-        {
-            foreach (var iterationPath in iterationPaths)
-            {
-                var itemsInCell = workItems
-                    .Where(wi =>
-                        wi.AreaPath.Equals(areaPath, StringComparison.OrdinalIgnoreCase) &&
-                        wi.IterationPath.Equals(iterationPath, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-
-                var effort = itemsInCell.Sum(wi => wi.Effort ?? 0);
-                var status = DetermineCapacityStatus(effort, defaultCapacity);
-
-                cells.Add(new EffortHeatMapCell(
-                    AreaPath: areaPath,
-                    IterationPath: iterationPath,
-                    Effort: effort,
-                    WorkItemCount: itemsInCell.Count,
-                    Status: status
-                ));
-            }
-        }
-
-        return cells;
-    }
-
-    private static CapacityStatus DetermineCapacityStatus(int effort, int? capacity)
-    {
-        if (!capacity.HasValue || capacity.Value == 0)
-        {
-            return CapacityStatus.Unknown;
-        }
-
-        var utilizationPercentage = (double)effort / capacity.Value * 100;
-
-        return utilizationPercentage switch
-        {
-            < 50 => CapacityStatus.Underutilized,
-            >= 50 and < 85 => CapacityStatus.Normal,
-            >= 85 and < 100 => CapacityStatus.NearCapacity,
-            _ => CapacityStatus.OverCapacity
-        };
-    }
-
-    private static string ExtractSprintName(string iterationPath)
-    {
-        var parts = iterationPath.Split('\\', '/');
-        return parts.Length > 0 ? parts[^1] : iterationPath;
     }
 }

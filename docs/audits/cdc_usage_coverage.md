@@ -99,9 +99,9 @@ Classification key:
 | --- | --- | --- | --- | --- |
 | `GetEffortImbalanceQueryHandler` | `IWorkItemRepository`, `IProductRepository`, `IMediator` | `EffortDiagnosticsAnalyzer` | Imbalance formulas are delegated to `Analyzer.AnalyzeImbalance(...)`, which now bridges into the canonical effort-diagnostics rules and statistics. The handler still owns grouping, filtering, and recommendation text. | `unavoidable adapter logic` |
 | `GetEffortConcentrationRiskQueryHandler` | `IWorkItemRepository`, `IProductRepository`, `IMediator` | `EffortDiagnosticsAnalyzer` | Concentration formulas are delegated to `Analyzer.AnalyzeConcentration(...)`, with local responsibility limited to visibility filtering, top-item lists, and mitigation text. | `unavoidable adapter logic` |
-| `GetEffortDistributionQueryHandler` | `IWorkItemRepository`, `IProductRepository`, `IMediator` | none | The handler computes area totals, iteration totals, utilization percentages, and heat-map cells locally through `CalculateEffortByAreaPath`, `CalculateEffortByIteration`, and `CalculateHeatMapCells`. | `CDC bypass` |
-| `GetEffortEstimationQualityQueryHandler` | `IWorkItemRepository`, `IProductRepository`, `IMediator`, `IWorkItemStateClassificationService` | `StatisticsMath` | Effort-quality scores are derived locally through variance and coefficient-of-variation calculations in `CalculateQualityByType`, `CalculateTrendOverTime`, and `CalculateOverallAccuracy`. | `CDC bypass` |
-| `GetEffortEstimationSuggestionsQueryHandler` | `IWorkItemRepository`, `IProductRepository`, `IMediator`, `IWorkItemStateClassificationService` | `StatisticsMath` | Similarity scoring, median estimation, confidence heuristics, and rationale generation all run locally in `GenerateSuggestion`, `CalculateSimilarity`, `CalculateMedian`, and `CalculateConfidence`. | `CDC bypass` |
+| `GetEffortDistributionQueryHandler` | `IWorkItemRepository`, `IProductRepository`, `IMediator` | `IEffortDistributionService` | The handler filters to scoped work items with effort, delegates area/iteration totals plus heat-map utilization to `_effortDistributionService.Analyze(...)`, and maps the canonical result to `EffortDistributionDto`. | `CDC compliant` |
+| `GetEffortEstimationQualityQueryHandler` | `IWorkItemRepository`, `IProductRepository`, `IMediator`, `IWorkItemStateClassificationService` | `IEffortEstimationQualityService` | The handler filters to completed work items with effort, delegates quality rollups to `_effortEstimationQualityService.Analyze(...)`, and maps the canonical result to `EffortEstimationQualityDto`. | `CDC compliant` |
+| `GetEffortEstimationSuggestionsQueryHandler` | `IWorkItemRepository`, `IProductRepository`, `IMediator`, `IWorkItemStateClassificationService` | `IEffortEstimationSuggestionService` | The handler filters suggestion candidates and historical completed samples, delegates similarity / median / confidence formulas to `_effortEstimationSuggestionService.GenerateSuggestion(...)`, and maps the canonical result to `EffortEstimationSuggestionDto`. | `CDC compliant` |
 
 ## CDC-Compliant Handlers
 
@@ -137,6 +137,18 @@ Handlers that are fully powered by CDC outputs or CDC-owned domain services:
   - reads `SprintMetricsProjectionEntity` rows plus `ComputeFeatureProgressAsync(...)` results
   - delegates delivery totals, product shares, and feature contribution shares to `IPortfolioDeliverySummaryService`
   - handler work is sprint-range loading, compatibility mapping, and DTO shaping
+- `GetEffortDistributionQueryHandler`
+  - filters scoped work items with effort
+  - delegates area totals, iteration totals, utilization percentages, and heat-map cells to `IEffortDistributionService`
+  - handler work is retrieval, filtering, and DTO mapping
+- `GetEffortEstimationQualityQueryHandler`
+  - filters completed work items through `IWorkItemStateClassificationService`
+  - delegates quality-by-type, trend, and overall-accuracy rollups to `IEffortEstimationQualityService`
+  - handler work is retrieval, completed-state filtering, and DTO mapping
+- `GetEffortEstimationSuggestionsQueryHandler`
+  - filters unestimated candidates and completed historical samples
+  - delegates similarity scoring, medians, confidence, and rationale factors to `IEffortEstimationSuggestionService`
+  - handler work is candidate selection, settings lookup, and DTO mapping
 
 Supporting CDC-backed materialization seams confirmed during the audit:
 
@@ -153,16 +165,7 @@ Supporting CDC-backed materialization seams confirmed during the audit:
 
 Handlers that still compute delivery analytics locally instead of consuming already-owned CDC outputs:
 
-### Non-CDC effort calculations still living in handlers
-
-- `GetEffortDistributionQueryHandler`
-  - local effort heat-map and utilization arithmetic
-- `GetEffortEstimationQualityQueryHandler`
-  - local variance, coefficient-of-variation, and weighted-accuracy calculations
-- `GetEffortEstimationSuggestionsQueryHandler`
-  - local similarity heuristics, medians, and confidence scoring
-
-These three handlers do not currently consume CDC slice outputs for their formulas. They remain local analytics paths.
+- none in the audited effort-planning or portfolio scope
 
 ## Compatibility Paths
 
@@ -198,15 +201,16 @@ These seams are acceptable adapters because the formulas themselves are no longe
   - completed for: `GetPortfolioProgressTrendQueryHandler` and `GetPortfolioDeliveryQueryHandler`
   - new seams: `IPortfolioFlowSummaryService.BuildTrend(...)` and `IPortfolioDeliverySummaryService.BuildSummary(...)`
   - result: handlers now map `CompletionPercent`, `NetFlowStoryPoints`, trajectory, product delivery totals, and contribution shares from canonical outputs instead of re-aggregating projection rows
-- **Decide whether effort distribution / quality / suggestion analytics belong in the CDC**
-  - current status: `GetEffortDistributionQueryHandler`, `GetEffortEstimationQualityQueryHandler`, and `GetEffortEstimationSuggestionsQueryHandler` remain local calculations
-  - migration option: either leave them explicitly outside the CDC or extract a new CDC-backed effort-planning slice so those formulas stop drifting in handlers
+- **Adopt the EffortPlanning CDC seam for effort distribution, quality, and suggestions**
+  - completed for: `GetEffortDistributionQueryHandler`, `GetEffortEstimationQualityQueryHandler`, and `GetEffortEstimationSuggestionsQueryHandler`
+  - new seams: `IEffortDistributionService.Analyze(...)`, `IEffortEstimationQualityService.Analyze(...)`, and `IEffortEstimationSuggestionService.GenerateSuggestion(...)`
+  - result: handlers now load/filter data, call the EffortPlanning CDC slice, and map canonical results instead of owning formulas
 - **Collapse backlog-health compatibility wrappers when direct CDC contracts are available**
   - target consumers: `GetBacklogHealthQueryHandler` and `GetMultiIterationBacklogHealthQueryHandler`
   - expected simplification: replace wrapper-plus-heuristic composition with thinner mapping over direct BacklogQuality outputs
 
 Net assessment:
 
-- CDC adoption is strong for trend projections, forecasting services, and effort-diagnostics formulas.
-- The main remaining non-CDC paths are not raw helper lookups anymore; they are handler-level rollups layered on top of CDC facts.
-- The highest-value remaining cleanup targets are sprint-local effort analytics and backlog-health compatibility wrappers; portfolio summary rollups are now CDC-backed.
+- CDC adoption is strong for trend projections, forecasting services, effort diagnostics, and effort planning.
+- The main remaining non-CDC paths in the audited scope are backlog-health compatibility wrappers and client-side roadmap scope replay.
+- The highest-value remaining cleanup targets are backlog-health compatibility wrappers and client-side duplication; portfolio and effort-planning summary rollups are now CDC-backed.

@@ -253,6 +253,44 @@ Primary references:
 
 - `docs/audits/effort_diagnostics_cdc_extraction_report.md`
 
+### EffortPlanning
+
+Purpose:
+
+- own the stable effort-planning formulas for effort distribution, estimation quality, and effort suggestions
+
+Canonical inputs:
+
+- effort hours resolved from current work-item snapshots
+- current work-item grouping context such as area path, iteration path, type, and retrieved timestamp
+- shared pure-math statistics where the contract is repository-wide
+- effort-estimation defaults supplied by application settings
+
+Canonical outputs:
+
+- area-path effort totals
+- iteration effort totals
+- heat-map cells and utilization percentages
+- effort-quality rollups by type and over time
+- effort suggestions with similarity ranking, median effort, confidence, and explanation factors
+
+Downstream consumers:
+
+- effort distribution handlers
+- effort estimation quality handlers
+- effort estimation suggestion handlers
+
+What remains outside the slice:
+
+- product-scoped loading
+- completed-state filtering
+- candidate-item filtering such as `OnlyInProgressItems`
+- DTO shaping and analysis timestamps
+
+Primary references:
+
+- `docs/audits/effort_planning_cdc_extraction.md`
+
 ### PortfolioFlow
 
 Purpose:

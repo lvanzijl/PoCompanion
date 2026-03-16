@@ -1,6 +1,7 @@
 using Mediator;
+using PoTool.Api.Adapters;
 using PoTool.Core.Contracts;
-using PoTool.Core.Domain.Statistics;
+using PoTool.Core.Domain.EffortPlanning;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
@@ -22,6 +23,7 @@ public sealed class GetEffortEstimationQualityQueryHandler
     private readonly IProductRepository _productRepository;
     private readonly IMediator _mediator;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
+    private readonly IEffortEstimationQualityService _effortEstimationQualityService;
     private readonly ILogger<GetEffortEstimationQualityQueryHandler> _logger;
 
     public GetEffortEstimationQualityQueryHandler(
@@ -29,12 +31,14 @@ public sealed class GetEffortEstimationQualityQueryHandler
         IProductRepository productRepository,
         IMediator mediator,
         IWorkItemStateClassificationService stateClassificationService,
+        IEffortEstimationQualityService effortEstimationQualityService,
         ILogger<GetEffortEstimationQualityQueryHandler> logger)
     {
         _repository = repository;
         _productRepository = productRepository;
         _mediator = mediator;
         _stateClassificationService = stateClassificationService;
+        _effortEstimationQualityService = effortEstimationQualityService;
         _logger = logger;
     }
 
@@ -93,135 +97,36 @@ public sealed class GetEffortEstimationQualityQueryHandler
 
         _logger.LogDebug("Found {Count} completed work items with effort estimates", completedWorkItems.Count);
 
-        // Group by iteration path and take most recent iterations
-        var iterationGroups = completedWorkItems
-            .GroupBy(wi => wi.IterationPath)
-            .OrderByDescending(g => g.Max(wi => wi.RetrievedAt))
-            .Take(query.MaxIterations)
-            .ToList();
-
-        // For quality analysis, we use a heuristic approach:
-        // - Compare effort distribution across similar work item types
-        // - Identify outliers and patterns
-        // - Calculate consistency metrics
-
-        var qualityByType = CalculateQualityByType(completedWorkItems);
-        var trendOverTime = CalculateTrendOverTime(iterationGroups);
-        var overallAccuracy = CalculateOverallAccuracy(completedWorkItems);
+        var quality = _effortEstimationQualityService.Analyze(
+            completedWorkItems.Select(static wi => wi.ToEffortPlanningWorkItem()).ToList(),
+            query.MaxIterations);
 
         var result = new EffortEstimationQualityDto(
-            AverageEstimationAccuracy: overallAccuracy,
-            TotalCompletedWorkItems: completedWorkItems.Count,
-            WorkItemsWithEstimates: completedWorkItems.Count(wi => wi.Effort.HasValue && wi.Effort.Value > 0),
-            QualityByType: qualityByType,
-            TrendOverTime: trendOverTime
+            AverageEstimationAccuracy: quality.AverageEstimationAccuracy,
+            TotalCompletedWorkItems: quality.TotalCompletedWorkItems,
+            WorkItemsWithEstimates: quality.WorkItemsWithEstimates,
+            QualityByType: quality.QualityByType
+                .Select(static entry => new WorkItemTypeEstimationQuality(
+                    entry.WorkItemType,
+                    entry.Count,
+                    entry.AverageAccuracy,
+                    entry.TypicalEffortMin,
+                    entry.TypicalEffortMax,
+                    entry.AverageEffort))
+                .ToList(),
+            TrendOverTime: quality.TrendOverTime
+                .Select(static trend => new EstimationTrend(
+                    trend.Period,
+                    trend.StartDate,
+                    trend.EndDate,
+                    trend.AverageAccuracy,
+                    trend.EstimatedCount))
+                .ToList()
         );
 
         _logger.LogInformation("Effort estimation quality analysis complete: {Accuracy:P2} accuracy across {Count} items",
-            overallAccuracy, completedWorkItems.Count);
+            quality.AverageEstimationAccuracy, completedWorkItems.Count);
 
         return result;
-    }
-
-    private IReadOnlyList<WorkItemTypeEstimationQuality> CalculateQualityByType(List<WorkItemDto> workItems)
-    {
-        var groupedByType = workItems
-            .GroupBy(wi => wi.Type)
-            .ToList();
-
-        var qualityList = new List<WorkItemTypeEstimationQuality>();
-
-        foreach (var group in groupedByType)
-        {
-            var efforts = group.Select(wi => wi.Effort!.Value).ToList();
-
-            if (efforts.Count == 0)
-                continue;
-
-            var min = efforts.Min();
-            var max = efforts.Max();
-            var avg = (int)Math.Round(efforts.Average());
-
-            // Calculate consistency as accuracy metric
-            // Lower variance = higher accuracy/consistency
-            var variance = StatisticsMath.Variance(efforts.Select(static value => (double)value));
-            var coefficientOfVariation = avg > 0 ? Math.Sqrt(variance) / avg : 0;
-
-            // Convert to accuracy score (0-1, where 1 is perfect consistency)
-            var accuracy = Math.Max(0, 1.0 - Math.Min(1.0, coefficientOfVariation));
-
-            qualityList.Add(new WorkItemTypeEstimationQuality(
-                WorkItemType: group.Key,
-                Count: group.Count(),
-                AverageAccuracy: accuracy,
-                TypicalEffortMin: min,
-                TypicalEffortMax: max,
-                AverageEffort: avg
-            ));
-        }
-
-        return qualityList
-            .OrderByDescending(q => q.Count)
-            .ToList();
-    }
-
-    private IReadOnlyList<EstimationTrend> CalculateTrendOverTime(
-        List<IGrouping<string, WorkItemDto>> iterationGroups)
-    {
-        var trends = new List<EstimationTrend>();
-
-        foreach (var group in iterationGroups)
-        {
-            var items = group.ToList();
-            var efforts = items.Select(wi => wi.Effort!.Value).ToList();
-
-            if (efforts.Count == 0)
-                continue;
-
-            var avg = efforts.Average();
-            var variance = StatisticsMath.Variance(efforts.Select(static value => (double)value));
-            var coefficientOfVariation = avg > 0 ? Math.Sqrt(variance) / avg : 0;
-            var accuracy = Math.Max(0, 1.0 - Math.Min(1.0, coefficientOfVariation));
-
-            var startDate = items.Min(wi => wi.RetrievedAt);
-            var endDate = items.Max(wi => wi.RetrievedAt);
-
-            trends.Add(new EstimationTrend(
-                Period: group.Key,
-                StartDate: startDate,
-                EndDate: endDate,
-                AverageAccuracy: accuracy,
-                EstimatedCount: efforts.Count
-            ));
-        }
-
-        return trends
-            .OrderBy(t => t.StartDate)
-            .ToList();
-    }
-
-    private double CalculateOverallAccuracy(List<WorkItemDto> workItems)
-    {
-        if (workItems.Count == 0)
-            return 0.0;
-
-        // Group by type and calculate weighted average accuracy
-        var typeGroups = workItems.GroupBy(wi => wi.Type).ToList();
-        var totalItems = workItems.Count;
-        double weightedAccuracySum = 0;
-
-        foreach (var group in typeGroups)
-        {
-            var efforts = group.Select(wi => wi.Effort!.Value).ToList();
-            var avg = efforts.Average();
-            var variance = StatisticsMath.Variance(efforts.Select(static value => (double)value));
-            var coefficientOfVariation = avg > 0 ? Math.Sqrt(variance) / avg : 0;
-            var accuracy = Math.Max(0, 1.0 - Math.Min(1.0, coefficientOfVariation));
-
-            var weight = (double)group.Count() / totalItems;
-            weightedAccuracySum += accuracy * weight;
-        }
-
-        return weightedAccuracySum;
     }
 }
