@@ -124,6 +124,17 @@ Services and helpers reviewed but currently valid:
   - now maps `EffortEstimationSuggestionResult` from `IEffortEstimationSuggestionService.GenerateSuggestion(...)`
   - no longer calculates local similarity scores, medians, or confidence heuristics
 
+## Resolved BacklogQuality Simplifications
+
+- `PoTool.Api/Handlers/Metrics/GetBacklogHealthQueryHandler.cs`
+  - now calls `IBacklogQualityAnalysisService.AnalyzeAsync(...)` instead of `IHierarchicalWorkItemValidator`
+  - no longer interprets legacy hierarchical validation buckets in the handler
+- `PoTool.Api/Handlers/Metrics/GetMultiIterationBacklogHealthQueryHandler.cs`
+  - now reuses the same direct BacklogQuality seam for each real sprint slot
+  - no longer depends on the backlog-health compatibility wrapper
+- `PoTool.Api/Handlers/Metrics/BacklogHealthDtoFactory.cs`
+  - centralizes the shared DTO mapping so both handlers project canonical BacklogQuality findings consistently
+
 ## Estimated Impact
 
 Estimated reduction if the above simplifications are implemented in a later refactor:

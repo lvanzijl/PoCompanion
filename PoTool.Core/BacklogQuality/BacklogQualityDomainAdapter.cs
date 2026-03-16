@@ -2,6 +2,7 @@ using PoTool.Core.Contracts;
 using PoTool.Core.Domain.BacklogQuality.Models;
 using PoTool.Core.Domain.BacklogQuality.Rules;
 using PoTool.Shared.Health;
+using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 using DomainStateClassification = PoTool.Core.Domain.Models.StateClassification;
 
@@ -44,7 +45,15 @@ internal static class BacklogQualityDomainAdapter
     {
         ArgumentNullException.ThrowIfNull(stateClassificationService);
 
-        return stateClassificationService.GetClassificationsAsync().GetAwaiter().GetResult().Classifications
+        return CreateClassificationLookup(stateClassificationService.GetClassificationsAsync().GetAwaiter().GetResult().Classifications);
+    }
+
+    public static IReadOnlyDictionary<(string WorkItemType, string StateName), DomainStateClassification> CreateClassificationLookup(
+        IEnumerable<WorkItemStateClassificationDto> classifications)
+    {
+        ArgumentNullException.ThrowIfNull(classifications);
+
+        return classifications
             .GroupBy(item => (Normalize(item.WorkItemType), Normalize(item.StateName)))
             .ToDictionary(
                 group => group.Key,

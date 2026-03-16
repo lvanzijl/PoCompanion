@@ -64,9 +64,9 @@ public sealed class CdcUsageCoverageDocumentTests
         var effortQuality = ReadRepositoryFile(repositoryRoot, "PoTool.Api/Handlers/Metrics/GetEffortEstimationQualityQueryHandler.cs");
         var effortSuggestions = ReadRepositoryFile(repositoryRoot, "PoTool.Api/Handlers/Metrics/GetEffortEstimationSuggestionsQueryHandler.cs");
 
-        StringAssert.Contains(backlogHealth, "_validator.ValidateWorkItems");
-        StringAssert.Contains(backlogHealth, "CountBlockedItems");
-        StringAssert.Contains(multiBacklogHealth, "_validator.ValidateWorkItems");
+        StringAssert.Contains(backlogHealth, "_backlogQualityAnalysisService.AnalyzeAsync");
+        StringAssert.Contains(backlogHealth, "BacklogHealthDtoFactory.Create");
+        StringAssert.Contains(multiBacklogHealth, "_backlogQualityAnalysisService.AnalyzeAsync");
         StringAssert.Contains(multiBacklogHealth, "CalculateIterationHealth");
 
         StringAssert.Contains(sprintMetrics, "ISprintCommitmentService");

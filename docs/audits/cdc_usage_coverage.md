@@ -62,8 +62,8 @@ Classification key:
 
 | Handler | Service dependencies | Calculator dependencies | Calculation origin | Classification |
 | --- | --- | --- | --- | --- |
-| `GetBacklogHealthQueryHandler` | `IWorkItemReadProvider`, `IProductRepository`, `IMediator`, `IHierarchicalWorkItemValidator` | none | `IHierarchicalWorkItemValidator.ValidateWorkItems(...)` provides validation findings, but the handler still computes blocked-item counts, in-progress-at-end counts, and grouped summaries locally via `CountBlockedItems`, `CountInProgressAtEnd`, and `GroupValidationIssuesByConsequence`. | `legacy compatibility path` |
-| `GetMultiIterationBacklogHealthQueryHandler` | `IWorkItemReadProvider`, `IProductRepository`, `ISprintRepository`, `IMediator`, `IHierarchicalWorkItemValidator` | `SprintWindowSelector` | `CalculateIterationHealth(...)` reuses `IHierarchicalWorkItemValidator.ValidateWorkItems(...)`, then computes per-iteration totals and trend directions locally. Placeholder slot generation and trend aggregation stay outside the BacklogQuality slice. | `legacy compatibility path` |
+| `GetBacklogHealthQueryHandler` | `IWorkItemReadProvider`, `IProductRepository`, `IMediator`, `IBacklogQualityAnalysisService` | none | The handler loads iteration snapshots, delegates canonical validation and readiness interpretation to `_backlogQualityAnalysisService.AnalyzeAsync(...)`, then maps `BacklogQualityAnalysisResult` through `BacklogHealthDtoFactory`. Only dashboard-specific blocked-item and in-progress presentation heuristics remain local. | `CDC compliant` |
+| `GetMultiIterationBacklogHealthQueryHandler` | `IWorkItemReadProvider`, `IProductRepository`, `ISprintRepository`, `IMediator`, `IBacklogQualityAnalysisService` | `SprintWindowSelector` | `CalculateIterationHealth(...)` now delegates each real sprint to `_backlogQualityAnalysisService.AnalyzeAsync(...)` and maps the canonical result through `BacklogHealthDtoFactory`. Placeholder slot generation and trend aggregation remain outside the BacklogQuality slice. | `CDC compliant` |
 
 ### Sprint metrics handlers
 
@@ -115,6 +115,14 @@ Handlers that are fully powered by CDC outputs or CDC-owned domain services:
   - reconstructs membership, churn, completion, and spillover through CDC services
   - reads committed, added, removed, delivered, delivered-from-added, spillover, and remaining story points from `ISprintFactService.BuildSprintFactResult(...)`
   - delegates rates to `SprintMetrics.ISprintExecutionMetricsCalculator` and keeps only presentation-oriented counts / heuristics locally
+- `GetBacklogHealthQueryHandler`
+  - loads iteration snapshots and delegates canonical backlog analysis to `_backlogQualityAnalysisService.AnalyzeAsync(...)`
+  - maps structural-integrity, refinement-readiness, and implementation-readiness findings through `BacklogHealthDtoFactory`
+  - retains only dashboard-specific blocked-state and in-progress-at-end presentation heuristics locally
+- `GetMultiIterationBacklogHealthQueryHandler`
+  - reuses `_backlogQualityAnalysisService.AnalyzeAsync(...)` for each real sprint slot selected by `SprintWindowSelector`
+  - maps direct BacklogQuality outputs through `BacklogHealthDtoFactory`
+  - keeps placeholder slot generation and trend narration as handler-owned presentation logic
 - `GetSprintTrendMetricsQueryHandler`
   - reads `SprintMetricsProjectionEntity` rows produced by `SprintTrendProjectionService`
   - feature and epic rollups come from `ComputeFeatureProgressAsync(...)` and `ComputeEpicProgressAsync(...)`
@@ -171,14 +179,9 @@ Handlers that still compute delivery analytics locally instead of consuming alre
 
 ### Legacy compatibility path
 
-- `GetBacklogHealthQueryHandler`
-  - depends on `IHierarchicalWorkItemValidator`, which remains a legacy-facing wrapper over analyzer-backed backlog-quality results
-  - still computes dashboard-specific blocked and in-progress heuristics locally
-- `GetMultiIterationBacklogHealthQueryHandler`
-  - uses the same validator seam
-  - still owns placeholder sprint-window shaping and trend summary logic for the current health UI
+- none in the audited metrics-handler scope
 
-These handlers consume a compatibility wrapper rather than direct BacklogQuality CDC outputs. Their remaining local logic exists to preserve current health-dashboard behavior.
+The remaining compatibility seams in this audit live outside the backlog-health handlers.
 
 ### Unavoidable adapter logic
 
@@ -206,11 +209,12 @@ These seams are acceptable adapters because the formulas themselves are no longe
   - new seams: `IEffortDistributionService.Analyze(...)`, `IEffortEstimationQualityService.Analyze(...)`, and `IEffortEstimationSuggestionService.GenerateSuggestion(...)`
   - result: handlers now load/filter data, call the EffortPlanning CDC slice, and map canonical results instead of owning formulas
 - **Collapse backlog-health compatibility wrappers when direct CDC contracts are available**
-  - target consumers: `GetBacklogHealthQueryHandler` and `GetMultiIterationBacklogHealthQueryHandler`
-  - expected simplification: replace wrapper-plus-heuristic composition with thinner mapping over direct BacklogQuality outputs
+  - completed for: `GetBacklogHealthQueryHandler` and `GetMultiIterationBacklogHealthQueryHandler`
+  - new seam: `IBacklogQualityAnalysisService.AnalyzeAsync(...)`
+  - result: handlers now consume direct `BacklogQualityAnalysisResult` outputs instead of `IHierarchicalWorkItemValidator`
 
 Net assessment:
 
 - CDC adoption is strong for trend projections, forecasting services, effort diagnostics, and effort planning.
-- The main remaining non-CDC paths in the audited scope are backlog-health compatibility wrappers and client-side roadmap scope replay.
-- The highest-value remaining cleanup targets are backlog-health compatibility wrappers and client-side duplication; portfolio and effort-planning summary rollups are now CDC-backed.
+- The main remaining non-CDC path in the audited scope is client-side roadmap scope replay.
+- The highest-value remaining cleanup target is client-side duplication; backlog-health, portfolio, and effort-planning summary rollups are now CDC-backed.
