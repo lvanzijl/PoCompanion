@@ -140,4 +140,62 @@ public class ActivityEventIngestionServiceTests
         Assert.AreEqual(2, events[0].UpdateId);
         Assert.AreEqual(now.AddDays(-1).ToUnixTimeSeconds(), result.Watermark?.ToUnixTimeSeconds());
     }
+
+    [TestMethod]
+    public async Task IngestAsync_StoryPointsChange_PersistsLedgerRow()
+    {
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase($"ActivityEventIngestion_StoryPoints_{Guid.NewGuid()}")
+            .Options;
+
+        await using var dbContext = new PoToolDbContext(options);
+        dbContext.WorkItems.Add(new WorkItemEntity
+        {
+            TfsId = 303,
+            Type = "PBI",
+            Title = "Estimated Work Item",
+            AreaPath = "Area",
+            IterationPath = "Iteration A",
+            State = "New",
+            RetrievedAt = DateTimeOffset.UtcNow,
+            TfsChangedDate = DateTimeOffset.UtcNow,
+            TfsChangedDateUtc = DateTime.UtcNow
+        });
+        dbContext.ProductOwnerCacheStates.Add(new ProductOwnerCacheStateEntity
+        {
+            ProductOwnerId = 1
+        });
+        await dbContext.SaveChangesAsync();
+
+        var revisedDate = DateTimeOffset.UtcNow;
+        var tfsClient = new Mock<ITfsClient>(MockBehavior.Strict);
+        tfsClient.Setup(client => client.GetWorkItemUpdatesAsync(303, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new WorkItemUpdate
+                {
+                    WorkItemId = 303,
+                    UpdateId = 11,
+                    RevisedDate = revisedDate,
+                    FieldChanges = new Dictionary<string, WorkItemUpdateFieldChange>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["Microsoft.VSTS.Scheduling.StoryPoints"] = new("Microsoft.VSTS.Scheduling.StoryPoints", "3", "5")
+                    }
+                }
+            ]);
+
+        var service = new ActivityEventIngestionService(
+            dbContext,
+            tfsClient.Object,
+            Options.Create(new ActivityIngestionOptions { ActivityBackfillDays = 0 }),
+            NullLogger<ActivityEventIngestionService>.Instance);
+
+        await service.IngestAsync(1);
+        await service.IngestAsync(1);
+
+        var ledgerRow = await dbContext.ActivityEventLedgerEntries.SingleAsync();
+        Assert.AreEqual("Microsoft.VSTS.Scheduling.StoryPoints", ledgerRow.FieldRefName);
+        Assert.AreEqual("3", ledgerRow.OldValue);
+        Assert.AreEqual("5", ledgerRow.NewValue);
+        Assert.AreEqual(11, ledgerRow.UpdateId);
+    }
 }

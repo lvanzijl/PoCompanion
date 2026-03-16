@@ -1,5 +1,10 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Api.Persistence;
 using PoTool.Api.Services;
+using PoTool.Core.Domain.Portfolio;
 using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
@@ -100,6 +105,58 @@ public class WorkItemResolutionServiceTests
         Assert.IsNull(featureId);
     }
 
+    [TestMethod]
+    public async Task ResolveAllAsync_WhenResolvedProductChanges_PersistsSyntheticLedgerTransition()
+    {
+        await using var provider = BuildServiceProvider($"WorkItemResolution_Transition_{Guid.NewGuid()}");
+        await SeedResolutionScenarioAsync(
+            provider,
+            seedPreviousResolvedItem: true,
+            currentParentId: 200,
+            previousResolvedProductId: 1);
+
+        var service = new WorkItemResolutionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<WorkItemResolutionService>.Instance);
+
+        await service.ResolveAllAsync(productOwnerId: 7);
+
+        await using var verificationScope = provider.CreateAsyncScope();
+        var context = verificationScope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        var ledgerEntry = await context.ActivityEventLedgerEntries.SingleAsync();
+        var resolvedItem = await context.ResolvedWorkItems.SingleAsync(item => item.WorkItemId == 300);
+
+        Assert.AreEqual(PortfolioEntryLookup.ResolvedProductIdFieldRefName, ledgerEntry.FieldRefName);
+        Assert.AreEqual("1", ledgerEntry.OldValue);
+        Assert.AreEqual("2", ledgerEntry.NewValue);
+        Assert.IsLessThan(0, ledgerEntry.UpdateId);
+        Assert.AreEqual(2, resolvedItem.ResolvedProductId);
+    }
+
+    [TestMethod]
+    public async Task ResolveAllAsync_WhenResolvedProductDoesNotChange_DoesNotPersistSyntheticLedgerTransition()
+    {
+        await using var provider = BuildServiceProvider($"WorkItemResolution_NoTransition_{Guid.NewGuid()}");
+        await SeedResolutionScenarioAsync(
+            provider,
+            seedPreviousResolvedItem: true,
+            currentParentId: 100,
+            previousResolvedProductId: 1);
+
+        var service = new WorkItemResolutionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<WorkItemResolutionService>.Instance);
+
+        await service.ResolveAllAsync(productOwnerId: 7);
+
+        await using var verificationScope = provider.CreateAsyncScope();
+        var context = verificationScope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+
+        Assert.AreEqual(0, await context.ActivityEventLedgerEntries.CountAsync());
+        Assert.AreEqual(3, await context.ResolvedWorkItems.CountAsync());
+        Assert.AreEqual(1, (await context.ResolvedWorkItems.SingleAsync(item => item.WorkItemId == 300)).ResolvedProductId);
+    }
+
     private static WorkItemEntity CreateWorkItem(
         int tfsId, string type, string title,
         int? effort = null, string state = "New",
@@ -118,5 +175,80 @@ public class WorkItemResolutionServiceTests
             RetrievedAt = DateTimeOffset.UtcNow,
             TfsChangedDate = DateTimeOffset.UtcNow,
         };
+    }
+
+    private static ServiceProvider BuildServiceProvider(string databaseName)
+    {
+        return new ServiceCollection()
+            .AddDbContext<PoToolDbContext>(options => options.UseInMemoryDatabase(databaseName))
+            .BuildServiceProvider();
+    }
+
+    private static async Task SeedResolutionScenarioAsync(
+        ServiceProvider provider,
+        bool seedPreviousResolvedItem,
+        int currentParentId,
+        int previousResolvedProductId)
+    {
+        await using var scope = provider.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+
+        context.Products.AddRange(
+            new ProductEntity
+            {
+                Id = 1,
+                ProductOwnerId = 7,
+                Name = "Product A",
+                BacklogRoots = [new ProductBacklogRootEntity { ProductId = 1, WorkItemTfsId = 100 }]
+            },
+            new ProductEntity
+            {
+                Id = 2,
+                ProductOwnerId = 7,
+                Name = "Product B",
+                BacklogRoots = [new ProductBacklogRootEntity { ProductId = 2, WorkItemTfsId = 200 }]
+            });
+
+        context.WorkItems.AddRange(
+            CreateWorkItem(100, WorkItemType.Feature, "Feature A"),
+            CreateWorkItem(200, WorkItemType.Feature, "Feature B"),
+            CreateWorkItem(300, WorkItemType.Pbi, "Portfolio PBI", parentId: currentParentId));
+
+        if (seedPreviousResolvedItem)
+        {
+            context.ResolvedWorkItems.AddRange(
+                new ResolvedWorkItemEntity
+                {
+                    WorkItemId = 100,
+                    WorkItemType = WorkItemType.Feature,
+                    ResolvedProductId = 1,
+                    ResolvedFeatureId = 100,
+                    ResolutionStatus = ResolutionStatus.Resolved,
+                    LastResolvedAt = DateTimeOffset.UtcNow,
+                    ResolvedAtRevision = 0
+                },
+                new ResolvedWorkItemEntity
+                {
+                    WorkItemId = 200,
+                    WorkItemType = WorkItemType.Feature,
+                    ResolvedProductId = 2,
+                    ResolvedFeatureId = 200,
+                    ResolutionStatus = ResolutionStatus.Resolved,
+                    LastResolvedAt = DateTimeOffset.UtcNow,
+                    ResolvedAtRevision = 0
+                },
+                new ResolvedWorkItemEntity
+                {
+                    WorkItemId = 300,
+                    WorkItemType = WorkItemType.Pbi,
+                    ResolvedProductId = previousResolvedProductId,
+                    ResolvedFeatureId = previousResolvedProductId == 1 ? 100 : 200,
+                    ResolutionStatus = ResolutionStatus.Resolved,
+                    LastResolvedAt = DateTimeOffset.UtcNow,
+                    ResolvedAtRevision = 0
+                });
+        }
+
+        await context.SaveChangesAsync();
     }
 }
