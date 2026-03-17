@@ -198,6 +198,27 @@ public sealed class SprintCommitmentCdcServicesTests
         Assert.AreEqual(3d, result.DeliveredFromAddedStoryPoints, 0.001);
         Assert.AreEqual(8d, result.SpilloverStoryPoints, 0.001);
         Assert.AreEqual(8d, result.RemainingStoryPoints, 0.001);
+        Assert.AreEqual(
+            result.CommittedStoryPoints + result.AddedStoryPoints - result.RemovedStoryPoints - result.DeliveredStoryPoints,
+            result.RemainingStoryPoints,
+            0.001,
+            "Remaining scope should include added scope and exclude delivered and removed scope.");
+        Assert.IsGreaterThanOrEqualTo(
+            result.DeliveredStoryPoints,
+            result.CommittedStoryPoints,
+            "Delivered committed scope should not exceed committed scope.");
+        Assert.IsGreaterThanOrEqualTo(
+            result.DeliveredFromAddedStoryPoints,
+            result.AddedStoryPoints,
+            "Delivered added scope should stay within added scope.");
+        Assert.IsLessThanOrEqualTo(
+            result.SpilloverStoryPoints,
+            result.RemainingStoryPoints,
+            "Spillover should remain a subset of remaining scope.");
+        Assert.IsLessThanOrEqualTo(
+            result.DeliveredFromAddedStoryPoints,
+            result.AddedStoryPoints,
+            "Delivered-from-added scope must remain bounded by added scope.");
     }
 
     private static SprintDefinition CreateSprint()

@@ -15,17 +15,22 @@ public sealed class EffortPlanningCdcServicesTests
     [TestMethod]
     public void EffortDistribution_ProducesCanonicalAreaIterationAndTotalRollups()
     {
-        var result = DistributionService.Analyze(
+        IReadOnlyList<EffortPlanningWorkItem> inputs =
         [
             CreateWorkItem(1, "Task", "A", "Area1", "Sprint 2", "Done", 5),
             CreateWorkItem(2, "Task", "B", "Area1", "Sprint 2", "Done", 8),
             CreateWorkItem(3, "Task", "C", "Area2", "Sprint 1", "Done", 3),
             CreateWorkItem(4, "Task", "D", "Area1", "Sprint 1", "Done", 13)
-        ],
-        maxIterations: 10,
-        defaultCapacityPerIteration: 20);
+        ];
+        var result = DistributionService.Analyze(
+            inputs,
+            maxIterations: 10,
+            defaultCapacityPerIteration: 20);
+        var totalWorkItemEffort = inputs.Sum(static item => item.Effort ?? 0);
 
-        Assert.AreEqual(29, result.TotalEffort);
+        Assert.AreEqual(totalWorkItemEffort, result.TotalEffort);
+        Assert.AreEqual(totalWorkItemEffort, result.EffortByArea.Sum(static area => area.TotalEffort));
+        Assert.AreEqual(totalWorkItemEffort, result.EffortByIteration.Sum(static iteration => iteration.TotalEffort));
         Assert.AreEqual(26, result.EffortByArea.Single(area => area.AreaPath == "Area1").TotalEffort);
         Assert.AreEqual(13, result.EffortByIteration.Single(iteration => iteration.IterationPath == "Sprint 2").TotalEffort);
         Assert.AreEqual(65d, result.EffortByIteration.Single(iteration => iteration.IterationPath == "Sprint 2").UtilizationPercentage, 0.001d);
