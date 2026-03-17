@@ -1461,14 +1461,14 @@ public class BattleshipMockDataFacade : ITfsClient
         var projects = new List<TfsProjectDto>
         {
             new TfsProjectDto(
-                "battleship-project-guid",
-                "Battleship",
-                "Battleship game development project"
+                "battleship-systems-project-guid",
+                "Battleship Systems",
+                "Battleship incident-response portfolio"
             ),
             new TfsProjectDto(
-                "game-platform-guid",
-                "GamePlatform",
-                "Shared game platform and services"
+                "operations-project-guid",
+                "Battleship Operations",
+                "Operations automation and fleet readiness"
             ),
             new TfsProjectDto(
                 "infrastructure-guid",
@@ -1485,31 +1485,14 @@ public class BattleshipMockDataFacade : ITfsClient
         IncrementAndGetApiCallCount();
         _logger.LogInformation("Mock TFS client (BattleshipMockDataFacade): GetTfsTeamsAsync called");
 
-        // Return mock teams for the Battleship project
-        var teams = new List<TfsTeamDto>
-        {
-            new TfsTeamDto(
-                "team-alpha-guid",
-                "Battleship Alpha Squad",
-                "Battleship",
-                "Primary development team for Battleship game",
-                "Battleship\\Alpha Squad"
-            ),
-            new TfsTeamDto(
-                "team-beta-guid",
-                "Battleship Beta Team",
-                "Battleship",
-                "Feature development and enhancements",
-                "Battleship\\Beta Team"
-            ),
-            new TfsTeamDto(
-                "team-ops-guid",
-                "Battleship Operations",
-                "Battleship",
-                "DevOps and infrastructure support",
-                "Battleship\\Operations"
-            )
-        };
+        var teams = BattleshipWorkItemGenerator.GetTeamStructure()
+            .SelectMany(program => program.Teams.Select(team => new TfsTeamDto(
+                $"mock-{NormalizeTeamToken(program.Program)}-{NormalizeTeamToken(team)}",
+                team,
+                "Battleship Systems",
+                $"{program.Program} delivery team for the mock dataset",
+                $@"Battleship Systems\{program.Program}\{team}")))
+            .ToList();
 
         return Task.FromResult<IEnumerable<TfsTeamDto>>(teams);
     }
@@ -1547,61 +1530,38 @@ public class BattleshipMockDataFacade : ITfsClient
             "Mock TFS client (BattleshipMockDataFacade): GetTeamIterationsAsync called for Project='{Project}', Team='{Team}'",
             projectName, teamName);
 
-        // Return mock team iterations with past, current, and future sprints
+        // Return mock team iterations with a realistic rolling 10-sprint window.
         var now = DateTimeOffset.UtcNow;
-        var iterations = new List<TeamIterationDto>
-        {
-            // Past sprint
-            new TeamIterationDto(
-                "iteration-past-id",
-                "Sprint 10",
-                $"\\{projectName}\\Sprint 10",
-                now.AddDays(-28),
-                now.AddDays(-14),
-                "past"
-            ),
-            // Current sprint
-            new TeamIterationDto(
-                "iteration-current-id",
-                "Sprint 11",
-                $"\\{projectName}\\Sprint 11",
-                now.AddDays(-7),
-                now.AddDays(7),
-                "current"
-            ),
-            // Future sprints
-            new TeamIterationDto(
-                "iteration-future-1-id",
-                "Sprint 12",
-                $"\\{projectName}\\Sprint 12",
-                now.AddDays(7),
-                now.AddDays(21),
-                "future"
-            ),
-            new TeamIterationDto(
-                "iteration-future-2-id",
-                "Sprint 13",
-                $"\\{projectName}\\Sprint 13",
-                now.AddDays(21),
-                now.AddDays(35),
-                "future"
-            ),
-            // Sprint without attributes (null dates)
-            new TeamIterationDto(
-                "iteration-no-dates-id",
-                "Sprint 14",
-                $"\\{projectName}\\Sprint 14",
-                null,
-                null,
-                null
-            )
-        };
+        var iterations = Enumerable.Range(1, 10)
+            .Select(index =>
+            {
+                var start = now.Date.AddDays((index - 6) * 14);
+                var end = start.AddDays(13);
+                var timeFrame = index < 6 ? "past" : index == 6 ? "current" : "future";
+
+                return new TeamIterationDto(
+                    $"iteration-{NormalizeTeamToken(teamName)}-{index:D2}",
+                    $"Sprint {index}",
+                    $@"\{projectName}\2025\{(index <= 5 ? "Q1" : "Q2")}\Sprint {index}",
+                    start,
+                    end,
+                    timeFrame);
+            })
+            .ToList();
 
         _logger.LogInformation(
             "Mock TFS client (BattleshipMockDataFacade): Returning {Count} team iterations for Project='{Project}', Team='{Team}'",
             iterations.Count, projectName, teamName);
 
         return Task.FromResult<IEnumerable<TeamIterationDto>>(iterations);
+    }
+
+    private static string NormalizeTeamToken(string value)
+    {
+        return value
+            .ToLowerInvariant()
+            .Replace(" ", "-")
+            .Replace("&", "and");
     }
 
     /// <summary>

@@ -29,19 +29,26 @@ public class BattleshipPullRequestGenerator
 
         var developers = GetDevelopers();
         var repositories = new[] { "Battleship-Incident-Backend", "Battleship-Web-UI", "Battleship-Mobile-App", "Battleship-Sensor-Integration" };
-        var quarters = new[] { "Q1", "Q2", "Q3", "Q4" };
 
         for (var i = 0; i < prCount; i++)
         {
             var prId = 1001 + i;
             var repository = repositories[_random.Next(repositories.Length)];
             var developer = developers[_random.Next(developers.Length)];
-            var quarter = quarters[i / 40]; // Distribute across quarters
-            var sprint = _random.Next(1, 101); // Sprints 1-100
-
-            var createdDate = now.AddDays(-_random.Next(1, 365));
+            var sprint = _random.Next(1, 11);
+            var quarter = sprint <= 5 ? "Q1" : "Q2";
+            var sprintStart = now.AddDays(-14 * (11 - sprint));
+            var createdDate = sprintStart.AddDays(_random.Next(-5, 9)).AddHours(_random.Next(0, 24));
             var status = GetPrStatus();
-            DateTimeOffset? completedDate = status == "completed" ? createdDate.AddDays(_random.Next(1, 15)) : null;
+            DateTimeOffset? completedDate = null;
+            if (status == "completed")
+            {
+                var candidateCompletedDate = createdDate.AddDays(_random.Next(1, 15));
+                var latestCompletedDate = now.AddHours(-_random.Next(1, 12));
+                completedDate = candidateCompletedDate <= latestCompletedDate
+                    ? candidateCompletedDate
+                    : latestCompletedDate;
+            }
 
             var title = GetPrTitle(i, repository);
             var sourceBranch = GetBranchName(title);

@@ -1,80 +1,71 @@
 using PoTool.Shared.WorkItems;
 using PoTool.Shared.PullRequests;
+using System.Text.RegularExpressions;
 
 using PoTool.Core.WorkItems;
 
 namespace PoTool.Api.Services.MockData;
 
 /// <summary>
-/// Validates mock data against rules defined in mock-data-rules.md
+/// Validates mock data against the expected operational realism constraints.
 /// </summary>
 public class MockDataValidator
 {
+    private static readonly string[] GoalStates = ["Proposed", "Active", "Completed", "Removed"];
+    private static readonly string[] EpicStates = ["New", "Active", "Resolved", "Closed", "Removed"];
+    private static readonly string[] BacklogStates = ["New", "Approved", "Committed", "Done", "Removed"];
+    private static readonly string[] TaskStates = ["To Do", "In Progress", "Done", "Removed"];
+    private static readonly HashSet<int> ValidStoryPoints = [1, 2, 3, 5, 8, 13, 21];
+
     /// <summary>
-    /// Validates work item hierarchy and generates a validation report
+    /// Validates work item hierarchy and generates a validation report.
     /// </summary>
     public ValidationReport ValidateWorkItems(List<WorkItemDto> workItems)
     {
-        var report = new ValidationReport();
+        var report = new ValidationReport
+        {
+            TotalWorkItems = workItems.Count,
+            GoalCount = workItems.Count(w => w.Type == WorkItemType.Goal),
+            ObjectiveCount = workItems.Count(w => w.Type == WorkItemType.Objective),
+            EpicCount = workItems.Count(w => w.Type == WorkItemType.Epic),
+            FeatureCount = workItems.Count(w => w.Type == WorkItemType.Feature),
+            PbiCount = workItems.Count(w => w.Type == WorkItemType.Pbi),
+            BugCount = workItems.Count(w => w.Type == WorkItemType.Bug),
+            TaskCount = workItems.Count(w => w.Type == WorkItemType.Task)
+        };
 
-        // Count work items by type
-        report.TotalWorkItems = workItems.Count;
-        report.GoalCount = workItems.Count(w => w.Type == WorkItemType.Goal);
-        report.ObjectiveCount = workItems.Count(w => w.Type == WorkItemType.Objective);
-        report.EpicCount = workItems.Count(w => w.Type == WorkItemType.Epic);
-        report.FeatureCount = workItems.Count(w => w.Type == WorkItemType.Feature);
-        report.PbiCount = workItems.Count(w => w.Type == WorkItemType.Pbi);
-        report.BugCount = workItems.Count(w => w.Type == WorkItemType.Bug);
-        report.TaskCount = workItems.Count(w => w.Type == WorkItemType.Task);
-
-        // Validate hierarchy quantities (Rule 2.2)
         ValidateQuantities(report);
-
-        // Validate hierarchy integrity (Rule 10.1.1)
         ValidateHierarchyIntegrity(workItems, report);
-
-        // Validate area path consistency (Rule 10.1.2)
         ValidateAreaPathConsistency(workItems, report);
-
-        // Validate iteration paths (Rule 10.1.3)
         ValidateIterationPaths(workItems, report);
-
-        // Validate states (Rule 10.1.4)
         ValidateStates(workItems, report);
-
-        // Validate effort estimation (Rule 10.1.5)
         ValidateEstimation(workItems, report);
-
-        // Validate Battleship theme usage
+        ValidateBacklogQualityDistribution(workItems, report);
         ValidateBattleshipTheme(workItems, report);
 
         return report;
     }
 
     /// <summary>
-    /// Validates dependencies against rules
+    /// Validates dependencies against rules.
     /// </summary>
     public void ValidateDependencies(List<DependencyLink> dependencies, List<WorkItemDto> workItems, ValidationReport report)
     {
         report.TotalDependencies = dependencies.Count;
 
-        // Validate cross-team percentage (Rule 7.3)
         var crossTeamCount = dependencies.Count(d => d.IsCrossTeam);
         report.CrossTeamDependencyPercentage = report.TotalDependencies > 0
             ? (double)crossTeamCount / report.TotalDependencies * 100
             : 0;
 
-        // Validate no self-dependencies (except intentional for testing)
         var selfDependencies = dependencies.Count(d => d.SourceWorkItemId == d.TargetWorkItemId);
         report.SelfDependencyCount = selfDependencies;
 
-        // Validate orphaned dependencies
         var workItemIds = new HashSet<int>(workItems.Select(w => w.TfsId));
         var orphanedCount = dependencies.Count(d =>
             !workItemIds.Contains(d.SourceWorkItemId) || !workItemIds.Contains(d.TargetWorkItemId));
         report.OrphanedDependencyCount = orphanedCount;
 
-        // Calculate invalid dependency percentage
         var invalidCount = selfDependencies + orphanedCount;
         report.InvalidDependencyPercentage = report.TotalDependencies > 0
             ? (double)invalidCount / report.TotalDependencies * 100
@@ -82,7 +73,7 @@ public class MockDataValidator
     }
 
     /// <summary>
-    /// Validates pull requests against rules
+    /// Validates pull requests against rules.
     /// </summary>
     public void ValidatePullRequests(
         List<PullRequestDto> pullRequests,
@@ -90,26 +81,21 @@ public class MockDataValidator
         ValidationReport report)
     {
         report.TotalPullRequests = pullRequests.Count;
-
-        // Validate PR volume (Rule 8.1)
         report.PullRequestVolumeValid = pullRequests.Count >= 100;
 
-        // Validate status distribution (Rule 8.3)
         var activeCount = pullRequests.Count(pr => pr.Status == "active");
         var completedCount = pullRequests.Count(pr => pr.Status == "completed");
         var abandonedCount = pullRequests.Count(pr => pr.Status == "abandoned");
 
-        report.ActivePrPercentage = (double)activeCount / pullRequests.Count * 100;
-        report.CompletedPrPercentage = (double)completedCount / pullRequests.Count * 100;
-        report.AbandonedPrPercentage = (double)abandonedCount / pullRequests.Count * 100;
+        report.ActivePrPercentage = pullRequests.Count > 0 ? (double)activeCount / pullRequests.Count * 100 : 0;
+        report.CompletedPrPercentage = pullRequests.Count > 0 ? (double)completedCount / pullRequests.Count * 100 : 0;
+        report.AbandonedPrPercentage = pullRequests.Count > 0 ? (double)abandonedCount / pullRequests.Count * 100 : 0;
 
-        // Validate work item links (Rule 8.7)
         var linkedPrCount = prWorkItemLinks.Select(l => l.PullRequestId).Distinct().Count();
         report.PrWithWorkItemLinksPercentage = pullRequests.Count > 0
             ? (double)linkedPrCount / pullRequests.Count * 100
             : 0;
 
-        // Validate all PRs have required metadata
         var prsWithoutTitle = pullRequests.Count(pr => string.IsNullOrEmpty(pr.Title));
         var prsWithoutCreator = pullRequests.Count(pr => string.IsNullOrEmpty(pr.CreatedBy));
         var prsWithoutRepository = pullRequests.Count(pr => string.IsNullOrEmpty(pr.RepositoryName));
@@ -117,9 +103,8 @@ public class MockDataValidator
         report.PrMetadataValid = prsWithoutTitle == 0 && prsWithoutCreator == 0 && prsWithoutRepository == 0;
     }
 
-    private void ValidateQuantities(ValidationReport report)
+    private static void ValidateQuantities(ValidationReport report)
     {
-        // Exact hierarchy: 10 Goals → 30 Objectives → 100 Epics → 500 Features → 3,000 PBIs + 1,000 Bugs → 15,000 Tasks
         report.GoalQuantityValid = report.GoalCount == 10;
         report.ObjectiveQuantityValid = report.ObjectiveCount >= 25 && report.ObjectiveCount <= 35;
         report.EpicQuantityValid = report.EpicCount >= 80 && report.EpicCount <= 120;
@@ -129,24 +114,23 @@ public class MockDataValidator
         report.TaskQuantityValid = report.TaskCount >= 12000 && report.TaskCount <= 18000;
     }
 
-    private void ValidateHierarchyIntegrity(List<WorkItemDto> workItems, ValidationReport report)
+    private static void ValidateHierarchyIntegrity(List<WorkItemDto> workItems, ValidationReport report)
     {
         var workItemIds = new HashSet<int>(workItems.Select(w => w.TfsId));
         var orphanedCount = 0;
 
         foreach (var item in workItems)
         {
-            // Goals should have no parent
             if (item.Type == WorkItemType.Goal)
             {
                 if (item.ParentTfsId.HasValue)
+                {
                     orphanedCount++;
+                }
             }
-            else
+            else if (!item.ParentTfsId.HasValue || !workItemIds.Contains(item.ParentTfsId.Value))
             {
-                // All other items must have a parent
-                if (!item.ParentTfsId.HasValue || !workItemIds.Contains(item.ParentTfsId.Value))
-                    orphanedCount++;
+                orphanedCount++;
             }
         }
 
@@ -154,25 +138,22 @@ public class MockDataValidator
         report.HierarchyIntegrityValid = orphanedCount == 0;
     }
 
-    private void ValidateAreaPathConsistency(List<WorkItemDto> workItems, ValidationReport report)
+    private static void ValidateAreaPathConsistency(List<WorkItemDto> workItems, ValidationReport report)
     {
         var violations = 0;
-
-        // Group by Epic and validate all descendants have the same area path
         var epics = workItems.Where(w => w.Type == WorkItemType.Epic).ToList();
 
         foreach (var epic in epics)
         {
             var descendants = GetDescendants(epic.TfsId, workItems);
-            var inconsistentDescendants = descendants.Count(d => d.AreaPath != epic.AreaPath);
-            violations += inconsistentDescendants;
+            violations += descendants.Count(descendant => descendant.AreaPath != epic.AreaPath);
         }
 
         report.AreaPathViolationCount = violations;
         report.AreaPathConsistencyValid = violations == 0;
     }
 
-    private List<WorkItemDto> GetDescendants(int parentId, List<WorkItemDto> allItems)
+    private static List<WorkItemDto> GetDescendants(int parentId, List<WorkItemDto> allItems)
     {
         var descendants = new List<WorkItemDto>();
         var directChildren = allItems.Where(w => w.ParentTfsId == parentId).ToList();
@@ -186,18 +167,19 @@ public class MockDataValidator
         return descendants;
     }
 
-    private void ValidateIterationPaths(List<WorkItemDto> workItems, ValidationReport report)
+    private static void ValidateIterationPaths(List<WorkItemDto> workItems, ValidationReport report)
     {
-        // Validate that iteration paths follow expected format
         var invalidIterations = workItems.Count(w =>
-            string.IsNullOrEmpty(w.IterationPath) ||
-            (!w.IterationPath.Contains("Backlog") && !w.IterationPath.Contains("Sprint") && !w.IterationPath.Contains("2025")));
+            string.IsNullOrWhiteSpace(w.IterationPath) ||
+            (!w.IterationPath.Contains("Backlog", StringComparison.OrdinalIgnoreCase) &&
+             !w.IterationPath.Contains("Sprint", StringComparison.OrdinalIgnoreCase) &&
+             !Regex.IsMatch(w.IterationPath, @"\\20\d{2}(\\|$)")));
 
         report.InvalidIterationPathCount = invalidIterations;
         report.IterationPathValid = invalidIterations == 0;
     }
 
-    private void ValidateStates(List<WorkItemDto> workItems, ValidationReport report)
+    private static void ValidateStates(List<WorkItemDto> workItems, ValidationReport report)
     {
         var invalidStates = 0;
 
@@ -205,45 +187,157 @@ public class MockDataValidator
         {
             var validStates = item.Type switch
             {
-                WorkItemType.Goal => new[] { "Proposed", "Active", "Completed", "Removed" },
-                WorkItemType.Objective => new[] { "Proposed", "Active", "Completed", "Removed" },
-                WorkItemType.Epic => new[] { "New", "Active", "Resolved", "Closed", "Removed" },
-                WorkItemType.Feature => new[] { "New", "Active", "Resolved", "Closed", "Removed" },
-                WorkItemType.Pbi => new[] { "New", "Approved", "Committed", "Done", "Removed" },
-                WorkItemType.Bug => new[] { "New", "Approved", "Committed", "Done", "Removed" },
-                WorkItemType.Task => new[] { "To Do", "In Progress", "Done", "Removed" },
+                WorkItemType.Goal => GoalStates,
+                WorkItemType.Objective => GoalStates,
+                WorkItemType.Epic => EpicStates,
+                WorkItemType.Feature => EpicStates,
+                WorkItemType.Pbi => BacklogStates,
+                WorkItemType.Bug => BacklogStates,
+                WorkItemType.Task => TaskStates,
                 _ => Array.Empty<string>()
             };
 
             if (!validStates.Contains(item.State))
+            {
                 invalidStates++;
+            }
         }
 
         report.InvalidStateCount = invalidStates;
         report.StateValidityValid = invalidStates == 0;
     }
 
-    private void ValidateEstimation(List<WorkItemDto> workItems, ValidationReport report)
+    private static void ValidateEstimation(List<WorkItemDto> workItems, ValidationReport report)
     {
-        var fibonacci = new[] { 1, 2, 3, 5, 8, 13, 21 };
-        var pbisAndBugs = workItems.Where(w => w.Type == WorkItemType.Pbi || w.Type == WorkItemType.Bug).ToList();
+        var targetItems = workItems.Where(w =>
+            w.Type == WorkItemType.Epic ||
+            w.Type == WorkItemType.Feature ||
+            w.Type == WorkItemType.Pbi ||
+            w.Type == WorkItemType.Bug).ToList();
 
-        var estimated = pbisAndBugs.Count(w => w.Effort.HasValue);
-        var unestimated = pbisAndBugs.Count(w => !w.Effort.HasValue);
+        var pbis = workItems.Where(w => w.Type == WorkItemType.Pbi).ToList();
+        var nonPbisWithStoryPoints = workItems.Count(w =>
+            w.Type != WorkItemType.Pbi &&
+            (w.StoryPoints.HasValue || w.BusinessValue.HasValue));
 
-        report.EstimatedItemCount = estimated;
-        report.UnestimatedItemCount = unestimated;
-        report.UnestimatedPercentage = pbisAndBugs.Count > 0
-            ? (double)unestimated / pbisAndBugs.Count * 100
+        report.EstimatedItemCount = targetItems.Count(w => w.Effort.HasValue && w.Effort.Value > 0);
+        report.UnestimatedItemCount = targetItems.Count - report.EstimatedItemCount;
+        report.UnestimatedPercentage = targetItems.Count > 0
+            ? (double)report.UnestimatedItemCount / targetItems.Count * 100
             : 0;
 
-        // Validate Fibonacci values
-        var nonFibonacci = pbisAndBugs.Count(w => w.Effort.HasValue && !fibonacci.Contains(w.Effort.Value));
-        report.NonFibonacciEstimateCount = nonFibonacci;
-        report.FibonacciEstimationValid = nonFibonacci == 0;
+        report.NonStandardStoryPointCount = pbis.Count(w =>
+            w.StoryPoints.HasValue &&
+            !ValidStoryPoints.Contains(w.StoryPoints.Value) &&
+            !(w.StoryPoints.Value == 0 && IsClosedState(w.State)));
+        report.NonPbiStoryPointCount = nonPbisWithStoryPoints;
+        report.StoryPointCoveragePercentage = pbis.Count > 0
+            ? (double)pbis.Count(w => w.StoryPoints.HasValue || w.BusinessValue.HasValue) / pbis.Count * 100
+            : 0;
+
+        report.StoryPointEstimationValid = report.NonStandardStoryPointCount == 0;
+        report.EffortStoryPointSeparationValid = report.NonPbiStoryPointCount == 0;
     }
 
-    private void ValidateBattleshipTheme(List<WorkItemDto> workItems, ValidationReport report)
+    private static void ValidateBacklogQualityDistribution(List<WorkItemDto> workItems, ValidationReport report)
+    {
+        var activeBacklogItems = workItems.Where(w =>
+                (w.Type == WorkItemType.Epic || w.Type == WorkItemType.Feature || w.Type == WorkItemType.Pbi) &&
+                !IsTerminalState(w.State))
+            .ToList();
+        var backlogItemsForStateChecks = workItems.Where(w =>
+                w.Type == WorkItemType.Epic || w.Type == WorkItemType.Feature || w.Type == WorkItemType.Pbi)
+            .Where(w => !string.Equals(w.State, "Removed", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var invalidIds = new HashSet<int>();
+
+        foreach (var item in activeBacklogItems)
+        {
+            if (string.IsNullOrWhiteSpace(item.Description))
+            {
+                report.MissingDescriptionCount++;
+                invalidIds.Add(item.TfsId);
+            }
+
+            if (!item.Effort.HasValue || item.Effort.Value <= 0)
+            {
+                report.MissingEstimateCount++;
+                invalidIds.Add(item.TfsId);
+            }
+        }
+
+        var features = activeBacklogItems.Where(item => item.Type == WorkItemType.Feature).ToList();
+        foreach (var feature in features)
+        {
+            var hasPbiChildren = workItems.Any(item =>
+                item.ParentTfsId == feature.TfsId &&
+                item.Type == WorkItemType.Pbi);
+
+            if (!hasPbiChildren)
+            {
+                report.BrokenHierarchyCount++;
+                invalidIds.Add(feature.TfsId);
+            }
+        }
+
+        var allById = workItems.ToDictionary(item => item.TfsId);
+        var childrenByParent = workItems
+            .Where(item => item.ParentTfsId.HasValue)
+            .GroupBy(item => item.ParentTfsId!.Value)
+            .ToDictionary(group => group.Key, group => group.Select(child => child.TfsId).ToList());
+
+        foreach (var item in backlogItemsForStateChecks.Where(item => IsClosedState(item.State)))
+        {
+            if (HasUnfinishedDescendant(item.TfsId, allById, childrenByParent))
+            {
+                report.InconsistentStateCount++;
+            }
+        }
+
+        report.InvalidBacklogItemCount = invalidIds.Count;
+        report.ValidBacklogItemCount = Math.Max(0, activeBacklogItems.Count - invalidIds.Count);
+        report.InvalidBacklogItemPercentage = activeBacklogItems.Count > 0
+            ? (double)invalidIds.Count / activeBacklogItems.Count * 100
+            : 0;
+        report.ValidBacklogItemPercentage = activeBacklogItems.Count > 0
+            ? 100 - report.InvalidBacklogItemPercentage
+            : 0;
+        report.BacklogQualityDistributionValid = report.InvalidBacklogItemPercentage >= 5 && report.InvalidBacklogItemPercentage <= 20;
+    }
+
+    private static bool HasUnfinishedDescendant(
+        int itemId,
+        IReadOnlyDictionary<int, WorkItemDto> allById,
+        IReadOnlyDictionary<int, List<int>> childrenByParent)
+    {
+        if (!childrenByParent.TryGetValue(itemId, out var children))
+        {
+            return false;
+        }
+
+        foreach (var childId in children)
+        {
+            if (!allById.TryGetValue(childId, out var child))
+            {
+                continue;
+            }
+
+            if (!IsTerminalState(child.State))
+            {
+                return true;
+            }
+
+            if (HasUnfinishedDescendant(childId, allById, childrenByParent))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void ValidateBattleshipTheme(List<WorkItemDto> workItems, ValidationReport report)
     {
         var battleshipKeywords = new[]
         {
@@ -253,20 +347,29 @@ public class MockDataValidator
         };
 
         var goals = workItems.Where(w => w.Type == WorkItemType.Goal).ToList();
-        var themeCompliant = goals.Count(g =>
-            battleshipKeywords.Any(keyword => g.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase)));
+        var themeCompliant = goals.Count(goal =>
+            battleshipKeywords.Any(keyword => goal.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase)));
 
         report.BattleshipThemeCompliantCount = themeCompliant;
-        report.BattleshipThemeValid = themeCompliant >= goals.Count * 0.7; // At least 70% should use theme
+        report.BattleshipThemeValid = themeCompliant >= goals.Count * 0.7;
+    }
+
+    private static bool IsTerminalState(string state)
+    {
+        return IsClosedState(state) || string.Equals(state, "Removed", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsClosedState(string state)
+    {
+        return state is "Completed" or "Resolved" or "Closed" or "Done";
     }
 }
 
 /// <summary>
-/// Validation report containing all metrics and validation results
+/// Validation report containing all metrics and validation results.
 /// </summary>
 public class ValidationReport
 {
-    // Work item counts
     public int TotalWorkItems { get; set; }
     public int GoalCount { get; set; }
     public int ObjectiveCount { get; set; }
@@ -276,7 +379,6 @@ public class ValidationReport
     public int BugCount { get; set; }
     public int TaskCount { get; set; }
 
-    // Quantity validations
     public bool GoalQuantityValid { get; set; }
     public bool ObjectiveQuantityValid { get; set; }
     public bool EpicQuantityValid { get; set; }
@@ -285,37 +387,43 @@ public class ValidationReport
     public bool BugQuantityValid { get; set; }
     public bool TaskQuantityValid { get; set; }
 
-    // Hierarchy integrity
     public int OrphanedWorkItemCount { get; set; }
     public bool HierarchyIntegrityValid { get; set; }
 
-    // Area path consistency
     public int AreaPathViolationCount { get; set; }
     public bool AreaPathConsistencyValid { get; set; }
 
-    // Iteration paths
     public int InvalidIterationPathCount { get; set; }
     public bool IterationPathValid { get; set; }
 
-    // States
     public int InvalidStateCount { get; set; }
     public bool StateValidityValid { get; set; }
 
-    // Estimation
     public int EstimatedItemCount { get; set; }
     public int UnestimatedItemCount { get; set; }
     public double UnestimatedPercentage { get; set; }
-    public int NonFibonacciEstimateCount { get; set; }
-    public bool FibonacciEstimationValid { get; set; }
+    public int NonStandardStoryPointCount { get; set; }
+    public int NonPbiStoryPointCount { get; set; }
+    public double StoryPointCoveragePercentage { get; set; }
+    public bool StoryPointEstimationValid { get; set; }
+    public bool EffortStoryPointSeparationValid { get; set; }
 
-    // Dependencies
+    public int MissingDescriptionCount { get; set; }
+    public int MissingEstimateCount { get; set; }
+    public int BrokenHierarchyCount { get; set; }
+    public int InconsistentStateCount { get; set; }
+    public int InvalidBacklogItemCount { get; set; }
+    public int ValidBacklogItemCount { get; set; }
+    public double InvalidBacklogItemPercentage { get; set; }
+    public double ValidBacklogItemPercentage { get; set; }
+    public bool BacklogQualityDistributionValid { get; set; }
+
     public int TotalDependencies { get; set; }
     public double CrossTeamDependencyPercentage { get; set; }
     public int SelfDependencyCount { get; set; }
     public int OrphanedDependencyCount { get; set; }
     public double InvalidDependencyPercentage { get; set; }
 
-    // Pull requests
     public int TotalPullRequests { get; set; }
     public bool PullRequestVolumeValid { get; set; }
     public double ActivePrPercentage { get; set; }
@@ -324,13 +432,9 @@ public class ValidationReport
     public double PrWithWorkItemLinksPercentage { get; set; }
     public bool PrMetadataValid { get; set; }
 
-    // Theme validation
     public int BattleshipThemeCompliantCount { get; set; }
     public bool BattleshipThemeValid { get; set; }
 
-    /// <summary>
-    /// Returns true if all validations pass
-    /// </summary>
     public bool IsValid()
     {
         return GoalQuantityValid
@@ -344,15 +448,14 @@ public class ValidationReport
             && AreaPathConsistencyValid
             && IterationPathValid
             && StateValidityValid
-            && FibonacciEstimationValid
+            && StoryPointEstimationValid
+            && EffortStoryPointSeparationValid
+            && BacklogQualityDistributionValid
             && PullRequestVolumeValid
             && PrMetadataValid
             && BattleshipThemeValid;
     }
 
-    /// <summary>
-    /// Returns a summary of the validation report
-    /// </summary>
     public string GetSummary()
     {
         return $@"Mock Data Validation Report
@@ -372,8 +475,19 @@ Data Quality:
   Area Path Consistency: {AreaPathConsistencyValid} (Violations: {AreaPathViolationCount})
   Iteration Path Valid: {IterationPathValid} (Invalid: {InvalidIterationPathCount})
   State Validity: {StateValidityValid} (Invalid: {InvalidStateCount})
-  Fibonacci Estimation: {FibonacciEstimationValid} (Non-Fibonacci: {NonFibonacciEstimateCount})
-  Unestimated: {UnestimatedPercentage:F1}%
+  Effort Coverage: {100 - UnestimatedPercentage:F1}% estimated / {UnestimatedPercentage:F1}% missing
+  Story Point Validity: {StoryPointEstimationValid} (Non-standard: {NonStandardStoryPointCount})
+  Story Point Separation: {EffortStoryPointSeparationValid} (Non-PBI story-point fields: {NonPbiStoryPointCount})
+  Story Point Coverage: {StoryPointCoveragePercentage:F1}% of PBIs
+
+Backlog Quality Distribution:
+  Valid Backlog Items: {ValidBacklogItemCount} ({ValidBacklogItemPercentage:F1}%)
+  Invalid Backlog Items: {InvalidBacklogItemCount} ({InvalidBacklogItemPercentage:F1}%)
+  Missing Descriptions: {MissingDescriptionCount}
+  Missing Estimates: {MissingEstimateCount}
+  Broken Hierarchy Cases: {BrokenHierarchyCount}
+  Inconsistent States: {InconsistentStateCount}
+  Distribution Valid: {BacklogQualityDistributionValid}
 
 Dependencies:
   Total: {TotalDependencies}

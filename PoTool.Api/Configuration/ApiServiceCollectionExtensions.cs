@@ -224,6 +224,7 @@ public static class ApiServiceCollectionExtensions
             services.AddSingleton<BattleshipPipelineGenerator>();
             services.AddSingleton<MockDataValidator>();
             services.AddSingleton<BattleshipMockDataFacade>();
+            services.AddHostedService<MockConfigurationSeedHostedService>();
         }
 
         // Bridge hierarchical rules into the legacy pipeline so all SI/RR/RC violations
