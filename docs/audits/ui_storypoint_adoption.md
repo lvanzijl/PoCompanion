@@ -13,6 +13,7 @@ The following UI surfaces now use canonical story-point fields:
 | File | Updated usage |
 | --- | --- |
 | `PoTool.Client/Components/Forecast/ForecastPanel.razor` | Replaced `TotalEffort`, `CompletedEffort`, and `RemainingEffort` bindings with `TotalStoryPoints`, `DeliveredStoryPoints`, and `RemainingStoryPoints` on `EpicCompletionForecastDto` |
+| `PoTool.Client/ApiClient/ApiClient.Extensions.cs` | Added a partial compatibility shim so the generated `EpicCompletionForecastDto` exposes canonical story-point aliases without editing generated code |
 | `PoTool.Client/Services/RoadmapAnalyticsService.cs` | Replaced forecast consumer usage of `RemainingEffort` with `RemainingStoryPoints` for at-risk threshold evaluation |
 | `PoTool.Client/Pages/Home/ProductRoadmaps.razor` | Renamed local roadmap epic story-point fields from `TotalEffort` / `DeliveredEffort` / `RemainingEffort` to `TotalStoryPoints` / `DeliveredStoryPoints` / `RemainingStoryPoints` |
 

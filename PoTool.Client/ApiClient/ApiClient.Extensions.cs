@@ -125,3 +125,14 @@ public partial class BugTriageClient
     static partial void UpdateJsonSerializerSettings(JsonSerializerOptions settings)
         => ApiClientJsonSettings.Configure(settings);
 }
+
+public partial class EpicCompletionForecastDto
+{
+    public int TotalStoryPoints => TotalEffort;
+
+    public int DoneStoryPoints => CompletedEffort;
+
+    public int DeliveredStoryPoints => DoneStoryPoints;
+
+    public int RemainingStoryPoints => RemainingEffort;
+}

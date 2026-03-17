@@ -27,9 +27,9 @@ public sealed class RoadmapAnalyticsServiceTests
     {
         var result = RoadmapAnalyticsService.ComputeLocalAnalytics(1, Array.Empty<WorkItemDto>());
 
-        Assert.AreEqual(0, result.TotalEffort);
-        Assert.AreEqual(0, result.DeliveredEffort);
-        Assert.AreEqual(0, result.RemainingEffort);
+        Assert.AreEqual(0, result.TotalStoryPoints);
+        Assert.AreEqual(0, result.DeliveredStoryPoints);
+        Assert.AreEqual(0, result.RemainingStoryPoints);
         Assert.AreEqual(0, result.PbiCount);
         Assert.IsNull(result.EpicAgeDays);
         Assert.IsNull(result.LastActivityDays);
@@ -48,9 +48,9 @@ public sealed class RoadmapAnalyticsServiceTests
 
         var result = RoadmapAnalyticsService.ComputeLocalAnalytics(100, workItems);
 
-        Assert.AreEqual(16, result.TotalEffort); // 5 + 8 + 3 (all PBIs)
-        Assert.AreEqual(13, result.RemainingEffort); // 5 + 8 (active only)
-        Assert.AreEqual(3, result.DeliveredEffort); // 3 (Closed)
+        Assert.AreEqual(16, result.TotalStoryPoints); // 5 + 8 + 3 (all PBIs)
+        Assert.AreEqual(13, result.RemainingStoryPoints); // 5 + 8 (active only)
+        Assert.AreEqual(3, result.DeliveredStoryPoints); // 3 (Closed)
         Assert.AreEqual(3, result.PbiCount); // all PBIs including Closed
     }
 
@@ -66,7 +66,7 @@ public sealed class RoadmapAnalyticsServiceTests
 
         var result = RoadmapAnalyticsService.ComputeLocalAnalytics(100, workItems);
 
-        Assert.AreEqual(8, result.TotalEffort);
+        Assert.AreEqual(8, result.TotalStoryPoints);
         Assert.AreEqual(2, result.PbiCount); // PBI + Bug
     }
 
@@ -83,12 +83,12 @@ public sealed class RoadmapAnalyticsServiceTests
 
         var result = RoadmapAnalyticsService.ComputeLocalAnalytics(100, workItems);
 
-        Assert.AreEqual(13, result.TotalEffort);
+        Assert.AreEqual(13, result.TotalStoryPoints);
         Assert.AreEqual(1, result.PbiCount);
     }
 
     [TestMethod]
-    public void ComputeLocalAnalytics_DoneAndRemovedExcludedFromRemainingEffort()
+    public void ComputeLocalAnalytics_DoneAndRemovedExcludedFromRemainingStoryPoints()
     {
         var workItems = new List<WorkItemDto>
         {
@@ -100,9 +100,9 @@ public sealed class RoadmapAnalyticsServiceTests
 
         var result = RoadmapAnalyticsService.ComputeLocalAnalytics(100, workItems);
 
-        Assert.AreEqual(18, result.TotalEffort); // 10 + 5 + 3 (all PBIs)
-        Assert.AreEqual(10, result.RemainingEffort); // only Active
-        Assert.AreEqual(8, result.DeliveredEffort); // Done + Removed: 5 + 3
+        Assert.AreEqual(18, result.TotalStoryPoints); // 10 + 5 + 3 (all PBIs)
+        Assert.AreEqual(10, result.RemainingStoryPoints); // only Active
+        Assert.AreEqual(8, result.DeliveredStoryPoints); // Done + Removed: 5 + 3
         Assert.AreEqual(3, result.PbiCount); // all PBIs counted
     }
 
@@ -132,7 +132,7 @@ public sealed class RoadmapAnalyticsServiceTests
 
         var result = RoadmapAnalyticsService.ComputeLocalAnalytics(100, workItems);
 
-        Assert.AreEqual(0, result.TotalEffort);
+        Assert.AreEqual(0, result.TotalStoryPoints);
         Assert.AreEqual(0, result.PbiCount);
     }
 
@@ -148,7 +148,7 @@ public sealed class RoadmapAnalyticsServiceTests
 
         var result = RoadmapAnalyticsService.ComputeLocalAnalytics(100, workItems);
 
-        Assert.AreEqual(5, result.TotalEffort);
+        Assert.AreEqual(5, result.TotalStoryPoints);
         Assert.AreEqual(2, result.PbiCount);
     }
 
