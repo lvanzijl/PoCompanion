@@ -31,8 +31,8 @@ internal static class MockDevOpsSeedCatalog
 
     public static string CreateRepositoryId(string repositoryName)
     {
-        var hash = MD5.HashData(Encoding.UTF8.GetBytes(repositoryName));
-        return new Guid(hash).ToString();
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(repositoryName));
+        return new Guid(hash.AsSpan(0, 16)).ToString();
     }
 
     public static IReadOnlyList<PipelineDefinitionDto> GetPipelineDefinitionsForRepository(

@@ -530,17 +530,28 @@ public class BattleshipPullRequestGenerator
         }
 
         return workItems
-            .Where(item =>
-                item.Type is WorkItemType.Feature or WorkItemType.Pbi or WorkItemType.Bug or WorkItemType.Task &&
-                (string.Equals(item.State, "Done", StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(item.State, "Active", StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(item.State, "In Progress", StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(item.State, "Committed", StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(item.State, "Resolved", StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(item.State, "Closed", StringComparison.OrdinalIgnoreCase)))
+            .Where(IsEligibleForPullRequestLink)
             .Select(item => item.TfsId)
             .Distinct()
             .ToList();
+    }
+
+    private static bool IsEligibleForPullRequestLink(WorkItemDto item)
+    {
+        var isImplementationLevelItem =
+            item.Type is WorkItemType.Feature or WorkItemType.Pbi or WorkItemType.Bug or WorkItemType.Task;
+
+        if (!isImplementationLevelItem)
+        {
+            return false;
+        }
+
+        return string.Equals(item.State, "Done", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(item.State, "Active", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(item.State, "In Progress", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(item.State, "Committed", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(item.State, "Resolved", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(item.State, "Closed", StringComparison.OrdinalIgnoreCase);
     }
 }
 

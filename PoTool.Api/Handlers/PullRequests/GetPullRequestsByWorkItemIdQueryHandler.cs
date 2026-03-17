@@ -24,26 +24,30 @@ public sealed class GetPullRequestsByWorkItemIdQueryHandler
         GetPullRequestsByWorkItemIdQuery query,
         CancellationToken cancellationToken)
     {
-        var pullRequests = await (
-                from link in _context.PullRequestWorkItemLinks.AsNoTracking()
-                join pullRequest in _context.PullRequests.AsNoTracking()
-                    on link.PullRequestId equals pullRequest.Id
-                where link.WorkItemId == query.WorkItemId
-                orderby pullRequest.CreatedDateUtc descending, pullRequest.Id descending
-                select new PullRequestDto(
-                    pullRequest.Id,
-                    pullRequest.RepositoryName,
-                    pullRequest.Title,
-                    pullRequest.CreatedBy,
-                    pullRequest.CreatedDate,
-                    pullRequest.CompletedDate,
-                    pullRequest.Status,
-                    pullRequest.IterationPath,
-                    pullRequest.SourceBranch,
-                    pullRequest.TargetBranch,
-                    pullRequest.RetrievedAt,
-                    pullRequest.ProductId))
-            .Distinct()
+        var linkedPullRequestIds = _context.PullRequestWorkItemLinks
+            .AsNoTracking()
+            .Where(link => link.WorkItemId == query.WorkItemId)
+            .Select(link => link.PullRequestId)
+            .Distinct();
+
+        var pullRequests = await _context.PullRequests
+            .AsNoTracking()
+            .Where(pullRequest => linkedPullRequestIds.Contains(pullRequest.Id))
+            .OrderByDescending(pullRequest => pullRequest.CreatedDateUtc)
+            .ThenByDescending(pullRequest => pullRequest.Id)
+            .Select(pullRequest => new PullRequestDto(
+                pullRequest.Id,
+                pullRequest.RepositoryName,
+                pullRequest.Title,
+                pullRequest.CreatedBy,
+                pullRequest.CreatedDate,
+                pullRequest.CompletedDate,
+                pullRequest.Status,
+                pullRequest.IterationPath,
+                pullRequest.SourceBranch,
+                pullRequest.TargetBranch,
+                pullRequest.RetrievedAt,
+                pullRequest.ProductId))
             .ToListAsync(cancellationToken);
 
         return pullRequests;
