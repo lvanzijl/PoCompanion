@@ -164,7 +164,7 @@ public sealed class CdcGeneratedDomainMapDocumentTests
                 var content = File.ReadAllText(filePath);
                 var matches = Regex.Matches(
                     content,
-                    @"\bpublic\s+interface\s+([A-Za-z_][A-Za-z0-9_]*)",
+                    @"\bpublic\s+interface\s+([A-Za-z_][A-Za-z0-9_]*(?:<[^>\r\n]+>)?)",
                     RegexOptions.CultureInvariant);
 
                 interfaceNames.AddRange(matches.Select(match => match.Groups[1].Value));
