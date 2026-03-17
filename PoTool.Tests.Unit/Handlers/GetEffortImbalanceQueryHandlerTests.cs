@@ -1,5 +1,4 @@
 using Mediator;
-using EffortDiagnosticsAnalyzer = PoTool.Core.Metrics.EffortDiagnostics.EffortDiagnosticsAnalyzer;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -83,7 +82,7 @@ public class GetEffortImbalanceQueryHandlerTests
         var result = await _handler.Handle(
             new GetEffortImbalanceQuery(ImbalanceThreshold: 0.3),
             CancellationToken.None);
-        var analyzer = new EffortDiagnosticsAnalyzer();
+        var analyzer = new PoTool.Core.Metrics.EffortDiagnostics.EffortDiagnosticsAnalyzer();
         var expectedAnalysis = analyzer.AnalyzeImbalance(
             new Dictionary<string, int>
             {
