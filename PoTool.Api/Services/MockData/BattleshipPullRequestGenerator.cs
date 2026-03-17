@@ -1,4 +1,6 @@
 using PoTool.Shared.PullRequests;
+using PoTool.Shared.WorkItems;
+using PoTool.Core.WorkItems;
 
 namespace PoTool.Api.Services.MockData;
 
@@ -20,6 +22,11 @@ public class BattleshipPullRequestGenerator
     /// Generates pull requests with full metadata
     /// </summary>
     public List<PullRequestDto> GeneratePullRequests(int workItemCount)
+        => GeneratePullRequests(null, null);
+
+    public List<PullRequestDto> GeneratePullRequests(
+        IReadOnlyCollection<WorkItemDto>? workItems,
+        IReadOnlyList<string>? repositoryNames = null)
     {
         var pullRequests = new List<PullRequestDto>();
         var now = DateTimeOffset.UtcNow;
@@ -28,12 +35,14 @@ public class BattleshipPullRequestGenerator
         var prCount = 150;
 
         var developers = GetDevelopers();
-        var repositories = new[] { "Battleship-Incident-Backend", "Battleship-Web-UI", "Battleship-Mobile-App", "Battleship-Sensor-Integration" };
+        var repositories = repositoryNames?.Count > 0
+            ? repositoryNames
+            : MockDevOpsSeedCatalog.RepositoryNames;
 
         for (var i = 0; i < prCount; i++)
         {
             var prId = 1001 + i;
-            var repository = repositories[_random.Next(repositories.Length)];
+            var repository = repositories[_random.Next(repositories.Count)];
             var developer = developers[_random.Next(developers.Length)];
             var sprint = _random.Next(1, 11);
             var quarter = sprint <= 5 ? "Q1" : "Q2";
@@ -43,8 +52,8 @@ public class BattleshipPullRequestGenerator
             DateTimeOffset? completedDate = null;
             if (status == "completed")
             {
-                var candidateCompletedDate = createdDate.AddDays(_random.Next(1, 15));
-                var latestCompletedDate = now.AddHours(-_random.Next(1, 12));
+                var candidateCompletedDate = createdDate.Add(GetCompletionDuration());
+                var latestCompletedDate = now.AddMinutes(-_random.Next(30, 360));
                 completedDate = candidateCompletedDate <= latestCompletedDate
                     ? candidateCompletedDate
                     : latestCompletedDate;
@@ -205,35 +214,46 @@ public class BattleshipPullRequestGenerator
     /// Generates PR-to-WorkItem links (70-80% of PRs linked to work items)
     /// </summary>
     public List<PrWorkItemLink> GeneratePrWorkItemLinks(List<PullRequestDto> pullRequests, int workItemCount)
+        => GeneratePrWorkItemLinks(pullRequests, null, workItemCount);
+
+    public List<PrWorkItemLink> GeneratePrWorkItemLinks(
+        List<PullRequestDto> pullRequests,
+        IReadOnlyCollection<WorkItemDto>? workItems)
+        => GeneratePrWorkItemLinks(pullRequests, workItems, null);
+
+    private List<PrWorkItemLink> GeneratePrWorkItemLinks(
+        List<PullRequestDto> pullRequests,
+        IReadOnlyCollection<WorkItemDto>? workItems,
+        int? fallbackWorkItemCount)
     {
         var links = new List<PrWorkItemLink>();
         var linkId = 1;
+        var eligibleWorkItemIds = GetEligibleWorkItemIds(workItems);
+
+        if (eligibleWorkItemIds.Count == 0)
+        {
+            var fallbackCount = Math.Max(fallbackWorkItemCount ?? 1, 1);
+            eligibleWorkItemIds = Enumerable.Range(1000, fallbackCount).ToList();
+        }
 
         foreach (var pr in pullRequests)
         {
-            // 70-80% of PRs should have work item links
-            if (_random.NextDouble() < 0.75)
+            var linkCount = GetWorkItemLinkCount();
+            if (linkCount == 0)
             {
-                // Determine number of links (1-4)
-                var rand = _random.NextDouble();
-                int linkCount;
-                if (rand < 0.50) linkCount = 1;
-                else if (rand < 0.75) linkCount = 2;
-                else if (rand < 0.90) linkCount = 3;
-                else linkCount = 4;
+                continue;
+            }
 
-                for (var i = 0; i < linkCount; i++)
+            foreach (var workItemId in eligibleWorkItemIds
+                         .OrderBy(_ => _random.Next())
+                         .Take(linkCount))
+            {
+                links.Add(new PrWorkItemLink
                 {
-                    // Generate a realistic work item ID (between 1000 and workItemCount)
-                    var workItemId = _random.Next(1000, 1000 + workItemCount);
-
-                    links.Add(new PrWorkItemLink
-                    {
-                        Id = linkId++,
-                        PullRequestId = pr.Id,
-                        WorkItemId = workItemId
-                    });
-                }
+                    Id = linkId++,
+                    PullRequestId = pr.Id,
+                    WorkItemId = workItemId
+                });
             }
         }
 
@@ -310,7 +330,7 @@ public class BattleshipPullRequestGenerator
     private string GetPrStatus()
     {
         var statuses = new[] { "active", "completed", "abandoned" };
-        var weights = new[] { 0.18, 0.72, 0.10 };
+        var weights = new[] { 0.07, 0.90, 0.03 };
 
         var rand = _random.NextDouble();
         var cumulative = 0.0;
@@ -441,16 +461,7 @@ public class BattleshipPullRequestGenerator
     {
         var paths = repository switch
         {
-            "Battleship-Incident-Backend" => new[]
-            {
-                "src/Services/IncidentDetectionService.cs",
-                "src/Services/DamageControlService.cs",
-                "src/Controllers/CrewSafetyController.cs",
-                "src/Models/HullIntegrityData.cs",
-                "src/Repositories/IncidentRepository.cs",
-                "tests/Services/IncidentDetectionServiceTests.cs"
-            },
-            "Battleship-Web-UI" => new[]
+            var name when name.Contains("UI", StringComparison.OrdinalIgnoreCase) => new[]
             {
                 "src/components/DamageControlDashboard.tsx",
                 "src/components/CrewSafetyPanel.tsx",
@@ -458,12 +469,23 @@ public class BattleshipPullRequestGenerator
                 "src/styles/dashboard.css",
                 "tests/components/DamageControlDashboard.test.tsx"
             },
-            "Battleship-Mobile-App" => new[]
+            var name when name.Contains("Mobile", StringComparison.OrdinalIgnoreCase) => new[]
             {
                 "src/screens/IncidentAlertScreen.dart",
                 "src/screens/CrewLocationScreen.dart",
                 "src/services/NotificationService.dart",
                 "tests/screens/IncidentAlertScreen_test.dart"
+            },
+            var name when name.Contains("Backend", StringComparison.OrdinalIgnoreCase) ||
+                          name.Contains("Analytics", StringComparison.OrdinalIgnoreCase) ||
+                          name.Contains("Reporting", StringComparison.OrdinalIgnoreCase) => new[]
+            {
+                "src/Services/IncidentDetectionService.cs",
+                "src/Services/DamageControlService.cs",
+                "src/Controllers/CrewSafetyController.cs",
+                "src/Models/HullIntegrityData.cs",
+                "src/Repositories/IncidentRepository.cs",
+                "tests/Services/IncidentDetectionServiceTests.cs"
             },
             _ => new[]
             {
@@ -475,6 +497,61 @@ public class BattleshipPullRequestGenerator
         };
 
         return paths[index % paths.Length];
+    }
+
+    private TimeSpan GetCompletionDuration()
+    {
+        var distribution = _random.NextDouble();
+        return distribution switch
+        {
+            < 0.35 => TimeSpan.FromHours(_random.Next(2, 9)),
+            < 0.85 => TimeSpan.FromHours(12 + _random.Next(0, 37)),
+            _ => TimeSpan.FromDays(2 + _random.NextDouble() * 3)
+        };
+    }
+
+    private int GetWorkItemLinkCount()
+    {
+        var distribution = _random.NextDouble();
+        return distribution switch
+        {
+            < 0.60 => 1,
+            < 0.85 => _random.Next(2, 4),
+            < 0.95 => 0,
+            _ => _random.Next(4, 9)
+        };
+    }
+
+    private static List<int> GetEligibleWorkItemIds(IReadOnlyCollection<WorkItemDto>? workItems)
+    {
+        if (workItems == null)
+        {
+            return [];
+        }
+
+        return workItems
+            .Where(IsEligibleForPullRequestLink)
+            .Select(item => item.TfsId)
+            .Distinct()
+            .ToList();
+    }
+
+    private static bool IsEligibleForPullRequestLink(WorkItemDto item)
+    {
+        var isImplementationLevelItem =
+            item.Type is WorkItemType.Feature or WorkItemType.Pbi or WorkItemType.Bug or WorkItemType.Task;
+
+        if (!isImplementationLevelItem)
+        {
+            return false;
+        }
+
+        return string.Equals(item.State, "Done", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(item.State, "Active", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(item.State, "In Progress", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(item.State, "Committed", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(item.State, "Resolved", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(item.State, "Closed", StringComparison.OrdinalIgnoreCase);
     }
 }
 

@@ -61,36 +61,36 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
         var hasProducts = await context.Products.AnyAsync(cancellationToken);
         var hasTeams = await context.Teams.AnyAsync(cancellationToken);
 
-        if (hasProfiles || hasProducts || hasTeams)
-        {
-            await EnsureMockTfsConfigurationAsync(context, cancellationToken);
-            await EnsureActiveProfileAsync(context, cancellationToken);
-            return;
-        }
-
-        var hierarchy = mockDataFacade.GetMockHierarchy();
-        var goals = hierarchy
-            .Where(item => item.Type.Equals(WorkItemType.Goal, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(item => item.TfsId)
-            .ToList();
-
-        if (goals.Count == 0)
-        {
-            _logger.LogWarning("Mock mode configuration seeding skipped because no goal roots were generated.");
-            return;
-        }
-
         var now = DateTimeOffset.UtcNow;
-        var teams = await SeedTeamsAsync(context, hierarchy, now, cancellationToken);
-        await SeedProfilesAndProductsAsync(context, hierarchy, goals, teams, now, cancellationToken);
+
+        if (!hasProfiles && !hasProducts && !hasTeams)
+        {
+            var hierarchy = mockDataFacade.GetMockHierarchy();
+            var goals = hierarchy
+                .Where(item => item.Type.Equals(WorkItemType.Goal, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(item => item.TfsId)
+                .ToList();
+
+            if (goals.Count == 0)
+            {
+                _logger.LogWarning("Mock mode configuration seeding skipped because no goal roots were generated.");
+                return;
+            }
+
+            var teams = await SeedTeamsAsync(context, hierarchy, now, cancellationToken);
+            await SeedProfilesAndProductsAsync(context, hierarchy, goals, teams, now, cancellationToken);
+        }
+
+        await EnsureMockRepositoriesAsync(context, now, cancellationToken);
         await EnsureMockTfsConfigurationAsync(context, cancellationToken);
         await EnsureActiveProfileAsync(context, cancellationToken);
 
         _logger.LogInformation(
-            "Seeded mock configuration with {ProfileCount} profiles, {ProductCount} products, and {TeamCount} teams.",
+            "Seeded mock configuration with {ProfileCount} profiles, {ProductCount} products, {TeamCount} teams, and {RepositoryCount} repositories.",
             await context.Profiles.CountAsync(cancellationToken),
             await context.Products.CountAsync(cancellationToken),
-            await context.Teams.CountAsync(cancellationToken));
+            await context.Teams.CountAsync(cancellationToken),
+            await context.Repositories.CountAsync(cancellationToken));
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
@@ -232,6 +232,60 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
                 await context.SaveChangesAsync(cancellationToken);
             }
         }
+    }
+
+    private static async Task EnsureMockRepositoriesAsync(
+        PoToolDbContext context,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var products = await context.Products
+            .OrderBy(product => product.Id)
+            .ToListAsync(cancellationToken);
+
+        if (products.Count == 0)
+        {
+            return;
+        }
+
+        var existingRepositories = await context.Repositories
+            .ToListAsync(cancellationToken);
+
+        var existingByProduct = existingRepositories
+            .GroupBy(repository => repository.ProductId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(repository => repository.Name).ToHashSet(StringComparer.OrdinalIgnoreCase));
+
+        var repositoriesToAdd = new List<RepositoryEntity>();
+
+        foreach (var product in products)
+        {
+            var targetRepositories = MockDevOpsSeedCatalog.GetRepositoryNamesForProduct(product.Name);
+            if (targetRepositories.Count == 0)
+            {
+                continue;
+            }
+
+            existingByProduct.TryGetValue(product.Id, out var existingNames);
+
+            repositoriesToAdd.AddRange(targetRepositories
+                .Where(repositoryName => existingNames == null || !existingNames.Contains(repositoryName))
+                .Select(repositoryName => new RepositoryEntity
+                {
+                    ProductId = product.Id,
+                    Name = repositoryName,
+                    CreatedAt = now
+                }));
+        }
+
+        if (repositoriesToAdd.Count == 0)
+        {
+            return;
+        }
+
+        context.Repositories.AddRange(repositoriesToAdd);
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     private static async Task EnsureActiveProfileAsync(

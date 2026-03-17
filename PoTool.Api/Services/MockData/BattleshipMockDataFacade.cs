@@ -147,7 +147,9 @@ public class BattleshipMockDataFacade : ITfsClient
             var startTime = DateTimeOffset.UtcNow;
 
             var workItems = GetMockHierarchy();
-            _cachedPullRequests = _pullRequestGenerator.GeneratePullRequests(workItems.Count);
+            _cachedPullRequests = _pullRequestGenerator.GeneratePullRequests(
+                workItems,
+                MockDevOpsSeedCatalog.RepositoryNames);
 
             var elapsed = (DateTimeOffset.UtcNow - startTime).TotalSeconds;
             _logger.LogInformation(
@@ -237,7 +239,7 @@ public class BattleshipMockDataFacade : ITfsClient
 
             var pullRequests = GetMockPullRequests();
             var workItems = GetMockHierarchy();
-            _cachedPrWorkItemLinks = _pullRequestGenerator.GeneratePrWorkItemLinks(pullRequests, workItems.Count);
+            _cachedPrWorkItemLinks = _pullRequestGenerator.GeneratePrWorkItemLinks(pullRequests, workItems);
 
             _logger.LogInformation("Generated {Count} PR-WorkItem links", _cachedPrWorkItemLinks.Count);
             return _cachedPrWorkItemLinks;
@@ -1388,10 +1390,8 @@ public class BattleshipMockDataFacade : ITfsClient
     {
         IncrementAndGetApiCallCount();
         _logger.LogInformation("Mock TFS client: GetRepositoryIdByNameAsync called for repository={RepoName}", repositoryName);
-        
-        // Return a deterministic mock GUID based on repository name
-        var mockGuid = $"mock-repo-{repositoryName.ToLowerInvariant()}-guid";
-        return Task.FromResult<string?>(mockGuid);
+
+        return Task.FromResult<string?>(MockDevOpsSeedCatalog.CreateRepositoryId(repositoryName));
     }
 
     public Task<IEnumerable<PipelineDefinitionDto>> GetPipelineDefinitionsForRepositoryAsync(
@@ -1401,46 +1401,10 @@ public class BattleshipMockDataFacade : ITfsClient
         IncrementAndGetApiCallCount();
         _logger.LogInformation("Mock TFS client: GetPipelineDefinitionsForRepositoryAsync called for repository={RepoName}", repositoryName);
 
-        // Generate mock pipeline definitions for the repository
-        var mockRepoId = $"mock-repo-{repositoryName.ToLowerInvariant()}-guid";
-        var syncTime = DateTimeOffset.UtcNow;
-
-        var definitions = new List<PipelineDefinitionDto>
-        {
-            new PipelineDefinitionDto
-            {
-                PipelineDefinitionId = 101,
-                RepoId = mockRepoId,
-                RepoName = repositoryName,
-                Name = $"{repositoryName} - CI Build",
-                YamlPath = "/pipelines/ci-build.yml",
-                Folder = "\\CI",
-                Url = $"https://mock-tfs/{repositoryName}/_build?definitionId=101",
-                LastSyncedUtc = syncTime
-            },
-            new PipelineDefinitionDto
-            {
-                PipelineDefinitionId = 102,
-                RepoId = mockRepoId,
-                RepoName = repositoryName,
-                Name = $"{repositoryName} - PR Validation",
-                YamlPath = "/pipelines/pr-validation.yml",
-                Folder = "\\PR",
-                Url = $"https://mock-tfs/{repositoryName}/_build?definitionId=102",
-                LastSyncedUtc = syncTime
-            },
-            new PipelineDefinitionDto
-            {
-                PipelineDefinitionId = 103,
-                RepoId = mockRepoId,
-                RepoName = repositoryName,
-                Name = $"{repositoryName} - Release",
-                YamlPath = "/pipelines/release.yml",
-                Folder = "\\Release",
-                Url = $"https://mock-tfs/{repositoryName}/_build?definitionId=103",
-                LastSyncedUtc = syncTime
-            }
-        };
+        var definitions = MockDevOpsSeedCatalog.GetPipelineDefinitionsForRepository(
+            repositoryName,
+            GetMockPipelines(),
+            DateTimeOffset.UtcNow);
 
         _logger.LogInformation("Mock TFS client: Returning {Count} pipeline definitions for repository '{RepoName}'",
             definitions.Count, repositoryName);

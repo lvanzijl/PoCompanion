@@ -76,8 +76,8 @@ public class MockDataValidatorTests
     public void ValidatePullRequests_Should_Check_Volume()
     {
         // Arrange
-        var pullRequests = _pullRequestGenerator.GeneratePullRequests(10000);
-        var prLinks = _pullRequestGenerator.GeneratePrWorkItemLinks(pullRequests, 10000);
+        var pullRequests = _pullRequestGenerator.GeneratePullRequests(_workItems);
+        var prLinks = _pullRequestGenerator.GeneratePrWorkItemLinks(pullRequests, _workItems);
         var report = new ValidationReport();
 
         // Act
@@ -86,50 +86,55 @@ public class MockDataValidatorTests
         // Assert
         Assert.IsTrue(report.PullRequestVolumeValid,
             $"PR volume should be at least 100. Found {report.TotalPullRequests}");
-        Assert.IsGreaterThanOrEqualTo(100, report.TotalPullRequests,
-            $"Should generate at least 100 PRs. Found {report.TotalPullRequests}");
+        Assert.IsGreaterThan(0, report.TotalPullRequests,
+            $"Should generate pull requests. Found {report.TotalPullRequests}");
     }
 
     [TestMethod]
     public void ValidatePullRequests_Should_Check_Status_Distribution()
     {
         // Arrange
-        var pullRequests = _pullRequestGenerator.GeneratePullRequests(10000);
-        var prLinks = _pullRequestGenerator.GeneratePrWorkItemLinks(pullRequests, 10000);
+        var pullRequests = _pullRequestGenerator.GeneratePullRequests(_workItems);
+        var prLinks = _pullRequestGenerator.GeneratePrWorkItemLinks(pullRequests, _workItems);
         var report = new ValidationReport();
 
         // Act
         _validator.ValidatePullRequests(pullRequests, prLinks, report);
 
         // Assert
-        Assert.IsTrue(report.ActivePrPercentage >= 10 && report.ActivePrPercentage <= 25,
-            $"Active PR percentage should be 15-20%. Found {report.ActivePrPercentage:F1}%");
-        Assert.IsTrue(report.CompletedPrPercentage >= 65 && report.CompletedPrPercentage <= 80,
-            $"Completed PR percentage should be 70-75%. Found {report.CompletedPrPercentage:F1}%");
+        Assert.IsTrue(report.ActivePrPercentage >= 3 && report.ActivePrPercentage <= 12,
+            $"Active PR percentage should remain a small minority. Found {report.ActivePrPercentage:F1}%");
+        Assert.IsTrue(report.CompletedPrPercentage >= 85 && report.CompletedPrPercentage <= 95,
+            $"Completed PR percentage should be about 90%. Found {report.CompletedPrPercentage:F1}%");
+        Assert.IsLessThanOrEqualTo(8d, report.AbandonedPrPercentage,
+            $"Abandoned PR percentage should remain small. Found {report.AbandonedPrPercentage:F1}%");
     }
 
     [TestMethod]
     public void ValidatePullRequests_Should_Check_Work_Item_Links()
     {
         // Arrange
-        var pullRequests = _pullRequestGenerator.GeneratePullRequests(10000);
-        var prLinks = _pullRequestGenerator.GeneratePrWorkItemLinks(pullRequests, 10000);
+        var pullRequests = _pullRequestGenerator.GeneratePullRequests(_workItems);
+        var prLinks = _pullRequestGenerator.GeneratePrWorkItemLinks(pullRequests, _workItems);
         var report = new ValidationReport();
 
         // Act
         _validator.ValidatePullRequests(pullRequests, prLinks, report);
 
         // Assert
-        Assert.IsTrue(report.PrWithWorkItemLinksPercentage >= 65 && report.PrWithWorkItemLinksPercentage <= 85,
-            $"PR with work item links should be 70-80%. Found {report.PrWithWorkItemLinksPercentage:F1}%");
+        Assert.IsTrue(report.PrWithWorkItemLinksPercentage >= 80 && report.PrWithWorkItemLinksPercentage <= 95,
+            $"PR with work item links should be at least 80%. Found {report.PrWithWorkItemLinksPercentage:F1}%");
+        var workItemIds = _workItems.Select(item => item.TfsId).ToHashSet();
+        Assert.IsTrue(prLinks.All(link => workItemIds.Contains(link.WorkItemId)),
+            "Every generated PR link should point at an existing work item.");
     }
 
     [TestMethod]
     public void ValidatePullRequests_Should_Validate_Metadata()
     {
         // Arrange
-        var pullRequests = _pullRequestGenerator.GeneratePullRequests(10000);
-        var prLinks = _pullRequestGenerator.GeneratePrWorkItemLinks(pullRequests, 10000);
+        var pullRequests = _pullRequestGenerator.GeneratePullRequests(_workItems);
+        var prLinks = _pullRequestGenerator.GeneratePrWorkItemLinks(pullRequests, _workItems);
         var report = new ValidationReport();
 
         // Act
