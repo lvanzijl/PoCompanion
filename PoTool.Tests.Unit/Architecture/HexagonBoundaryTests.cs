@@ -248,7 +248,7 @@ public sealed class HexagonBoundaryTests
 
     private static string ReadRepositoryFile(string repositoryRoot, string relativePath)
     {
-        return File.ReadAllText(Path.Combine(repositoryRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+        return File.ReadAllText(Path.Combine(repositoryRoot, relativePath));
     }
 
     private static string NormalizeRelativePath(string repositoryRoot, string filePath)
