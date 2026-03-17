@@ -7,7 +7,7 @@ public sealed class CdcFreezeAuditDocumentTests
     public void CdcFreezeAudit_ReportExistsWithRequiredSectionsAndFreezeDecision()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "cdc_freeze_audit.md");
+        var reportPath = $"{repositoryRoot}/docs/audits/cdc_freeze_audit.md";
 
         Assert.IsTrue(File.Exists(reportPath), "The CDC freeze audit should exist under docs/audits.");
 
@@ -37,7 +37,7 @@ public sealed class CdcFreezeAuditDocumentTests
 
         while (current is not null)
         {
-            if (File.Exists(Path.Combine(current.FullName, "PoTool.sln")))
+            if (File.Exists($"{current.FullName}/PoTool.sln"))
             {
                 return current.FullName;
             }
