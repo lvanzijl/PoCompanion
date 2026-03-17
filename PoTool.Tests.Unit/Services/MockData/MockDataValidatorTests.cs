@@ -12,6 +12,7 @@ public class MockDataValidatorTests
     private BattleshipWorkItemGenerator _workItemGenerator = null!;
     private BattleshipDependencyGenerator _dependencyGenerator = null!;
     private BattleshipPullRequestGenerator _pullRequestGenerator = null!;
+    private List<WorkItemDto> _workItems = null!;
 
     [TestInitialize]
     public void Setup()
@@ -20,16 +21,13 @@ public class MockDataValidatorTests
         _workItemGenerator = new BattleshipWorkItemGenerator();
         _dependencyGenerator = new BattleshipDependencyGenerator();
         _pullRequestGenerator = new BattleshipPullRequestGenerator();
+        _workItems = _workItemGenerator.GenerateHierarchy();
     }
 
     [TestMethod]
     public void ValidateWorkItems_Should_Validate_Area_Path_Consistency()
     {
-        // Arrange
-        var workItems = _workItemGenerator.GenerateHierarchy();
-
-        // Act
-        var report = _validator.ValidateWorkItems(workItems);
+        var report = _validator.ValidateWorkItems(_workItems);
 
         // Assert
         Assert.IsTrue(report.AreaPathConsistencyValid,
@@ -41,11 +39,7 @@ public class MockDataValidatorTests
     [TestMethod]
     public void ValidateWorkItems_Should_Validate_States()
     {
-        // Arrange
-        var workItems = _workItemGenerator.GenerateHierarchy();
-
-        // Act
-        var report = _validator.ValidateWorkItems(workItems);
+        var report = _validator.ValidateWorkItems(_workItems);
 
         // Assert
         Assert.IsTrue(report.StateValidityValid,
@@ -55,31 +49,27 @@ public class MockDataValidatorTests
     }
 
     [TestMethod]
-    public void ValidateWorkItems_Should_Validate_Fibonacci_Estimation()
+    public void ValidateWorkItems_Should_Validate_StoryPoint_Separation()
     {
-        // Arrange
-        var workItems = _workItemGenerator.GenerateHierarchy();
+        var report = _validator.ValidateWorkItems(_workItems);
 
-        // Act
-        var report = _validator.ValidateWorkItems(workItems);
-
-        // Assert
-        Assert.IsTrue(report.FibonacciEstimationValid,
-            $"All estimates should use Fibonacci values. Found {report.NonFibonacciEstimateCount} non-Fibonacci estimates.");
+        Assert.IsTrue(report.StoryPointEstimationValid,
+            $"PBI story-point values should stay in the supported sizing set. Found {report.NonStandardStoryPointCount} invalid values.");
+        Assert.IsTrue(report.EffortStoryPointSeparationValid,
+            $"Only PBIs should carry story-point sizing fields. Found {report.NonPbiStoryPointCount} invalid non-PBI items.");
     }
 
     [TestMethod]
-    public void ValidateWorkItems_Should_Check_Unestimated_Percentage()
+    public void ValidateWorkItems_Should_Check_Backlog_Quality_Distribution()
     {
-        // Arrange
-        var workItems = _workItemGenerator.GenerateHierarchy();
+        var report = _validator.ValidateWorkItems(_workItems);
 
-        // Act
-        var report = _validator.ValidateWorkItems(workItems);
-
-        // Assert
-        Assert.IsTrue(report.UnestimatedPercentage >= 15 && report.UnestimatedPercentage <= 35,
-            $"Unestimated percentage should be 20-30%. Found {report.UnestimatedPercentage:F1}%");
+        Assert.IsTrue(report.BacklogQualityDistributionValid,
+            $"Expected 5-20% invalid backlog items. Found {report.InvalidBacklogItemPercentage:F1}% invalid.");
+        Assert.IsGreaterThan(0, report.MissingDescriptionCount, "Expected some backlog items with missing descriptions.");
+        Assert.IsGreaterThan(0, report.MissingEstimateCount, "Expected some backlog items with missing effort estimates.");
+        Assert.IsGreaterThan(0, report.BrokenHierarchyCount, "Expected some broken hierarchy cases for backlog realism.");
+        Assert.IsGreaterThan(0, report.InconsistentStateCount, "Expected some state mismatches for backlog realism.");
     }
 
     [TestMethod]
