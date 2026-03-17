@@ -167,6 +167,7 @@ public sealed class GetPortfolioDeliveryQueryHandler
                     ProductName = summary.ProductName,
                     SprintCompletedEffort = summary.DeliveredStoryPoints,
                     TotalEffort = summary.TotalScopeStoryPoints,
+                    TotalStoryPoints = summary.TotalScopeStoryPoints,
                     EffortShare = summary.DeliveredSharePercent,
                     ProgressPercent = summary.ProgressPercent
                 })

@@ -128,6 +128,8 @@ public sealed class GetPortfolioDeliveryQueryHandlerTests
         Assert.HasCount(1, result.TopFeatures);
         Assert.AreEqual(8d, result.TopFeatures[0].SprintCompletedEffort, 0.001d);
         Assert.AreEqual(8d, result.TopFeatures[0].DeliveredStoryPoints, 0.001d);
+        Assert.AreEqual(13d, result.TopFeatures[0].TotalEffort, 0.001d);
+        Assert.AreEqual(13d, result.TopFeatures[0].TotalStoryPoints, 0.001d);
         Assert.AreEqual(80d, result.TopFeatures[0].EffortShare, 0.001d);
         Assert.AreEqual(80d, result.TopFeatures[0].DeliveredSharePercent, 0.001d);
 

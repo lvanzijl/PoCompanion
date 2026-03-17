@@ -150,7 +150,12 @@ public sealed class GetEpicCompletionForecastQueryHandler
                 .ToList(),
             AreaPath: epic.AreaPath ?? "Unknown",
             AnalysisTimestamp: DateTimeOffset.UtcNow
-        );
+        )
+        {
+            TotalStoryPoints = forecast.TotalScopeStoryPoints,
+            DoneStoryPoints = forecast.CompletedScopeStoryPoints,
+            RemainingStoryPoints = forecast.RemainingScopeStoryPoints
+        };
     }
 
     private async Task<Dictionary<int, bool>> BuildDoneLookupAsync(
