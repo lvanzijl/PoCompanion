@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-17",
+    "type": "Changed",
+    "title": "Mock mode now seeds realistic onboarding data",
+    "impact": "Mock mode now starts with seeded product owners, products, teams, and more varied backlog and sprint history so onboarding and analytics views show usable non-flat demo data immediately.",
+    "area": "Settings",
+    "link": "/settings/productowner"
+  },
+  {
     "date": "2026-03-16",
     "type": "Changed",
     "title": "Portfolio flow now uses canonical story points",
