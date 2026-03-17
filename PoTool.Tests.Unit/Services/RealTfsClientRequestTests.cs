@@ -53,6 +53,58 @@ public class RealTfsClientRequestTests
     }
 
     [TestMethod]
+    public async Task GetWorkItemsByTypeAsync_UsesTypeFilteredWiqlAndBatchRequest()
+    {
+        var config = CreateConfig();
+        var requestBodies = new List<string>();
+
+        var handler = new CaptureHttpMessageHandler(async (request, ct) =>
+        {
+            if (request.Content != null)
+            {
+                requestBodies.Add(await request.Content.ReadAsStringAsync(ct));
+            }
+
+            if (request.RequestUri!.AbsoluteUri.Contains("_apis/wit/wiql", StringComparison.OrdinalIgnoreCase))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"workItems\":[{\"id\":101},{\"id\":102}]}")
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"value\":[{\"id\":101,\"fields\":{\"System.Title\":\"Goal A\",\"System.WorkItemType\":\"goal\"}},{\"id\":102,\"fields\":{\"System.Title\":\"Goal B\",\"System.WorkItemType\":\"goal\"}}]}")
+            };
+        });
+
+        var client = CreateClient(config, handler);
+
+        var results = (await client.GetWorkItemsByTypeAsync("goal", "TestProject\\Area")).ToList();
+
+        Assert.HasCount(2, requestBodies);
+
+        using (var wiqlDoc = JsonDocument.Parse(requestBodies[0]))
+        {
+            var query = wiqlDoc.RootElement.GetProperty("query").GetString();
+            StringAssert.Contains(query, "[System.WorkItemType] = 'goal'");
+            StringAssert.Contains(query, "[System.AreaPath] UNDER 'TestProject\\Area'");
+        }
+
+        using (var batchDoc = JsonDocument.Parse(requestBodies[1]))
+        {
+            var fields = batchDoc.RootElement.GetProperty("fields").EnumerateArray().Select(element => element.GetString()).ToList();
+            CollectionAssert.AreEquivalent(
+                new[] { "System.Id", "System.Title", "System.WorkItemType" },
+                fields.Where(value => value != null).Cast<string>().ToList());
+        }
+
+        Assert.AreEqual("Goal A", results[0].Title);
+        Assert.AreEqual("Goal B", results[1].Title);
+    }
+
+    [TestMethod]
     public async Task GetPullRequestsAsync_UsesUtcForMinAndMaxTime()
     {
         var config = CreateConfig();

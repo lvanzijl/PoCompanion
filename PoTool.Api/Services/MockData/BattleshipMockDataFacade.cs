@@ -481,6 +481,30 @@ public class BattleshipMockDataFacade : ITfsClient
         return GetWorkItemsAsync(areaPath, since: null, cancellationToken);
     }
 
+    public Task<IEnumerable<WorkItemDto>> GetWorkItemsByTypeAsync(
+        string workItemType,
+        string areaPath,
+        CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        _logger.LogInformation(
+            "Mock TFS client: GetWorkItemsByTypeAsync with workItemType={WorkItemType}, areaPath={AreaPath}",
+            workItemType,
+            areaPath);
+
+        var normalizedAreaPath = areaPath.Trim('\\');
+        var results = GetMockHierarchy()
+            .Where(wi =>
+                wi.Type.Equals(workItemType, StringComparison.OrdinalIgnoreCase) &&
+                (wi.AreaPath.Trim('\\').Equals(normalizedAreaPath, StringComparison.OrdinalIgnoreCase) ||
+                 wi.AreaPath.Trim('\\').StartsWith(normalizedAreaPath + "\\", StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(wi => wi.Title)
+            .ToList();
+
+        _logger.LogInformation("Mock TFS client: Returning {Count} work items for type {WorkItemType}", results.Count, workItemType);
+        return Task.FromResult<IEnumerable<WorkItemDto>>(results);
+    }
+
     public Task<WorkItemDto?> GetWorkItemByIdAsync(int workItemId, CancellationToken cancellationToken = default)
     {
         IncrementAndGetApiCallCount();

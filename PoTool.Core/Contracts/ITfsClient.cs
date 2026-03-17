@@ -24,6 +24,18 @@ public interface ITfsClient
     Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves work items of a specific type under the specified area path.
+    /// </summary>
+    /// <param name="workItemType">The work item type to query.</param>
+    /// <param name="areaPath">The area path to query.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of work item DTOs.</returns>
+    Task<IEnumerable<WorkItemDto>> GetWorkItemsByTypeAsync(
+        string workItemType,
+        string areaPath,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves work items under the specified area path, optionally filtered by last modified date.
     /// </summary>
     /// <param name="areaPath">The area path to query.</param>
