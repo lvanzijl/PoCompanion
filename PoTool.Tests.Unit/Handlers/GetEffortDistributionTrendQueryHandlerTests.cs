@@ -1,281 +1,156 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Api.Handlers.Metrics;
-using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Domain.Forecasting.Models;
 using PoTool.Core.Domain.Forecasting.Services;
-using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems.Queries;
+using PoTool.Shared.Metrics;
 using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
-
-using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit.Handlers;
 
 [TestClass]
-public class GetEffortDistributionTrendQueryHandlerTests
+public sealed class GetEffortDistributionTrendQueryHandlerTests
 {
     private Mock<IWorkItemRepository> _mockRepository = null!;
     private Mock<IProductRepository> _mockProductRepository = null!;
     private Mock<IMediator> _mockMediator = null!;
     private Mock<ILogger<GetEffortDistributionTrendQueryHandler>> _mockLogger = null!;
-    private IEffortTrendForecastService _effortTrendForecastService = null!;
+    private Mock<IEffortTrendForecastService> _mockEffortTrendForecastService = null!;
     private GetEffortDistributionTrendQueryHandler _handler = null!;
 
     [TestInitialize]
     public void Setup()
     {
-        _mockRepository = new Mock<IWorkItemRepository>();
-        _mockProductRepository = new Mock<IProductRepository>();
-        _mockMediator = new Mock<IMediator>();
+        _mockRepository = new Mock<IWorkItemRepository>(MockBehavior.Strict);
+        _mockProductRepository = new Mock<IProductRepository>(MockBehavior.Strict);
+        _mockMediator = new Mock<IMediator>(MockBehavior.Strict);
         _mockLogger = new Mock<ILogger<GetEffortDistributionTrendQueryHandler>>();
-        _effortTrendForecastService = new EffortTrendForecastService();
-
-        // Setup default mock behaviors
-        _mockProductRepository.Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ProductDto>());
-        _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto>());
+        _mockEffortTrendForecastService = new Mock<IEffortTrendForecastService>(MockBehavior.Strict);
 
         _handler = new GetEffortDistributionTrendQueryHandler(
             _mockRepository.Object,
             _mockProductRepository.Object,
             _mockMediator.Object,
-            _effortTrendForecastService,
+            _mockEffortTrendForecastService.Object,
             _mockLogger.Object);
     }
 
     [TestMethod]
-    public async Task Handle_WithNoWorkItems_ReturnsEmptyTrend()
+    public async Task Handle_FiltersAreaPathBeforeAnalyzing()
     {
-        // Arrange
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto>());
-        var query = new GetEffortDistributionTrendQuery();
+        IReadOnlyList<EffortDistributionWorkItem>? capturedWorkItems = null;
 
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        _mockProductRepository
+            .Setup(repository => repository.GetAllProductsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<ProductDto>());
+        _mockRepository
+            .Setup(repository => repository.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WorkItemDto>
+            {
+                CreateWorkItem(1, "Project\\TeamA", "Sprint 1", 10),
+                CreateWorkItem(2, "Project\\TeamB", "Sprint 2", 20),
+                CreateWorkItem(3, "Other\\TeamC", "Sprint 3", 30)
+            });
+        _mockEffortTrendForecastService
+            .Setup(service => service.Analyze(It.IsAny<IReadOnlyList<EffortDistributionWorkItem>>(), 5, 40))
+            .Callback<IReadOnlyList<EffortDistributionWorkItem>, int, int?>((workItems, _, _) => capturedWorkItems = workItems)
+            .Returns(new EffortDistributionAnalysis(
+                trendBySprint: Array.Empty<EffortSprintTrend>(),
+                trendByAreaPath: Array.Empty<EffortAreaPathTrend>(),
+                overallTrend: EffortForecastDirection.Stable,
+                trendSlope: 0,
+                forecasts: Array.Empty<EffortDistributionForecast>()));
 
-        // Assert
-        Assert.IsNotNull(result);
+        var result = await _handler.Handle(
+            new GetEffortDistributionTrendQuery(AreaPathFilter: "Project", MaxIterations: 5, DefaultCapacityPerIteration: 40),
+            CancellationToken.None);
+
+        Assert.IsNotNull(capturedWorkItems);
+        Assert.HasCount(2, capturedWorkItems);
+        CollectionAssert.AreEquivalent(
+            new[] { "Project\\TeamA", "Project\\TeamB" },
+            capturedWorkItems.Select(item => item.AreaPath).ToArray());
         Assert.AreEqual(EffortTrendDirection.Stable, result.OverallTrend);
-        Assert.AreEqual(0, result.TrendSlope);
-        Assert.IsEmpty(result.TrendBySprint);
-        Assert.IsEmpty(result.TrendByAreaPath);
-        Assert.IsEmpty(result.Forecasts);
+
+        _mockProductRepository.VerifyAll();
+        _mockRepository.VerifyAll();
+        _mockEffortTrendForecastService.VerifyAll();
     }
 
     [TestMethod]
-    public async Task Handle_WithIncreasingEffort_DetectsIncreasingTrend()
+    public async Task Handle_UsesProductRootLoadingAndMapsAnalysisIntoDto()
     {
-        // Arrange - effort increasing over sprints
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "Team1", "Sprint 1", 10),
-            CreateWorkItem(2, "Team1", "Sprint 2", 20),
-            CreateWorkItem(3, "Team1", "Sprint 3", 30),
-            CreateWorkItem(4, "Team1", "Sprint 4", 40)
-        };
+        _mockProductRepository
+            .Setup(repository => repository.GetAllProductsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([CreateProduct(1, backlogRootWorkItemId: 100)]);
+        _mockMediator
+            .Setup(mediator => mediator.Send(
+                It.Is<GetWorkItemsByRootIdsQuery>(query => query.RootIds.SequenceEqual(new[] { 100 })),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WorkItemDto>
+            {
+                CreateWorkItem(1, "TeamA", "Sprint 1", 10)
+            });
+        _mockEffortTrendForecastService
+            .Setup(service => service.Analyze(It.IsAny<IReadOnlyList<EffortDistributionWorkItem>>(), 10, null))
+            .Returns(new EffortDistributionAnalysis(
+                trendBySprint:
+                [
+                    new EffortSprintTrend("Sprint 1", "Sprint 1", totalEffort: 10, workItemCount: 1, utilizationPercentage: 20, changeFromPrevious: 0, direction: EffortForecastDirection.Increasing)
+                ],
+                trendByAreaPath:
+                [
+                    new EffortAreaPathTrend("TeamA", effortBySprint: [10], averageEffort: 10, standardDeviation: 0, direction: EffortForecastDirection.Stable, trendSlope: 0)
+                ],
+                overallTrend: EffortForecastDirection.Increasing,
+                trendSlope: 1.5,
+                forecasts:
+                [
+                    new EffortDistributionForecast("Sprint 2", forecastedEffort: 12, lowEstimate: 10, highEstimate: 14, confidenceLevel: 0.8)
+                ]));
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetEffortDistributionTrendQuery(MaxIterations: 10);
+        var result = await _handler.Handle(new GetEffortDistributionTrendQuery(), CancellationToken.None);
 
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
         Assert.AreEqual(EffortTrendDirection.Increasing, result.OverallTrend);
-        Assert.IsGreaterThan(0d, result.TrendSlope);
-        Assert.HasCount(4, result.TrendBySprint);
+        Assert.AreEqual(1.5d, result.TrendSlope, 0.001);
+        Assert.HasCount(1, result.TrendBySprint);
+        Assert.AreEqual("Sprint 1", result.TrendBySprint[0].IterationPath);
+        Assert.AreEqual(EffortTrendDirection.Increasing, result.TrendBySprint[0].Direction);
+        Assert.HasCount(1, result.TrendByAreaPath);
+        Assert.AreEqual("TeamA", result.TrendByAreaPath[0].AreaPath);
+        Assert.AreEqual(EffortTrendDirection.Stable, result.TrendByAreaPath[0].Direction);
+        Assert.HasCount(1, result.Forecasts);
+        Assert.AreEqual("Sprint 2", result.Forecasts[0].SprintName);
+        Assert.AreEqual(12, result.Forecasts[0].ForecastedEffort);
+        Assert.AreEqual(0.8d, result.Forecasts[0].ConfidenceLevel, 0.001);
+
+        _mockRepository.Verify(repository => repository.GetAllAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mockProductRepository.VerifyAll();
+        _mockMediator.VerifyAll();
+        _mockEffortTrendForecastService.VerifyAll();
     }
 
-    [TestMethod]
-    public async Task Handle_WithDecreasingEffort_DetectsDecreasingTrend()
+    private static ProductDto CreateProduct(int id, int backlogRootWorkItemId)
     {
-        // Arrange - effort decreasing over sprints
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "Team1", "Sprint 1", 40),
-            CreateWorkItem(2, "Team1", "Sprint 2", 30),
-            CreateWorkItem(3, "Team1", "Sprint 3", 20),
-            CreateWorkItem(4, "Team1", "Sprint 4", 10)
-        };
-
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetEffortDistributionTrendQuery(MaxIterations: 10);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(EffortTrendDirection.Decreasing, result.OverallTrend);
-        Assert.IsLessThan(0d, result.TrendSlope);
-    }
-
-    [TestMethod]
-    public async Task Handle_WithStableEffort_DetectsStableTrend()
-    {
-        // Arrange - consistent effort over sprints
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "Team1", "Sprint 1", 25),
-            CreateWorkItem(2, "Team1", "Sprint 2", 25),
-            CreateWorkItem(3, "Team1", "Sprint 3", 25),
-            CreateWorkItem(4, "Team1", "Sprint 4", 25)
-        };
-
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetEffortDistributionTrendQuery(MaxIterations: 10);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(EffortTrendDirection.Stable, result.OverallTrend);
-        Assert.IsLessThan(1d, Math.Abs(result.TrendSlope)); // Near zero
-    }
-
-    [TestMethod]
-    public async Task Handle_WithVolatileEffort_DetectsVolatileTrend()
-    {
-        // Arrange - highly variable effort
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "Team1", "Sprint 1", 10),
-            CreateWorkItem(2, "Team1", "Sprint 2", 50),
-            CreateWorkItem(3, "Team1", "Sprint 3", 5),
-            CreateWorkItem(4, "Team1", "Sprint 4", 60),
-            CreateWorkItem(5, "Team1", "Sprint 5", 15)
-        };
-
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetEffortDistributionTrendQuery(MaxIterations: 10);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(EffortTrendDirection.Volatile, result.OverallTrend);
-    }
-
-    [TestMethod]
-    public async Task Handle_WithSufficientHistory_GeneratesForecasts()
-    {
-        // Arrange - enough sprints for forecasting
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "Team1", "Sprint 1", 20),
-            CreateWorkItem(2, "Team1", "Sprint 2", 25),
-            CreateWorkItem(3, "Team1", "Sprint 3", 30)
-        };
-
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetEffortDistributionTrendQuery(MaxIterations: 10);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.IsNotEmpty(result.Forecasts);
-        Assert.IsLessThanOrEqualTo(result.Forecasts.Count, 3); // Should forecast 3 future sprints
-        Assert.IsTrue(result.Forecasts.All(f => f.ForecastedEffort > 0));
-        Assert.IsTrue(result.Forecasts.All(f => f.ConfidenceLevel > 0 && f.ConfidenceLevel <= 1));
-    }
-
-    [TestMethod]
-    public async Task Handle_WithInsufficientHistory_NoForecasts()
-    {
-        // Arrange - only 1 sprint, not enough for forecasting
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "Team1", "Sprint 1", 20)
-        };
-
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetEffortDistributionTrendQuery(MaxIterations: 10);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.IsEmpty(result.Forecasts);
-    }
-
-    [TestMethod]
-    public async Task Handle_CalculatesChangeFromPrevious()
-    {
-        // Arrange
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "Team1", "Sprint 1", 20),
-            CreateWorkItem(2, "Team1", "Sprint 2", 25), // 25% increase
-            CreateWorkItem(3, "Team1", "Sprint 3", 20)  // 20% decrease
-        };
-
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetEffortDistributionTrendQuery(MaxIterations: 10);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.HasCount(3, result.TrendBySprint);
-
-        var sprint2 = result.TrendBySprint[1];
-        Assert.IsTrue(sprint2.ChangeFromPrevious > 20 && sprint2.ChangeFromPrevious < 30);
-
-        var sprint3 = result.TrendBySprint[2];
-        Assert.IsTrue(sprint3.ChangeFromPrevious < -15 && sprint3.ChangeFromPrevious > -25);
-    }
-
-    [TestMethod]
-    public async Task Handle_AnalyzesAreaPathTrends()
-    {
-        // Arrange
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "TeamA", "Sprint 1", 10),
-            CreateWorkItem(2, "TeamA", "Sprint 2", 20),
-            CreateWorkItem(3, "TeamB", "Sprint 1", 30),
-            CreateWorkItem(4, "TeamB", "Sprint 2", 30)
-        };
-
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetEffortDistributionTrendQuery(MaxIterations: 10);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.IsGreaterThanOrEqualTo(result.TrendByAreaPath.Count, 2);
-
-        var teamATrend = result.TrendByAreaPath.FirstOrDefault(t => t.AreaPath == "TeamA");
-        Assert.IsNotNull(teamATrend);
-        Assert.AreEqual(EffortTrendDirection.Increasing, teamATrend.Direction);
-
-        var teamBTrend = result.TrendByAreaPath.FirstOrDefault(t => t.AreaPath == "TeamB");
-        Assert.IsNotNull(teamBTrend);
-        Assert.AreEqual(EffortTrendDirection.Stable, teamBTrend.Direction);
+        return new ProductDto(
+            Id: id,
+            ProductOwnerId: 1,
+            Name: $"Product {id}",
+            BacklogRootWorkItemIds: [backlogRootWorkItemId],
+            Order: id,
+            PictureType: ProductPictureType.Default,
+            DefaultPictureId: 0,
+            CustomPicturePath: null,
+            CreatedAt: DateTimeOffset.UtcNow,
+            LastModified: DateTimeOffset.UtcNow,
+            LastSyncedAt: null,
+            TeamIds: [],
+            Repositories: []);
     }
 
     private static WorkItemDto CreateWorkItem(int id, string areaPath, string iterationPath, int effort)
@@ -290,8 +165,7 @@ public class GetEffortDistributionTrendQueryHandlerTests
             State: "New",
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
-                    Description: null,
-                    Tags: null
-        );
+            Description: null,
+            Tags: null);
     }
 }

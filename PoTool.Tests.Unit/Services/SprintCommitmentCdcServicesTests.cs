@@ -113,6 +113,104 @@ public sealed class SprintCommitmentCdcServicesTests
     }
 
     [TestMethod]
+    public void SprintCommitmentService_BuildCommitments_UsesBoundaryIterationAtExactCommitmentTimestamp()
+    {
+        var sprint = CreateSprint();
+        var commitmentTimestamp = SprintCommitmentLookup.GetCommitmentTimestamp(sprint.StartUtc!.Value);
+        var service = new SprintCommitmentService();
+        IReadOnlyDictionary<int, WorkItemSnapshot> workItemsById = new Dictionary<int, WorkItemSnapshot>
+        {
+            [101] = new(101, WorkItemType.Pbi, "Active", sprint.Path),
+            [102] = new(102, WorkItemType.Pbi, "Active", "\\Project\\Backlog")
+        };
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>> iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>
+        {
+            [101] =
+            [
+                CreateFieldChangeEvent(101, "System.IterationPath", commitmentTimestamp, "\\Project\\Backlog", sprint.Path)
+            ],
+            [102] =
+            [
+                CreateFieldChangeEvent(102, "System.IterationPath", commitmentTimestamp, sprint.Path, "\\Project\\Backlog")
+            ]
+        };
+
+        var commitments = service.BuildCommitments(sprint, workItemsById, iterationEventsByWorkItem);
+
+        CollectionAssert.AreEqual(new[] { 101 }, commitments.Select(commitment => commitment.WorkItemId).ToArray());
+    }
+
+    [TestMethod]
+    public void StateClassificationLookup_GetClassification_UsesCanonicalMappingsCaseInsensitively()
+    {
+        var stateLookup = StateClassificationLookup.Create(
+        [
+            new(WorkItemType.Pbi, "Resolved", StateClassification.Done)
+        ]);
+
+        var classification = StateClassificationLookup.GetClassification(stateLookup, WorkItemType.Pbi, "resolved");
+
+        Assert.AreEqual(StateClassification.Done, classification);
+    }
+
+    [TestMethod]
+    public void SprintCompletionService_BuildFirstDoneByWorkItem_PreservesFirstDoneWhenItemIsReopened()
+    {
+        var service = new SprintCompletionService();
+        var firstDoneTimestamp = new DateTimeOffset(2026, 1, 3, 0, 0, 0, TimeSpan.Zero);
+        IReadOnlyDictionary<int, WorkItemSnapshot> workItemsById = new Dictionary<int, WorkItemSnapshot>
+        {
+            [101] = new(101, WorkItemType.Pbi, "Resolved", "\\Project\\Sprint 1")
+        };
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification> stateLookup =
+            new Dictionary<(string WorkItemType, string StateName), StateClassification>
+            {
+                [(WorkItemType.Pbi, "Resolved")] = StateClassification.Done
+            };
+        IReadOnlyList<FieldChangeEvent> stateEvents =
+        [
+            CreateFieldChangeEvent(101, "System.State", firstDoneTimestamp, "Active", "Resolved"),
+            CreateFieldChangeEvent(101, "System.State", firstDoneTimestamp.AddDays(1), "Resolved", "Active"),
+            CreateFieldChangeEvent(101, "System.State", firstDoneTimestamp.AddDays(2), "Active", "Resolved")
+        ];
+
+        var firstDoneByWorkItem = service.BuildFirstDoneByWorkItem(stateEvents, workItemsById, stateLookup);
+
+        Assert.AreEqual(firstDoneTimestamp, firstDoneByWorkItem[101]);
+    }
+
+    [TestMethod]
+    public void SprintSpilloverService_DetectSpillover_CountsDirectMoveAtSprintEndBoundary()
+    {
+        var sprint = CreateSprint();
+        var sprintEnd = sprint.EndUtc!.Value;
+        var service = new SprintSpilloverService();
+        IReadOnlyDictionary<int, WorkItemSnapshot> workItemsById = new Dictionary<int, WorkItemSnapshot>
+        {
+            [101] = new(101, WorkItemType.Pbi, "Active", "\\Project\\Sprint 2")
+        };
+        IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>> iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>
+        {
+            [101] =
+            [
+                CreateFieldChangeEvent(101, "System.IterationPath", sprintEnd, sprint.Path, "\\Project\\Sprint 2")
+            ]
+        };
+
+        var spillover = service.DetectSpillover(
+            new HashSet<int> { 101 },
+            workItemsById,
+            new Dictionary<int, IReadOnlyList<FieldChangeEvent>>(),
+            iterationEventsByWorkItem,
+            stateLookup: null,
+            sprint,
+            nextSprintPath: "\\Project\\Sprint 2",
+            sprintEnd);
+
+        CollectionAssert.AreEqual(new[] { 101 }, spillover.Select(item => item.WorkItemId).ToArray());
+    }
+
+    [TestMethod]
     public void SprintFactService_BuildSprintFactResult_ReturnsCanonicalSprintTotals()
     {
         var sprint = CreateSprint();
