@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-17",
+    "type": "Fixed",
+    "title": "Mock startup now seeds cache-sync configuration",
+    "impact": "Fresh mock-backed startup now seeds the Azure DevOps connection used by sprint projections so onboarding data, cache sync, and analytics pages work without manual configuration first.",
+    "area": "Settings",
+    "link": "/onboarding"
+  },
+  {
+    "date": "2026-03-17",
     "type": "Changed",
     "title": "Mock mode now seeds realistic onboarding data",
     "impact": "Mock mode now starts with seeded product owners, products, teams, and more varied backlog and sprint history so onboarding and analytics views show usable non-flat demo data immediately.",
