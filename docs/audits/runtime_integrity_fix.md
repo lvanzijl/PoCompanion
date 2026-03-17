@@ -12,7 +12,7 @@
 - Routed goal bootstrap access through `ITfsClient.GetWorkItemsByTypeAsync(...)` instead of handler-level HTTP calls.
 - Implemented `GetWorkItemsByTypeAsync(...)` in both `RealTfsClient` and `MockTfsClient` so the existing DI selection decides live vs mock behavior.
 - Normalized mock area-path matching so the development configuration’s project-root area path resolves against the Battleship mock hierarchy.
-- Added a runtime guard in `GetGoalsFromTfsQueryHandler` that refuses to continue when mock mode is enabled but the resolved TFS client is not the mock client.
+- Added a runtime guard in `GetGoalsFromTfsQueryHandler` that throws a clear exception when mock mode is enabled but the resolved TFS client is not the mock client.
 - Reworked focused unit tests so the handler verifies the abstraction boundary instead of raw `HttpClient` behavior.
 
 ## Validation results

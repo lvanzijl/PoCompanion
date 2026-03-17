@@ -97,7 +97,7 @@ public class GetGoalsFromTfsQueryHandlerTests
     }
 
     [TestMethod]
-    public async Task Handle_WhenMockModeUsesNonMockClient_ReturnsEmptyList()
+    public async Task Handle_WhenMockModeUsesNonMockClient_ThrowsInvalidOperationException()
     {
         var handler = new GetGoalsFromTfsQueryHandler(
             _tfsClientMock.Object,
@@ -105,10 +105,16 @@ public class GetGoalsFromTfsQueryHandlerTests
             CreateConfiguration(useMockClient: true),
             _loggerMock.Object);
 
-        var result = await handler.Handle(new GetGoalsFromTfsQuery(), CancellationToken.None);
+        try
+        {
+            await handler.Handle(new GetGoalsFromTfsQuery(), CancellationToken.None);
+            Assert.Fail("Expected InvalidOperationException to be thrown.");
+        }
+        catch (InvalidOperationException)
+        {
+            // Expected guardrail exception.
+        }
 
-        Assert.IsNotNull(result);
-        Assert.AreEqual(0, result.Count());
         _tfsClientMock.Verify(
             client => client.GetWorkItemsByTypeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);

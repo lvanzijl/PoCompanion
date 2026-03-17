@@ -47,15 +47,15 @@ public sealed class GetGoalsFromTfsQueryHandler : IQueryHandler<GetGoalsFromTfsQ
             return Enumerable.Empty<WorkItemDto>();
         }
 
+        if (_useMockClient && _tfsClient is not MockTfsClient)
+        {
+            throw new InvalidOperationException(
+                "Mock mode is enabled but the resolved TFS client is not the mock implementation. " +
+                "Goal bootstrap requires MockTfsClient when TfsIntegration:UseMockClient=true.");
+        }
+
         try
         {
-            if (_useMockClient && _tfsClient is not MockTfsClient)
-            {
-                throw new InvalidOperationException(
-                    "Mock mode is enabled, but goal bootstrap did not resolve the mock TFS client. " +
-                    "Direct TFS HTTP access is not allowed when TfsIntegration:UseMockClient=true.");
-            }
-
             var goals = (await _tfsClient.GetWorkItemsByTypeAsync(
                     WorkItemType.Goal,
                     config.DefaultAreaPath,
