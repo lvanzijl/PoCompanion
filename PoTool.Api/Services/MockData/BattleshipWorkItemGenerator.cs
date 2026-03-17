@@ -546,8 +546,15 @@ public class BattleshipWorkItemGenerator
         var sprintNumber = TryGetSprintNumber(iterationPath);
         if (sprintNumber.HasValue)
         {
-            var baseline = now.AddDays(Math.Min(0, (sprintNumber.Value - 6) * 14));
+            var baseline = sprintNumber.Value <= 6
+                ? now.AddDays((sprintNumber.Value - 6) * 14)
+                : now.AddDays(-_random.Next(1, 21));
             return baseline.AddDays(-_random.Next(10, 70)).AddHours(-_random.Next(0, 24));
+        }
+
+        if (iterationPath.Contains(@"\2025", StringComparison.OrdinalIgnoreCase))
+        {
+            return now.AddDays(-_random.Next(90, 240)).AddHours(-_random.Next(0, 24));
         }
 
         return now.AddDays(-_random.Next(21, 210)).AddHours(-_random.Next(0, 24));

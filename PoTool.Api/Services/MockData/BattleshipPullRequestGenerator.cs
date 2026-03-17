@@ -40,9 +40,15 @@ public class BattleshipPullRequestGenerator
             var sprintStart = now.AddDays(-14 * (11 - sprint));
             var createdDate = sprintStart.AddDays(_random.Next(-5, 9)).AddHours(_random.Next(0, 24));
             var status = GetPrStatus();
-            DateTimeOffset? completedDate = status == "completed"
-                ? Min(createdDate.AddDays(_random.Next(1, 15)), now.AddHours(-_random.Next(1, 12)))
-                : null;
+            DateTimeOffset? completedDate = null;
+            if (status == "completed")
+            {
+                var candidateCompletedDate = createdDate.AddDays(_random.Next(1, 15));
+                var latestCompletedDate = now.AddHours(-_random.Next(1, 12));
+                completedDate = candidateCompletedDate <= latestCompletedDate
+                    ? candidateCompletedDate
+                    : latestCompletedDate;
+            }
 
             var title = GetPrTitle(i, repository);
             var sourceBranch = GetBranchName(title);
@@ -98,11 +104,6 @@ public class BattleshipPullRequestGenerator
         }
 
         return iterations;
-    }
-
-    private static DateTimeOffset Min(DateTimeOffset left, DateTimeOffset right)
-    {
-        return left <= right ? left : right;
     }
 
     /// <summary>

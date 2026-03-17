@@ -1,5 +1,6 @@
 using PoTool.Shared.WorkItems;
 using PoTool.Shared.PullRequests;
+using System.Text.RegularExpressions;
 
 using PoTool.Core.WorkItems;
 
@@ -172,7 +173,7 @@ public class MockDataValidator
             string.IsNullOrWhiteSpace(w.IterationPath) ||
             (!w.IterationPath.Contains("Backlog", StringComparison.OrdinalIgnoreCase) &&
              !w.IterationPath.Contains("Sprint", StringComparison.OrdinalIgnoreCase) &&
-             !w.IterationPath.Contains("2025", StringComparison.OrdinalIgnoreCase)));
+             !Regex.IsMatch(w.IterationPath, @"\\20\d{2}(\\|$)")));
 
         report.InvalidIterationPathCount = invalidIterations;
         report.IterationPathValid = invalidIterations == 0;
