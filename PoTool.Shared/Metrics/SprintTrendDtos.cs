@@ -357,9 +357,6 @@ public record GetSprintTrendMetricsResponse
 /// </summary>
 public record FeatureProgressDto
 {
-    private readonly double? _totalStoryPoints;
-    private readonly double? _doneStoryPoints;
-
     /// <summary>
     /// Feature TFS ID.
     /// </summary>
@@ -394,42 +391,17 @@ public record FeatureProgressDto
     /// <summary>
     /// Total canonical story-point scope of all PBIs under this feature.
     /// Domain meaning: TotalScope.
-    /// The legacy property name is retained for API compatibility and values may be fractional.
-    /// Compatibility alias; deprecated in future contract revision.
     /// </summary>
-    public double TotalEffort { get; init; }
+    public double TotalStoryPoints { get; init; }
 
     /// <summary>
     /// Canonical story-point scope of done PBIs under this feature.
     /// Domain meaning: DeliveredScope.
-    /// The legacy property name is retained for API compatibility and values may be fractional.
-    /// Compatibility alias; deprecated in future contract revision.
     /// </summary>
-    public double DoneEffort { get; init; }
-
-    /// <summary>
-    /// Canonical total story-point scope of all PBIs under this feature.
-    /// Maps to the same internal value as TotalEffort.
-    /// </summary>
-    public double TotalStoryPoints
-    {
-        get => _totalStoryPoints ?? TotalEffort;
-        init => _totalStoryPoints = value;
-    }
-
-    /// <summary>
-    /// Canonical done story-point scope under this feature.
-    /// Maps to the same internal value as DoneEffort.
-    /// </summary>
-    public double DoneStoryPoints
-    {
-        get => _doneStoryPoints ?? DoneEffort;
-        init => _doneStoryPoints = value;
-    }
+    public double DoneStoryPoints { get; init; }
 
     /// <summary>
     /// Canonical delivered story points under this feature.
-    /// Maps to the same internal value as DoneStoryPoints.
     /// </summary>
     public double DeliveredStoryPoints => DoneStoryPoints;
 
@@ -454,7 +426,7 @@ public record FeatureProgressDto
 
     /// <summary>
     /// Progression delta gained during the selected sprint for this feature (0-100).
-    /// Computed as SprintCompletedEffort / TotalEffort * 100. Zero when not in single-sprint view.
+    /// Computed as SprintCompletedEffort / TotalStoryPoints * 100. Zero when not in single-sprint view.
     /// </summary>
     public double SprintProgressionDelta { get; init; }
 
@@ -491,9 +463,6 @@ public record FeatureProgressDto
 /// </summary>
 public record EpicProgressDto
 {
-    private readonly double? _totalStoryPoints;
-    private readonly double? _doneStoryPoints;
-
     /// <summary>
     /// Epic TFS ID.
     /// </summary>
@@ -519,42 +488,17 @@ public record EpicProgressDto
     /// <summary>
     /// Total canonical story-point scope of all PBIs under this epic's features.
     /// Domain meaning: TotalScope.
-    /// The legacy property name is retained for API compatibility and values may be fractional.
-    /// Compatibility alias; deprecated in future contract revision.
     /// </summary>
-    public double TotalEffort { get; init; }
+    public double TotalStoryPoints { get; init; }
 
     /// <summary>
     /// Canonical story-point scope of done PBIs under this epic's features.
     /// Domain meaning: DeliveredScope.
-    /// The legacy property name is retained for API compatibility and values may be fractional.
-    /// Compatibility alias; deprecated in future contract revision.
     /// </summary>
-    public double DoneEffort { get; init; }
-
-    /// <summary>
-    /// Canonical total story-point scope of all PBIs under this epic's features.
-    /// Maps to the same internal value as TotalEffort.
-    /// </summary>
-    public double TotalStoryPoints
-    {
-        get => _totalStoryPoints ?? TotalEffort;
-        init => _totalStoryPoints = value;
-    }
-
-    /// <summary>
-    /// Canonical done story-point scope under this epic's features.
-    /// Maps to the same internal value as DoneEffort.
-    /// </summary>
-    public double DoneStoryPoints
-    {
-        get => _doneStoryPoints ?? DoneEffort;
-        init => _doneStoryPoints = value;
-    }
+    public double DoneStoryPoints { get; init; }
 
     /// <summary>
     /// Canonical delivered story points under this epic's features.
-    /// Maps to the same internal value as DoneStoryPoints.
     /// </summary>
     public double DeliveredStoryPoints => DoneStoryPoints;
 
@@ -589,7 +533,7 @@ public record EpicProgressDto
 
     /// <summary>
     /// Progression delta gained during the selected sprint for this epic (0-100).
-    /// Computed as SprintCompletedEffort / TotalEffort * 100. Zero when not in single-sprint view.
+    /// Computed as SprintCompletedEffort / TotalStoryPoints * 100. Zero when not in single-sprint view.
     /// </summary>
     public double SprintProgressionDelta { get; init; }
 

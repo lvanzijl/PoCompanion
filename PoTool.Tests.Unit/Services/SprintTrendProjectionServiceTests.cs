@@ -722,8 +722,8 @@ public class SprintTrendProjectionServiceTests
         var feature = result[0];
         Assert.AreEqual(100, feature.FeatureId);
         Assert.AreEqual("Feature A", feature.FeatureTitle);
-        Assert.AreEqual(20, feature.TotalEffort, "Total effort should be 5+10+5=20");
-        Assert.AreEqual(10, feature.DoneEffort, "Done effort should be 5+5=10");
+        Assert.AreEqual(20, feature.TotalStoryPoints, "Total effort should be 5+10+5=20");
+        Assert.AreEqual(10, feature.DoneStoryPoints, "Done effort should be 5+5=10");
         Assert.AreEqual(50, feature.ProgressPercent, "Progress should be 50% (10/20)");
         Assert.IsFalse(feature.IsDone);
     }
@@ -779,7 +779,7 @@ public class SprintTrendProjectionServiceTests
 
         Assert.HasCount(1, result);
         Assert.AreEqual(100, result[0].ProgressPercent, "Resolved feature should be treated as done when canonically mapped");
-        Assert.AreEqual(5, result[0].DoneEffort, "Resolved PBI should contribute to done effort");
+        Assert.AreEqual(5, result[0].DoneStoryPoints, "Resolved PBI should contribute to done effort");
         Assert.IsTrue(result[0].IsDone);
     }
 
@@ -1076,8 +1076,8 @@ public class SprintTrendProjectionServiceTests
 
         Assert.HasCount(1, result);
         // PBI2 missing effort → sibling avg = 10, so total = 10 + 10 = 20, done = 10
-        Assert.AreEqual(20, result[0].TotalEffort, "Total should use sibling average for missing effort");
-        Assert.AreEqual(10, result[0].DoneEffort);
+        Assert.AreEqual(20, result[0].TotalStoryPoints, "Total should use sibling average for missing effort");
+        Assert.AreEqual(10, result[0].DoneStoryPoints);
         Assert.AreEqual(50, result[0].ProgressPercent);
     }
 
@@ -1103,10 +1103,10 @@ public class SprintTrendProjectionServiceTests
         var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
 
         Assert.HasCount(2, result);
-        Assert.AreEqual(8d, result.Single(f => f.FeatureId == 100).TotalEffort);
-        Assert.AreEqual(8d, result.Single(f => f.FeatureId == 100).DoneEffort);
-        Assert.AreEqual(5d, result.Single(f => f.FeatureId == 101).TotalEffort);
-        Assert.AreEqual(0d, result.Single(f => f.FeatureId == 101).DoneEffort);
+        Assert.AreEqual(8d, result.Single(f => f.FeatureId == 100).TotalStoryPoints);
+        Assert.AreEqual(8d, result.Single(f => f.FeatureId == 100).DoneStoryPoints);
+        Assert.AreEqual(5d, result.Single(f => f.FeatureId == 101).TotalStoryPoints);
+        Assert.AreEqual(0d, result.Single(f => f.FeatureId == 101).DoneStoryPoints);
     }
 
     [TestMethod]
@@ -1131,8 +1131,8 @@ public class SprintTrendProjectionServiceTests
         var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
 
         Assert.HasCount(1, result);
-        Assert.AreEqual(10.5d, result[0].TotalEffort, 0.001d);
-        Assert.AreEqual(3d, result[0].DoneEffort, 0.001d);
+        Assert.AreEqual(10.5d, result[0].TotalStoryPoints, 0.001d);
+        Assert.AreEqual(3d, result[0].DoneStoryPoints, 0.001d);
         Assert.AreEqual(29, result[0].ProgressPercent);
     }
 
@@ -1158,8 +1158,8 @@ public class SprintTrendProjectionServiceTests
         var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
 
         Assert.HasCount(1, result);
-        Assert.AreEqual(5d, result[0].TotalEffort);
-        Assert.AreEqual(5d, result[0].DoneEffort);
+        Assert.AreEqual(5d, result[0].TotalStoryPoints);
+        Assert.AreEqual(5d, result[0].DoneStoryPoints);
     }
 
     #endregion
@@ -1179,8 +1179,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Epic X",
                 ProductId = 1,
                 ProgressPercent = 50,
-                TotalEffort = 20,
-                DoneEffort = 10,
+                TotalStoryPoints = 20,
+                DoneStoryPoints = 10,
                 IsDone = false
             },
             new()
@@ -1191,8 +1191,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Epic X",
                 ProductId = 1,
                 ProgressPercent = 80,
-                TotalEffort = 10,
-                DoneEffort = 8,
+                TotalStoryPoints = 10,
+                DoneStoryPoints = 8,
                 IsDone = false
             }
         };
@@ -1208,8 +1208,8 @@ public class SprintTrendProjectionServiceTests
         Assert.HasCount(1, result);
         Assert.AreEqual(100, result[0].EpicId);
         Assert.AreEqual("Epic X", result[0].EpicTitle);
-        Assert.AreEqual(30, result[0].TotalEffort, "Total effort should be 20+10=30");
-        Assert.AreEqual(18, result[0].DoneEffort, "Done effort should be 10+8=18");
+        Assert.AreEqual(30, result[0].TotalStoryPoints, "Total effort should be 20+10=30");
+        Assert.AreEqual(18, result[0].DoneStoryPoints, "Done effort should be 10+8=18");
         Assert.AreEqual(60, result[0].ProgressPercent, "Progress should be ~60% (18/30)");
         Assert.AreEqual(2, result[0].FeatureCount);
         Assert.AreEqual(0, result[0].DoneFeatureCount);
@@ -1229,8 +1229,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Done Epic",
                 ProductId = 1,
                 ProgressPercent = 50,
-                TotalEffort = 10,
-                DoneEffort = 5,
+                TotalStoryPoints = 10,
+                DoneStoryPoints = 5,
                 IsDone = false
             }
         };
@@ -1261,8 +1261,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Resolved Epic",
                 ProductId = 1,
                 ProgressPercent = 50,
-                TotalEffort = 10,
-                DoneEffort = 5,
+                TotalStoryPoints = 10,
+                DoneStoryPoints = 5,
                 IsDone = false
             }
         };
@@ -1296,8 +1296,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Active Epic",
                 ProductId = 1,
                 ProgressPercent = 90,
-                TotalEffort = 10,
-                DoneEffort = 10,
+                TotalStoryPoints = 10,
+                DoneStoryPoints = 10,
                 IsDone = true
             }
         };
@@ -1329,8 +1329,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = null,
                 ProductId = 1,
                 ProgressPercent = 50,
-                TotalEffort = 10,
-                DoneEffort = 5,
+                TotalStoryPoints = 10,
+                DoneStoryPoints = 5,
                 IsDone = false
             }
         };
@@ -1865,7 +1865,7 @@ public class SprintTrendProjectionServiceTests
 
         Assert.HasCount(1, result);
         Assert.AreEqual(50, result[0].SprintCompletedEffort, "Sprint scored effort should equal effort of PBI closed in sprint");
-        // SprintProgressionDelta = 50 / 150 * 100 = 33.33% (TotalEffort = 50 done + 100 active = 150)
+        // SprintProgressionDelta = 50 / 150 * 100 = 33.33% (TotalStoryPoints = 50 done + 100 active = 150)
         Assert.IsGreaterThan(0.0, result[0].SprintProgressionDelta, "Sprint progression delta should be positive");
         Assert.AreEqual(33.33, result[0].SprintProgressionDelta, 0.01, "Sprint progression delta should be 33.33%");
     }
@@ -1935,8 +1935,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Epic X",
                 ProductId = 1,
                 ProgressPercent = 50,
-                TotalEffort = 40,
-                DoneEffort = 20,
+                TotalStoryPoints = 40,
+                DoneStoryPoints = 20,
                 IsDone = false,
                 SprintCompletedEffort = 10,
                 SprintProgressionDelta = 25.0
@@ -1949,8 +1949,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Epic X",
                 ProductId = 1,
                 ProgressPercent = 80,
-                TotalEffort = 60,
-                DoneEffort = 48,
+                TotalStoryPoints = 60,
+                DoneStoryPoints = 48,
                 IsDone = false,
                 SprintCompletedEffort = 20,
                 SprintProgressionDelta = 33.33
@@ -1967,12 +1967,12 @@ public class SprintTrendProjectionServiceTests
 
         Assert.HasCount(1, result);
         Assert.AreEqual(30, result[0].SprintCompletedEffort, "Epic sprint scored effort should aggregate from child features (10+20=30)");
-        // SprintProgressionDelta = 30 / 100 * 100 = 30% (TotalEffort = 40 + 60 = 100 from both features)
+        // SprintProgressionDelta = 30 / 100 * 100 = 30% (TotalStoryPoints = 40 + 60 = 100 from both features)
         Assert.AreEqual(30.0, result[0].SprintProgressionDelta, 0.01, "Epic sprint delta should be 30%");
     }
 
     [TestMethod]
-    public void ComputeEpicProgress_ZeroTotalEffort_SprintDeltaIsZero()
+    public void ComputeEpicProgress_ZeroTotalStoryPoints_SprintDeltaIsZero()
     {
         var featureProgress = new List<FeatureProgressDto>
         {
@@ -1984,8 +1984,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Epic X",
                 ProductId = 1,
                 ProgressPercent = 0,
-                TotalEffort = 0,
-                DoneEffort = 0,
+                TotalStoryPoints = 0,
+                DoneStoryPoints = 0,
                 IsDone = false,
                 SprintCompletedEffort = 0,
                 SprintProgressionDelta = 0.0
@@ -2101,8 +2101,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Epic X",
                 ProductId = 1,
                 ProgressPercent = 100,
-                TotalEffort = 30,
-                DoneEffort = 30,
+                TotalStoryPoints = 30,
+                DoneStoryPoints = 30,
                 IsDone = true,
                 SprintCompletedEffort = 30,
                 SprintProgressionDelta = 100.0,
@@ -2117,8 +2117,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Epic X",
                 ProductId = 1,
                 ProgressPercent = 50,
-                TotalEffort = 40,
-                DoneEffort = 20,
+                TotalStoryPoints = 40,
+                DoneStoryPoints = 20,
                 IsDone = false,
                 SprintCompletedEffort = 20,
                 SprintProgressionDelta = 50.0,

@@ -120,13 +120,13 @@ public sealed class GetPortfolioDeliveryQueryHandler
                     feature.ProductId,
                     products.GetValueOrDefault(feature.ProductId, "Unknown"),
                     feature.SprintCompletedEffort,
-                    feature.TotalEffort,
+                    feature.TotalStoryPoints,
                     feature.ProgressPercent))
                     .ToList(),
                 TopFeatureLimit));
 
         _logger.LogInformation(
-            "Portfolio delivery snapshot for ProductOwner {ProductOwnerId}: {ProductCount} products, {FeatureCount} top features, total effort {TotalEffort}",
+            "Portfolio delivery snapshot for ProductOwner {ProductOwnerId}: {ProductCount} products, {FeatureCount} top features, delivered story points {DeliveredStoryPoints}",
             query.ProductOwnerId,
             deliverySummary.ProductSummaries.Count,
             deliverySummary.FeatureContributionSummaries.Count,
@@ -166,7 +166,6 @@ public sealed class GetPortfolioDeliveryQueryHandler
                     ProductId = summary.ProductId,
                     ProductName = summary.ProductName,
                     SprintCompletedEffort = summary.DeliveredStoryPoints,
-                    TotalEffort = summary.TotalScopeStoryPoints,
                     TotalStoryPoints = summary.TotalScopeStoryPoints,
                     EffortShare = summary.DeliveredSharePercent,
                     ProgressPercent = summary.ProgressPercent

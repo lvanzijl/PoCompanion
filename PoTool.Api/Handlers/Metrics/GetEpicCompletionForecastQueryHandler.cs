@@ -22,8 +22,8 @@ namespace PoTool.Api.Handlers.Metrics;
 /// items, retrieves historical SprintMetrics for each (via GetSprintMetricsQuery), and derives
 /// average velocity from CompletedStoryPoints. Sprints older than 6 months are excluded,
 /// and the result is capped at MaxSprintsForVelocity.
-/// The forecast DTO intentionally keeps legacy <c>*Effort</c> property names for API compatibility,
-/// but this handler maps those fields from canonical story-point scope rollups.
+/// The forecast DTO exposes canonical story-point property names and this handler
+/// maps them directly from canonical story-point scope rollups.
 /// </summary>
 public sealed class GetEpicCompletionForecastQueryHandler
     : IQueryHandler<GetEpicCompletionForecastQuery, EpicCompletionForecastDto?>
@@ -131,9 +131,9 @@ public sealed class GetEpicCompletionForecastQueryHandler
             EpicId: epic.TfsId,
             Title: epic.Title,
             Type: epic.Type,
-            TotalEffort: forecast.TotalScopeStoryPoints,
-            CompletedEffort: forecast.CompletedScopeStoryPoints,
-            RemainingEffort: forecast.RemainingScopeStoryPoints,
+            TotalStoryPoints: forecast.TotalScopeStoryPoints,
+            DoneStoryPoints: forecast.CompletedScopeStoryPoints,
+            RemainingStoryPoints: forecast.RemainingScopeStoryPoints,
             EstimatedVelocity: forecast.EstimatedVelocity,
             SprintsRemaining: forecast.SprintsRemaining,
             EstimatedCompletionDate: forecast.EstimatedCompletionDate,
@@ -150,12 +150,7 @@ public sealed class GetEpicCompletionForecastQueryHandler
                 .ToList(),
             AreaPath: epic.AreaPath ?? "Unknown",
             AnalysisTimestamp: DateTimeOffset.UtcNow
-        )
-        {
-            TotalStoryPoints = forecast.TotalScopeStoryPoints,
-            DoneStoryPoints = forecast.CompletedScopeStoryPoints,
-            RemainingStoryPoints = forecast.RemainingScopeStoryPoints
-        };
+        );
     }
 
     private async Task<Dictionary<int, bool>> BuildDoneLookupAsync(
