@@ -190,15 +190,15 @@
                                                 </MudText>
 
                                                 @* Progress and effort signals *@
-                                                @if (epic.TotalEffort > 0)
+                                                @if (epic.TotalStoryPoints > 0)
                                                 {
                                                     <MudStack Spacing="0" Class="mt-1">
                                                         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                                Delivered Story Points: @epic.DeliveredEffort / @epic.TotalEffort (@epic.ProgressPercent%)
+                                                                Delivered Story Points: @epic.DeliveredStoryPoints / @epic.TotalStoryPoints (@epic.ProgressPercent%)
                                                             </MudText>
                                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                                Remaining Story Points: @epic.RemainingEffort
+                                                                Remaining Story Points: @epic.RemainingStoryPoints
                                                             </MudText>
                                                         </MudStack>
                                                         <MudProgressLinear Value="@epic.ProgressPercent"
@@ -631,11 +631,11 @@
                             Title = epic.Title,
                             OrderNumber = orderNumber++,
                             TfsUrl = BuildTfsUrl(epic.TfsId),
-                            TotalEffort = localAnalytics.TotalEffort,
-                            DeliveredEffort = localAnalytics.DeliveredEffort,
-                            RemainingEffort = localAnalytics.RemainingEffort,
-                            ProgressPercent = localAnalytics.TotalEffort > 0
-                                ? (int)Math.Round(100.0 * localAnalytics.DeliveredEffort / localAnalytics.TotalEffort)
+                            TotalStoryPoints = localAnalytics.TotalStoryPoints,
+                            DeliveredStoryPoints = localAnalytics.DeliveredStoryPoints,
+                            RemainingStoryPoints = localAnalytics.RemainingStoryPoints,
+                            ProgressPercent = localAnalytics.TotalStoryPoints > 0
+                                ? (int)Math.Round(100.0 * localAnalytics.DeliveredStoryPoints / localAnalytics.TotalStoryPoints)
                                 : 0,
                             PbiCount = localAnalytics.PbiCount,
                             EpicAgeDays = localAnalytics.EpicAgeDays,
@@ -1001,9 +1001,9 @@
         public string? TfsUrl { get; set; }
 
         // Analytics signals — populated from RoadmapAnalyticsService
-        public int TotalEffort { get; set; }
-        public int DeliveredEffort { get; set; }
-        public int RemainingEffort { get; set; }
+        public int TotalStoryPoints { get; set; }
+        public int DeliveredStoryPoints { get; set; }
+        public int RemainingStoryPoints { get; set; }
         public int ProgressPercent { get; set; }
         public bool HasDependencies { get; set; }
         public int PbiCount { get; set; }
