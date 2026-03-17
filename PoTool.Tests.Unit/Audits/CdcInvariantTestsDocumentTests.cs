@@ -15,7 +15,7 @@ public sealed class CdcInvariantTestsDocumentTests
 
         StringAssert.Contains(report, "# CDC Invariant Tests");
         StringAssert.Contains(report, "## Corrected Invariants");
-        StringAssert.Contains(report, "CommittedSP = DeliveredSP + RemainingSP + SpilloverSP");
+        StringAssert.Contains(report, "Incorrect: `CommittedSP = DeliveredSP + RemainingSP + SpilloverSP`");
         StringAssert.Contains(report, "RemainingSP = CommittedSP + AddedSP - RemovedSP - DeliveredSP");
         StringAssert.Contains(report, "CommittedSP >= DeliveredSP");
         StringAssert.Contains(report, "AddedSP >= DeliveredFromAddedSP");

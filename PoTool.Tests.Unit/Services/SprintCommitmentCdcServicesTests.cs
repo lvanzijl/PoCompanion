@@ -203,13 +203,13 @@ public sealed class SprintCommitmentCdcServicesTests
             result.RemainingStoryPoints,
             0.001,
             "Remaining scope should include added scope and exclude delivered and removed scope.");
-        Assert.IsGreaterThanOrEqualTo(
-            result.DeliveredStoryPoints,
+        Assert.IsLessThanOrEqualTo(
             result.CommittedStoryPoints,
+            result.DeliveredStoryPoints,
             "Delivered committed scope should not exceed committed scope.");
-        Assert.IsGreaterThanOrEqualTo(
-            result.DeliveredFromAddedStoryPoints,
+        Assert.IsLessThanOrEqualTo(
             result.AddedStoryPoints,
+            result.DeliveredFromAddedStoryPoints,
             "Delivered added scope should stay within added scope.");
         Assert.IsLessThanOrEqualTo(
             result.SpilloverStoryPoints,

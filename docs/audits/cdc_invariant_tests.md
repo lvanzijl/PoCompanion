@@ -14,13 +14,13 @@ References:
 The previously generated invariant set carried two incorrect assumptions:
 
 1. it treated `SpilloverSP` as additive to `RemainingSP`, even though spillover is a subset of Remaining
-2. it coupled SprintFacts story-point semantics to EffortPlanning effort-hour rollups
+2. it coupled SprintFacts story point semantics to EffortPlanning effort-hour rollups
 
 Those assumptions created false failures because SprintFacts and EffortPlanning own different units and different slice responsibilities.
 
 ## Original incorrect assumptions
 
-- `CommittedSP = DeliveredSP + RemainingSP + SpilloverSP`
+- Incorrect: `CommittedSP = DeliveredSP + RemainingSP + SpilloverSP`
 - SprintFacts invariants may use effort totals
 - EffortPlanning totals may be equated to SprintFacts totals
 - cross-slice invariants may compare effort hours directly with story points
@@ -48,13 +48,13 @@ EffortPlanning distribution totals equal the sum of work-item effort hours in th
 
 Interpretation constraints:
 
-- EffortPlanning totals are effort-hour rollups, not SprintFacts story-point totals
+- EffortPlanning totals are effort-hour rollups, not SprintFacts story point totals
 - invariants must not equate effort hours with story points
 
 ## Final invariant definitions
 
-Use the corrected SprintFacts formulas above for sprint story-point tests.
+Use the corrected SprintFacts formulas above for sprint story point tests.
 
 Use effort-hour summation only inside EffortPlanning distribution tests.
 
-Do not create cross-slice invariants that compare effort-hour totals to story-point totals.
+Do not create cross-slice invariants that compare effort-hour totals to story point totals.
