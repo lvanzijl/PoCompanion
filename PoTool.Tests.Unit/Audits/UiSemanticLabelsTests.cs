@@ -12,10 +12,22 @@ public sealed class UiSemanticLabelsTests
         StringAssert.Contains(forecastPanel, "Total Story Points");
         StringAssert.Contains(forecastPanel, "Delivered Story Points");
         StringAssert.Contains(forecastPanel, "Remaining Story Points");
+        StringAssert.Contains(forecastPanel, "_forecastData.TotalStoryPoints");
+        StringAssert.Contains(forecastPanel, "_forecastData.DeliveredStoryPoints");
+        StringAssert.Contains(forecastPanel, "_forecastData.RemainingStoryPoints");
+        Assert.DoesNotContain(forecastPanel, "_forecastData.TotalEffort");
+        Assert.DoesNotContain(forecastPanel, "_forecastData.CompletedEffort");
+        Assert.DoesNotContain(forecastPanel, "_forecastData.RemainingEffort");
 
         var productRoadmaps = File.ReadAllText(Path.Combine(repositoryRoot, "PoTool.Client", "Pages", "Home", "ProductRoadmaps.razor"));
         StringAssert.Contains(productRoadmaps, "Delivered Story Points:");
         StringAssert.Contains(productRoadmaps, "Remaining Story Points:");
+        StringAssert.Contains(productRoadmaps, "epic.TotalStoryPoints");
+        StringAssert.Contains(productRoadmaps, "epic.DeliveredStoryPoints");
+        StringAssert.Contains(productRoadmaps, "epic.RemainingStoryPoints");
+        Assert.DoesNotContain(productRoadmaps, "epic.TotalEffort");
+        Assert.DoesNotContain(productRoadmaps, "epic.DeliveredEffort");
+        Assert.DoesNotContain(productRoadmaps, "epic.RemainingEffort");
 
         var sprintExecution = File.ReadAllText(Path.Combine(repositoryRoot, "PoTool.Client", "Pages", "Home", "SprintExecution.razor"));
         StringAssert.Contains(sprintExecution, "Committed Story Points");

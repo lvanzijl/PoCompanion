@@ -65,16 +65,16 @@ public class RoadmapAnalyticsService
             .ToList();
 
         // Effort: sum of effort on active PBIs/Bugs (remaining work)
-        var remainingEffort = activeDescendants
+        var remainingStoryPoints = activeDescendants
             .Where(wi => wi.Type is "Product Backlog Item" or "Bug")
             .Sum(wi => wi.Effort ?? 0);
 
         // Delivered effort: sum of effort on terminal-state PBIs/Bugs
-        var deliveredEffort = descendants
+        var deliveredStoryPoints = descendants
             .Where(wi => wi.Type is "Product Backlog Item" or "Bug" && IsTerminalState(wi.State))
             .Sum(wi => wi.Effort ?? 0);
 
-        var totalEffort = deliveredEffort + remainingEffort;
+        var totalStoryPoints = deliveredStoryPoints + remainingStoryPoints;
 
         var pbiCount = pbis.Count;
 
@@ -102,7 +102,7 @@ public class RoadmapAnalyticsService
             lastActivityDays = (int)(DateTimeOffset.UtcNow - mostRecent).TotalDays;
         }
 
-        return new EpicLocalAnalytics(totalEffort, deliveredEffort, remainingEffort, pbiCount, epicAgeDays, lastActivityDays);
+        return new EpicLocalAnalytics(totalStoryPoints, deliveredStoryPoints, remainingStoryPoints, pbiCount, epicAgeDays, lastActivityDays);
     }
 
     /// <summary>
@@ -155,7 +155,7 @@ public class RoadmapAnalyticsService
             // Epic is "at risk" if it needs more than 3 sprints or exceeds 3x velocity
             var exceedsVelocity = forecast.SprintsRemaining > 3 ||
                                   (forecast.EstimatedVelocity > 0 &&
-                                   forecast.RemainingEffort > forecast.EstimatedVelocity * 3);
+                                   forecast.RemainingStoryPoints > forecast.EstimatedVelocity * 3);
 
             return new EpicForecastAnalytics(
                 forecast.SprintsRemaining,
@@ -213,16 +213,16 @@ public class RoadmapAnalyticsService
 /// <summary>
 /// Locally computed analytics for a roadmap epic, derived from cached work item data.
 /// </summary>
-/// <param name="TotalEffort">Total effort (story points) across all PBIs/Bugs (delivered + remaining).</param>
-/// <param name="DeliveredEffort">Effort (story points) from completed PBIs/Bugs (Closed/Done/Removed).</param>
-/// <param name="RemainingEffort">Effort (story points) from active PBIs/Bugs (not yet completed).</param>
+/// <param name="TotalStoryPoints">Total story points across all PBIs/Bugs (delivered + remaining).</param>
+/// <param name="DeliveredStoryPoints">Story points from completed PBIs/Bugs (Closed/Done/Removed).</param>
+/// <param name="RemainingStoryPoints">Story points from active PBIs/Bugs (not yet completed).</param>
 /// <param name="PbiCount">Total number of PBIs and Bugs under this epic.</param>
 /// <param name="EpicAgeDays">Days since the epic was created, or null if creation date unavailable.</param>
 /// <param name="LastActivityDays">Days since the most recent activity on the epic or its descendants.</param>
 public sealed record EpicLocalAnalytics(
-    int TotalEffort,
-    int DeliveredEffort,
-    int RemainingEffort,
+    int TotalStoryPoints,
+    int DeliveredStoryPoints,
+    int RemainingStoryPoints,
     int PbiCount,
     int? EpicAgeDays,
     int? LastActivityDays);
