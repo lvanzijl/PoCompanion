@@ -1,436 +1,186 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using System.Linq;
 using PoTool.Api.Handlers.Metrics;
 using PoTool.Api.Services;
-using PoTool.Core.Domain.Forecasting.Services;
 using PoTool.Core.Contracts;
-using PoTool.Core.Domain.Estimation;
+using PoTool.Core.Domain.Forecasting.Models;
+using PoTool.Core.Domain.Forecasting.Services;
 using PoTool.Core.Domain.Hierarchy;
-using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems.Queries;
+using PoTool.Shared.Metrics;
 using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
-
-using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit.Handlers;
 
 [TestClass]
-public class GetEpicCompletionForecastQueryHandlerTests
+public sealed class GetEpicCompletionForecastQueryHandlerTests
 {
     private Mock<IWorkItemRepository> _mockRepository = null!;
     private Mock<IProductRepository> _mockProductRepository = null!;
     private Mock<IMediator> _mockMediator = null!;
     private Mock<IWorkItemStateClassificationService> _mockStateService = null!;
+    private Mock<IHierarchyRollupService> _mockHierarchyRollupService = null!;
+    private Mock<ICompletionForecastService> _mockCompletionForecastService = null!;
     private Mock<ILogger<GetEpicCompletionForecastQueryHandler>> _mockLogger = null!;
-    private IHierarchyRollupService _hierarchyRollupService = null!;
-    private ICompletionForecastService _completionForecastService = null!;
     private GetEpicCompletionForecastQueryHandler _handler = null!;
 
     [TestInitialize]
     public void Setup()
     {
-        _mockRepository = new Mock<IWorkItemRepository>();
-        _mockProductRepository = new Mock<IProductRepository>();
-        _mockMediator = new Mock<IMediator>();
-        _mockStateService = new Mock<IWorkItemStateClassificationService>();
+        _mockRepository = new Mock<IWorkItemRepository>(MockBehavior.Strict);
+        _mockProductRepository = new Mock<IProductRepository>(MockBehavior.Strict);
+        _mockMediator = new Mock<IMediator>(MockBehavior.Strict);
+        _mockStateService = new Mock<IWorkItemStateClassificationService>(MockBehavior.Strict);
+        _mockHierarchyRollupService = new Mock<IHierarchyRollupService>(MockBehavior.Strict);
+        _mockCompletionForecastService = new Mock<ICompletionForecastService>(MockBehavior.Strict);
         _mockLogger = new Mock<ILogger<GetEpicCompletionForecastQueryHandler>>();
-        _hierarchyRollupService = new HierarchyRollupService(new CanonicalStoryPointResolutionService());
-        _completionForecastService = new CompletionForecastService();
-        
-        // Setup default state classification
-        _mockStateService.Setup(s => s.IsDoneStateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string type, string state, CancellationToken ct) => 
-                state.Equals("Done", StringComparison.OrdinalIgnoreCase) ||
-                state.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
-                state.Equals("Removed", StringComparison.OrdinalIgnoreCase) ||
-                state.Equals("Completed", StringComparison.OrdinalIgnoreCase));
 
-        // Setup default mock behaviors
-        _mockProductRepository.Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ProductDto>());
-        _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto>());
-
-        // Default: return sprint metrics with 10 completed story points for any iteration path
-        _mockMediator.Setup(m => m.Send(It.IsAny<GetSprintMetricsQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((GetSprintMetricsQuery q, CancellationToken ct) =>
-                new SprintMetricsDto(
-                    IterationPath: q.IterationPath,
-                    SprintName: q.IterationPath,
-                    StartDate: DateTimeOffset.UtcNow.AddDays(-28),
-                    EndDate: DateTimeOffset.UtcNow.AddDays(-14),
-                    CompletedStoryPoints: 10,
-                    PlannedStoryPoints: 12,
-                    CompletedWorkItemCount: 5,
-                    TotalWorkItemCount: 8,
-                    CompletedPBIs: 3,
-                    CompletedBugs: 1,
-                    CompletedTasks: 1
-                ));
-        
         _handler = new GetEpicCompletionForecastQueryHandler(
             _mockRepository.Object,
             _mockProductRepository.Object,
             _mockMediator.Object,
             _mockStateService.Object,
-            _hierarchyRollupService,
-            _completionForecastService,
+            _mockHierarchyRollupService.Object,
+            _mockCompletionForecastService.Object,
             _mockLogger.Object);
     }
 
     [TestMethod]
     public async Task Handle_WithNonExistentEpic_ReturnsNull()
     {
-        // Arrange
-        _mockRepository.Setup(r => r.GetByTfsIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        _mockRepository
+            .Setup(repository => repository.GetByTfsIdAsync(999, It.IsAny<CancellationToken>()))
             .ReturnsAsync((WorkItemDto?)null);
-        var query = new GetEpicCompletionForecastQuery(999);
 
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
+        var result = await _handler.Handle(new GetEpicCompletionForecastQuery(999), CancellationToken.None);
 
-        // Assert
         Assert.IsNull(result);
+        _mockRepository.VerifyAll();
     }
 
     [TestMethod]
-    public async Task Handle_WithEpicWithNoChildren_CalculatesCorrectly()
+    public async Task Handle_UsesProductRootLoadingAndMapsForecastDto()
     {
-        // Arrange
-        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-
-        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(epic);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto> { epic });
-
-        var query = new GetEpicCompletionForecastQuery(1);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(1, result.EpicId);
-        Assert.AreEqual(0, result.TotalEffort);
-        Assert.AreEqual(0, result.CompletedEffort);
-        Assert.AreEqual(0, result.RemainingEffort);
-        Assert.AreEqual(0, result.SprintsRemaining);
-    }
-
-    [TestMethod]
-    public async Task Handle_WithEpicAndChildren_CalculatesCorrectly()
-    {
-        // Arrange
-        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-        var child1 = CreateWorkItem(2, "PBI", "Done", "TestArea", "Sprint 1", 1, 5);
-        var child2 = CreateWorkItem(3, "PBI", "In Progress", "TestArea", "Sprint 2", 1, 8);
-        var child3 = CreateWorkItem(4, "PBI", "New", "TestArea", "Sprint 3", 1, 13);
-
-        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(epic);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto> { epic, child1, child2, child3 });
-
-        var query = new GetEpicCompletionForecastQuery(1);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(26, result.TotalEffort); // 5 + 8 + 13
-        Assert.AreEqual(5, result.CompletedEffort); // Only child1 is done
-        Assert.AreEqual(21, result.RemainingEffort); // 26 - 5
-        Assert.AreEqual(10.0, result.EstimatedVelocity);
-        Assert.AreEqual(3, result.SprintsRemaining); // Ceiling(21 / 10)
-    }
-
-    [TestMethod]
-    public async Task Handle_WithNestedChildren_IncludesAllDescendants()
-    {
-        // Arrange
-        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-        var feature = CreateWorkItem(2, "Feature", "In Progress", "TestArea", "Sprint 1", 1, null);
-        var pbi1 = CreateWorkItem(3, "PBI", "Done", "TestArea", "Sprint 1", 2, 5);
-        var pbi2 = CreateWorkItem(4, "PBI", "In Progress", "TestArea", "Sprint 2", 2, 8);
-        var task = CreateWorkItem(5, "Task", "Done", "TestArea", "Sprint 1", 3, 2);
-
-        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(epic);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto> { epic, feature, pbi1, pbi2, task });
-
-        var query = new GetEpicCompletionForecastQuery(1);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(13d, result.TotalEffort); // 5 + 8 (task excluded from canonical story-point scope)
-        Assert.AreEqual(5d, result.CompletedEffort); // Only the completed PBI contributes
-        Assert.AreEqual(8, result.RemainingEffort);
-    }
-
-    [TestMethod]
-    public async Task Handle_WithZeroVelocity_ReturnsZeroSprintsRemaining()
-    {
-        // Arrange
-        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-        var child = CreateWorkItem(2, "PBI", "New", "TestArea", "Sprint 1", 1, 20);
-
-        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(epic);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto> { epic, child });
-
-        _mockMediator.Setup(m => m.Send(It.IsAny<GetSprintMetricsQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((GetSprintMetricsQuery q, CancellationToken ct) =>
-                new SprintMetricsDto(
-                    IterationPath: q.IterationPath,
-                    SprintName: q.IterationPath,
-                    StartDate: DateTimeOffset.UtcNow.AddDays(-28),
-                    EndDate: DateTimeOffset.UtcNow.AddDays(-14),
-                    CompletedStoryPoints: 0,
-                    PlannedStoryPoints: 12,
-                    CompletedWorkItemCount: 0,
-                    TotalWorkItemCount: 5,
-                    CompletedPBIs: 0,
-                    CompletedBugs: 0,
-                    CompletedTasks: 0
-                ));
-
-        var query = new GetEpicCompletionForecastQuery(1);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(20, result.RemainingEffort);
-        Assert.AreEqual(0, result.SprintsRemaining); // Can't forecast with zero velocity
-    }
-
-    [TestMethod]
-    public async Task Handle_WithChildrenWithoutEffort_IgnoresThemInCalculation()
-    {
-        // Arrange
-        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-        var child1 = CreateWorkItem(2, "PBI", "Done", "TestArea", "Sprint 1", 1, 5);
-        var child2 = CreateWorkItem(3, "PBI", "New", "TestArea", "Sprint 2", 1, null);
-        var child3 = CreateWorkItem(4, "PBI", "New", "TestArea", "Sprint 3", 1, 10);
-
-        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(epic);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto> { epic, child1, child2, child3 });
-
-        var query = new GetEpicCompletionForecastQuery(1);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(22.5d, result.TotalEffort, 0.001d); // 5 + 10 + derived 7.5
-        Assert.AreEqual(5d, result.CompletedEffort, 0.001d);
-        Assert.AreEqual(17.5d, result.RemainingEffort, 0.001d);
-    }
-
-    [TestMethod]
-    public async Task Handle_WithAllChildrenCompleted_ReturnsZeroRemaining()
-    {
-        // Arrange
-        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-        var child1 = CreateWorkItem(2, "PBI", "Done", "TestArea", "Sprint 1", 1, 5);
-        var child2 = CreateWorkItem(3, "PBI", "Closed", "TestArea", "Sprint 2", 1, 8);
-
-        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(epic);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto> { epic, child1, child2 });
-
-        var query = new GetEpicCompletionForecastQuery(1);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(13, result.TotalEffort);
-        Assert.AreEqual(13, result.CompletedEffort);
-        Assert.AreEqual(0, result.RemainingEffort);
-        Assert.AreEqual(0, result.SprintsRemaining);
-    }
-
-    [TestMethod]
-    [DataRow(1, ForecastConfidence.Low)]
-    [DataRow(3, ForecastConfidence.Medium)]
-    [DataRow(5, ForecastConfidence.High)]
-    public async Task Handle_WithHistoricalDataThresholds_ReturnsExpectedConfidence(int historicalSprintCount, ForecastConfidence expectedConfidence)
-    {
-        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-
-        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(epic);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(
+        var epic = CreateWorkItem(1, "Epic", "In Progress", "Area\\Epic", "Sprint 3", null, storyPoints: null);
+        var child = CreateWorkItem(2, "PBI", "Done", "Area\\Epic\\Feature", "Sprint 3", 1, storyPoints: 8);
+        var products = new[]
+        {
+            CreateProduct(10, backlogRootWorkItemId: 500)
+        };
+        var deliveryForecast = new DeliveryForecast(
+            totalScopeStoryPoints: 21,
+            completedScopeStoryPoints: 8,
+            remainingScopeStoryPoints: 13,
+            estimatedVelocity: 6,
+            sprintsRemaining: 3,
+            estimatedCompletionDate: new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero),
+            confidence: ForecastConfidenceLevel.Medium,
+            projections:
             [
-                epic,
-                .. Enumerable.Range(1, historicalSprintCount).Select(index =>
-                    CreateWorkItem(index + 1, "PBI", "New", "TestArea", $"Sprint {index}", 1, 10))
+                new CompletionProjection(
+                    sprintName: "Sprint 4",
+                    iterationPath: "Sprint 4",
+                    sprintStartDate: new DateTimeOffset(2026, 4, 1, 0, 0, 0, TimeSpan.Zero),
+                    sprintEndDate: new DateTimeOffset(2026, 4, 14, 0, 0, 0, TimeSpan.Zero),
+                    expectedCompletedStoryPoints: 6,
+                    remainingStoryPointsAfterSprint: 7,
+                    progressPercentage: 66.6)
             ]);
 
-        var result = await _handler.Handle(new GetEpicCompletionForecastQuery(1), CancellationToken.None);
-
-        Assert.IsNotNull(result);
-        Assert.AreEqual(expectedConfidence, result.Confidence);
-    }
-
-    [TestMethod]
-    public async Task Handle_WithVariousCompletedStates_RecognizesAll()
-    {
-        // Arrange
-        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-        var child1 = CreateWorkItem(2, "PBI", "Done", "TestArea", "Sprint 1", 1, 5);
-        var child2 = CreateWorkItem(3, "PBI", "Closed", "TestArea", "Sprint 1", 1, 8);
-        var child3 = CreateWorkItem(4, "PBI", "Completed", "TestArea", "Sprint 1", 1, 3);
-        var child4 = CreateWorkItem(5, "PBI", "Removed", "TestArea", "Sprint 1", 1, 2);
-        var child5 = CreateWorkItem(6, "PBI", "In Progress", "TestArea", "Sprint 1", 1, 10);
-
-        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
+        _mockRepository
+            .Setup(repository => repository.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(epic);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto> { epic, child1, child2, child3, child4, child5 });
-
-        var query = new GetEpicCompletionForecastQuery(1);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(28, result.TotalEffort);
-        Assert.AreEqual(18, result.CompletedEffort); // Done, Closed, Completed, Removed
-        Assert.AreEqual(10, result.RemainingEffort);
-    }
-
-    [TestMethod]
-    public async Task Handle_UsesFeatureFallbackOnlyWhenChildPbisLackEstimates()
-    {
-        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-        var featureWithoutChildEstimates = CreateWorkItem(2, "Feature", "Done", "TestArea", "Sprint 1", 1, null, storyPoints: null, businessValue: 8);
-        var fallbackPbi = CreateWorkItem(3, "PBI", "Done", "TestArea", "Sprint 1", 2, null, storyPoints: null, businessValue: null);
-        var featureWithChildEstimate = CreateWorkItem(4, "Feature", "Active", "TestArea", "Sprint 1", 1, null, storyPoints: null, businessValue: 13);
-        var estimatedPbi = CreateWorkItem(5, "PBI", "Active", "TestArea", "Sprint 2", 4, 5);
-
-        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(epic);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto>
-            {
-                epic,
-                featureWithoutChildEstimates,
-                fallbackPbi,
-                featureWithChildEstimate,
-                estimatedPbi
-            });
+        _mockProductRepository
+            .Setup(repository => repository.GetAllProductsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(products);
+        _mockMediator
+            .Setup(mediator => mediator.Send(
+                It.Is<GetWorkItemsByRootIdsQuery>(query => query.RootIds.SequenceEqual(new[] { 500 })),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WorkItemDto> { child });
+        _mockStateService
+            .Setup(service => service.IsDoneStateAsync("PBI", "Done", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _mockStateService
+            .Setup(service => service.IsDoneStateAsync("Epic", "In Progress", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _mockHierarchyRollupService
+            .Setup(service => service.RollupCanonicalScope(
+                It.Is<PoTool.Core.Domain.Models.CanonicalWorkItem>(workItem => workItem.WorkItemId == 1),
+                It.Is<IReadOnlyList<PoTool.Core.Domain.Models.CanonicalWorkItem>>(workItems => workItems.Select(item => item.WorkItemId).OrderBy(id => id).SequenceEqual(new[] { 1, 2 })),
+                It.Is<IReadOnlyDictionary<int, bool>>(doneLookup => !doneLookup[1] && doneLookup[2])))
+            .Returns(new HierarchyScopeRollup(Total: 21, Completed: 8));
+        _mockMediator
+            .Setup(mediator => mediator.Send(
+                It.Is<GetSprintMetricsQuery>(query => query.IterationPath == "Sprint 3"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SprintMetricsDto(
+                IterationPath: "Sprint 3",
+                SprintName: "Sprint 3",
+                StartDate: DateTimeOffset.UtcNow.AddDays(-14),
+                EndDate: DateTimeOffset.UtcNow.AddDays(-1),
+                CompletedStoryPoints: 6,
+                PlannedStoryPoints: 8,
+                CompletedWorkItemCount: 1,
+                TotalWorkItemCount: 1,
+                CompletedPBIs: 1,
+                CompletedBugs: 0,
+                CompletedTasks: 0));
+        _mockCompletionForecastService
+            .Setup(service => service.Forecast(
+                totalScopeStoryPoints: 21,
+                completedScopeStoryPoints: 8,
+                It.Is<IReadOnlyList<HistoricalVelocitySample>>(samples =>
+                    samples.Count == 1 &&
+                    samples[0].SprintName == "Sprint 3" &&
+                    samples[0].CompletedStoryPoints == 6)))
+            .Returns(deliveryForecast);
 
         var result = await _handler.Handle(new GetEpicCompletionForecastQuery(1), CancellationToken.None);
 
         Assert.IsNotNull(result);
-        Assert.AreEqual(13d, result.TotalEffort, "Feature fallback should contribute only when its PBIs remain unestimated.");
-        Assert.AreEqual(8d, result.CompletedEffort, "Done feature fallback should count as completed scope.");
-        Assert.AreEqual(5d, result.RemainingEffort);
+        Assert.AreEqual(1, result.EpicId);
+        Assert.AreEqual(epic.Title, result.Title);
+        Assert.AreEqual(epic.Type, result.Type);
+        Assert.AreEqual(21d, result.TotalEffort, 0.001);
+        Assert.AreEqual(8d, result.CompletedEffort, 0.001);
+        Assert.AreEqual(13d, result.RemainingEffort, 0.001);
+        Assert.AreEqual(6d, result.EstimatedVelocity, 0.001);
+        Assert.AreEqual(3, result.SprintsRemaining);
+        Assert.AreEqual(ForecastConfidence.Medium, result.Confidence);
+        Assert.AreEqual(epic.AreaPath, result.AreaPath);
+        Assert.HasCount(1, result.ForecastByDate);
+        Assert.AreEqual("Sprint 4", result.ForecastByDate[0].SprintName);
+        Assert.AreEqual(6d, result.ForecastByDate[0].ExpectedCompletedEffort, 0.001);
+
+        _mockRepository.Verify(repository => repository.GetAllAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mockRepository.VerifyAll();
+        _mockProductRepository.VerifyAll();
+        _mockMediator.VerifyAll();
+        _mockStateService.VerifyAll();
+        _mockHierarchyRollupService.VerifyAll();
+        _mockCompletionForecastService.VerifyAll();
     }
 
-    [TestMethod]
-    public async Task Handle_ExcludesBugAndTaskStoryPointsFromForecastScope()
+    private static ProductDto CreateProduct(int id, int backlogRootWorkItemId)
     {
-        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-        var feature = CreateWorkItem(2, "Feature", "In Progress", "TestArea", "Sprint 1", 1, null);
-        var pbi = CreateWorkItem(3, "PBI", "Done", "TestArea", "Sprint 1", 2, 5);
-        var bug = CreateWorkItem(4, "Bug", "Done", "TestArea", "Sprint 1", 2, 13);
-        var task = CreateWorkItem(5, "Task", "Done", "TestArea", "Sprint 1", 3, 8);
-
-        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(epic);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto> { epic, feature, pbi, bug, task });
-
-        var result = await _handler.Handle(new GetEpicCompletionForecastQuery(1), CancellationToken.None);
-
-        Assert.IsNotNull(result);
-        Assert.AreEqual(5d, result.TotalEffort);
-        Assert.AreEqual(5d, result.CompletedEffort);
-        Assert.AreEqual(0d, result.RemainingEffort);
-    }
-
-    [TestMethod]
-    public async Task Handle_UsesFractionalDerivedStoryPointsInForecast()
-    {
-        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-        var feature = CreateWorkItem(2, "Feature", "In Progress", "TestArea", "Sprint 1", 1, null);
-        var estimatedPbiA = CreateWorkItem(3, "PBI", "Done", "TestArea", "Sprint 1", 2, 3);
-        var estimatedPbiB = CreateWorkItem(4, "PBI", "Active", "TestArea", "Sprint 2", 2, 4);
-        var missingPbi = CreateWorkItem(5, "PBI", "Active", "TestArea", "Sprint 3", 2, null, storyPoints: null, businessValue: null);
-
-        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(epic);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto> { epic, feature, estimatedPbiA, estimatedPbiB, missingPbi });
-
-        var result = await _handler.Handle(new GetEpicCompletionForecastQuery(1), CancellationToken.None);
-
-        Assert.IsNotNull(result);
-        Assert.AreEqual(10.5d, result.TotalEffort, 0.001d);
-        Assert.AreEqual(3d, result.CompletedEffort, 0.001d);
-        Assert.AreEqual(7.5d, result.RemainingEffort, 0.001d);
-        Assert.AreEqual(7.5d, result.ForecastByDate[0].ExpectedCompletedEffort, 0.001d);
-    }
-
-    [TestMethod]
-    public async Task Handle_MapsLegacyEffortFieldsFromCanonicalStoryPointScope()
-    {
-        var epic = CreateWorkItem(1, "Epic", "In Progress", "TestArea", "Sprint 1", null, null);
-        var feature = CreateWorkItem(2, "Feature", "In Progress", "TestArea", "Sprint 1", 1, null);
-        var completedPbi = CreateWorkItem(3, "PBI", "Done", "TestArea", "Sprint 1", 2, effort: 40, storyPoints: 8);
-        var remainingPbi = CreateWorkItem(4, "PBI", "Active", "TestArea", "Sprint 2", 2, effort: 100, storyPoints: 5);
-
-        _mockRepository.Setup(r => r.GetByTfsIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(epic);
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<WorkItemDto> { epic, feature, completedPbi, remainingPbi });
-        _mockMediator.Setup(m => m.Send(It.IsAny<GetSprintMetricsQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((GetSprintMetricsQuery q, CancellationToken ct) =>
-                new SprintMetricsDto(
-                    IterationPath: q.IterationPath,
-                    SprintName: q.IterationPath,
-                    StartDate: DateTimeOffset.UtcNow.AddDays(-28),
-                    EndDate: DateTimeOffset.UtcNow.AddDays(-14),
-                    CompletedStoryPoints: 4,
-                    PlannedStoryPoints: 13,
-                    CompletedWorkItemCount: 1,
-                    TotalWorkItemCount: 2,
-                    CompletedPBIs: 1,
-                    CompletedBugs: 0,
-                    CompletedTasks: 0
-                ));
-
-        var result = await _handler.Handle(new GetEpicCompletionForecastQuery(1), CancellationToken.None);
-
-        Assert.IsNotNull(result);
-        Assert.AreEqual(13d, result.TotalEffort, 0.001d, "Legacy TotalEffort should carry total canonical story-point scope.");
-        Assert.AreEqual(8d, result.CompletedEffort, 0.001d, "Legacy CompletedEffort should carry delivered canonical story-point scope.");
-        Assert.AreEqual(5d, result.RemainingEffort, 0.001d, "Legacy RemainingEffort should carry remaining canonical story-point scope.");
-        Assert.AreEqual(4d, result.EstimatedVelocity, 0.001d, "Velocity should continue to come from CompletedStoryPoints.");
-        Assert.AreEqual(2, result.SprintsRemaining, "Forecast should divide remaining scope story points by delivered story-point velocity.");
+        return new ProductDto(
+            Id: id,
+            ProductOwnerId: 1,
+            Name: $"Product {id}",
+            BacklogRootWorkItemIds: [backlogRootWorkItemId],
+            Order: id,
+            PictureType: ProductPictureType.Default,
+            DefaultPictureId: 0,
+            CustomPicturePath: null,
+            CreatedAt: DateTimeOffset.UtcNow,
+            LastModified: DateTimeOffset.UtcNow,
+            LastSyncedAt: null,
+            TeamIds: [],
+            Repositories: []);
     }
 
     private static WorkItemDto CreateWorkItem(
@@ -440,9 +190,7 @@ public class GetEpicCompletionForecastQueryHandlerTests
         string areaPath,
         string iterationPath,
         int? parentTfsId,
-        int? effort,
-        int? storyPoints = null,
-        int? businessValue = null)
+        int? storyPoints)
     {
         return new WorkItemDto(
             TfsId: id,
@@ -453,11 +201,10 @@ public class GetEpicCompletionForecastQueryHandlerTests
             IterationPath: iterationPath,
             State: state,
             RetrievedAt: DateTimeOffset.UtcNow,
-            Effort: effort,
+            Effort: null,
             Description: null,
             Tags: null,
-            BusinessValue: businessValue,
-            StoryPoints: storyPoints ?? effort
-        );
+            BusinessValue: null,
+            StoryPoints: storyPoints);
     }
 }

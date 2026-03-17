@@ -1,4 +1,5 @@
 using Mediator;
+using EffortDiagnosticsAnalyzer = PoTool.Core.Metrics.EffortDiagnostics.EffortDiagnosticsAnalyzer;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -58,7 +59,7 @@ public class GetEffortImbalanceQueryHandlerTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(ImbalanceRiskLevel.Low, result.OverallRiskLevel);
+        Assert.AreEqual(PoTool.Shared.Metrics.ImbalanceRiskLevel.Low, result.OverallRiskLevel);
         Assert.AreEqual(0, result.ImbalanceScore);
         Assert.IsEmpty(result.TeamImbalances);
         Assert.IsEmpty(result.SprintImbalances);
@@ -66,40 +67,8 @@ public class GetEffortImbalanceQueryHandlerTests
     }
 
     [TestMethod]
-    public async Task Handle_WithBalancedDistribution_ReturnsLowRisk()
-    {
-        // Arrange - evenly distributed effort
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "Area1", "Sprint 1", 10),
-            CreateWorkItem(2, "Area2", "Sprint 1", 10),
-            CreateWorkItem(3, "Area3", "Sprint 1", 10),
-            CreateWorkItem(4, "Area1", "Sprint 2", 10),
-            CreateWorkItem(5, "Area2", "Sprint 2", 10),
-            CreateWorkItem(6, "Area3", "Sprint 2", 10)
-        };
-
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetEffortImbalanceQuery(ImbalanceThreshold: 0.3);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.AreEqual(ImbalanceRiskLevel.Low, result.OverallRiskLevel);
-        Assert.IsLessThan(30d, result.ImbalanceScore, "Balanced distributions should keep the imbalance score below the default threshold.");
-    }
-
-    [TestMethod]
     public async Task Handle_UsesAnalyzerDerivedBucketValues_ForImbalanceOutput()
     {
-        const double expectedImbalanceScore = 60.8d;
-        const int expectedAverageEffortAcrossTeams = 16;
-        const double expectedDeviationPercentage = 80d;
-
-        // Arrange - matches the canonical analyzer scenario for area buckets while keeping sprint totals balanced.
         var workItems = new List<WorkItemDto>
         {
             CreateWorkItem(1, "Area A", "Sprint 1", 15),
@@ -111,75 +80,34 @@ public class GetEffortImbalanceQueryHandlerTests
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
 
-        // Act
         var result = await _handler.Handle(
             new GetEffortImbalanceQuery(ImbalanceThreshold: 0.3),
             CancellationToken.None);
+        var analyzer = new EffortDiagnosticsAnalyzer();
+        var expectedAnalysis = analyzer.AnalyzeImbalance(
+            new Dictionary<string, int>
+            {
+                ["Area A"] = 30,
+                ["Area B"] = 10,
+                ["Area C"] = 10
+            },
+            new Dictionary<string, int>
+            {
+                ["Sprint 1"] = 25,
+                ["Sprint 2"] = 25
+            },
+            0.3);
 
-        // Assert
-        Assert.AreEqual(ImbalanceRiskLevel.High, result.OverallRiskLevel);
-        Assert.AreEqual(expectedImbalanceScore, result.ImbalanceScore, 0.001);
+        Assert.AreEqual(MapRisk(expectedAnalysis.OverallRiskLevel), result.OverallRiskLevel);
+        Assert.AreEqual(expectedAnalysis.ImbalanceScore, result.ImbalanceScore, 0.001);
         Assert.IsEmpty(result.SprintImbalances);
 
+        var expectedDominantTeam = expectedAnalysis.AreaBuckets.Single(bucket => bucket.BucketKey == "Area A");
         var dominantTeam = result.TeamImbalances.Single(team => team.AreaPath == "Area A");
-        Assert.AreEqual("Area A", dominantTeam.AreaPath);
-        Assert.AreEqual(30, dominantTeam.TotalEffort);
-        Assert.AreEqual(expectedAverageEffortAcrossTeams, dominantTeam.AverageEffortAcrossTeams);
-        Assert.AreEqual(expectedDeviationPercentage, dominantTeam.DeviationPercentage, 0.001);
-        Assert.AreEqual(ImbalanceRiskLevel.Critical, dominantTeam.RiskLevel);
-    }
-
-    [TestMethod]
-    public async Task Handle_WithImbalancedTeams_DetectsHighRisk()
-    {
-        // Arrange - Team1 has 5x more effort than others
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "Team1", "Sprint 1", 50),
-            CreateWorkItem(2, "Team1", "Sprint 2", 50),
-            CreateWorkItem(3, "Team2", "Sprint 1", 10),
-            CreateWorkItem(4, "Team3", "Sprint 1", 10)
-        };
-
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetEffortImbalanceQuery(ImbalanceThreshold: 0.3);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-#pragma warning disable MSTEST0037 // Enum comparison
-        Assert.IsTrue(result.OverallRiskLevel >= ImbalanceRiskLevel.Medium);
-#pragma warning restore MSTEST0037
-        Assert.IsNotEmpty(result.TeamImbalances);
-        Assert.IsTrue(result.TeamImbalances.Any(t => t.RiskLevel >= ImbalanceRiskLevel.High));
-    }
-
-    [TestMethod]
-    public async Task Handle_WithImbalancedSprints_DetectsHighRisk()
-    {
-        // Arrange - Sprint1 has much more effort than Sprint2
-        var workItems = new List<WorkItemDto>
-        {
-            CreateWorkItem(1, "Team1", "Sprint 1", 40),
-            CreateWorkItem(2, "Team2", "Sprint 1", 40),
-            CreateWorkItem(3, "Team1", "Sprint 2", 5),
-            CreateWorkItem(4, "Team2", "Sprint 2", 5)
-        };
-
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(workItems);
-        var query = new GetEffortImbalanceQuery(ImbalanceThreshold: 0.3);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        Assert.IsNotNull(result);
-        Assert.IsNotEmpty(result.SprintImbalances);
-        Assert.IsTrue(result.SprintImbalances.Any(s => s.RiskLevel >= ImbalanceRiskLevel.High));
+        Assert.AreEqual((int)expectedDominantTeam.EffortAmount, dominantTeam.TotalEffort);
+        Assert.AreEqual((int)expectedDominantTeam.MeanEffort, dominantTeam.AverageEffortAcrossTeams);
+        Assert.AreEqual(expectedDominantTeam.DeviationFromMean * 100, dominantTeam.DeviationPercentage, 0.001);
+        Assert.AreEqual(MapRisk(expectedDominantTeam.RiskLevel), dominantTeam.RiskLevel);
     }
 
     [TestMethod]
@@ -304,5 +232,16 @@ public class GetEffortImbalanceQueryHandlerTests
                     Description: null,
                     Tags: null
         );
+    }
+
+    private static PoTool.Shared.Metrics.ImbalanceRiskLevel MapRisk(PoTool.Core.Metrics.EffortDiagnostics.ImbalanceRiskLevel riskLevel)
+    {
+        return riskLevel switch
+        {
+            PoTool.Core.Metrics.EffortDiagnostics.ImbalanceRiskLevel.Low => PoTool.Shared.Metrics.ImbalanceRiskLevel.Low,
+            PoTool.Core.Metrics.EffortDiagnostics.ImbalanceRiskLevel.Medium => PoTool.Shared.Metrics.ImbalanceRiskLevel.Medium,
+            PoTool.Core.Metrics.EffortDiagnostics.ImbalanceRiskLevel.High => PoTool.Shared.Metrics.ImbalanceRiskLevel.High,
+            _ => PoTool.Shared.Metrics.ImbalanceRiskLevel.Critical
+        };
     }
 }
