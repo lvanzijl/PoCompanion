@@ -68,6 +68,26 @@ public class PullRequestsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets cached pull requests linked to a specific work item.
+    /// </summary>
+    [HttpGet("by-workitem/{workItemId:int}")]
+    public async Task<ActionResult<IEnumerable<PullRequestDto>>> GetByWorkItemId(
+        int workItemId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var pullRequests = await _mediator.Send(new GetPullRequestsByWorkItemIdQuery(workItemId), cancellationToken);
+            return Ok(pullRequests);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving pull requests for work item ID: {WorkItemId}", workItemId);
+            return StatusCode(500, "Error retrieving pull requests for work item");
+        }
+    }
+
+    /// <summary>
     /// Gets aggregated metrics for pull requests.
     /// </summary>
     /// <param name="productIds">Optional comma-separated list of product IDs to filter by</param>

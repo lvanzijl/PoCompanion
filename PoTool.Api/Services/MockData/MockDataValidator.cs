@@ -81,7 +81,7 @@ public class MockDataValidator
         ValidationReport report)
     {
         report.TotalPullRequests = pullRequests.Count;
-        report.PullRequestVolumeValid = pullRequests.Count >= 100;
+        report.PullRequestVolumeValid = pullRequests.Count > 0;
 
         var activeCount = pullRequests.Count(pr => pr.Status == "active");
         var completedCount = pullRequests.Count(pr => pr.Status == "completed");
@@ -101,6 +101,10 @@ public class MockDataValidator
         var prsWithoutRepository = pullRequests.Count(pr => string.IsNullOrEmpty(pr.RepositoryName));
 
         report.PrMetadataValid = prsWithoutTitle == 0 && prsWithoutCreator == 0 && prsWithoutRepository == 0;
+        report.PullRequestVolumeValid = report.PullRequestVolumeValid &&
+            report.PrWithWorkItemLinksPercentage >= 80 &&
+            report.CompletedPrPercentage >= 85 &&
+            report.AbandonedPrPercentage <= 10;
     }
 
     private static void ValidateQuantities(ValidationReport report)
