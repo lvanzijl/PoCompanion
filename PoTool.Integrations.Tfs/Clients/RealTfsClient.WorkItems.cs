@@ -388,6 +388,126 @@ public partial class RealTfsClient
         return GetWorkItemsAsync(areaPath, since: null, cancellationToken);
     }
 
+    public async Task<IEnumerable<WorkItemDto>> GetWorkItemsByTypeAsync(
+        string workItemType,
+        string areaPath,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+        ValidateTfsConfiguration(entity);
+
+        var config = entity!;
+        var httpClient = GetAuthenticatedHttpClient();
+
+        return await ExecuteWithRetryAsync(async () =>
+        {
+            var wiql = new
+            {
+                query =
+                    $"SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemType] = '{EscapeWiql(workItemType)}' " +
+                    $"AND [System.AreaPath] UNDER '{EscapeWiql(areaPath)}' ORDER BY [System.Title]"
+            };
+
+            var wiqlUrl = ProjectUrl(config, "_apis/wit/wiql");
+            using var wiqlContent = new StringContent(
+                JsonSerializer.Serialize(wiql),
+                System.Text.Encoding.UTF8,
+                "application/json");
+
+            _logger.LogDebug("Executing WIQL query for work item type {WorkItemType}: {Query}", workItemType, wiql.query);
+
+            var wiqlResponse = await SendPostAsync(httpClient, config, wiqlUrl, wiqlContent, cancellationToken, handleErrors: false);
+
+            if (!wiqlResponse.IsSuccessStatusCode)
+            {
+                var errorBody = await wiqlResponse.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError(
+                    "WIQL query failed for work item type {WorkItemType}: HTTP {StatusCode}, Response: {ErrorBody}",
+                    workItemType,
+                    wiqlResponse.StatusCode,
+                    errorBody);
+
+                if (errorBody.Contains("does not exist", StringComparison.OrdinalIgnoreCase) ||
+                    errorBody.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning(
+                        "Work item type {WorkItemType} not found or not accessible in TFS project {Project}",
+                        workItemType,
+                        config.Project);
+                }
+
+                return Enumerable.Empty<WorkItemDto>();
+            }
+
+            using var wiqlStream = await wiqlResponse.Content.ReadAsStreamAsync(cancellationToken);
+            using var wiqlDoc = await JsonDocument.ParseAsync(wiqlStream, cancellationToken: cancellationToken);
+
+            var workItemIds = wiqlDoc.RootElement.GetProperty("workItems").EnumerateArray()
+                .Select(element => element.GetProperty("id").GetInt32())
+                .ToArray();
+
+            if (workItemIds.Length == 0)
+            {
+                return Enumerable.Empty<WorkItemDto>();
+            }
+
+            var batchRequest = new
+            {
+                ids = workItemIds,
+                fields = new[]
+                {
+                    "System.Id",
+                    "System.Title",
+                    "System.WorkItemType"
+                }
+            };
+
+            var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
+            using var batchContent = new StringContent(
+                JsonSerializer.Serialize(batchRequest),
+                System.Text.Encoding.UTF8,
+                "application/json");
+
+            var batchResponse = await SendPostAsync(httpClient, config, batchUrl, batchContent, cancellationToken, handleErrors: false);
+
+            if (!batchResponse.IsSuccessStatusCode)
+            {
+                var errorBody = await batchResponse.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError(
+                    "Batch fetch failed for work item type {WorkItemType}: HTTP {StatusCode}, Response: {ErrorBody}",
+                    workItemType,
+                    batchResponse.StatusCode,
+                    errorBody);
+                return Enumerable.Empty<WorkItemDto>();
+            }
+
+            using var batchStream = await batchResponse.Content.ReadAsStreamAsync(cancellationToken);
+            using var batchDoc = await JsonDocument.ParseAsync(batchStream, cancellationToken: cancellationToken);
+
+            return batchDoc.RootElement.GetProperty("value").EnumerateArray()
+                .Select(item =>
+                {
+                    var fields = item.GetProperty("fields");
+                    var id = item.GetProperty("id").GetInt32();
+                    var title = fields.GetProperty("System.Title").GetString() ?? string.Empty;
+
+                    return new WorkItemDto(
+                        TfsId: id,
+                        Type: workItemType,
+                        Title: title,
+                        ParentTfsId: null,
+                        AreaPath: string.Empty,
+                        IterationPath: string.Empty,
+                        State: string.Empty,
+                        RetrievedAt: DateTimeOffset.UtcNow,
+                        Effort: null,
+                        Description: null);
+                })
+                .OrderBy(item => item.Title)
+                .ToList();
+        }, cancellationToken);
+    }
+
     public async Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, DateTimeOffset? since, CancellationToken cancellationToken = default)
     {
         // NOTE: This method fetches work items by area path, not by hierarchy.

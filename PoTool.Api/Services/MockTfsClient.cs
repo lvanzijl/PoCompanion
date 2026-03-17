@@ -62,6 +62,30 @@ public class MockTfsClient : ITfsClient
         return GetWorkItemsAsync(areaPath, since: null, cancellationToken);
     }
 
+    public Task<IEnumerable<WorkItemDto>> GetWorkItemsByTypeAsync(
+        string workItemType,
+        string areaPath,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "Mock TFS client: GetWorkItemsByTypeAsync called for workItemType={WorkItemType}, areaPath={AreaPath}",
+            workItemType,
+            areaPath);
+
+        var normalizedAreaPath = areaPath.Trim('\\');
+        var filtered = _mockDataFacade.GetMockHierarchy()
+            .Where(wi =>
+                wi.Type.Equals(workItemType, StringComparison.OrdinalIgnoreCase) &&
+                (wi.AreaPath.Trim('\\').Equals(normalizedAreaPath, StringComparison.OrdinalIgnoreCase) ||
+                 wi.AreaPath.Trim('\\').StartsWith(normalizedAreaPath + "\\", StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(wi => wi.Title)
+            .ToList();
+
+        _logger.LogInformation("Mock TFS client: Returning {Count} work items for type {WorkItemType}", filtered.Count, workItemType);
+
+        return Task.FromResult<IEnumerable<WorkItemDto>>(filtered);
+    }
+
     public Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, DateTimeOffset? since, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Mock TFS client: GetWorkItemsAsync called for areaPath={AreaPath}, since={Since}", areaPath, since);
