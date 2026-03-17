@@ -46,7 +46,7 @@ public class GetEffortImbalanceQueryHandlerTests
     }
 
     [TestMethod]
-    public async Task Handle_WithNoWorkItems_ReturnsEmptyImbalance()
+    public async Task Handle_ReturnsEmptyImbalance_WhenNoWorkItems()
     {
         // Arrange
         _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -66,7 +66,7 @@ public class GetEffortImbalanceQueryHandlerTests
     }
 
     [TestMethod]
-    public async Task Handle_UsesAnalyzerDerivedBucketValues_ForImbalanceOutput()
+    public async Task Handle_MapsAnalyzerBucketValues_IntoImbalanceDto()
     {
         var workItems = new List<WorkItemDto>
         {
@@ -110,7 +110,7 @@ public class GetEffortImbalanceQueryHandlerTests
     }
 
     [TestMethod]
-    public async Task Handle_WithImbalance_GeneratesRecommendations()
+    public async Task Handle_GeneratesRecommendations_FromAnalyzedImbalance()
     {
         // Arrange - heavily imbalanced
         var workItems = new List<WorkItemDto>
@@ -135,7 +135,7 @@ public class GetEffortImbalanceQueryHandlerTests
     }
 
     [TestMethod]
-    public async Task Handle_WithAreaPathFilter_FiltersCorrectly()
+    public async Task Handle_FiltersWorkItems_ByAreaPathFilter()
     {
         // Arrange
         var workItems = new List<WorkItemDto>
@@ -159,7 +159,7 @@ public class GetEffortImbalanceQueryHandlerTests
     }
 
     [TestMethod]
-    public async Task Handle_WithCapacity_CalculatesUtilization()
+    public async Task Handle_AddsCapacityUtilizationDescription_WhenCapacityProvided()
     {
         // Arrange
         var workItems = new List<WorkItemDto>
