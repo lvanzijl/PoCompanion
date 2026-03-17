@@ -8,7 +8,7 @@ namespace PoTool.Tests.Unit.Adapters;
 public sealed class DeliveryTrendProgressRollupMapperTests
 {
     [TestMethod]
-    public void ToFeatureProgressDto_MapsLegacyAndCanonicalStoryPointAliases()
+    public void ToFeatureProgressDto_MapsCanonicalStoryPointFields()
     {
         var featureProgress = new FeatureProgress(
             featureId: 101,
@@ -29,15 +29,13 @@ public sealed class DeliveryTrendProgressRollupMapperTests
 
         var dto = featureProgress.ToFeatureProgressDto(Array.Empty<CompletedPbiDto>());
 
-        Assert.AreEqual(13.5d, dto.TotalEffort, 0.001d);
         Assert.AreEqual(13.5d, dto.TotalStoryPoints, 0.001d);
-        Assert.AreEqual(8.25d, dto.DoneEffort, 0.001d);
         Assert.AreEqual(8.25d, dto.DoneStoryPoints, 0.001d);
         Assert.AreEqual(8.25d, dto.DeliveredStoryPoints, 0.001d);
     }
 
     [TestMethod]
-    public void ToEpicProgressDto_MapsLegacyAndCanonicalStoryPointAliases()
+    public void ToEpicProgressDto_MapsCanonicalStoryPointFields()
     {
         var epicProgress = new EpicProgress(
             epicId: 42,
@@ -58,9 +56,7 @@ public sealed class DeliveryTrendProgressRollupMapperTests
 
         var dto = epicProgress.ToEpicProgressDto();
 
-        Assert.AreEqual(21.5d, dto.TotalEffort, 0.001d);
         Assert.AreEqual(21.5d, dto.TotalStoryPoints, 0.001d);
-        Assert.AreEqual(13.25d, dto.DoneEffort, 0.001d);
         Assert.AreEqual(13.25d, dto.DoneStoryPoints, 0.001d);
         Assert.AreEqual(13.25d, dto.DeliveredStoryPoints, 0.001d);
     }

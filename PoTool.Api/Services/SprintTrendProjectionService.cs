@@ -638,7 +638,6 @@ public class SprintTrendProjectionService
     /// <summary>
     /// Computes Epic-level progress from Feature progress data.
     /// Each Epic's progress is the story-point-weighted completion of its child Features.
-    /// The DTO keeps legacy <c>*Effort</c> property names for API compatibility.
     /// </summary>
     internal static IReadOnlyList<EpicProgressDto> ComputeEpicProgress(
         IReadOnlyList<FeatureProgressDto> featureProgress,

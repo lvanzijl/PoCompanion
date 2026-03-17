@@ -145,11 +145,9 @@ public sealed class GetEpicCompletionForecastQueryHandlerTests
         Assert.AreEqual(1, result.EpicId);
         Assert.AreEqual(epic.Title, result.Title);
         Assert.AreEqual(epic.Type, result.Type);
-        Assert.AreEqual(21d, result.TotalEffort, 0.001);
         Assert.AreEqual(21d, result.TotalStoryPoints, 0.001);
-        Assert.AreEqual(8d, result.CompletedEffort, 0.001);
         Assert.AreEqual(8d, result.DoneStoryPoints, 0.001);
-        Assert.AreEqual(13d, result.RemainingEffort, 0.001);
+        Assert.AreEqual(8d, result.DeliveredStoryPoints, 0.001);
         Assert.AreEqual(13d, result.RemainingStoryPoints, 0.001);
         Assert.AreEqual(6d, result.EstimatedVelocity, 0.001);
         Assert.AreEqual(3, result.SprintsRemaining);
@@ -157,7 +155,6 @@ public sealed class GetEpicCompletionForecastQueryHandlerTests
         Assert.AreEqual(epic.AreaPath, result.AreaPath);
         Assert.HasCount(1, result.ForecastByDate);
         Assert.AreEqual("Sprint 4", result.ForecastByDate[0].SprintName);
-        Assert.AreEqual(6d, result.ForecastByDate[0].ExpectedCompletedEffort, 0.001);
         Assert.AreEqual(6d, result.ForecastByDate[0].ExpectedCompletedStoryPoints, 0.001);
 
         _mockRepository.Verify(repository => repository.GetAllAsync(It.IsAny<CancellationToken>()), Times.Never);

@@ -1390,7 +1390,7 @@
     private int GetEpicColorIndex(int productId, int epicId)
     {
         return GetEpicProgressForProduct(productId)
-            .Where(epic => epic.DoneEffort > 0)
+            .Where(epic => epic.DoneStoryPoints > 0)
             .ToList()
             .FindIndex(epic => epic.EpicId == epicId);
     }

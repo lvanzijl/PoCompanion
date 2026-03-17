@@ -18333,14 +18333,14 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("type")]
         public string Type { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("totalEffort")]
-        public int TotalEffort { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("totalStoryPoints")]
+        public double TotalStoryPoints { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("completedEffort")]
-        public int CompletedEffort { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("doneStoryPoints")]
+        public double DoneStoryPoints { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("remainingEffort")]
-        public int RemainingEffort { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("remainingStoryPoints")]
+        public double RemainingStoryPoints { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("estimatedVelocity")]
         public double EstimatedVelocity { get; set; } = default!;
@@ -18362,6 +18362,9 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("analysisTimestamp")]
         public System.DateTimeOffset AnalysisTimestamp { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("deliveredStoryPoints")]
+        public double DeliveredStoryPoints { get; set; } = default!;
 
     }
 
@@ -18393,11 +18396,11 @@ namespace PoTool.Client.ApiClient
         [System.Text.Json.Serialization.JsonPropertyName("sprintEndDate")]
         public System.DateTimeOffset SprintEndDate { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("expectedCompletedEffort")]
-        public int ExpectedCompletedEffort { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("expectedCompletedStoryPoints")]
+        public double ExpectedCompletedStoryPoints { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("remainingEffortAfterSprint")]
-        public int RemainingEffortAfterSprint { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("remainingStoryPointsAfterSprint")]
+        public double RemainingStoryPointsAfterSprint { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("progressPercentage")]
         public double ProgressPercentage { get; set; } = default!;

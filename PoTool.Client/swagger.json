@@ -6643,17 +6643,17 @@
           "type": {
             "type": "string"
           },
-          "totalEffort": {
-            "type": "integer",
-            "format": "int32"
+          "totalStoryPoints": {
+            "type": "number",
+            "format": "double"
           },
-          "completedEffort": {
-            "type": "integer",
-            "format": "int32"
+          "doneStoryPoints": {
+            "type": "number",
+            "format": "double"
           },
-          "remainingEffort": {
-            "type": "integer",
-            "format": "int32"
+          "remainingStoryPoints": {
+            "type": "number",
+            "format": "double"
           },
           "estimatedVelocity": {
             "type": "number",
@@ -6683,6 +6683,10 @@
           "analysisTimestamp": {
             "type": "string",
             "format": "date-time"
+          },
+          "deliveredStoryPoints": {
+            "type": "number",
+            "format": "double"
           }
         }
       },
@@ -6718,13 +6722,13 @@
             "type": "string",
             "format": "date-time"
           },
-          "expectedCompletedEffort": {
-            "type": "integer",
-            "format": "int32"
+          "expectedCompletedStoryPoints": {
+            "type": "number",
+            "format": "double"
           },
-          "remainingEffortAfterSprint": {
-            "type": "integer",
-            "format": "int32"
+          "remainingStoryPointsAfterSprint": {
+            "type": "number",
+            "format": "double"
           },
           "progressPercentage": {
             "type": "number",
@@ -10768,12 +10772,16 @@
             "type": "string"
           },
           "sprintCompletedEffort": {
-            "type": "integer",
-            "format": "int32"
+            "type": "number",
+            "format": "double"
           },
-          "totalEffort": {
-            "type": "integer",
-            "format": "int32"
+          "deliveredStoryPoints": {
+            "type": "number",
+            "format": "double"
+          },
+          "totalStoryPoints": {
+            "type": "number",
+            "format": "double"
           },
           "effortShare": {
             "type": "number",
@@ -10782,6 +10790,10 @@
           "progressPercent": {
             "type": "integer",
             "format": "int32"
+          },
+          "deliveredSharePercent": {
+            "type": "number",
+            "format": "double"
           }
         }
       },
@@ -10997,13 +11009,17 @@
             "type": "integer",
             "format": "int32"
           },
-          "totalEffort": {
-            "type": "integer",
-            "format": "int32"
+          "totalStoryPoints": {
+            "type": "number",
+            "format": "double"
           },
-          "doneEffort": {
-            "type": "integer",
-            "format": "int32"
+          "doneStoryPoints": {
+            "type": "number",
+            "format": "double"
+          },
+          "deliveredStoryPoints": {
+            "type": "number",
+            "format": "double"
           },
           "donePbiCount": {
             "type": "integer",
@@ -11013,8 +11029,8 @@
             "type": "boolean"
           },
           "sprintCompletedEffort": {
-            "type": "integer",
-            "format": "int32"
+            "type": "number",
+            "format": "double"
           },
           "sprintProgressionDelta": {
             "type": "number",
@@ -11063,13 +11079,17 @@
             "type": "integer",
             "format": "int32"
           },
-          "totalEffort": {
-            "type": "integer",
-            "format": "int32"
+          "totalStoryPoints": {
+            "type": "number",
+            "format": "double"
           },
-          "doneEffort": {
-            "type": "integer",
-            "format": "int32"
+          "doneStoryPoints": {
+            "type": "number",
+            "format": "double"
+          },
+          "deliveredStoryPoints": {
+            "type": "number",
+            "format": "double"
           },
           "featureCount": {
             "type": "integer",
@@ -11087,8 +11107,8 @@
             "type": "boolean"
           },
           "sprintCompletedEffort": {
-            "type": "integer",
-            "format": "int32"
+            "type": "number",
+            "format": "double"
           },
           "sprintProgressionDelta": {
             "type": "number",
