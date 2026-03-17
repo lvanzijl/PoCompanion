@@ -357,6 +357,9 @@ public record GetSprintTrendMetricsResponse
 /// </summary>
 public record FeatureProgressDto
 {
+    private readonly double? _totalStoryPoints;
+    private readonly double? _doneStoryPoints;
+
     /// <summary>
     /// Feature TFS ID.
     /// </summary>
@@ -405,10 +408,30 @@ public record FeatureProgressDto
     public double DoneEffort { get; init; }
 
     /// <summary>
-    /// Canonical delivered story points under this feature.
+    /// Canonical total story-point scope of all PBIs under this feature.
+    /// Maps to the same internal value as TotalEffort.
+    /// </summary>
+    public double TotalStoryPoints
+    {
+        get => _totalStoryPoints ?? TotalEffort;
+        init => _totalStoryPoints = value;
+    }
+
+    /// <summary>
+    /// Canonical done story-point scope under this feature.
     /// Maps to the same internal value as DoneEffort.
     /// </summary>
-    public double DeliveredStoryPoints => DoneEffort;
+    public double DoneStoryPoints
+    {
+        get => _doneStoryPoints ?? DoneEffort;
+        init => _doneStoryPoints = value;
+    }
+
+    /// <summary>
+    /// Canonical delivered story points under this feature.
+    /// Maps to the same internal value as DoneStoryPoints.
+    /// </summary>
+    public double DeliveredStoryPoints => DoneStoryPoints;
 
     /// <summary>
     /// Number of PBIs in Done state under this feature.
@@ -468,6 +491,9 @@ public record FeatureProgressDto
 /// </summary>
 public record EpicProgressDto
 {
+    private readonly double? _totalStoryPoints;
+    private readonly double? _doneStoryPoints;
+
     /// <summary>
     /// Epic TFS ID.
     /// </summary>
@@ -507,10 +533,30 @@ public record EpicProgressDto
     public double DoneEffort { get; init; }
 
     /// <summary>
-    /// Canonical delivered story points under this epic's features.
+    /// Canonical total story-point scope of all PBIs under this epic's features.
+    /// Maps to the same internal value as TotalEffort.
+    /// </summary>
+    public double TotalStoryPoints
+    {
+        get => _totalStoryPoints ?? TotalEffort;
+        init => _totalStoryPoints = value;
+    }
+
+    /// <summary>
+    /// Canonical done story-point scope under this epic's features.
     /// Maps to the same internal value as DoneEffort.
     /// </summary>
-    public double DeliveredStoryPoints => DoneEffort;
+    public double DoneStoryPoints
+    {
+        get => _doneStoryPoints ?? DoneEffort;
+        init => _doneStoryPoints = value;
+    }
+
+    /// <summary>
+    /// Canonical delivered story points under this epic's features.
+    /// Maps to the same internal value as DoneStoryPoints.
+    /// </summary>
+    public double DeliveredStoryPoints => DoneStoryPoints;
 
     /// <summary>
     /// Number of child features under this epic.

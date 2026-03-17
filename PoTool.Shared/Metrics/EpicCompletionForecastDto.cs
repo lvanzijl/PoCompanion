@@ -36,17 +36,45 @@ public sealed record EpicCompletionForecastDto(
     DateTimeOffset AnalysisTimestamp
 )
 {
+    private readonly double? _totalStoryPoints;
+    private readonly double? _doneStoryPoints;
+    private readonly double? _remainingStoryPoints;
+
+    /// <summary>
+    /// Canonical alias for total canonical story-point scope.
+    /// Maps to the same internal value as TotalEffort.
+    /// </summary>
+    public double TotalStoryPoints
+    {
+        get => _totalStoryPoints ?? TotalEffort;
+        init => _totalStoryPoints = value;
+    }
+
     /// <summary>
     /// Canonical alias for completed canonical story-point scope.
     /// Maps to the same internal value as CompletedEffort.
     /// </summary>
-    public double DeliveredStoryPoints => CompletedEffort;
+    public double DoneStoryPoints
+    {
+        get => _doneStoryPoints ?? CompletedEffort;
+        init => _doneStoryPoints = value;
+    }
+
+    /// <summary>
+    /// Canonical alias for completed canonical story-point scope.
+    /// Maps to the same internal value as DoneStoryPoints.
+    /// </summary>
+    public double DeliveredStoryPoints => DoneStoryPoints;
 
     /// <summary>
     /// Canonical alias for remaining canonical story-point scope.
     /// Maps to the same internal value as RemainingEffort.
     /// </summary>
-    public double RemainingStoryPoints => RemainingEffort;
+    public double RemainingStoryPoints
+    {
+        get => _remainingStoryPoints ?? RemainingEffort;
+        init => _remainingStoryPoints = value;
+    }
 }
 
 /// <summary>
@@ -67,7 +95,20 @@ public sealed record SprintForecast(
     double ExpectedCompletedEffort,
     double RemainingEffortAfterSprint,
     double ProgressPercentage
-);
+)
+{
+    /// <summary>
+    /// Canonical alias for expected completed scope in story points after this forecast sprint.
+    /// Maps to the same internal value as ExpectedCompletedEffort.
+    /// </summary>
+    public double ExpectedCompletedStoryPoints => ExpectedCompletedEffort;
+
+    /// <summary>
+    /// Canonical alias for remaining scope after this forecast sprint in story points.
+    /// Maps to the same internal value as RemainingEffortAfterSprint.
+    /// </summary>
+    public double RemainingStoryPointsAfterSprint => RemainingEffortAfterSprint;
+}
 
 /// <summary>
 /// Confidence level for forecast prediction.

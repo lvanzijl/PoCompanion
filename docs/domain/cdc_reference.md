@@ -465,6 +465,7 @@ The remaining debt is application and transport debt, not CDC semantic debt.
 Documented examples:
 
 - legacy `*Effort` DTO names still appear at transport boundaries even where canonical semantics are story points
+- those effort-named fields are legacy transport aliases for story points when they surface CDC-derived delivery, forecasting, or progress values; the naming does not indicate a separate CDC concept
 - compatibility aliases such as `RC-2` and `EFF` remain in backlog-quality adapters and UI metadata
 - pages and handlers still preserve older response shapes for clients during migration
 - portfolio consumers still carry legacy effort-oriented compatibility surfaces while canonical stock, inflow, throughput, and remaining scope semantics are story-point based

@@ -148,6 +148,8 @@ public record ProductDeliveryDto
 /// </summary>
 public record FeatureDeliveryDto
 {
+    private readonly double? _totalStoryPoints;
+
     /// <summary>
     /// Feature TFS ID.
     /// </summary>
@@ -192,6 +194,16 @@ public record FeatureDeliveryDto
     /// Compatibility alias; deprecated in future contract revision.
     /// </summary>
     public double TotalEffort { get; init; }
+
+    /// <summary>
+    /// Canonical total story-point scope of all PBIs under this feature.
+    /// Maps to the same internal value as TotalEffort.
+    /// </summary>
+    public double TotalStoryPoints
+    {
+        get => _totalStoryPoints ?? TotalEffort;
+        init => _totalStoryPoints = value;
+    }
 
     /// <summary>
     /// Share of total portfolio delivered effort for this feature (0–100 percentage).
