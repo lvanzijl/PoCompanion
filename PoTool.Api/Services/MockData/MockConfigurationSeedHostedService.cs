@@ -12,6 +12,9 @@ namespace PoTool.Api.Services.MockData;
 /// </summary>
 public sealed class MockConfigurationSeedHostedService : IHostedService
 {
+    private const string MockOrganizationUrl = "https://dev.azure.com/mock";
+    private const string MockProjectName = "Battleship Systems";
+
     private static readonly MockProfileSeed[] ProfileSeeds =
     [
         new(
@@ -60,6 +63,7 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
 
         if (hasProfiles || hasProducts || hasTeams)
         {
+            await EnsureMockTfsConfigurationAsync(context, cancellationToken);
             await EnsureActiveProfileAsync(context, cancellationToken);
             return;
         }
@@ -79,6 +83,7 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
         var now = DateTimeOffset.UtcNow;
         var teams = await SeedTeamsAsync(context, hierarchy, now, cancellationToken);
         await SeedProfilesAndProductsAsync(context, hierarchy, goals, teams, now, cancellationToken);
+        await EnsureMockTfsConfigurationAsync(context, cancellationToken);
         await EnsureActiveProfileAsync(context, cancellationToken);
 
         _logger.LogInformation(
@@ -89,6 +94,37 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    private static async Task EnsureMockTfsConfigurationAsync(
+        PoToolDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var existingConfig = await context.TfsConfigs
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (existingConfig != null)
+        {
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        context.TfsConfigs.Add(new TfsConfigEntity
+        {
+            Url = MockOrganizationUrl,
+            Project = MockProjectName,
+            DefaultAreaPath = MockProjectName,
+            UseDefaultCredentials = true,
+            TimeoutSeconds = 30,
+            ApiVersion = "7.0",
+            LastValidated = now,
+            CreatedAt = now,
+            UpdatedAt = now,
+            UpdatedAtUtc = now.UtcDateTime
+        });
+
+        await context.SaveChangesAsync(cancellationToken);
+    }
 
     private static async Task<List<TeamEntity>> SeedTeamsAsync(
         PoToolDbContext context,
@@ -110,7 +146,7 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
                 TeamAreaPath = areaPath,
                 PictureType = (int)TeamPictureType.Default,
                 DefaultPictureId = (index * 3) % 24,
-                ProjectName = "Battleship Systems",
+                ProjectName = MockProjectName,
                 TfsTeamId = $"mock-team-{index + 1:D2}",
                 TfsTeamName = areaPath.Split('\\', StringSplitOptions.RemoveEmptyEntries).Last(),
                 CreatedAt = now,
