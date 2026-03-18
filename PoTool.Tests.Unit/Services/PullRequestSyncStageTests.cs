@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Api.Persistence;
+using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services.Sync;
 using PoTool.Core.Contracts;
 using PoTool.Shared.PullRequests;
@@ -141,5 +142,69 @@ public class PullRequestSyncStageTests
         Assert.HasCount(1, savedLinks);
         Assert.AreEqual(100, savedLinks[0].PullRequestId);
         Assert.AreEqual(300, savedLinks[0].WorkItemId);
+    }
+
+    [TestMethod]
+    public async Task ExecuteAsync_WhenNoNewPrs_BackfillsExistingNullProductIdsFromRepositoryMapping()
+    {
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase(databaseName: $"PullRequestSyncStageTests_{Guid.NewGuid()}")
+            .Options;
+
+        await using var dbContext = new PoToolDbContext(options);
+
+        dbContext.Products.Add(new ProductEntity
+        {
+            Id = 42,
+            Name = "Product 42",
+            ProductOwnerId = 1
+        });
+        dbContext.Repositories.Add(new RepositoryEntity
+        {
+            Id = 7,
+            ProductId = 42,
+            Name = "TestRepo",
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        dbContext.PullRequests.Add(new PullRequestEntity
+        {
+            InternalId = 1,
+            Id = 900,
+            RepositoryName = "TestRepo",
+            Title = "Existing PR",
+            CreatedBy = "User1",
+            CreatedDate = DateTimeOffset.UtcNow.AddDays(-3),
+            CreatedDateUtc = DateTime.UtcNow.AddDays(-3),
+            CompletedDate = null,
+            Status = "active",
+            IterationPath = "Sprint/1",
+            SourceBranch = "feature/existing",
+            TargetBranch = "main",
+            RetrievedAt = DateTimeOffset.UtcNow.AddDays(-3),
+            ProductId = null
+        });
+        await dbContext.SaveChangesAsync();
+
+        var tfsClient = new Mock<ITfsClient>();
+        tfsClient
+            .Setup(c => c.GetPullRequestsAsync("TestRepo", It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<PullRequestDto>());
+
+        var logger = new Mock<ILogger<PullRequestSyncStage>>();
+        var stage = new PullRequestSyncStage(tfsClient.Object, dbContext, logger.Object);
+
+        var context = new SyncContext
+        {
+            ProductOwnerId = 1,
+            RootWorkItemIds = Array.Empty<int>(),
+            RepositoryNames = ["TestRepo"]
+        };
+
+        var result = await stage.ExecuteAsync(context, _ => { }, CancellationToken.None);
+
+        Assert.IsTrue(result.Success, $"Sync should succeed but failed with: {result.ErrorMessage}");
+
+        var persistedPr = await dbContext.PullRequests.SingleAsync(pr => pr.Id == 900);
+        Assert.AreEqual(42, persistedPr.ProductId);
     }
 }

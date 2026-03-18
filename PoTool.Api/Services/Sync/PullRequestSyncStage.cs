@@ -66,6 +66,7 @@ public class PullRequestSyncStage : ISyncStage
                 NoToDateFilter,
                 PullRequestStatusAll);
 
+            var repositoryProductMap = await BuildRepositoryProductMapAsync(context, cancellationToken);
             var allPullRequests = new List<PullRequestDto>();
             var totalRepos = context.RepositoryNames.Length;
             var processedRepos = 0;
@@ -81,7 +82,7 @@ public class PullRequestSyncStage : ISyncStage
                     null, // toDate
                     cancellationToken);
 
-                allPullRequests.AddRange(prs);
+                allPullRequests.AddRange(ApplyProductScope(prs, repoName, repositoryProductMap));
                 processedRepos++;
 
                 // Map repo progress to 0-80%
@@ -95,6 +96,7 @@ public class PullRequestSyncStage : ISyncStage
                 context.ProductOwnerId);
 
             progressCallback(80);
+            await BackfillMissingProductIdsAsync(repositoryProductMap, cancellationToken);
 
             if (allPullRequests.Count == 0)
             {
@@ -129,6 +131,114 @@ public class PullRequestSyncStage : ISyncStage
             _logger.LogError(ex, "Pull request sync failed for ProductOwner {ProductOwnerId}", context.ProductOwnerId);
             return SyncStageResult.CreateFailure(ex.Message);
         }
+    }
+
+    private async Task<Dictionary<string, int>> BuildRepositoryProductMapAsync(
+        SyncContext context,
+        CancellationToken cancellationToken)
+    {
+        var repositoryNames = context.RepositoryNames
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (repositoryNames.Count == 0)
+        {
+            return new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        var repositoryRows = await _context.Repositories
+            .AsNoTracking()
+            .Where(r => repositoryNames.Contains(r.Name) && r.Product.ProductOwnerId == context.ProductOwnerId)
+            .Select(r => new { r.Name, r.ProductId })
+            .ToListAsync(cancellationToken);
+
+        var repositoryProductMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in repositoryRows.GroupBy(row => row.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            var productIds = group
+                .Select(row => row.ProductId)
+                .Distinct()
+                .ToList();
+
+            if (productIds.Count == 1)
+            {
+                repositoryProductMap[group.Key] = productIds[0];
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "PR_PRODUCT_SCOPE_AMBIGUOUS: ProductOwner {ProductOwnerId}, repository {RepositoryName} maps to multiple products [{ProductIds}]",
+                    context.ProductOwnerId,
+                    group.Key,
+                    string.Join(", ", productIds));
+            }
+        }
+
+        foreach (var repositoryName in repositoryNames.Where(name => !repositoryProductMap.ContainsKey(name)))
+        {
+            _logger.LogWarning(
+                "PR_PRODUCT_SCOPE_MISSING: ProductOwner {ProductOwnerId}, repository {RepositoryName} has no unique product mapping",
+                context.ProductOwnerId,
+                repositoryName);
+        }
+
+        return repositoryProductMap;
+    }
+
+    private List<PullRequestDto> ApplyProductScope(
+        IEnumerable<PullRequestDto> pullRequests,
+        string repositoryName,
+        IReadOnlyDictionary<string, int> repositoryProductMap)
+    {
+        if (!repositoryProductMap.TryGetValue(repositoryName, out var productId))
+        {
+            return pullRequests.ToList();
+        }
+
+        return pullRequests
+            .Select(pr => pr with { ProductId = productId })
+            .ToList();
+    }
+
+    private async Task BackfillMissingProductIdsAsync(
+        IReadOnlyDictionary<string, int> repositoryProductMap,
+        CancellationToken cancellationToken)
+    {
+        if (repositoryProductMap.Count == 0)
+        {
+            return;
+        }
+
+        var repositoryNames = repositoryProductMap.Keys.ToList();
+        var existingPullRequests = await _context.PullRequests
+            .Where(pr => !pr.ProductId.HasValue && repositoryNames.Contains(pr.RepositoryName))
+            .ToListAsync(cancellationToken);
+
+        var updatedCount = 0;
+
+        foreach (var pullRequest in existingPullRequests)
+        {
+            if (!repositoryProductMap.TryGetValue(pullRequest.RepositoryName, out var productId))
+            {
+                continue;
+            }
+
+            pullRequest.ProductId = productId;
+            updatedCount++;
+        }
+
+        if (updatedCount == 0)
+        {
+            return;
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "PR_PRODUCT_SCOPE_BACKFILL: Updated ProductId for {Count} cached pull requests",
+            updatedCount);
     }
 
     private async Task<DateTimeOffset?> UpsertPullRequestsAsync(
