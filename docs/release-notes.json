@@ -2,6 +2,14 @@
   {
     "date": "2026-03-18",
     "type": "Fixed",
+    "title": "Sprint Delivery breadcrumbs now restore drill-down state",
+    "impact": "Sprint Delivery drill-down breadcrumbs now return to the portfolio, product, or epic view on the same page instead of navigating away from the current sprint flow.",
+    "area": "Trends",
+    "link": "/home/delivery/sprint"
+  },
+  {
+    "date": "2026-03-18",
+    "type": "Fixed",
     "title": "Planner sync baseline now works with SQLite",
     "impact": "Work item sync no longer fails against SQLite-backed local data, and planner diagnostics now log sampled IDs so sync validation is easier to inspect.",
     "area": "Settings",

@@ -127,13 +127,68 @@
     @if (_drillDownLevel > DrillDownLevel.Portfolio)
     {
         <MudPaper Elevation="1" Class="pa-3 mb-4">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Wrap="Wrap.Wrap">
                 <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
                                Size="Size.Small"
                                Color="Color.Primary"
-                               OnClick="DrillUp"
-                               aria-label="Go back to previous level" />
-                <MudBreadcrumbs Items="@_drillDownBreadcrumbs" Class="pa-0" />
+                                OnClick="DrillUp"
+                                aria-label="Go back to previous level" />
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Wrap="Wrap.Wrap">
+                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                   Icon="@Icons.Material.Filled.Dashboard"
+                                   OnClick="RestorePortfolioLevel">
+                        Portfolio
+                    </CompactButton>
+
+                    @if (_selectedProductName is not null)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">/</MudText>
+                        @if (_drillDownLevel == DrillDownLevel.Product)
+                        {
+                            <MudText Typo="Typo.body2">
+                                <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" Class="mr-1" />
+                                @_selectedProductName
+                            </MudText>
+                        }
+                        else
+                        {
+                            <CompactButton ButtonRole="ButtonRole.Utility"
+                                           Icon="@Icons.Material.Filled.Inventory2"
+                                           OnClick="RestoreProductLevel">
+                                @_selectedProductName
+                            </CompactButton>
+                        }
+                    }
+
+                    @if (_selectedEpicName is not null && _drillDownLevel >= DrillDownLevel.Epic)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">/</MudText>
+                        @if (_drillDownLevel == DrillDownLevel.Epic)
+                        {
+                            <MudText Typo="Typo.body2">
+                                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Class="mr-1" />
+                                @_selectedEpicName
+                            </MudText>
+                        }
+                        else
+                        {
+                            <CompactButton ButtonRole="ButtonRole.Utility"
+                                           Icon="@Icons.Material.Filled.AccountTree"
+                                           OnClick="RestoreEpicLevel">
+                                @_selectedEpicName
+                            </CompactButton>
+                        }
+                    }
+
+                    @if (_selectedFeatureName is not null && _drillDownLevel == DrillDownLevel.Feature)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">/</MudText>
+                        <MudText Typo="Typo.body2">
+                            <MudIcon Icon="@Icons.Material.Filled.FeaturedPlayList" Size="Size.Small" Class="mr-1" />
+                            @_selectedFeatureName
+                        </MudText>
+                    }
+                </MudStack>
             </MudStack>
         </MudPaper>
     }
@@ -661,7 +716,6 @@
     private string? _selectedEpicName;
     private int? _selectedFeatureId;
     private string? _selectedFeatureName;
-    private List<BreadcrumbItem> _drillDownBreadcrumbs = new();
 
     private List<TeamDto> _teams = new();
     private List<SprintDto> _allSprints = new();
@@ -1108,8 +1162,11 @@
     {
         _selectedProductId = productId;
         _selectedProductName = productName;
+        _selectedEpicId = null;
+        _selectedEpicName = null;
+        _selectedFeatureId = null;
+        _selectedFeatureName = null;
         _drillDownLevel = DrillDownLevel.Product;
-        UpdateDrillDownBreadcrumbs();
         await InvokeAsync(StateHasChanged);
         await EnsureDetailsLoadedAsync();
     }
@@ -1118,8 +1175,9 @@
     {
         _selectedEpicId = epicId;
         _selectedEpicName = epicTitle;
+        _selectedFeatureId = null;
+        _selectedFeatureName = null;
         _drillDownLevel = DrillDownLevel.Epic;
-        UpdateDrillDownBreadcrumbs();
         await InvokeAsync(StateHasChanged);
         await EnsureDetailsLoadedAsync();
     }
@@ -1129,7 +1187,6 @@
         _selectedFeatureId = featureId;
         _selectedFeatureName = featureTitle;
         _drillDownLevel = DrillDownLevel.Feature;
-        UpdateDrillDownBreadcrumbs();
         await InvokeAsync(StateHasChanged);
         await EnsureDetailsLoadedAsync();
     }
@@ -1139,23 +1196,15 @@
         switch (_drillDownLevel)
         {
             case DrillDownLevel.Feature:
-                _selectedFeatureId = null;
-                _selectedFeatureName = null;
-                _drillDownLevel = DrillDownLevel.Epic;
+                RestoreEpicLevel();
                 break;
             case DrillDownLevel.Epic:
-                _selectedEpicId = null;
-                _selectedEpicName = null;
-                _drillDownLevel = DrillDownLevel.Product;
+                RestoreProductLevel();
                 break;
             case DrillDownLevel.Product:
-                _selectedProductId = null;
-                _selectedProductName = null;
-                _drillDownLevel = DrillDownLevel.Portfolio;
+                RestorePortfolioLevel();
                 break;
         }
-
-        UpdateDrillDownBreadcrumbs();
     }
 
     private void ResetDrillDown()
@@ -1167,46 +1216,39 @@
         _selectedEpicName = null;
         _selectedFeatureId = null;
         _selectedFeatureName = null;
-        _drillDownBreadcrumbs.Clear();
     }
 
-    private void UpdateDrillDownBreadcrumbs()
+    private void RestorePortfolioLevel()
     {
-        _drillDownBreadcrumbs = new List<BreadcrumbItem>
-        {
-            new(
-                "Portfolio",
-                href: null,
-                disabled: _drillDownLevel == DrillDownLevel.Portfolio,
-                icon: Icons.Material.Filled.Dashboard)
-        };
+        ResetDrillDown();
+    }
 
-        if (_drillDownLevel >= DrillDownLevel.Product && _selectedProductName is not null)
+    private void RestoreProductLevel()
+    {
+        if (!_selectedProductId.HasValue || string.IsNullOrWhiteSpace(_selectedProductName))
         {
-            _drillDownBreadcrumbs.Add(new BreadcrumbItem(
-                _selectedProductName,
-                href: null,
-                disabled: _drillDownLevel == DrillDownLevel.Product,
-                icon: Icons.Material.Filled.Inventory2));
+            RestorePortfolioLevel();
+            return;
         }
 
-        if (_drillDownLevel >= DrillDownLevel.Epic && _selectedEpicName is not null)
+        _selectedEpicId = null;
+        _selectedEpicName = null;
+        _selectedFeatureId = null;
+        _selectedFeatureName = null;
+        _drillDownLevel = DrillDownLevel.Product;
+    }
+
+    private void RestoreEpicLevel()
+    {
+        if (!_selectedEpicId.HasValue || string.IsNullOrWhiteSpace(_selectedEpicName))
         {
-            _drillDownBreadcrumbs.Add(new BreadcrumbItem(
-                _selectedEpicName,
-                href: null,
-                disabled: _drillDownLevel == DrillDownLevel.Epic,
-                icon: Icons.Material.Filled.AccountTree));
+            RestoreProductLevel();
+            return;
         }
 
-        if (_drillDownLevel >= DrillDownLevel.Feature && _selectedFeatureName is not null)
-        {
-            _drillDownBreadcrumbs.Add(new BreadcrumbItem(
-                _selectedFeatureName,
-                href: null,
-                disabled: true,
-                icon: Icons.Material.Filled.FeaturedPlayList));
-        }
+        _selectedFeatureId = null;
+        _selectedFeatureName = null;
+        _drillDownLevel = DrillDownLevel.Epic;
     }
 
     private record BarChartItem(string Label, double Percent);
