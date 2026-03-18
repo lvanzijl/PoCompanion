@@ -322,8 +322,14 @@ public class SyncPipelineRunner : ISyncPipeline
             var finalizeStage = scope.ServiceProvider.GetRequiredService<FinalizeCacheStage>();
 
             // Set finalization data
+            var productIds = await context.Products
+                .Where(p => p.ProductOwnerId == productOwnerId)
+                .Select(p => p.Id)
+                .ToListAsync(cts.Token);
             var workItemCount = await context.WorkItems.CountAsync(cts.Token);
-            var pullRequestCount = await context.PullRequests.CountAsync(cts.Token);
+            var pullRequestCount = await context.PullRequests
+                .Where(pr => pr.ProductId.HasValue && productIds.Contains(pr.ProductId.Value))
+                .CountAsync(cts.Token);
             var pipelineCount = await context.CachedPipelineRuns
                 .Where(p => p.ProductOwnerId == productOwnerId)
                 .CountAsync(cts.Token);

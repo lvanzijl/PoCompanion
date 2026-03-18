@@ -215,16 +215,16 @@ public class GetPullRequestInsightsQueryHandlerTests
     }
 
     [TestMethod]
-    [Description("When teamId is given, only PRs whose repository is linked to the team's products are returned")]
+    [Description("When teamId is given, only PRs linked to the team's products are returned")]
     public async Task Handle_TeamFilter_ExcludesPrsFromOtherTeams()
     {
         await AddTeamWithProductAsync(teamId: 10, productId: 100);
         await AddRepositoryAsync(productId: 100, repoName: "Repo-Team10");
 
         var inRange = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
-        await AddPrAsync(1, "completed", inRange, inRange.AddDays(3), repository: "Repo-Team10");  // in team
-        await AddPrAsync(2, "completed", inRange, inRange.AddDays(3), repository: "Repo-Other");   // different repo
-        await AddPrAsync(3, "completed", inRange, inRange.AddDays(3), repository: "Repo-Unknown"); // unlinked repo
+        await AddPrAsync(1, "completed", inRange, inRange.AddDays(3), repository: "Repo-Team10", productId: 100); // linked product
+        await AddPrAsync(2, "completed", inRange, inRange.AddDays(3), repository: "Repo-Team10", productId: 200); // different product
+        await AddPrAsync(3, "completed", inRange, inRange.AddDays(3), repository: "Repo-Unknown");                // unscoped PR
 
         var result = await _handler.Handle(MakeQuery(teamId: 10), CancellationToken.None);
 
@@ -234,18 +234,19 @@ public class GetPullRequestInsightsQueryHandlerTests
     }
 
     [TestMethod]
-    [Description("When team has products but no repositories configured, an empty result is returned")]
-    public async Task Handle_TeamFilter_NoRepositoriesConfigured_ReturnsEmpty()
+    [Description("Team scoping uses ProductId even when no repository configuration is present")]
+    public async Task Handle_TeamFilter_UsesProductIdScopeWithoutRepositoryConfiguration()
     {
         await AddTeamWithProductAsync(teamId: 10, productId: 100);
-        // No repository added for product 100
 
         var inRange = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
-        await AddPrAsync(1, "completed", inRange, inRange.AddDays(3));
+        await AddPrAsync(1, "completed", inRange, inRange.AddDays(3), productId: 100);
+        await AddPrAsync(2, "completed", inRange, inRange.AddDays(2), productId: 999);
 
         var result = await _handler.Handle(MakeQuery(teamId: 10), CancellationToken.None);
 
-        Assert.AreEqual(0, result.Summary.TotalPrs);
+        Assert.AreEqual(1, result.Summary.TotalPrs);
+        Assert.AreEqual(1, result.ScatterPoints[0].Id);
     }
 
     [TestMethod]

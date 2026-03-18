@@ -55,6 +55,39 @@ public class RealTfsClientErrorHandlingTests
     }
 
     [TestMethod]
+    public async Task HandleHttpErrorsAsync_429_WithRetryAfterDate_UsesRemainingDelay()
+    {
+        var now = new DateTimeOffset(2026, 03, 18, 12, 00, 00, TimeSpan.Zero);
+        var retryAt = now.AddSeconds(30);
+        var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests)
+        {
+            Content = new StringContent("rate limited"),
+            RequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://tfs.example.com/_apis/projects")
+        };
+        response.Headers.RetryAfter = new RetryConditionHeaderValue(retryAt);
+
+        var retryAfter = InvokeGetRetryAfter(response, now);
+
+        Assert.AreEqual(TimeSpan.FromSeconds(30), retryAfter);
+    }
+
+    [TestMethod]
+    public async Task HandleHttpErrorsAsync_500_ThrowsTfsExceptionWithStatusCode()
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+        {
+            Content = new StringContent("server failure"),
+            RequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://tfs.example.com/_apis/projects")
+        };
+
+        var exception = await AssertThrowsAsync<TfsException>(
+            () => InvokeHandleHttpErrorsAsync(response));
+
+        Assert.AreEqual(500, exception.StatusCode);
+        Assert.AreEqual("server failure", exception.ErrorContent);
+    }
+
+    [TestMethod]
     public async Task ExecuteWithRetryAsync_RetriesOnServerError()
     {
         var attempts = 0;
@@ -84,6 +117,18 @@ public class RealTfsClientErrorHandlingTests
 
         var task = (Task)method!.Invoke(_client, new object[] { response, CancellationToken.None })!;
         await task;
+    }
+
+    private static TimeSpan? InvokeGetRetryAfter(HttpResponseMessage response, DateTimeOffset now)
+    {
+        var method = typeof(RealTfsClient).GetMethod(
+            "GetRetryAfter",
+            BindingFlags.Static | BindingFlags.NonPublic,
+            binder: null,
+            types: [typeof(HttpResponseMessage), typeof(DateTimeOffset)],
+            modifiers: null);
+
+        return (TimeSpan?)method!.Invoke(null, new object[] { response, now });
     }
 
     private static async Task<TException> AssertThrowsAsync<TException>(Func<Task> action)
