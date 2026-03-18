@@ -560,10 +560,11 @@ public partial class RealTfsClient
 
         return await ExecuteWithRetryAsync(async () =>
         {
-            // GET {baseUrl}/{project}/_apis/git/repositories/{repo}/pullRequests/{id}/workitems
-            // Returns: { "count": N, "value": [ { "id": 123, "url": "..." }, ... ] }
-            // This endpoint returns all linked work items in a single page — no pagination needed.
-            var encodedRepoName = Uri.EscapeDataString(repositoryName);
+           // GET {baseUrl}/{project}/_apis/git/repositories/{repo}/pullRequests/{id}/workitems
+           // Returns a work items payload with entries containing an "id" and "url".
+           // In real on-prem TFS, "id" may be returned as either a JSON number or a numeric string.
+           // This endpoint returns all linked work items in a single page — no pagination needed.
+           var encodedRepoName = Uri.EscapeDataString(repositoryName);
             var url = ProjectUrl(config,
                 $"_apis/git/repositories/{encodedRepoName}/pullrequests/{pullRequestId}/workitems");
 
@@ -593,17 +594,26 @@ public partial class RealTfsClient
             {
                 foreach (var item in valueArray.EnumerateArray())
                 {
-                    if (item.TryGetProperty("id", out var idProp) && idProp.TryGetInt32(out var workItemId))
-                    {
-                        workItemIds.Add(workItemId);
-                    }
-                    else
-                    {
-                        _logger.LogWarning(
-                            "PR work item links response contained an entry without a valid integer 'id' for PR {PullRequestId} in repo {Repo}; skipping entry",
-                            pullRequestId, repositoryName);
-                    }
-                }
+                 if (!item.TryGetProperty("id", out var idProp))
+                 {
+                    _logger.LogWarning(
+                        "PR work item links response contained an entry without an 'id' for PR {PullRequestId} in repo {Repo}; skipping entry",
+                        pullRequestId, repositoryName);
+                    continue;
+                 }
+
+                 var workItemId = ReadInt32Flexible(idProp);
+                 if (workItemId.HasValue)
+                 {
+                    workItemIds.Add(workItemId.Value);
+                 }
+                 else
+                 {
+                    _logger.LogWarning(
+                        "PR work item links response contained an invalid 'id' value for PR {PullRequestId} in repo {Repo}. TokenType={TokenType}; skipping entry",
+                        pullRequestId, repositoryName, idProp.ValueKind);
+                 }
+              }
             }
 
             _logger.LogDebug(
@@ -613,4 +623,14 @@ public partial class RealTfsClient
             return workItemIds;
         }, cancellationToken);
     }
+
+   private static int? ReadInt32Flexible(JsonElement element)
+   {
+      return element.ValueKind switch
+      {
+         JsonValueKind.Number when element.TryGetInt32(out var n) => n,
+         JsonValueKind.String when int.TryParse(element.GetString(), out var s) => s,
+         _ => null
+      };
+   }
 }
