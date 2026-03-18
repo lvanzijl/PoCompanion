@@ -2,6 +2,14 @@
   {
     "date": "2026-03-18",
     "type": "Fixed",
+    "title": "PR delivery scatter legend is now readable",
+    "impact": "PR Delivery Insights now shows a right-side scatter legend with visible state colors and epic names instead of hard-to-read entries and raw epic IDs.",
+    "area": "Home",
+    "link": "/home/pr-delivery-insights"
+  },
+  {
+    "date": "2026-03-18",
+    "type": "Fixed",
     "title": "TFS mode now blocks mixed mock and real runtime",
     "impact": "Settings and sync startup now fail fast when real-data mode would resolve mock TFS services, preventing blank settings flows and silent mixed-provider behavior.",
     "area": "Settings",

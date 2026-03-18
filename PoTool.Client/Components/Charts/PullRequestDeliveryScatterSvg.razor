@@ -4,11 +4,10 @@
     X axis: PR creation time over the selected date range
     Y axis: PR lifetime in hours (auto-scaled from data)
 
-    Color mapping (by PR status):
-      completed (clean)    → green  (--mud-palette-success)    merged without changes requested
-      completed (rework)   → yellow (--mud-palette-warning)    merged after changes requested
+    Color mapping (by PR state):
+      completed            → green  (--mud-palette-success)
       abandoned            → red    (--mud-palette-error)
-      active               → grey   (--mud-palette-default)
+      active               → neutral (--mud-palette-text-secondary)
 
     Shape mapping (by Epic):
       Each unique Epic gets a distinct shape: circle, square, triangle (cycling).
@@ -28,9 +27,11 @@
 @using PoTool.Shared.PullRequests
 
 <div class="pr-scatter-container" style="position: relative; width: 100%;">
-    <svg viewBox="0 0 820 300"
-         style="width: 100%; height: auto; max-height: @(Height)px; display: block; overflow: visible;"
-         @onmouseleave="() => _hoveredPoint = null">
+    <div class="pr-scatter-layout">
+        <div class="pr-scatter-chart">
+            <svg viewBox="0 0 820 300"
+                 style="width: 100%; height: auto; max-height: @(Height)px; display: block; overflow: visible;"
+                 @onmouseleave="() => _hoveredPoint = null">
 
         @* ── Y axis grid lines + labels ────────────────────────────── *@
         @foreach (var tick in GetYTicks())
@@ -177,33 +178,48 @@
         {
             @((MarkupString)$"""<text x="{F(LeftPad + PlotWidth / 2)}" y="{F(TopPad + PlotHeight / 2)}" text-anchor="middle" font-size="12" fill="var(--mud-palette-text-disabled)">No PR data for the selected period</text>""")
         }
-    </svg>
+            </svg>
+        </div>
 
-    @* ── Legend ─────────────────────────────────────────────────────── *@
-    <div class="pr-scatter-legend">
-        <span class="pr-legend-item pr-legend-clean">● Merged</span>
-        <span class="pr-legend-item pr-legend-rework">● Merged (rework)</span>
-        <span class="pr-legend-item pr-legend-abandoned">● Abandoned</span>
-        @if (Data.Any(p => string.Equals(p.Status, "active", StringComparison.OrdinalIgnoreCase)))
-        {
-            <span class="pr-legend-item pr-legend-active">● Active</span>
-        }
-        @if (ShowMedianLine && MedianLifetimeHours.HasValue)
-        {
-            <span class="pr-legend-item pr-legend-median">— med</span>
-        }
-        @if (ShowP90Line && P90LifetimeHours.HasValue)
-        {
-            <span class="pr-legend-item pr-legend-p90">- - P90</span>
-        }
-        @if (_epicShapeMap.Count > 1)
-        {
-            foreach (var (epicName, shape) in _epicShapeMap)
+        @* ── Legend ─────────────────────────────────────────────────── *@
+        <aside class="pr-scatter-legend-panel" aria-label="PR lifetime scatter legend">
+            <div class="pr-legend-section">
+                <span class="pr-legend-title">Color → PR state</span>
+                <span class="pr-legend-item pr-legend-completed">● @PrFormatHelpers.FormatStatus("completed")</span>
+                <span class="pr-legend-item pr-legend-abandoned">● @PrFormatHelpers.FormatStatus("abandoned")</span>
+                @if (Data.Any(p => string.Equals(p.Status, "active", StringComparison.OrdinalIgnoreCase)))
+                {
+                    <span class="pr-legend-item pr-legend-active">● @PrFormatHelpers.FormatStatus("active")</span>
+                }
+            </div>
+
+            @if (_epicLegendItems.Count > 0)
             {
-                var sym = shape switch { "circle" => "●", "square" => "■", _ => "▲" };
-                <span class="pr-legend-item" style="color: var(--mud-palette-text-secondary);">@sym @epicName</span>
+                <div class="pr-legend-section">
+                    <span class="pr-legend-title">Shape → Epic</span>
+                    @foreach (var item in _epicLegendItems)
+                    {
+                        var sym = item.Shape switch { "circle" => "●", "square" => "■", _ => "▲" };
+                        <span class="pr-legend-item pr-legend-shape">@sym @item.Label</span>
+                    }
+                </div>
             }
-        }
+
+            @if (ShowMedianLine && MedianLifetimeHours.HasValue || ShowP90Line && P90LifetimeHours.HasValue)
+            {
+                <div class="pr-legend-section">
+                    <span class="pr-legend-title">Reference lines</span>
+                    @if (ShowMedianLine && MedianLifetimeHours.HasValue)
+                    {
+                        <span class="pr-legend-item pr-legend-median">— Median lifetime</span>
+                    }
+                    @if (ShowP90Line && P90LifetimeHours.HasValue)
+                    {
+                        <span class="pr-legend-item pr-legend-p90">- - P90 lifetime</span>
+                    }
+                </div>
+            }
+        </aside>
     </div>
 </div>
 
@@ -256,14 +272,16 @@
 
     /// <summary>Maps (epicId?.ToString() ?? "none") → shape name.</summary>
     private Dictionary<string, string> _epicShapeMap = new();
+    private List<(string Shape, string Label)> _epicLegendItems = new();
 
     private static readonly string[] Shapes = { "circle", "square", "triangle" };
 
     protected override void OnParametersSet()
     {
         // Build a stable epic → shape mapping based on first-seen order.
-        // Null epic always maps to "circle".
         _epicShapeMap = new Dictionary<string, string>();
+        _epicLegendItems = new List<(string Shape, string Label)>();
+        var legendKeys = new HashSet<string>(StringComparer.Ordinal);
         int idx = 0;
         foreach (var pt in Data)
         {
@@ -272,6 +290,13 @@
             {
                 _epicShapeMap[key] = Shapes[idx % Shapes.Length];
                 idx++;
+            }
+
+            if (pt.EpicId.HasValue &&
+                !string.IsNullOrWhiteSpace(pt.EpicName) &&
+                legendKeys.Add(key))
+            {
+                _epicLegendItems.Add((_epicShapeMap[key], pt.EpicName));
             }
         }
     }
@@ -384,7 +409,7 @@
         {
             "completed" => "var(--mud-palette-success)",
             "abandoned" => "var(--mud-palette-error)",
-            _           => "var(--mud-palette-default)"
+            _           => "var(--mud-palette-text-secondary)"
         };
     }
 
