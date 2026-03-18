@@ -12,6 +12,7 @@ namespace PoTool.Api.Services.Sync;
 /// </summary>
 public class WorkItemSyncStage : ISyncStage
 {
+    private const int LoggedIdSampleSize = 20;
     private readonly ITfsClient _tfsClient;
     private readonly PoToolDbContext _context;
     private readonly IIncrementalSyncPlanner _incrementalSyncPlanner;
@@ -41,7 +42,7 @@ public class WorkItemSyncStage : ISyncStage
         {
             if (context.RootWorkItemIds.Length == 0)
             {
-                _logger.LogWarning("No root work item IDs provided for ProductOwner {ProductOwnerId}", context.ProductOwnerId);
+                LogIncrementalSyncPlanSkipped(context, "NoRootWorkItemIds");
                 return SyncStageResult.CreateSuccess(0);
             }
 
@@ -76,6 +77,7 @@ public class WorkItemSyncStage : ISyncStage
 
             if (workItemList.Count == 0)
             {
+                LogIncrementalSyncPlanSkipped(context, "NoWorkItemsFetched");
                 progressCallback(100);
                 return SyncStageResult.CreateSuccess(0, context.WorkItemWatermark);
             }
@@ -247,21 +249,32 @@ public class WorkItemSyncStage : ISyncStage
         var plan = execution.Plan;
 
         _logger.LogInformation(
-            "INCREMENTAL_SYNC_PLAN: ProductOwnerId={ProductOwnerId}, ProductIds=[{ProductIds}], SyncRunId={SyncRunId}, PlanningMode={PlanningMode}, AnalyticalScopeIds={AnalyticalScopeCount}, ClosureScopeIds={ClosureScopeCount}, EnteredAnalyticalScopeIds={EnteredAnalyticalScopeCount}, LeftAnalyticalScopeIds={LeftAnalyticalScopeCount}, IdsToHydrate={IdsToHydrateCount}, HierarchyChangedIds={HierarchyChangedCount}, RequiresRelationshipSnapshotRebuild={RequiresRelationshipSnapshotRebuild}, RequiresResolutionRebuild={RequiresResolutionRebuild}, RequiresProjectionRefresh={RequiresProjectionRefresh}, ReasonCodes=[{ReasonCodes}]",
+            "INCREMENTAL_SYNC_PLAN: ProductOwnerId={ProductOwnerId}, ProductIds=[{ProductIds}], SyncRunId={SyncRunId}, PlanningMode={PlanningMode}, AnalyticalScopeIds={AnalyticalScopeCount}, ClosureScopeIds={ClosureScopeCount}, EnteredAnalyticalScopeIds={EnteredAnalyticalScopeSummary}, LeftAnalyticalScopeIds={LeftAnalyticalScopeSummary}, IdsToHydrate={IdsToHydrateSummary}, HierarchyChangedIds={HierarchyChangedSummary}, RequiresRelationshipSnapshotRebuild={RequiresRelationshipSnapshotRebuild}, RequiresResolutionRebuild={RequiresResolutionRebuild}, RequiresProjectionRefresh={RequiresProjectionRefresh}, ReasonCodes=[{ReasonCodes}]",
             context.ProductOwnerId,
             string.Join(", ", execution.ProductIds),
             (string?)null,
             plan.PlanningMode,
             plan.AnalyticalScopeIds.Count,
             plan.ClosureScopeIds.Count,
-            plan.EnteredAnalyticalScopeIds.Count,
-            plan.LeftAnalyticalScopeIds.Count,
-            plan.IdsToHydrate.Count,
-            plan.HierarchyChangedIds.Count,
+            BuildIdSetSummary(plan.EnteredAnalyticalScopeIds),
+            BuildIdSetSummary(plan.LeftAnalyticalScopeIds),
+            BuildIdSetSummary(plan.IdsToHydrate),
+            BuildIdSetSummary(plan.HierarchyChangedIds),
             plan.RequiresRelationshipSnapshotRebuild,
             plan.RequiresResolutionRebuild,
             plan.RequiresProjectionRefresh,
             string.Join(", ", plan.ReasonCodes));
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "INCREMENTAL_SYNC_PLAN_DEBUG: ProductOwnerId={ProductOwnerId}, ProductIds=[{ProductIds}], SyncRunId={SyncRunId}, IdsToHydrate=[{IdsToHydrate}], HierarchyChangedIds=[{HierarchyChangedIds}]",
+                context.ProductOwnerId,
+                string.Join(", ", execution.ProductIds),
+                (string?)null,
+                BuildFullIdList(plan.IdsToHydrate),
+                BuildFullIdList(plan.HierarchyChangedIds));
+        }
     }
 
     private void LogResolvedOutsideClosureWarning(
@@ -281,12 +294,22 @@ public class WorkItemSyncStage : ISyncStage
         }
 
         _logger.LogWarning(
-            "INCREMENTAL_SYNC_PLAN_VALIDATION: ProductOwnerId={ProductOwnerId}, ProductIds=[{ProductIds}], SyncRunId={SyncRunId}, ResolvedWorkItemsOutsideClosureScope={ResolvedCount}, ResolvedWorkItemIds=[{ResolvedWorkItemIds}]",
+            "INCREMENTAL_SYNC_PLAN_VALIDATION: ProductOwnerId={ProductOwnerId}, ProductIds=[{ProductIds}], SyncRunId={SyncRunId}, ResolvedWorkItemsOutsideClosureScope={ResolvedOutsideClosureSummary}",
             context.ProductOwnerId,
             string.Join(", ", previousFacts.ProductIds),
             (string?)null,
-            resolvedOutsideClosure.Length,
-            string.Join(", ", resolvedOutsideClosure));
+            BuildIdSetSummary(resolvedOutsideClosure));
+    }
+
+    private void LogIncrementalSyncPlanSkipped(
+        SyncContext context,
+        string reason)
+    {
+        _logger.LogWarning(
+            "INCREMENTAL_SYNC_PLAN_SKIPPED: ProductOwnerId={ProductOwnerId}, SyncRunId={SyncRunId}, Reason={Reason}",
+            context.ProductOwnerId,
+            (string?)null,
+            reason);
     }
 
     private async Task<PreviousGraphFacts> LoadPreviousGraphFactsAsync(
@@ -310,11 +333,15 @@ public class WorkItemSyncStage : ISyncStage
                 .OrderBy(id => id)
                 .ToArrayAsync(cancellationToken);
 
-        var persistedParents = await _context.WorkItems
+        var persistedParentRows = await _context.WorkItems
             .AsNoTracking()
-            .Select(item => new PersistedParentNode(item.TfsId, item.ParentTfsId))
+            .Select(item => new { item.TfsId, item.ParentTfsId })
             .OrderBy(item => item.TfsId)
             .ToListAsync(cancellationToken);
+
+        var persistedParents = persistedParentRows
+            .Select(item => new PersistedParentNode(item.TfsId, item.ParentTfsId))
+            .ToArray();
 
         var parentById = persistedParents.ToDictionary(item => item.TfsId, item => item.ParentTfsId);
         var previousClosureScopeIds = ExpandClosureScope(resolvedWorkItemIds, parentById);
@@ -409,6 +436,18 @@ public class WorkItemSyncStage : ISyncStage
         }
 
         return closure.ToArray();
+    }
+
+    private static string BuildIdSetSummary(IReadOnlyCollection<int> ids)
+    {
+        var sample = ids.Take(LoggedIdSampleSize).ToArray();
+        var truncatedSuffix = ids.Count > sample.Length ? ", truncated=true" : string.Empty;
+        return $"count={ids.Count}, sample=[{string.Join(", ", sample)}]{truncatedSuffix}";
+    }
+
+    private static string BuildFullIdList(IReadOnlyCollection<int> ids)
+    {
+        return string.Join(", ", ids);
     }
 
     private sealed record PersistedParentNode(int TfsId, int? ParentTfsId);

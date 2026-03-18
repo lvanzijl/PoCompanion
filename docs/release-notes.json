@@ -2,6 +2,14 @@
   {
     "date": "2026-03-18",
     "type": "Fixed",
+    "title": "Planner sync baseline now works with SQLite",
+    "impact": "Work item sync no longer fails against SQLite-backed local data, and planner diagnostics now log sampled IDs so sync validation is easier to inspect.",
+    "area": "Settings",
+    "link": "/settings/productowner"
+  },
+  {
+    "date": "2026-03-18",
+    "type": "Fixed",
     "title": "PR delivery scatter legend now matches chart",
     "impact": "The PR Delivery Insights scatter chart now uses readable active-PR colors and a right-side legend whose status colors and epic shapes match the points shown in the chart.",
     "area": "Home",
