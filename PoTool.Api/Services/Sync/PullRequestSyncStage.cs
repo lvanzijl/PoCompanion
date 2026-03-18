@@ -56,6 +56,8 @@ public class PullRequestSyncStage : ISyncStage
 
             progressCallback(0);
 
+            var repositoryProductMap = await LoadRepositoryProductMapAsync(context.RepositoryNames, cancellationToken);
+
             _logger.LogInformation(
                 "PR_INGEST_STAGE_START: ProductOwner {ProductOwnerId}, repos={RepoCount} [{RepoNames}], " +
                 "dateWindow from={FromDate} to={ToDate}, status={Status}",
@@ -87,6 +89,17 @@ public class PullRequestSyncStage : ISyncStage
                 // Map repo progress to 0-80%
                 var percent = (int)((processedRepos / (double)totalRepos) * 80);
                 progressCallback(percent);
+            }
+
+            await BackfillCachedPullRequestProductIdsAsync(repositoryProductMap, cancellationToken);
+
+            if (repositoryProductMap.Count > 0)
+            {
+                allPullRequests = allPullRequests
+                    .Select(pr => repositoryProductMap.TryGetValue(pr.RepositoryName, out var productId)
+                        ? pr with { ProductId = productId }
+                        : pr)
+                    .ToList();
             }
 
             _logger.LogInformation(
@@ -187,6 +200,63 @@ public class PullRequestSyncStage : ISyncStage
         }
 
         return maxDate;
+    }
+
+    private async Task<Dictionary<string, int>> LoadRepositoryProductMapAsync(
+        IReadOnlyCollection<string> repositoryNames,
+        CancellationToken cancellationToken)
+    {
+        var repositoryEntries = await _context.Repositories
+            .AsNoTracking()
+            .Where(r => repositoryNames.Contains(r.Name))
+            .Select(r => new { r.Name, r.ProductId })
+            .ToListAsync(cancellationToken);
+
+        var productMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var repositoryEntry in repositoryEntries)
+        {
+            if (!productMap.TryAdd(repositoryEntry.Name, repositoryEntry.ProductId)
+                && productMap[repositoryEntry.Name] != repositoryEntry.ProductId)
+            {
+                _logger.LogWarning(
+                    "PR_INGEST_REPO_MAPPING_CONFLICT: repository {RepositoryName} maps to multiple products; using first configured product {ProductId}",
+                    repositoryEntry.Name,
+                    productMap[repositoryEntry.Name]);
+            }
+        }
+
+        return productMap;
+    }
+
+    private async Task BackfillCachedPullRequestProductIdsAsync(
+        IReadOnlyDictionary<string, int> repositoryProductMap,
+        CancellationToken cancellationToken)
+    {
+        if (repositoryProductMap.Count == 0)
+        {
+            return;
+        }
+
+        var repositoryNames = repositoryProductMap.Keys.ToList();
+        var cachedPullRequests = await _context.PullRequests
+            .Where(pr => !pr.ProductId.HasValue && repositoryNames.Contains(pr.RepositoryName))
+            .ToListAsync(cancellationToken);
+
+        if (cachedPullRequests.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var pullRequest in cachedPullRequests)
+        {
+            if (repositoryProductMap.TryGetValue(pullRequest.RepositoryName, out var productId))
+            {
+                pullRequest.ProductId = productId;
+            }
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     /// <summary>
