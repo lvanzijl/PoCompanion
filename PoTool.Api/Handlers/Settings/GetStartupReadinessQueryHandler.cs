@@ -1,5 +1,5 @@
 using Mediator;
-using Microsoft.Extensions.Configuration;
+using PoTool.Api.Configuration;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
@@ -16,18 +16,18 @@ public class GetStartupReadinessQueryHandler : IQueryHandler<GetStartupReadiness
     private readonly TfsConfigurationService _tfsConfigService;
     private readonly IProfileRepository _profileRepository;
     private readonly ISettingsRepository _settingsRepository;
-    private readonly bool _isMockDataEnabled;
+    private readonly TfsRuntimeMode _runtimeMode;
 
     public GetStartupReadinessQueryHandler(
         TfsConfigurationService tfsConfigService,
         IProfileRepository profileRepository,
         ISettingsRepository settingsRepository,
-        IConfiguration configuration)
+        TfsRuntimeMode runtimeMode)
     {
         _tfsConfigService = tfsConfigService;
         _profileRepository = profileRepository;
         _settingsRepository = settingsRepository;
-        _isMockDataEnabled = configuration.GetValue<bool>("TfsIntegration:UseMockClient", false);
+        _runtimeMode = runtimeMode;
     }
 
     public async ValueTask<StartupReadinessDto> Handle(GetStartupReadinessQuery query, CancellationToken cancellationToken)
@@ -46,7 +46,7 @@ public class GetStartupReadinessQueryHandler : IQueryHandler<GetStartupReadiness
         // Determine the missing requirement message based on the startup routing logic
         string? missingMessage = null;
 
-        if (!_isMockDataEnabled)
+        if (_runtimeMode.IsRealDataMode)
         {
             if (!hasSavedTfsConfig)
             {
@@ -71,7 +71,7 @@ public class GetStartupReadinessQueryHandler : IQueryHandler<GetStartupReadiness
         }
 
         return new StartupReadinessDto(
-            IsMockDataEnabled: _isMockDataEnabled,
+            IsMockDataEnabled: _runtimeMode.UseMockClient,
             HasSavedTfsConfig: hasSavedTfsConfig,
             HasTestedConnectionSuccessfully: hasTestedConnection,
             HasVerifiedTfsApiSuccessfully: hasVerifiedTfsApi,

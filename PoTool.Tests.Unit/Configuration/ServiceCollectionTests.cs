@@ -19,6 +19,7 @@ using PoTool.Core.Domain.Forecasting.Services;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.Domain.Metrics;
 using PoTool.Core.Domain.Portfolio;
+using PoTool.Integrations.Tfs.Clients;
 
 namespace PoTool.Tests.Unit.Configuration;
 
@@ -145,6 +146,62 @@ public class ServiceCollectionTests
         Assert.IsNotNull(effortEstimationSuggestionService, "Effort estimation suggestion CDC service should be registered.");
         Assert.IsNotNull(backlogQualityAnalysisService, "Backlog quality analysis service should be registered.");
         Assert.IsNotNull(projectionService, "SprintTrendProjectionService should be resolvable from DI.");
+    }
+
+    [TestMethod]
+    public void AddPoToolApiServices_ResolvesMockTfsClient_WhenMockModeEnabled()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["TfsIntegration:UseMockClient"] = bool.TrueString
+            })
+            .Build();
+
+        services.AddLogging();
+        RegisterHostEnvironment(services);
+        services.AddDbContext<PoToolDbContext>(options =>
+            options.UseInMemoryDatabase("TestDb4"));
+
+        services.AddPoToolApiServices(configuration, isDevelopment: true);
+
+        using var serviceProvider = services.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+
+        var runtimeMode = scope.ServiceProvider.GetRequiredService<TfsRuntimeMode>();
+        var tfsClient = scope.ServiceProvider.GetRequiredService<ITfsClient>();
+
+        Assert.IsTrue(runtimeMode.UseMockClient, "Mock mode should be captured once during startup.");
+        Assert.IsInstanceOfType<MockTfsClient>(tfsClient, "Mock mode should resolve MockTfsClient.");
+    }
+
+    [TestMethod]
+    public void AddPoToolApiServices_ResolvesRealTfsClient_WhenMockModeDisabled()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["TfsIntegration:UseMockClient"] = bool.FalseString
+            })
+            .Build();
+
+        services.AddLogging();
+        RegisterHostEnvironment(services);
+        services.AddDbContext<PoToolDbContext>(options =>
+            options.UseInMemoryDatabase("TestDb5"));
+
+        services.AddPoToolApiServices(configuration, isDevelopment: true);
+
+        using var serviceProvider = services.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+
+        var runtimeMode = scope.ServiceProvider.GetRequiredService<TfsRuntimeMode>();
+        var tfsClient = scope.ServiceProvider.GetRequiredService<ITfsClient>();
+
+        Assert.IsFalse(runtimeMode.UseMockClient, "Real mode should be captured once during startup.");
+        Assert.IsInstanceOfType<RealTfsClient>(tfsClient, "Real mode should resolve RealTfsClient.");
     }
 
     private static void RegisterHostEnvironment(IServiceCollection services)

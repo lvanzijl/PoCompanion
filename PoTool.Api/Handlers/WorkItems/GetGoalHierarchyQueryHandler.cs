@@ -1,5 +1,5 @@
 using Mediator;
-using Microsoft.Extensions.Configuration;
+using PoTool.Api.Configuration;
 using PoTool.Api.Services;
 using PoTool.Api.Services.MockData;
 using PoTool.Core.Contracts;
@@ -19,29 +19,31 @@ public class GetGoalHierarchyQueryHandler : IQueryHandler<GetGoalHierarchyQuery,
     private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly IProductRepository _productRepository;
     private readonly BattleshipMockDataFacade? _mockDataFacade;
-    private readonly bool _useMockClient;
+    private readonly TfsRuntimeMode _runtimeMode;
     private readonly ILogger<GetGoalHierarchyQueryHandler> _logger;
 
     public GetGoalHierarchyQueryHandler(
         IWorkItemReadProvider workItemReadProvider,
         IProductRepository productRepository,
-        IConfiguration configuration,
+        TfsRuntimeMode runtimeMode,
         ILogger<GetGoalHierarchyQueryHandler> logger,
         BattleshipMockDataFacade? mockDataFacade = null)
     {
         _workItemReadProvider = workItemReadProvider;
         _productRepository = productRepository;
         _mockDataFacade = mockDataFacade;
-        _useMockClient = configuration.GetValue<bool>("TfsIntegration:UseMockClient", false);
+        _runtimeMode = runtimeMode;
         _logger = logger;
     }
 
     public async ValueTask<IEnumerable<WorkItemDto>> Handle(GetGoalHierarchyQuery query, CancellationToken cancellationToken)
     {
-        if (_useMockClient && _mockDataFacade != null)
+        TfsRuntimeModeGuard.EnsureExpectedMockFacade(_runtimeMode, _mockDataFacade, _logger, nameof(GetGoalHierarchyQueryHandler));
+
+        if (_runtimeMode.UseMockClient)
         {
             // Return mock data for specified goal IDs using new Battleship system
-            return _mockDataFacade.GetMockHierarchyForGoals(query.GoalIds);
+            return _mockDataFacade!.GetMockHierarchyForGoals(query.GoalIds);
         }
 
         // For TFS mode, use hierarchical loading by goal IDs (goals are product roots)

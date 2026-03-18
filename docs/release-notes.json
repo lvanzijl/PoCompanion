@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-18",
+    "type": "Fixed",
+    "title": "TFS mode now blocks mixed mock and real runtime",
+    "impact": "Settings and sync startup now fail fast when real-data mode would resolve mock TFS services, preventing blank settings flows and silent mixed-provider behavior.",
+    "area": "Settings",
+    "link": "/settings/productowner/1"
+  },
+  {
     "date": "2026-03-17",
     "type": "Changed",
     "title": "Mock mode now seeds PR and pipeline sources",

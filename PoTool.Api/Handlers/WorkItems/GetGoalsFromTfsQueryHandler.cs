@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Configuration;
 using Mediator;
+using PoTool.Api.Configuration;
 using PoTool.Core.Contracts;
 using PoTool.Shared.WorkItems;
 using PoTool.Shared.Settings;
@@ -14,32 +14,33 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// Fetches goals from the configured TFS client, bypassing the cache.
 /// Used specifically for the Add Profile flow where cache is not yet populated.
 /// </summary>
-public sealed class GetGoalsFromTfsQueryHandler : IQueryHandler<GetGoalsFromTfsQuery, IEnumerable<WorkItemDto>>
-{
-    private readonly ITfsClient _tfsClient;
-    private readonly TfsConfigurationService _configService;
-    private readonly bool _useMockClient;
-    private readonly ILogger<GetGoalsFromTfsQueryHandler> _logger;
-
-    public GetGoalsFromTfsQueryHandler(
-        ITfsClient tfsClient,
-        TfsConfigurationService configService,
-        IConfiguration configuration,
-        ILogger<GetGoalsFromTfsQueryHandler> logger)
+    public sealed class GetGoalsFromTfsQueryHandler : IQueryHandler<GetGoalsFromTfsQuery, IEnumerable<WorkItemDto>>
     {
-        _tfsClient = tfsClient;
-        _configService = configService;
-        _useMockClient = configuration.GetValue<bool>("TfsIntegration:UseMockClient");
-        _logger = logger;
-    }
+        private readonly ITfsClient _tfsClient;
+        private readonly TfsConfigurationService _configService;
+        private readonly TfsRuntimeMode _runtimeMode;
+        private readonly ILogger<GetGoalsFromTfsQueryHandler> _logger;
+
+        public GetGoalsFromTfsQueryHandler(
+            ITfsClient tfsClient,
+            TfsConfigurationService configService,
+            TfsRuntimeMode runtimeMode,
+            ILogger<GetGoalsFromTfsQueryHandler> logger)
+        {
+            _tfsClient = tfsClient;
+            _configService = configService;
+            _runtimeMode = runtimeMode;
+            _logger = logger;
+        }
 
     public async ValueTask<IEnumerable<WorkItemDto>> Handle(
         GetGoalsFromTfsQuery query,
         CancellationToken cancellationToken)
-    {
-        _logger.LogDebug("Fetching goals from the configured TFS client (cache bypass for Add Profile flow)");
+        {
+            _logger.LogDebug("Fetching goals from the configured TFS client (cache bypass for Add Profile flow)");
+            TfsRuntimeModeGuard.EnsureExpectedClient(_runtimeMode, _tfsClient, _logger, nameof(GetGoalsFromTfsQueryHandler));
 
-        var config = await _configService.GetConfigEntityAsync(cancellationToken);
+            var config = await _configService.GetConfigEntityAsync(cancellationToken);
 
         if (config == null || string.IsNullOrWhiteSpace(config.DefaultAreaPath))
         {
@@ -47,7 +48,7 @@ public sealed class GetGoalsFromTfsQueryHandler : IQueryHandler<GetGoalsFromTfsQ
             return Enumerable.Empty<WorkItemDto>();
         }
 
-        if (_useMockClient && _tfsClient is not MockTfsClient)
+        if (_runtimeMode.UseMockClient && _tfsClient is not MockTfsClient)
         {
             throw new InvalidOperationException(
                 "Mock mode is enabled but the resolved TFS client is not the mock implementation. " +
