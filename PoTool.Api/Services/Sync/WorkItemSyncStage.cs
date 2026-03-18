@@ -14,6 +14,7 @@ public class WorkItemSyncStage : ISyncStage
 {
     private readonly ITfsClient _tfsClient;
     private readonly PoToolDbContext _context;
+    private readonly IIncrementalSyncPlanner _incrementalSyncPlanner;
     private readonly ILogger<WorkItemSyncStage> _logger;
 
     public string StageName => "SyncWorkItems";
@@ -22,10 +23,12 @@ public class WorkItemSyncStage : ISyncStage
     public WorkItemSyncStage(
         ITfsClient tfsClient,
         PoToolDbContext context,
+        IIncrementalSyncPlanner incrementalSyncPlanner,
         ILogger<WorkItemSyncStage> logger)
     {
         _tfsClient = tfsClient;
         _context = context;
+        _incrementalSyncPlanner = incrementalSyncPlanner;
         _logger = logger;
     }
 
@@ -76,6 +79,9 @@ public class WorkItemSyncStage : ISyncStage
                 progressCallback(100);
                 return SyncStageResult.CreateSuccess(0, context.WorkItemWatermark);
             }
+
+            var incrementalPlanExecution = await BuildIncrementalSyncPlanAsync(context, workItemList, cancellationToken);
+            LogIncrementalSyncPlan(context, incrementalPlanExecution);
 
             // Upsert work items to database in batches
             var maxChangedDate = await UpsertWorkItemsAsync(workItemList, context.ProductOwnerId, progressCallback, cancellationToken);
@@ -209,4 +215,218 @@ public class WorkItemSyncStage : ISyncStage
             BacklogPriority = dto.BacklogPriority
         };
     }
+
+    private async Task<IncrementalPlanExecution> BuildIncrementalSyncPlanAsync(
+        SyncContext context,
+        IReadOnlyList<WorkItemDto> workItems,
+        CancellationToken cancellationToken)
+    {
+        var previousFacts = await LoadPreviousGraphFactsAsync(context.ProductOwnerId, cancellationToken);
+        var currentFacts = BuildCurrentGraphFacts(context.RootWorkItemIds, context.WorkItemWatermark, workItems);
+
+        var request = new IncrementalSyncPlannerRequest
+        {
+            RootIds = context.RootWorkItemIds.OrderBy(id => id).ToArray(),
+            PreviousAnalyticalScopeIds = previousFacts.PreviousAnalyticalScopeIds,
+            PreviousClosureScopeIds = previousFacts.PreviousClosureScopeIds,
+            PreviousParentById = previousFacts.PreviousParentById,
+            CurrentAnalyticalScopeIds = currentFacts.CurrentAnalyticalScopeIds,
+            CurrentClosureScopeIds = currentFacts.CurrentClosureScopeIds,
+            CurrentParentById = currentFacts.CurrentParentById,
+            ChangedIdsSinceWatermark = currentFacts.ChangedIdsSinceWatermark,
+            ForceFullHydration = !context.WorkItemWatermark.HasValue
+        };
+
+        var plan = _incrementalSyncPlanner.Plan(request);
+        LogResolvedOutsideClosureWarning(context, previousFacts, plan);
+        return new IncrementalPlanExecution(plan, previousFacts.ProductIds);
+    }
+
+    private void LogIncrementalSyncPlan(SyncContext context, IncrementalPlanExecution execution)
+    {
+        var plan = execution.Plan;
+
+        _logger.LogInformation(
+            "INCREMENTAL_SYNC_PLAN: ProductOwnerId={ProductOwnerId}, ProductIds=[{ProductIds}], SyncRunId={SyncRunId}, PlanningMode={PlanningMode}, AnalyticalScopeIds={AnalyticalScopeCount}, ClosureScopeIds={ClosureScopeCount}, EnteredAnalyticalScopeIds={EnteredAnalyticalScopeCount}, LeftAnalyticalScopeIds={LeftAnalyticalScopeCount}, IdsToHydrate={IdsToHydrateCount}, HierarchyChangedIds={HierarchyChangedCount}, RequiresRelationshipSnapshotRebuild={RequiresRelationshipSnapshotRebuild}, RequiresResolutionRebuild={RequiresResolutionRebuild}, RequiresProjectionRefresh={RequiresProjectionRefresh}, ReasonCodes=[{ReasonCodes}]",
+            context.ProductOwnerId,
+            string.Join(", ", execution.ProductIds),
+            (string?)null,
+            plan.PlanningMode,
+            plan.AnalyticalScopeIds.Count,
+            plan.ClosureScopeIds.Count,
+            plan.EnteredAnalyticalScopeIds.Count,
+            plan.LeftAnalyticalScopeIds.Count,
+            plan.IdsToHydrate.Count,
+            plan.HierarchyChangedIds.Count,
+            plan.RequiresRelationshipSnapshotRebuild,
+            plan.RequiresResolutionRebuild,
+            plan.RequiresProjectionRefresh,
+            string.Join(", ", plan.ReasonCodes));
+    }
+
+    private void LogResolvedOutsideClosureWarning(
+        SyncContext context,
+        PreviousGraphFacts previousFacts,
+        IncrementalSyncPlan plan)
+    {
+        var closureScope = plan.ClosureScopeIds.ToHashSet();
+        var resolvedOutsideClosure = previousFacts.ResolvedWorkItemIds
+            .Where(id => !closureScope.Contains(id))
+            .OrderBy(id => id)
+            .ToArray();
+
+        if (resolvedOutsideClosure.Length == 0)
+        {
+            return;
+        }
+
+        _logger.LogWarning(
+            "INCREMENTAL_SYNC_PLAN_VALIDATION: ProductOwnerId={ProductOwnerId}, ProductIds=[{ProductIds}], SyncRunId={SyncRunId}, ResolvedWorkItemsOutsideClosureScope={ResolvedCount}, ResolvedWorkItemIds=[{ResolvedWorkItemIds}]",
+            context.ProductOwnerId,
+            string.Join(", ", previousFacts.ProductIds),
+            (string?)null,
+            resolvedOutsideClosure.Length,
+            string.Join(", ", resolvedOutsideClosure));
+    }
+
+    private async Task<PreviousGraphFacts> LoadPreviousGraphFactsAsync(
+        int productOwnerId,
+        CancellationToken cancellationToken)
+    {
+        var productIds = await _context.Products
+            .AsNoTracking()
+            .Where(product => product.ProductOwnerId == productOwnerId)
+            .Select(product => product.Id)
+            .OrderBy(id => id)
+            .ToArrayAsync(cancellationToken);
+
+        var resolvedWorkItemIds = productIds.Length == 0
+            ? []
+            : await _context.ResolvedWorkItems
+                .AsNoTracking()
+                .Where(item => item.ResolvedProductId.HasValue && productIds.Contains(item.ResolvedProductId.Value))
+                .Select(item => item.WorkItemId)
+                .Distinct()
+                .OrderBy(id => id)
+                .ToArrayAsync(cancellationToken);
+
+        var persistedParents = await _context.WorkItems
+            .AsNoTracking()
+            .Select(item => new PersistedParentNode(item.TfsId, item.ParentTfsId))
+            .OrderBy(item => item.TfsId)
+            .ToListAsync(cancellationToken);
+
+        var parentById = persistedParents.ToDictionary(item => item.TfsId, item => item.ParentTfsId);
+        var previousClosureScopeIds = ExpandClosureScope(resolvedWorkItemIds, parentById);
+        var previousParentById = previousClosureScopeIds.ToDictionary(id => id, id => parentById.GetValueOrDefault(id));
+
+        return new PreviousGraphFacts(
+            productIds,
+            resolvedWorkItemIds,
+            previousClosureScopeIds,
+            previousParentById,
+            resolvedWorkItemIds);
+    }
+
+    private static CurrentGraphFacts BuildCurrentGraphFacts(
+        IReadOnlyList<int> rootWorkItemIds,
+        DateTimeOffset? workItemWatermark,
+        IReadOnlyList<WorkItemDto> workItems)
+    {
+        var currentParentById = workItems
+            .GroupBy(item => item.TfsId)
+            .OrderBy(group => group.Key)
+            .ToDictionary(group => group.Key, group => group.Last().ParentTfsId);
+
+        var currentClosureScopeIds = currentParentById.Keys.OrderBy(id => id).ToArray();
+        var currentAnalyticalScopeIds = TraverseAnalyticalScope(rootWorkItemIds, currentParentById);
+        var changedIdsSinceWatermark = workItemWatermark.HasValue
+            ? workItems
+                .Where(item => (item.ChangedDate ?? item.RetrievedAt) > workItemWatermark.Value)
+                .Select(item => item.TfsId)
+                .Distinct()
+                .OrderBy(id => id)
+                .ToArray()
+            : [];
+
+        return new CurrentGraphFacts(
+            currentAnalyticalScopeIds,
+            currentClosureScopeIds,
+            currentParentById,
+            changedIdsSinceWatermark);
+    }
+
+    private static int[] TraverseAnalyticalScope(
+        IEnumerable<int> rootWorkItemIds,
+        IReadOnlyDictionary<int, int?> parentById)
+    {
+        var childrenByParent = parentById
+            .Where(entry => entry.Value.HasValue)
+            .GroupBy(entry => entry.Value!.Value)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(entry => entry.Key).OrderBy(id => id).ToArray());
+
+        var visited = new SortedSet<int>();
+        var stack = new Stack<int>(rootWorkItemIds.OrderByDescending(id => id));
+
+        while (stack.Count > 0)
+        {
+            var currentId = stack.Pop();
+            if (!parentById.ContainsKey(currentId) || !visited.Add(currentId))
+            {
+                continue;
+            }
+
+            if (childrenByParent.TryGetValue(currentId, out var children))
+            {
+                for (var index = children.Length - 1; index >= 0; index--)
+                {
+                    stack.Push(children[index]);
+                }
+            }
+        }
+
+        return visited.ToArray();
+    }
+
+    private static int[] ExpandClosureScope(
+        IEnumerable<int> analyticalScopeIds,
+        IReadOnlyDictionary<int, int?> parentById)
+    {
+        var closure = new SortedSet<int>(analyticalScopeIds);
+
+        foreach (var workItemId in analyticalScopeIds)
+        {
+            var visited = new HashSet<int> { workItemId };
+            var currentId = workItemId;
+
+            while (parentById.TryGetValue(currentId, out var parentId) && parentId.HasValue && visited.Add(parentId.Value))
+            {
+                closure.Add(parentId.Value);
+                currentId = parentId.Value;
+            }
+        }
+
+        return closure.ToArray();
+    }
+
+    private sealed record PersistedParentNode(int TfsId, int? ParentTfsId);
+
+    private sealed record PreviousGraphFacts(
+        int[] ProductIds,
+        int[] PreviousAnalyticalScopeIds,
+        int[] PreviousClosureScopeIds,
+        IReadOnlyDictionary<int, int?> PreviousParentById,
+        int[] ResolvedWorkItemIds);
+
+    private sealed record CurrentGraphFacts(
+        int[] CurrentAnalyticalScopeIds,
+        int[] CurrentClosureScopeIds,
+        IReadOnlyDictionary<int, int?> CurrentParentById,
+        int[] ChangedIdsSinceWatermark);
+
+    private sealed record IncrementalPlanExecution(
+        IncrementalSyncPlan Plan,
+        int[] ProductIds);
 }

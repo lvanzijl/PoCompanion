@@ -5,6 +5,7 @@ using Moq;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services.Sync;
 using PoTool.Core.Contracts;
+using PoTool.Core.Sync;
 using PoTool.Shared.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
@@ -60,7 +61,11 @@ public class WorkItemSyncStageTests
             .ReturnsAsync(workItems);
 
         var logger = new Mock<ILogger<WorkItemSyncStage>>();
-        var stage = new WorkItemSyncStage(tfsClient.Object, dbContext, logger.Object);
+        var stage = new WorkItemSyncStage(
+            tfsClient.Object,
+            dbContext,
+            new DefaultIncrementalSyncPlanner(),
+            logger.Object);
 
         var context = new SyncContext
         {

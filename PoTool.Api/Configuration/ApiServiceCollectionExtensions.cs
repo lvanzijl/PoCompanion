@@ -11,6 +11,7 @@ using PoTool.Integrations.Tfs.Clients;
 using PoTool.Core.BacklogQuality;
 using PoTool.Core.Contracts;
 using PoTool.Core.Configuration;
+using PoTool.Core.Sync;
 using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems.Validators.Rules;
 using PoTool.Core.WorkItems.Filtering;
@@ -163,6 +164,7 @@ public static class ApiServiceCollectionExtensions
 
         // Register Work Item State Classification service
         services.AddScoped<IWorkItemStateClassificationService, WorkItemStateClassificationService>();
+        services.AddScoped<IIncrementalSyncPlanner, DefaultIncrementalSyncPlanner>();
 
         // Register Sync Pipeline services (Stages 1-10)
         services.AddScoped<WorkItemSyncStage>();
