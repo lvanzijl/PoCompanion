@@ -2,6 +2,14 @@
   {
     "date": "2026-03-18",
     "type": "Fixed",
+    "title": "Sprint Delivery breadcrumbs now stay in-page",
+    "impact": "Sprint Delivery drill-down breadcrumbs now follow the products overview → product → epic hierarchy and navigate back inside the page instead of leaving to unrelated profile views.",
+    "area": "Trends",
+    "link": "/home/delivery/sprint"
+  },
+  {
+    "date": "2026-03-18",
+    "type": "Fixed",
     "title": "TFS mode now blocks mixed mock and real runtime",
     "impact": "Settings and sync startup now fail fast when real-data mode would resolve mock TFS services, preventing blank settings flows and silent mixed-provider behavior.",
     "area": "Settings",

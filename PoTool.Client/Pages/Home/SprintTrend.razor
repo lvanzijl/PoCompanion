@@ -133,7 +133,37 @@
                                Color="Color.Primary"
                                OnClick="DrillUp"
                                aria-label="Go back to previous level" />
-                <MudBreadcrumbs Items="@_drillDownBreadcrumbs" Class="pa-0" />
+                <nav aria-label="Sprint Delivery drill-down breadcrumb">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        @for (var index = 0; index < _drillDownBreadcrumbs.Count; index++)
+                        {
+                            var breadcrumb = _drillDownBreadcrumbs[index];
+
+                            @if (index > 0)
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">/</MudText>
+                            }
+
+                            @if (breadcrumb.IsCurrent)
+                            {
+                                <MudText Typo="Typo.body2">
+                                    <MudIcon Icon="@breadcrumb.Icon" Size="Size.Small" Class="mr-1" />
+                                    @breadcrumb.Text
+                                </MudText>
+                            }
+                            else
+                            {
+                                <a href=""
+                                   class="mud-typography mud-link"
+                                   @onclick="@(() => NavigateToDrillDownLevel(breadcrumb.TargetLevel))"
+                                   @onclick:preventDefault="true">
+                                    <MudIcon Icon="@breadcrumb.Icon" Size="Size.Small" Class="mr-1" />
+                                    @breadcrumb.Text
+                                </a>
+                            }
+                        }
+                    </MudStack>
+                </nav>
             </MudStack>
         </MudPaper>
     }
@@ -661,7 +691,7 @@
     private string? _selectedEpicName;
     private int? _selectedFeatureId;
     private string? _selectedFeatureName;
-    private List<BreadcrumbItem> _drillDownBreadcrumbs = new();
+    private IReadOnlyList<SprintDeliveryDrillDownBreadcrumbSegment> _drillDownBreadcrumbs = Array.Empty<SprintDeliveryDrillDownBreadcrumbSegment>();
 
     private List<TeamDto> _teams = new();
     private List<SprintDto> _allSprints = new();
@@ -1139,23 +1169,15 @@
         switch (_drillDownLevel)
         {
             case DrillDownLevel.Feature:
-                _selectedFeatureId = null;
-                _selectedFeatureName = null;
-                _drillDownLevel = DrillDownLevel.Epic;
+                NavigateToDrillDownLevel(DrillDownLevel.Epic);
                 break;
             case DrillDownLevel.Epic:
-                _selectedEpicId = null;
-                _selectedEpicName = null;
-                _drillDownLevel = DrillDownLevel.Product;
+                NavigateToDrillDownLevel(DrillDownLevel.Product);
                 break;
             case DrillDownLevel.Product:
-                _selectedProductId = null;
-                _selectedProductName = null;
-                _drillDownLevel = DrillDownLevel.Portfolio;
+                NavigateToDrillDownLevel(DrillDownLevel.Portfolio);
                 break;
         }
-
-        UpdateDrillDownBreadcrumbs();
     }
 
     private void ResetDrillDown()
@@ -1167,46 +1189,68 @@
         _selectedEpicName = null;
         _selectedFeatureId = null;
         _selectedFeatureName = null;
-        _drillDownBreadcrumbs.Clear();
+        _drillDownBreadcrumbs = Array.Empty<SprintDeliveryDrillDownBreadcrumbSegment>();
     }
 
     private void UpdateDrillDownBreadcrumbs()
     {
-        _drillDownBreadcrumbs = new List<BreadcrumbItem>
+        _drillDownBreadcrumbs = SprintDeliveryDrillDownBreadcrumbBuilder.Build(
+            ToBreadcrumbLevel(_drillDownLevel),
+            _selectedProductName,
+            _selectedEpicName,
+            _selectedFeatureName);
+    }
+
+    private void NavigateToDrillDownLevel(DrillDownLevel level)
+    {
+        switch (level)
         {
-            new(
-                "Portfolio",
-                href: null,
-                disabled: _drillDownLevel == DrillDownLevel.Portfolio,
-                icon: Icons.Material.Filled.Dashboard)
+            case DrillDownLevel.Portfolio:
+                _selectedProductId = null;
+                _selectedProductName = null;
+                _selectedEpicId = null;
+                _selectedEpicName = null;
+                _selectedFeatureId = null;
+                _selectedFeatureName = null;
+                break;
+            case DrillDownLevel.Product:
+                _selectedEpicId = null;
+                _selectedEpicName = null;
+                _selectedFeatureId = null;
+                _selectedFeatureName = null;
+                break;
+            case DrillDownLevel.Epic:
+                _selectedFeatureId = null;
+                _selectedFeatureName = null;
+                break;
+        }
+
+        _drillDownLevel = level;
+        UpdateDrillDownBreadcrumbs();
+    }
+
+    private void NavigateToDrillDownLevel(SprintDeliveryDrillDownLevel level)
+    {
+        NavigateToDrillDownLevel(level switch
+        {
+            SprintDeliveryDrillDownLevel.ProductsOverview => DrillDownLevel.Portfolio,
+            SprintDeliveryDrillDownLevel.Product => DrillDownLevel.Product,
+            SprintDeliveryDrillDownLevel.Epic => DrillDownLevel.Epic,
+            SprintDeliveryDrillDownLevel.Feature => DrillDownLevel.Feature,
+            _ => DrillDownLevel.Portfolio
+        });
+    }
+
+    private static SprintDeliveryDrillDownLevel ToBreadcrumbLevel(DrillDownLevel level)
+    {
+        return level switch
+        {
+            DrillDownLevel.Portfolio => SprintDeliveryDrillDownLevel.ProductsOverview,
+            DrillDownLevel.Product => SprintDeliveryDrillDownLevel.Product,
+            DrillDownLevel.Epic => SprintDeliveryDrillDownLevel.Epic,
+            DrillDownLevel.Feature => SprintDeliveryDrillDownLevel.Feature,
+            _ => SprintDeliveryDrillDownLevel.ProductsOverview
         };
-
-        if (_drillDownLevel >= DrillDownLevel.Product && _selectedProductName is not null)
-        {
-            _drillDownBreadcrumbs.Add(new BreadcrumbItem(
-                _selectedProductName,
-                href: null,
-                disabled: _drillDownLevel == DrillDownLevel.Product,
-                icon: Icons.Material.Filled.Inventory2));
-        }
-
-        if (_drillDownLevel >= DrillDownLevel.Epic && _selectedEpicName is not null)
-        {
-            _drillDownBreadcrumbs.Add(new BreadcrumbItem(
-                _selectedEpicName,
-                href: null,
-                disabled: _drillDownLevel == DrillDownLevel.Epic,
-                icon: Icons.Material.Filled.AccountTree));
-        }
-
-        if (_drillDownLevel >= DrillDownLevel.Feature && _selectedFeatureName is not null)
-        {
-            _drillDownBreadcrumbs.Add(new BreadcrumbItem(
-                _selectedFeatureName,
-                href: null,
-                disabled: true,
-                icon: Icons.Material.Filled.FeaturedPlayList));
-        }
     }
 
     private record BarChartItem(string Label, double Percent);
