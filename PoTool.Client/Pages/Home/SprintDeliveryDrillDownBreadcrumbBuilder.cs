@@ -57,7 +57,7 @@ public static class SprintDeliveryDrillDownBreadcrumbBuilder
                 featureName,
                 Icons.Material.Filled.FeaturedPlayList,
                 SprintDeliveryDrillDownLevel.Feature,
-                true));
+                level == SprintDeliveryDrillDownLevel.Feature));
         }
 
         return breadcrumbs;

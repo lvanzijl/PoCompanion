@@ -1237,7 +1237,7 @@
             SprintDeliveryDrillDownLevel.Product => DrillDownLevel.Product,
             SprintDeliveryDrillDownLevel.Epic => DrillDownLevel.Epic,
             SprintDeliveryDrillDownLevel.Feature => DrillDownLevel.Feature,
-            _ => DrillDownLevel.Portfolio
+            _ => throw new ArgumentOutOfRangeException(nameof(level), level, "Unsupported Sprint Delivery drill-down level.")
         });
     }
 
@@ -1249,7 +1249,7 @@
             DrillDownLevel.Product => SprintDeliveryDrillDownLevel.Product,
             DrillDownLevel.Epic => SprintDeliveryDrillDownLevel.Epic,
             DrillDownLevel.Feature => SprintDeliveryDrillDownLevel.Feature,
-            _ => SprintDeliveryDrillDownLevel.ProductsOverview
+            _ => throw new ArgumentOutOfRangeException(nameof(level), level, "Unsupported Sprint Delivery drill-down level.")
         };
     }
 
