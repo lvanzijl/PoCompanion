@@ -201,10 +201,22 @@ public partial class RealTfsClient
 
     private TimeSpan? GetRetryAfter(HttpResponseMessage response)
     {
+        return GetRetryAfter(response, DateTimeOffset.UtcNow);
+    }
+
+    private static TimeSpan? GetRetryAfter(HttpResponseMessage response, DateTimeOffset utcNow)
+    {
         if (response.Headers.RetryAfter?.Delta.HasValue == true)
         {
             return response.Headers.RetryAfter.Delta.Value;
         }
+
+        if (response.Headers.RetryAfter?.Date.HasValue == true)
+        {
+            var delay = response.Headers.RetryAfter.Date.Value - utcNow;
+            return delay > TimeSpan.Zero ? delay : TimeSpan.Zero;
+        }
+
         return null;
     }
 

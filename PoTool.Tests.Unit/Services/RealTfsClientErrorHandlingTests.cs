@@ -55,6 +55,41 @@ public class RealTfsClientErrorHandlingTests
     }
 
     [TestMethod]
+    public async Task HandleHttpErrorsAsync_429_WithRetryAfterDate_UsesRemainingDelay()
+    {
+        var retryAt = DateTimeOffset.UtcNow.AddSeconds(30);
+        var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests)
+        {
+            Content = new StringContent("rate limited"),
+            RequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://tfs.example.com/_apis/projects")
+        };
+        response.Headers.RetryAfter = new RetryConditionHeaderValue(retryAt);
+
+        var exception = await AssertThrowsAsync<TfsRateLimitException>(
+            () => InvokeHandleHttpErrorsAsync(response));
+
+        Assert.IsNotNull(exception.RetryAfter);
+        Assert.IsTrue(exception.RetryAfter.Value >= TimeSpan.FromSeconds(28));
+        Assert.IsTrue(exception.RetryAfter.Value <= TimeSpan.FromSeconds(30));
+    }
+
+    [TestMethod]
+    public async Task HandleHttpErrorsAsync_500_ThrowsTfsExceptionWithStatusCode()
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+        {
+            Content = new StringContent("server failure"),
+            RequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://tfs.example.com/_apis/projects")
+        };
+
+        var exception = await AssertThrowsAsync<TfsException>(
+            () => InvokeHandleHttpErrorsAsync(response));
+
+        Assert.AreEqual(500, exception.StatusCode);
+        Assert.AreEqual("server failure", exception.ErrorContent);
+    }
+
+    [TestMethod]
     public async Task ExecuteWithRetryAsync_RetriesOnServerError()
     {
         var attempts = 0;
