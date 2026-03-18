@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
+using PoTool.Api.Configuration;
 using PoTool.Api.Handlers.WorkItems;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services;
@@ -47,7 +47,7 @@ public class GetGoalsFromTfsQueryHandlerTests
         _handler = new GetGoalsFromTfsQueryHandler(
             _tfsClientMock.Object,
             _configService,
-            CreateConfiguration(useMockClient: false),
+            new TfsRuntimeMode(useMockClient: false),
             _loggerMock.Object);
     }
 
@@ -102,7 +102,7 @@ public class GetGoalsFromTfsQueryHandlerTests
         var handler = new GetGoalsFromTfsQueryHandler(
             _tfsClientMock.Object,
             _configService,
-            CreateConfiguration(useMockClient: true),
+            new TfsRuntimeMode(useMockClient: true),
             _loggerMock.Object);
 
         try
@@ -143,16 +143,6 @@ public class GetGoalsFromTfsQueryHandlerTests
 
         Assert.IsNotNull(result);
         Assert.AreEqual(0, result.Count());
-    }
-
-    private static IConfiguration CreateConfiguration(bool useMockClient)
-    {
-        return new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["TfsIntegration:UseMockClient"] = useMockClient.ToString()
-            })
-            .Build();
     }
 
     private static WorkItemDto CreateGoal(int id, string title)

@@ -1,10 +1,12 @@
 using System.Text.Json;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using PoTool.Api.Hubs;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
+using PoTool.Api.Services.MockData;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Contracts;
 using PoTool.Shared.Contracts.TfsVerification;
@@ -33,9 +35,15 @@ public static class ApiApplicationBuilderExtensions
         {
             var db = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
             var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+            var runtimeMode = scope.ServiceProvider.GetRequiredService<TfsRuntimeMode>();
 
             try
             {
+                logger.LogInformation(
+                    "TFS runtime mode selected at startup: {Mode} (UseMockClient={UseMockClient})",
+                    runtimeMode.Name,
+                    runtimeMode.UseMockClient);
+
                 // Check if we're using InMemory database (for testing)
                 var isInMemory = db.Database.ProviderName == InMemoryProviderName;
 
@@ -146,6 +154,8 @@ public static class ApiApplicationBuilderExtensions
                 logger.LogCritical("To create migrations locally, use: dotnet ef migrations add <Name> --project PoTool.Api --startup-project PoTool.Api");
                 throw;
             }
+
+            ValidateTfsRuntime(scope.ServiceProvider, runtimeMode, logger);
         }
 
         // Configure the HTTP request pipeline
@@ -445,6 +455,48 @@ public static class ApiApplicationBuilderExtensions
         var json = JsonSerializer.Serialize(progress);
         await writer.WriteLineAsync(json);
         await writer.FlushAsync(cancellationToken);
+    }
+
+    private static void ValidateTfsRuntime(
+        IServiceProvider serviceProvider,
+        TfsRuntimeMode runtimeMode,
+        ILogger logger)
+    {
+        var tfsClient = serviceProvider.GetRequiredService<ITfsClient>();
+        TfsRuntimeModeGuard.EnsureExpectedClient(runtimeMode, tfsClient, logger, "startup");
+
+        var mockFacade = serviceProvider.GetService<BattleshipMockDataFacade>();
+        TfsRuntimeModeGuard.EnsureExpectedMockFacade(runtimeMode, mockFacade, logger, "startup");
+
+        LogResolvedService<ITfsClient>(logger, tfsClient);
+        LogResolvedService<IRepositoryConfigRepository>(logger, serviceProvider.GetRequiredService<IRepositoryConfigRepository>());
+        LogResolvedService<IProfileRepository>(logger, serviceProvider.GetRequiredService<IProfileRepository>());
+        LogResolvedService<IProductRepository>(logger, serviceProvider.GetRequiredService<IProductRepository>());
+        LogResolvedService<IWorkItemReadProvider>(logger, serviceProvider.GetRequiredService<IWorkItemReadProvider>());
+        LogResolvedService<IPipelineReadProvider>(logger, serviceProvider.GetRequiredService<IPipelineReadProvider>());
+        LogResolvedService<IPullRequestReadProvider>(logger, serviceProvider.GetRequiredService<IPullRequestReadProvider>());
+        LogResolvedService(
+            logger,
+            $"{nameof(IPipelineReadProvider)}[Live]",
+            serviceProvider.GetRequiredKeyedService<IPipelineReadProvider>("Live"));
+        LogResolvedService(
+            logger,
+            $"{nameof(IPipelineReadProvider)}[Cached]",
+            serviceProvider.GetRequiredKeyedService<IPipelineReadProvider>("Cached"));
+    }
+
+    private static void LogResolvedService<TService>(ILogger logger, TService service)
+        where TService : notnull
+    {
+        LogResolvedService(logger, typeof(TService).Name, service);
+    }
+
+    private static void LogResolvedService(ILogger logger, string abstractionName, object service)
+    {
+        logger.LogInformation(
+            "Resolved {Abstraction} implementation: {Implementation}",
+            abstractionName,
+            service.GetType().FullName);
     }
 }
 

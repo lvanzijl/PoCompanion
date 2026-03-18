@@ -125,6 +125,7 @@ public static class ApiServiceCollectionExtensions
         // Read the data source configuration setting
         // This single setting controls whether mock data or TFS data is used
         var useMockClient = configuration.GetValue<bool>("TfsIntegration:UseMockClient", false);
+        services.AddSingleton(new TfsRuntimeMode(useMockClient));
 
         // Register repositories based on data source configuration
         // When UseMockClient is false (TFS mode), always use the real WorkItemRepository
@@ -306,7 +307,7 @@ public static class ApiServiceCollectionExtensions
         if (useMockClient)
         {
             // Use mock TFS client with predefined test data
-            services.AddScoped<ITfsClient, MockTfsClient>();
+            services.AddScoped<MockTfsClient>();
         }
         else
         {
@@ -326,9 +327,20 @@ public static class ApiServiceCollectionExtensions
             // Register RealTfsClient as a regular scoped service
             // RealTfsClient uses IHttpClientFactory internally (via GetAuthenticatedHttpClient)
             // and has multiple constructor dependencies, so it doesn't follow the typed HttpClient pattern
-            services.AddScoped<ITfsClient, RealTfsClient>();
+            services.AddScoped<RealTfsClient>();
 
         }
+        services.AddScoped<ITfsClient>(provider =>
+        {
+            var runtimeMode = provider.GetRequiredService<TfsRuntimeMode>();
+            var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("TfsRuntime");
+            ITfsClient client = runtimeMode.UseMockClient
+                ? provider.GetRequiredService<MockTfsClient>()
+                : provider.GetRequiredService<RealTfsClient>();
+
+            TfsRuntimeModeGuard.EnsureExpectedClient(runtimeMode, client, logger, "ITfsClient registration");
+            return client;
+        });
         services.AddScoped<ActivityEventIngestionService>();
         services.AddScoped<IActivityEventSource, LedgerActivityEventSource>();
 
