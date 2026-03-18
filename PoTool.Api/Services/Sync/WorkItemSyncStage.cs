@@ -445,7 +445,7 @@ public class WorkItemSyncStage : ISyncStage
         return $"count={ids.Count}, sample=[{string.Join(", ", sample)}]{truncatedSuffix}";
     }
 
-    private static string BuildFullIdList(IEnumerable<int> ids)
+    private static string BuildFullIdList(IReadOnlyCollection<int> ids)
     {
         return string.Join(", ", ids);
     }

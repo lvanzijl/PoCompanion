@@ -139,7 +139,7 @@ public class WorkItemSyncStageTests
         var planLog = logger.Messages.Single(entry => entry.Level == LogLevel.Information && entry.Message.Contains("INCREMENTAL_SYNC_PLAN:", StringComparison.Ordinal));
         StringAssert.Contains(planLog.Message, "EnteredAnalyticalScopeIds=count=22");
         StringAssert.Contains(planLog.Message, "LeftAnalyticalScopeIds=count=1, sample=[999]");
-        StringAssert.Contains(planLog.Message, "IdsToHydrate=count=23");
+        StringAssert.Contains(planLog.Message, "IdsToHydrate=count=23, sample=[1, 2, 3");
         StringAssert.Contains(planLog.Message, "HierarchyChangedIds=count=23");
         StringAssert.Contains(planLog.Message, "truncated=true");
 
