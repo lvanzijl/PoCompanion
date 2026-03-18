@@ -5,14 +5,13 @@
     Y axis: PR lifetime in hours (auto-scaled from data)
 
     Color mapping (by PR status):
-      completed (clean)    → green  (--mud-palette-success)    merged without changes requested
-      completed (rework)   → yellow (--mud-palette-warning)    merged after changes requested
+      completed            → green  (--mud-palette-success)
       abandoned            → red    (--mud-palette-error)
-      active               → grey   (--mud-palette-default)
+      active               → blue   (--mud-palette-info)
 
     Shape mapping (by Epic):
       Each unique Epic gets a distinct shape: circle, square, triangle (cycling).
-      No-epic PRs are shown as small circles (neutral).
+      No-epic PRs are shown using the same shape legend with a "No Epic" label.
 
     Overlay lines:
       Median: dashed info color
@@ -27,195 +26,209 @@
 @using PoTool.Client.Helpers
 @using PoTool.Shared.PullRequests
 
-<div class="pr-scatter-container" style="position: relative; width: 100%;">
-    <svg viewBox="0 0 820 300"
-         style="width: 100%; height: auto; max-height: @(Height)px; display: block; overflow: visible;"
-         @onmouseleave="() => _hoveredPoint = null">
+<div class="pr-delivery-scatter" style="@($"--pr-delivery-scatter-height:{Height}px;")">
+    <div class="pr-delivery-scatter__chart">
+        <svg viewBox="0 0 820 300"
+             class="pr-delivery-scatter__svg"
+             @onmouseleave="() => _hoveredPoint = null">
 
-        @* ── Y axis grid lines + labels ────────────────────────────── *@
-        @foreach (var tick in GetYTicks())
-        {
-            <line x1="@L" y1="@F(tick.Px)"
-                  x2="@F(PlotRight)" y2="@F(tick.Px)"
-                  stroke="var(--mud-palette-divider)" stroke-width="0.5" />
-            @Txt(LeftPad - 6, tick.Px + 3.5, "end", 9, "var(--mud-palette-text-secondary)", FormatYLabel(tick.Val))
-        }
+            @* ── Y axis grid lines + labels ────────────────────────────── *@
+            @foreach (var tick in GetYTicks())
+            {
+                <line x1="@L" y1="@F(tick.Px)"
+                      x2="@F(PlotRight)" y2="@F(tick.Px)"
+                      stroke="var(--mud-palette-divider)" stroke-width="0.5" />
+                @Txt(LeftPad - 6, tick.Px + 3.5, "end", 9, "var(--mud-palette-text-secondary)", FormatYLabel(tick.Val))
+            }
 
-        @* ── X axis ticks + labels ─────────────────────────────────── *@
-        @foreach (var tick in GetXTicks())
-        {
-            <line x1="@F(tick.Px)" y1="@F(PlotBottom)"
-                  x2="@F(tick.Px)" y2="@F(PlotBottom + 4)"
+            @* ── X axis ticks + labels ─────────────────────────────────── *@
+            @foreach (var tick in GetXTicks())
+            {
+                <line x1="@F(tick.Px)" y1="@F(PlotBottom)"
+                      x2="@F(tick.Px)" y2="@F(PlotBottom + 4)"
+                      stroke="var(--mud-palette-divider)" stroke-width="1" />
+                @Txt(tick.Px, PlotBottom + 14, "middle", 9, "var(--mud-palette-text-secondary)", FormatXLabel(tick.Time))
+            }
+
+            @* ── Axis lines ─────────────────────────────────────────────── *@
+            <line x1="@L" y1="@T" x2="@L" y2="@F(PlotBottom)"
                   stroke="var(--mud-palette-divider)" stroke-width="1" />
-            @Txt(tick.Px, PlotBottom + 14, "middle", 9, "var(--mud-palette-text-secondary)", FormatXLabel(tick.Time))
-        }
+            <line x1="@L" y1="@F(PlotBottom)" x2="@F(PlotRight)" y2="@F(PlotBottom)"
+                  stroke="var(--mud-palette-divider)" stroke-width="1" />
 
-        @* ── Axis lines ─────────────────────────────────────────────── *@
-        <line x1="@L" y1="@T" x2="@L" y2="@F(PlotBottom)"
-              stroke="var(--mud-palette-divider)" stroke-width="1" />
-        <line x1="@L" y1="@F(PlotBottom)" x2="@F(PlotRight)" y2="@F(PlotBottom)"
-              stroke="var(--mud-palette-divider)" stroke-width="1" />
+            @* ── Y axis label ──────────────────────────────────────────── *@
+            @((MarkupString)$"""<text x="11" y="{F(TopPad + PlotHeight / 2)}" text-anchor="middle" font-size="9" fill="var(--mud-palette-text-secondary)" transform="rotate(-90 11 {F(TopPad + PlotHeight / 2)})">Lifetime (h)</text>""")
 
-        @* ── Y axis label ──────────────────────────────────────────── *@
-        @((MarkupString)$"""<text x="11" y="{F(TopPad + PlotHeight / 2)}" text-anchor="middle" font-size="9" fill="var(--mud-palette-text-secondary)" transform="rotate(-90 11 {F(TopPad + PlotHeight / 2)})">Lifetime (h)</text>""")
-
-        @* ── Median overlay line ───────────────────────────────────── *@
-        @if (ShowMedianLine && MedianLifetimeHours.HasValue && MedianLifetimeHours.Value > 0)
-        {
-            var medY = ToSvgY(MedianLifetimeHours.Value);
-            <line x1="@L" y1="@F(medY)" x2="@F(PlotRight)" y2="@F(medY)"
-                  stroke="var(--mud-palette-info)" stroke-width="1"
-                  stroke-dasharray="4,3" opacity="0.80" />
-            @Txt(PlotRight + 3, medY + 3, "start", 8, "var(--mud-palette-info)", "med")
-        }
-
-        @* ── P90 overlay line ──────────────────────────────────────── *@
-        @if (ShowP90Line && P90LifetimeHours.HasValue && P90LifetimeHours.Value > 0)
-        {
-            var p90Y = ToSvgY(P90LifetimeHours.Value);
-            <line x1="@L" y1="@F(p90Y)" x2="@F(PlotRight)" y2="@F(p90Y)"
-                  stroke="var(--mud-palette-warning)" stroke-width="1"
-                  stroke-dasharray="2,3" opacity="0.80" />
-            @Txt(PlotRight + 3, p90Y + 3, "start", 8, "var(--mud-palette-warning)", "P90")
-        }
-
-        @* ── Data points ───────────────────────────────────────────── *@
-        @foreach (var pt in Data)
-        {
-            double cx      = ToSvgX(pt.CreatedDate);
-            double cy      = ToSvgY(pt.LifetimeHours);
-            bool isHovered = _hoveredPoint?.Id == pt.Id;
-
-            double opacity = isHovered ? 1.0 : 0.80;
-            double r       = isHovered ? 8.0 : 5.5;
-            var stroke     = isHovered ? "var(--mud-palette-primary)" : "transparent";
-            var color      = GetStatusColor(pt.Status);
-            var shape      = GetEpicShape(pt.EpicId);
-
-            @if (shape == "circle")
+            @* ── Median overlay line ───────────────────────────────────── *@
+            @if (ShowMedianLine && MedianLifetimeHours.HasValue && MedianLifetimeHours.Value > 0)
             {
-                <circle cx="@F(cx)" cy="@F(cy)" r="@F(r)"
-                        fill="@color"
-                        opacity="@F(opacity)"
-                        stroke="@stroke"
-                        stroke-width="@(isHovered ? "1.5" : "0")"
-                        style="cursor: pointer;"
-                        @onmouseenter="() => _hoveredPoint = pt"
-                        @onmouseleave="() => _hoveredPoint = null"
-                        @onclick="() => HandlePointClick(pt)" />
+                var medY = ToSvgY(MedianLifetimeHours.Value);
+                <line x1="@L" y1="@F(medY)" x2="@F(PlotRight)" y2="@F(medY)"
+                      stroke="var(--mud-palette-info)" stroke-width="1"
+                      stroke-dasharray="4,3" opacity="0.80" />
+                @Txt(PlotRight + 3, medY + 3, "start", 8, "var(--mud-palette-info)", "med")
             }
-            else if (shape == "square")
+
+            @* ── P90 overlay line ──────────────────────────────────────── *@
+            @if (ShowP90Line && P90LifetimeHours.HasValue && P90LifetimeHours.Value > 0)
             {
-                double side = r * 1.6;
-                <rect x="@F(cx - side/2)" y="@F(cy - side/2)"
-                      width="@F(side)" height="@F(side)"
-                      fill="@color"
-                      opacity="@F(opacity)"
-                      stroke="@stroke"
-                      stroke-width="@(isHovered ? "1.5" : "0")"
-                      style="cursor: pointer;"
-                      @onmouseenter="() => _hoveredPoint = pt"
-                      @onmouseleave="() => _hoveredPoint = null"
-                      @onclick="() => HandlePointClick(pt)" />
+                var p90Y = ToSvgY(P90LifetimeHours.Value);
+                <line x1="@L" y1="@F(p90Y)" x2="@F(PlotRight)" y2="@F(p90Y)"
+                      stroke="var(--mud-palette-warning)" stroke-width="1"
+                      stroke-dasharray="2,3" opacity="0.80" />
+                @Txt(PlotRight + 3, p90Y + 3, "start", 8, "var(--mud-palette-warning)", "P90")
             }
-            else
+
+            @* ── Data points ───────────────────────────────────────────── *@
+            @foreach (var pt in Data)
             {
-                @* triangle *@
-                double th = r * 1.8;
-                string pts = $"{F(cx)},{F(cy - th)} {F(cx - th * 0.87)},{F(cy + th * 0.5)} {F(cx + th * 0.87)},{F(cy + th * 0.5)}";
-                <polygon points="@pts"
-                         fill="@color"
-                         opacity="@F(opacity)"
-                         stroke="@stroke"
-                         stroke-width="@(isHovered ? "1.5" : "0")"
-                         style="cursor: pointer;"
-                         @onmouseenter="() => _hoveredPoint = pt"
-                         @onmouseleave="() => _hoveredPoint = null"
-                         @onclick="() => HandlePointClick(pt)" />
+                double cx = ToSvgX(pt.CreatedDate);
+                double cy = ToSvgY(pt.LifetimeHours);
+                bool isHovered = _hoveredPoint?.Id == pt.Id;
+
+                double opacity = isHovered ? 1.0 : 0.80;
+                double r = isHovered ? 8.0 : 5.5;
+                var stroke = isHovered ? "var(--mud-palette-primary)" : "transparent";
+                var color = GetStatusColor(pt.Status);
+                var shape = GetEpicShape(pt.EpicId);
+
+                @if (shape == "circle")
+                {
+                    <circle cx="@F(cx)" cy="@F(cy)" r="@F(r)"
+                            fill="@color"
+                            opacity="@F(opacity)"
+                            stroke="@stroke"
+                            stroke-width="@(isHovered ? "1.5" : "0")"
+                            style="cursor: pointer;"
+                            @onmouseenter="() => _hoveredPoint = pt"
+                            @onmouseleave="() => _hoveredPoint = null"
+                            @onclick="() => HandlePointClick(pt)" />
+                }
+                else if (shape == "square")
+                {
+                    double side = r * 1.6;
+                    <rect x="@F(cx - side/2)" y="@F(cy - side/2)"
+                          width="@F(side)" height="@F(side)"
+                          fill="@color"
+                          opacity="@F(opacity)"
+                          stroke="@stroke"
+                          stroke-width="@(isHovered ? "1.5" : "0")"
+                          style="cursor: pointer;"
+                          @onmouseenter="() => _hoveredPoint = pt"
+                          @onmouseleave="() => _hoveredPoint = null"
+                          @onclick="() => HandlePointClick(pt)" />
+                }
+                else
+                {
+                    @* triangle *@
+                    double th = r * 1.8;
+                    string pts = $"{F(cx)},{F(cy - th)} {F(cx - th * 0.87)},{F(cy + th * 0.5)} {F(cx + th * 0.87)},{F(cy + th * 0.5)}";
+                    <polygon points="@pts"
+                             fill="@color"
+                             opacity="@F(opacity)"
+                             stroke="@stroke"
+                             stroke-width="@(isHovered ? "1.5" : "0")"
+                             style="cursor: pointer;"
+                             @onmouseenter="() => _hoveredPoint = pt"
+                             @onmouseleave="() => _hoveredPoint = null"
+                             @onclick="() => HandlePointClick(pt)" />
+                }
             }
-        }
 
-        @* ── SVG tooltip (shown on hover) ──────────────────────────── *@
-        @if (_hoveredPoint != null)
-        {
-            const double ttW = 220;
-            const double ttH = 120;
-            double htX = ToSvgX(_hoveredPoint.CreatedDate);
-            double htY = ToSvgY(_hoveredPoint.LifetimeHours);
-            double ttX = Math.Min(htX + 10, 820 - ttW - 5);
-            double ttY = Math.Max(htY - ttH - 8, TopPad + 2);
-            var statusColor = GetStatusColor(_hoveredPoint.Status);
-
-            <g pointer-events="none">
-                @* shadow *@
-                <rect x="@F(ttX + 2)" y="@F(ttY + 2)" width="@ttW" height="@ttH"
-                      rx="4" fill="rgba(0,0,0,0.14)" />
-                @* background *@
-                <rect x="@F(ttX)" y="@F(ttY)" width="@ttW" height="@ttH"
-                      rx="4"
-                      fill="var(--mud-palette-surface)"
-                      stroke="var(--mud-palette-divider)"
-                      stroke-width="0.8" />
-                @* PR title *@
-                @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+16)}" font-size="10.5" font-weight="600" fill="var(--mud-palette-text-primary)">{He(Trunc(_hoveredPoint.Title, 28))}</text>""")
-                @* Epic / Feature *@
-                @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+30)}" font-size="9" fill="var(--mud-palette-text-secondary)">{He(_hoveredPoint.EpicName ?? "No Epic")} · {He(_hoveredPoint.FeatureName ?? "No Feature")}</text>""")
-                @* Lifetime *@
-                @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+46)}" font-size="9" fill="var(--mud-palette-text-secondary)">⏱ {He(PrFormatHelpers.FormatLifetime(_hoveredPoint.LifetimeHours))} lifetime</text>""")
-                @* Category *@
-                @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+61)}" font-size="9" fill="var(--mud-palette-text-secondary)">Category: {He(_hoveredPoint.Category)}</text>""")
-                @* Status chip *@
-                <rect x="@F(ttX+8)" y="@F(ttY+72)"
-                      width="@GetStatusChipW(_hoveredPoint.Status)" height="16" rx="8"
-                      fill="@statusColor" opacity="0.18" />
-                @((MarkupString)$"""<text x="{F(ttX+16)}" y="{F(ttY+84)}" font-size="9" font-weight="600" fill="{statusColor}">{He(PrFormatHelpers.FormatStatus(_hoveredPoint.Status))}</text>""")
-            </g>
-        }
-
-        @* ── Empty state ───────────────────────────────────────────── *@
-        @if (!Data.Any())
-        {
-            @((MarkupString)$"""<text x="{F(LeftPad + PlotWidth / 2)}" y="{F(TopPad + PlotHeight / 2)}" text-anchor="middle" font-size="12" fill="var(--mud-palette-text-disabled)">No PR data for the selected period</text>""")
-        }
-    </svg>
-
-    @* ── Legend ─────────────────────────────────────────────────────── *@
-    <div class="pr-scatter-legend">
-        <span class="pr-legend-item pr-legend-clean">● Merged</span>
-        <span class="pr-legend-item pr-legend-rework">● Merged (rework)</span>
-        <span class="pr-legend-item pr-legend-abandoned">● Abandoned</span>
-        @if (Data.Any(p => string.Equals(p.Status, "active", StringComparison.OrdinalIgnoreCase)))
-        {
-            <span class="pr-legend-item pr-legend-active">● Active</span>
-        }
-        @if (ShowMedianLine && MedianLifetimeHours.HasValue)
-        {
-            <span class="pr-legend-item pr-legend-median">— med</span>
-        }
-        @if (ShowP90Line && P90LifetimeHours.HasValue)
-        {
-            <span class="pr-legend-item pr-legend-p90">- - P90</span>
-        }
-        @if (_epicShapeMap.Count > 1)
-        {
-            foreach (var (epicName, shape) in _epicShapeMap)
+            @* ── SVG tooltip (shown on hover) ──────────────────────────── *@
+            @if (_hoveredPoint != null)
             {
-                var sym = shape switch { "circle" => "●", "square" => "■", _ => "▲" };
-                <span class="pr-legend-item" style="color: var(--mud-palette-text-secondary);">@sym @epicName</span>
+                const double ttW = 220;
+                const double ttH = 120;
+                double htX = ToSvgX(_hoveredPoint.CreatedDate);
+                double htY = ToSvgY(_hoveredPoint.LifetimeHours);
+                double ttX = Math.Min(htX + 10, 820 - ttW - 5);
+                double ttY = Math.Max(htY - ttH - 8, TopPad + 2);
+                var statusColor = GetStatusColor(_hoveredPoint.Status);
+
+                <g pointer-events="none">
+                    @* shadow *@
+                    <rect x="@F(ttX + 2)" y="@F(ttY + 2)" width="@ttW" height="@ttH"
+                          rx="4" fill="rgba(0,0,0,0.14)" />
+                    @* background *@
+                    <rect x="@F(ttX)" y="@F(ttY)" width="@ttW" height="@ttH"
+                          rx="4"
+                          fill="var(--mud-palette-surface)"
+                          stroke="var(--mud-palette-divider)"
+                          stroke-width="0.8" />
+                    @* PR title *@
+                    @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+16)}" font-size="10.5" font-weight="600" fill="var(--mud-palette-text-primary)">{He(Trunc(_hoveredPoint.Title, 28))}</text>""")
+                    @* Epic / Feature *@
+                    @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+30)}" font-size="9" fill="var(--mud-palette-text-secondary)">{He(_hoveredPoint.EpicName ?? "No Epic")} · {He(_hoveredPoint.FeatureName ?? "No Feature")}</text>""")
+                    @* Lifetime *@
+                    @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+46)}" font-size="9" fill="var(--mud-palette-text-secondary)">⏱ {He(PrFormatHelpers.FormatLifetime(_hoveredPoint.LifetimeHours))} lifetime</text>""")
+                    @* Category *@
+                    @((MarkupString)$"""<text x="{F(ttX+8)}" y="{F(ttY+61)}" font-size="9" fill="var(--mud-palette-text-secondary)">Category: {He(_hoveredPoint.Category)}</text>""")
+                    @* Status chip *@
+                    <rect x="@F(ttX+8)" y="@F(ttY+72)"
+                          width="@GetStatusChipW(_hoveredPoint.Status)" height="16" rx="8"
+                          fill="@statusColor" opacity="0.18" />
+                    @((MarkupString)$"""<text x="{F(ttX+16)}" y="{F(ttY+84)}" font-size="9" font-weight="600" fill="{statusColor}">{He(PrFormatHelpers.FormatStatus(_hoveredPoint.Status))}</text>""")
+                </g>
             }
-        }
+
+            @* ── Empty state ───────────────────────────────────────────── *@
+            @if (!Data.Any())
+            {
+                @((MarkupString)$"""<text x="{F(LeftPad + PlotWidth / 2)}" y="{F(TopPad + PlotHeight / 2)}" text-anchor="middle" font-size="12" fill="var(--mud-palette-text-disabled)">No PR data for the selected period</text>""")
+            }
+        </svg>
     </div>
+
+    @if (_statusLegendEntries.Count > 0 || _epicLegendEntries.Count > 0)
+    {
+        <aside class="pr-delivery-scatter__legend" aria-label="PR delivery scatter legend">
+            @if (_statusLegendEntries.Count > 0)
+            {
+                <section class="pr-delivery-scatter__legend-section">
+                    <div class="pr-delivery-scatter__legend-title">Status</div>
+                    <div class="pr-delivery-scatter__legend-items">
+                        @foreach (var statusEntry in _statusLegendEntries)
+                        {
+                            <div class="pr-delivery-scatter__legend-item">
+                                <span class="pr-delivery-scatter__color-dot"
+                                      style="@($"--pr-delivery-status-color:{statusEntry.Color};")"
+                                      aria-hidden="true"></span>
+                                <span>@statusEntry.Label</span>
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
+
+            @if (_epicLegendEntries.Count > 0)
+            {
+                <section class="pr-delivery-scatter__legend-section">
+                    <div class="pr-delivery-scatter__legend-title">Epic</div>
+                    <div class="pr-delivery-scatter__legend-items">
+                        @foreach (var epicEntry in _epicLegendEntries)
+                        {
+                            <div class="pr-delivery-scatter__legend-item">
+                                <span class="pr-delivery-scatter__shape-indicator" aria-hidden="true">@GetShapeSymbol(epicEntry.Shape)</span>
+                                <span>@epicEntry.EpicName</span>
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
+        </aside>
+    }
 </div>
 
 @code {
     // ── Chart geometry constants ────────────────────────────────────────
-    private const double LeftPad   = 56;
-    private const double RightPad  = 40;
-    private const double TopPad    = 14;
+    private const double LeftPad = 56;
+    private const double RightPad = 40;
+    private const double TopPad = 14;
     private const double BottomPad = 42;
-    private const double PlotRight  = 820 - RightPad;
+    private const double PlotRight = 820 - RightPad;
     private const double PlotBottom = 300 - BottomPad;
-    private const double PlotWidth  = PlotRight - LeftPad;
+    private const double PlotWidth = PlotRight - LeftPad;
     private const double PlotHeight = PlotBottom - TopPad;
 
     private static string L => F(LeftPad);
@@ -253,26 +266,55 @@
 
     // ── Internal state ────────────────────────────────────────────────────
     private PrDeliveryScatterPointDto? _hoveredPoint;
-
-    /// <summary>Maps (epicId?.ToString() ?? "none") → shape name.</summary>
     private Dictionary<string, string> _epicShapeMap = new();
+    private List<EpicLegendEntry> _epicLegendEntries = new();
+    private List<StatusLegendEntry> _statusLegendEntries = new();
 
     private static readonly string[] Shapes = { "circle", "square", "triangle" };
+    private static readonly string[] OrderedStatuses = { "completed", "active", "abandoned" };
+    private static readonly IReadOnlyDictionary<string, StatusLegendEntry> StatusVisuals =
+        new Dictionary<string, StatusLegendEntry>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["completed"] = new("completed", PrFormatHelpers.FormatStatus("completed"), "var(--mud-palette-success)"),
+            ["active"] = new("active", PrFormatHelpers.FormatStatus("active"), "var(--mud-palette-info)"),
+            ["abandoned"] = new("abandoned", PrFormatHelpers.FormatStatus("abandoned"), "var(--mud-palette-error)")
+        };
 
     protected override void OnParametersSet()
     {
-        // Build a stable epic → shape mapping based on first-seen order.
-        // Null epic always maps to "circle".
-        _epicShapeMap = new Dictionary<string, string>();
-        int idx = 0;
+        _statusLegendEntries = Data
+            .Select(point => GetStatusLegendEntry(point.Status))
+            .DistinctBy(entry => entry.Status, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(entry => GetStatusOrder(entry.Status))
+            .ThenBy(entry => entry.Label, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        _epicShapeMap = new Dictionary<string, string>(StringComparer.Ordinal);
+        _epicLegendEntries = new List<EpicLegendEntry>();
+
+        var noEpicAssigned = false;
+        var idx = 0;
         foreach (var pt in Data)
         {
-            var key = GetEpicKey(pt.EpicId);
-            if (!_epicShapeMap.ContainsKey(key))
+            var epicKey = GetEpicKey(pt.EpicId);
+            if (pt.EpicId is null)
             {
-                _epicShapeMap[key] = Shapes[idx % Shapes.Length];
-                idx++;
+                if (noEpicAssigned)
+                {
+                    continue;
+                }
+
+                noEpicAssigned = true;
             }
+            else if (_epicShapeMap.ContainsKey(epicKey))
+            {
+                continue;
+            }
+
+            var shape = Shapes[idx % Shapes.Length];
+            _epicShapeMap[epicKey] = shape;
+            _epicLegendEntries.Add(new EpicLegendEntry(pt.EpicId, GetEpicLegendLabel(pt.EpicName), shape));
+            idx++;
         }
     }
 
@@ -308,15 +350,15 @@
 
     private static double RoundUpNice(double v)
     {
-        if (v <= 0)    return 24;
-        if (v <= 12)   return 12;
-        if (v <= 24)   return 24;
-        if (v <= 48)   return 48;
-        if (v <= 72)   return 72;
-        if (v <= 120)  return 120;
-        if (v <= 168)  return 168;
-        if (v <= 336)  return 336;
-        if (v <= 720)  return 720;
+        if (v <= 0) return 24;
+        if (v <= 12) return 12;
+        if (v <= 24) return 24;
+        if (v <= 48) return 48;
+        if (v <= 72) return 72;
+        if (v <= 120) return 120;
+        if (v <= 168) return 168;
+        if (v <= 336) return 336;
+        if (v <= 720) return 720;
         return Math.Ceiling(v / 168.0) * 168;
     }
 
@@ -332,11 +374,11 @@
     }
 
     private static double GetYStep(double yMax) =>
-        yMax <= 24  ? 6   :
-        yMax <= 48  ? 12  :
-        yMax <= 120 ? 24  :
-        yMax <= 168 ? 24  :
-        yMax <= 336 ? 48  :
+        yMax <= 24 ? 6 :
+        yMax <= 48 ? 12 :
+        yMax <= 120 ? 24 :
+        yMax <= 168 ? 24 :
+        yMax <= 336 ? 48 :
         yMax <= 720 ? 120 : 168;
 
     private IEnumerable<XTick> GetXTicks()
@@ -346,9 +388,9 @@
         var xMax = Data.Max(p => p.CreatedDate);
         var span = xMax - xMin;
 
-        int everyDays = span.TotalDays <= 14  ? 2  :
-                        span.TotalDays <= 31  ? 7  :
-                        span.TotalDays <= 90  ? 14 :
+        int everyDays = span.TotalDays <= 14 ? 2 :
+                        span.TotalDays <= 31 ? 7 :
+                        span.TotalDays <= 90 ? 14 :
                         span.TotalDays <= 182 ? 30 : 60;
 
         var day = xMin.Date.AddDays(1);
@@ -365,36 +407,19 @@
 
     private static string FormatYLabel(double h) =>
         h >= 168 ? $"{(int)(h / 168)}w" :
-        h >= 24  ? $"{(int)(h / 24)}d"  :
-                   $"{(int)h}h";
+        h >= 24 ? $"{(int)(h / 24)}d" :
+        $"{(int)h}h";
 
     private static string FormatXLabel(DateTimeOffset t) => t.ToString("MMM d");
 
     // ── Color + shape helpers ─────────────────────────────────────────────
 
-    /// <summary>
-    /// Color based on PR status:
-    ///   completed → green (merged)
-    ///   abandoned → red
-    ///   active    → grey
-    /// </summary>
-    private static string GetStatusColor(string status)
-    {
-        return status.ToLowerInvariant() switch
-        {
-            "completed" => "var(--mud-palette-success)",
-            "abandoned" => "var(--mud-palette-error)",
-            _           => "var(--mud-palette-default)"
-        };
-    }
+    private static string GetStatusColor(string status) => GetStatusLegendEntry(status).Color;
 
     private string GetEpicShape(int? epicId)
     {
-        var key = GetEpicKey(epicId);
-        return _epicShapeMap.TryGetValue(key, out var shape) ? shape : "circle";
+        return _epicShapeMap.TryGetValue(GetEpicKey(epicId), out var shape) ? shape : "circle";
     }
-
-    private static string GetEpicKey(int? epicId) => epicId?.ToString() ?? "none";
 
     // ── Tooltip helpers ───────────────────────────────────────────────────
 
@@ -403,8 +428,8 @@
         {
             "completed" => 60,
             "abandoned" => 72,
-            "active"    => 52,
-            _           => 60
+            "active" => 52,
+            _ => 60
         };
 
     private static string Trunc(string s, int max) =>
@@ -420,6 +445,42 @@
     private static string He(string s)
         => System.Net.WebUtility.HtmlEncode(s);
 
+    private static StatusLegendEntry GetStatusLegendEntry(string status)
+    {
+        var normalizedStatus = status?.Trim() ?? string.Empty;
+        if (StatusVisuals.TryGetValue(normalizedStatus, out var entry))
+        {
+            return entry;
+        }
+
+        var label = string.IsNullOrWhiteSpace(normalizedStatus)
+            ? "Unknown"
+            : PrFormatHelpers.FormatStatus(normalizedStatus);
+
+        return new StatusLegendEntry(normalizedStatus, label, "var(--mud-palette-info)");
+    }
+
+    private static int GetStatusOrder(string status)
+    {
+        var idx = Array.FindIndex(OrderedStatuses, candidate =>
+            string.Equals(candidate, status, StringComparison.OrdinalIgnoreCase));
+
+        return idx >= 0 ? idx : int.MaxValue;
+    }
+
+    private static string GetEpicLegendLabel(string? epicName) =>
+        string.IsNullOrWhiteSpace(epicName) ? "No Epic" : epicName.Trim();
+
+    private static string GetEpicKey(int? epicId) =>
+        epicId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "none";
+
+    private static string GetShapeSymbol(string shape) => shape switch
+    {
+        "circle" => "●",
+        "square" => "■",
+        _ => "▲"
+    };
+
     // ── Event handlers ────────────────────────────────────────────────────
 
     private async Task HandlePointClick(PrDeliveryScatterPointDto pt)
@@ -427,4 +488,7 @@
         if (OnPointClick.HasDelegate)
             await OnPointClick.InvokeAsync(pt);
     }
+
+    private sealed record StatusLegendEntry(string Status, string Label, string Color);
+    private sealed record EpicLegendEntry(int? EpicId, string EpicName, string Shape);
 }

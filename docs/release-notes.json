@@ -2,6 +2,14 @@
   {
     "date": "2026-03-18",
     "type": "Fixed",
+    "title": "PR delivery scatter legend now matches chart",
+    "impact": "The PR Delivery Insights scatter chart now uses readable active-PR colors and a right-side legend whose status colors and epic shapes match the points shown in the chart.",
+    "area": "Home",
+    "link": "/home/pr-delivery-insights"
+  },
+  {
+    "date": "2026-03-18",
+    "type": "Fixed",
     "title": "TFS mode now blocks mixed mock and real runtime",
     "impact": "Settings and sync startup now fail fast when real-data mode would resolve mock TFS services, preventing blank settings flows and silent mixed-provider behavior.",
     "area": "Settings",
