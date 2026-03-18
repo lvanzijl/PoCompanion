@@ -7,7 +7,7 @@ public sealed class BugTrendTfsDashboardMismatchDocumentTests
     public void BugTrendTfsDashboardMismatch_ReportExistsWithRootCauseAndIssueComments()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "bug_trend_tfs_dashboard_mismatch.md");
+        var reportPath = $"{repositoryRoot}/docs/audits/bug_trend_tfs_dashboard_mismatch.md";
 
         Assert.IsTrue(File.Exists(reportPath), "The bug trend mismatch report should exist under docs/audits.");
 
@@ -25,8 +25,8 @@ public sealed class BugTrendTfsDashboardMismatchDocumentTests
         StringAssert.Contains(report, "PoTool.Core.Domain/Domain/Sprints/StateClassificationDefaults.cs");
         StringAssert.Contains(report, "aggregation/query semantics mismatch");
         StringAssert.Contains(report, "The chart does not restrict closed bugs to the sprint backlog.");
-        StringAssert.Contains(report, "Resolved and Closed are not default Done states for Bug");
-        StringAssert.Contains(report, "ClosedDate is already ingested from TFS, but the sprint trend pipeline does not use it.");
+        StringAssert.Contains(report, "`Resolved` and `Closed` are **not** default Done states for `Bug`");
+        StringAssert.Contains(report, "`ClosedDate` is already ingested from TFS, but the sprint trend pipeline does not use it.");
     }
 
     private static string GetRepositoryRoot()
@@ -35,7 +35,7 @@ public sealed class BugTrendTfsDashboardMismatchDocumentTests
 
         while (current is not null)
         {
-            if (File.Exists(Path.Combine(current.FullName, "PoTool.sln")))
+            if (File.Exists($"{current.FullName}/PoTool.sln"))
             {
                 return current.FullName;
             }

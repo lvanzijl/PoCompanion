@@ -105,7 +105,6 @@ Source: `PoTool.Core.Domain/Domain/Sprints/StateClassificationDefaults.cs:50-55`
 Important consequence:
 
 - `Resolved` and `Closed` are **not** default Done states for `Bug`
-- Resolved and Closed are not default Done states for Bug
 - `WorkItemStateClassificationService.GetClassificationAsync(...)` defaults unknown states to `New`
   - `PoTool.Api/Services/WorkItemStateClassificationService.cs:187-199`
 
@@ -169,7 +168,6 @@ Primary causes:
 Contributing detail:
 
 - `ClosedDate` is already ingested from TFS, but the sprint trend pipeline does not use it.
-- ClosedDate is already ingested from TFS, but the sprint trend pipeline does not use it.
 - Because `DeliveryTrendWorkItem` excludes `ClosedDate`, the projection must reconstruct closure from activity ledger state events only.
 
 ### 6. Data-lineage classification of the issue
