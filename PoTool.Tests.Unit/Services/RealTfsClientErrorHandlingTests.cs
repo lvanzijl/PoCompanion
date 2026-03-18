@@ -57,7 +57,8 @@ public class RealTfsClientErrorHandlingTests
     [TestMethod]
     public async Task HandleHttpErrorsAsync_429_WithRetryAfterDate_UsesRemainingDelay()
     {
-        var retryAt = DateTimeOffset.UtcNow.AddSeconds(30);
+        var now = new DateTimeOffset(2026, 03, 18, 12, 00, 00, TimeSpan.Zero);
+        var retryAt = now.AddSeconds(30);
         var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests)
         {
             Content = new StringContent("rate limited"),
@@ -65,12 +66,9 @@ public class RealTfsClientErrorHandlingTests
         };
         response.Headers.RetryAfter = new RetryConditionHeaderValue(retryAt);
 
-        var exception = await AssertThrowsAsync<TfsRateLimitException>(
-            () => InvokeHandleHttpErrorsAsync(response));
+        var retryAfter = InvokeGetRetryAfter(response, now);
 
-        Assert.IsNotNull(exception.RetryAfter);
-        Assert.IsTrue(exception.RetryAfter.Value >= TimeSpan.FromSeconds(28));
-        Assert.IsTrue(exception.RetryAfter.Value <= TimeSpan.FromSeconds(30));
+        Assert.AreEqual(TimeSpan.FromSeconds(30), retryAfter);
     }
 
     [TestMethod]
@@ -119,6 +117,18 @@ public class RealTfsClientErrorHandlingTests
 
         var task = (Task)method!.Invoke(_client, new object[] { response, CancellationToken.None })!;
         await task;
+    }
+
+    private static TimeSpan? InvokeGetRetryAfter(HttpResponseMessage response, DateTimeOffset now)
+    {
+        var method = typeof(RealTfsClient).GetMethod(
+            "GetRetryAfter",
+            BindingFlags.Static | BindingFlags.NonPublic,
+            binder: null,
+            types: [typeof(HttpResponseMessage), typeof(DateTimeOffset)],
+            modifiers: null);
+
+        return (TimeSpan?)method!.Invoke(null, new object[] { response, now });
     }
 
     private static async Task<TException> AssertThrowsAsync<TException>(Func<Task> action)
