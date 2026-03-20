@@ -10,6 +10,8 @@ namespace PoTool.Api.Services;
 
 public class WorkItemResolutionService
 {
+    private const string ParentRelationType = "System.LinkTypes.Hierarchy-Reverse";
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<WorkItemResolutionService> _logger;
 
@@ -46,8 +48,23 @@ public class WorkItemResolutionService
             };
         }
 
+        var latestRelationshipsSnapshotAsOfUtc = await context.WorkItemRelationshipEdges
+            .AsNoTracking()
+            .Where(edge => edge.ProductOwnerId == productOwnerId)
+            .Select(edge => (DateTimeOffset?)edge.SnapshotAsOfUtc)
+            .MaxAsync(cancellationToken);
+
+        var childrenByParent = await BuildChildrenLookupAsync(
+            context,
+            productOwnerId,
+            latestRelationshipsSnapshotAsOfUtc,
+            cancellationToken);
+
+        var closureScopeIds = GetClosureScopeIds(products, childrenByParent);
+
         var workItems = await context.WorkItems
             .AsNoTracking()
+            .Where(workItem => closureScopeIds.Contains(workItem.TfsId))
             .ToListAsync(cancellationToken);
 
         if (workItems.Count == 0)
@@ -72,12 +89,6 @@ public class WorkItemResolutionService
         var sprintsByPath = sprints
             .GroupBy(s => s.Path, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
-
-        // Build children lookup
-        var childrenByParent = workItems
-            .Where(w => w.ParentTfsId.HasValue)
-            .GroupBy(w => w.ParentTfsId!.Value)
-            .ToDictionary(g => g.Key, g => g.Select(w => w.TfsId).ToList());
 
         var resolvedEntities = new List<ResolvedWorkItemEntity>();
         var resolvedProductByWorkItemId = new Dictionary<int, int?>();
@@ -139,6 +150,11 @@ public class WorkItemResolutionService
                     }
                 }
             }
+        }
+
+        if (resolvedEntities.Any(entity => !closureScopeIds.Contains(entity.WorkItemId)))
+        {
+            throw new InvalidOperationException("ResolvedWorkItems must remain within the current closure scope.");
         }
 
         var productIds = products.Select(p => p.Id).ToList();
@@ -257,6 +273,71 @@ public class WorkItemResolutionService
         }
 
         return (epicId, featureId);
+    }
+
+    private static async Task<Dictionary<int, List<int>>> BuildChildrenLookupAsync(
+        PoToolDbContext context,
+        int productOwnerId,
+        DateTimeOffset? latestRelationshipsSnapshotAsOfUtc,
+        CancellationToken cancellationToken)
+    {
+        if (!latestRelationshipsSnapshotAsOfUtc.HasValue)
+        {
+            return new Dictionary<int, List<int>>();
+        }
+
+        var hierarchyEdges = await context.WorkItemRelationshipEdges
+            .AsNoTracking()
+            .Where(edge =>
+                edge.ProductOwnerId == productOwnerId &&
+                edge.SnapshotAsOfUtc == latestRelationshipsSnapshotAsOfUtc.Value &&
+                edge.RelationType == ParentRelationType &&
+                edge.TargetWorkItemId != null)
+            .Select(edge => new { ParentId = edge.TargetWorkItemId!.Value, ChildId = edge.SourceWorkItemId })
+            .ToListAsync(cancellationToken);
+
+        return hierarchyEdges
+            .GroupBy(edge => edge.ParentId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(edge => edge.ChildId).Distinct().ToList());
+    }
+
+    private static HashSet<int> GetClosureScopeIds(
+        IReadOnlyCollection<ProductEntity> products,
+        IReadOnlyDictionary<int, List<int>> childrenByParent)
+    {
+        var closureScopeIds = new HashSet<int>();
+
+        foreach (var rootId in products.SelectMany(product => product.BacklogRoots.Select(root => root.WorkItemTfsId)))
+        {
+            if (!closureScopeIds.Add(rootId))
+            {
+                continue;
+            }
+
+            var stack = new Stack<int>();
+            stack.Push(rootId);
+
+            while (stack.Count > 0)
+            {
+                var currentId = stack.Pop();
+                if (!childrenByParent.TryGetValue(currentId, out var children))
+                {
+                    continue;
+                }
+
+                foreach (var childId in children)
+                {
+                    if (closureScopeIds.Add(childId))
+                    {
+                        stack.Push(childId);
+                    }
+                }
+            }
+        }
+
+        return closureScopeIds;
     }
 
     private static async Task<int> GetNextSyntheticUpdateIdAsync(
