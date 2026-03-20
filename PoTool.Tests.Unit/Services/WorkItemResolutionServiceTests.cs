@@ -235,7 +235,6 @@ public class WorkItemResolutionServiceTests
             .ToListAsync();
 
         CollectionAssert.AreEqual(new List<int> { 100, 200 }, resolvedIds);
-        CollectionAssert.DoesNotContain(resolvedIds, 300, "Out-of-scope item should be excluded from resolved closure.");
     }
 
     [TestMethod]

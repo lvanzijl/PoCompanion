@@ -152,9 +152,17 @@ public class WorkItemResolutionService
             }
         }
 
-        if (resolvedEntities.Any(entity => !closureScopeIds.Contains(entity.WorkItemId)))
+        var violatingResolvedIds = resolvedEntities
+            .Where(entity => !closureScopeIds.Contains(entity.WorkItemId))
+            .Select(entity => entity.WorkItemId)
+            .Distinct()
+            .OrderBy(id => id)
+            .ToList();
+
+        if (violatingResolvedIds.Count > 0)
         {
-            throw new InvalidOperationException("ResolvedWorkItems must remain within the current closure scope.");
+            throw new InvalidOperationException(
+                $"ResolvedWorkItems must remain within the current closure scope. Violating IDs: {string.Join(", ", violatingResolvedIds)}");
         }
 
         var productIds = products.Select(p => p.Id).ToList();
@@ -316,8 +324,7 @@ public class WorkItemResolutionService
                 continue;
             }
 
-            var stack = new Stack<int>();
-            stack.Push(rootId);
+            var stack = new Stack<int>([rootId]);
 
             while (stack.Count > 0)
             {
