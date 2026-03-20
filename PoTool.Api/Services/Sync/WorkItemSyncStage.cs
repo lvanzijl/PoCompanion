@@ -85,6 +85,12 @@ public class WorkItemSyncStage : ISyncStage
             var incrementalPlanExecution = await BuildIncrementalSyncPlanAsync(context, workItemList, cancellationToken);
             LogIncrementalSyncPlan(context, incrementalPlanExecution);
 
+            await RemoveLeftClosureScopeWorkItemsAsync(
+                incrementalPlanExecution.Plan.LeftClosureScopeIds,
+                workItemList,
+                context,
+                cancellationToken);
+
             // Upsert work items to database in batches
             var maxChangedDate = await UpsertWorkItemsAsync(workItemList, context.ProductOwnerId, progressCallback, cancellationToken);
 
@@ -165,6 +171,51 @@ public class WorkItemSyncStage : ISyncStage
         }
 
         return maxChangedDate;
+    }
+
+    private async Task RemoveLeftClosureScopeWorkItemsAsync(
+        IReadOnlyList<int> leftClosureScopeIds,
+        IReadOnlyList<WorkItemDto> fetchedWorkItems,
+        SyncContext context,
+        CancellationToken cancellationToken)
+    {
+        if (leftClosureScopeIds.Count == 0)
+        {
+            return;
+        }
+
+        var fetchedIds = fetchedWorkItems
+            .Select(item => item.TfsId)
+            .ToHashSet();
+
+        var staleIds = leftClosureScopeIds
+            .Where(id => !fetchedIds.Contains(id))
+            .Distinct()
+            .OrderBy(id => id)
+            .ToArray();
+
+        if (staleIds.Length == 0)
+        {
+            return;
+        }
+
+        var staleWorkItems = await _context.WorkItems
+            .Where(item => staleIds.Contains(item.TfsId))
+            .ToListAsync(cancellationToken);
+
+        if (staleWorkItems.Count == 0)
+        {
+            return;
+        }
+
+        _context.WorkItems.RemoveRange(staleWorkItems);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "INCREMENTAL_SYNC_CLOSURE_EXIT_CLEANUP: ProductOwnerId={ProductOwnerId}, SyncRunId={SyncRunId}, RemovedWorkItems={RemovedWorkItemsSummary}",
+            context.ProductOwnerId,
+            (string?)null,
+            BuildIdSetSummary(staleWorkItems.Select(item => item.TfsId).OrderBy(id => id).ToArray()));
     }
 
     private static void UpdateEntity(WorkItemEntity entity, WorkItemDto dto)
