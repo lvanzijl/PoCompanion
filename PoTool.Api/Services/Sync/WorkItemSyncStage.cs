@@ -190,7 +190,6 @@ public class WorkItemSyncStage : ISyncStage
 
         var staleIds = leftClosureScopeIds
             .Where(id => !fetchedIds.Contains(id))
-            .Distinct()
             .OrderBy(id => id)
             .ToArray();
 
