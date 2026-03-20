@@ -13,6 +13,7 @@ namespace PoTool.Tests.Unit.Services;
 public class WorkItemResolutionServiceTests
 {
     private const string ParentRelationType = "System.LinkTypes.Hierarchy-Reverse";
+    private const int TestProductOwnerId = 7;
 
     [TestMethod]
     public void ResolveAncestry_PbiUnderFeatureUnderEpic_ResolvesCorrectly()
@@ -121,7 +122,7 @@ public class WorkItemResolutionServiceTests
             provider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<WorkItemResolutionService>.Instance);
 
-        await service.ResolveAllAsync(productOwnerId: 7);
+        await service.ResolveAllAsync(productOwnerId: TestProductOwnerId);
 
         await using var verificationScope = provider.CreateAsyncScope();
         var context = verificationScope.ServiceProvider.GetRequiredService<PoToolDbContext>();
@@ -149,7 +150,7 @@ public class WorkItemResolutionServiceTests
             provider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<WorkItemResolutionService>.Instance);
 
-        await service.ResolveAllAsync(productOwnerId: 7);
+        await service.ResolveAllAsync(productOwnerId: TestProductOwnerId);
 
         await using var verificationScope = provider.CreateAsyncScope();
         var context = verificationScope.ServiceProvider.GetRequiredService<PoToolDbContext>();
@@ -173,7 +174,7 @@ public class WorkItemResolutionServiceTests
             context.Products.Add(new ProductEntity
             {
                 Id = 1,
-                ProductOwnerId = 7,
+                ProductOwnerId = TestProductOwnerId,
                 Name = "Product A",
                 BacklogRoots = [new ProductBacklogRootEntity { ProductId = 1, WorkItemTfsId = 100 }]
             });
@@ -215,8 +216,8 @@ public class WorkItemResolutionServiceTests
                     ResolvedAtRevision = 0
                 });
 
-            AddRelationshipSnapshot(context, 7, olderSnapshot, (200, 100), (300, 100));
-            AddRelationshipSnapshot(context, 7, latestSnapshot, (200, 100));
+            AddRelationshipSnapshot(context, TestProductOwnerId, olderSnapshot, (200, 100), (300, 100));
+            AddRelationshipSnapshot(context, TestProductOwnerId, latestSnapshot, (200, 100));
 
             await context.SaveChangesAsync();
         }
@@ -225,7 +226,7 @@ public class WorkItemResolutionServiceTests
             provider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<WorkItemResolutionService>.Instance);
 
-        await service.ResolveAllAsync(productOwnerId: 7);
+        await service.ResolveAllAsync(productOwnerId: TestProductOwnerId);
 
         await using var verificationScope = provider.CreateAsyncScope();
         var verificationContext = verificationScope.ServiceProvider.GetRequiredService<PoToolDbContext>();
@@ -250,7 +251,7 @@ public class WorkItemResolutionServiceTests
             context.Products.Add(new ProductEntity
             {
                 Id = 1,
-                ProductOwnerId = 7,
+                ProductOwnerId = TestProductOwnerId,
                 Name = "Product A",
                 BacklogRoots = [new ProductBacklogRootEntity { ProductId = 1, WorkItemTfsId = 100 }]
             });
@@ -260,7 +261,7 @@ public class WorkItemResolutionServiceTests
                 CreateWorkItem(200, WorkItemType.Feature, "Feature B", parentId: 100),
                 CreateWorkItem(300, WorkItemType.Pbi, "PBI C", parentId: 200));
 
-            AddRelationshipSnapshot(context, 7, snapshot, (200, 100), (300, 200));
+            AddRelationshipSnapshot(context, TestProductOwnerId, snapshot, (200, 100), (300, 200));
 
             await context.SaveChangesAsync();
         }
@@ -269,7 +270,7 @@ public class WorkItemResolutionServiceTests
             provider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<WorkItemResolutionService>.Instance);
 
-        var result = await service.ResolveAllAsync(productOwnerId: 7);
+        var result = await service.ResolveAllAsync(productOwnerId: TestProductOwnerId);
 
         await using var verificationScope = provider.CreateAsyncScope();
         var verificationContext = verificationScope.ServiceProvider.GetRequiredService<PoToolDbContext>();
@@ -295,7 +296,7 @@ public class WorkItemResolutionServiceTests
             context.Products.Add(new ProductEntity
             {
                 Id = 1,
-                ProductOwnerId = 7,
+                ProductOwnerId = TestProductOwnerId,
                 Name = "Product A",
                 BacklogRoots = [new ProductBacklogRootEntity { ProductId = 1, WorkItemTfsId = 100 }]
             });
@@ -304,8 +305,8 @@ public class WorkItemResolutionServiceTests
                 CreateWorkItem(100, WorkItemType.Feature, "A"),
                 CreateWorkItem(200, WorkItemType.Pbi, "B", parentId: 100));
 
-            AddRelationshipSnapshot(context, 7, olderSnapshot);
-            AddRelationshipSnapshot(context, 7, latestSnapshot, (200, 100));
+            AddRelationshipSnapshot(context, TestProductOwnerId, olderSnapshot);
+            AddRelationshipSnapshot(context, TestProductOwnerId, latestSnapshot, (200, 100));
 
             await context.SaveChangesAsync();
         }
@@ -314,7 +315,7 @@ public class WorkItemResolutionServiceTests
             provider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<WorkItemResolutionService>.Instance);
 
-        var result = await service.ResolveAllAsync(productOwnerId: 7);
+        var result = await service.ResolveAllAsync(productOwnerId: TestProductOwnerId);
 
         await using var verificationScope = provider.CreateAsyncScope();
         var verificationContext = verificationScope.ServiceProvider.GetRequiredService<PoToolDbContext>();
@@ -367,14 +368,14 @@ public class WorkItemResolutionServiceTests
             new ProductEntity
             {
                 Id = 1,
-                ProductOwnerId = 7,
+                ProductOwnerId = TestProductOwnerId,
                 Name = "Product A",
                 BacklogRoots = [new ProductBacklogRootEntity { ProductId = 1, WorkItemTfsId = 100 }]
             },
             new ProductEntity
             {
                 Id = 2,
-                ProductOwnerId = 7,
+                ProductOwnerId = TestProductOwnerId,
                 Name = "Product B",
                 BacklogRoots = [new ProductBacklogRootEntity { ProductId = 2, WorkItemTfsId = 200 }]
             });
@@ -384,7 +385,7 @@ public class WorkItemResolutionServiceTests
             CreateWorkItem(200, WorkItemType.Feature, "Feature B"),
             CreateWorkItem(300, WorkItemType.Pbi, "Portfolio PBI", parentId: currentParentId));
 
-        AddRelationshipSnapshot(context, 7, DateTimeOffset.UtcNow, (300, currentParentId));
+        AddRelationshipSnapshot(context, TestProductOwnerId, DateTimeOffset.UtcNow, (300, currentParentId));
 
         if (seedPreviousResolvedItem)
         {

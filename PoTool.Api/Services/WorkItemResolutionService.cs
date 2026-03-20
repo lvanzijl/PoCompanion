@@ -48,7 +48,7 @@ public class WorkItemResolutionService
             };
         }
 
-        var latestRelationshipsSnapshotAsOfUtc = await context.WorkItemRelationshipEdges
+        var latestSnapshotAsOf = await context.WorkItemRelationshipEdges
             .AsNoTracking()
             .Where(edge => edge.ProductOwnerId == productOwnerId)
             .Select(edge => (DateTimeOffset?)edge.SnapshotAsOfUtc)
@@ -57,7 +57,7 @@ public class WorkItemResolutionService
         var childrenByParent = await BuildChildrenLookupAsync(
             context,
             productOwnerId,
-            latestRelationshipsSnapshotAsOfUtc,
+            latestSnapshotAsOf,
             cancellationToken);
 
         var closureScopeIds = GetClosureScopeIds(products, childrenByParent);
@@ -286,10 +286,10 @@ public class WorkItemResolutionService
     private static async Task<Dictionary<int, List<int>>> BuildChildrenLookupAsync(
         PoToolDbContext context,
         int productOwnerId,
-        DateTimeOffset? latestRelationshipsSnapshotAsOfUtc,
+        DateTimeOffset? latestSnapshotAsOf,
         CancellationToken cancellationToken)
     {
-        if (!latestRelationshipsSnapshotAsOfUtc.HasValue)
+        if (!latestSnapshotAsOf.HasValue)
         {
             return new Dictionary<int, List<int>>();
         }
@@ -298,7 +298,7 @@ public class WorkItemResolutionService
             .AsNoTracking()
             .Where(edge =>
                 edge.ProductOwnerId == productOwnerId &&
-                edge.SnapshotAsOfUtc == latestRelationshipsSnapshotAsOfUtc.Value &&
+                edge.SnapshotAsOfUtc == latestSnapshotAsOf.Value &&
                 edge.RelationType == ParentRelationType &&
                 edge.TargetWorkItemId != null)
             .Select(edge => new { ParentId = edge.TargetWorkItemId!.Value, ChildId = edge.SourceWorkItemId })
