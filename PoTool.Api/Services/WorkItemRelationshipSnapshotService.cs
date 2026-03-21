@@ -13,7 +13,6 @@ namespace PoTool.Api.Services;
 /// </summary>
 public class WorkItemRelationshipSnapshotService
 {
-    private const string InMemoryProviderName = "Microsoft.EntityFrameworkCore.InMemory";
     private const string ParentRelationType = "System.LinkTypes.Hierarchy-Reverse";
 
     private readonly IServiceScopeFactory _scopeFactory;
@@ -154,7 +153,7 @@ public class WorkItemRelationshipSnapshotService
         var existingEdgesQuery = context.WorkItemRelationshipEdges
             .Where(edge => edge.ProductOwnerId == productOwnerId);
 
-        if (context.Database.ProviderName == InMemoryProviderName)
+        if (context.Database.IsInMemory())
         {
             var existingEdges = await existingEdgesQuery.ToListAsync(cancellationToken);
             context.WorkItemRelationshipEdges.RemoveRange(existingEdges);

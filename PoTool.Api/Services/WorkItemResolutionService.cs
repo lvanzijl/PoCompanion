@@ -166,7 +166,7 @@ public class WorkItemResolutionService
         if (violatingResolvedIds.Count > 0)
         {
             throw new InvalidOperationException(
-                $"ResolvedWorkItems must remain within the current closure scope. Violating IDs: {string.Join(", ", violatingResolvedIds)}");
+                $"ResolvedWorkItems must remain within the current closure scope. Violating IDs: {string.Join(", ", violatingResolvedIds)}. Verify the relationship snapshot for the current sync run.");
         }
 
         var productIds = products.Select(p => p.Id).ToList();
