@@ -13,6 +13,7 @@ namespace PoTool.Api.Services;
 /// </summary>
 public class WorkItemRelationshipSnapshotService
 {
+    private const string InMemoryProviderName = "Microsoft.EntityFrameworkCore.InMemory";
     private const string ParentRelationType = "System.LinkTypes.Hierarchy-Reverse";
 
     private readonly IServiceScopeFactory _scopeFactory;
@@ -69,35 +70,16 @@ public class WorkItemRelationshipSnapshotService
         var snapshotAsOf = DateTimeOffset.UtcNow;
         var edges = BuildEdges(workItems, productOwnerId, snapshotAsOf);
 
-        await DeleteExistingEdgesAsync(context, productOwnerId, cancellationToken);
-
-        if (edges.Count > 0)
+        if (!IsInMemoryProvider(context))
         {
-            await context.WorkItemRelationshipEdges.AddRangeAsync(edges, cancellationToken);
+            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+            await ReplaceEdgesAsync(context, productOwnerId, edges, workItems, snapshotAsOf, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
         }
-
-        var cacheState = await context.ProductOwnerCacheStates
-            .OrderBy(e => e.Id)
-            .FirstOrDefaultAsync(e => e.ProductOwnerId == productOwnerId, cancellationToken);
-
-        if (cacheState == null)
+        else
         {
-            cacheState = new ProductOwnerCacheStateEntity
-            {
-                ProductOwnerId = productOwnerId,
-                SyncStatus = CacheSyncStatus.Idle
-            };
-            context.ProductOwnerCacheStates.Add(cacheState);
+            await ReplaceEdgesAsync(context, productOwnerId, edges, workItems, snapshotAsOf, cancellationToken);
         }
-
-        cacheState.RelationshipsSnapshotAsOfUtc = snapshotAsOf;
-        cacheState.RelationshipsSnapshotWorkItemWatermark = workItems
-            .Select(w => w.ChangedDate ?? w.RetrievedAt)
-            .Where(d => d != default)
-            .DefaultIfEmpty(snapshotAsOf)
-            .Max();
-
-        await context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "Captured {EdgeCount} relationship edges for ProductOwner {ProductOwnerId} at {SnapshotAsOf}",
@@ -153,7 +135,7 @@ public class WorkItemRelationshipSnapshotService
         var existingEdgesQuery = context.WorkItemRelationshipEdges
             .Where(edge => edge.ProductOwnerId == productOwnerId);
 
-        if (context.Database.IsInMemory())
+        if (IsInMemoryProvider(context))
         {
             var existingEdges = await existingEdgesQuery.ToListAsync(cancellationToken);
             context.WorkItemRelationshipEdges.RemoveRange(existingEdges);
@@ -162,6 +144,48 @@ public class WorkItemRelationshipSnapshotService
 
         await existingEdgesQuery.ExecuteDeleteAsync(cancellationToken);
     }
+
+    private static async Task ReplaceEdgesAsync(
+        PoToolDbContext context,
+        int productOwnerId,
+        IReadOnlyCollection<WorkItemRelationshipEdgeEntity> edges,
+        IReadOnlyCollection<WorkItemDto> workItems,
+        DateTimeOffset snapshotAsOf,
+        CancellationToken cancellationToken)
+    {
+        await DeleteExistingEdgesAsync(context, productOwnerId, cancellationToken);
+
+        if (edges.Count > 0)
+        {
+            await context.WorkItemRelationshipEdges.AddRangeAsync(edges, cancellationToken);
+        }
+
+        var cacheState = await context.ProductOwnerCacheStates
+            .OrderBy(e => e.Id)
+            .FirstOrDefaultAsync(e => e.ProductOwnerId == productOwnerId, cancellationToken);
+
+        if (cacheState == null)
+        {
+            cacheState = new ProductOwnerCacheStateEntity
+            {
+                ProductOwnerId = productOwnerId,
+                SyncStatus = CacheSyncStatus.Idle
+            };
+            context.ProductOwnerCacheStates.Add(cacheState);
+        }
+
+        cacheState.RelationshipsSnapshotAsOfUtc = snapshotAsOf;
+        cacheState.RelationshipsSnapshotWorkItemWatermark = workItems
+            .Select(w => w.ChangedDate ?? w.RetrievedAt)
+            .Where(d => d != default)
+            .DefaultIfEmpty(snapshotAsOf)
+            .Max();
+
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    private static bool IsInMemoryProvider(PoToolDbContext context)
+        => context.Database.ProviderName == InMemoryProviderName;
 
     private static void TryAddEdge(
         ICollection<WorkItemRelationshipEdgeEntity> edges,
