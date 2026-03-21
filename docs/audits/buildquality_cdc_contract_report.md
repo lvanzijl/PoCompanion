@@ -265,3 +265,34 @@ No drift detected.
 ## 14. Open questions introduced
 
 None.
+
+## 15. Clarifications and Locks
+
+### Build result interpretation
+
+- `PartiallySucceeded` builds are included in `EligibleBuilds`
+- `PartiallySucceeded` builds are treated as failures in `SuccessRate`
+
+### Unknown vs Low Confidence
+
+- `Unknown` strictly means absence of data:
+  - no builds → `SuccessRate = Unknown`
+  - no test runs → `TestPassRate = Unknown`
+  - no coverage or `TotalLines == 0` → `Coverage = Unknown`
+
+- Low confidence means:
+  - data exists but does not meet thresholds
+
+### Confidence semantics
+
+- `Confidence = 0` → insufficient builds AND insufficient tests
+- `Confidence = 1` → sufficient in exactly one dimension
+- `Confidence = 2` → sufficient in both dimensions
+
+### Coverage aggregation rule
+
+- Coverage MUST be calculated using:
+  - total `CoveredLines` (summed)
+  - total `TotalLines` (summed)
+
+- Coverage MUST NOT be calculated by averaging percentages
