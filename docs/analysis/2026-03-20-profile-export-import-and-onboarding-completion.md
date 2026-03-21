@@ -1,47 +1,38 @@
 # Bug Analysis Report
 
 ## Metadata
-- Bug: Profile export/import is incomplete and does not fully complete onboarding
+- Bug: Import through onboarding does not fully complete startup readiness; export/import completeness needs verification
 - Area: Settings / ImportExport / Onboarding
 - Status: Analysis complete
 
 ## ROOT_CAUSE
 
-- **Export/import completeness:** I did not find a current defect in the configuration transfer path for state classifications or profile scope.
-- `ConfigurationExportDto` already carries `StateClassifications` as a top-level collection (`PoTool.Shared/Settings/ConfigurationTransferDto.cs`).
-- `ExportConfigurationService` fills that collection from `WorkItemStateClassifications`, and `ImportConfigurationService` persists it again through `ApplyStateClassificationsAsync` (`PoTool.Api/Services/Configuration/ExportConfigurationService.cs`, `PoTool.Api/Services/Configuration/ImportConfigurationService.cs`).
-- Export scope is all profiles because export calls `GetAllProfilesAsync()` without any active-profile filter (`PoTool.Api/Services/Configuration/ExportConfigurationService.cs`).
-- The most likely root cause of the completeness observation is issue-framing drift: this is a full configuration export/import, not a single-profile export, and state classifications are configuration-level data rather than data nested inside an individual profile.
-- **Onboarding completion after import:** The onboarding wizard and startup readiness use different completion criteria.
-- The wizard only becomes explicitly finishable after import by setting `_configurationImported` and showing **Get Started** (`PoTool.Client/Components/Onboarding/OnboardingWizard.razor`).
-- App startup does not trust that client-side onboarding flag alone; it routes from backend readiness (`PoTool.Api/Handlers/Settings/GetStartupReadinessQueryHandler.cs`, `PoTool.Client/Services/StartupOrchestratorService.cs`).
-- During import, `ApplyImportedTfsConfigurationAsync` explicitly resets `HasTestedConnectionSuccessfully` and `HasVerifiedTfsApiSuccessfully` to `false` (`PoTool.Api/Services/Configuration/ImportConfigurationService.cs`).
-- That is why restart sends the user back to `/settings/tfs` even if profiles and settings were imported successfully.
+- The confirmed issue is the onboarding/import readiness gap, not missing export content. Import through onboarding can succeed, but the wizard only becomes manually finishable after `HandleImportedConfigurationAsync()` sets `_configurationImported`; onboarding is not auto-completed by the import itself, and the actual completion flag is only written when the user clicks **Get Started** or **Skip Wizard** (`PoTool.Client/Components/Onboarding/OnboardingWizard.razor`, `PoTool.Client/Services/OnboardingService.cs`).
+- Restart still routes to `/settings/tfs` because startup readiness is enforced separately from the client-side onboarding flag. `GetStartupReadinessQueryHandler` and `StartupOrchestratorService` require saved TFS config, successful connection test, successful API verification, at least one profile, and an active profile; `ApplyImportedTfsConfigurationAsync()` explicitly resets `HasTestedConnectionSuccessfully` and `HasVerifiedTfsApiSuccessfully` to `false`, so the import path leaves the app in a not-ready state until those checks are re-run (`PoTool.Api/Handlers/Settings/GetStartupReadinessQueryHandler.cs`, `PoTool.Client/Services/StartupOrchestratorService.cs`, `PoTool.Api/Services/Configuration/ImportConfigurationService.cs`).
 
 ## CURRENT_BEHAVIOR
-- The configuration transfer contract is `ConfigurationExportDto`, which contains `TfsConfiguration`, `Settings`, `EffortEstimationSettings`, `StateClassifications`, `TriageTags`, `Profiles`, `Teams`, and `Products` (`PoTool.Shared/Settings/ConfigurationTransferDto.cs`).
-- Export is handled by `SettingsController.ExportConfiguration()` → `ExportConfigurationService.ExportAsync()` (`PoTool.Api/Controllers/SettingsController.cs`, `PoTool.Api/Services/Configuration/ExportConfigurationService.cs`).
-- That export service loads **all** profiles, **all** teams, **all** products, the latest TFS config, application settings, effort settings, state classifications, and triage tags, then returns them in one file (`PoTool.Api/Services/Configuration/ExportConfigurationService.cs`).
-- Import is handled by `SettingsController.ImportConfiguration()` → `ImportConfigurationService.ImportAsync()` (`PoTool.Api/Controllers/SettingsController.cs`, `PoTool.Api/Services/Configuration/ImportConfigurationService.cs`).
-- Import first validates the JSON and temporarily applies the imported TFS configuration so it can validate connection, project, teams, repositories, work item types, and backlog roots against TFS before persisting data (`PoTool.Api/Services/Configuration/ImportConfigurationService.cs`).
-- Import restores profiles, teams, products, repository links, application settings, effort settings, triage tags, and state classifications. State classifications are not ignored in the current code path; `ApplyStateClassificationsAsync()` removes existing classifications for the imported project names and inserts the imported entries (`PoTool.Api/Services/Configuration/ImportConfigurationService.cs`).
-- Export scope is global, not active-profile-only. The only selectivity happens on import, where invalid or non-importable profiles/teams/products can be skipped after validation; the export file itself contains every profile returned by `GetAllProfilesAsync()` (`PoTool.Api/Services/Configuration/ExportConfigurationService.cs`, `PoTool.Api/Services/Configuration/ImportConfigurationService.cs`).
-- Onboarding completion is stored only in client preferences by `OnboardingService.MarkOnboardingCompletedAsync()` / `MarkOnboardingSkippedAsync()`. The onboarding page checks that flag to decide whether to show the wizard, but startup routing after that is controlled separately by backend readiness (`PoTool.Client/Services/OnboardingService.cs`, `PoTool.Client/Pages/Index.razor`).
-- In the onboarding wizard, a successful import does **not** automatically mark onboarding complete. `HandleImportedConfigurationAsync()` only sets `_configurationImported`, which swaps the footer CTA to **Get Started**. The actual completion flag is written only when the user clicks **Get Started** (or **Skip Wizard**) (`PoTool.Client/Components/Onboarding/OnboardingWizard.razor`).
-- Even after the user exits the wizard correctly, restart can still route to `/settings/tfs` because startup readiness in real-data mode requires saved TFS config, successful connection test, successful API verification, at least one profile, and an active profile. Import clears the two TFS validation flags, so the readiness check fails before profile availability is even considered (`PoTool.Api/Handlers/Settings/GetStartupReadinessQueryHandler.cs`, `PoTool.Client/Services/StartupOrchestratorService.cs`, `PoTool.Api/Services/Configuration/ImportConfigurationService.cs`).
+- The configuration transfer contract already includes `TfsConfiguration`, `Settings`, `EffortEstimationSettings`, `StateClassifications`, `TriageTags`, `Profiles`, `Teams`, and `Products` in `ConfigurationExportDto` (`PoTool.Shared/Settings/ConfigurationTransferDto.cs`).
+- Export is `SettingsController.ExportConfiguration()` → `ExportConfigurationService.ExportAsync()`, and it loads all profiles via `GetAllProfilesAsync()`, all teams, all products, and all stored state classifications; I did not find evidence that export is limited to only the active profile or that state classifications are omitted (`PoTool.Api/Controllers/SettingsController.cs`, `PoTool.Api/Services/Configuration/ExportConfigurationService.cs`).
+- Import is `SettingsController.ImportConfiguration()` → `ImportConfigurationService.ImportAsync()`. It validates the JSON, temporarily applies the imported TFS configuration for live validation, restores importable profiles/teams/products, restores the active profile when the imported profile id can be mapped, and applies state classifications through `ApplyStateClassificationsAsync()` (`PoTool.Api/Controllers/SettingsController.cs`, `PoTool.Api/Services/Configuration/ImportConfigurationService.cs`).
+- State classifications are stored and used per TFS project. Import removes existing rows for the imported project names and inserts the imported rows, while `WorkItemStateClassificationService` later reads classifications only for the currently configured project name. That means the current code supports project-scoped restore and lookup after import (`PoTool.Api/Services/Configuration/ImportConfigurationService.cs`, `PoTool.Api/Services/WorkItemStateClassificationService.cs`, `PoTool.Api/Persistence/Entities/WorkItemStateClassificationEntity.cs`).
+- The onboarding flow still feels incomplete after a successful import because import only changes the footer action to **Get Started**; the user must still explicitly finish or skip the wizard (`PoTool.Client/Components/Onboarding/OnboardingWizard.razor`).
+- Even after the user exits onboarding, a restart can route to `/settings/tfs` because the imported TFS configuration is treated as unvalidated. The startup page checks onboarding separately, then defers to readiness routing, which sends the user to `/settings/tfs` when TFS validation flags are false (`PoTool.Client/Pages/Index.razor`, `PoTool.Client/Services/StartupOrchestratorService.cs`, `PoTool.Api/Handlers/Settings/GetStartupReadinessQueryHandler.cs`).
 
 ## Comments on the Issue (you are @copilot in this section)
 
 <comments>
-I traced the end-to-end flow and the current code does not support the assumption that configuration export/import is only exporting one profile. It also does not support the assumption that state classifications are currently omitted from the transfer payload. The current transfer model is already a full configuration snapshot, and both the export and import services have explicit state-classification handling.
+I traced the export/import flow end to end and only the onboarding-completion/readiness problem is confirmed as a current defect.
 
-So I would not treat “missing exported/imported state classifications” as the present root defect without first confirming the user was testing this exact configuration-transfer feature and not an older file or a different path.
+For the verification questions:
+1. **Does export include all profiles?** Yes. Export calls `GetAllProfilesAsync()` and writes every returned profile into `ConfigurationExportDto`.
+2. **Does export include state classifications?** Yes. `ConfigurationExportDto` has a top-level `StateClassifications` collection, and `ExportConfigurationService` fills it from `WorkItemStateClassifications`.
+3. **Does import restore all profiles?** It restores all profiles that pass the import validation rules. The import path is not active-profile-only, but invalid or non-importable profiles can still be skipped.
+4. **Does import restore state classifications?** Yes. `ApplyStateClassificationsAsync()` deletes existing rows for the imported project names and inserts the imported rows.
+5. **Are state classifications scoped and used correctly after import?** In the current code, yes. They are stored with `TfsProjectName`, and `WorkItemStateClassificationService` resolves classifications by the currently configured project.
 
-The onboarding complaint is real, but the strongest evidence says it is not primarily an “onboarding flag not written” bug. The app has two separate notions of completion: local onboarding completion in browser preferences, and backend startup readiness. Import through onboarding can leave the wizard and even be marked completed.
+The confirmed defect is that onboarding import does not leave the app in a fully usable post-import state. There are effectively two gates:
+- a client-side onboarding-completed preference; and
+- a backend startup-readiness check.
 
-The app still redirects to TFS configuration on restart because the import path deliberately clears the TFS validation flags. Startup routing blocks on those flags before it cares about imported profiles.
-
-So the practical analysis outcome is:
-1. configuration export/import already appears to cover all profiles and already includes/restores state classifications in the current codebase; and
-2. the restart redirect is explained by the import path bypassing the normal “ready to use” state, because imported TFS configuration is treated as unvalidated and startup routing enforces re-validation.
+Import through onboarding can satisfy neither gate automatically: it does not complete onboarding on its own, and it also resets TFS validation readiness. That is why the experience feels incomplete immediately after import and why a later restart still routes to `/settings/tfs`.
 </comments>
