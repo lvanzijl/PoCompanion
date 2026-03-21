@@ -23,13 +23,13 @@ public sealed class OnboardingWizardImportTests
             .Setup(instance => instance.Close(It.IsAny<DialogResult>()))
             .Verifiable();
 
-        var completionCount = 0;
+        var onCompletedCallCount = 0;
         var component = CreateWizardComponent(
             onboardingService.Object,
             dialog.Object,
             new EventCallbackFactory().Create(this, () =>
             {
-                completionCount++;
+                onCompletedCallCount++;
                 return Task.CompletedTask;
             }));
 
@@ -37,7 +37,7 @@ public sealed class OnboardingWizardImportTests
 
         onboardingService.Verify(service => service.MarkOnboardingCompletedAsync(), Times.Once);
         dialog.Verify(instance => instance.Close(It.IsAny<DialogResult>()), Times.Once);
-        Assert.AreEqual(1, completionCount);
+        Assert.AreEqual(1, onCompletedCallCount);
     }
 
     [TestMethod]
@@ -45,14 +45,14 @@ public sealed class OnboardingWizardImportTests
     {
         var onboardingService = new Mock<IOnboardingService>(MockBehavior.Strict);
         var dialog = new Mock<IMudDialogInstance>(MockBehavior.Strict);
-        var completionCount = 0;
+        var onCompletedCallCount = 0;
 
         var component = CreateWizardComponent(
             onboardingService.Object,
             dialog.Object,
             new EventCallbackFactory().Create(this, () =>
             {
-                completionCount++;
+                onCompletedCallCount++;
                 return Task.CompletedTask;
             }));
 
@@ -60,7 +60,7 @@ public sealed class OnboardingWizardImportTests
 
         onboardingService.Verify(service => service.MarkOnboardingCompletedAsync(), Times.Never);
         dialog.Verify(instance => instance.Close(It.IsAny<DialogResult>()), Times.Never);
-        Assert.AreEqual(0, completionCount);
+        Assert.AreEqual(0, onCompletedCallCount);
     }
 
     private static object CreateWizardComponent(

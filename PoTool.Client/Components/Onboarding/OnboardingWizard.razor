@@ -575,13 +575,7 @@
                     Previous
                 </CompactButton>
             }
-            @if (_configurationImported)
-            {
-                <CompactButton OnClick="Complete" Color="Color.Success" Variant="Variant.Filled">
-                    Get Started
-                </CompactButton>
-            }
-            else if (_currentStep < 4)
+            @if (_currentStep < 4)
             {
                 <CompactButton OnClick="Next" 
                               Color="Color.Primary" 
@@ -625,7 +619,6 @@
     private ErrorResponse? _configErrorResponse;
     private List<TfsConfigProgressUpdate> _progressUpdates = new();
     private bool? _configCompleted;
-    private bool _configurationImported;
 
     // Profile form fields
     private MudForm? _profileForm;
@@ -769,11 +762,6 @@
 
     private bool IsNextDisabled()
     {
-        if (_configurationImported)
-        {
-            return false;
-        }
-
         // For step 0 (TFS Configuration), require verification and no changes
         if (_currentStep == 0)
         {
@@ -885,9 +873,7 @@
 
     private async Task HandleImportedConfigurationAsync(ConfigurationImportResultDto result)
     {
-        _configurationImported = result.ImportExecuted && result.CanImport;
-
-        if (_configurationImported)
+        if (result.ImportExecuted && result.CanImport)
         {
             await Complete();
         }

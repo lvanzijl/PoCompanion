@@ -62,11 +62,13 @@ public sealed class ImportConfigurationService
         }
 
         var removedItems = new List<string>();
+        var trustedConfigurationId = validation.ImportedConfigurationId;
         if (validation.ExistingConfigurationDetected)
         {
             await RestoreTfsConfigurationAsync(validation.BackupConfiguration, cancellationToken);
             removedItems = await WipeExistingConfigurationAsync(cancellationToken);
-            await ApplyImportedTfsConfigurationAsync(validation.Configuration.TfsConfiguration!, cancellationToken);
+            var appliedConfiguration = await ApplyImportedTfsConfigurationAsync(validation.Configuration.TfsConfiguration!, cancellationToken);
+            trustedConfigurationId = appliedConfiguration.ConfigurationId;
         }
 
         var importedProfiles = new List<string>();
@@ -298,7 +300,7 @@ public sealed class ImportConfigurationService
         globalSettingsApplied.Add(await ApplyEffortSettingsAsync(validation.Configuration, cancellationToken));
         globalSettingsApplied.Add(await ApplyStateClassificationsAsync(validation.Configuration, cancellationToken));
         globalSettingsApplied.Add(await ApplyTriageTagsAsync(validation.Configuration, cancellationToken));
-        await MarkImportedTfsConfigurationAsTrustedReadyAsync(cancellationToken);
+        await MarkImportedTfsConfigurationAsTrustedReadyAsync(trustedConfigurationId, cancellationToken);
 
         return new ConfigurationImportResultDto(
             CanImport: true,
@@ -377,7 +379,8 @@ public sealed class ImportConfigurationService
         ValidateProductSchema(configuration, warnings, errors, repositoriesLinked);
         ValidateTeamSchema(configuration, importableTeamIds, errors, teamsImported);
 
-        var backupConfiguration = await ApplyImportedTfsConfigurationAsync(configuration.TfsConfiguration, cancellationToken);
+        var appliedConfiguration = await ApplyImportedTfsConfigurationAsync(configuration.TfsConfiguration, cancellationToken);
+        var backupConfiguration = appliedConfiguration.BackupConfiguration;
 
         try
         {
@@ -545,6 +548,7 @@ public sealed class ImportConfigurationService
             return ValidationContext.Create(
                 configuration,
                 backupConfiguration,
+                appliedConfiguration.ConfigurationId,
                 true,
                 validatedProfiles,
                 importableProfileIds,
@@ -734,7 +738,7 @@ public sealed class ImportConfigurationService
             $"Applied {configuration.TriageTags.Count} triage tag(s).");
     }
 
-    private async Task<TfsConfigEntity?> ApplyImportedTfsConfigurationAsync(
+    private async Task<AppliedImportedTfsConfiguration> ApplyImportedTfsConfigurationAsync(
         TfsConfigEntity importedConfiguration,
         CancellationToken cancellationToken)
     {
@@ -768,17 +772,25 @@ public sealed class ImportConfigurationService
         current.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
-        return backup;
+        return new AppliedImportedTfsConfiguration(backup, current.Id);
     }
 
-    private async Task MarkImportedTfsConfigurationAsTrustedReadyAsync(CancellationToken cancellationToken)
+    private async Task MarkImportedTfsConfigurationAsTrustedReadyAsync(int? configurationId, CancellationToken cancellationToken)
     {
+        if (!configurationId.HasValue)
+        {
+            _logger.LogWarning("Skipping trusted-ready marking because the imported TFS configuration ID was not available.");
+            return;
+        }
+
         var current = await _dbContext.TfsConfigs
-            .OrderByDescending(config => config.UpdatedAtUtc)
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(config => config.Id == configurationId.Value, cancellationToken);
 
         if (current == null)
         {
+            _logger.LogWarning(
+                "Skipping trusted-ready marking because imported TFS configuration {ConfigurationId} was not found.",
+                configurationId.Value);
             return;
         }
 
@@ -1128,6 +1140,7 @@ public sealed class ImportConfigurationService
     {
         public required ConfigurationExportDto Configuration { get; init; }
         public TfsConfigEntity? BackupConfiguration { get; init; }
+        public int? ImportedConfigurationId { get; init; }
         public bool CanImport { get; init; }
         public required IReadOnlyList<string> ValidatedProfiles { get; init; }
         public required ISet<int> ImportableProfileIds { get; init; }
@@ -1148,6 +1161,7 @@ public sealed class ImportConfigurationService
         public static ValidationContext Create(
             ConfigurationExportDto configuration,
             TfsConfigEntity? backupConfiguration,
+            int? importedConfigurationId,
             bool canImport,
             IReadOnlyList<string> validatedProfiles,
             ISet<int> importableProfileIds,
@@ -1168,6 +1182,7 @@ public sealed class ImportConfigurationService
             {
                 Configuration = configuration,
                 BackupConfiguration = backupConfiguration,
+                ImportedConfigurationId = importedConfigurationId,
                 CanImport = canImport,
                 ValidatedProfiles = validatedProfiles,
                 ImportableProfileIds = importableProfileIds,
@@ -1210,6 +1225,7 @@ public sealed class ImportConfigurationService
                     [],
                     []),
                 backupConfiguration,
+                importedConfigurationId: null,
                 canImport: false,
                 [],
                 new HashSet<int>(),
@@ -1270,4 +1286,8 @@ public sealed class ImportConfigurationService
     {
         return new ConfigurationImportEntityResultDto(entityType, name, status, message);
     }
+
+    private sealed record AppliedImportedTfsConfiguration(
+        TfsConfigEntity? BackupConfiguration,
+        int ConfigurationId);
 }
