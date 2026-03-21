@@ -48,6 +48,10 @@ public class WorkItemResolutionService
             };
         }
 
+        // WorkItemRelationshipSnapshotStage (stage 4) rebuilds WorkItemRelationshipEdges by deleting the
+        // current product owner's rows and inserting the current graph before resolution runs in stage 5.
+        // That delete-and-replace contract keeps the snapshot scoped to a single sync run, so reading the
+        // latest snapshot timestamp is safe and cannot mix edges from older runs for this product owner.
         var latestSnapshotAsOf = await context.WorkItemRelationshipEdges
             .AsNoTracking()
             .Where(edge => edge.ProductOwnerId == productOwnerId)
