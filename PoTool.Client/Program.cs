@@ -113,6 +113,14 @@ builder.Services.AddScoped<IPipelinesClient>(sp =>
     return client;
 });
 
+builder.Services.AddScoped<IBuildQualityClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new BuildQualityClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
 builder.Services.AddScoped<IProductsClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
@@ -150,6 +158,7 @@ builder.Services.AddScoped<WorkItemService>();
 builder.Services.AddScoped<WorkItemLoadCoordinatorService>();
 builder.Services.AddScoped<PullRequestService>();
 builder.Services.AddScoped<PipelineService>();
+builder.Services.AddScoped<IBuildQualityService, BuildQualityService>();
 builder.Services.AddScoped<ITreeBuilderService, TreeBuilderService>();
 builder.Services.AddScoped<ICorrelationIdService, CorrelationIdService>();
 builder.Services.AddScoped<SettingsService>();

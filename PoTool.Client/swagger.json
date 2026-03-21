@@ -5668,6 +5668,155 @@
           }
         }
       }
+    },
+    "/api/buildquality/rolling": {
+      "get": {
+        "tags": [
+          "BuildQuality"
+        ],
+        "operationId": "BuildQuality_GetRolling",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "windowStartUtc",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "x-position": 2
+          },
+          {
+            "name": "windowEndUtc",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildQualityPageDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/buildquality/sprint": {
+      "get": {
+        "tags": [
+          "BuildQuality"
+        ],
+        "operationId": "BuildQuality_GetSprint",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "sprintId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryBuildQualityDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/buildquality/pipeline": {
+      "get": {
+        "tags": [
+          "BuildQuality"
+        ],
+        "operationId": "BuildQuality_GetPipeline",
+        "parameters": [
+          {
+            "name": "productOwnerId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "sprintId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 2
+          },
+          {
+            "name": "pipelineDefinitionId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 3
+          },
+          {
+            "name": "repositoryId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 4
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineBuildQualityDto"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -12253,6 +12402,308 @@
             "type": "integer",
             "format": "int32",
             "nullable": true
+          }
+        }
+      },
+      "BuildQualityPageDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productOwnerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "windowStartUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "windowEndUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "productIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "defaultBranches": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "summary": {
+            "$ref": "#/components/schemas/BuildQualityResultDto"
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildQualityProductDto"
+            }
+          }
+        }
+      },
+      "BuildQualityResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "metrics": {
+            "$ref": "#/components/schemas/BuildQualityMetricsDto"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/BuildQualityEvidenceDto"
+          }
+        }
+      },
+      "BuildQualityMetricsDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "successRate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "testPassRate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "testVolume": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "coverage": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "confidence": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "BuildQualityEvidenceDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "eligibleBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "succeededBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failedBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "partiallySucceededBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "canceledBuilds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalTests": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "passedTests": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "notApplicableTests": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "coveredLines": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalLines": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "buildThresholdMet": {
+            "type": "boolean"
+          },
+          "testThresholdMet": {
+            "type": "boolean"
+          },
+          "successRateUnknown": {
+            "type": "boolean"
+          },
+          "successRateUnknownReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "testPassRateUnknown": {
+            "type": "boolean"
+          },
+          "testPassRateUnknownReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "coverageUnknown": {
+            "type": "boolean"
+          },
+          "coverageUnknownReason": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "BuildQualityProductDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "pipelineDefinitionIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "repositoryIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "result": {
+            "$ref": "#/components/schemas/BuildQualityResultDto"
+          }
+        }
+      },
+      "DeliveryBuildQualityDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productOwnerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sprintId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sprintName": {
+            "type": "string"
+          },
+          "teamId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "sprintStartUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "sprintEndUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "productIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "defaultBranches": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "summary": {
+            "$ref": "#/components/schemas/BuildQualityResultDto"
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildQualityProductDto"
+            }
+          }
+        }
+      },
+      "PipelineBuildQualityDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productOwnerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sprintId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sprintName": {
+            "type": "string"
+          },
+          "teamId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "sprintStartUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "sprintEndUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "productId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "repositoryId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "repositoryName": {
+            "type": "string",
+            "nullable": true
+          },
+          "pipelineDefinitionId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "pipelineName": {
+            "type": "string",
+            "nullable": true
+          },
+          "defaultBranches": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "result": {
+            "$ref": "#/components/schemas/BuildQualityResultDto"
           }
         }
       }
