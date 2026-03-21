@@ -33,7 +33,6 @@ Define the missing ingestion and persistence contract that allows the locked `Bu
   - coverage
 - no build-only fallback
 - Unknown rules remain unchanged
-- Unknown rules unchanged
 - aggregation remains unchanged
 - formulas unchanged
 - percentages MUST NOT be averaged
@@ -61,6 +60,7 @@ Contract requirements:
   - `NotApplicableTests`
 - exact TFS field names for total, passed, and notApplicable remain **UNCERTAIN** until verified in the source API
 - if TFS uses an equivalent field rather than a literal `notApplicable` field, that mapping must be explicit and marked **UNCERTAIN** until verified
+- verification path for **UNCERTAIN** test fields: confirm the concrete API payload and field names against the TFS / Azure DevOps test-results contract before implementation; do not guess or infer names from formulas
 
 ### 5.2 Coverage retrieval
 
@@ -78,6 +78,7 @@ Contract requirements:
 - Cobertura or equivalent formats are expected
 - pipeline defines filters (not ingestion)
 - exact TFS field names or artifact element names for coverage totals remain **UNCERTAIN** until verified in the source API
+- verification path for **UNCERTAIN** coverage fields: confirm the concrete coverage artifact contract and summary fields against the TFS / Azure DevOps source before implementation; do not guess or infer names from formulas
 
 ## 6. External data contracts
 
@@ -147,13 +148,15 @@ Required fields:
 - `TotalTests`
 - `PassedTests`
 - `NotApplicableTests`
-- `Timestamp` (if applicable and only when the source exposes a verified test-run timestamp; otherwise nullable / omitted from the minimum contract)
+- `Timestamp` (nullable; populated only when the source exposes a verified test-run timestamp; when null, time scoping continues to use the build anchor completion time)
 
 Persistence rules:
 
 - store raw numeric facts only
 - do not persist derived pass rate or test volume
 - use the build foreign key, not an inferred product or pipeline key, as the linkage anchor
+- `Timestamp` remains a nullable field in the initial implementation when the source does not expose a verified test-run timestamp
+- BuildQuality queries must continue to use the build anchor completion time for time scoping when child timestamps are absent
 
 ### `CoverageEntity`
 
@@ -162,13 +165,15 @@ Required fields:
 - `BuildId` (FK to the cached build anchor)
 - `CoveredLines`
 - `TotalLines`
-- `Timestamp` (if applicable and only when the source exposes a verified coverage timestamp; otherwise nullable / omitted from the minimum contract)
+- `Timestamp` (nullable; populated only when the source exposes a verified coverage timestamp; when null, time scoping continues to use the build anchor completion time)
 
 Persistence rules:
 
 - store raw numeric facts only
 - do not persist derived coverage percentage
 - use the build foreign key, not an inferred product or pipeline key, as the linkage anchor
+- `Timestamp` remains a nullable field in the initial implementation when the source does not expose a verified coverage timestamp
+- BuildQuality queries must continue to use the build anchor completion time for time scoping when child timestamps are absent
 
 ## 9. Linkage model
 
@@ -186,6 +191,9 @@ Multiplicity rules:
 - multiple coverage entries per build are persisted as separate raw records
 - ingestion does not aggregate multiple test runs per build
 - ingestion does not aggregate multiple coverage entries per build
+- when the source exposes a stable external child-record identity, persistence should upsert idempotently on that identity plus `BuildId`
+- when the source does not expose a stable external child-record identity, the sync stage should replace previously cached child rows for the synced build set before inserting the current raw facts so duplicates do not accumulate
+- decision rule: use idempotent upsert only after the TFS / Azure DevOps response is verified to contain a stable child-record identity for that child type; otherwise use replace-linked-rows for that child type
 - later BuildQuality selection/provider steps aggregate totals from the linked raw facts without changing the locked formulas
 
 ## 10. Data integrity rules

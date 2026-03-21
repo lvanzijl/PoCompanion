@@ -35,7 +35,7 @@ public sealed class BuildQualityImplementationContractReportDocumentTests
         StringAssert.Contains(report, "full BuildQuality scope required");
         StringAssert.Contains(report, "no build-only fallback");
         StringAssert.Contains(report, "formulas unchanged");
-        StringAssert.Contains(report, "Unknown rules unchanged");
+        StringAssert.Contains(report, "Unknown rules remain unchanged");
         StringAssert.Contains(report, "CDC not reinterpreted");
         StringAssert.Contains(report, "aggregation remains unchanged");
         StringAssert.Contains(report, "no new metrics");
@@ -50,7 +50,9 @@ public sealed class BuildQualityImplementationContractReportDocumentTests
         StringAssert.Contains(report, "TotalLines");
         StringAssert.Contains(report, "Cobertura or equivalent formats are expected");
         StringAssert.Contains(report, "pipeline defines filters (not ingestion)");
-        StringAssert.Contains(report, "UNCERTAIN");
+        StringAssert.Contains(report, "exact TFS field names for total, passed, and notApplicable remain **UNCERTAIN**");
+        StringAssert.Contains(report, "exact TFS field names or artifact element names for coverage totals remain **UNCERTAIN**");
+        StringAssert.Contains(report, "exact TFS test-run source field names for `TotalTests`, `PassedTests`, and `NotApplicableTests` remain **UNCERTAIN**");
         StringAssert.Contains(report, "raw facts only");
         StringAssert.Contains(report, "build is the anchor");
         StringAssert.Contains(report, "multiple test runs per build are allowed");
