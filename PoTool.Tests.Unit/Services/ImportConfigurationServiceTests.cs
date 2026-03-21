@@ -86,7 +86,10 @@ public sealed class ImportConfigurationServiceTests
         Assert.AreEqual(1, await _dbContext.Repositories.CountAsync());
         Assert.AreEqual(1, await _dbContext.WorkItemStateClassifications.CountAsync());
         Assert.AreEqual(1, await _dbContext.TriageTags.CountAsync());
-        Assert.AreEqual("https://dev.azure.com/example", (await _dbContext.TfsConfigs.SingleAsync()).Url);
+        var importedTfsConfig = await _dbContext.TfsConfigs.SingleAsync();
+        Assert.AreEqual("https://dev.azure.com/example", importedTfsConfig.Url);
+        Assert.IsTrue(importedTfsConfig.HasTestedConnectionSuccessfully);
+        Assert.IsTrue(importedTfsConfig.HasVerifiedTfsApiSuccessfully);
     }
 
     [TestMethod]
@@ -251,7 +254,10 @@ public sealed class ImportConfigurationServiceTests
         Assert.AreEqual("Import Product", (await _dbContext.Products.SingleAsync()).Name);
         Assert.AreEqual(1, await _dbContext.TriageTags.CountAsync());
         Assert.AreEqual("Needs Investigation", (await _dbContext.TriageTags.SingleAsync()).Name);
-        Assert.AreEqual("https://dev.azure.com/example", (await _dbContext.TfsConfigs.SingleAsync()).Url);
+        var importedTfsConfig = await _dbContext.TfsConfigs.SingleAsync();
+        Assert.AreEqual("https://dev.azure.com/example", importedTfsConfig.Url);
+        Assert.IsTrue(importedTfsConfig.HasTestedConnectionSuccessfully);
+        Assert.IsTrue(importedTfsConfig.HasVerifiedTfsApiSuccessfully);
     }
 
     private static ConfigurationExportDto CreateConfigurationExportDto(

@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-21",
+    "type": "Fixed",
+    "title": "Onboarding import now completes trusted setup",
+    "impact": "Importing a saved configuration during onboarding now finishes the wizard automatically and preserves trusted TFS readiness so restart no longer sends verified imports back to TFS settings.",
+    "area": "Settings",
+    "link": "/onboarding"
+  },
+  {
     "date": "2026-03-18",
     "type": "Fixed",
     "title": "Sprint Delivery breadcrumbs now restore drill-down state",

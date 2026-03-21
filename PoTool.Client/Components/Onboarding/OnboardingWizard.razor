@@ -883,11 +883,14 @@
         return Task.FromResult(filtered);
     }
 
-    private Task HandleImportedConfigurationAsync(ConfigurationImportResultDto result)
+    private async Task HandleImportedConfigurationAsync(ConfigurationImportResultDto result)
     {
         _configurationImported = result.ImportExecuted && result.CanImport;
-        StateHasChanged();
-        return Task.CompletedTask;
+
+        if (_configurationImported)
+        {
+            await Complete();
+        }
     }
 
     private async Task Next()

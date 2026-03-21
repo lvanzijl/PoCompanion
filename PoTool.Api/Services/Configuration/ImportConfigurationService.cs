@@ -298,6 +298,7 @@ public sealed class ImportConfigurationService
         globalSettingsApplied.Add(await ApplyEffortSettingsAsync(validation.Configuration, cancellationToken));
         globalSettingsApplied.Add(await ApplyStateClassificationsAsync(validation.Configuration, cancellationToken));
         globalSettingsApplied.Add(await ApplyTriageTagsAsync(validation.Configuration, cancellationToken));
+        await MarkImportedTfsConfigurationAsTrustedReadyAsync(cancellationToken);
 
         return new ConfigurationImportResultDto(
             CanImport: true,
@@ -768,6 +769,23 @@ public sealed class ImportConfigurationService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return backup;
+    }
+
+    private async Task MarkImportedTfsConfigurationAsTrustedReadyAsync(CancellationToken cancellationToken)
+    {
+        var current = await _dbContext.TfsConfigs
+            .OrderByDescending(config => config.UpdatedAtUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (current == null)
+        {
+            return;
+        }
+
+        current.HasTestedConnectionSuccessfully = true;
+        current.HasVerifiedTfsApiSuccessfully = true;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task RestoreTfsConfigurationAsync(TfsConfigEntity? backupConfiguration, CancellationToken cancellationToken)
