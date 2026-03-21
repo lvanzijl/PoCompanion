@@ -83,8 +83,13 @@ public class PipelineSyncStage : ISyncStage
                 .Where(pd => context.PipelineDefinitionIds.Contains(pd.PipelineDefinitionId))
                 .ToDictionaryAsync(pd => pd.PipelineDefinitionId, pd => pd.Id, cancellationToken);
 
-            // Upsert pipeline runs to database
+            // Upsert pipeline runs to database so the build anchor exists before child facts are processed.
             var maxDate = await UpsertPipelineRunsAsync(runList, context.ProductOwnerId, pipelineIdMapping, progressCallback, cancellationToken);
+
+            var buildQualityResult = await SyncBuildQualityFactsAsync(
+                context.ProductOwnerId,
+                runList,
+                cancellationToken);
 
             progressCallback(100);
 
@@ -94,7 +99,11 @@ public class PipelineSyncStage : ISyncStage
                 context.ProductOwnerId,
                 maxDate?.ToString("O") ?? "none");
 
-            return SyncStageResult.CreateSuccess(runList.Count, maxDate);
+            return SyncStageResult.CreateSuccess(
+                runList.Count,
+                maxDate,
+                buildQualityResult.HasWarnings,
+                buildQualityResult.WarningMessage);
         }
         catch (OperationCanceledException)
         {
@@ -186,6 +195,197 @@ public class PipelineSyncStage : ISyncStage
         return maxDate;
     }
 
+    private async Task<BuildQualitySyncResult> SyncBuildQualityFactsAsync(
+        int productOwnerId,
+        IReadOnlyCollection<PipelineRunDto> runs,
+        CancellationToken cancellationToken)
+    {
+        var requestedRunIds = runs
+            .Select(run => run.RunId)
+            .Distinct()
+            .ToArray();
+
+        if (requestedRunIds.Length == 0)
+        {
+            return BuildQualitySyncResult.None;
+        }
+
+        var buildAnchors = await _context.CachedPipelineRuns
+            .Where(run => run.ProductOwnerId == productOwnerId && requestedRunIds.Contains(run.TfsRunId))
+            .Select(run => new { run.Id, run.TfsRunId })
+            .ToDictionaryAsync(run => run.TfsRunId, run => run.Id, cancellationToken);
+
+        if (buildAnchors.Count == 0)
+        {
+            return BuildQualitySyncResult.None;
+        }
+
+        var buildIds = buildAnchors.Keys.ToArray();
+        var testRunsTask = _tfsClient.GetTestRunsByBuildIdsAsync(buildIds, cancellationToken);
+        var coverageTask = _tfsClient.GetCoverageByBuildIdsAsync(buildIds, cancellationToken);
+
+        await Task.WhenAll(testRunsTask, coverageTask);
+
+        var testRuns = (await testRunsTask).ToList();
+        var coverage = (await coverageTask).ToList();
+
+        var warningCount = 0;
+        warningCount += await UpsertTestRunsAsync(buildAnchors, testRuns, cancellationToken);
+        warningCount += await ReplaceCoverageAsync(buildAnchors, coverage, cancellationToken);
+
+        _logger.LogInformation(
+            "Build quality ingestion synced {TestRunCount} test runs and {CoverageCount} coverage rows for ProductOwner {ProductOwnerId}",
+            testRuns.Count,
+            coverage.Count,
+            productOwnerId);
+
+        return warningCount == 0
+            ? BuildQualitySyncResult.None
+            : new BuildQualitySyncResult(true, "Build quality ingestion skipped invalid or unlinked child records.");
+    }
+
+    private async Task<int> UpsertTestRunsAsync(
+        IReadOnlyDictionary<int, int> buildAnchors,
+        IReadOnlyCollection<TestRunDto> testRuns,
+        CancellationToken cancellationToken)
+    {
+        var affectedBuildIds = buildAnchors.Values.ToArray();
+        var existingEntities = await _context.TestRuns
+            .Where(testRun => affectedBuildIds.Contains(testRun.BuildId))
+            .ToListAsync(cancellationToken);
+
+        var existingByKey = existingEntities
+            .Where(testRun => testRun.ExternalId.HasValue)
+            .ToDictionary(testRun => (testRun.BuildId, testRun.ExternalId!.Value));
+
+        var incomingKeys = new HashSet<(int BuildId, int ExternalId)>();
+        var warningCount = 0;
+        var now = DateTimeOffset.UtcNow;
+
+        foreach (var dto in testRuns)
+        {
+            if (!buildAnchors.TryGetValue(dto.BuildId, out var internalBuildId))
+            {
+                warningCount += LogSkippedTestRun(dto, "missing build linkage");
+                continue;
+            }
+
+            if (dto.ExternalId is null)
+            {
+                warningCount += LogSkippedTestRun(dto, "missing stable external id");
+                continue;
+            }
+
+            if (dto.TotalTests < 0 || dto.PassedTests < 0 || dto.NotApplicableTests < 0)
+            {
+                warningCount += LogSkippedTestRun(dto, "negative raw counters");
+                continue;
+            }
+
+            var key = (internalBuildId, dto.ExternalId.Value);
+            incomingKeys.Add(key);
+
+            if (existingByKey.TryGetValue(key, out var entity))
+            {
+                entity.TotalTests = dto.TotalTests;
+                entity.PassedTests = dto.PassedTests;
+                entity.NotApplicableTests = dto.NotApplicableTests;
+                entity.Timestamp = dto.Timestamp?.UtcDateTime;
+                entity.CachedAt = now;
+            }
+            else
+            {
+                await _context.TestRuns.AddAsync(new TestRunEntity
+                {
+                    BuildId = internalBuildId,
+                    ExternalId = dto.ExternalId,
+                    TotalTests = dto.TotalTests,
+                    PassedTests = dto.PassedTests,
+                    NotApplicableTests = dto.NotApplicableTests,
+                    Timestamp = dto.Timestamp?.UtcDateTime,
+                    CachedAt = now
+                }, cancellationToken);
+            }
+        }
+
+        var staleEntities = existingEntities
+            .Where(entity => !entity.ExternalId.HasValue || !incomingKeys.Contains((entity.BuildId, entity.ExternalId.Value)))
+            .ToList();
+
+        if (staleEntities.Count != 0)
+        {
+            _context.TestRuns.RemoveRange(staleEntities);
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        return warningCount;
+    }
+
+    private async Task<int> ReplaceCoverageAsync(
+        IReadOnlyDictionary<int, int> buildAnchors,
+        IReadOnlyCollection<CoverageDto> coverageRows,
+        CancellationToken cancellationToken)
+    {
+        var affectedBuildIds = buildAnchors.Values.ToArray();
+        var existingEntities = await _context.Coverages
+            .Where(coverage => affectedBuildIds.Contains(coverage.BuildId))
+            .ToListAsync(cancellationToken);
+
+        if (existingEntities.Count != 0)
+        {
+            _context.Coverages.RemoveRange(existingEntities);
+        }
+
+        var warningCount = 0;
+        var now = DateTimeOffset.UtcNow;
+
+        foreach (var dto in coverageRows)
+        {
+            if (!buildAnchors.TryGetValue(dto.BuildId, out var internalBuildId))
+            {
+                warningCount += LogSkippedCoverage(dto, "missing build linkage");
+                continue;
+            }
+
+            if (dto.CoveredLines < 0 || dto.TotalLines < 0)
+            {
+                warningCount += LogSkippedCoverage(dto, "negative raw counters");
+                continue;
+            }
+
+            await _context.Coverages.AddAsync(new CoverageEntity
+            {
+                BuildId = internalBuildId,
+                CoveredLines = dto.CoveredLines,
+                TotalLines = dto.TotalLines,
+                Timestamp = dto.Timestamp?.UtcDateTime,
+                CachedAt = now
+            }, cancellationToken);
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        return warningCount;
+    }
+
+    private int LogSkippedTestRun(TestRunDto dto, string reason)
+    {
+        _logger.LogWarning(
+            "Skipping invalid test run fact for external build {BuildId} and external test run {ExternalId}: {Reason}",
+            dto.BuildId,
+            dto.ExternalId,
+            reason);
+        return 1;
+    }
+
+    private int LogSkippedCoverage(CoverageDto dto, string reason)
+    {
+        _logger.LogWarning(
+            "Skipping invalid coverage fact for external build {BuildId}: {Reason}",
+            dto.BuildId,
+            reason);
+        return 1;
+    }
+
     private static void UpdateEntity(CachedPipelineRunEntity entity, PipelineRunDto dto)
     {
         entity.RunName = dto.PipelineName;
@@ -216,5 +416,10 @@ public class PipelineSyncStage : ISyncStage
             SourceBranch = dto.Branch,
             CachedAt = DateTimeOffset.UtcNow
         };
+    }
+
+    private sealed record BuildQualitySyncResult(bool HasWarnings, string? WarningMessage)
+    {
+        public static BuildQualitySyncResult None { get; } = new(false, null);
     }
 }

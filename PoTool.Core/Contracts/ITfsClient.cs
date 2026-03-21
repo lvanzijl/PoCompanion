@@ -444,6 +444,28 @@ public interface ITfsClient
         string repositoryName,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Retrieves raw test runs linked to the supplied build IDs.
+    /// Returns transport DTOs only; callers handle linking and persistence.
+    /// </summary>
+    /// <param name="buildIds">Collection of TFS build identifiers.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of raw test run DTOs.</returns>
+    Task<IEnumerable<TestRunDto>> GetTestRunsByBuildIdsAsync(
+        IEnumerable<int> buildIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves raw coverage facts linked to the supplied build IDs.
+    /// Returns transport DTOs only; callers handle linking and persistence.
+    /// </summary>
+    /// <param name="buildIds">Collection of TFS build identifiers.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of raw coverage DTOs.</returns>
+    Task<IEnumerable<CoverageDto>> GetCoverageByBuildIdsAsync(
+        IEnumerable<int> buildIds,
+        CancellationToken cancellationToken = default);
+
     // ============================================
     // PROJECTS, TEAMS, REPOSITORIES
     // ============================================
