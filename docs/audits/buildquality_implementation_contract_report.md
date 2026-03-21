@@ -1,547 +1,262 @@
-# Prompt 4 — BuildQuality Implementation Contract Report
+# Prompt 4 — BuildQuality Data Foundation (Ingestion & Persistence Contract Report)
 
 ## 1. Purpose
 
-Define the exact implementation contract for exposing the locked `BuildQuality` slice through `PoTool.Core`, `PoTool.Api`, `PoTool.Shared`, and `PoTool.Client` without changing formulas, thresholds, Unknown rules, aggregation rules, or page-boundary decisions from the upstream reports.
+Define the missing ingestion and persistence contract that allows the locked `BuildQuality` provider to consume build, test-run, and coverage facts without changing CDC semantics, aggregation rules, formulas, Unknown handling, or existing application contracts.
 
 ## 2. In scope
 
-- queries
-- handlers
-- DTOs
-- endpoints
-- client usage
+- test-run ingestion
+- coverage ingestion
+- `ITfsClient` expansion
+- sync-stage expansion
+- persistence entities
+- linkage between:
+  - builds
+  - test runs
+  - coverage
 
 ## 3. Out of scope
 
-- CDC changes
-- aggregation changes
+- BuildQuality formulas
+- application queries/handlers
+- DTOs for UI
 - UI design
-- ingestion changes
-- database schema changes
+- metrics redesign
 
 ## 4. Locked decisions applied
 
-The following decisions from `docs/audits/buildquality_application_page_integration_report.md` and `docs/audits/buildquality_data_aggregation_contract_report.md` are applied unchanged, with the application-page integration report taking precedence where wording overlaps:
-
-- default branch only
-- no nightly builds
-- no feature branches
-- no WorkItem linkage
-- no test-type distinction
-- no additional metrics
-- `BuildQuality` remains time-agnostic at the CDC level
-- time-window and sprint scoping are selected by the consuming query/handler path, not by the UI and not by the CDC
-- Health remains a hub
-- Backlog Health remains unchanged in this phase
-- Build Quality is a separate consumer and must not be merged into `BacklogQuality`
-- Delivery consumes sprint-scoped `BuildQuality`
-- Pipeline Insights consumes pipeline- or repository-scoped `BuildQuality`
-- canonical metrics remain only:
-  - `SuccessRate`
-  - `TestPassRate`
-  - `TestVolume`
-  - `Coverage`
-  - `Confidence`
-- build success mapping remains:
-  - success = `succeeded`
-  - failure = `failed + partiallySucceeded`
-  - exclude = `canceled`
-- formulas remain locked:
-  - `SuccessRate = succeeded / (succeeded + failed + partiallySucceeded)`
-  - `TestPassRate = passed / (total - notApplicable)`
-  - `TestVolume = total - notApplicable`
-  - `Coverage = covered_lines / total_lines`
-  - `Confidence = BuildThresholdMet + TestThresholdMet`
-- Unknown rules remain locked:
-  - no builds -> `SuccessRate = Unknown`
-  - no test runs -> `TestPassRate = Unknown`
-  - no coverage OR `total_lines == 0` -> `Coverage = Unknown`
-- thresholds remain locked:
-  - `minimum_builds = 3`
-  - `minimum_tests = 20`
-- aggregation remains count-first / totals-first, ratios second
+- Option A — Expand scope is mandatory.
+- full BuildQuality scope required:
+  - builds
+  - test runs
+  - coverage
+- no build-only fallback
+- Unknown rules remain unchanged
+- aggregation remains unchanged
+- formulas unchanged
 - percentages MUST NOT be averaged
-- confidence remains exactly:
-  - `BuildThresholdMet = 1 when EligibleBuilds >= minimum_builds, otherwise 0`
-  - `TestThresholdMet = 1 when TestVolume >= minimum_tests, otherwise 0`
-  - `Confidence = BuildThresholdMet + TestThresholdMet`
+- no new metrics
+- CDC not reinterpreted
+- the existing BuildQuality provider remains untouched in semantics
 
-## 5. Query contracts (PoTool.Core)
+## 5. TFS client contract (`ITfsClient`)
 
-`PoTool.Core` owns query contracts only. These contracts define request shape, required validation, and the shared DTO returned across the API/client boundary. They do not contain EF access, HTTP concerns, or formula implementation.
+`ITfsClient` remains the only backend boundary for TFS / Azure DevOps access. Existing build retrieval through cached pipeline runs remains unchanged. The contract must be extended only with raw read methods that return build-linked test and coverage facts.
 
-### 5.1 GetBuildQualityRollingWindowQuery
+### 5.1 Test runs retrieval
 
-Purpose:
+Define a batched read method on `ITfsClient` that returns test runs linked to supplied builds, for example: `GetTestRunsByBuildIdsAsync(...)`.
 
-- request rolling-window `BuildQuality` for the Build Quality page / Health flow
+Contract requirements:
 
-Required parameters:
+- input is a batch of build identifiers, not a single-build-only contract
+- `BuildId` refers to the TFS build/run identifier already represented by cached pipeline runs
+- output returns raw linked test-run facts only
+- each returned record must include:
+  - `BuildId`
+  - `TotalTests`
+  - `PassedTests`
+  - `NotApplicableTests`
+- exact TFS field names for total, passed, and notApplicable remain **UNCERTAIN** until verified in the source API
+- if TFS uses an equivalent field rather than a literal `notApplicable` field, that mapping must be explicit and marked **UNCERTAIN** until verified
+- verification path for **UNCERTAIN** test fields: confirm the concrete API payload and field names against the TFS / Azure DevOps test-results contract before implementation; do not guess or infer names from formulas
 
-- `ProductIds`
-  - required
-  - one or more product identifiers
-  - single-product scope is represented as one item
-- `WindowStart`
-  - required
-  - inclusive lower time bound
-- `WindowEnd`
-  - required
-  - inclusive upper time bound
+### 5.2 Coverage retrieval
 
-Validation rules:
+Define a batched read method on `ITfsClient` that returns coverage linked to supplied builds, for example: `GetCoverageByBuildIdsAsync(...)`.
 
-- `ProductIds` must contain at least one value
-- product identifiers must be unique within the request
-- `WindowStart` and `WindowEnd` must both be supplied
-- `WindowEnd` must not be earlier than `WindowStart`
+Contract requirements:
 
-Expected output contract reference:
+- input is a batch of build identifiers, not a single-build-only contract
+- `BuildId` refers to the TFS build/run identifier already represented by cached pipeline runs
+- output returns raw linked coverage facts only
+- each returned record must include:
+  - `BuildId`
+  - `CoveredLines`
+  - `TotalLines`
+- Cobertura or equivalent formats are expected
+- pipeline defines filters (not ingestion)
+- exact TFS field names or artifact element names for coverage totals remain **UNCERTAIN** until verified in the source API
+- verification path for **UNCERTAIN** coverage fields: confirm the concrete coverage artifact contract and summary fields against the TFS / Azure DevOps source before implementation; do not guess or infer names from formulas
 
-- `BuildQualityPageDto`
+## 6. External data contracts
 
-### 5.2 GetBuildQualitySprintQuery
+The TFS client should return canonical transport DTOs that expose only the raw facts needed by the locked BuildQuality provider.
 
-Purpose:
+### `TestRunDto`
 
-- request sprint-scoped `BuildQuality` for Delivery consumption
+Required fields:
 
-Required parameters:
-
-- `ProductIds`
-  - required
-  - one or more product identifiers in scope
-- `TeamId`
-  - optional
-  - supplied only when Delivery scope is team-specific
-- `SprintId`
-  - required
-  - canonical sprint identifier used by the application layer to resolve sprint metadata and sprint window
-
-Validation rules:
-
-- `ProductIds` must contain at least one value
-- product identifiers must be unique within the request
-- `SprintId` must be supplied
-- `TeamId`, when supplied, must be non-empty
-
-Expected output contract reference:
-
-- `DeliveryBuildQualityDto`
-
-### 5.3 GetBuildQualityPipelineDetailQuery
-
-Purpose:
-
-- request pipeline- or repository-scoped `BuildQuality` for Build Quality drill-down and Pipeline Insights reuse
-
-Required parameters:
-
-- one scope identifier:
-  - `PipelineId`, or
-  - `RepositoryId`
-- one optional time context:
-  - `WindowStart` and `WindowEnd`, or
-  - `SprintId`
-
-Validation rules:
-
-- exactly one of `PipelineId` or `RepositoryId` must be supplied
-- rolling-window context requires both `WindowStart` and `WindowEnd`
-- `WindowEnd` must not be earlier than `WindowStart`
-- `SprintId` may be supplied instead of a rolling window
-- sprint context and rolling-window context must not both be supplied in the same request
-
-Expected output contract reference:
-
-- `PipelineBuildQualityDto`
-
-## 6. Handler design (PoTool.Api)
-
-`PoTool.Api` owns handlers, scope resolution, raw-data selection, and DTO mapping. It does not own formula semantics.
-
-### 6.1 Shared BuildQuality provider
-
-`PoTool.Api` must contain one shared BuildQuality provider/service that every BuildQuality handler calls.
-
-Responsibilities:
-
-- accept scoped raw data that is already filtered to the requested default-branch scope and requested time scope
-- accept build facts, test-run facts, and coverage facts only after scope selection is complete
-- perform build aggregation using counts first
-- perform test aggregation using totals first
-- perform coverage aggregation using totals first
-- calculate the locked formulas exactly
-- apply the locked Unknown handling exactly
-- calculate `BuildThresholdMet`, `TestThresholdMet`, and `Confidence` exactly
-- produce a canonical result object that handlers map into shared DTOs
-
-Guarantees:
-
-- single implementation of BuildQuality logic
-- no duplication across handlers
-- no consumer-specific reinterpretation of formulas
-- no consumer-specific reinterpretation of Unknown
-- no averaging of percentages
-
-The shared provider is the only allowed place for:
-
-- `SuccessRate` calculation
-- `TestPassRate` calculation
-- `TestVolume` calculation
-- `Coverage` calculation
-- Unknown determination
-- confidence calculation
-
-### 6.2 Query handlers
-
-Every BuildQuality query handler must follow the same flow:
-
-- resolve the request scope
-- select already-cached raw facts for that scope
-- pass only the in-scope facts into the shared BuildQuality provider
-- map the provider output into the page-appropriate shared DTO
-
-Handlers must not contain formulas.
-
-#### GetBuildQualityRollingWindowQueryHandler
-
-Scope resolution:
-
-- resolve the requested `ProductIds`
-- resolve the rolling window from `WindowStart` to `WindowEnd`
-- enforce default-branch-only fact selection for the selected products
-
-Data selection:
-
-- select only in-scope default-branch build facts inside the rolling window
-- select only test-run facts linked to the selected in-scope builds
-- select only coverage facts linked to the selected in-scope builds
-
-Provider call:
-
-- call the shared BuildQuality provider with the already-filtered rolling-window facts
-
-DTO mapping:
-
-- map overall rolling-window output plus per-product breakdowns into `BuildQualityPageDto`
-
-#### GetBuildQualitySprintQueryHandler
-
-Scope resolution:
-
-- resolve the requested `ProductIds`
-- resolve optional `TeamId` context
-- resolve sprint metadata and sprint window from `SprintId`
-- enforce default-branch-only fact selection for the selected sprint scope
-
-Data selection:
-
-- select only in-scope default-branch build facts inside the resolved sprint window
-- select only test-run facts linked to the selected in-scope builds
-- select only coverage facts linked to the selected in-scope builds
-
-Provider call:
-
-- call the shared BuildQuality provider with the already-filtered sprint-window facts
-
-DTO mapping:
-
-- map sprint metadata, scope metadata, overall result, and any per-product breakdowns into `DeliveryBuildQualityDto`
-
-#### GetBuildQualityPipelineDetailQueryHandler
-
-Scope resolution:
-
-- resolve either the requested pipeline scope or the requested repository scope
-- resolve either rolling-window context or sprint context when present
-- enforce default-branch-only fact selection for the selected pipeline/repository context
-
-Data selection:
-
-- select only in-scope default-branch build facts for the chosen pipeline/repository scope
-- select only test-run facts linked to the selected in-scope builds
-- select only coverage facts linked to the selected in-scope builds
-
-Provider call:
-
-- call the shared BuildQuality provider with the already-filtered pipeline/repository facts
-
-DTO mapping:
-
-- map scope metadata, canonical result, and any referenced pipeline-detail metadata into `PipelineBuildQualityDto`
-
-The following are explicitly forbidden in all handlers:
-
-- formula logic in handlers
-- percentage averaging
-- custom Unknown logic
-- custom confidence logic
-- page-specific reinterpretation of the five canonical metrics
-
-## 7. DTO definitions (PoTool.Shared)
-
-`PoTool.Shared` owns the DTOs that cross the API/client boundary. These DTOs transport canonical BuildQuality outputs plus supporting evidence. They do not create new metrics.
-
-### 7.1 BuildQualityMetricsDto
-
-Fields:
-
-- `SuccessRate`
-- `TestPassRate`
-- `TestVolume`
-- `Coverage`
-- `Confidence`
-
-Field contract:
-
-- `SuccessRate`, `TestPassRate`, and `Coverage` must allow explicit `Unknown`
-- `TestVolume` is transported as the locked `total - notApplicable` value
-- `Confidence` is transported exactly as `BuildThresholdMet + TestThresholdMet`
-
-### 7.2 BuildQualityEvidenceDto
-
-Fields:
-
-- `EligibleBuildCount`
-- `SucceededCount`
-- `FailedCount`
-- `PartiallySucceededCount`
-- `CanceledExcludedCount`
+- `BuildId`
 - `TotalTests`
 - `PassedTests`
 - `NotApplicableTests`
+
+Contract notes:
+
+- `BuildId` is the build/run identifier used to link the record to the existing cached build anchor
+- `NotApplicableTests` may require an explicit source-field adapter if TFS exposes an equivalent field name; that source mapping remains **UNCERTAIN** until verified
+
+### `CoverageDto`
+
+Required fields:
+
+- `BuildId`
 - `CoveredLines`
 - `TotalLines`
 
-Field contract:
+Contract notes:
 
-- these fields are evidence only
-- they exist to explain canonical outputs, Unknown states, and threshold sufficiency
-- they must not be treated as alternative metrics
+- `BuildId` is the build/run identifier used to link the record to the existing cached build anchor
+- raw coverage source element names remain **UNCERTAIN** until the exact TFS artifact contract is verified
+- the minimum BuildQuality contract is summary coverage only; ingestion does not define pipeline-specific filters or quality semantics
 
-### 7.3 BuildQualityResultDto
+## 7. Sync-stage responsibilities
 
-Fields:
+Sync-stage responsibilities are limited to fetching, linking, and persisting raw facts.
 
-- scope metadata
-- `Metrics` (`BuildQualityMetricsDto`)
-- `Evidence` (`BuildQualityEvidenceDto`)
-- explicit Unknown flags:
-  - `IsSuccessRateUnknown`
-  - `IsTestPassRateUnknown`
-  - `IsCoverageUnknown`
-- explicit Unknown reasons:
-  - `NoEligibleBuilds`
-  - `NoTestRuns`
-  - `NoCoverage`
-  - `CoverageTotalLinesZero`
-- threshold flags:
-  - `BuildThresholdMet`
-  - `TestThresholdMet`
+- fetch pipeline runs first so the build anchor exists before child facts are processed
+- resolve the in-scope cached builds produced by the existing pipeline ingestion path
+- fetch test runs for those builds through batched `ITfsClient` calls
+- fetch coverage for those builds through batched `ITfsClient` calls
+- resolve each returned `BuildId` to the existing cached build row
+- persist raw linked facts only
 
-Field contract:
+Batching strategy:
 
-- scope metadata identifies the selected consumer scope and time context
-- Unknown flags are explicit so the client never infers Unknown from missing values
-- threshold flags are explicit so the client never recalculates confidence inputs
+- preferred: batch by build-id set for the current sync window
+- acceptable fallback: chunk by pipeline-derived build sets when request size must be limited
+- not acceptable as the default contract: one remote call per build
 
-### 7.4 BuildQualityProductDto
+Hard rules:
 
-Fields:
+- no formula logic
+- no aggregation logic
+- raw facts only
+- no percentage calculation in ingestion
 
-- product identity
-- `Result` (`BuildQualityResultDto`)
+## 8. Persistence model
 
-Field contract:
+The existing build cache remains the anchor. New persistence is additive and stores raw linked facts only.
 
-- one instance per product in scope
-- uses the same canonical result structure as the overall page-level result
+### `TestRunEntity`
 
-### 7.5 Page-level DTOs
+Required fields:
 
-#### BuildQualityPageDto
+- `BuildId` (FK to the cached build anchor)
+- `TotalTests`
+- `PassedTests`
+- `NotApplicableTests`
+- `Timestamp` (nullable; populated only when the source exposes a verified test-run timestamp; when null, time scoping continues to use the build anchor completion time)
 
-Purpose:
+Persistence rules:
 
-- rolling-window response for the Build Quality page
+- store raw numeric facts only
+- do not persist derived pass rate or test volume
+- use the build foreign key, not an inferred product or pipeline key, as the linkage anchor
+- `Timestamp` remains a nullable field in the initial implementation when the source does not expose a verified test-run timestamp
+- BuildQuality queries must continue to use the build anchor completion time for time scoping when child timestamps are absent
 
-Fields:
+### `CoverageEntity`
 
-- rolling-window metadata
-- applied scope metadata
-- overall `BuildQualityResultDto`
-- per-product collection of `BuildQualityProductDto`
-- optional pipeline/repository breakdown references already prepared by the API
+Required fields:
 
-#### DeliveryBuildQualityDto
+- `BuildId` (FK to the cached build anchor)
+- `CoveredLines`
+- `TotalLines`
+- `Timestamp` (nullable; populated only when the source exposes a verified coverage timestamp; when null, time scoping continues to use the build anchor completion time)
 
-Purpose:
+Persistence rules:
 
-- sprint-window response for Delivery
+- store raw numeric facts only
+- do not persist derived coverage percentage
+- use the build foreign key, not an inferred product or pipeline key, as the linkage anchor
+- `Timestamp` remains a nullable field in the initial implementation when the source does not expose a verified coverage timestamp
+- BuildQuality queries must continue to use the build anchor completion time for time scoping when child timestamps are absent
 
-Fields:
+## 9. Linkage model
 
-- sprint identity
-- sprint window metadata
-- applied product/team scope metadata
-- overall `BuildQualityResultDto`
-- optional per-product collection of `BuildQualityProductDto`
+- build is the anchor
+- test runs link via `BuildId`
+- coverage links via `BuildId`
+- the external `BuildId` from TFS is resolved to the existing cached build row before persistence
+- `CachedPipelineRunEntity` remains the persisted build anchor already associated to `PipelineDefinitionEntity`
 
-#### PipelineBuildQualityDto
+Multiplicity rules:
 
-Purpose:
+- multiple test runs per build are allowed
+- multiple test runs per build are persisted as separate raw records
+- multiple coverage entries per build are allowed
+- multiple coverage entries per build are persisted as separate raw records
+- ingestion does not aggregate multiple test runs per build
+- ingestion does not aggregate multiple coverage entries per build
+- when the source exposes a stable external child-record identity, persistence should upsert idempotently on that identity plus `BuildId`
+- when the source does not expose a stable external child-record identity, the sync stage should replace previously cached child rows for the synced build set before inserting the current raw facts so duplicates do not accumulate
+- decision rule: use idempotent upsert only after the TFS / Azure DevOps response is verified to contain a stable child-record identity for that child type; otherwise use replace-linked-rows for that child type
+- later BuildQuality selection/provider steps aggregate totals from the linked raw facts without changing the locked formulas
 
-- pipeline- or repository-scoped response for Pipeline Insights and Build Quality drill-down reuse
+## 10. Data integrity rules
 
-Fields:
+- missing test runs are allowed
+- missing coverage is allowed
+- no coercion to zero
+- incomplete records must not break ingestion
+- records without verified build linkage must not be persisted as build-scoped facts
+- records missing required numerator or denominator inputs must not be silently repaired
+- invalid or incomplete raw records may be skipped with diagnostics, but valid sibling records must still be ingested
+- raw numeric facts are persisted as-is so later Unknown evaluation remains possible
 
-- selected pipeline or repository identity
-- optional sprint metadata or rolling-window metadata
-- applied scope metadata
-- overall `BuildQualityResultDto`
-- references to existing pipeline-detail context already owned by Pipeline Insights
-
-## 8. Endpoint definitions (PoTool.Api)
-
-The API exposes thin HTTP endpoints that map request parameters into the `PoTool.Core` queries and return the shared DTOs.
-
-### 8.1 GET /api/buildquality/rolling
-
-Query mapping:
-
-- maps request parameters to `GetBuildQualityRollingWindowQuery`
-
-Parameters:
-
-- `productIds`
-- `windowStart`
-- `windowEnd`
-
-Response DTO:
-
-- `BuildQualityPageDto`
-
-### 8.2 GET /api/buildquality/sprint
-
-Query mapping:
-
-- maps request parameters to `GetBuildQualitySprintQuery`
-
-Parameters:
-
-- `productIds`
-- `teamId`
-- `sprintId`
-
-Response DTO:
-
-- `DeliveryBuildQualityDto`
-
-### 8.3 GET /api/buildquality/pipeline
-
-Query mapping:
-
-- maps request parameters to `GetBuildQualityPipelineDetailQuery`
-
-Parameters:
-
-- `pipelineId` or `repositoryId`
-- optional `windowStart`
-- optional `windowEnd`
-- optional `sprintId`
-
-Response DTO:
-
-- `PipelineBuildQualityDto`
-
-## 9. Client consumption (PoTool.Client)
-
-`PoTool.Client` consumes BuildQuality through typed API client usage wrapped by page-level frontend service abstractions.
-
-Required client pattern:
-
-- generated or typed API client performs the HTTP call
-- page-level frontend service abstraction wraps the API client
-- pages consume only the frontend service abstraction
-- pages manage only asynchronous loading, page state, and presentation mapping
-
-Explicitly required:
-
-- no mediator usage in `PoTool.Client`
-- no direct HTTP logic in pages
-- no formula logic in pages
-- no Unknown logic in pages
-
-Per-page consumption:
-
-- Build Quality page -> calls the page-level service abstraction that uses `GET /api/buildquality/rolling`
-- Delivery -> calls the page-level service abstraction that uses `GET /api/buildquality/sprint`
-- Pipeline Insights -> calls the page-level service abstraction that uses `GET /api/buildquality/pipeline`
-
-Explicitly forbidden in the client:
-
-- recomputation of metrics
-- deriving formulas from evidence
-- redefining Unknown
-- recalculating `BuildThresholdMet`
-- recalculating `TestThresholdMet`
-- recalculating `Confidence`
-
-## 10. Data flow (implementation view)
-
-GetBuildQualityRollingWindowQuery / GetBuildQualitySprintQuery / GetBuildQualityPipelineDetailQuery
--> handler
--> scope selection
--> shared BuildQuality provider
--> DTO mapping
--> API response
--> typed client
--> page-level service abstraction
--> page
-
-## 11. Single source of truth enforcement
-
-The shared BuildQuality provider is the ONLY place where:
-
-- formulas exist
-- Unknown logic exists
-- confidence is calculated
-
-Enforcement rules:
-
-- handlers MUST call the shared BuildQuality provider
-- handlers MUST NOT implement formulas
-- handlers MUST NOT implement Unknown handling
-- handlers MUST NOT implement confidence logic
-- DTOs MUST transport provider outputs only
-- endpoints MUST only map requests and return DTOs
-- clients MUST consume outputs without recomputation
-- any duplicate logic = violation
-
-## 12. Integration risks
-
-- provider bypass
-- handler duplication
-- DTO drift
-- endpoint misuse
-- client-side recomputation
-
-## 13. Consistency with previous reports
-
-- formulas unchanged
-- Unknown rules unchanged
-- no new metrics
-- CDC not reinterpreted
-
-## 14. Drift check
-
-- assumptions: none
-- deviations: none
+## 11. Unknown propagation support
+
+The ingestion contract must preserve absence and zero-denominator cases so the provider can correctly emit `Unknown`.
+
+- absence of test runs is represented by no linked `TestRunEntity` rows, not by zero-filled totals
+- absence of coverage is represented by no linked `CoverageEntity` rows, not by zero-filled totals
+- `TotalLines = 0` must remain representable in persisted coverage facts
+- builds may exist without linked tests
+- builds may exist without linked coverage
+- `NotApplicableTests` must remain separate so `TestVolume` can be derived later without changing the locked formula
+
+## 12. Performance considerations
+
+- avoid N+1 calls per build
+- prefer batched `BuildId` retrieval in `ITfsClient`
+- reuse the existing pipeline-run sync result set as the source of build ids for downstream test and coverage fetches
+- align test-run and coverage ingestion to the existing pipeline-run caching window instead of rescanning unrelated history
+- follow the existing two-phase pattern:
+  - collect remote DTOs first
+  - persist sequentially against one `DbContext`
+- batching and caching optimizations must not move formula or aggregation logic into ingestion
+
+## 13. Integration risks
+
+- missing linkage between test runs and builds
+- inconsistent coverage formats
+- pipelines without coverage configured
+- multiple test runs per build ambiguity
+
+## 14. Consistency with previous reports
+
+- no change to formulas
+- no change to Unknown rules
+- no new metrics introduced
+- BuildQuality provider contract remains valid
+- CDC semantics remain locked
+- aggregation semantics remain locked
+
+## 15. Drift check
+
+- assumptions:
+  - the existing cached build persistence (`CachedPipelineRunEntity`) remains the build anchor
+- uncertainties:
+  - exact TFS test-run source field names for `TotalTests`, `PassedTests`, and `NotApplicableTests` remain **UNCERTAIN**
+  - exact TFS coverage source field names or artifact element names for `CoveredLines` and `TotalLines` remain **UNCERTAIN**
+  - source timestamps for test runs and coverage remain **UNCERTAIN**
+- deviation from locked rules: none
 
 No drift detected.
 
-## 15. Open questions
+## 16. Open questions
 
 None.
