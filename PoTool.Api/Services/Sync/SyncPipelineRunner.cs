@@ -185,8 +185,9 @@ public class SyncPipelineRunner : ISyncPipeline
 
             if (stage3Update.HasFailed)
             {
-                await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
-                    workItemResult?.NewWatermark, null, null, cts.Token);
+                // Resolution depends entirely on the current-run relationship snapshot. If snapshot capture
+                // fails, ExecuteStageAsync has already marked the sync as failed and the pipeline must stop
+                // here so ResolveWorkItems cannot observe a partial or incomplete graph.
                 yield break;
             }
             if (stage3Result.HasWarnings)
