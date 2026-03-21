@@ -1412,6 +1412,32 @@ public class BattleshipMockDataFacade : ITfsClient
         return Task.FromResult<IEnumerable<PipelineDefinitionDto>>(definitions);
     }
 
+    public Task<IEnumerable<TestRunDto>> GetTestRunsByBuildIdsAsync(
+        IEnumerable<int> buildIds,
+        CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        var requestedBuildIds = buildIds.Distinct().ToArray();
+        _logger.LogInformation(
+            "Mock TFS client: GetTestRunsByBuildIdsAsync called for {Count} builds",
+            requestedBuildIds.Length);
+
+        return Task.FromResult<IEnumerable<TestRunDto>>([]);
+    }
+
+    public Task<IEnumerable<CoverageDto>> GetCoverageByBuildIdsAsync(
+        IEnumerable<int> buildIds,
+        CancellationToken cancellationToken = default)
+    {
+        IncrementAndGetApiCallCount();
+        var requestedBuildIds = buildIds.Distinct().ToArray();
+        _logger.LogInformation(
+            "Mock TFS client: GetCoverageByBuildIdsAsync called for {Count} builds",
+            requestedBuildIds.Length);
+
+        return Task.FromResult<IEnumerable<CoverageDto>>([]);
+    }
+
     // ============================================
     // TEAMS
     // ============================================

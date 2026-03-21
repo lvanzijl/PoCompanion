@@ -768,6 +768,20 @@ public class MockTfsClient : ITfsClient
         return _mockDataFacade.GetPipelineDefinitionsForRepositoryAsync(repositoryName, cancellationToken);
     }
 
+    public Task<IEnumerable<TestRunDto>> GetTestRunsByBuildIdsAsync(
+        IEnumerable<int> buildIds,
+        CancellationToken cancellationToken = default)
+    {
+        return _mockDataFacade.GetTestRunsByBuildIdsAsync(buildIds, cancellationToken);
+    }
+
+    public Task<IEnumerable<CoverageDto>> GetCoverageByBuildIdsAsync(
+        IEnumerable<int> buildIds,
+        CancellationToken cancellationToken = default)
+    {
+        return _mockDataFacade.GetCoverageByBuildIdsAsync(buildIds, cancellationToken);
+    }
+
     // ============================================
     // TEAMS
     // ============================================

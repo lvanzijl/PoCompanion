@@ -166,6 +166,16 @@ public class PoToolDbContext : DbContext
     public DbSet<CachedPipelineRunEntity> CachedPipelineRuns => Set<CachedPipelineRunEntity>();
 
     /// <summary>
+    /// Raw test runs linked to cached pipeline run build anchors.
+    /// </summary>
+    public DbSet<TestRunEntity> TestRuns => Set<TestRunEntity>();
+
+    /// <summary>
+    /// Raw coverage facts linked to cached pipeline run build anchors.
+    /// </summary>
+    public DbSet<CoverageEntity> Coverages => Set<CoverageEntity>();
+
+    /// <summary>
     /// Bug triage state tracking (local, not persisted to TFS).
     /// </summary>
     public DbSet<BugTriageStateEntity> BugTriageStates => Set<BugTriageStateEntity>();
@@ -561,6 +571,30 @@ public class PoToolDbContext : DbContext
             entity.HasOne(e => e.PipelineDefinition)
                 .WithMany()
                 .HasForeignKey(e => e.PipelineDefinitionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TestRunEntity>(entity =>
+        {
+            entity.HasIndex(e => e.BuildId);
+            entity.HasIndex(e => new { e.BuildId, e.ExternalId })
+                .IsUnique();
+            entity.HasIndex(e => e.Timestamp);
+
+            entity.HasOne(e => e.Build)
+                .WithMany()
+                .HasForeignKey(e => e.BuildId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CoverageEntity>(entity =>
+        {
+            entity.HasIndex(e => e.BuildId);
+            entity.HasIndex(e => e.Timestamp);
+
+            entity.HasOne(e => e.Build)
+                .WithMany()
+                .HasForeignKey(e => e.BuildId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
