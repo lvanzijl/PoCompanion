@@ -97,13 +97,18 @@
                                  || HighlightedPipelineIds.Contains(pt.PipelineDefinitionId);
                 double opacity = isHl ? (isHovered ? 1.0 : 0.82) : 0.22;
                 double r       = isHovered ? 7.5 : 5.5;
-                var stroke     = isHovered ? "var(--mud-palette-primary)" : "transparent";
+                var stroke = string.IsNullOrWhiteSpace(pt.QualityStrokeColor)
+                    ? (isHovered ? "var(--mud-palette-primary)" : "transparent")
+                    : pt.QualityStrokeColor;
+                var strokeWidth = string.IsNullOrWhiteSpace(pt.QualityStrokeColor)
+                    ? (isHovered ? "1.5" : "0")
+                    : (isHovered ? "2.4" : "1.6");
 
                 <circle cx="@F(cx)" cy="@F(cy)" r="@F(r)"
                         fill="@GetCategoryColor(pt.Category)"
                         opacity="@F(opacity)"
                         stroke="@stroke"
-                        stroke-width="@(isHovered ? "1.5" : "0")"
+                        stroke-width="@strokeWidth"
                         style="cursor: pointer;"
                         @onmouseenter="() => _hoveredPoint = pt"
                         @onmouseleave="() => _hoveredPoint = null"
@@ -144,6 +149,10 @@
                       fill="@GetCategoryColor(cat)" opacity="0.18" />
                 @* result label *@
                 @((MarkupString)$"""<text x="{F(ttX+16)}" y="{F(ttY+67)}" font-size="9" font-weight="600" fill="{GetCategoryColor(cat)}">{He(FmtResult(cat))}</text>""")
+                @if (!string.IsNullOrWhiteSpace(_hoveredPoint.QualityStateLabel))
+                {
+                    @((MarkupString)$"""<text x="{F(ttX+90)}" y="{F(ttY+67)}" font-size="9" font-weight="600" fill="{_hoveredPoint.QualityStrokeColor ?? "var(--mud-palette-text-secondary)"}">{He(_hoveredPoint.QualityStateLabel!)}</text>""")
+                }
             </g>
         }
 

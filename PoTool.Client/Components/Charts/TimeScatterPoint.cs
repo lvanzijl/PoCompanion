@@ -31,6 +31,16 @@ public sealed class TimeScatterPoint
     public string Label { get; init; } = string.Empty;
 
     /// <summary>
+    /// Optional Build Quality state label used for point borders and drawer context.
+    /// </summary>
+    public string? QualityStateLabel { get; init; }
+
+    /// <summary>
+    /// Optional SVG/CSS color for the Build Quality border.
+    /// </summary>
+    public string? QualityStrokeColor { get; init; }
+
+    /// <summary>
     /// Extended key/value metadata shown in the tooltip and Build Summary drawer.
     /// Recommended keys: PipelineName, FinishTime, Branch, Url, PipelineDefinitionId.
     /// </summary>

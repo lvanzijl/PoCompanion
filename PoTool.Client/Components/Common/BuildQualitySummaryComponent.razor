@@ -1,0 +1,169 @@
+@using PoTool.Client.ApiClient
+
+@if (Result is not null)
+{
+    var buildState = BuildQualityPresentation.GetDimensionState(Result, BuildQualityDimension.Builds);
+    var testState = BuildQualityPresentation.GetDimensionState(Result, BuildQualityDimension.Tests);
+    var coverageState = BuildQualityPresentation.GetDimensionState(Result, BuildQualityDimension.Coverage);
+    var confidenceState = BuildQualityPresentation.GetConfidenceState(Result);
+
+    <MudCard Elevation="@Elevation" Class="build-quality-summary">
+        <MudCardContent>
+            <MudStack Spacing="3">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.h6">@Title</MudText>
+                        @if (!string.IsNullOrWhiteSpace(Subtitle))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@Subtitle</MudText>
+                        }
+                    </MudStack>
+
+                    <MudTooltip Text="@BuildQualityPresentation.GetConfidenceSummary(Result)" Placement="Placement.Bottom" Arrow="true">
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Color="@confidenceState.Color"
+                                 Icon="@confidenceState.Icon">
+                            @confidenceState.Label
+                        </MudChip>
+                    </MudTooltip>
+                </MudStack>
+
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="4">
+                        <div class="build-quality-summary__panel @GetPanelClass(buildState)">
+                            <MudStack Spacing="1">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.subtitle2">Builds</MudText>
+                                    <MudTooltip Placement="Placement.Bottom" Arrow="true">
+                                        <ChildContent>
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="@buildState.Color" />
+                                        </ChildContent>
+                                        <TooltipContent>
+                                            <BuildQualityTooltipComponent Result="Result" Dimension="BuildQualityDimension.Builds" />
+                                        </TooltipContent>
+                                    </MudTooltip>
+                                </MudStack>
+                                <MudText Typo="Typo.h5" Color="@buildState.Color">
+                                    @BuildQualityPresentation.FormatPercent(Result.Metrics.SuccessRate, Result.Evidence.SuccessRateUnknown)
+                                </MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@buildState.Color" Icon="@buildState.Icon">
+                                    @buildState.Label
+                                </MudChip>
+                            </MudStack>
+                        </div>
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <div class="build-quality-summary__panel @GetPanelClass(testState)">
+                            <MudStack Spacing="1">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.subtitle2">Tests</MudText>
+                                    <MudTooltip Placement="Placement.Bottom" Arrow="true">
+                                        <ChildContent>
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="@testState.Color" />
+                                        </ChildContent>
+                                        <TooltipContent>
+                                            <BuildQualityTooltipComponent Result="Result" Dimension="BuildQualityDimension.Tests" />
+                                        </TooltipContent>
+                                    </MudTooltip>
+                                </MudStack>
+                                <MudText Typo="Typo.h5" Color="@testState.Color">
+                                    @BuildQualityPresentation.FormatPercent(Result.Metrics.TestPassRate, Result.Evidence.TestPassRateUnknown)
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Volume: @Result.Metrics.TestVolume</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@testState.Color" Icon="@testState.Icon">
+                                    @testState.Label
+                                </MudChip>
+                            </MudStack>
+                        </div>
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <div class="build-quality-summary__panel @GetPanelClass(coverageState)">
+                            <MudStack Spacing="1">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.subtitle2">Coverage</MudText>
+                                    <MudTooltip Placement="Placement.Bottom" Arrow="true">
+                                        <ChildContent>
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="@coverageState.Color" />
+                                        </ChildContent>
+                                        <TooltipContent>
+                                            <BuildQualityTooltipComponent Result="Result" Dimension="BuildQualityDimension.Coverage" />
+                                        </TooltipContent>
+                                    </MudTooltip>
+                                </MudStack>
+                                <MudText Typo="Typo.h5" Color="@coverageState.Color">
+                                    @BuildQualityPresentation.FormatPercent(Result.Metrics.Coverage, Result.Evidence.CoverageUnknown)
+                                </MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@coverageState.Color" Icon="@coverageState.Icon">
+                                    @coverageState.Label
+                                </MudChip>
+                            </MudStack>
+                        </div>
+                    </MudItem>
+                </MudGrid>
+            </MudStack>
+        </MudCardContent>
+    </MudCard>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public BuildQualityResultDto Result { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Subtitle { get; set; }
+
+    [Parameter]
+    public int Elevation { get; set; } = 2;
+
+    private static string GetPanelClass(BuildQualityStateDescriptor descriptor) =>
+        descriptor.State switch
+        {
+            BuildQualityVisualState.Good => "build-quality-summary__panel--good",
+            BuildQualityVisualState.Warning => "build-quality-summary__panel--warning",
+            BuildQualityVisualState.Bad => "build-quality-summary__panel--bad",
+            _ => "build-quality-summary__panel--unknown"
+        };
+}
+
+<style>
+    .build-quality-summary {
+        height: 100%;
+    }
+
+    .build-quality-summary__panel {
+        height: 100%;
+        border-radius: 8px;
+        padding: 12px;
+        border: 1px solid var(--mud-palette-divider);
+    }
+
+    .build-quality-summary__panel--good {
+        background: rgba(76, 175, 80, 0.08);
+        border-color: rgba(76, 175, 80, 0.3);
+    }
+
+    .build-quality-summary__panel--warning {
+        background: rgba(255, 152, 0, 0.08);
+        border-color: rgba(255, 152, 0, 0.35);
+    }
+
+    .build-quality-summary__panel--bad {
+        background: rgba(244, 67, 54, 0.08);
+        border-color: rgba(244, 67, 54, 0.35);
+    }
+
+    .build-quality-summary__panel--unknown {
+        background: rgba(96, 125, 139, 0.08);
+        border-color: rgba(96, 125, 139, 0.35);
+    }
+
+    .build-quality-tooltip {
+        max-width: 240px;
+    }
+</style>

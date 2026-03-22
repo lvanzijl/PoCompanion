@@ -7,6 +7,7 @@
 @using PoTool.Client.Pages.Home.Components
 @inject IProfileService ProfileService
 @inject IPipelinesClient PipelinesClient
+@inject IBuildQualityService BuildQualityService
 @inject TeamService TeamService
 @inject SprintService SprintService
 @inject NavigationManager NavigationManager
@@ -179,6 +180,13 @@
     }
     else
     {
+        @if (!string.IsNullOrWhiteSpace(_pipelineQualityErrorMessage))
+        {
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Class="mb-4">
+                @_pipelineQualityErrorMessage
+            </MudAlert>
+        }
+
         @* ── Global summary chips ────────────────────────────────────── *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudText Typo="Typo.h6" Class="mb-3">
@@ -460,6 +468,66 @@
 
             <MudDivider Class="my-3" />
 
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Build Quality</MudText>
+
+            @if (_isDrawerBuildQualityLoading)
+            {
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="140px" Class="mb-3" />
+            }
+            else if (!string.IsNullOrWhiteSpace(_drawerBuildQualityErrorMessage))
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Class="mb-3">
+                    @_drawerBuildQualityErrorMessage
+                </MudAlert>
+            }
+            else if (_drawerBuildQuality?.Result is not null)
+            {
+                <BuildQualityCompactComponent Result="@_drawerBuildQuality.Result"
+                                              Title="@GetDrawerBuildQualityTitle()"
+                                              Elevation="0" />
+
+                <MudGrid Spacing="2" Class="mt-2">
+                    <MudItem xs="12">
+                        <MudPaper Elevation="0" Class="pa-2">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Builds</MudText>
+                            <MudText Typo="Typo.body2">
+                                Total @_drawerBuildQuality.Result.Evidence.EligibleBuilds · Succeeded @_drawerBuildQuality.Result.Evidence.SucceededBuilds · Failed @(_drawerBuildQuality.Result.Evidence.FailedBuilds + _drawerBuildQuality.Result.Evidence.PartiallySucceededBuilds)
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudPaper Elevation="0" Class="pa-2">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Tests</MudText>
+                            <MudText Typo="Typo.body2">
+                                Total @_drawerBuildQuality.Result.Evidence.TotalTests · Passed @_drawerBuildQuality.Result.Evidence.PassedTests · N/A @_drawerBuildQuality.Result.Evidence.NotApplicableTests
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Pass rate: @BuildQualityPresentation.FormatPercent(_drawerBuildQuality.Result.Metrics.TestPassRate, _drawerBuildQuality.Result.Evidence.TestPassRateUnknown)
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudPaper Elevation="0" Class="pa-2">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Coverage</MudText>
+                            <MudText Typo="Typo.body2">
+                                Covered @_drawerBuildQuality.Result.Evidence.CoveredLines · Total @_drawerBuildQuality.Result.Evidence.TotalLines
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Coverage: @BuildQualityPresentation.FormatPercent(_drawerBuildQuality.Result.Metrics.Coverage, _drawerBuildQuality.Result.Evidence.CoverageUnknown)
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            }
+            else
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3">
+                    Build Quality has not been loaded for this pipeline yet.
+                </MudText>
+            }
+
+            <MudDivider Class="my-3" />
+
             @* Azure DevOps link *@
             @if (!string.IsNullOrEmpty(_drawerPoint.Url))
             {
@@ -513,6 +581,12 @@
     private List<SprintDto> _sprints = new();
 
     private PipelineInsightsDto? _insightsData;
+    private string? _pipelineQualityErrorMessage;
+    private bool _isDrawerBuildQualityLoading;
+    private string? _drawerBuildQualityErrorMessage;
+    private PipelineBuildQualityDto? _drawerBuildQuality;
+    private Dictionary<int, PipelineBuildQualityDto> _pipelineBuildQualityByDefinition = new();
+    private CancellationTokenSource? _pipelineQualityLoadCts;
 
     // ── Scatter state (per product) ──────────────────────────────────────
 
@@ -642,7 +716,13 @@
         _errorMessage = null;
         _scatterPointsByProduct.Clear();
         _highlightByProduct.Clear();
+        _pipelineBuildQualityByDefinition.Clear();
+        _pipelineQualityErrorMessage = null;
+        _drawerBuildQuality = null;
+        _drawerBuildQualityErrorMessage = null;
+        _isDrawerBuildQualityLoading = false;
         _drawerOpen = false;
+        CancelPipelineQualityLoad();
         StateHasChanged();
 
         try
@@ -663,6 +743,8 @@
                 BuildScatterMaps(_insightsData);
                 // Collapse filter panel once data is loaded successfully
                 _filterExpanded = false;
+
+                _ = LoadPipelineBuildQualityAsync(_selectedSprintId.Value, _insightsData);
             }
         }
         catch (Exception ex)
@@ -692,21 +774,28 @@
 
             var points = product.ScatterPoints
                 .Where(sp => sp.StartTime.HasValue)
-                .Select(sp => new TimeScatterPoint
+                .Select(sp =>
                 {
-                    Id       = sp.Id,
-                    X        = sp.StartTime!.Value,
-                    Y        = sp.DurationMinutes ?? 0,
-                    Category = sp.Result ?? "Unknown",
-                    Label    = sp.BuildNumber ?? $"Build #{sp.TfsRunId}",
-                    Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    var qualityDescriptor = GetPipelineQualityDescriptor(sp.PipelineDefinitionId);
+
+                    return new TimeScatterPoint
                     {
-                        ["PipelineName"]         = sp.PipelineName,
-                        ["PipelineDefinitionId"] = sp.PipelineDefinitionId.ToString(),
-                        ["FinishTime"]           = sp.FinishTime?.ToString("O") ?? string.Empty,
-                        ["Branch"]               = sp.Branch ?? string.Empty,
-                        ["Url"]                  = sp.Url    ?? string.Empty
-                    }
+                        Id = sp.Id,
+                        X = sp.StartTime!.Value,
+                        Y = sp.DurationMinutes ?? 0,
+                        Category = sp.Result ?? "Unknown",
+                        Label = sp.BuildNumber ?? $"Build #{sp.TfsRunId}",
+                        QualityStateLabel = qualityDescriptor?.Label,
+                        QualityStrokeColor = qualityDescriptor?.StrokeColor,
+                        Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            ["PipelineName"] = sp.PipelineName,
+                            ["PipelineDefinitionId"] = sp.PipelineDefinitionId.ToString(),
+                            ["FinishTime"] = sp.FinishTime?.ToString("O") ?? string.Empty,
+                            ["Branch"] = sp.Branch ?? string.Empty,
+                            ["Url"] = sp.Url ?? string.Empty
+                        }
+                    };
                 })
                 .ToList();
 
@@ -755,7 +844,12 @@
     {
         _drawerPoint = point;
         _drawerOpen  = true;
+        _drawerBuildQuality = null;
+        _drawerBuildQualityErrorMessage = null;
+        _isDrawerBuildQualityLoading = true;
         StateHasChanged();
+
+        await LoadDrawerBuildQualityAsync(point.PipelineDefinitionId);
 
         // Scroll the product section into view so the drawer opens next to the scatter chart
         await ScrollToProductAsync(productId);
@@ -825,6 +919,124 @@
     private void NavigateToHome()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.Home);
+    }
+
+    private async Task LoadPipelineBuildQualityAsync(int sprintId, PipelineInsightsDto data)
+    {
+        if (!_activeProfileId.HasValue)
+        {
+            return;
+        }
+
+        CancelPipelineQualityLoad();
+        var cancellationTokenSource = new CancellationTokenSource();
+        _pipelineQualityLoadCts = cancellationTokenSource;
+        try
+        {
+            var pipelineIds = data.Products
+                .SelectMany(product => product.ScatterPoints ?? Array.Empty<PipelineScatterPointDto>())
+                .Select(point => point.PipelineDefinitionId)
+                .Where(id => id > 0)
+                .Distinct()
+                .ToArray();
+
+            var loadTasks = pipelineIds.Select(async pipelineId => new
+            {
+                PipelineId = pipelineId,
+                Detail = await BuildQualityService.GetPipelineAsync(
+                    _activeProfileId.Value,
+                    sprintId,
+                    pipelineDefinitionId: pipelineId,
+                    cancellationToken: cancellationTokenSource.Token)
+            });
+
+            var pipelineDetails = await Task.WhenAll(loadTasks);
+            _pipelineBuildQualityByDefinition = pipelineDetails.ToDictionary(
+                detail => detail.PipelineId,
+                detail => detail.Detail);
+
+            if (_insightsData is not null)
+            {
+                BuildScatterMaps(_insightsData);
+            }
+
+            if (_drawerPoint is not null)
+            {
+                await LoadDrawerBuildQualityAsync(_drawerPoint.PipelineDefinitionId);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _pipelineQualityErrorMessage = $"Build Quality overlay unavailable right now: {ex.Message}";
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadDrawerBuildQualityAsync(int pipelineDefinitionId)
+    {
+        if (!_activeProfileId.HasValue || !_selectedSprintId.HasValue || pipelineDefinitionId <= 0)
+        {
+            _isDrawerBuildQualityLoading = false;
+            return;
+        }
+
+        try
+        {
+            if (_pipelineBuildQualityByDefinition.TryGetValue(pipelineDefinitionId, out var cachedDetail))
+            {
+                _drawerBuildQuality = cachedDetail;
+                return;
+            }
+
+            _drawerBuildQuality = await BuildQualityService.GetPipelineAsync(
+                _activeProfileId.Value,
+                _selectedSprintId.Value,
+                pipelineDefinitionId: pipelineDefinitionId,
+                cancellationToken: CancellationToken.None);
+
+            _pipelineBuildQualityByDefinition[pipelineDefinitionId] = _drawerBuildQuality;
+        }
+        catch (Exception ex)
+        {
+            _drawerBuildQualityErrorMessage = $"Build Quality detail unavailable right now: {ex.Message}";
+        }
+        finally
+        {
+            _isDrawerBuildQualityLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private BuildQualityStateDescriptor? GetPipelineQualityDescriptor(int pipelineDefinitionId)
+    {
+        return _pipelineBuildQualityByDefinition.TryGetValue(pipelineDefinitionId, out var detail)
+            ? BuildQualityPresentation.GetOverallState(detail.Result)
+            : null;
+    }
+
+    private string GetDrawerBuildQualityTitle()
+    {
+        if (_drawerBuildQuality is null)
+        {
+            return "Pipeline scope";
+        }
+
+        return !string.IsNullOrWhiteSpace(_drawerBuildQuality.PipelineName)
+            ? _drawerBuildQuality.PipelineName!
+            : "Pipeline scope";
+    }
+
+    private void CancelPipelineQualityLoad()
+    {
+        _pipelineQualityLoadCts?.Cancel();
+        _pipelineQualityLoadCts?.Dispose();
+        _pipelineQualityLoadCts = null;
     }
 }
 

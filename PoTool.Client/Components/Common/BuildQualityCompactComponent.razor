@@ -1,0 +1,148 @@
+@using PoTool.Client.ApiClient
+
+@if (Result is not null)
+{
+    var buildState = BuildQualityPresentation.GetDimensionState(Result, BuildQualityDimension.Builds);
+    var testState = BuildQualityPresentation.GetDimensionState(Result, BuildQualityDimension.Tests);
+    var coverageState = BuildQualityPresentation.GetDimensionState(Result, BuildQualityDimension.Coverage);
+    var confidenceState = BuildQualityPresentation.GetConfidenceState(Result);
+
+    <MudPaper Elevation="@Elevation" Class="pa-3">
+        @if (!string.IsNullOrWhiteSpace(Title))
+        {
+            <MudText Typo="Typo.subtitle2" Class="mb-2">@Title</MudText>
+        }
+
+        <MudGrid Spacing="2">
+            <MudItem xs="12" md="3">
+                <div class="build-quality-compact__tile @GetTileClass(buildState)">
+                    <MudStack Spacing="0">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudText Typo="Typo.caption">Builds</MudText>
+                            <MudTooltip Placement="Placement.Bottom" Arrow="true">
+                                <ChildContent>
+                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="@buildState.Color" />
+                                </ChildContent>
+                                <TooltipContent>
+                                    <BuildQualityTooltipComponent Result="Result" Dimension="BuildQualityDimension.Builds" />
+                                </TooltipContent>
+                            </MudTooltip>
+                        </MudStack>
+                        <MudText Typo="Typo.subtitle1" Color="@buildState.Color">
+                            @BuildQualityPresentation.FormatPercent(Result.Metrics.SuccessRate, Result.Evidence.SuccessRateUnknown)
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@buildState.Label</MudText>
+                    </MudStack>
+                </div>
+            </MudItem>
+
+            <MudItem xs="12" md="3">
+                <div class="build-quality-compact__tile @GetTileClass(testState)">
+                    <MudStack Spacing="0">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudText Typo="Typo.caption">Tests</MudText>
+                            <MudTooltip Placement="Placement.Bottom" Arrow="true">
+                                <ChildContent>
+                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="@testState.Color" />
+                                </ChildContent>
+                                <TooltipContent>
+                                    <BuildQualityTooltipComponent Result="Result" Dimension="BuildQualityDimension.Tests" />
+                                </TooltipContent>
+                            </MudTooltip>
+                        </MudStack>
+                        <MudText Typo="Typo.subtitle1" Color="@testState.Color">
+                            @BuildQualityPresentation.FormatPercent(Result.Metrics.TestPassRate, Result.Evidence.TestPassRateUnknown)
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Volume: @Result.Metrics.TestVolume</MudText>
+                    </MudStack>
+                </div>
+            </MudItem>
+
+            <MudItem xs="12" md="3">
+                <div class="build-quality-compact__tile @GetTileClass(coverageState)">
+                    <MudStack Spacing="0">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudText Typo="Typo.caption">Coverage</MudText>
+                            <MudTooltip Placement="Placement.Bottom" Arrow="true">
+                                <ChildContent>
+                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="@coverageState.Color" />
+                                </ChildContent>
+                                <TooltipContent>
+                                    <BuildQualityTooltipComponent Result="Result" Dimension="BuildQualityDimension.Coverage" />
+                                </TooltipContent>
+                            </MudTooltip>
+                        </MudStack>
+                        <MudText Typo="Typo.subtitle1" Color="@coverageState.Color">
+                            @BuildQualityPresentation.FormatPercent(Result.Metrics.Coverage, Result.Evidence.CoverageUnknown)
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@coverageState.Label</MudText>
+                    </MudStack>
+                </div>
+            </MudItem>
+
+            <MudItem xs="12" md="3">
+                <div class="build-quality-compact__tile @GetTileClass(confidenceState)">
+                    <MudStack Spacing="0">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudText Typo="Typo.caption">Confidence</MudText>
+                            <MudTooltip Text="@BuildQualityPresentation.GetConfidenceSummary(Result)" Placement="Placement.Bottom" Arrow="true">
+                                <MudIcon Icon="@confidenceState.Icon" Size="Size.Small" Color="@confidenceState.Color" />
+                            </MudTooltip>
+                        </MudStack>
+                        <MudText Typo="Typo.subtitle1" Color="@confidenceState.Color">@confidenceState.Label</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@($"Score: {Result.Metrics.Confidence}")</MudText>
+                    </MudStack>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public BuildQualityResultDto Result { get; set; } = default!;
+
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    public int Elevation { get; set; } = 1;
+
+    private static string GetTileClass(BuildQualityStateDescriptor descriptor) =>
+        descriptor.State switch
+        {
+            BuildQualityVisualState.Good => "build-quality-compact__tile--good",
+            BuildQualityVisualState.Warning => "build-quality-compact__tile--warning",
+            BuildQualityVisualState.Bad => "build-quality-compact__tile--bad",
+            _ => "build-quality-compact__tile--unknown"
+        };
+}
+
+<style>
+    .build-quality-compact__tile {
+        height: 100%;
+        border-radius: 8px;
+        padding: 8px;
+        border: 1px solid var(--mud-palette-divider);
+    }
+
+    .build-quality-compact__tile--good {
+        background: rgba(76, 175, 80, 0.08);
+        border-color: rgba(76, 175, 80, 0.3);
+    }
+
+    .build-quality-compact__tile--warning {
+        background: rgba(255, 152, 0, 0.08);
+        border-color: rgba(255, 152, 0, 0.35);
+    }
+
+    .build-quality-compact__tile--bad {
+        background: rgba(244, 67, 54, 0.08);
+        border-color: rgba(244, 67, 54, 0.35);
+    }
+
+    .build-quality-compact__tile--unknown {
+        background: rgba(96, 125, 139, 0.08);
+        border-color: rgba(96, 125, 139, 0.35);
+    }
+</style>
