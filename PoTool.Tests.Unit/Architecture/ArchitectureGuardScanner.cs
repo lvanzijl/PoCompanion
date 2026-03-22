@@ -100,7 +100,7 @@ internal static class ArchitectureGuardScanner
                 continue;
             }
 
-            var normalizedPath = filePath.Replace('\\', '/');
+            var normalizedPath = NormalizePath(filePath);
             if (normalizedPath.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase)
                 || ExcludedPathTokens.Any(token => normalizedPath.Contains(token, StringComparison.Ordinal)))
             {
@@ -191,7 +191,12 @@ internal static class ArchitectureGuardScanner
 
     private static string NormalizeRelativePath(string repositoryRoot, string filePath)
     {
-        return Path.GetRelativePath(repositoryRoot, filePath).Replace('\\', '/');
+        return NormalizePath(Path.GetRelativePath(repositoryRoot, filePath));
+    }
+
+    private static string NormalizePath(string path)
+    {
+        return path.Replace('\\', '/');
     }
 
     private static string GetRepositoryRoot()
@@ -230,11 +235,6 @@ internal sealed class ArchitectureGuardPattern
     public string Description { get; }
 
     public Regex Regex { get; }
-
-    public static ArchitectureGuardPattern Literal(string token)
-    {
-        return new(token, Regex.Escape(token));
-    }
 }
 
 internal sealed record ArchitectureGuardViolation(
