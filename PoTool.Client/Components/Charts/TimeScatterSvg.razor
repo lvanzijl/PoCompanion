@@ -97,12 +97,10 @@
                                  || HighlightedPipelineIds.Contains(pt.PipelineDefinitionId);
                 double opacity = isHl ? (isHovered ? 1.0 : 0.82) : 0.22;
                 double r       = isHovered ? 7.5 : 5.5;
-                var stroke     = isHovered ? "var(--mud-palette-primary)" : "transparent";
-
                 <circle cx="@F(cx)" cy="@F(cy)" r="@F(r)"
                         fill="@GetCategoryColor(pt.Category)"
                         opacity="@F(opacity)"
-                        stroke="@stroke"
+                        stroke="@(isHovered ? "var(--mud-palette-primary)" : "transparent")"
                         stroke-width="@(isHovered ? "1.5" : "0")"
                         style="cursor: pointer;"
                         @onmouseenter="() => _hoveredPoint = pt"

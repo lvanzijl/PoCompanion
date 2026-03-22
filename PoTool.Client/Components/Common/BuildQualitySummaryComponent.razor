@@ -1,0 +1,124 @@
+@using PoTool.Client.ApiClient
+
+@if (Result is not null)
+{
+    <MudCard Elevation="@Elevation" Class="build-quality-summary">
+        <MudCardContent>
+            <MudStack Spacing="3">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.h6">@Title</MudText>
+                        @if (!string.IsNullOrWhiteSpace(Subtitle))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@Subtitle</MudText>
+                        }
+                    </MudStack>
+
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Info">
+                        Confidence: @Result.Metrics.Confidence
+                    </MudChip>
+                </MudStack>
+
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="4">
+                        <div class="build-quality-summary__panel">
+                            <MudStack Spacing="1">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.subtitle2">Builds</MudText>
+                                    <MudTooltip Placement="Placement.Bottom" Arrow="true">
+                                        <ChildContent>
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" />
+                                        </ChildContent>
+                                        <TooltipContent>
+                                            <BuildQualityTooltipComponent Result="Result" Dimension="BuildQualityDimension.Builds" />
+                                        </TooltipContent>
+                                    </MudTooltip>
+                                </MudStack>
+                                <MudText Typo="Typo.h5">
+                                    @BuildQualityPresentation.FormatPercent(Result.Metrics.SuccessRate, Result.Evidence.SuccessRateUnknown)
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Eligible: @Result.Evidence.EligibleBuilds</MudText>
+                            </MudStack>
+                        </div>
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <div class="build-quality-summary__panel">
+                            <MudStack Spacing="1">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.subtitle2">Tests</MudText>
+                                    <MudTooltip Placement="Placement.Bottom" Arrow="true">
+                                        <ChildContent>
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" />
+                                        </ChildContent>
+                                        <TooltipContent>
+                                            <BuildQualityTooltipComponent Result="Result" Dimension="BuildQualityDimension.Tests" />
+                                        </TooltipContent>
+                                    </MudTooltip>
+                                </MudStack>
+                                <MudText Typo="Typo.h5">
+                                    @BuildQualityPresentation.FormatPercent(Result.Metrics.TestPassRate, Result.Evidence.TestPassRateUnknown)
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Volume: @Result.Metrics.TestVolume</MudText>
+                            </MudStack>
+                        </div>
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <div class="build-quality-summary__panel">
+                            <MudStack Spacing="1">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.subtitle2">Coverage</MudText>
+                                    <MudTooltip Placement="Placement.Bottom" Arrow="true">
+                                        <ChildContent>
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" />
+                                        </ChildContent>
+                                        <TooltipContent>
+                                            <BuildQualityTooltipComponent Result="Result" Dimension="BuildQualityDimension.Coverage" />
+                                        </TooltipContent>
+                                    </MudTooltip>
+                                </MudStack>
+                                <MudText Typo="Typo.h5">
+                                    @BuildQualityPresentation.FormatPercent(Result.Metrics.Coverage, Result.Evidence.CoverageUnknown)
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Total lines: @Result.Evidence.TotalLines</MudText>
+                            </MudStack>
+                        </div>
+                    </MudItem>
+                </MudGrid>
+            </MudStack>
+        </MudCardContent>
+    </MudCard>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public BuildQualityResultDto Result { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Subtitle { get; set; }
+
+    [Parameter]
+    public int Elevation { get; set; } = 2;
+}
+
+<style>
+    .build-quality-summary {
+        height: 100%;
+    }
+
+    .build-quality-summary__panel {
+        height: 100%;
+        border-radius: 8px;
+        padding: 12px;
+        border: 1px solid var(--mud-palette-divider);
+        background: rgba(96, 125, 139, 0.08);
+    }
+
+    .build-quality-tooltip {
+        max-width: 240px;
+    }
+</style>
