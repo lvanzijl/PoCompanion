@@ -491,7 +491,7 @@
                         <MudPaper Elevation="0" Class="pa-2">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Builds</MudText>
                             <MudText Typo="Typo.body2">
-                                Total @_drawerBuildQuality.Result.Evidence.EligibleBuilds · Succeeded @_drawerBuildQuality.Result.Evidence.SucceededBuilds · Failed @(_drawerBuildQuality.Result.Evidence.FailedBuilds + _drawerBuildQuality.Result.Evidence.PartiallySucceededBuilds)
+                                Total @_drawerBuildQuality.Result.Evidence.EligibleBuilds · Succeeded @_drawerBuildQuality.Result.Evidence.SucceededBuilds · Failed @_drawerBuildQuality.Result.Evidence.FailedBuilds · Partial @_drawerBuildQuality.Result.Evidence.PartiallySucceededBuilds
                             </MudText>
                         </MudPaper>
                     </MudItem>
@@ -776,8 +776,6 @@
                 .Where(sp => sp.StartTime.HasValue)
                 .Select(sp =>
                 {
-                    var qualityDescriptor = GetPipelineQualityDescriptor(sp.PipelineDefinitionId);
-
                     return new TimeScatterPoint
                     {
                         Id = sp.Id,
@@ -785,8 +783,6 @@
                         Y = sp.DurationMinutes ?? 0,
                         Category = sp.Result ?? "Unknown",
                         Label = sp.BuildNumber ?? $"Build #{sp.TfsRunId}",
-                        QualityStateLabel = qualityDescriptor?.Label,
-                        QualityStrokeColor = qualityDescriptor?.StrokeColor,
                         Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                         {
                             ["PipelineName"] = sp.PipelineName,
@@ -1011,13 +1007,6 @@
             _isDrawerBuildQualityLoading = false;
             await InvokeAsync(StateHasChanged);
         }
-    }
-
-    private BuildQualityStateDescriptor? GetPipelineQualityDescriptor(int pipelineDefinitionId)
-    {
-        return _pipelineBuildQualityByDefinition.TryGetValue(pipelineDefinitionId, out var detail)
-            ? BuildQualityPresentation.GetOverallState(detail.Result)
-            : null;
     }
 
     private string GetDrawerBuildQualityTitle()

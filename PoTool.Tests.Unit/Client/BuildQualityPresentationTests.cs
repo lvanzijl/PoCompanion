@@ -1,4 +1,3 @@
-using PoTool.Client.ApiClient;
 using PoTool.Client.Components.Common;
 
 namespace PoTool.Tests.Unit.Client;
@@ -7,81 +6,28 @@ namespace PoTool.Tests.Unit.Client;
 public sealed class BuildQualityPresentationTests
 {
     [TestMethod]
-    public void GetDimensionState_ReturnsUnknown_WhenMetricIsUnknown()
+    public void FormatPercent_ReturnsUnknown_WhenExplicitUnknownFlagIsTrue()
     {
-        var result = CreateResult();
-        result.Metrics.SuccessRate = null;
-        result.Evidence.SuccessRateUnknown = true;
-        result.Evidence.SuccessRateUnknownReason = "NoEligibleBuilds";
-
-        var state = BuildQualityPresentation.GetDimensionState(result, BuildQualityDimension.Builds);
-
-        Assert.AreEqual(BuildQualityVisualState.Unknown, state.State);
-        Assert.AreEqual("Unknown", BuildQualityPresentation.FormatPercent(result.Metrics.SuccessRate, result.Evidence.SuccessRateUnknown));
+        Assert.AreEqual("Unknown", BuildQualityPresentation.FormatPercent(0.96d, isUnknown: true));
     }
 
     [TestMethod]
-    public void GetDimensionState_ReturnsWarning_WhenTestThresholdIsNotMet()
+    public void FormatPercent_ReturnsDash_WhenValueIsMissingWithoutUnknownFlag()
     {
-        var result = CreateResult();
-        result.Metrics.TestPassRate = 0.98d;
-        result.Metrics.TestVolume = 12;
-        result.Evidence.TestThresholdMet = false;
-
-        var state = BuildQualityPresentation.GetDimensionState(result, BuildQualityDimension.Tests);
-
-        Assert.AreEqual(BuildQualityVisualState.Warning, state.State);
+        Assert.AreEqual("—", BuildQualityPresentation.FormatPercent(null, isUnknown: false));
     }
 
     [TestMethod]
-    public void GetOverallState_ReturnsBad_WhenAnyDimensionIsBad()
+    public void FormatPercent_ReturnsPercent_WhenValueExistsAndUnknownFlagIsFalse()
     {
-        var result = CreateResult();
-        result.Metrics.Coverage = 0.55d;
-
-        var state = BuildQualityPresentation.GetOverallState(result);
-
-        Assert.AreEqual(BuildQualityVisualState.Bad, state.State);
+        Assert.AreEqual("96%", BuildQualityPresentation.FormatPercent(0.96d, isUnknown: false).Replace(" ", string.Empty));
     }
 
     [TestMethod]
-    public void GetConfidenceSummary_UsesLockedThresholdText()
+    public void GetUnknownReasonText_ReturnsFriendlyMessage_ForKnownReason()
     {
-        var result = CreateResult();
-        result.Evidence.BuildThresholdMet = true;
-        result.Evidence.TestThresholdMet = false;
+        var message = BuildQualityPresentation.GetUnknownReasonText("NoCoverage");
 
-        var summary = BuildQualityPresentation.GetConfidenceSummary(result);
-
-        StringAssert.Contains(summary, "Minimum builds (3): met.");
-        StringAssert.Contains(summary, "Minimum tests (20): not met.");
-    }
-
-    private static BuildQualityResultDto CreateResult()
-    {
-        return new BuildQualityResultDto
-        {
-            Metrics = new BuildQualityMetricsDto
-            {
-                SuccessRate = 0.96d,
-                TestPassRate = 0.92d,
-                TestVolume = 40,
-                Coverage = 0.84d,
-                Confidence = 2
-            },
-            Evidence = new BuildQualityEvidenceDto
-            {
-                EligibleBuilds = 10,
-                SucceededBuilds = 9,
-                FailedBuilds = 1,
-                TotalTests = 44,
-                PassedTests = 41,
-                NotApplicableTests = 4,
-                CoveredLines = 840,
-                TotalLines = 1000,
-                BuildThresholdMet = true,
-                TestThresholdMet = true
-            }
-        };
+        Assert.AreEqual("No coverage data is available in scope.", message);
     }
 }

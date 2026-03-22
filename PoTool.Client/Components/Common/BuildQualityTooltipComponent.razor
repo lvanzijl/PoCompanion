@@ -16,7 +16,7 @@
     <MudDivider Class="my-1" />
 
     <MudText Typo="Typo.subtitle2">Confidence</MudText>
-    <MudText Typo="Typo.caption">@BuildQualityPresentation.GetConfidenceSummary(Result)</MudText>
+    <MudText Typo="Typo.caption">Score: @Result.Metrics.Confidence</MudText>
     <MudText Typo="Typo.caption">Build threshold: @(Result.Evidence.BuildThresholdMet ? "met" : "not met")</MudText>
     <MudText Typo="Typo.caption">Test threshold: @(Result.Evidence.TestThresholdMet ? "met" : "not met")</MudText>
 </MudStack>
@@ -51,7 +51,8 @@
         {
             case BuildQualityDimension.Builds:
                 yield return $"Succeeded: {Result.Evidence.SucceededBuilds}";
-                yield return $"Failed: {Result.Evidence.FailedBuilds + Result.Evidence.PartiallySucceededBuilds}";
+                yield return $"Failed: {Result.Evidence.FailedBuilds}";
+                yield return $"Partially succeeded: {Result.Evidence.PartiallySucceededBuilds}";
                 yield return $"Canceled: {Result.Evidence.CanceledBuilds}";
                 break;
 
