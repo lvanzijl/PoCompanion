@@ -20,11 +20,13 @@ public sealed class BuildQualityUiComplianceAuditReportDocumentTests
         StringAssert.Contains(report, "## 4. Build-level (Pipeline Insights) analysis");
         StringAssert.Contains(report, "## 5. Rolling window handling");
         StringAssert.Contains(report, "## 6. Unknown handling");
-        StringAssert.Contains(report, "## 7. Violations");
-        StringAssert.Contains(report, "## 8. Final verdict");
+        StringAssert.Contains(report, "## 7. Drift detection results");
+        StringAssert.Contains(report, "## 8. Violations");
+        StringAssert.Contains(report, "## 9. Final verdict");
+        StringAssert.Contains(report, "## Reviewer-ready notes");
 
         StringAssert.Contains(report, "Scope handling: **PASS**");
-        StringAssert.Contains(report, "No recomputation: **FAIL**");
+        StringAssert.Contains(report, "No recomputation: **PASS**");
         StringAssert.Contains(report, "HealthWorkspace.razor");
         StringAssert.Contains(report, "SprintTrend.razor");
         StringAssert.Contains(report, "PipelineInsights.razor");
@@ -32,14 +34,20 @@ public sealed class BuildQualityUiComplianceAuditReportDocumentTests
         StringAssert.Contains(report, "BuildQualitySummaryComponent.razor");
         StringAssert.Contains(report, "BuildQualityCompactComponent.razor");
         StringAssert.Contains(report, "BuildQualityTooltipComponent.razor");
-        StringAssert.Contains(report, "GoodThreshold = 0.90d");
-        StringAssert.Contains(report, "WarningThreshold = 0.70d");
+        StringAssert.Contains(report, "GetRollingWindowAsync(...)");
+        StringAssert.Contains(report, "GetSprintAsync(...)");
+        StringAssert.Contains(report, "GetPipelineAsync(...)");
         StringAssert.Contains(report, "FailedBuilds + PartiallySucceededBuilds");
-        StringAssert.Contains(report, "GetOverallState(detail.Result)");
-        StringAssert.Contains(report, "GetRollingWindowAsync");
-        StringAssert.Contains(report, "GetSprintAsync");
-        StringAssert.Contains(report, "GetPipelineAsync");
-        StringAssert.Contains(report, "**FAIL**");
+        StringAssert.Contains(report, "QualityStateLabel");
+        StringAssert.Contains(report, "QualityStrokeColor");
+        StringAssert.Contains(report, "None.");
+        StringAssert.Contains(report, "**PASS — SAFE TO MERGE**");
+        StringAssert.Contains(report, "refreshed `buildquality_ui_compliance_audit_report.md` to match current UI implementation after the final cleanup");
+        StringAssert.Contains(report, "updated the matching MSTest document audit to enforce the current result");
+        StringAssert.Contains(report, "no backend/provider/query/DTO changes");
+        StringAssert.Contains(report, "no UI redesign beyond the already completed compliance fix and chart cleanup");
+        StringAssert.Contains(report, "no formula/threshold/Unknown semantic changes");
+
     }
 
     private static string GetRepositoryRoot()

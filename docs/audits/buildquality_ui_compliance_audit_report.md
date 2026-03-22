@@ -3,9 +3,15 @@
 ## 1. Summary
 
 - Scope handling: **PASS**
-- No recomputation: **FAIL**
+- No recomputation: **PASS**
 
-The current `PoTool.Client` BuildQuality integration passes scope parameters to backend queries and does not locally slice BuildQuality raw facts. However, the UI layer does recompute and reinterpret BuildQuality presentation states in several places, which violates the no-recomputation invariant.
+This audit was refreshed against the current `PoTool.Client` implementation after the final chart-state cleanup documented in `docs/audits/buildquality_chart_state_cleanup_report.md`.
+
+Current repository truth:
+
+- BuildQuality scope is selected only by passing parameters into typed backend BuildQuality service calls.
+- The client displays DTO values, explicit DTO flags, and explicit unknown-reason codes without reintroducing local BuildQuality formulas, thresholds, confidence reinterpretation, or chart-state drift.
+- No current UI compliance violations were found in the audited files.
 
 ---
 
@@ -14,49 +20,49 @@ The current `PoTool.Client` BuildQuality integration passes scope parameters to 
 ### `PoTool.Client/Pages/Home/HealthWorkspace.razor`
 
 - **Location:** `PoTool.Client/Pages/Home/HealthWorkspace.razor:155-201`
-- **How scope is passed:** the page computes a rolling window (`_windowEndUtc = DateTimeOffset.UtcNow`, `_windowStartUtc = _windowEndUtc.AddDays(-DefaultRollingWindowDays)`) and passes those values into `BuildQualityService.GetRollingWindowAsync(activeProfile.Id, _windowStartUtc, _windowEndUtc, ...)`.
-- **UI filtering exists:** no filtering of builds, test runs, coverage, or BuildQuality evidence/metrics. The only local collection handling is product display ordering in `GetProductsInDisplayOrder()` (`PoTool.Client/Pages/Home/HealthWorkspace.razor:234-244`), which reorders already returned products but does not change BuildQuality scope.
+- **How scope is passed:** the page computes a rolling window once (`_windowStartUtc`, `_windowEndUtc`) and passes those values into `BuildQualityService.GetRollingWindowAsync(...)`.
+- **UI filtering exists:** none. `GetProductsInDisplayOrder()` only reorders already-returned products for display.
 - **Verdict:** **PASS**
 
 ### `PoTool.Client/Pages/Home/SprintTrend.razor`
 
 - **Location:** `PoTool.Client/Pages/Home/SprintTrend.razor:1073-1098`
-- **How scope is passed:** the page passes the selected sprint directly into `BuildQualityService.GetSprintAsync(_profileId.Value, _currentSprint.Id, ...)`.
-- **UI filtering exists:** no filtering of BuildQuality facts or DTO collections. The only local collection handling is product ordering for display in `_sprintBuildQuality.Products.OrderBy(product => product.ProductName, ...)` (`PoTool.Client/Pages/Home/SprintTrend.razor:169-180`), which does not change scope.
+- **How scope is passed:** the page passes the selected sprint identifier directly into `BuildQualityService.GetSprintAsync(...)`.
+- **UI filtering exists:** none. Product ordering remains presentation-only.
 - **Verdict:** **PASS**
 
 ### `PoTool.Client/Pages/Home/PipelineInsights.razor`
 
-- **Location:** `PoTool.Client/Pages/Home/PipelineInsights.razor:924-1003`
-- **How scope is passed:** the page derives pipeline identifiers from the existing Pipeline Insights DTO and passes `productOwnerId`, `sprintId`, and `pipelineDefinitionId` into `BuildQualityService.GetPipelineAsync(...)`.
-- **UI filtering exists:** no filtering of BuildQuality builds, tests, coverage, or BuildQuality DTO collections after retrieval. The page caches returned `PipelineBuildQualityDto` instances in `_pipelineBuildQualityByDefinition` and reuses them.
+- **Location:** `PoTool.Client/Pages/Home/PipelineInsights.razor:920-999`
+- **How scope is passed:** the page derives pipeline definition identifiers from the existing Pipeline Insights DTO and passes `productOwnerId`, `sprintId`, and `pipelineDefinitionId` into `BuildQualityService.GetPipelineAsync(...)`.
+- **UI filtering exists:** none. The page caches returned `PipelineBuildQualityDto` instances but does not slice broader BuildQuality datasets after retrieval.
 - **Verdict:** **PASS**
 
 ### `PoTool.Client/Components/Common/BuildQualitySummaryComponent.razor`
 
-- **Location:** `PoTool.Client/Components/Common/BuildQualitySummaryComponent.razor:1-132`
-- **How scope is passed:** no scope selection; receives a single `BuildQualityResultDto` as a parameter.
+- **Location:** `PoTool.Client/Components/Common/BuildQualitySummaryComponent.razor:1-124`
+- **How scope is passed:** no scope selection; receives a single `BuildQualityResultDto`.
 - **UI filtering exists:** none.
 - **Verdict:** **PASS**
 
 ### `PoTool.Client/Components/Common/BuildQualityCompactComponent.razor`
 
-- **Location:** `PoTool.Client/Components/Common/BuildQualityCompactComponent.razor:1-119`
-- **How scope is passed:** no scope selection; receives a single `BuildQualityResultDto` as a parameter.
+- **Location:** `PoTool.Client/Components/Common/BuildQualityCompactComponent.razor:1-123`
+- **How scope is passed:** no scope selection; receives a single `BuildQualityResultDto`.
 - **UI filtering exists:** none.
 - **Verdict:** **PASS**
 
 ### `PoTool.Client/Components/Common/BuildQualityTooltipComponent.razor`
 
-- **Location:** `PoTool.Client/Components/Common/BuildQualityTooltipComponent.razor:1-85`
-- **How scope is passed:** no scope selection; receives a single `BuildQualityResultDto` as a parameter.
+- **Location:** `PoTool.Client/Components/Common/BuildQualityTooltipComponent.razor:1-86`
+- **How scope is passed:** no scope selection; receives a single `BuildQualityResultDto`.
 - **UI filtering exists:** none.
 - **Verdict:** **PASS**
 
 ### `PoTool.Client/Components/Common/BuildQualityPresentation.cs`
 
-- **Location:** `PoTool.Client/Components/Common/BuildQualityPresentation.cs:1-212`
-- **How scope is passed:** no scope selection; consumes already returned DTO values.
+- **Location:** `PoTool.Client/Components/Common/BuildQualityPresentation.cs:13-48`
+- **How scope is passed:** no scope selection; consumes already-returned DTO values and explicit unknown-reason codes.
 - **UI filtering exists:** none.
 - **Verdict:** **PASS**
 
@@ -64,104 +70,150 @@ The current `PoTool.Client` BuildQuality integration passes scope parameters to 
 
 ## 3. Recomputation analysis
 
-### Finding 1 — UI defines new quality thresholds and derives visual health states
+### `PoTool.Client/Components/Common/BuildQualityPresentation.cs`
 
-- **Location:** `PoTool.Client/Components/Common/BuildQualityPresentation.cs:32-36,64-95,161-179`
-- **Code pattern:** hardcoded thresholds `MinimumBuilds = 3`, `MinimumTests = 20`, `GoodThreshold = 0.90d`, `WarningThreshold = 0.70d`; local comparisons in `GetRateState`, `GetTestState`, and `GetOverallState`.
-- **Why it is a violation:** the UI is introducing its own interpretation layer for "good / warning / bad / unknown" using metric values and duplicated thresholds. This is not present in the DTO contract and is not a simple display of DTO values.
+- The helper now contains only:
+  - `FormatPercent(double? value, bool isUnknown)`
+  - `GetUnknownReasonText(string? reason)`
+- `FormatPercent(...)` formats backend-provided percentages for display, returns `"Unknown"` only when the explicit DTO unknown flag is set, and returns an em dash when the value is absent without an unknown flag.
+- `GetUnknownReasonText(...)` maps backend-provided unknown reason codes into user-facing text and does not derive new metric semantics.
+- **Verified absent:** client-side thresholds, rate-state derivation, confidence-state derivation, overall-state derivation, and null-driven Unknown inference.
+- **Verdict:** **PASS**
 
-### Finding 2 — UI reinterprets confidence into new labels and border states
+### `PoTool.Client/Components/Common/BuildQualitySummaryComponent.razor`
 
-- **Location:** `PoTool.Client/Components/Common/BuildQualityPresentation.cs:86-122`
-- **Code pattern:** `result.Metrics.Confidence < 2` and `GetConfidenceState(...)` map numeric confidence into `"High confidence"`, `"Low confidence"`, and `"Insufficient confidence"`.
-- **Why it is a violation:** the UI is transforming the canonical confidence value into a new client-side scoring interpretation instead of displaying the DTO value directly.
+- Displays `Result.Metrics.SuccessRate`, `Result.Metrics.TestPassRate`, `Result.Metrics.Coverage`, `Result.Metrics.Confidence`, and explicit evidence counts/flags.
+- Does not calculate percentages, ratios, confidence, Unknown, or overall health states.
+- **Verdict:** **PASS**
 
-### Finding 3 — UI infers Unknown from `null` instead of using explicit DTO flags only
+### `PoTool.Client/Components/Common/BuildQualityCompactComponent.razor`
 
-- **Location:** `PoTool.Client/Components/Common/BuildQualityPresentation.cs:38-43,161-166`
-- **Code pattern:** `return isUnknown || !value.HasValue ? "Unknown" : ...`
-- **Why it is a violation:** the helper derives Unknown from the absence of a value (`!value.HasValue`) in addition to the explicit DTO unknown flags. The audit rule requires the UI to avoid inferring Unknown and to rely on transported semantics.
+- Displays DTO values directly, including the raw numeric `Result.Metrics.Confidence` and explicit `BuildThresholdMet` / `TestThresholdMet` flags.
+- Does not reinterpret confidence into qualitative client states.
+- **Verdict:** **PASS**
 
-### Finding 4 — UI duplicates threshold explanation constants
+### `PoTool.Client/Components/Common/BuildQualityTooltipComponent.razor`
 
-- **Location:** `PoTool.Client/Components/Common/BuildQualityPresentation.cs:32-33,136-144`
-- **Code pattern:** `GetConfidenceSummary(...)` embeds `MinimumBuilds (3)` and `MinimumTests (20)` from UI-local constants.
-- **Why it is a violation:** the UI repeats threshold semantics locally instead of only displaying backend-provided data. This duplicates canonical threshold knowledge in the client.
+- Displays evidence fields exactly as transported:
+  - `FailedBuilds`
+  - `PartiallySucceededBuilds`
+  - `PassedTests`
+  - `NotApplicableTests`
+  - `CoveredLines`
+  - `TotalLines`
+- Does not aggregate `FailedBuilds + PartiallySucceededBuilds` into a new UI-only number.
+- Uses explicit unknown-reason fields from the DTO.
+- **Verdict:** **PASS**
 
-### Finding 5 — UI aggregates evidence counts into a derived failed total
+### `PoTool.Client/Pages/Home/PipelineInsights.razor`
 
-- **Location:** `PoTool.Client/Components/Common/BuildQualityTooltipComponent.razor:52-55`
-- **Code pattern:** `Result.Evidence.FailedBuilds + Result.Evidence.PartiallySucceededBuilds`
-- **Why it is a violation:** the tooltip creates a new combined "Failed" number in the UI rather than displaying the evidence fields exactly as transported.
+- Displays pipeline BuildQuality detail returned by `BuildQualityService.GetPipelineAsync(...)`.
+- The drawer now renders `FailedBuilds` and `PartiallySucceededBuilds` separately.
+- No `BuildQualityPresentation.GetOverallState(...)` call or equivalent border-state derivation remains.
+- **Verdict:** **PASS**
 
-### Finding 6 — Pipeline Insights drawer repeats the failed-count aggregation
+### Previously reported violations re-audited
 
-- **Location:** `PoTool.Client/Pages/Home/PipelineInsights.razor:492-495`
-- **Code pattern:** `Failed @(_drawerBuildQuality.Result.Evidence.FailedBuilds + _drawerBuildQuality.Result.Evidence.PartiallySucceededBuilds)`
-- **Why it is a violation:** the build drawer derives a new failed count locally instead of showing the evidence fields directly.
+The previously documented violations are no longer present in the current client code:
 
-### Finding 7 — Pipeline Insights border state is derived locally from the DTO
+- client thresholds in `BuildQualityPresentation`
+- client confidence mapping
+- Unknown inference from `null`
+- `FailedBuilds + PartiallySucceededBuilds` aggregation
+- pipeline/build border-state derivation from client-side logic
+- dormant chart-state identifiers and rendering logic
+- remaining strict drift matches in shared chart code
 
-- **Location:** `PoTool.Client/Pages/Home/PipelineInsights.razor:1016-1020`
-- **Code pattern:** `BuildQualityPresentation.GetOverallState(detail.Result)`
-- **Why it is a violation:** the page computes a new overall BuildQuality state for each pipeline/build border using client-side threshold and confidence logic instead of rendering a backend-provided state.
+Overall recomputation verdict: **PASS**
 
 ---
 
 ## 4. Build-level (Pipeline Insights) analysis
 
-- **Whether build-level recomputation exists:** **Yes**
-- **Whether DTO is used correctly:** **Partially**
+- **Whether build-level recomputation exists:** **No**
+- **Whether DTO is used correctly:** **Yes**
 
-`PipelineInsights.razor` does not compute build-level pass rates, coverage percentages, or confidence formulas from raw build facts. It does, however, derive a client-side overall quality border state by calling `BuildQualityPresentation.GetOverallState(detail.Result)` (`PoTool.Client/Pages/Home/PipelineInsights.razor:1016-1020`) and derives a combined failed count in the drawer (`PoTool.Client/Pages/Home/PipelineInsights.razor:492-495`).
+`PipelineInsights.razor` loads pipeline-scoped BuildQuality detail through `BuildQualityService.GetPipelineAsync(...)` and renders the returned DTO values via `BuildQualityCompactComponent` plus direct evidence-field display in the drawer.
 
-So the page uses backend DTOs as the source, but it does not use them directly for build-level presentation. It layers additional UI-side BuildQuality interpretation on top.
+Current audited behavior:
+
+- no client-side pass-rate or coverage recomputation from raw build facts
+- no client-side confidence reinterpretation
+- no aggregated failed count
+- no pipeline/build border-state derivation from DTO metrics
+
+**Verdict:** **PASS**
 
 ---
 
 ## 5. Rolling window handling
 
 - **Location:** `PoTool.Client/Pages/Home/HealthWorkspace.razor:155-201`
-- **Whether UI slices data or passes parameter:** the page computes a rolling 30-day window locally and passes it into `GetRollingWindowAsync(...)`. It does **not** fetch a broader BuildQuality dataset and slice it locally afterward.
+- **Whether UI slices data or passes parameter:** the page computes a rolling 30-day window once and passes it into `BuildQualityService.GetRollingWindowAsync(...)`.
+- **Whether broader BuildQuality data is sliced after retrieval:** **No**
 - **Verdict:** **PASS**
 
 ---
 
 ## 6. Unknown handling
 
-- **Whether UI alters Unknown semantics:** **Yes**
+- **Whether UI alters Unknown semantics:** **No**
 - **Details:**
-  - The UI does **not** convert null to `0`.
-  - The UI does display `"Unknown"` explicitly.
-  - However, `BuildQualityPresentation.FormatPercent(...)` treats either an explicit unknown flag **or** a `null` value as `"Unknown"` (`PoTool.Client/Components/Common/BuildQualityPresentation.cs:38-43`), which means the UI is inferring Unknown from missing data rather than relying only on explicit transported semantics.
-- **Verdict:** **FAIL**
+  - `BuildQualityPresentation.FormatPercent(...)` returns `"Unknown"` only when the explicit DTO unknown flag is true.
+  - When a metric value is absent without an unknown flag, the UI renders `"—"` instead of inferring Unknown.
+  - `BuildQualityTooltipComponent` uses the explicit DTO unknown-reason fields and maps them to text through `GetUnknownReasonText(...)`.
+- **Verdict:** **PASS**
 
 ---
 
-## 7. Violations
+## 7. Drift detection results
 
-1. `PoTool.Client/Components/Common/BuildQualityPresentation.cs:32-36,64-95,161-179`  
-   UI defines and applies client-side thresholds (`0.90`, `0.70`, `3`, `20`) to derive BuildQuality health states.
+Repository-wide verification after the final cleanup found no remaining strict BuildQuality UI drift matches in the shared chart surface or presentation helpers.
 
-2. `PoTool.Client/Components/Common/BuildQualityPresentation.cs:86-122`  
-   UI reinterprets numeric confidence into new qualitative states.
+Search-based results:
 
-3. `PoTool.Client/Components/Common/BuildQualityPresentation.cs:38-43`  
-   UI infers Unknown from `null`.
+- `GoodThreshold`, `WarningThreshold`, `MinimumBuilds`, `MinimumTests` in `PoTool.Client`: **no matches found**
+- `GetRateState`, `GetTestState`, `GetConfidenceState`, `GetOverallState` in `PoTool.Client`: **no matches found**
+- `FailedBuilds + PartiallySucceededBuilds` in `PoTool.Client`: **no matches found**
+- `QualityStateLabel` in `PoTool.Client`: **no matches found**
+- `QualityStrokeColor` in `PoTool.Client`: **no matches found**
 
-4. `PoTool.Client/Components/Common/BuildQualityTooltipComponent.razor:52-55`  
-   UI aggregates `FailedBuilds + PartiallySucceededBuilds`.
+Current chart code state:
 
-5. `PoTool.Client/Pages/Home/PipelineInsights.razor:492-495`  
-   UI aggregates `FailedBuilds + PartiallySucceededBuilds` in the drawer.
+- `PoTool.Client/Components/Charts/TimeScatterPoint.cs` now exposes only standard scatter-point fields plus metadata convenience accessors.
+- `PoTool.Client/Components/Charts/TimeScatterSvg.razor` renders hover and category styling from `Category` only, with no dormant BuildQuality state label or stroke override.
 
-6. `PoTool.Client/Pages/Home/PipelineInsights.razor:1016-1020`  
-   UI derives a new overall BuildQuality state for pipeline/build borders.
+**Verdict:** **PASS**
 
 ---
 
-## 8. Final verdict
+## 8. Violations
 
-**FAIL**
+None.
 
-Scope selection is correctly delegated to backend BuildQuality queries, but the UI does recompute and reinterpret BuildQuality semantics in shared presentation helpers and Pipeline Insights rendering. The no-recomputation invariant is therefore not satisfied.
+No current scope-handling violations or no-recomputation violations were found in the audited UI files.
+
+---
+
+## 9. Final verdict
+
+**PASS — SAFE TO MERGE**
+
+The current `PoTool.Client` BuildQuality UI complies with the audited scope-handling and no-recomputation rules. The previous FAIL findings were stale and are no longer supported by the code after the final presentation cleanup and chart-state cleanup.
+
+## Reviewer-ready notes
+
+### What changed
+
+- refreshed `buildquality_ui_compliance_audit_report.md` to match current UI implementation after the final cleanup
+- updated the matching MSTest document audit to enforce the current result
+
+### What was intentionally not changed
+
+- no backend/provider/query/DTO changes
+- no UI redesign beyond the already completed compliance fix and chart cleanup
+- no formula/threshold/Unknown semantic changes
+
+### Known limitations / follow-up
+
+- None.
