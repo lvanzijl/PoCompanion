@@ -180,14 +180,13 @@ public class RealTfsClientRequestTests
 
         Assert.IsFalse(coverage.Any());
         Assert.HasCount(2, requests);
-        StringAssert.Contains(requests[1].AbsoluteUri, "_apis/test/codecoverage?buildId=101");
-        StringAssert.Contains(requests[1].Query, "flags=1");
-        StringAssert.Contains(requests[1].Query, "api-version=2.0-preview");
-        Assert.IsFalse(requests[1].Query.Contains("api-version=7.0", StringComparison.Ordinal));
+        StringAssert.Contains(requests[1].AbsoluteUri, "_apis/testresults/codecoverage?buildId=101");
+        StringAssert.Contains(requests[1].Query, "api-version=7.0-preview");
+        Assert.IsFalse(requests[1].Query.Contains("flags=1", StringComparison.Ordinal));
     }
 
     [TestMethod]
-    public async Task GetTestRunsByBuildIdsAsync_UsesBuildUriQueryShapeWithPreviewApiVersionOverride()
+    public async Task GetTestRunsByBuildIdsAsync_UsesBuildIdsQueryShapeWithSupportedApiVersion()
     {
         var config = CreateConfig();
         var requests = new List<Uri>();
@@ -224,12 +223,10 @@ public class RealTfsClientRequestTests
         Assert.AreEqual(101, testRuns[0].BuildId);
         Assert.AreEqual(5001, testRuns[0].ExternalId);
         Assert.HasCount(3, requests);
-        StringAssert.Contains(requests[1].AbsoluteUri, "_apis/test/runs?buildUri=");
-        StringAssert.Contains(requests[1].Query, Uri.EscapeDataString("vstfs:///Build/Build/101"));
-        StringAssert.Contains(requests[1].Query, "api-version=5.0-preview.5");
-        Assert.IsFalse(requests[1].Query.Contains("api-version=7.0", StringComparison.Ordinal));
+        StringAssert.Contains(requests[1].AbsoluteUri, "_apis/test/runs?buildIds=101");
+        StringAssert.Contains(requests[1].Query, "api-version=7.0");
+        Assert.IsFalse(requests[1].Query.Contains("buildUri=", StringComparison.Ordinal));
         Assert.IsFalse(requests[1].Query.Contains("minLastUpdatedDate", StringComparison.Ordinal));
-        Assert.IsFalse(requests[1].Query.Contains("buildIds=", StringComparison.Ordinal));
         StringAssert.Contains(requests[2].Query, "$skip=200");
     }
 
