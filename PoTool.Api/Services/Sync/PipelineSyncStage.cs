@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
@@ -200,8 +201,35 @@ public class PipelineSyncStage : ISyncStage
         IReadOnlyCollection<PipelineRunDto> runs,
         CancellationToken cancellationToken)
     {
+        var childIngestionStopwatch = Stopwatch.StartNew();
+        var testRunRetrievalElapsedMs = 0L;
+        var coverageRetrievalElapsedMs = 0L;
+        var testRunPersistenceElapsedMs = 0L;
+        var coveragePersistenceElapsedMs = 0L;
+        var requestedTestRunBuildCount = 0;
+        var requestedCoverageBuildCount = 0;
+        var returnedTestRunDtoCount = 0;
+        var returnedCoverageDtoCount = 0;
+        var persistedTestRunRowCount = 0;
+        var persistedCoverageRowCount = 0;
+        var warningCount = 0;
+
         if (pipelineDefinitionIds.Count == 0)
         {
+            LogBuildQualityChildIngestSummary(
+                productOwnerId,
+                childIngestionStopwatch.ElapsedMilliseconds,
+                requestedTestRunBuildCount,
+                requestedCoverageBuildCount,
+                returnedTestRunDtoCount,
+                returnedCoverageDtoCount,
+                persistedTestRunRowCount,
+                persistedCoverageRowCount,
+                testRunRetrievalElapsedMs,
+                coverageRetrievalElapsedMs,
+                testRunPersistenceElapsedMs,
+                coveragePersistenceElapsedMs,
+                warningCount);
             return BuildQualitySyncResult.None;
         }
 
@@ -253,6 +281,20 @@ public class PipelineSyncStage : ISyncStage
 
         if (buildIds.Length == 0)
         {
+            LogBuildQualityChildIngestSummary(
+                productOwnerId,
+                childIngestionStopwatch.ElapsedMilliseconds,
+                requestedTestRunBuildCount,
+                requestedCoverageBuildCount,
+                returnedTestRunDtoCount,
+                returnedCoverageDtoCount,
+                persistedTestRunRowCount,
+                persistedCoverageRowCount,
+                testRunRetrievalElapsedMs,
+                coverageRetrievalElapsedMs,
+                testRunPersistenceElapsedMs,
+                coveragePersistenceElapsedMs,
+                warningCount);
             return BuildQualitySyncResult.None;
         }
 
@@ -263,34 +305,109 @@ public class PipelineSyncStage : ISyncStage
 
         if (buildAnchors.Count == 0)
         {
+            LogBuildQualityChildIngestSummary(
+                productOwnerId,
+                childIngestionStopwatch.ElapsedMilliseconds,
+                requestedTestRunBuildCount,
+                requestedCoverageBuildCount,
+                returnedTestRunDtoCount,
+                returnedCoverageDtoCount,
+                persistedTestRunRowCount,
+                persistedCoverageRowCount,
+                testRunRetrievalElapsedMs,
+                coverageRetrievalElapsedMs,
+                testRunPersistenceElapsedMs,
+                coveragePersistenceElapsedMs,
+                warningCount);
             return BuildQualitySyncResult.None;
         }
 
         var childFetchBuildIds = buildAnchors.Keys.ToArray();
+        requestedTestRunBuildCount = childFetchBuildIds.Length;
+        requestedCoverageBuildCount = childFetchBuildIds.Length;
+        var testRunRetrievalStopwatch = Stopwatch.StartNew();
         var testRunsTask = _tfsClient.GetTestRunsByBuildIdsAsync(childFetchBuildIds, cancellationToken);
+        var coverageRetrievalStopwatch = Stopwatch.StartNew();
         var coverageTask = _tfsClient.GetCoverageByBuildIdsAsync(childFetchBuildIds, cancellationToken);
 
         await Task.WhenAll(testRunsTask, coverageTask);
+        testRunRetrievalElapsedMs = testRunRetrievalStopwatch.ElapsedMilliseconds;
+        coverageRetrievalElapsedMs = coverageRetrievalStopwatch.ElapsedMilliseconds;
 
         var testRuns = (await testRunsTask).ToList();
         var coverage = (await coverageTask).ToList();
+        returnedTestRunDtoCount = testRuns.Count;
+        returnedCoverageDtoCount = coverage.Count;
 
-        var warningCount = 0;
-        warningCount += await UpsertTestRunsAsync(buildAnchors, testRuns, cancellationToken);
-        warningCount += await ReplaceCoverageAsync(buildAnchors, coverage, cancellationToken);
+        _logger.LogInformation(
+            "BUILDQUALITY_TESTRUN_RETRIEVAL_SUMMARY: productOwnerId={ProductOwnerId}, requestedBuildCount={RequestedBuildCount}, returnedDtoCount={ReturnedDtoCount}, elapsedMs={ElapsedMs}",
+            productOwnerId,
+            requestedTestRunBuildCount,
+            returnedTestRunDtoCount,
+            testRunRetrievalElapsedMs);
+        _logger.LogInformation(
+            "BUILDQUALITY_COVERAGE_RETRIEVAL_SUMMARY: productOwnerId={ProductOwnerId}, requestedBuildCount={RequestedBuildCount}, returnedDtoCount={ReturnedDtoCount}, elapsedMs={ElapsedMs}",
+            productOwnerId,
+            requestedCoverageBuildCount,
+            returnedCoverageDtoCount,
+            coverageRetrievalElapsedMs);
+
+        var testRunPersistenceStopwatch = Stopwatch.StartNew();
+        var testRunPersistence = await UpsertTestRunsAsync(buildAnchors, testRuns, cancellationToken);
+        testRunPersistenceElapsedMs = testRunPersistenceStopwatch.ElapsedMilliseconds;
+        warningCount += testRunPersistence.WarningCount;
+        persistedTestRunRowCount = testRunPersistence.PersistedRowCount;
+
+        var coveragePersistenceStopwatch = Stopwatch.StartNew();
+        var coveragePersistence = await ReplaceCoverageAsync(buildAnchors, coverage, cancellationToken);
+        coveragePersistenceElapsedMs = coveragePersistenceStopwatch.ElapsedMilliseconds;
+        warningCount += coveragePersistence.WarningCount;
+        persistedCoverageRowCount = coveragePersistence.PersistedRowCount;
+
+        _logger.LogInformation(
+            "BUILDQUALITY_TESTRUN_PERSISTENCE_SUMMARY: productOwnerId={ProductOwnerId}, persistedRowCount={PersistedRowCount}, insertedRowCount={InsertedRowCount}, updatedRowCount={UpdatedRowCount}, removedRowCount={RemovedRowCount}, warningCount={WarningCount}, elapsedMs={ElapsedMs}",
+            productOwnerId,
+            testRunPersistence.PersistedRowCount,
+            testRunPersistence.InsertedRowCount,
+            testRunPersistence.UpdatedRowCount,
+            testRunPersistence.RemovedRowCount,
+            testRunPersistence.WarningCount,
+            testRunPersistenceElapsedMs);
+        _logger.LogInformation(
+            "BUILDQUALITY_COVERAGE_PERSISTENCE_SUMMARY: productOwnerId={ProductOwnerId}, persistedRowCount={PersistedRowCount}, insertedRowCount={InsertedRowCount}, removedRowCount={RemovedRowCount}, warningCount={WarningCount}, elapsedMs={ElapsedMs}",
+            productOwnerId,
+            coveragePersistence.PersistedRowCount,
+            coveragePersistence.InsertedRowCount,
+            coveragePersistence.RemovedRowCount,
+            coveragePersistence.WarningCount,
+            coveragePersistenceElapsedMs);
 
         _logger.LogInformation(
             "Build quality ingestion synced {TestRunCount} test runs and {CoverageCount} coverage rows for ProductOwner {ProductOwnerId}",
             testRuns.Count,
             coverage.Count,
             productOwnerId);
+        LogBuildQualityChildIngestSummary(
+            productOwnerId,
+            childIngestionStopwatch.ElapsedMilliseconds,
+            requestedTestRunBuildCount,
+            requestedCoverageBuildCount,
+            returnedTestRunDtoCount,
+            returnedCoverageDtoCount,
+            persistedTestRunRowCount,
+            persistedCoverageRowCount,
+            testRunRetrievalElapsedMs,
+            coverageRetrievalElapsedMs,
+            testRunPersistenceElapsedMs,
+            coveragePersistenceElapsedMs,
+            warningCount);
 
         return warningCount == 0
             ? BuildQualitySyncResult.None
             : new BuildQualitySyncResult(true, "Build quality ingestion skipped invalid or unlinked child records.");
     }
 
-    private async Task<int> UpsertTestRunsAsync(
+    private async Task<BuildQualityPersistenceResult> UpsertTestRunsAsync(
         IReadOnlyDictionary<int, int> buildAnchors,
         IReadOnlyCollection<TestRunDto> testRuns,
         CancellationToken cancellationToken)
@@ -307,6 +424,8 @@ public class PipelineSyncStage : ISyncStage
         var incomingKeys = new HashSet<(int BuildId, int ExternalId)>();
         var warningCount = 0;
         var now = DateTimeOffset.UtcNow;
+        var insertedRowCount = 0;
+        var updatedRowCount = 0;
 
         foreach (var dto in testRuns)
         {
@@ -338,6 +457,7 @@ public class PipelineSyncStage : ISyncStage
                 entity.NotApplicableTests = dto.NotApplicableTests;
                 entity.Timestamp = dto.Timestamp?.UtcDateTime;
                 entity.CachedAt = now;
+                updatedRowCount++;
             }
             else
             {
@@ -351,6 +471,7 @@ public class PipelineSyncStage : ISyncStage
                     Timestamp = dto.Timestamp?.UtcDateTime,
                     CachedAt = now
                 }, cancellationToken);
+                insertedRowCount++;
             }
         }
 
@@ -364,10 +485,15 @@ public class PipelineSyncStage : ISyncStage
         }
 
         await _context.SaveChangesAsync(cancellationToken);
-        return warningCount;
+        return new BuildQualityPersistenceResult(
+            warningCount,
+            incomingKeys.Count,
+            insertedRowCount,
+            updatedRowCount,
+            staleEntities.Count);
     }
 
-    private async Task<int> ReplaceCoverageAsync(
+    private async Task<BuildQualityPersistenceResult> ReplaceCoverageAsync(
         IReadOnlyDictionary<int, int> buildAnchors,
         IReadOnlyCollection<CoverageDto> coverageRows,
         CancellationToken cancellationToken)
@@ -384,6 +510,7 @@ public class PipelineSyncStage : ISyncStage
 
         var warningCount = 0;
         var now = DateTimeOffset.UtcNow;
+        var insertedRowCount = 0;
 
         foreach (var dto in coverageRows)
         {
@@ -407,10 +534,16 @@ public class PipelineSyncStage : ISyncStage
                 Timestamp = dto.Timestamp?.UtcDateTime,
                 CachedAt = now
             }, cancellationToken);
+            insertedRowCount++;
         }
 
         await _context.SaveChangesAsync(cancellationToken);
-        return warningCount;
+        return new BuildQualityPersistenceResult(
+            warningCount,
+            insertedRowCount,
+            insertedRowCount,
+            0,
+            existingEntities.Count);
     }
 
     private int LogSkippedTestRun(TestRunDto dto, string reason)
@@ -430,6 +563,38 @@ public class PipelineSyncStage : ISyncStage
             dto.BuildId,
             reason);
         return 1;
+    }
+
+    private void LogBuildQualityChildIngestSummary(
+        int productOwnerId,
+        long childIngestionElapsedMs,
+        int requestedTestRunBuildCount,
+        int requestedCoverageBuildCount,
+        int returnedTestRunDtoCount,
+        int returnedCoverageDtoCount,
+        int persistedTestRunRowCount,
+        int persistedCoverageRowCount,
+        long testRunRetrievalElapsedMs,
+        long coverageRetrievalElapsedMs,
+        long testRunPersistenceElapsedMs,
+        long coveragePersistenceElapsedMs,
+        int warningCount)
+    {
+        _logger.LogInformation(
+            "BUILDQUALITY_CHILD_INGEST_SUMMARY: productOwnerId={ProductOwnerId}, childIngestionElapsedMs={ChildIngestionElapsedMs}, requestedTestRunBuildCount={RequestedTestRunBuildCount}, requestedCoverageBuildCount={RequestedCoverageBuildCount}, returnedTestRunDtoCount={ReturnedTestRunDtoCount}, returnedCoverageDtoCount={ReturnedCoverageDtoCount}, persistedTestRunRowCount={PersistedTestRunRowCount}, persistedCoverageRowCount={PersistedCoverageRowCount}, testRunRetrievalElapsedMs={TestRunRetrievalElapsedMs}, coverageRetrievalElapsedMs={CoverageRetrievalElapsedMs}, testRunPersistenceElapsedMs={TestRunPersistenceElapsedMs}, coveragePersistenceElapsedMs={CoveragePersistenceElapsedMs}, warningCount={WarningCount}",
+            productOwnerId,
+            childIngestionElapsedMs,
+            requestedTestRunBuildCount,
+            requestedCoverageBuildCount,
+            returnedTestRunDtoCount,
+            returnedCoverageDtoCount,
+            persistedTestRunRowCount,
+            persistedCoverageRowCount,
+            testRunRetrievalElapsedMs,
+            coverageRetrievalElapsedMs,
+            testRunPersistenceElapsedMs,
+            coveragePersistenceElapsedMs,
+            warningCount);
     }
 
     private static void UpdateEntity(CachedPipelineRunEntity entity, PipelineRunDto dto)
@@ -468,4 +633,11 @@ public class PipelineSyncStage : ISyncStage
     {
         public static BuildQualitySyncResult None { get; } = new(false, null);
     }
+
+    private sealed record BuildQualityPersistenceResult(
+        int WarningCount,
+        int PersistedRowCount,
+        int InsertedRowCount,
+        int UpdatedRowCount,
+        int RemovedRowCount);
 }

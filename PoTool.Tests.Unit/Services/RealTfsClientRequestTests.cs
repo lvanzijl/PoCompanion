@@ -155,6 +155,7 @@ public class RealTfsClientRequestTests
     {
         var config = CreateConfig();
         var requests = new List<Uri>();
+        var logger = new Mock<ILogger<RealTfsClient>>();
 
         var handler = new CaptureHttpMessageHandler((request, _) =>
         {
@@ -165,7 +166,7 @@ public class RealTfsClientRequestTests
             });
         });
 
-        var client = CreateClient(config, handler);
+        var client = CreateClient(config, handler, logger);
 
         var coverage = (await client.GetCoverageByBuildIdsAsync([101, 102])).ToList();
 
@@ -179,6 +180,10 @@ public class RealTfsClientRequestTests
             Assert.IsFalse(request.Query.Contains("flags=1", StringComparison.Ordinal));
             Assert.IsFalse(request.AbsoluteUri.Contains("_apis/build/builds", StringComparison.OrdinalIgnoreCase));
         }
+
+        AssertLogged(logger, "BUILDQUALITY_COVERAGE_BUILD_SUMMARY: buildId=101");
+        AssertLogged(logger, "BUILDQUALITY_COVERAGE_BUILD_SUMMARY: buildId=102");
+        AssertLogged(logger, "BUILDQUALITY_COVERAGE_REQUEST_SUMMARY:");
     }
 
     [TestMethod]
@@ -186,6 +191,7 @@ public class RealTfsClientRequestTests
     {
         var config = CreateConfig();
         var requests = new List<Uri>();
+        var logger = new Mock<ILogger<RealTfsClient>>();
 
         var handler = new CaptureHttpMessageHandler((request, _) =>
         {
@@ -214,7 +220,7 @@ public class RealTfsClientRequestTests
             });
         });
 
-        var client = CreateClient(config, handler);
+        var client = CreateClient(config, handler, logger);
 
         var testRuns = (await client.GetTestRunsByBuildIdsAsync([101, 102])).ToList();
 
@@ -241,9 +247,16 @@ public class RealTfsClientRequestTests
             Assert.IsFalse(request.AbsoluteUri.Contains("_apis/build/builds", StringComparison.OrdinalIgnoreCase));
             Assert.AreEqual(1, request.Query.Split("buildIds=").Length - 1);
         }
+
+        AssertLogged(logger, "BUILDQUALITY_TESTRUN_BUILD_SUMMARY: buildId=101");
+        AssertLogged(logger, "BUILDQUALITY_TESTRUN_BUILD_SUMMARY: buildId=102");
+        AssertLogged(logger, "BUILDQUALITY_TESTRUN_REQUEST_SUMMARY:");
     }
 
-    private static RealTfsClient CreateClient(TfsConfigEntity config, HttpMessageHandler handler)
+    private static RealTfsClient CreateClient(
+        TfsConfigEntity config,
+        HttpMessageHandler handler,
+        Mock<ILogger<RealTfsClient>>? logger = null)
     {
         var mockFactory = new Mock<IHttpClientFactory>();
         mockFactory.Setup(f => f.CreateClient(It.IsAny<string>()))
@@ -253,7 +266,7 @@ public class RealTfsClientRequestTests
         configService.Setup(cs => cs.GetConfigEntityAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(config);
 
-        var logger = new Mock<ILogger<RealTfsClient>>();
+        var realLogger = logger ?? new Mock<ILogger<RealTfsClient>>();
         var throttlerLogger = new Mock<ILogger<TfsRequestThrottler>>();
         var throttler = new TfsRequestThrottler(throttlerLogger.Object);
         var senderLogger = new Mock<ILogger<TfsRequestSender>>();
@@ -262,7 +275,7 @@ public class RealTfsClientRequestTests
         return new RealTfsClient(
             mockFactory.Object,
             configService.Object,
-            logger.Object,
+            realLogger.Object,
             throttler,
             requestSender);
     }
@@ -326,5 +339,17 @@ public class RealTfsClientRequestTests
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             => _handler(request, cancellationToken);
+    }
+
+    private static void AssertLogged(Mock<ILogger<RealTfsClient>> logger, string messageFragment)
+    {
+        logger.Verify(
+            instance => instance.Log(
+                It.IsAny<LogLevel>(),
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains(messageFragment, StringComparison.Ordinal)),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
     }
 }
