@@ -2,39 +2,39 @@
 
 ## 1. Current configuration model
 
-- The main application uses one shared persisted API-version value: `TfsConfigEntity.ApiVersion` in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Shared/Settings/TfsConfigEntity.cs`.
-- `RealTfsClient` centralizes most URL construction through two helpers in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Integrations.Tfs/Clients/RealTfsClient.Core.cs`:
+- The main application uses one shared persisted API-version value: `TfsConfigEntity.ApiVersion` in `PoTool.Shared/Settings/TfsConfigEntity.cs`.
+- `RealTfsClient` centralizes most URL construction through two helpers in `PoTool.Integrations.Tfs/Clients/RealTfsClient.Core.cs`:
   - `CollectionUrl(...)` appends `api-version={config.ApiVersion}`
   - `ProjectUrl(...)` appends `api-version={config.ApiVersion}`
 - BuildQuality retrieval follows that shared model. Its build, test-run, and coverage requests all use `ProjectUrl(...)`, so they all consume the same stored `ApiVersion` value.
 - There is not a separate endpoint-specific configuration model for build, test-run, or coverage requests today.
-- There is one hardcoded runtime exception outside that shared model: `GetTfsProjectsAsync(...)` in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Integrations.Tfs/Clients/RealTfsClient.Teams.cs` builds `/_apis/projects?api-version=7.0` directly.
+- There is one hardcoded runtime exception outside that shared model: `GetTfsProjectsAsync(...)` in `PoTool.Integrations.Tfs/Clients/RealTfsClient.Teams.cs` builds `/_apis/projects?api-version=7.0` directly.
 
 ## 2. Where versions are defined
 
 ### Main application runtime
 
 - Persisted configuration class:
-  - `TfsConfigEntity.ApiVersion` in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Shared/Settings/TfsConfigEntity.cs`
+  - `TfsConfigEntity.ApiVersion` in `PoTool.Shared/Settings/TfsConfigEntity.cs`
   - Default: `"7.0"`
 - API service DTO:
-  - `TfsConfig.ApiVersion` in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Services/TfsConfigurationService.cs`
+  - `TfsConfig.ApiVersion` in `PoTool.Api/Services/TfsConfigurationService.cs`
   - Default: `"7.0"`
 - API request model:
-  - `TfsConfigRequest.ApiVersion` in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Configuration/ApiApplicationBuilderExtensions.cs`
+  - `TfsConfigRequest.ApiVersion` in `PoTool.Api/Configuration/ApiApplicationBuilderExtensions.cs`
   - Default: `"7.0"`
 - Client DTO:
-  - `TfsConfigDto.ApiVersion` in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Services/TfsConfigService.cs`
+  - `TfsConfigDto.ApiVersion` in `PoTool.Client/Services/TfsConfigService.cs`
   - Default: `"7.0"`
 
 ### Appsettings keys
 
-- The main API runtime does **not** define a checked-in `ApiVersion` appsettings key in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/appsettings.json`.
+- The main API runtime does **not** define a checked-in `ApiVersion` appsettings key in `PoTool.Api/appsettings.json`.
 - The checked-in API config only includes `TfsIntegration.UseMockClient`; the live TFS API version is stored via the persisted TFS configuration record instead of appsettings.
 - There is one appsettings-based consumer outside the main runtime:
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tools.TfsRetrievalValidator/appsettings.json`
+  - `PoTool.Tools.TfsRetrievalValidator/appsettings.json`
   - Key: `Tfs:ApiVersion`
-  - Bound through `services.Configure<TfsConfigEntity>(configuration.GetSection("Tfs"))` in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tools.TfsRetrievalValidator/Program.cs`
+  - Bound through `services.Configure<TfsConfigEntity>(configuration.GetSection("Tfs"))` in `PoTool.Tools.TfsRetrievalValidator/Program.cs`
 
 ### Defaults and fallback behavior
 
@@ -49,7 +49,7 @@
 ### Supporting build endpoint
 
 - Method: `GetBuildMetadataAsync(...)`
-- File: `/home/runner/work/PoCompanion/PoCompanion/PoTool.Integrations.Tfs/Clients/RealTfsClient.BuildQuality.cs`
+- File: `PoTool.Integrations.Tfs/Clients/RealTfsClient.BuildQuality.cs`
 - Exact endpoint path:
   - `/_apis/build/builds?buildIds={comma-separated ids}&$top={batch.Length}`
 - Exact api-version source:
@@ -64,7 +64,7 @@
 ### Test-run retrieval
 
 - Method: `GetTestRunsByBuildIdsAsync(...)`
-- File: `/home/runner/work/PoCompanion/PoCompanion/PoTool.Integrations.Tfs/Clients/RealTfsClient.BuildQuality.cs`
+- File: `PoTool.Integrations.Tfs/Clients/RealTfsClient.BuildQuality.cs`
 - Exact endpoint path:
   - `/_apis/testresults/runs?minLastUpdatedDate={window.Start:O}&maxLastUpdatedDate={window.End:O}&buildIds={comma-separated ids}`
 - Exact api-version source:
@@ -79,7 +79,7 @@
 ### Coverage retrieval
 
 - Method: `GetCoverageByBuildIdsAsync(...)` -> `GetCoverageForBuildAsync(...)`
-- File: `/home/runner/work/PoCompanion/PoCompanion/PoTool.Integrations.Tfs/Clients/RealTfsClient.BuildQuality.cs`
+- File: `PoTool.Integrations.Tfs/Clients/RealTfsClient.BuildQuality.cs`
 - Exact endpoint path:
   - `/_apis/testresults/codecoverage?buildId={buildId}`
 - Exact api-version source:
@@ -105,7 +105,7 @@
 ### Hardcoded usage
 
 - One runtime endpoint is hardcoded:
-  - `GetTfsProjectsAsync(...)` in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Integrations.Tfs/Clients/RealTfsClient.Teams.cs`
+  - `GetTfsProjectsAsync(...)` in `PoTool.Integrations.Tfs/Clients/RealTfsClient.Teams.cs`
   - Exact path: `/_apis/projects?api-version=7.0`
 - The rest of the runtime client does not expose endpoint-family-specific version overrides.
 
