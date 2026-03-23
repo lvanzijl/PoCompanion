@@ -51,6 +51,7 @@ public partial class RealTfsClient
             {
                 var buildUri = GetBuildUri(buildId);
                 var skip = 0;
+                var buildResultCount = 0;
                 while (true)
                 {
                     var url = ProjectUrlWithApiVersionOverride(
@@ -58,8 +59,8 @@ public partial class RealTfsClient
                         $"_apis/test/runs?buildUri={Uri.EscapeDataString(buildUri)}" +
                         $"&includeRunDetails=true&$top={TestRunPageSize}&$skip={skip}",
                         BuildQualityTestRunsApiVersion);
-                    _logger.LogInformation(
-                        "Requesting TFS test runs for build {BuildId} via {RequestUrl}.",
+                    _logger.LogDebug(
+                        "Requesting TFS test runs page for build {BuildId} via {RequestUrl}.",
                         buildId,
                         url);
 
@@ -84,6 +85,7 @@ public partial class RealTfsClient
                         {
                             results.Add(dto);
                             pageCount++;
+                            buildResultCount++;
                         }
                     }
 
@@ -92,14 +94,14 @@ public partial class RealTfsClient
                         break;
                     }
 
-                    _logger.LogInformation(
-                        "Retrieved {ResultCount} TFS test runs for build {BuildId} from {RequestUrl}.",
-                        pageCount,
-                        buildId,
-                        url);
-
                     skip += TestRunPageSize;
                 }
+
+                _logger.LogInformation(
+                    "Retrieved {ResultCount} TFS test runs for build {BuildId} via _apis/test/runs with api-version {ApiVersion}.",
+                    buildResultCount,
+                    buildId,
+                    BuildQualityTestRunsApiVersion);
             }
 
             return results;
@@ -268,10 +270,6 @@ public partial class RealTfsClient
             config,
             $"_apis/test/codecoverage?buildId={buildId}&flags=1",
             BuildQualityCoverageApiVersion);
-        _logger.LogInformation(
-            "Requesting TFS coverage for build {BuildId} via {RequestUrl}.",
-            buildId,
-            url);
         var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
 
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
