@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -326,6 +327,67 @@ public class WorkItemResolutionServiceTests
 
         Assert.IsTrue(result.Success);
         CollectionAssert.AreEqual(new List<int> { 100, 200 }, resolvedIds);
+    }
+
+    [TestMethod]
+    public async Task ResolveAllAsync_WithSqliteLatestSnapshot_ExecutesWithoutTranslationFailure()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using (var setupContext = new PoToolDbContext(options))
+        {
+            await setupContext.Database.EnsureCreatedAsync();
+
+            setupContext.Profiles.Add(new ProfileEntity
+            {
+                Id = TestProductOwnerId,
+                Name = "PO",
+                Products =
+                {
+                    new ProductEntity
+                    {
+                        Id = 1,
+                        ProductOwnerId = TestProductOwnerId,
+                        Name = "Product A",
+                        BacklogRoots = [new ProductBacklogRootEntity { ProductId = 1, WorkItemTfsId = 100 }]
+                    }
+                }
+            });
+
+            setupContext.WorkItems.AddRange(
+                CreateWorkItem(100, WorkItemType.Epic, "Epic A"),
+                CreateWorkItem(200, WorkItemType.Feature, "Feature B", parentId: 100),
+                CreateWorkItem(300, WorkItemType.Pbi, "PBI C", parentId: 200));
+
+            AddRelationshipSnapshot(setupContext, TestProductOwnerId, DateTimeOffset.UtcNow.AddMinutes(-5), (200, 100));
+            AddRelationshipSnapshot(setupContext, TestProductOwnerId, DateTimeOffset.UtcNow, (200, 100), (300, 200));
+
+            await setupContext.SaveChangesAsync();
+        }
+
+        await using var provider = new ServiceCollection()
+            .AddDbContext<PoToolDbContext>(dbOptions => dbOptions.UseSqlite(connection))
+            .BuildServiceProvider();
+
+        var service = new WorkItemResolutionService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<WorkItemResolutionService>.Instance);
+
+        var result = await service.ResolveAllAsync(TestProductOwnerId);
+
+        await using var verificationScope = provider.CreateAsyncScope();
+        var verificationContext = verificationScope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        var resolvedPbi = await verificationContext.ResolvedWorkItems.SingleAsync(item => item.WorkItemId == 300);
+
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual(3, result.ResolvedCount);
+        Assert.AreEqual(100, resolvedPbi.ResolvedEpicId);
+        Assert.AreEqual(200, resolvedPbi.ResolvedFeatureId);
     }
 
     private static WorkItemEntity CreateWorkItem(
