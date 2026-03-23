@@ -52,7 +52,7 @@ public partial class RealTfsClient
                     buildId);
 
                 var skip = 0;
-                var scannedRunCount = 0;
+                var retrievedRunCount = 0;
                 var parsedRunCount = 0;
                 while (true)
                 {
@@ -95,7 +95,7 @@ public partial class RealTfsClient
                         }
                     }
 
-                    scannedRunCount += pageRetrievedCount;
+                    retrievedRunCount += pageRetrievedCount;
 
                     if (pageRetrievedCount == 0)
                     {
@@ -106,13 +106,13 @@ public partial class RealTfsClient
                 }
 
                 _logger.LogInformation(
-                    "Scanned {ScannedCount} TFS test run elements for build {BuildId}.",
-                    scannedRunCount,
+                    "Retrieved {RetrievedCount} raw TFS test run elements for build {BuildId}.",
+                    retrievedRunCount,
                     buildId);
                 _logger.LogInformation(
-                    "Parsed {ParsedCount}/{ScannedCount} TFS test runs for build {BuildId}.",
+                    "Parsed {ParsedCount}/{RetrievedCount} TFS test runs for build {BuildId}.",
                     parsedRunCount,
-                    scannedRunCount,
+                    retrievedRunCount,
                     buildId);
             }
 
