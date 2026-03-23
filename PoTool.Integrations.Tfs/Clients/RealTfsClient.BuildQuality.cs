@@ -39,19 +39,20 @@ public partial class RealTfsClient
 
         var results = await ExecuteWithRetryAsync(async () =>
         {
-            var buildWindows = await GetBuildQueryWindowsAsync(config, httpClient, requestedBuildIds, cancellationToken);
-            if (buildWindows.ValidBuildIds.Count == 0)
-            {
-                _logger.LogInformation(
-                    "No valid build metadata found for requested test run retrieval: {BuildIds}",
-                    string.Join(", ", requestedBuildIds));
-                return [];
-            }
-
             var results = new List<TestRunDto>();
+            var attemptedBuildCount = 0;
 
-            foreach (var buildId in requestedBuildIds.Where(buildWindows.ValidBuildIds.Contains))
+            _logger.LogInformation(
+                "Attempting TFS test run retrieval for {AttemptedBuildCount} requested build ids.",
+                requestedBuildIds.Length);
+
+            foreach (var buildId in requestedBuildIds)
             {
+                attemptedBuildCount++;
+                _logger.LogInformation(
+                    "Attempting TFS test run retrieval for build {BuildId}.",
+                    buildId);
+
                 var skip = 0;
                 var retrievedRunCount = 0;
                 var parsedRunCount = 0;
@@ -117,6 +118,10 @@ public partial class RealTfsClient
                     buildId);
             }
 
+            _logger.LogInformation(
+                "Attempted TFS test run retrieval for {AttemptedBuildCount} requested build ids.",
+                attemptedBuildCount);
+
             return results;
         }, cancellationToken);
 
@@ -154,26 +159,23 @@ public partial class RealTfsClient
 
         var coverageResults = await ExecuteWithRetryAsync(async () =>
         {
-            var buildWindows = await GetBuildQueryWindowsAsync(config, httpClient, requestedBuildIds, cancellationToken);
-            if (buildWindows.ValidBuildIds.Count == 0)
-            {
-                _logger.LogInformation(
-                    "No valid build metadata found for requested coverage retrieval: {BuildIds}",
-                    string.Join(", ", requestedBuildIds));
-                return [];
-            }
-
             var coverageResults = new List<CoverageDto>();
+            var attemptedBuildCount = 0;
 
-            foreach (var batch in buildWindows.ValidBuildIds.Chunk(25))
+            _logger.LogInformation(
+                "Attempting TFS coverage retrieval for {AttemptedBuildCount} requested build ids.",
+                requestedBuildIds.Length);
+
+            foreach (var buildId in requestedBuildIds)
             {
-                var batchTasks = batch.Select(buildId => GetCoverageForBuildAsync(config, httpClient, buildId, cancellationToken));
-                var batchResults = await Task.WhenAll(batchTasks);
-                foreach (var result in batchResults)
-                {
-                    coverageResults.AddRange(result);
-                }
+                attemptedBuildCount++;
+                var result = await GetCoverageForBuildAsync(config, httpClient, buildId, cancellationToken);
+                coverageResults.AddRange(result);
             }
+
+            _logger.LogInformation(
+                "Attempted TFS coverage retrieval for {AttemptedBuildCount} requested build ids.",
+                attemptedBuildCount);
 
             return coverageResults;
         }, cancellationToken);
@@ -186,101 +188,16 @@ public partial class RealTfsClient
         return coverageResults;
     }
 
-    private async Task<BuildQueryWindows> GetBuildQueryWindowsAsync(
-        TfsConfigEntity config,
-        HttpClient httpClient,
-        IReadOnlyCollection<int> buildIds,
-        CancellationToken cancellationToken)
-    {
-        var buildMetadata = await GetBuildMetadataAsync(config, httpClient, buildIds, cancellationToken);
-        var validBuildIds = buildMetadata
-            .Select(metadata => metadata.BuildId)
-            .Distinct()
-            .ToHashSet();
-
-        var timestamps = buildMetadata
-            .SelectMany(metadata => new[] { metadata.StartTime, metadata.FinishTime })
-            .Where(timestamp => timestamp.HasValue)
-            .Select(timestamp => timestamp!.Value)
-            .OrderBy(timestamp => timestamp)
-            .ToList();
-
-        if (timestamps.Count == 0)
-        {
-            return new BuildQueryWindows(validBuildIds, []);
-        }
-
-        var minTimestamp = timestamps[0].AddDays(-1);
-        var maxTimestamp = timestamps[^1].AddDays(1);
-
-        var windows = new List<(DateTimeOffset Start, DateTimeOffset End)>();
-        var windowStart = minTimestamp;
-        while (windowStart < maxTimestamp)
-        {
-            var windowEnd = windowStart.AddDays(7);
-            if (windowEnd > maxTimestamp)
-            {
-                windowEnd = maxTimestamp;
-            }
-
-            windows.Add((windowStart, windowEnd));
-            windowStart = windowEnd;
-        }
-
-        return new BuildQueryWindows(validBuildIds, windows);
-    }
-
-    private async Task<List<BuildMetadata>> GetBuildMetadataAsync(
-        TfsConfigEntity config,
-        HttpClient httpClient,
-        IReadOnlyCollection<int> buildIds,
-        CancellationToken cancellationToken)
-    {
-        var metadata = new List<BuildMetadata>();
-
-        foreach (var batch in buildIds.Chunk(200))
-        {
-            var url = ProjectUrl(
-                config,
-                $"_apis/build/builds?buildIds={Uri.EscapeDataString(string.Join(",", batch))}&$top={batch.Length}");
-
-            var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
-            if (!response.IsSuccessStatusCode)
-            {
-                await HandleHttpErrorsAsync(response, cancellationToken);
-            }
-
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
-            if (!doc.RootElement.TryGetProperty("value", out var valueArray))
-            {
-                continue;
-            }
-
-            foreach (var build in valueArray.EnumerateArray())
-            {
-                if (!TryGetIntProperty(build, "id", out var buildId))
-                {
-                    continue;
-                }
-
-                metadata.Add(new BuildMetadata(
-                    buildId,
-                    TryGetDateTimeOffsetProperty(build, "startTime"),
-                    TryGetDateTimeOffsetProperty(build, "finishTime")));
-            }
-        }
-
-        return metadata;
-    }
-
     private async Task<List<CoverageDto>> GetCoverageForBuildAsync(
         TfsConfigEntity config,
         HttpClient httpClient,
         int buildId,
         CancellationToken cancellationToken)
     {
+        _logger.LogInformation(
+            "Attempting TFS coverage retrieval for build {BuildId}.",
+            buildId);
+
         var url = ProjectUrlWithApiVersionOverride(
             config,
             $"{BuildQualityCoverageEndpointPath}?buildId={buildId}",
@@ -480,10 +397,4 @@ public partial class RealTfsClient
             ? value
             : null;
     }
-
-    private sealed record BuildMetadata(int BuildId, DateTimeOffset? StartTime, DateTimeOffset? FinishTime);
-
-    private sealed record BuildQueryWindows(
-        HashSet<int> ValidBuildIds,
-        IReadOnlyList<(DateTimeOffset Start, DateTimeOffset End)> Windows);
 }

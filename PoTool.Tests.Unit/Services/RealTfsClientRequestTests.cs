@@ -151,7 +151,7 @@ public class RealTfsClientRequestTests
     }
 
     [TestMethod]
-    public async Task GetCoverageByBuildIdsAsync_UsesSupportedCoverageEndpointShape()
+    public async Task GetCoverageByBuildIdsAsync_UsesSupportedCoverageEndpointShapeWithoutBuildMetadataGate()
     {
         var config = CreateConfig();
         var requests = new List<Uri>();
@@ -159,15 +159,6 @@ public class RealTfsClientRequestTests
         var handler = new CaptureHttpMessageHandler((request, _) =>
         {
             requests.Add(request.RequestUri!);
-
-            if (request.RequestUri!.AbsoluteUri.Contains("_apis/build/builds", StringComparison.OrdinalIgnoreCase))
-            {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent("{\"value\":[{\"id\":101,\"startTime\":\"2025-01-01T00:00:00Z\",\"finishTime\":\"2025-01-01T01:00:00Z\"}]}")
-                });
-            }
-
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent("{\"coverageData\":[]}")
@@ -176,17 +167,22 @@ public class RealTfsClientRequestTests
 
         var client = CreateClient(config, handler);
 
-        var coverage = (await client.GetCoverageByBuildIdsAsync([101])).ToList();
+        var coverage = (await client.GetCoverageByBuildIdsAsync([101, 102])).ToList();
 
         Assert.IsFalse(coverage.Any());
         Assert.HasCount(2, requests);
-        StringAssert.Contains(requests[1].AbsoluteUri, "_apis/testresults/codecoverage?buildId=101");
-        StringAssert.Contains(requests[1].Query, "api-version=7.0-preview");
-        Assert.IsFalse(requests[1].Query.Contains("flags=1", StringComparison.Ordinal));
+        StringAssert.Contains(requests[0].AbsoluteUri, "_apis/testresults/codecoverage?buildId=101");
+        StringAssert.Contains(requests[1].AbsoluteUri, "_apis/testresults/codecoverage?buildId=102");
+        foreach (var request in requests)
+        {
+            StringAssert.Contains(request.Query, "api-version=7.0-preview");
+            Assert.IsFalse(request.Query.Contains("flags=1", StringComparison.Ordinal));
+            Assert.IsFalse(request.AbsoluteUri.Contains("_apis/build/builds", StringComparison.OrdinalIgnoreCase));
+        }
     }
 
     [TestMethod]
-    public async Task GetTestRunsByBuildIdsAsync_UsesPerBuildQueryShapeWithSupportedApiVersionAndFallbackBuildId()
+    public async Task GetTestRunsByBuildIdsAsync_UsesPerBuildQueryShapeWithSupportedApiVersionAndNoBuildMetadataGate()
     {
         var config = CreateConfig();
         var requests = new List<Uri>();
@@ -194,14 +190,6 @@ public class RealTfsClientRequestTests
         var handler = new CaptureHttpMessageHandler((request, _) =>
         {
             requests.Add(request.RequestUri!);
-
-            if (request.RequestUri!.AbsoluteUri.Contains("_apis/build/builds", StringComparison.OrdinalIgnoreCase))
-            {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent("{\"value\":[{\"id\":101,\"startTime\":\"2025-01-01T00:00:00Z\",\"finishTime\":\"2025-01-01T01:00:00Z\"},{\"id\":102,\"startTime\":\"2025-01-02T00:00:00Z\",\"finishTime\":\"2025-01-02T01:00:00Z\"}]}")
-                });
-            }
 
             var query = request.RequestUri!.Query;
             string payload;
@@ -236,20 +224,21 @@ public class RealTfsClientRequestTests
         Assert.AreEqual(12, testRuns[0].TotalTests);
         Assert.AreEqual(102, testRuns[1].BuildId);
         Assert.AreEqual(5002, testRuns[1].ExternalId);
-        Assert.HasCount(5, requests);
+        Assert.HasCount(4, requests);
+        StringAssert.Contains(requests[0].AbsoluteUri, "_apis/test/runs?buildIds=101");
         StringAssert.Contains(requests[1].AbsoluteUri, "_apis/test/runs?buildIds=101");
-        StringAssert.Contains(requests[1].Query, "api-version=7.0");
-        StringAssert.Contains(requests[2].AbsoluteUri, "_apis/test/runs?buildIds=101");
+        StringAssert.Contains(requests[2].AbsoluteUri, "_apis/test/runs?buildIds=102");
         StringAssert.Contains(requests[3].AbsoluteUri, "_apis/test/runs?buildIds=102");
-        StringAssert.Contains(requests[4].AbsoluteUri, "_apis/test/runs?buildIds=102");
-        Assert.IsFalse(requests[1].Query.Contains("buildUri=", StringComparison.Ordinal));
-        Assert.IsFalse(requests[1].Query.Contains("minLastUpdatedDate", StringComparison.Ordinal));
-        StringAssert.Contains(requests[2].Query, "$skip=200");
-        StringAssert.Contains(requests[4].Query, "$skip=200");
-        foreach (var request in requests.Skip(1))
+        Assert.IsFalse(requests[0].Query.Contains("buildUri=", StringComparison.Ordinal));
+        Assert.IsFalse(requests[0].Query.Contains("minLastUpdatedDate", StringComparison.Ordinal));
+        StringAssert.Contains(requests[0].Query, "api-version=7.0");
+        StringAssert.Contains(requests[1].Query, "$skip=200");
+        StringAssert.Contains(requests[3].Query, "$skip=200");
+        foreach (var request in requests)
         {
             Assert.IsFalse(request.AbsoluteUri.Contains("buildIds=101%2C102", StringComparison.Ordinal));
             Assert.IsFalse(request.AbsoluteUri.Contains("buildIds=101,102", StringComparison.Ordinal));
+            Assert.IsFalse(request.AbsoluteUri.Contains("_apis/build/builds", StringComparison.OrdinalIgnoreCase));
             Assert.AreEqual(1, request.Query.Split("buildIds=").Length - 1);
         }
     }
