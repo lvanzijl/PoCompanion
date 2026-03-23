@@ -257,7 +257,7 @@ public class PipelineSyncStageBuildQualityTests
             .OrderBy(testRun => testRun.ExternalId)
             .ToListAsync();
         Assert.HasCount(1, testRunsAfterSecondSync);
-        Assert.AreEqual(5001, testRuns[0].ExternalId);
+        Assert.AreEqual(5001, testRunsAfterSecondSync[0].ExternalId);
         Assert.AreEqual(12, testRunsAfterSecondSync[0].TotalTests);
         Assert.AreEqual(11, testRunsAfterSecondSync[0].PassedTests);
         Assert.AreEqual(1, testRunsAfterSecondSync[0].NotApplicableTests);
@@ -266,6 +266,17 @@ public class PipelineSyncStageBuildQualityTests
         Assert.HasCount(1, coverageRows);
         Assert.AreEqual(91, coverageRows[0].CoveredLines);
         Assert.AreEqual(100, coverageRows[0].TotalLines);
+
+        tfsClient.Verify(
+            client => client.GetTestRunsByBuildIdsAsync(
+                It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 1001 })),
+                It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+        tfsClient.Verify(
+            client => client.GetCoverageByBuildIdsAsync(
+                It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 1001 })),
+                It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
     }
 
     [TestMethod]
