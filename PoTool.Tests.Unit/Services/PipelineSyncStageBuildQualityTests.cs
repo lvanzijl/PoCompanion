@@ -105,7 +105,92 @@ public class PipelineSyncStageBuildQualityTests
     }
 
     [TestMethod]
-    public async Task ExecuteAsync_ReplacesMissingChildRowsAndUpsertsExistingTestRuns()
+    public async Task ExecuteAsync_SkipsAlreadyCompleteBuildsWhenRefreshingCurrentRuns()
+    {
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase($"PipelineSyncStageBuildQuality_{Guid.NewGuid()}")
+            .Options;
+
+        await using var dbContext = new PoToolDbContext(options);
+        SeedPipelineDefinition(dbContext, productOwnerId: 1, pipelineDefinitionId: 42);
+
+        var tfsClient = new Mock<ITfsClient>();
+        tfsClient
+            .SetupSequence(client => client.GetPipelineRunsAsync(
+                It.IsAny<int[]>(),
+                It.IsAny<string?>(),
+                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([CreatePipelineRun(runId: 1001, pipelineId: 42)])
+            .ReturnsAsync([CreatePipelineRun(runId: 1001, pipelineId: 42)]);
+        tfsClient
+            .Setup(client => client.GetTestRunsByBuildIdsAsync(
+                It.IsAny<IEnumerable<int>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[]
+            {
+                new TestRunDto { BuildId = 1001, ExternalId = 5001, TotalTests = 10, PassedTests = 9, NotApplicableTests = 1 },
+                new TestRunDto { BuildId = 1001, ExternalId = 5002, TotalTests = 5, PassedTests = 5, NotApplicableTests = 0 }
+            });
+        tfsClient
+            .Setup(client => client.GetCoverageByBuildIdsAsync(
+                It.IsAny<IEnumerable<int>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[]
+            {
+                new CoverageDto { BuildId = 1001, CoveredLines = 90, TotalLines = 100 }
+            });
+
+        var logger = new Mock<ILogger<PipelineSyncStage>>();
+        var stage = new PipelineSyncStage(tfsClient.Object, dbContext, logger.Object);
+        var syncContext = new SyncContext
+        {
+            ProductOwnerId = 1,
+            RootWorkItemIds = [100],
+            PipelineDefinitionIds = [42]
+        };
+
+        var firstResult = await stage.ExecuteAsync(syncContext, _ => { }, CancellationToken.None);
+        Assert.IsTrue(firstResult.Success);
+
+        var secondResult = await stage.ExecuteAsync(syncContext, _ => { }, CancellationToken.None);
+        Assert.IsTrue(secondResult.Success);
+
+        var testRuns = await dbContext.TestRuns
+            .OrderBy(testRun => testRun.ExternalId)
+            .ToListAsync();
+        Assert.HasCount(2, testRuns);
+        Assert.AreEqual(5001, testRuns[0].ExternalId);
+        Assert.AreEqual(10, testRuns[0].TotalTests);
+        Assert.AreEqual(9, testRuns[0].PassedTests);
+        Assert.AreEqual(1, testRuns[0].NotApplicableTests);
+        Assert.AreEqual(5002, testRuns[1].ExternalId);
+        Assert.AreEqual(5, testRuns[1].TotalTests);
+        Assert.AreEqual(5, testRuns[1].PassedTests);
+        Assert.AreEqual(0, testRuns[1].NotApplicableTests);
+
+        var coverageRows = await dbContext.Coverages
+            .OrderBy(coverage => coverage.BuildId)
+            .ToListAsync();
+        Assert.HasCount(1, coverageRows);
+        Assert.AreEqual(90, coverageRows[0].CoveredLines);
+        Assert.AreEqual(100, coverageRows[0].TotalLines);
+
+        tfsClient.Verify(
+            client => client.GetTestRunsByBuildIdsAsync(
+                It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 1001 })),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        tfsClient.Verify(
+            client => client.GetCoverageByBuildIdsAsync(
+                It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 1001 })),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [TestMethod]
+    public async Task ExecuteAsync_RequeriesIncompleteBuildsMissingCoverage()
     {
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
             .UseInMemoryDatabase($"PipelineSyncStageBuildQuality_{Guid.NewGuid()}")
@@ -130,8 +215,7 @@ public class PipelineSyncStageBuildQualityTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[]
             {
-                new TestRunDto { BuildId = 1001, ExternalId = 5001, TotalTests = 10, PassedTests = 9, NotApplicableTests = 1 },
-                new TestRunDto { BuildId = 1001, ExternalId = 5002, TotalTests = 5, PassedTests = 5, NotApplicableTests = 0 }
+                new TestRunDto { BuildId = 1001, ExternalId = 5001, TotalTests = 10, PassedTests = 9, NotApplicableTests = 1 }
             })
             .ReturnsAsync(new[]
             {
@@ -145,7 +229,10 @@ public class PipelineSyncStageBuildQualityTests
             {
                 new CoverageDto { BuildId = 1001, CoveredLines = 90, TotalLines = 100 }
             })
-            .ReturnsAsync(Array.Empty<CoverageDto>());
+            .ReturnsAsync(new[]
+            {
+                new CoverageDto { BuildId = 1001, CoveredLines = 91, TotalLines = 100 }
+            });
 
         var logger = new Mock<ILogger<PipelineSyncStage>>();
         var stage = new PipelineSyncStage(tfsClient.Object, dbContext, logger.Object);
@@ -159,20 +246,26 @@ public class PipelineSyncStageBuildQualityTests
         var firstResult = await stage.ExecuteAsync(syncContext, _ => { }, CancellationToken.None);
         Assert.IsTrue(firstResult.Success);
 
+        var existingCoverage = await dbContext.Coverages.SingleAsync();
+        dbContext.Coverages.Remove(existingCoverage);
+        await dbContext.SaveChangesAsync();
+
         var secondResult = await stage.ExecuteAsync(syncContext, _ => { }, CancellationToken.None);
         Assert.IsTrue(secondResult.Success);
 
-        var testRuns = await dbContext.TestRuns
+        var testRunsAfterSecondSync = await dbContext.TestRuns
             .OrderBy(testRun => testRun.ExternalId)
             .ToListAsync();
-        Assert.HasCount(1, testRuns);
+        Assert.HasCount(1, testRunsAfterSecondSync);
         Assert.AreEqual(5001, testRuns[0].ExternalId);
-        Assert.AreEqual(12, testRuns[0].TotalTests);
-        Assert.AreEqual(11, testRuns[0].PassedTests);
-        Assert.AreEqual(1, testRuns[0].NotApplicableTests);
+        Assert.AreEqual(12, testRunsAfterSecondSync[0].TotalTests);
+        Assert.AreEqual(11, testRunsAfterSecondSync[0].PassedTests);
+        Assert.AreEqual(1, testRunsAfterSecondSync[0].NotApplicableTests);
 
         var coverageRows = await dbContext.Coverages.ToListAsync();
-        Assert.HasCount(0, coverageRows);
+        Assert.HasCount(1, coverageRows);
+        Assert.AreEqual(91, coverageRows[0].CoveredLines);
+        Assert.AreEqual(100, coverageRows[0].TotalLines);
     }
 
     [TestMethod]
@@ -329,21 +422,16 @@ public class PipelineSyncStageBuildQualityTests
             expectedAffectedBuildIds,
             coverageRows.Select(coverage => coverage.BuildId).ToArray());
 
-        logger.Verify(
-            instance => instance.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("BuildQuality backfill: 1 incomplete builds added to ingestion batch")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        AssertLogged(logger, "BUILDQUALITY_CHILD_INGEST_SELECTION:");
+        AssertLogged(logger, "originalScopeBuildCount=3");
+        AssertLogged(logger, "completeBuildCount=1");
+        AssertLogged(logger, "incompleteBuildCount=2");
+        AssertLogged(logger, "cappedBuildCount=2");
     }
 
     [TestMethod]
-    public async Task ExecuteAsync_DeduplicatesMergedBatchAndCapsBackfillOnly()
+    public async Task ExecuteAsync_CapsMostRecentIncompleteBuildsOnly()
     {
-        const int duplicateRunId = 3001;
-        const int requestedRunStart = 4000;
         const int pipelineDefinitionId = 42;
         var maxBuildQualityBuildBatchSize = GetMaxBuildQualityBuildBatchSize();
 
@@ -354,13 +442,9 @@ public class PipelineSyncStageBuildQualityTests
         await using var dbContext = new PoToolDbContext(options);
         SeedPipelineDefinition(dbContext, productOwnerId: 1, pipelineDefinitionId: pipelineDefinitionId);
 
-        var requestedRuns = Enumerable.Range(requestedRunStart, maxBuildQualityBuildBatchSize + 5)
-            .Select(runId => CreatePipelineRun(runId, pipelineDefinitionId))
-            .ToList();
-        requestedRuns.Insert(0, CreatePipelineRun(duplicateRunId, pipelineDefinitionId));
-
-        var backfillRunIds = Enumerable.Range(duplicateRunId, maxBuildQualityBuildBatchSize + 10).ToArray();
-        foreach (var runId in backfillRunIds)
+        var baseFinishedDateUtc = new DateTime(2026, 03, 23, 12, 0, 0, DateTimeKind.Utc);
+        var incompleteBuildIds = Enumerable.Range(3000, maxBuildQualityBuildBatchSize + 5).ToArray();
+        foreach (var (runId, index) in incompleteBuildIds.Select((runId, index) => (runId, index)))
         {
             dbContext.CachedPipelineRuns.Add(new CachedPipelineRunEntity
             {
@@ -370,10 +454,43 @@ public class PipelineSyncStageBuildQualityTests
                 RunName = $"Build {runId}",
                 State = "completed",
                 Result = "Succeeded",
+                FinishedDateUtc = baseFinishedDateUtc.AddMinutes(index),
                 CachedAt = DateTimeOffset.UtcNow
             });
         }
 
+        await dbContext.SaveChangesAsync();
+
+        var completeBuild = new CachedPipelineRunEntity
+        {
+            ProductOwnerId = 1,
+            PipelineDefinitionId = 1,
+            TfsRunId = 9999,
+            RunName = "Complete Build",
+            State = "completed",
+            Result = "Succeeded",
+            FinishedDateUtc = baseFinishedDateUtc.AddMinutes(500),
+            CachedAt = DateTimeOffset.UtcNow
+        };
+        dbContext.CachedPipelineRuns.Add(completeBuild);
+        await dbContext.SaveChangesAsync();
+
+        dbContext.TestRuns.Add(new TestRunEntity
+        {
+            BuildId = completeBuild.Id,
+            ExternalId = 7001,
+            TotalTests = 1,
+            PassedTests = 1,
+            NotApplicableTests = 0,
+            CachedAt = DateTimeOffset.UtcNow
+        });
+        dbContext.Coverages.Add(new CoverageEntity
+        {
+            BuildId = completeBuild.Id,
+            CoveredLines = 10,
+            TotalLines = 10,
+            CachedAt = DateTimeOffset.UtcNow
+        });
         await dbContext.SaveChangesAsync();
 
         IEnumerable<int>? requestedTestRunBuildIds = null;
@@ -387,7 +504,7 @@ public class PipelineSyncStageBuildQualityTests
                 It.IsAny<DateTimeOffset?>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(requestedRuns);
+            .ReturnsAsync(Array.Empty<PipelineRunDto>());
         tfsClient
             .Setup(client => client.GetTestRunsByBuildIdsAsync(
                 It.IsAny<IEnumerable<int>>(),
@@ -416,44 +533,25 @@ public class PipelineSyncStageBuildQualityTests
 
         Assert.IsTrue(result.Success);
 
-        var expectedRequestedRunIds = requestedRuns
-            .Select(run => run.RunId)
-            .Distinct()
-            .ToArray();
-        var expectedBackfillRunIds = backfillRunIds
-            .Where(runId => !expectedRequestedRunIds.Contains(runId))
+        var expectedBuildIds = incompleteBuildIds
+            .OrderByDescending(id => baseFinishedDateUtc.AddMinutes(Array.IndexOf(incompleteBuildIds, id)))
+            .ThenByDescending(id => id)
             .Take(maxBuildQualityBuildBatchSize)
-            .ToArray();
-        var expectedMergedRunIds = expectedRequestedRunIds
-            .Concat(expectedBackfillRunIds)
-            .Distinct()
-            .OrderBy(id => id)
             .ToArray();
 
         Assert.IsNotNull(requestedTestRunBuildIds);
         Assert.IsNotNull(requestedCoverageBuildIds);
-        CollectionAssert.AreEqual(
-            expectedMergedRunIds,
-            requestedTestRunBuildIds.OrderBy(id => id).ToArray());
-        CollectionAssert.AreEqual(
-            expectedMergedRunIds,
-            requestedCoverageBuildIds.OrderBy(id => id).ToArray());
-
-        CollectionAssert.IsSubsetOf(
-            expectedRequestedRunIds,
+        CollectionAssert.AreEquivalent(
+            expectedBuildIds,
             requestedTestRunBuildIds.ToArray());
+        CollectionAssert.AreEquivalent(
+            expectedBuildIds,
+            requestedCoverageBuildIds.ToArray());
         Assert.AreEqual(
-            expectedMergedRunIds.Length,
+            expectedBuildIds.Length,
             requestedTestRunBuildIds.Distinct().Count());
-
-        logger.Verify(
-            instance => instance.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains($"BuildQuality backfill: {expectedBackfillRunIds.Length} incomplete builds added to ingestion batch")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        Assert.IsFalse(requestedTestRunBuildIds.Contains(completeBuild.TfsRunId));
+        AssertLogged(logger, $"cappedBuildCount={maxBuildQualityBuildBatchSize}");
     }
 
     [TestMethod]
@@ -516,7 +614,13 @@ public class PipelineSyncStageBuildQualityTests
         AssertLogged(logger, "BUILDQUALITY_COVERAGE_RETRIEVAL_SUMMARY:");
         AssertLogged(logger, "BUILDQUALITY_TESTRUN_PERSISTENCE_SUMMARY:");
         AssertLogged(logger, "BUILDQUALITY_COVERAGE_PERSISTENCE_SUMMARY:");
+        AssertLogged(logger, "BUILDQUALITY_CHILD_INGEST_SELECTION:");
         AssertLogged(logger, "BUILDQUALITY_CHILD_INGEST_SUMMARY:");
+        AssertLogged(logger, "originalScopeBuildCount=2");
+        AssertLogged(logger, "completeBuildCount=0");
+        AssertLogged(logger, "incompleteBuildCount=2");
+        AssertLogged(logger, "cappedBuildCount=2");
+        AssertLogged(logger, "selectedBuildIds=[");
         AssertLogged(logger, "requestedBuildCount=2");
         AssertLogged(logger, "persistedRowCount=2");
     }

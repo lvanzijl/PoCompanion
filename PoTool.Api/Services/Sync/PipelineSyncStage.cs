@@ -13,7 +13,7 @@ namespace PoTool.Api.Services.Sync;
 /// </summary>
 public class PipelineSyncStage : ISyncStage
 {
-    private const int MaxBuildQualityBuildBatchSize = 200;
+    private const int MaxBuildQualityBuildBatchSize = 25;
     private readonly ITfsClient _tfsClient;
     private readonly PoToolDbContext _context;
     private readonly ILogger<PipelineSyncStage> _logger;
@@ -233,51 +233,11 @@ public class PipelineSyncStage : ISyncStage
             return BuildQualitySyncResult.None;
         }
 
-        var requestedRunIds = runs
-            .Select(run => run.RunId)
-            .Distinct()
-            .ToArray();
-
-        var requestedRunIdSet = requestedRunIds.ToHashSet();
-
-        var scopedRuns = _context.CachedPipelineRuns.Where(run =>
-            run.ProductOwnerId == productOwnerId &&
-            pipelineDefinitionIds.Contains(run.PipelineDefinitionId));
-
-        var missingTestRunTfsRunIds = await scopedRuns
-            .Where(run =>
-                !_context.TestRuns.Any(testRun => testRun.BuildId == run.Id))
-            .Select(run => run.TfsRunId)
-            .ToListAsync(cancellationToken);
-
-        var missingCoverageTfsRunIds = await scopedRuns
-            .Where(run =>
-                !_context.Coverages.Any(coverage => coverage.BuildId == run.Id))
-            .Select(run => run.TfsRunId)
-            .ToListAsync(cancellationToken);
-
-        var missingBuildRunIds = missingTestRunTfsRunIds
-            .Concat(missingCoverageTfsRunIds)
-            .Distinct()
-            .OrderBy(runId => runId)
-            .ToArray();
-
-        var backfillRunIds = missingBuildRunIds
-            .Where(runId => !requestedRunIdSet.Contains(runId))
-            .Take(MaxBuildQualityBuildBatchSize)
-            .ToArray();
-
-        if (backfillRunIds.Length != 0)
-        {
-            _logger.LogInformation(
-                "BuildQuality backfill: {MissingBuildCount} incomplete builds added to ingestion batch",
-                backfillRunIds.Length);
-        }
-
-        var buildIds = requestedRunIds
-            .Concat(backfillRunIds)
-            .Distinct()
-            .ToArray();
+        var buildSelection = await SelectBuildIdsForChildIngestionAsync(
+            productOwnerId,
+            pipelineDefinitionIds,
+            cancellationToken);
+        var buildIds = buildSelection.BuildIds;
 
         if (buildIds.Length == 0)
         {
@@ -405,6 +365,50 @@ public class PipelineSyncStage : ISyncStage
         return warningCount == 0
             ? BuildQualitySyncResult.None
             : new BuildQualitySyncResult(true, "Build quality ingestion skipped invalid or unlinked child records.");
+    }
+
+    private async Task<BuildQualityChildIngestionSelection> SelectBuildIdsForChildIngestionAsync(
+        int productOwnerId,
+        IReadOnlyCollection<int> pipelineDefinitionIds,
+        CancellationToken cancellationToken)
+    {
+        var scopedBuilds = await _context.CachedPipelineRuns
+            .Where(run =>
+                run.ProductOwnerId == productOwnerId &&
+                pipelineDefinitionIds.Contains(run.PipelineDefinitionId))
+            .Select(run => new BuildQualityChildIngestionCandidate(
+                run.TfsRunId,
+                run.FinishedDateUtc,
+                _context.TestRuns.Any(testRun => testRun.BuildId == run.Id),
+                _context.Coverages.Any(coverage => coverage.BuildId == run.Id)))
+            .ToListAsync(cancellationToken);
+
+        var orderedIncompleteBuilds = scopedBuilds
+            .Where(build => !build.HasTestRuns || !build.HasCoverage)
+            .OrderByDescending(build => build.FinishedDateUtc ?? DateTime.MinValue)
+            .ThenByDescending(build => build.BuildId)
+            .ToList();
+
+        var buildIds = orderedIncompleteBuilds
+            .Take(MaxBuildQualityBuildBatchSize)
+            .Select(build => build.BuildId)
+            .ToArray();
+
+        var completeBuildCount = scopedBuilds.Count - orderedIncompleteBuilds.Count;
+        var selectedBuildIdsDisplay = buildIds.Length == 0
+            ? "none"
+            : string.Join(", ", buildIds);
+
+        _logger.LogInformation(
+            "BUILDQUALITY_CHILD_INGEST_SELECTION: productOwnerId={ProductOwnerId}, originalScopeBuildCount={OriginalScopeBuildCount}, completeBuildCount={CompleteBuildCount}, incompleteBuildCount={IncompleteBuildCount}, cappedBuildCount={CappedBuildCount}, selectedBuildIds=[{SelectedBuildIds}]",
+            productOwnerId,
+            scopedBuilds.Count,
+            completeBuildCount,
+            orderedIncompleteBuilds.Count,
+            buildIds.Length,
+            selectedBuildIdsDisplay);
+
+        return new BuildQualityChildIngestionSelection(buildIds);
     }
 
     private async Task<BuildQualityPersistenceResult> UpsertTestRunsAsync(
@@ -633,6 +637,14 @@ public class PipelineSyncStage : ISyncStage
     {
         public static BuildQualitySyncResult None { get; } = new(false, null);
     }
+
+    private sealed record BuildQualityChildIngestionSelection(int[] BuildIds);
+
+    private sealed record BuildQualityChildIngestionCandidate(
+        int BuildId,
+        DateTime? FinishedDateUtc,
+        bool HasTestRuns,
+        bool HasCoverage);
 
     private sealed record BuildQualityPersistenceResult(
         int WarningCount,
