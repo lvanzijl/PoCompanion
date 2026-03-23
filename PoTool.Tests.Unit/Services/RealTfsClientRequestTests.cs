@@ -186,11 +186,10 @@ public class RealTfsClientRequestTests
     }
 
     [TestMethod]
-    public async Task GetTestRunsByBuildIdsAsync_UsesBuildIdsQueryShapeWithSupportedApiVersion()
+    public async Task GetTestRunsByBuildIdsAsync_UsesPerBuildQueryShapeWithSupportedApiVersionAndFallbackBuildId()
     {
         var config = CreateConfig();
         var requests = new List<Uri>();
-        var runRequests = 0;
 
         var handler = new CaptureHttpMessageHandler((request, _) =>
         {
@@ -200,14 +199,16 @@ public class RealTfsClientRequestTests
             {
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new StringContent("{\"value\":[{\"id\":101,\"startTime\":\"2025-01-01T00:00:00Z\",\"finishTime\":\"2025-01-01T01:00:00Z\"}]}")
+                    Content = new StringContent("{\"value\":[{\"id\":101,\"startTime\":\"2025-01-01T00:00:00Z\",\"finishTime\":\"2025-01-01T01:00:00Z\"},{\"id\":102,\"startTime\":\"2025-01-02T00:00:00Z\",\"finishTime\":\"2025-01-02T01:00:00Z\"}]}")
                 });
             }
 
-            runRequests++;
-            var payload = runRequests == 1
-                ? "[{\"id\":5001,\"build\":{\"id\":101},\"totalTests\":12,\"passedTests\":11,\"notApplicableTests\":1}]"
-                : "[]";
+            var query = request.RequestUri!.Query;
+            var payload = query.Contains("buildIds=101", StringComparison.Ordinal) && query.Contains("$skip=0", StringComparison.Ordinal)
+                ? "[{\"id\":5001,\"totalTests\":12,\"passedTests\":11,\"notApplicableTests\":1}]"
+                : query.Contains("buildIds=102", StringComparison.Ordinal) && query.Contains("$skip=0", StringComparison.Ordinal)
+                    ? "[{\"id\":5002,\"build\":{\"id\":102},\"totalTests\":8,\"passedTests\":6,\"notApplicableTests\":2}]"
+                    : "[]";
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
@@ -217,17 +218,25 @@ public class RealTfsClientRequestTests
 
         var client = CreateClient(config, handler);
 
-        var testRuns = (await client.GetTestRunsByBuildIdsAsync([101])).ToList();
+        var testRuns = (await client.GetTestRunsByBuildIdsAsync([101, 102])).ToList();
 
-        Assert.HasCount(1, testRuns);
+        Assert.HasCount(2, testRuns);
         Assert.AreEqual(101, testRuns[0].BuildId);
         Assert.AreEqual(5001, testRuns[0].ExternalId);
-        Assert.HasCount(3, requests);
+        Assert.AreEqual(12, testRuns[0].TotalTests);
+        Assert.AreEqual(102, testRuns[1].BuildId);
+        Assert.AreEqual(5002, testRuns[1].ExternalId);
+        Assert.HasCount(5, requests);
         StringAssert.Contains(requests[1].AbsoluteUri, "_apis/test/runs?buildIds=101");
         StringAssert.Contains(requests[1].Query, "api-version=7.0");
+        StringAssert.Contains(requests[2].AbsoluteUri, "_apis/test/runs?buildIds=101");
+        StringAssert.Contains(requests[3].AbsoluteUri, "_apis/test/runs?buildIds=102");
+        StringAssert.Contains(requests[4].AbsoluteUri, "_apis/test/runs?buildIds=102");
         Assert.IsFalse(requests[1].Query.Contains("buildUri=", StringComparison.Ordinal));
         Assert.IsFalse(requests[1].Query.Contains("minLastUpdatedDate", StringComparison.Ordinal));
         StringAssert.Contains(requests[2].Query, "$skip=200");
+        StringAssert.Contains(requests[4].Query, "$skip=200");
+        Assert.IsFalse(requests[1].AbsoluteUri.Contains("buildIds=101%2C102", StringComparison.Ordinal));
     }
 
     private static RealTfsClient CreateClient(TfsConfigEntity config, HttpMessageHandler handler)

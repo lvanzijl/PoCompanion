@@ -50,23 +50,21 @@ public partial class RealTfsClient
 
             var results = new List<TestRunDto>();
 
-            foreach (var batch in buildWindows.ValidBuildIds.Chunk(TestRunPageSize))
+            foreach (var buildId in requestedBuildIds.Where(buildWindows.ValidBuildIds.Contains))
             {
-                var batchIds = batch;
-                var batchIdLookup = batchIds.ToHashSet();
-                var batchIdsQuery = string.Join(",", batchIds);
                 var skip = 0;
-                var batchResultCount = 0;
+                var retrievedRunCount = 0;
+                var parsedRunCount = 0;
                 while (true)
                 {
                     var url = ProjectUrlWithApiVersionOverride(
                         config,
-                        $"{BuildQualityTestRunsEndpointPath}?buildIds={batchIdsQuery}" +
+                        $"{BuildQualityTestRunsEndpointPath}?buildIds={buildId}" +
                         $"&$top={TestRunPageSize}&$skip={skip}",
                         BuildQualityTestRunsApiVersion);
                     _logger.LogDebug(
-                        "Requesting TFS test runs page for {BuildCount} build ids via {RequestUrl} (endpoint {EndpointPath}, api-version {ApiVersion}).",
-                        batchIds.Length,
+                        "Requesting TFS test runs page for build {BuildId} via {RequestUrl} (endpoint {EndpointPath}, api-version {ApiVersion}).",
+                        buildId,
                         url,
                         BuildQualityTestRunsEndpointPath,
                         BuildQualityTestRunsApiVersion);
@@ -75,8 +73,8 @@ public partial class RealTfsClient
                     if (!response.IsSuccessStatusCode)
                     {
                         _logger.LogWarning(
-                            "TFS test runs endpoint failed for {BuildCount} build ids via {RequestUrl} (endpoint {EndpointPath}, api-version {ApiVersion}) with status code {StatusCode}.",
-                            batchIds.Length,
+                            "TFS test runs endpoint failed for build {BuildId} via {RequestUrl} (endpoint {EndpointPath}, api-version {ApiVersion}) with status code {StatusCode}.",
+                            buildId,
                             url,
                             BuildQualityTestRunsEndpointPath,
                             BuildQualityTestRunsApiVersion,
@@ -86,19 +84,21 @@ public partial class RealTfsClient
 
                     using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                     using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-                    var pageCount = 0;
+                    var pageRetrievedCount = 0;
                     foreach (var run in EnumerateTestRunElements(doc.RootElement))
                     {
-                        var dto = ParseTestRunDto(run);
-                        if (dto is not null && batchIdLookup.Contains(dto.BuildId))
+                        pageRetrievedCount++;
+                        var dto = ParseTestRunDto(run, buildId);
+                        if (dto is not null)
                         {
                             results.Add(dto);
-                            pageCount++;
-                            batchResultCount++;
+                            parsedRunCount++;
                         }
                     }
 
-                    if (pageCount == 0)
+                    retrievedRunCount += pageRetrievedCount;
+
+                    if (pageRetrievedCount == 0)
                     {
                         break;
                     }
@@ -107,11 +107,14 @@ public partial class RealTfsClient
                 }
 
                 _logger.LogInformation(
-                    "Retrieved {ResultCount} TFS test runs for {BuildCount} build ids via {EndpointPath} with api-version {ApiVersion}.",
-                    batchResultCount,
-                    batchIds.Length,
-                    BuildQualityTestRunsEndpointPath,
-                    BuildQualityTestRunsApiVersion);
+                    "Retrieved {ResultCount} TFS test runs for build {BuildId}.",
+                    retrievedRunCount,
+                    buildId);
+                _logger.LogInformation(
+                    "Parsed {ParsedCount}/{RetrievedCount} TFS test runs for build {BuildId}.",
+                    parsedRunCount,
+                    retrievedRunCount,
+                    buildId);
             }
 
             return results;
@@ -352,9 +355,14 @@ public partial class RealTfsClient
         return $"{config.Url.TrimEnd('/')}/{encodedProject}/{path}{separator}api-version={Uri.EscapeDataString(apiVersion)}";
     }
 
-    private TestRunDto? ParseTestRunDto(JsonElement run)
+    private TestRunDto? ParseTestRunDto(JsonElement run, int requestedBuildId)
     {
-        if (!TryGetBuildIdFromTestRun(run, out var buildId))
+        var buildId = requestedBuildId;
+        if (TryGetBuildIdFromTestRun(run, out var resolvedBuildId))
+        {
+            buildId = resolvedBuildId;
+        }
+        else if (requestedBuildId <= 0)
         {
             _logger.LogWarning("Skipping TFS test run payload without a verified build.id linkage.");
             return null;
