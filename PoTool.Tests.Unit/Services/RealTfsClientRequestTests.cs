@@ -150,6 +150,79 @@ public class RealTfsClientRequestTests
         StringAssert.Contains(capturedQuery, $"searchCriteria.maxTime={expectedMax}");
     }
 
+    [TestMethod]
+    public async Task GetCoverageByBuildIdsAsync_UsesPreviewApiVersionForCoverageEndpoint()
+    {
+        var config = CreateConfig();
+        var requests = new List<Uri>();
+
+        var handler = new CaptureHttpMessageHandler((request, _) =>
+        {
+            requests.Add(request.RequestUri!);
+
+            if (request.RequestUri!.AbsoluteUri.Contains("_apis/build/builds", StringComparison.OrdinalIgnoreCase))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"value\":[{\"id\":101,\"startTime\":\"2025-01-01T00:00:00Z\",\"finishTime\":\"2025-01-01T01:00:00Z\"}]}")
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"coverageData\":[]}")
+            });
+        });
+
+        var client = CreateClient(config, handler);
+
+        var coverage = (await client.GetCoverageByBuildIdsAsync([101])).ToList();
+
+        Assert.IsFalse(coverage.Any());
+        Assert.HasCount(2, requests);
+        StringAssert.Contains(requests[1].AbsoluteUri, "_apis/testresults/codecoverage?buildId=101");
+        StringAssert.Contains(requests[1].Query, "api-version=2.0-preview");
+        Assert.IsFalse(requests[1].Query.Contains("api-version=7.0", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task GetTestRunsByBuildIdsAsync_UsesBuildUriQueryShape()
+    {
+        var config = CreateConfig();
+        var requests = new List<Uri>();
+
+        var handler = new CaptureHttpMessageHandler((request, _) =>
+        {
+            requests.Add(request.RequestUri!);
+
+            if (request.RequestUri!.AbsoluteUri.Contains("_apis/build/builds", StringComparison.OrdinalIgnoreCase))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"value\":[{\"id\":101,\"startTime\":\"2025-01-01T00:00:00Z\",\"finishTime\":\"2025-01-01T01:00:00Z\"}]}")
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("[{\"id\":5001,\"build\":{\"id\":101},\"totalTests\":12,\"passedTests\":11,\"notApplicableTests\":1}]")
+            });
+        });
+
+        var client = CreateClient(config, handler);
+
+        var testRuns = (await client.GetTestRunsByBuildIdsAsync([101])).ToList();
+
+        Assert.HasCount(1, testRuns);
+        Assert.AreEqual(101, testRuns[0].BuildId);
+        Assert.AreEqual(5001, testRuns[0].ExternalId);
+        Assert.HasCount(2, requests);
+        StringAssert.Contains(requests[1].AbsoluteUri, "_apis/testresults/runs?buildUri=");
+        StringAssert.Contains(requests[1].Query, Uri.EscapeDataString("vstfs:///Build/Build/101"));
+        Assert.IsFalse(requests[1].Query.Contains("minLastUpdatedDate", StringComparison.Ordinal));
+        Assert.IsFalse(requests[1].Query.Contains("buildIds=", StringComparison.Ordinal));
+    }
+
     private static RealTfsClient CreateClient(TfsConfigEntity config, HttpMessageHandler handler)
     {
         var mockFactory = new Mock<IHttpClientFactory>();

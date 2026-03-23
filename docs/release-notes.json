@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-23",
+    "type": "Fixed",
+    "title": "Build Quality sync now loads test runs and coverage",
+    "impact": "Build Quality imports now use TFS-compatible test-run and coverage requests so synced builds populate test runs and coverage metrics again.",
+    "area": "Health",
+    "link": "/home/health"
+  },
+  {
     "date": "2026-03-22",
     "type": "Changed",
     "title": "Build Quality now appears across Health and Delivery",
