@@ -12,6 +12,7 @@ namespace PoTool.Api.Services.Sync;
 /// </summary>
 public class PipelineSyncStage : ISyncStage
 {
+    private const int MaxBuildQualityBuildBatchSize = 200;
     private readonly ITfsClient _tfsClient;
     private readonly PoToolDbContext _context;
     private readonly ILogger<PipelineSyncStage> _logger;
@@ -70,24 +71,22 @@ public class PipelineSyncStage : ISyncStage
                 runList.Count,
                 context.ProductOwnerId);
 
-            progressCallback(80);
-
-            if (runList.Count == 0)
-            {
-                progressCallback(100);
-                return SyncStageResult.CreateSuccess(0, context.PipelineWatermark);
-            }
-
-            // Get pipeline definition mapping (PipelineId -> internal PipelineDefinitionId)
             var pipelineIdMapping = await _context.PipelineDefinitions
                 .Where(pd => context.PipelineDefinitionIds.Contains(pd.PipelineDefinitionId))
                 .ToDictionaryAsync(pd => pd.PipelineDefinitionId, pd => pd.Id, cancellationToken);
 
-            // Upsert pipeline runs to database so the build anchor exists before child facts are processed.
-            var maxDate = await UpsertPipelineRunsAsync(runList, context.ProductOwnerId, pipelineIdMapping, progressCallback, cancellationToken);
+            progressCallback(80);
+
+            DateTimeOffset? maxDate = null;
+            if (runList.Count != 0)
+            {
+                // Upsert pipeline runs to database so the build anchor exists before child facts are processed.
+                maxDate = await UpsertPipelineRunsAsync(runList, context.ProductOwnerId, pipelineIdMapping, progressCallback, cancellationToken);
+            }
 
             var buildQualityResult = await SyncBuildQualityFactsAsync(
                 context.ProductOwnerId,
+                pipelineIdMapping.Values.ToArray(),
                 runList,
                 cancellationToken);
 
@@ -101,7 +100,7 @@ public class PipelineSyncStage : ISyncStage
 
             return SyncStageResult.CreateSuccess(
                 runList.Count,
-                maxDate,
+                maxDate ?? context.PipelineWatermark,
                 buildQualityResult.HasWarnings,
                 buildQualityResult.WarningMessage);
         }
@@ -197,21 +196,68 @@ public class PipelineSyncStage : ISyncStage
 
     private async Task<BuildQualitySyncResult> SyncBuildQualityFactsAsync(
         int productOwnerId,
+        IReadOnlyCollection<int> pipelineDefinitionIds,
         IReadOnlyCollection<PipelineRunDto> runs,
         CancellationToken cancellationToken)
     {
+        if (pipelineDefinitionIds.Count == 0)
+        {
+            return BuildQualitySyncResult.None;
+        }
+
         var requestedRunIds = runs
             .Select(run => run.RunId)
             .Distinct()
             .ToArray();
 
-        if (requestedRunIds.Length == 0)
+        var requestedRunIdSet = requestedRunIds.ToHashSet();
+        var backfillCapacity = Math.Max(0, MaxBuildQualityBuildBatchSize - requestedRunIds.Length);
+
+        var scopedRuns = _context.CachedPipelineRuns.Where(run =>
+            run.ProductOwnerId == productOwnerId &&
+            pipelineDefinitionIds.Contains(run.PipelineDefinitionId));
+
+        var missingTestRunTfsRunIds = await scopedRuns
+            .Where(run =>
+                !_context.TestRuns.Any(testRun => testRun.BuildId == run.Id))
+            .Select(run => run.TfsRunId)
+            .ToListAsync(cancellationToken);
+
+        var missingCoverageTfsRunIds = await scopedRuns
+            .Where(run =>
+                !_context.Coverages.Any(coverage => coverage.BuildId == run.Id))
+            .Select(run => run.TfsRunId)
+            .ToListAsync(cancellationToken);
+
+        var missingBuildRunIds = missingTestRunTfsRunIds
+            .Concat(missingCoverageTfsRunIds)
+            .Distinct()
+            .OrderBy(runId => runId)
+            .ToArray();
+
+        var backfillRunIds = missingBuildRunIds
+            .Where(runId => !requestedRunIdSet.Contains(runId))
+            .Take(backfillCapacity)
+            .ToArray();
+
+        if (backfillRunIds.Length != 0)
+        {
+            _logger.LogInformation(
+                "BuildQuality backfill: {MissingBuildCount} incomplete builds added to ingestion batch",
+                backfillRunIds.Length);
+        }
+
+        var buildIds = requestedRunIds
+            .Concat(backfillRunIds)
+            .ToArray();
+
+        if (buildIds.Length == 0)
         {
             return BuildQualitySyncResult.None;
         }
 
         var buildAnchors = await _context.CachedPipelineRuns
-            .Where(run => run.ProductOwnerId == productOwnerId && requestedRunIds.Contains(run.TfsRunId))
+            .Where(run => run.ProductOwnerId == productOwnerId && buildIds.Contains(run.TfsRunId))
             .Select(run => new { run.Id, run.TfsRunId })
             .ToDictionaryAsync(run => run.TfsRunId, run => run.Id, cancellationToken);
 
@@ -220,9 +266,9 @@ public class PipelineSyncStage : ISyncStage
             return BuildQualitySyncResult.None;
         }
 
-        var buildIds = buildAnchors.Keys.ToArray();
-        var testRunsTask = _tfsClient.GetTestRunsByBuildIdsAsync(buildIds, cancellationToken);
-        var coverageTask = _tfsClient.GetCoverageByBuildIdsAsync(buildIds, cancellationToken);
+        var childFetchBuildIds = buildAnchors.Keys.ToArray();
+        var testRunsTask = _tfsClient.GetTestRunsByBuildIdsAsync(childFetchBuildIds, cancellationToken);
+        var coverageTask = _tfsClient.GetCoverageByBuildIdsAsync(childFetchBuildIds, cancellationToken);
 
         await Task.WhenAll(testRunsTask, coverageTask);
 
