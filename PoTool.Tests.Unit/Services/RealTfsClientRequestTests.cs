@@ -204,11 +204,21 @@ public class RealTfsClientRequestTests
             }
 
             var query = request.RequestUri!.Query;
-            var payload = query.Contains("buildIds=101", StringComparison.Ordinal) && query.Contains("$skip=0", StringComparison.Ordinal)
-                ? "[{\"id\":5001,\"totalTests\":12,\"passedTests\":11,\"notApplicableTests\":1}]"
-                : query.Contains("buildIds=102", StringComparison.Ordinal) && query.Contains("$skip=0", StringComparison.Ordinal)
-                    ? "[{\"id\":5002,\"build\":{\"id\":102},\"totalTests\":8,\"passedTests\":6,\"notApplicableTests\":2}]"
-                    : "[]";
+            string payload;
+            if (query.Contains("buildIds=101", StringComparison.Ordinal) &&
+                query.Contains("$skip=0", StringComparison.Ordinal))
+            {
+                payload = "[{\"id\":5001,\"totalTests\":12,\"passedTests\":11,\"notApplicableTests\":1}]";
+            }
+            else if (query.Contains("buildIds=102", StringComparison.Ordinal) &&
+                     query.Contains("$skip=0", StringComparison.Ordinal))
+            {
+                payload = "[{\"id\":5002,\"build\":{\"id\":102},\"totalTests\":8,\"passedTests\":6,\"notApplicableTests\":2}]";
+            }
+            else
+            {
+                payload = "[]";
+            }
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
@@ -236,7 +246,12 @@ public class RealTfsClientRequestTests
         Assert.IsFalse(requests[1].Query.Contains("minLastUpdatedDate", StringComparison.Ordinal));
         StringAssert.Contains(requests[2].Query, "$skip=200");
         StringAssert.Contains(requests[4].Query, "$skip=200");
-        Assert.IsFalse(requests[1].AbsoluteUri.Contains("buildIds=101%2C102", StringComparison.Ordinal));
+        foreach (var request in requests.Skip(1))
+        {
+            Assert.IsFalse(request.AbsoluteUri.Contains("buildIds=101%2C102", StringComparison.Ordinal));
+            Assert.IsFalse(request.AbsoluteUri.Contains("buildIds=101,102", StringComparison.Ordinal));
+            Assert.AreEqual(1, request.Query.Split("buildIds=").Length - 1);
+        }
     }
 
     private static RealTfsClient CreateClient(TfsConfigEntity config, HttpMessageHandler handler)

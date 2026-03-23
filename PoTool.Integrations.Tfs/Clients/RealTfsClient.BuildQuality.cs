@@ -357,16 +357,9 @@ public partial class RealTfsClient
 
     private TestRunDto? ParseTestRunDto(JsonElement run, int requestedBuildId)
     {
-        var buildId = requestedBuildId;
-        if (TryGetBuildIdFromTestRun(run, out var resolvedBuildId))
-        {
-            buildId = resolvedBuildId;
-        }
-        else if (requestedBuildId <= 0)
-        {
-            _logger.LogWarning("Skipping TFS test run payload without a verified build.id linkage.");
-            return null;
-        }
+        var buildId = TryGetBuildIdFromTestRun(run, out var resolvedBuildId)
+            ? resolvedBuildId
+            : requestedBuildId;
 
         if (!TryGetIntProperty(run, "totalTests", out var totalTests) ||
             !TryGetIntProperty(run, "passedTests", out var passedTests) ||
