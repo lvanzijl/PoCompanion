@@ -7,6 +7,7 @@ namespace PoTool.Integrations.Tfs.Clients;
 
 public partial class RealTfsClient
 {
+    private const string BuildQualityTestRunsApiVersion = "5.0-preview.5";
     private const string BuildQualityCoverageApiVersion = "2.0-preview";
     private const int TestRunPageSize = 200;
 
@@ -52,17 +53,23 @@ public partial class RealTfsClient
                 var skip = 0;
                 while (true)
                 {
-                    var url = ProjectUrl(
+                    var url = ProjectUrlWithApiVersionOverride(
                         config,
-                        $"_apis/testresults/runs?buildUri={Uri.EscapeDataString(buildUri)}" +
-                        $"&includeRunDetails=true&$top={TestRunPageSize}&$skip={skip}");
+                        $"_apis/test/runs?buildUri={Uri.EscapeDataString(buildUri)}" +
+                        $"&includeRunDetails=true&$top={TestRunPageSize}&$skip={skip}",
+                        BuildQualityTestRunsApiVersion);
+                    _logger.LogInformation(
+                        "Requesting TFS test runs for build {BuildId} via {RequestUrl}.",
+                        buildId,
+                        url);
 
                     var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
                     if (!response.IsSuccessStatusCode)
                     {
                         _logger.LogWarning(
-                            "TFS test runs endpoint failed for build {BuildId} with status code {StatusCode}.",
+                            "TFS test runs endpoint failed for build {BuildId} via {RequestUrl} with status code {StatusCode}.",
                             buildId,
+                            url,
                             (int)response.StatusCode);
                         await HandleHttpErrorsAsync(response, cancellationToken);
                     }
@@ -84,6 +91,12 @@ public partial class RealTfsClient
                     {
                         break;
                     }
+
+                    _logger.LogInformation(
+                        "Retrieved {ResultCount} TFS test runs for build {BuildId} from {RequestUrl}.",
+                        pageCount,
+                        buildId,
+                        url);
 
                     skip += TestRunPageSize;
                 }
@@ -253,27 +266,42 @@ public partial class RealTfsClient
     {
         var url = ProjectUrlWithApiVersionOverride(
             config,
-            $"_apis/testresults/codecoverage?buildId={buildId}",
+            $"_apis/test/codecoverage?buildId={buildId}&flags=1",
             BuildQualityCoverageApiVersion);
+        _logger.LogInformation(
+            "Requesting TFS coverage for build {BuildId} via {RequestUrl}.",
+            buildId,
+            url);
         var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
 
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
+            _logger.LogWarning(
+                "TFS coverage endpoint returned 404 for build {BuildId} via {RequestUrl}.",
+                buildId,
+                url);
             return [];
         }
 
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogWarning(
-                "TFS coverage endpoint failed for build {BuildId} with status code {StatusCode}.",
+                "TFS coverage endpoint failed for build {BuildId} via {RequestUrl} with status code {StatusCode}.",
                 buildId,
+                url,
                 (int)response.StatusCode);
             await HandleHttpErrorsAsync(response, cancellationToken);
         }
 
         using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-        return ParseCoverageDtos(doc.RootElement, buildId).ToList();
+        var results = ParseCoverageDtos(doc.RootElement, buildId).ToList();
+        _logger.LogInformation(
+            "Retrieved {ResultCount} TFS coverage rows for build {BuildId} from {RequestUrl}.",
+            results.Count,
+            buildId,
+            url);
+        return results;
     }
 
     private IEnumerable<JsonElement> EnumerateTestRunElements(JsonElement root)
