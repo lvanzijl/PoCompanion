@@ -50,17 +50,18 @@ public partial class RealTfsClient
 
             var results = new List<TestRunDto>();
 
-            foreach (var batch in buildWindows.ValidBuildIds.Chunk(200))
+            foreach (var batch in buildWindows.ValidBuildIds.Chunk(TestRunPageSize))
             {
-                var batchIds = batch.ToArray();
+                var batchIds = batch;
                 var batchIdLookup = batchIds.ToHashSet();
+                var batchIdsQuery = string.Join(",", batchIds);
                 var skip = 0;
                 var batchResultCount = 0;
                 while (true)
                 {
                     var url = ProjectUrlWithApiVersionOverride(
                         config,
-                        $"{BuildQualityTestRunsEndpointPath}?buildIds={Uri.EscapeDataString(string.Join(",", batchIds))}" +
+                        $"{BuildQualityTestRunsEndpointPath}?buildIds={batchIdsQuery}" +
                         $"&$top={TestRunPageSize}&$skip={skip}",
                         BuildQualityTestRunsApiVersion);
                     _logger.LogDebug(
