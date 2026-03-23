@@ -211,7 +211,6 @@ public class PipelineSyncStage : ISyncStage
             .ToArray();
 
         var requestedRunIdSet = requestedRunIds.ToHashSet();
-        var backfillCapacity = Math.Max(0, MaxBuildQualityBuildBatchSize - requestedRunIds.Length);
 
         var scopedRuns = _context.CachedPipelineRuns.Where(run =>
             run.ProductOwnerId == productOwnerId &&
@@ -237,7 +236,7 @@ public class PipelineSyncStage : ISyncStage
 
         var backfillRunIds = missingBuildRunIds
             .Where(runId => !requestedRunIdSet.Contains(runId))
-            .Take(backfillCapacity)
+            .Take(MaxBuildQualityBuildBatchSize)
             .ToArray();
 
         if (backfillRunIds.Length != 0)
@@ -249,6 +248,7 @@ public class PipelineSyncStage : ISyncStage
 
         var buildIds = requestedRunIds
             .Concat(backfillRunIds)
+            .Distinct()
             .ToArray();
 
         if (buildIds.Length == 0)

@@ -339,6 +339,133 @@ public class PipelineSyncStageBuildQualityTests
             Times.Once);
     }
 
+    [TestMethod]
+    public async Task ExecuteAsync_DeduplicatesMergedBatchAndCapsBackfillOnly()
+    {
+        const int duplicateRunId = 3001;
+        const int requestedRunStart = 4000;
+        const int pipelineDefinitionId = 42;
+        var maxBuildQualityBuildBatchSize = GetMaxBuildQualityBuildBatchSize();
+
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase($"PipelineSyncStageBuildQuality_{Guid.NewGuid()}")
+            .Options;
+
+        await using var dbContext = new PoToolDbContext(options);
+        SeedPipelineDefinition(dbContext, productOwnerId: 1, pipelineDefinitionId: pipelineDefinitionId);
+
+        var requestedRuns = Enumerable.Range(requestedRunStart, maxBuildQualityBuildBatchSize + 5)
+            .Select(runId => CreatePipelineRun(runId, pipelineDefinitionId))
+            .ToList();
+        requestedRuns.Insert(0, CreatePipelineRun(duplicateRunId, pipelineDefinitionId));
+
+        var backfillRunIds = Enumerable.Range(duplicateRunId, maxBuildQualityBuildBatchSize + 10).ToArray();
+        foreach (var runId in backfillRunIds)
+        {
+            dbContext.CachedPipelineRuns.Add(new CachedPipelineRunEntity
+            {
+                ProductOwnerId = 1,
+                PipelineDefinitionId = 1,
+                TfsRunId = runId,
+                RunName = $"Build {runId}",
+                State = "completed",
+                Result = "Succeeded",
+                CachedAt = DateTimeOffset.UtcNow
+            });
+        }
+
+        await dbContext.SaveChangesAsync();
+
+        IEnumerable<int>? requestedTestRunBuildIds = null;
+        IEnumerable<int>? requestedCoverageBuildIds = null;
+
+        var tfsClient = new Mock<ITfsClient>();
+        tfsClient
+            .Setup(client => client.GetPipelineRunsAsync(
+                It.IsAny<int[]>(),
+                It.IsAny<string?>(),
+                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(requestedRuns);
+        tfsClient
+            .Setup(client => client.GetTestRunsByBuildIdsAsync(
+                It.IsAny<IEnumerable<int>>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<int>, CancellationToken>((ids, _) => requestedTestRunBuildIds = ids.ToArray())
+            .ReturnsAsync(Array.Empty<TestRunDto>());
+        tfsClient
+            .Setup(client => client.GetCoverageByBuildIdsAsync(
+                It.IsAny<IEnumerable<int>>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<int>, CancellationToken>((ids, _) => requestedCoverageBuildIds = ids.ToArray())
+            .ReturnsAsync(Array.Empty<CoverageDto>());
+
+        var logger = new Mock<ILogger<PipelineSyncStage>>();
+        var stage = new PipelineSyncStage(tfsClient.Object, dbContext, logger.Object);
+
+        var result = await stage.ExecuteAsync(
+            new SyncContext
+            {
+                ProductOwnerId = 1,
+                RootWorkItemIds = [100],
+                PipelineDefinitionIds = [pipelineDefinitionId]
+            },
+            _ => { },
+            CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+
+        var expectedRequestedRunIds = requestedRuns
+            .Select(run => run.RunId)
+            .Distinct()
+            .ToArray();
+        var expectedBackfillRunIds = backfillRunIds
+            .Where(runId => !expectedRequestedRunIds.Contains(runId))
+            .Take(maxBuildQualityBuildBatchSize)
+            .ToArray();
+        var expectedMergedRunIds = expectedRequestedRunIds
+            .Concat(expectedBackfillRunIds)
+            .Distinct()
+            .OrderBy(id => id)
+            .ToArray();
+
+        Assert.IsNotNull(requestedTestRunBuildIds);
+        Assert.IsNotNull(requestedCoverageBuildIds);
+        CollectionAssert.AreEqual(
+            expectedMergedRunIds,
+            requestedTestRunBuildIds.OrderBy(id => id).ToArray());
+        CollectionAssert.AreEqual(
+            expectedMergedRunIds,
+            requestedCoverageBuildIds.OrderBy(id => id).ToArray());
+
+        CollectionAssert.IsSubsetOf(
+            expectedRequestedRunIds,
+            requestedTestRunBuildIds.ToArray());
+        Assert.AreEqual(
+            expectedMergedRunIds.Length,
+            requestedTestRunBuildIds.Distinct().Count());
+
+        logger.Verify(
+            instance => instance.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains($"BuildQuality backfill: {expectedBackfillRunIds.Length} incomplete builds added to ingestion batch")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    private static int GetMaxBuildQualityBuildBatchSize()
+    {
+        var field = typeof(PipelineSyncStage).GetField(
+            "MaxBuildQualityBuildBatchSize",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        Assert.IsNotNull(field);
+        return (int?)field.GetValue(null) ?? throw new AssertFailedException("Missing MaxBuildQualityBuildBatchSize constant.");
+    }
+
     private static void SeedPipelineDefinition(PoToolDbContext dbContext, int productOwnerId, int pipelineDefinitionId)
     {
         dbContext.Profiles.Add(new ProfileEntity
