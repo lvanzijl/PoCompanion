@@ -222,16 +222,17 @@ public partial class RealTfsClient
             parsedRunCount,
             rawRunCount,
             buildId);
+        var httpRequestCount = pageCount;
         _logger.LogInformation(
             "BUILDQUALITY_TESTRUN_BUILD_SUMMARY: buildId={BuildId}, pageCount={PageCount}, httpRequestCount={HttpRequestCount}, rawRunCount={RawRunCount}, dtoCount={DtoCount}, elapsedMs={ElapsedMs}",
             buildId,
             pageCount,
-            pageCount,
+            httpRequestCount,
             rawRunCount,
             parsedRunCount,
             buildStopwatch.ElapsedMilliseconds);
 
-        return new TestRunBuildRetrievalSummary(testRuns, pageCount, pageCount, rawRunCount, parsedRunCount);
+        return new TestRunBuildRetrievalSummary(testRuns, pageCount, httpRequestCount, rawRunCount, parsedRunCount);
     }
 
     private async Task<CoverageBuildRetrievalSummary> GetCoverageForBuildAsync(
