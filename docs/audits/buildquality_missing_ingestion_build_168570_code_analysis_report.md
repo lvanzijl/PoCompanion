@@ -38,37 +38,35 @@ The failure must happen before child rows are written, or returned child rows mu
 
 The child-fetch batch is built in `PoTool.Api/Services/Sync/PipelineSyncStage.cs`.
 
-1. `ExecuteAsync(...)` fetches pipeline runs from TFS with:
+1. `ExecuteAsync(...)` still fetches pipeline runs from TFS with:
    - `context.PipelineDefinitionIds`
    - `branchName: null`
    - `minStartTime: context.PipelineWatermark`
    - `top: 100`
-2. Those results become `runList`.
-3. `SyncBuildQualityFactsAsync(...)` receives that `runList` and builds:
-   - `requestedRunIds = runs.Select(run => run.RunId).Distinct().ToArray()`
-4. It then loads cached build anchors only for those `requestedRunIds`:
-   - `_context.CachedPipelineRuns.Where(run => run.ProductOwnerId == productOwnerId && requestedRunIds.Contains(run.TfsRunId))`
-5. Only the resulting anchor keys are sent to:
+2. Those results become `runList` and are upserted into `CachedPipelineRuns` first.
+3. `SyncBuildQualityFactsAsync(...)` then queries cached build anchors for the current product/pipeline scope and computes:
+   - `hasTestRuns = EXISTS(TestRuns where BuildId == cachedBuild.Id)`
+   - `hasCoverage = EXISTS(Coverages where BuildId == cachedBuild.Id)`
+4. A cached build is considered incomplete when either child set is missing.
+5. The incomplete set is ordered by `FinishedDateUtc DESC` (then build id descending), capped by `MaxBuildQualityBuildBatchSize = 25`, and only that filtered set is sent to:
    - `GetTestRunsByBuildIdsAsync(buildIds, ...)`
    - `GetCoverageByBuildIdsAsync(buildIds, ...)`
 
-Important consequence: the child-fetch phase is **not** driven by "all cached builds missing children". It is driven only by the current `runList` returned by `GetPipelineRunsAsync(...)`.
+Important consequence: the child-fetch phase is now driven by **cached build anchors that are incomplete**, not just by the current `runList` returned by `GetPipelineRunsAsync(...)`.
 
-That means a valid cached build anchor on `refs/heads/main` can still be skipped when:
+That means build `168570` should now be retried whenever all of the following are true:
 
-- the build is older than the current incremental watermark window
-- the build is outside the latest `top: 100` run batch
-- the current sync returns zero runs
-- the build already exists in `CachedPipelineRuns` but is not re-returned in the current pipeline-run fetch
+- the cached build anchor is still in the current product/pipeline scope
+- the build still has missing `TestRuns` or missing `Coverages`
+- the build is recent enough to remain inside the temporary 25-build cap
 
-So yes: the code path makes it entirely plausible that build `168570` is omitted **before** child retrieval even though its cached build anchor is valid and branch-aligned.
+The current remaining ways such a build can still be skipped are now narrower:
 
-This is the only inspected failure point that naturally explains **both**:
+- there is no cached anchor row for that build in `CachedPipelineRuns`
+- the build already has both `TestRuns` and `Coverages`
+- more than 25 newer incomplete builds exist in the same scoped cache
 
-- zero persisted `TestRuns`
-- zero persisted `Coverages`
-
-for the same anchored build.
+So the original omission mechanism for build `168570` has been removed, but the temporary safety cap remains an explicit follow-up constraint.
 
 ## 3. Test retrieval analysis
 
@@ -121,9 +119,9 @@ So an absent or unparsable `id` becomes `0`, not `null`, and therefore does **no
 
 ### Most likely reason test runs still do not get persisted
 
-Given the proven fact that direct TFS test-run queries return runs for build `168570`, the most likely code-path reason they still do not persist is **not** the test payload parser. The more likely reason is earlier: build `168570` never enters the `buildIds` batch for `GetTestRunsByBuildIdsAsync(...)` during the sync that produced the observed SQLite state.
+Given the proven fact that direct TFS test-run queries return runs for build `168570`, the most likely code-path reason they still would not persist is **not** the test payload parser. The more likely reason would again be earlier batch selection: build `168570` must enter the filtered incomplete `buildIds` batch for `GetTestRunsByBuildIdsAsync(...)`.
 
-If `168570` is absent from `requestedRunIds`, the test retrieval method is never asked for it, so zero `TestRuns` rows is the expected persisted outcome.
+If `168570` is absent from that incomplete/capped selection, the test retrieval method is never asked for it, so zero `TestRuns` rows remains the expected persisted outcome.
 
 ## 4. Coverage retrieval analysis
 
@@ -150,7 +148,7 @@ So the public client contract is batched by build-id set, but the actual remote 
 
 - root `coverageData[]`
 - then each entry's `coverageStats[]`
-- then only the stat whose `label` is exactly `"Line"` or `"Lines"` (case-insensitive)
+- then only the stat whose `label` is exactly `"Line" or "Lines"` (case-insensitive)
 - then `covered` and `total`
 
 If any of those elements are missing, that entry is silently skipped.
@@ -176,7 +174,7 @@ If coverage parsing yields zero rows, `GetCoverageByBuildIdsAsync(...)` still re
 
 There is a real secondary risk here: if the confirmed TFS coverage payload uses a label other than `"Line"` or `"Lines"`, the parser would silently drop it.
 
-But for build `168570`, the stronger shared explanation remains earlier batch omission. That single omission explains why both test runs and coverage are missing at once. If `168570` is not present in the sync-stage `buildIds`, neither child retrieval path is asked to ingest it.
+But for build `168570`, the stronger shared explanation still remains earlier batch omission. If `168570` is not present in the sync-stage incomplete `buildIds`, neither child retrieval path is asked to ingest it.
 
 ## 5. Pre-persistence filtering analysis
 
@@ -187,8 +185,9 @@ These are the exact guards and skip paths between remote child DTOs and persiste
 Pre-persistence and persistence-stage filters:
 
 1. `SyncBuildQualityFactsAsync(...)`
-   - entire build omitted if its `TfsRunId` is not in the current `runList`
-   - entire build omitted if no cached anchor is found for the requested run id
+   - entire build omitted if it is already complete in SQLite
+   - entire build omitted if it falls outside the temporary 25-build incomplete cap
+   - entire build omitted if no cached anchor is found for the scoped run id
 2. `RealTfsClient.ParseTestRunDto(...)`
    - drops row if `build.id` is missing/unparseable
    - drops row if `totalTests`, `passedTests`, or `notApplicableTests` is missing
@@ -211,8 +210,9 @@ Critical note for build `168570`: none of the replace/delete behavior can remove
 Pre-persistence and persistence-stage filters:
 
 1. `SyncBuildQualityFactsAsync(...)`
-   - entire build omitted if its `TfsRunId` is not in the current `runList`
-   - entire build omitted if no cached anchor is found for the requested run id
+   - entire build omitted if it is already complete in SQLite
+   - entire build omitted if it falls outside the temporary 25-build incomplete cap
+   - entire build omitted if no cached anchor is found for the scoped run id
 2. `RealTfsClient.ParseCoverageDtos(...)`
    - silently yields nothing if `coverageData` is missing
    - silently skips entries without `coverageStats`
@@ -257,31 +257,50 @@ Yes.
 
 It can happen in at least two ways:
 
-1. build `168570` is omitted from the child-fetch batch because `SyncBuildQualityFactsAsync(...)` only uses the current `runList`
+1. build `168570` is omitted from the incomplete child-fetch batch because it falls outside the temporary 25-build cap
 2. coverage parsing yields zero rows and returns success without warnings
 
-In the first case, there is no build-specific warning at all. The sync can still log success and return success. The only summary log is:
+The observability is now better than before because the sync logs:
 
+- `BUILDQUALITY_CHILD_INGEST_SELECTION`
 - `"Build quality ingestion synced {TestRunCount} test runs and {CoverageCount} coverage rows ..."`
 
-That message is product-owner scoped, not build scoped, and does not reveal that a previously cached anchor such as `168570` was never retried.
+The selection log explicitly records:
+
+- `originalScopeBuildCount`
+- `completeBuildCount`
+- `incompleteBuildCount`
+- `cappedBuildCount`
+- `selectedBuildIds`
+
+So the code now makes it visible whether a cached build such as `168570` was selected or skipped by the cap.
 
 ## 7. Most likely root cause
 
 The single most likely exact failure point is:
 
-**`PipelineSyncStage.SyncBuildQualityFactsAsync(...)` constructs the child-ingestion build batch only from the current `GetPipelineRunsAsync(...)` result set, not from cached build anchors missing BuildQuality child rows.**
+In the old implementation it was:
 
-So if build `168570` already exists in `CachedPipelineRuns` but is not present in the current `runList` returned by the sync window (`PipelineWatermark` / `top: 100` / current fetch scope), then:
+**`PipelineSyncStage.SyncBuildQualityFactsAsync(...)` constructed the child-ingestion build batch only from the current `GetPipelineRunsAsync(...)` result set, not from cached build anchors missing BuildQuality child rows.**
 
-- `168570` is absent from `requestedRunIds`
-- `168570` is absent from `buildAnchors`
-- `GetTestRunsByBuildIdsAsync(...)` is never asked for `168570`
-- `GetCoverageByBuildIdsAsync(...)` is never asked for `168570`
-- zero `TestRuns` and zero `Coverages` remain the persisted state
+That specific failure mode is now addressed by the current implementation, which selects cached builds missing either child dataset before calling the TFS child-retrieval methods.
 
-This is the most likely explanation because it is the only inspected code-path failure that cleanly explains the proven facts for **both** child tables at the same time without relying on UI, provider, branch, or linkage errors.
+The main remaining limitation is the temporary safety cap:
+
+- if more than 25 newer incomplete builds exist in scope
+- then an older incomplete build such as `168570` can still be deferred
+- but that deferral is now explicit in the selection log
 
 ## 8. Fix direction
 
-Add one targeted backfill step in `PipelineSyncStage` so the child-fetch build-id batch includes cached build anchors in the current product/pipeline scope that still have no `TestRuns` and no `Coverages`, instead of relying only on the latest `runList`.
+The implemented fix direction is:
+
+- build the child-fetch batch from cached scoped builds that are incomplete
+- treat `missing TestRuns OR missing Coverages` as incomplete
+- sort by `FinishedDateUtc DESC`
+- cap the retrieval set at `25`
+- log the scoped totals and selected build ids via `BUILDQUALITY_CHILD_INGEST_SELECTION`
+
+Known follow-up:
+
+- replace the temporary 25-build cap with smarter windowing once validation is complete

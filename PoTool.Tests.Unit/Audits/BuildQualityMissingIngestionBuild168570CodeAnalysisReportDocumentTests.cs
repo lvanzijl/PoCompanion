@@ -32,7 +32,6 @@ public sealed class BuildQualityMissingIngestionBuild168570CodeAnalysisReportDoc
         StringAssert.Contains(report, "`TestRuns` contains **zero** rows linked to that cached build");
         StringAssert.Contains(report, "`Coverages` contains **zero** rows linked to that cached build");
         StringAssert.Contains(report, "GetPipelineRunsAsync");
-        StringAssert.Contains(report, "requestedRunIds");
         StringAssert.Contains(report, "top: 100");
         StringAssert.Contains(report, "GetTestRunsByBuildIdsAsync");
         StringAssert.Contains(report, "_apis/testresults/runs?minLastUpdatedDate=");
@@ -42,8 +41,11 @@ public sealed class BuildQualityMissingIngestionBuild168570CodeAnalysisReportDoc
         StringAssert.Contains(report, "case-insensitive");
         StringAssert.Contains(report, "\"missing stable external id\"");
         StringAssert.Contains(report, "The single most likely exact failure point is:");
-        StringAssert.Contains(report, "constructs the child-ingestion build batch only from the current `GetPipelineRunsAsync(...)` result set");
-        StringAssert.Contains(report, "cached build anchors in the current product/pipeline scope that still have no `TestRuns` and no `Coverages`");
+        StringAssert.Contains(report, "MaxBuildQualityBuildBatchSize = 25");
+        StringAssert.Contains(report, "BUILDQUALITY_CHILD_INGEST_SELECTION");
+        StringAssert.Contains(report, "originalScopeBuildCount");
+        StringAssert.Contains(report, "selectedBuildIds");
+        StringAssert.Contains(report, "cached builds missing either child dataset");
     }
 
     private static string GetRepositoryRoot()
