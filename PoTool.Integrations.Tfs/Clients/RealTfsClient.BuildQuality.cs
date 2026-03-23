@@ -40,21 +40,19 @@ public partial class RealTfsClient
         var results = await ExecuteWithRetryAsync(async () =>
         {
             var results = new List<TestRunDto>();
-            var attemptedBuildCount = 0;
 
             _logger.LogInformation(
-                "Attempting TFS test run retrieval for {AttemptedBuildCount} requested build ids.",
+                "Attempting TFS test run retrieval for {AttemptedBuildCount} requested build IDs.",
                 requestedBuildIds.Length);
 
             foreach (var buildId in requestedBuildIds)
             {
-                attemptedBuildCount++;
                 _logger.LogInformation(
                     "Attempting TFS test run retrieval for build {BuildId}.",
                     buildId);
 
                 var skip = 0;
-                var retrievedRunCount = 0;
+                var scannedRunCount = 0;
                 var parsedRunCount = 0;
                 while (true)
                 {
@@ -97,7 +95,7 @@ public partial class RealTfsClient
                         }
                     }
 
-                    retrievedRunCount += pageRetrievedCount;
+                    scannedRunCount += pageRetrievedCount;
 
                     if (pageRetrievedCount == 0)
                     {
@@ -108,19 +106,19 @@ public partial class RealTfsClient
                 }
 
                 _logger.LogInformation(
-                    "Retrieved {ResultCount} TFS test runs for build {BuildId}.",
-                    retrievedRunCount,
+                    "Scanned {ScannedCount} TFS test run elements for build {BuildId}.",
+                    scannedRunCount,
                     buildId);
                 _logger.LogInformation(
-                    "Parsed {ParsedCount}/{RetrievedCount} TFS test runs for build {BuildId}.",
+                    "Parsed {ParsedCount}/{ScannedCount} TFS test runs for build {BuildId}.",
                     parsedRunCount,
-                    retrievedRunCount,
+                    scannedRunCount,
                     buildId);
             }
 
             _logger.LogInformation(
-                "Attempted TFS test run retrieval for {AttemptedBuildCount} requested build ids.",
-                attemptedBuildCount);
+                "Attempted TFS test run retrieval for {AttemptedBuildCount} requested build IDs.",
+                requestedBuildIds.Length);
 
             return results;
         }, cancellationToken);
@@ -160,22 +158,24 @@ public partial class RealTfsClient
         var coverageResults = await ExecuteWithRetryAsync(async () =>
         {
             var coverageResults = new List<CoverageDto>();
-            var attemptedBuildCount = 0;
 
             _logger.LogInformation(
-                "Attempting TFS coverage retrieval for {AttemptedBuildCount} requested build ids.",
+                "Attempting TFS coverage retrieval for {AttemptedBuildCount} requested build IDs.",
                 requestedBuildIds.Length);
 
-            foreach (var buildId in requestedBuildIds)
+            foreach (var batch in requestedBuildIds.Chunk(25))
             {
-                attemptedBuildCount++;
-                var result = await GetCoverageForBuildAsync(config, httpClient, buildId, cancellationToken);
-                coverageResults.AddRange(result);
+                var batchTasks = batch.Select(buildId => GetCoverageForBuildAsync(config, httpClient, buildId, cancellationToken));
+                var batchResults = await Task.WhenAll(batchTasks);
+                foreach (var result in batchResults)
+                {
+                    coverageResults.AddRange(result);
+                }
             }
 
             _logger.LogInformation(
-                "Attempted TFS coverage retrieval for {AttemptedBuildCount} requested build ids.",
-                attemptedBuildCount);
+                "Attempted TFS coverage retrieval for {AttemptedBuildCount} requested build IDs.",
+                requestedBuildIds.Length);
 
             return coverageResults;
         }, cancellationToken);
@@ -274,6 +274,8 @@ public partial class RealTfsClient
 
     private TestRunDto? ParseTestRunDto(JsonElement run, int requestedBuildId)
     {
+        // TFS test run responses retrieved per build may omit run.build.id, so the
+        // current requested build context is the authoritative fallback for linkage.
         var buildId = TryGetBuildIdFromTestRun(run, out var resolvedBuildId)
             ? resolvedBuildId
             : requestedBuildId;
