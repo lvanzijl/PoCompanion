@@ -385,7 +385,7 @@ public class PipelineSyncStage : ISyncStage
 
         var orderedIncompleteBuilds = scopedBuilds
             .Where(build => !build.HasTestRuns || !build.HasCoverage)
-            .OrderByDescending(build => build.FinishedDateUtc ?? DateTime.MinValue)
+            .OrderByDescending(GetBuildQualityFinishedDateSortKey)
             .ThenByDescending(build => build.BuildId)
             .ToList();
 
@@ -632,6 +632,9 @@ public class PipelineSyncStage : ISyncStage
             CachedAt = DateTimeOffset.UtcNow
         };
     }
+
+    private static DateTime GetBuildQualityFinishedDateSortKey(BuildQualityChildIngestionCandidate build)
+        => build.FinishedDateUtc ?? DateTime.MinValue;
 
     private sealed record BuildQualitySyncResult(bool HasWarnings, string? WarningMessage)
     {
