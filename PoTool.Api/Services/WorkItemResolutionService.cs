@@ -48,20 +48,9 @@ public class WorkItemResolutionService
             };
         }
 
-        // WorkItemRelationshipSnapshotStage (stage 4) rebuilds WorkItemRelationshipEdges by deleting the
-        // current product owner's rows and inserting the current graph before resolution runs in stage 5.
-        // That delete-and-replace contract keeps the snapshot scoped to a single sync run, so reading the
-        // latest snapshot timestamp is safe and cannot mix edges from older runs for this product owner.
-        var latestSnapshotAsOf = await context.WorkItemRelationshipEdges
-            .AsNoTracking()
-            .Where(edge => edge.ProductOwnerId == productOwnerId)
-            .Select(edge => (DateTimeOffset?)edge.SnapshotAsOfUtc)
-            .MaxAsync(cancellationToken);
-
         var childrenByParent = await BuildChildrenLookupAsync(
             context,
             productOwnerId,
-            latestSnapshotAsOf,
             cancellationToken);
 
         var closureScopeIds = GetClosureScopeIds(products, childrenByParent);
@@ -290,25 +279,32 @@ public class WorkItemResolutionService
     private static async Task<Dictionary<int, List<int>>> BuildChildrenLookupAsync(
         PoToolDbContext context,
         int productOwnerId,
-        DateTimeOffset? latestSnapshotAsOf,
         CancellationToken cancellationToken)
     {
-        if (!latestSnapshotAsOf.HasValue)
-        {
-            return new Dictionary<int, List<int>>();
-        }
-
         var hierarchyEdges = await context.WorkItemRelationshipEdges
             .AsNoTracking()
             .Where(edge =>
                 edge.ProductOwnerId == productOwnerId &&
-                edge.SnapshotAsOfUtc == latestSnapshotAsOf.Value &&
                 edge.RelationType == ParentRelationType &&
                 edge.TargetWorkItemId != null)
-            .Select(edge => new { ParentId = edge.TargetWorkItemId!.Value, ChildId = edge.SourceWorkItemId })
+            .Select(edge => new
+            {
+                ParentId = edge.TargetWorkItemId!.Value,
+                ChildId = edge.SourceWorkItemId,
+                edge.SnapshotAsOfUtc
+            })
             .ToListAsync(cancellationToken);
 
+        if (hierarchyEdges.Count == 0)
+        {
+            return new Dictionary<int, List<int>>();
+        }
+
+        var latestSnapshotAsOf = hierarchyEdges
+            .Max(edge => edge.SnapshotAsOfUtc);
+
         return hierarchyEdges
+            .Where(edge => edge.SnapshotAsOfUtc == latestSnapshotAsOf)
             .GroupBy(edge => edge.ParentId)
             .ToDictionary(
                 group => group.Key,
