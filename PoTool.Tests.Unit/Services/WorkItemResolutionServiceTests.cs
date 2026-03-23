@@ -334,6 +334,8 @@ public class WorkItemResolutionServiceTests
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
+        var olderSnapshot = new DateTimeOffset(2025, 1, 1, 10, 0, 0, TimeSpan.Zero);
+        var latestSnapshot = olderSnapshot.AddMinutes(5);
 
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
             .UseSqlite(connection)
@@ -362,10 +364,11 @@ public class WorkItemResolutionServiceTests
             setupContext.WorkItems.AddRange(
                 CreateWorkItem(100, WorkItemType.Epic, "Epic A"),
                 CreateWorkItem(200, WorkItemType.Feature, "Feature B", parentId: 100),
-                CreateWorkItem(300, WorkItemType.Pbi, "PBI C", parentId: 200));
+                CreateWorkItem(300, WorkItemType.Pbi, "PBI C", parentId: 200),
+                CreateWorkItem(400, WorkItemType.Pbi, "Old Snapshot Only", parentId: 100));
 
-            AddRelationshipSnapshot(setupContext, TestProductOwnerId, DateTimeOffset.UtcNow.AddMinutes(-5), (200, 100));
-            AddRelationshipSnapshot(setupContext, TestProductOwnerId, DateTimeOffset.UtcNow, (200, 100), (300, 200));
+            AddRelationshipSnapshot(setupContext, TestProductOwnerId, olderSnapshot, (200, 100), (400, 100));
+            AddRelationshipSnapshot(setupContext, TestProductOwnerId, latestSnapshot, (200, 100), (300, 200));
 
             await setupContext.SaveChangesAsync();
         }
@@ -382,10 +385,15 @@ public class WorkItemResolutionServiceTests
 
         await using var verificationScope = provider.CreateAsyncScope();
         var verificationContext = verificationScope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        var resolvedIds = await verificationContext.ResolvedWorkItems
+            .OrderBy(item => item.WorkItemId)
+            .Select(item => item.WorkItemId)
+            .ToListAsync();
         var resolvedPbi = await verificationContext.ResolvedWorkItems.SingleAsync(item => item.WorkItemId == 300);
 
         Assert.IsTrue(result.Success);
         Assert.AreEqual(3, result.ResolvedCount);
+        CollectionAssert.AreEqual(new List<int> { 100, 200, 300 }, resolvedIds);
         Assert.AreEqual(100, resolvedPbi.ResolvedEpicId);
         Assert.AreEqual(200, resolvedPbi.ResolvedFeatureId);
     }
