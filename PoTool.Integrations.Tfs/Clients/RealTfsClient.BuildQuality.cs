@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using PoTool.Shared.Pipelines;
@@ -36,10 +37,12 @@ public partial class RealTfsClient
             requestedBuildIds.Length,
             BuildQualityTestRunsEndpointPath,
             BuildQualityTestRunsApiVersion);
+        var overallStopwatch = Stopwatch.StartNew();
 
         var results = await ExecuteWithRetryAsync(async () =>
         {
             var results = new List<TestRunDto>();
+            var buildSummaries = new List<TestRunBuildRetrievalSummary>(requestedBuildIds.Length);
 
             _logger.LogInformation(
                 "Attempting TFS test run retrieval for {AttemptedBuildCount} requested build IDs.",
@@ -47,78 +50,23 @@ public partial class RealTfsClient
 
             foreach (var buildId in requestedBuildIds)
             {
-                _logger.LogInformation(
-                    "Attempting TFS test run retrieval for build {BuildId}.",
-                    buildId);
-
-                var skip = 0;
-                var retrievedRunCount = 0;
-                var parsedRunCount = 0;
-                while (true)
-                {
-                    var url = ProjectUrlWithApiVersionOverride(
-                        config,
-                        $"{BuildQualityTestRunsEndpointPath}?buildIds={buildId}" +
-                        $"&$top={TestRunPageSize}&$skip={skip}",
-                        BuildQualityTestRunsApiVersion);
-                    _logger.LogDebug(
-                        "Requesting TFS test runs page for build {BuildId} via {RequestUrl} (endpoint {EndpointPath}, api-version {ApiVersion}).",
-                        buildId,
-                        url,
-                        BuildQualityTestRunsEndpointPath,
-                        BuildQualityTestRunsApiVersion);
-
-                    var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        _logger.LogWarning(
-                            "TFS test runs endpoint failed for build {BuildId} via {RequestUrl} (endpoint {EndpointPath}, api-version {ApiVersion}) with status code {StatusCode}.",
-                            buildId,
-                            url,
-                            BuildQualityTestRunsEndpointPath,
-                            BuildQualityTestRunsApiVersion,
-                            (int)response.StatusCode);
-                        await HandleHttpErrorsAsync(response, cancellationToken);
-                    }
-
-                    using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                    using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-                    var pageRetrievedCount = 0;
-                    foreach (var run in EnumerateTestRunElements(doc.RootElement))
-                    {
-                        pageRetrievedCount++;
-                        var dto = ParseTestRunDto(run, buildId);
-                        if (dto is not null)
-                        {
-                            results.Add(dto);
-                            parsedRunCount++;
-                        }
-                    }
-
-                    retrievedRunCount += pageRetrievedCount;
-
-                    if (pageRetrievedCount == 0)
-                    {
-                        break;
-                    }
-
-                    skip += TestRunPageSize;
-                }
-
-                _logger.LogInformation(
-                    "Retrieved {RetrievedCount} raw TFS test run elements for build {BuildId}.",
-                    retrievedRunCount,
-                    buildId);
-                _logger.LogInformation(
-                    "Parsed {ParsedCount}/{RetrievedCount} TFS test runs for build {BuildId}.",
-                    parsedRunCount,
-                    retrievedRunCount,
-                    buildId);
+                var buildSummary = await GetTestRunsForBuildAsync(config, httpClient, buildId, cancellationToken);
+                buildSummaries.Add(buildSummary);
+                results.AddRange(buildSummary.TestRuns);
             }
 
+            var totalHttpRequestCount = buildSummaries.Sum(summary => summary.HttpRequestCount);
+            var totalPageCount = buildSummaries.Sum(summary => summary.PagesRequested);
+            var totalRawRunCount = buildSummaries.Sum(summary => summary.RawRunCount);
+            var totalDtoCount = buildSummaries.Sum(summary => summary.DtoCount);
             _logger.LogInformation(
-                "Attempted TFS test run retrieval for {AttemptedBuildCount} requested build IDs.",
-                requestedBuildIds.Length);
+                "BUILDQUALITY_TESTRUN_REQUEST_SUMMARY: attemptedBuildCount={AttemptedBuildCount}, httpRequestCount={HttpRequestCount}, pageCount={PageCount}, rawRunCount={RawRunCount}, dtoCount={DtoCount}, elapsedMs={ElapsedMs}",
+                requestedBuildIds.Length,
+                totalHttpRequestCount,
+                totalPageCount,
+                totalRawRunCount,
+                totalDtoCount,
+                overallStopwatch.ElapsedMilliseconds);
 
             return results;
         }, cancellationToken);
@@ -154,10 +102,12 @@ public partial class RealTfsClient
             requestedBuildIds.Length,
             BuildQualityCoverageEndpointPath,
             BuildQualityCoverageApiVersion);
+        var overallStopwatch = Stopwatch.StartNew();
 
         var coverageResults = await ExecuteWithRetryAsync(async () =>
         {
             var coverageResults = new List<CoverageDto>();
+            var buildSummaries = new List<CoverageBuildRetrievalSummary>(requestedBuildIds.Length);
 
             _logger.LogInformation(
                 "Attempting TFS coverage retrieval for {AttemptedBuildCount} requested build IDs.",
@@ -169,13 +119,19 @@ public partial class RealTfsClient
                 var batchResults = await Task.WhenAll(batchTasks);
                 foreach (var result in batchResults)
                 {
-                    coverageResults.AddRange(result);
+                    buildSummaries.Add(result);
+                    coverageResults.AddRange(result.CoverageRows);
                 }
             }
 
+            var totalHttpRequestCount = buildSummaries.Sum(summary => summary.HttpRequestCount);
+            var totalDtoCount = buildSummaries.Sum(summary => summary.RowCount);
             _logger.LogInformation(
-                "Attempted TFS coverage retrieval for {AttemptedBuildCount} requested build IDs.",
-                requestedBuildIds.Length);
+                "BUILDQUALITY_COVERAGE_REQUEST_SUMMARY: attemptedBuildCount={AttemptedBuildCount}, httpRequestCount={HttpRequestCount}, dtoCount={DtoCount}, elapsedMs={ElapsedMs}",
+                requestedBuildIds.Length,
+                totalHttpRequestCount,
+                totalDtoCount,
+                overallStopwatch.ElapsedMilliseconds);
 
             return coverageResults;
         }, cancellationToken);
@@ -188,7 +144,97 @@ public partial class RealTfsClient
         return coverageResults;
     }
 
-    private async Task<List<CoverageDto>> GetCoverageForBuildAsync(
+    private async Task<TestRunBuildRetrievalSummary> GetTestRunsForBuildAsync(
+        TfsConfigEntity config,
+        HttpClient httpClient,
+        int buildId,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation(
+            "Attempting TFS test run retrieval for build {BuildId}.",
+            buildId);
+
+        var buildStopwatch = Stopwatch.StartNew();
+        var skip = 0;
+        var rawRunCount = 0;
+        var parsedRunCount = 0;
+        var pageCount = 0;
+        var testRuns = new List<TestRunDto>();
+
+        while (true)
+        {
+            var url = ProjectUrlWithApiVersionOverride(
+                config,
+                $"{BuildQualityTestRunsEndpointPath}?buildIds={buildId}" +
+                $"&$top={TestRunPageSize}&$skip={skip}",
+                BuildQualityTestRunsApiVersion);
+            _logger.LogDebug(
+                "Requesting TFS test runs page for build {BuildId} via {RequestUrl} (endpoint {EndpointPath}, api-version {ApiVersion}).",
+                buildId,
+                url,
+                BuildQualityTestRunsEndpointPath,
+                BuildQualityTestRunsApiVersion);
+
+            pageCount++;
+            var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "TFS test runs endpoint failed for build {BuildId} via {RequestUrl} (endpoint {EndpointPath}, api-version {ApiVersion}) with status code {StatusCode}.",
+                    buildId,
+                    url,
+                    BuildQualityTestRunsEndpointPath,
+                    BuildQualityTestRunsApiVersion,
+                    (int)response.StatusCode);
+                await HandleHttpErrorsAsync(response, cancellationToken);
+            }
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var pageRetrievedCount = 0;
+            foreach (var run in EnumerateTestRunElements(doc.RootElement))
+            {
+                pageRetrievedCount++;
+                var dto = ParseTestRunDto(run, buildId);
+                if (dto is not null)
+                {
+                    testRuns.Add(dto);
+                    parsedRunCount++;
+                }
+            }
+
+            rawRunCount += pageRetrievedCount;
+
+            if (pageRetrievedCount == 0)
+            {
+                break;
+            }
+
+            skip += TestRunPageSize;
+        }
+
+        _logger.LogInformation(
+            "Retrieved {RetrievedCount} raw TFS test run elements for build {BuildId}.",
+            rawRunCount,
+            buildId);
+        _logger.LogInformation(
+            "Parsed {ParsedCount}/{RetrievedCount} TFS test runs for build {BuildId}.",
+            parsedRunCount,
+            rawRunCount,
+            buildId);
+        _logger.LogInformation(
+            "BUILDQUALITY_TESTRUN_BUILD_SUMMARY: buildId={BuildId}, pageCount={PageCount}, httpRequestCount={HttpRequestCount}, rawRunCount={RawRunCount}, dtoCount={DtoCount}, elapsedMs={ElapsedMs}",
+            buildId,
+            pageCount,
+            pageCount,
+            rawRunCount,
+            parsedRunCount,
+            buildStopwatch.ElapsedMilliseconds);
+
+        return new TestRunBuildRetrievalSummary(testRuns, pageCount, pageCount, rawRunCount, parsedRunCount);
+    }
+
+    private async Task<CoverageBuildRetrievalSummary> GetCoverageForBuildAsync(
         TfsConfigEntity config,
         HttpClient httpClient,
         int buildId,
@@ -197,6 +243,7 @@ public partial class RealTfsClient
         _logger.LogInformation(
             "Attempting TFS coverage retrieval for build {BuildId}.",
             buildId);
+        var buildStopwatch = Stopwatch.StartNew();
 
         var url = ProjectUrlWithApiVersionOverride(
             config,
@@ -212,7 +259,13 @@ public partial class RealTfsClient
                 url,
                 BuildQualityCoverageEndpointPath,
                 BuildQualityCoverageApiVersion);
-            return [];
+            _logger.LogInformation(
+                "BUILDQUALITY_COVERAGE_BUILD_SUMMARY: buildId={BuildId}, httpRequestCount={HttpRequestCount}, rowCount={RowCount}, elapsedMs={ElapsedMs}",
+                buildId,
+                1,
+                0,
+                buildStopwatch.ElapsedMilliseconds);
+            return new CoverageBuildRetrievalSummary([], 1, 0);
         }
 
         if (!response.IsSuccessStatusCode)
@@ -236,7 +289,13 @@ public partial class RealTfsClient
             buildId,
             BuildQualityCoverageEndpointPath,
             BuildQualityCoverageApiVersion);
-        return results;
+        _logger.LogInformation(
+            "BUILDQUALITY_COVERAGE_BUILD_SUMMARY: buildId={BuildId}, httpRequestCount={HttpRequestCount}, rowCount={RowCount}, elapsedMs={ElapsedMs}",
+            buildId,
+            1,
+            results.Count,
+            buildStopwatch.ElapsedMilliseconds);
+        return new CoverageBuildRetrievalSummary(results, 1, results.Count);
     }
 
     private IEnumerable<JsonElement> EnumerateTestRunElements(JsonElement root)
@@ -399,4 +458,16 @@ public partial class RealTfsClient
             ? value
             : null;
     }
+
+    private sealed record TestRunBuildRetrievalSummary(
+        List<TestRunDto> TestRuns,
+        int PagesRequested,
+        int HttpRequestCount,
+        int RawRunCount,
+        int DtoCount);
+
+    private sealed record CoverageBuildRetrievalSummary(
+        List<CoverageDto> CoverageRows,
+        int HttpRequestCount,
+        int RowCount);
 }

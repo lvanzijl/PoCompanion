@@ -456,6 +456,71 @@ public class PipelineSyncStageBuildQualityTests
             Times.Once);
     }
 
+    [TestMethod]
+    public async Task ExecuteAsync_LogsBuildQualityTimingAndCountSummaries()
+    {
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase($"PipelineSyncStageBuildQuality_{Guid.NewGuid()}")
+            .Options;
+
+        await using var dbContext = new PoToolDbContext(options);
+        SeedPipelineDefinition(dbContext, productOwnerId: 1, pipelineDefinitionId: 42);
+
+        var tfsClient = new Mock<ITfsClient>();
+        tfsClient
+            .Setup(client => client.GetPipelineRunsAsync(
+                It.IsAny<int[]>(),
+                It.IsAny<string?>(),
+                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[]
+            {
+                CreatePipelineRun(runId: 1001, pipelineId: 42),
+                CreatePipelineRun(runId: 1002, pipelineId: 42)
+            });
+        tfsClient
+            .Setup(client => client.GetTestRunsByBuildIdsAsync(
+                It.IsAny<IEnumerable<int>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[]
+            {
+                new TestRunDto { BuildId = 1001, ExternalId = 5001, TotalTests = 10, PassedTests = 9, NotApplicableTests = 1 },
+                new TestRunDto { BuildId = 1002, ExternalId = 5002, TotalTests = 4, PassedTests = 4, NotApplicableTests = 0 }
+            });
+        tfsClient
+            .Setup(client => client.GetCoverageByBuildIdsAsync(
+                It.IsAny<IEnumerable<int>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[]
+            {
+                new CoverageDto { BuildId = 1001, CoveredLines = 90, TotalLines = 100 },
+                new CoverageDto { BuildId = 1002, CoveredLines = 20, TotalLines = 50 }
+            });
+
+        var logger = new Mock<ILogger<PipelineSyncStage>>();
+        var stage = new PipelineSyncStage(tfsClient.Object, dbContext, logger.Object);
+
+        var result = await stage.ExecuteAsync(
+            new SyncContext
+            {
+                ProductOwnerId = 1,
+                RootWorkItemIds = [100],
+                PipelineDefinitionIds = [42]
+            },
+            _ => { },
+            CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        AssertLogged(logger, "BUILDQUALITY_TESTRUN_RETRIEVAL_SUMMARY:");
+        AssertLogged(logger, "BUILDQUALITY_COVERAGE_RETRIEVAL_SUMMARY:");
+        AssertLogged(logger, "BUILDQUALITY_TESTRUN_PERSISTENCE_SUMMARY:");
+        AssertLogged(logger, "BUILDQUALITY_COVERAGE_PERSISTENCE_SUMMARY:");
+        AssertLogged(logger, "BUILDQUALITY_CHILD_INGEST_SUMMARY:");
+        AssertLogged(logger, "requestedBuildCount=2");
+        AssertLogged(logger, "persistedRowCount=2");
+    }
+
     private static int GetMaxBuildQualityBuildBatchSize()
     {
         var field = typeof(PipelineSyncStage).GetField(
@@ -526,5 +591,17 @@ public class PipelineSyncStageBuildQualityTests
             Branch: "refs/heads/main",
             RequestedFor: "Build User",
             RetrievedAt: DateTimeOffset.UtcNow);
+    }
+
+    private static void AssertLogged(Mock<ILogger<PipelineSyncStage>> logger, string messageFragment)
+    {
+        logger.Verify(
+            instance => instance.Log(
+                It.IsAny<LogLevel>(),
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains(messageFragment, StringComparison.Ordinal)),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
     }
 }
