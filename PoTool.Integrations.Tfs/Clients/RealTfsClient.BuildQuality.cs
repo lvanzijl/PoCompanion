@@ -202,9 +202,15 @@ public partial class RealTfsClient
             foreach (var run in EnumerateTestRunElements(doc.RootElement))
             {
                 pageRetrievedCount++;
-                var hasBuildId = TryGetBuildIdFromTestRun(run, out _);
-                var hasBuildUri = TryGetBuildUriFromTestRun(run, out _);
-                if (!MatchesRequestedBuild(run, buildId, requestedBuildUri))
+                var hasBuildId = TryGetBuildIdFromTestRun(run, out var runBuildId);
+                var hasBuildUri = TryGetBuildUriFromTestRun(run, out var runBuildUri);
+                if (!MatchesRequestedBuild(
+                        requestedBuildId: buildId,
+                        requestedBuildUri: requestedBuildUri,
+                        hasBuildId: hasBuildId,
+                        runBuildId: runBuildId,
+                        hasBuildUri: hasBuildUri,
+                        runBuildUri: runBuildUri))
                 {
                     _logger.LogDebug(
                         "Skipping TFS test run for requested build {BuildId} because the payload build linkage does not match (hasBuildId={HasBuildId}, hasBuildUri={HasBuildUri}).",
@@ -462,15 +468,19 @@ public partial class RealTfsClient
         };
     }
 
-    private bool MatchesRequestedBuild(JsonElement run, int requestedBuildId, string requestedBuildUri)
+    private static bool MatchesRequestedBuild(
+        int requestedBuildId,
+        string requestedBuildUri,
+        bool hasBuildId,
+        int runBuildId,
+        bool hasBuildUri,
+        string runBuildUri)
     {
-        var hasBuildId = TryGetBuildIdFromTestRun(run, out var runBuildId);
         if (hasBuildId)
         {
             return runBuildId == requestedBuildId;
         }
 
-        var hasBuildUri = TryGetBuildUriFromTestRun(run, out var runBuildUri);
         if (hasBuildUri)
         {
             return string.Equals(runBuildUri, requestedBuildUri, StringComparison.OrdinalIgnoreCase);
