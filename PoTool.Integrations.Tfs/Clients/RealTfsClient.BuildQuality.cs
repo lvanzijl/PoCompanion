@@ -12,8 +12,7 @@ public partial class RealTfsClient
     private const string BuildQualityCoverageEndpointPath = "_apis/testresults/codecoverage";
     private const string BuildQualityTestRunsApiVersion = "7.0";
     private const string BuildQualityCoverageApiVersion = "7.0-preview";
-    private const string BuildQualityTestRunsQueryShape = "buildIds";
-    private const int TestRunPageSize = 200;
+    private const string BuildQualityTestRunsQueryShape = "buildUri";
 
     public async Task<IEnumerable<TestRunDto>> GetTestRunsByBuildIdsAsync(
         IEnumerable<int> buildIds,
@@ -58,14 +57,12 @@ public partial class RealTfsClient
             }
 
             var totalHttpRequestCount = buildSummaries.Sum(summary => summary.HttpRequestCount);
-            var totalPageCount = buildSummaries.Sum(summary => summary.PagesRequested);
             var totalRawRunCount = buildSummaries.Sum(summary => summary.RawRunCount);
             var totalDtoCount = buildSummaries.Sum(summary => summary.DtoCount);
             _logger.LogInformation(
-                "BUILDQUALITY_TESTRUN_REQUEST_SUMMARY: attemptedBuildCount={AttemptedBuildCount}, httpRequestCount={HttpRequestCount}, pageCount={PageCount}, rawRunCount={RawRunCount}, dtoCount={DtoCount}, elapsedMs={ElapsedMs}",
+                "BUILDQUALITY_TESTRUN_REQUEST_SUMMARY: attemptedBuildCount={AttemptedBuildCount}, httpRequestCount={HttpRequestCount}, rawRunCount={RawRunCount}, dtoCount={DtoCount}, elapsedMs={ElapsedMs}",
                 requestedBuildIds.Length,
                 totalHttpRequestCount,
-                totalPageCount,
                 totalRawRunCount,
                 totalDtoCount,
                 overallStopwatch.ElapsedMilliseconds);
@@ -159,111 +156,104 @@ public partial class RealTfsClient
             BuildQualityTestRunsQueryShape);
 
         var buildStopwatch = Stopwatch.StartNew();
-        var requestedBuildUri = $"vstfs:///Build/Build/{buildId}";
-        var skip = 0;
-        var rawRunCount = 0;
-        var parsedRunCount = 0;
-        var pageCount = 0;
-        var testRuns = new List<TestRunDto>();
+        var url = ProjectUrlWithApiVersionOverride(
+            config,
+            $"{BuildQualityTestRunsEndpointPath}?buildUri={Uri.EscapeDataString($"vstfs:///Build/Build/{buildId}")}",
+            BuildQualityTestRunsApiVersion);
+        _logger.LogDebug(
+            "Requesting aggregated TFS test run for build {BuildId} via {RequestUrl} (endpoint {EndpointPath}, query shape {QueryShape}, api-version {ApiVersion}).",
+            buildId,
+            url,
+            BuildQualityTestRunsEndpointPath,
+            BuildQualityTestRunsQueryShape,
+            BuildQualityTestRunsApiVersion);
 
-        while (true)
+        var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
+        if (!response.IsSuccessStatusCode)
         {
-            var url = ProjectUrlWithApiVersionOverride(
-                config,
-                $"{BuildQualityTestRunsEndpointPath}?buildIds={buildId}" +
-                $"&$top={TestRunPageSize}&$skip={skip}",
-                BuildQualityTestRunsApiVersion);
-            _logger.LogDebug(
-                "Requesting TFS test runs page for build {BuildId} via {RequestUrl} (endpoint {EndpointPath}, query shape {QueryShape}, api-version {ApiVersion}).",
+            _logger.LogWarning(
+                "TFS test runs endpoint failed for build {BuildId} via {RequestUrl} (endpoint {EndpointPath}, query shape {QueryShape}, api-version {ApiVersion}) with status code {StatusCode}.",
                 buildId,
                 url,
                 BuildQualityTestRunsEndpointPath,
                 BuildQualityTestRunsQueryShape,
-                BuildQualityTestRunsApiVersion);
+                BuildQualityTestRunsApiVersion,
+                (int)response.StatusCode);
+            await HandleHttpErrorsAsync(response, cancellationToken);
+        }
 
-            pageCount++;
-            var response = await SendGetAsync(httpClient, config, url, cancellationToken, handleErrors: false);
-            if (!response.IsSuccessStatusCode)
+        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        var aggregatedRuns = EnumerateTestRunElements(doc.RootElement).ToList();
+        var testRuns = new List<TestRunDto>(capacity: 1);
+
+        if (aggregatedRuns.Count > 0)
+        {
+            var run = aggregatedRuns[0];
+            if (!TryGetIntProperty(run, "totalTests", out var totalTests) ||
+                !TryGetIntProperty(run, "passedTests", out var passedTests) ||
+                !TryGetIntProperty(run, "notApplicableTests", out var notApplicableTests))
             {
                 _logger.LogWarning(
-                    "TFS test runs endpoint failed for build {BuildId} via {RequestUrl} (endpoint {EndpointPath}, query shape {QueryShape}, api-version {ApiVersion}) with status code {StatusCode}.",
-                    buildId,
-                    url,
-                    BuildQualityTestRunsEndpointPath,
-                    BuildQualityTestRunsQueryShape,
-                    BuildQualityTestRunsApiVersion,
-                    (int)response.StatusCode);
-                await HandleHttpErrorsAsync(response, cancellationToken);
+                    "Skipping aggregated TFS test run payload for build {BuildId} because one or more required raw counters are missing.",
+                    buildId);
             }
-
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-            var pageRetrievedCount = 0;
-            foreach (var run in EnumerateTestRunElements(doc.RootElement))
+            else
             {
-                pageRetrievedCount++;
-                var hasBuildId = TryGetBuildIdFromTestRun(run, out var runBuildId);
-                var hasBuildUri = TryGetBuildUriFromTestRun(run, out var runBuildUri);
-                if (!MatchesRequestedBuild(
-                        requestedBuildId: buildId,
-                        requestedBuildUri: requestedBuildUri,
-                        hasBuildId: hasBuildId,
-                        runBuildId: runBuildId,
-                        hasBuildUri: hasBuildUri,
-                        runBuildUri: runBuildUri))
+                _ = TryGetIntProperty(run, "id", out var externalId);
+                testRuns.Add(new TestRunDto
                 {
-                    _logger.LogDebug(
-                        "Skipping TFS test run for requested build {BuildId} because the payload build linkage does not match (hasBuildId={HasBuildId}, hasBuildUri={HasBuildUri}).",
-                        buildId,
-                        hasBuildId,
-                        hasBuildUri);
-                    continue;
-                }
-
-                var dto = ParseTestRunDto(run, buildId);
-                if (dto is not null)
-                {
-                    testRuns.Add(dto);
-                    parsedRunCount++;
-                }
+                    BuildId = buildId,
+                    ExternalId = externalId,
+                    TotalTests = totalTests,
+                    PassedTests = passedTests,
+                    NotApplicableTests = notApplicableTests,
+                    Timestamp = TryGetDateTimeOffsetProperty(run, "completedDate")
+                });
             }
+        }
 
-            rawRunCount += pageRetrievedCount;
-
-            if (pageRetrievedCount == 0)
-            {
-                break;
-            }
-
-            skip += TestRunPageSize;
+        if (testRuns.Count > 0)
+        {
+            var retrievedRun = testRuns[0];
+            _logger.LogInformation(
+                "Build {BuildId} -> 1 aggregated run retrieved (Total={TotalTests}, Passed={PassedTests}, NotApplicable={NotApplicableTests}).",
+                buildId,
+                retrievedRun.TotalTests,
+                retrievedRun.PassedTests,
+                retrievedRun.NotApplicableTests);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Build {BuildId} -> 0 aggregated runs retrieved.",
+                buildId);
         }
 
         _logger.LogInformation(
             "Retrieved {RetrievedCount} raw TFS test run elements for build {BuildId} via {EndpointPath} with query shape {QueryShape}.",
-            rawRunCount,
+            aggregatedRuns.Count,
             buildId,
             BuildQualityTestRunsEndpointPath,
             BuildQualityTestRunsQueryShape);
         _logger.LogInformation(
-            "Parsed {ParsedCount}/{RetrievedCount} TFS test runs for build {BuildId} via {EndpointPath} with query shape {QueryShape}.",
-            parsedRunCount,
-            rawRunCount,
+            "Parsed {ParsedCount}/{RetrievedCount} aggregated TFS test runs for build {BuildId} via {EndpointPath} with query shape {QueryShape}.",
+            testRuns.Count,
+            aggregatedRuns.Count,
             buildId,
             BuildQualityTestRunsEndpointPath,
             BuildQualityTestRunsQueryShape);
-        var httpRequestCount = pageCount;
         _logger.LogInformation(
-            "BUILDQUALITY_TESTRUN_BUILD_SUMMARY: buildId={BuildId}, endpointPath={EndpointPath}, queryShape={QueryShape}, pageCount={PageCount}, httpRequestCount={HttpRequestCount}, rawRunCount={RawRunCount}, dtoCount={DtoCount}, elapsedMs={ElapsedMs}",
+            "BUILDQUALITY_TESTRUN_BUILD_SUMMARY: buildId={BuildId}, endpointPath={EndpointPath}, queryShape={QueryShape}, httpRequestCount={HttpRequestCount}, rawRunCount={RawRunCount}, dtoCount={DtoCount}, elapsedMs={ElapsedMs}",
             buildId,
             BuildQualityTestRunsEndpointPath,
             BuildQualityTestRunsQueryShape,
-            pageCount,
-            httpRequestCount,
-            rawRunCount,
-            parsedRunCount,
+            1,
+            aggregatedRuns.Count,
+            testRuns.Count,
             buildStopwatch.ElapsedMilliseconds);
 
-        return new TestRunBuildRetrievalSummary(testRuns, pageCount, httpRequestCount, rawRunCount, parsedRunCount);
+        return new TestRunBuildRetrievalSummary(testRuns, 1, aggregatedRuns.Count, testRuns.Count);
     }
 
     private async Task<CoverageBuildRetrievalSummary> GetCoverageForBuildAsync(
@@ -363,37 +353,6 @@ public partial class RealTfsClient
         return $"{config.Url.TrimEnd('/')}/{encodedProject}/{path}{separator}api-version={Uri.EscapeDataString(apiVersion)}";
     }
 
-    private TestRunDto? ParseTestRunDto(JsonElement run, int requestedBuildId)
-    {
-        // TFS test run responses retrieved per build may omit run.build.id, so the
-        // current requested build context is the authoritative fallback for linkage.
-        var buildId = TryGetBuildIdFromTestRun(run, out var resolvedBuildId)
-            ? resolvedBuildId
-            : requestedBuildId;
-
-        if (!TryGetIntProperty(run, "totalTests", out var totalTests) ||
-            !TryGetIntProperty(run, "passedTests", out var passedTests) ||
-            !TryGetIntProperty(run, "notApplicableTests", out var notApplicableTests))
-        {
-            _logger.LogWarning(
-                "Skipping TFS test run payload for build {BuildId} because one or more required raw counters are missing.",
-                buildId);
-            return null;
-        }
-
-        _ = TryGetIntProperty(run, "id", out var externalId);
-
-        return new TestRunDto
-        {
-            BuildId = buildId,
-            ExternalId = externalId,
-            TotalTests = totalTests,
-            PassedTests = passedTests,
-            NotApplicableTests = notApplicableTests,
-            Timestamp = TryGetDateTimeOffsetProperty(run, "completedDate")
-        };
-    }
-
     private IEnumerable<CoverageDto> ParseCoverageDtos(JsonElement summary, int buildId)
     {
         if (!summary.TryGetProperty("coverageData", out var coverageData) ||
@@ -446,61 +405,6 @@ public partial class RealTfsClient
         }
     }
 
-    private bool TryGetBuildIdFromTestRun(JsonElement run, out int buildId)
-    {
-        buildId = default;
-        if (!run.TryGetProperty("build", out var buildReference) ||
-            !buildReference.TryGetProperty("id", out var buildIdElement))
-        {
-            return false;
-        }
-
-        return buildIdElement.ValueKind switch
-        {
-            JsonValueKind.Number => buildIdElement.TryGetInt32(out buildId),
-            JsonValueKind.String => int.TryParse(buildIdElement.GetString(), out buildId),
-            _ => false
-        };
-    }
-
-    private static bool MatchesRequestedBuild(
-        int requestedBuildId,
-        string requestedBuildUri,
-        bool hasBuildId,
-        int runBuildId,
-        bool hasBuildUri,
-        string runBuildUri)
-    {
-        if (hasBuildId)
-        {
-            return runBuildId == requestedBuildId;
-        }
-
-        if (hasBuildUri)
-        {
-            return string.Equals(runBuildUri, requestedBuildUri, StringComparison.OrdinalIgnoreCase);
-        }
-
-        return false;
-    }
-
-    private static bool TryGetBuildUriFromTestRun(JsonElement run, out string buildUri)
-    {
-        buildUri = string.Empty;
-
-        if (TryGetStringProperty(run, "buildUri", out buildUri))
-        {
-            return true;
-        }
-
-        if (!run.TryGetProperty("build", out var buildReference))
-        {
-            return false;
-        }
-
-        return TryGetStringProperty(buildReference, "uri", out buildUri);
-    }
-
     private static bool TryGetIntProperty(JsonElement element, string propertyName, out int value)
     {
         value = default;
@@ -529,27 +433,8 @@ public partial class RealTfsClient
             : null;
     }
 
-    private static bool TryGetStringProperty(JsonElement element, string propertyName, out string value)
-    {
-        value = string.Empty;
-        if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.String)
-        {
-            return false;
-        }
-
-        var propertyValue = property.GetString();
-        if (string.IsNullOrWhiteSpace(propertyValue))
-        {
-            return false;
-        }
-
-        value = propertyValue;
-        return true;
-    }
-
     private sealed record TestRunBuildRetrievalSummary(
         List<TestRunDto> TestRuns,
-        int PagesRequested,
         int HttpRequestCount,
         int RawRunCount,
         int DtoCount);
