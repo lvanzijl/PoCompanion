@@ -5,12 +5,14 @@
 @using System.Web
 @using PoTool.Client.ApiClient
 @inherits WorkspaceBase
+@implements IDisposable
 @inject INavigationContextService NavigationContextService
 @inject WorkItemService WorkItemService
 @inject StateClassificationService StateClassificationService
 @inject TeamService TeamService
 @inject SprintService SprintService
 @inject IPullRequestsClient PullRequestsClient
+@inject IBuildQualityService BuildQualityService
 
 @* 
     Decision #3: Time Horizon Default - Configurable sprint range (defaults to last 6 months if no sprints selected)
@@ -153,7 +155,24 @@
                                         Icon="@Icons.Material.Filled.BugReport"
                                         IconColor="Color.Error"
                                         AriaLabel="Bug Trend — Bug patterns over time"
-                                        OnClick="NavigateToBugTrend" />
+                                        OnClick="NavigateToBugTrend">
+                        @if (_bugTrendSignal?.HasTrendValues == true)
+                        {
+                            <TrendSlopeBadge StartValue="@_bugTrendSignal.StartValue"
+                                             EndValue="@_bugTrendSignal.EndValue"
+                                             LowerIsBetter="true"
+                                             MetricLabel="bug creation rate"
+                                             PositiveLabel="Decreasing"
+                                             NegativeLabel="Increasing"
+                                             NeutralLabel="Stable" />
+                        }
+                        else if (_bugTrendSignal?.FallbackSignal is not null)
+                        {
+                            <WorkspaceTileBadge Signal="@_bugTrendSignal.FallbackSignal"
+                                               AriaLabel="Bug Trend signal status"
+                                               Class="mt-1" />
+                        }
+                    </NavigationTileCard>
                 </MudItem>
 
                 @* PR Trend Signal (Read-Only) *@
@@ -167,10 +186,19 @@
                         @* Slope badge: summarises median time-to-merge over the selected horizon.
                            Median TTM is chosen as the primary signal because it captures end-to-end
                            flow efficiency and is the most actionable metric for a PO. *@
-                        <TrendSlopeBadge StartValue="@_prTtmSlopeStart"
-                                         EndValue="@_prTtmSlopeEnd"
-                                         LowerIsBetter="true"
-                                         MetricLabel="median time to merge" />
+                        @if (_prTrendSignal?.HasTrendValues == true)
+                        {
+                            <TrendSlopeBadge StartValue="@_prTrendSignal.StartValue"
+                                             EndValue="@_prTrendSignal.EndValue"
+                                             LowerIsBetter="true"
+                                             MetricLabel="median time to merge" />
+                        }
+                        else if (_prTrendSignal?.FallbackSignal is not null)
+                        {
+                            <WorkspaceTileBadge Signal="@_prTrendSignal.FallbackSignal"
+                                               AriaLabel="PR Trend signal status"
+                                               Class="mt-1" />
+                        }
                         <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
                     </NavigationTileCard>
                 </MudItem>
@@ -183,6 +211,12 @@
                                         IconColor="Color.Warning"
                                         AriaLabel="Pipeline Insights — PO-first sprint stability per product"
                                         OnClick="NavigateToPipelineInsights">
+                        @if (_pipelineSignal is not null)
+                        {
+                            <WorkspaceTileBadge Signal="@_pipelineSignal"
+                                               AriaLabel="Pipeline Insights signal status"
+                                               Class="mt-1" />
+                        }
                         <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
                     </NavigationTileCard>
                 </MudItem>
@@ -295,9 +329,10 @@
     private Dictionary<string, int> _bugTrendFixed = new();   // Bugs moved to Done in that month
     private Dictionary<string, int> _bugTrendAdded = new();   // Bugs created in that month
 
-    // PR slope badge: first/last median time-to-merge values over the selected sprint horizon
-    private double? _prTtmSlopeStart;
-    private double? _prTtmSlopeEnd;
+    private TrendTileSignal? _bugTrendSignal;
+    private TrendTileSignal? _prTrendSignal;
+    private StatusTileSignal? _pipelineSignal;
+    private CancellationTokenSource? _tileSignalLoadCts;
     
     protected override async Task OnInitializedAsync()
     {
@@ -331,8 +366,9 @@
             
             // Load bug trend data with calculated date range
             await LoadBugTrendDataAsync();
-            
+             
             UpdateBreadcrumbs();
+            StartDynamicTileSignalLoad();
         }
         catch (Exception ex)
         {
@@ -341,6 +377,43 @@
         finally
         {
             _isLoading = false;
+        }
+    }
+
+    private void StartDynamicTileSignalLoad()
+    {
+        CancelTileSignalLoad();
+        _prTrendSignal = null;
+        _pipelineSignal = null;
+
+        if (!_profileId.HasValue)
+        {
+            return;
+        }
+
+        var cancellationTokenSource = new CancellationTokenSource();
+        _tileSignalLoadCts = cancellationTokenSource;
+        _ = LoadDynamicTileSignalsAsync(cancellationTokenSource.Token);
+    }
+
+    private async Task LoadDynamicTileSignalsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var prTrendTask = LoadPrTrendSignalAsync(cancellationToken);
+            var pipelineTask = LoadPipelineSignalAsync(cancellationToken);
+
+            await Task.WhenAll(prTrendTask, pipelineTask);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                await InvokeAsync(StateHasChanged);
+            }
         }
     }
     
@@ -437,6 +510,8 @@
             Console.WriteLine($"Failed to load bug trend data: {ex.Message}");
             // Keep empty dictionaries on failure
         }
+
+        _bugTrendSignal = TrendsWorkspaceTileSignalService.GetBugTrendSignal(_bugTrendAdded);
     }
     
     /// <summary>
@@ -561,16 +636,16 @@
     }
 
     /// <summary>
-    /// Loads median time-to-merge data for the selected sprint range to populate the PR Trend slope badge.
+    /// Loads median time-to-merge data for the selected sprint range to populate the PR Trend tile signal.
     /// Only called when both from/to sprints are selected.
     /// </summary>
-    private async Task LoadPrSprintTrendSlopeAsync()
+    private async Task LoadPrTrendSignalAsync(CancellationToken cancellationToken)
     {
-        _prTtmSlopeStart = null;
-        _prTtmSlopeEnd = null;
-
         if (!_selectedFromSprintId.HasValue || !_selectedToSprintId.HasValue || _sprints.Count == 0)
+        {
+            _prTrendSignal = null;
             return;
+        }
 
         try
         {
@@ -578,11 +653,15 @@
             var toSprint = _sprints.FirstOrDefault(s => s.Id == _selectedToSprintId.Value);
 
             if (fromSprint == null || toSprint == null)
+            {
+                _prTrendSignal = null;
                 return;
+            }
 
-            // Ensure ordering
             if (fromSprint.StartUtc > toSprint.StartUtc)
+            {
                 (fromSprint, toSprint) = (toSprint, fromSprint);
+            }
 
             var selectedSprintIds = _sprints
                 .Where(s => s.StartUtc >= fromSprint.StartUtc && s.StartUtc <= toSprint.StartUtc)
@@ -590,25 +669,56 @@
                 .ToList();
 
             if (selectedSprintIds.Count == 0)
+            {
+                _prTrendSignal = null;
                 return;
+            }
 
             var response = await PullRequestsClient.GetSprintTrendsAsync(
                 selectedSprintIds,
                 productIds: null,
                 teamId: _selectedTeamId,
-                CancellationToken.None);
+                cancellationToken);
 
-            if (response?.Success == true && response.Sprints.Count > 0)
-            {
-                var ordered = response.Sprints.OrderBy(s => s.StartUtc ?? DateTimeOffset.MaxValue).ToList();
-                _prTtmSlopeStart = ordered.FirstOrDefault(s => s.MedianTimeToMergeHours.HasValue)?.MedianTimeToMergeHours;
-                _prTtmSlopeEnd = ordered.LastOrDefault(s => s.MedianTimeToMergeHours.HasValue)?.MedianTimeToMergeHours;
-            }
+            _prTrendSignal = TrendsWorkspaceTileSignalService.GetPrTrendSignal(
+                response?.Success == true ? response.Sprints : null);
+        }
+        catch (OperationCanceledException)
+        {
         }
         catch (Exception ex)
         {
-            // Non-blocking: slope badge simply stays hidden on error
             Console.WriteLine($"PR slope badge load failed: {ex.Message}");
+            _prTrendSignal = TrendTileSignal.WithFallback(
+                StatusTileSignal.NoData("PR trend data is unavailable right now."));
+        }
+    }
+
+    private async Task LoadPipelineSignalAsync(CancellationToken cancellationToken)
+    {
+        if (!_profileId.HasValue)
+        {
+            _pipelineSignal = null;
+            return;
+        }
+
+        try
+        {
+            var buildQualityPage = await BuildQualityService.GetRollingWindowAsync(
+                _profileId.Value,
+                _fromDate,
+                _toDate,
+                cancellationToken);
+
+            _pipelineSignal = TrendsWorkspaceTileSignalService.GetPipelineSignal(buildQualityPage, ProductId);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Pipeline signal load failed: {ex.Message}");
+            _pipelineSignal = StatusTileSignal.NoData("Pipeline signal is unavailable right now.");
         }
     }
     
@@ -674,9 +784,8 @@
         _selectedFromSprintId = null;
         _selectedToSprintId = null;
         _sprints.Clear();
-        _prTtmSlopeStart = null;
-        _prTtmSlopeEnd = null;
-        
+        _prTrendSignal = null;
+         
         if (teamId.HasValue)
         {
             await LoadSprintsForTeamAsync(teamId.Value);
@@ -685,6 +794,7 @@
         CalculateDateRange();
         UpdateSprintUrlParameters();
         await LoadBugTrendDataAsync();
+        StartDynamicTileSignalLoad();
         StateHasChanged();
     }
     
@@ -696,7 +806,8 @@
         _selectedFromSprintId = sprintId;
         CalculateDateRange();
         UpdateSprintUrlParameters();
-        await Task.WhenAll(LoadBugTrendDataAsync(), LoadPrSprintTrendSlopeAsync());
+        await LoadBugTrendDataAsync();
+        StartDynamicTileSignalLoad();
         StateHasChanged();
     }
     
@@ -708,7 +819,8 @@
         _selectedToSprintId = sprintId;
         CalculateDateRange();
         UpdateSprintUrlParameters();
-        await Task.WhenAll(LoadBugTrendDataAsync(), LoadPrSprintTrendSlopeAsync());
+        await LoadBugTrendDataAsync();
+        StartDynamicTileSignalLoad();
         StateHasChanged();
     }
     
@@ -719,5 +831,17 @@
     {
         var months = ((toDate.Year - fromDate.Year) * 12) + toDate.Month - fromDate.Month + 1;
         return Math.Max(1, Math.Min(months, 12)); // Cap at 12 months for performance
+    }
+
+    private void CancelTileSignalLoad()
+    {
+        _tileSignalLoadCts?.Cancel();
+        _tileSignalLoadCts?.Dispose();
+        _tileSignalLoadCts = null;
+    }
+
+    public void Dispose()
+    {
+        CancelTileSignalLoad();
     }
 }

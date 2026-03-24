@@ -1,0 +1,54 @@
+@using PoTool.Client.Services
+
+@if (Signal is not null)
+{
+    <MudTooltip Text="@Signal.Tooltip">
+        <MudChip T="string"
+                 Size="Size.Small"
+                 Color="@GetColor(Signal.Tone)"
+                 Icon="@GetIcon(Signal.Kind)"
+                 aria-label="@GetAriaLabel()"
+                 Class="@ChipClass">
+            @Signal.Label
+        </MudChip>
+    </MudTooltip>
+}
+
+@code {
+    [Parameter]
+    public StatusTileSignal? Signal { get; set; }
+
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    private string ChipClass =>
+        string.IsNullOrWhiteSpace(Class)
+            ? "trend-slope-badge"
+            : $"trend-slope-badge {Class}";
+
+    private string GetAriaLabel()
+    {
+        return !string.IsNullOrWhiteSpace(AriaLabel)
+            ? AriaLabel
+            : $"{Signal?.Label ?? "Signal"} badge";
+    }
+
+    private static Color GetColor(TileSignalTone tone) =>
+        tone switch
+        {
+            TileSignalTone.Negative => Color.Error,
+            _ => Color.Default
+        };
+
+    private static string GetIcon(TileSignalKind kind) =>
+        kind switch
+        {
+            TileSignalKind.Stable => Icons.Material.Filled.TrendingFlat,
+            TileSignalKind.Unstable => Icons.Material.Filled.TrendingUp,
+            TileSignalKind.InsufficientData => Icons.Material.Filled.HorizontalRule,
+            _ => Icons.Material.Filled.Info
+        };
+}
