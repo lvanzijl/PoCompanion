@@ -46,4 +46,7 @@ public static class BuildQualityPresentation
             _ => "No evidence is available for this metric."
         };
     }
+
+    public static string FormatThresholdStatus(bool thresholdMet) =>
+        thresholdMet ? "met" : "not met";
 }

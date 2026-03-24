@@ -30,4 +30,11 @@ public sealed class BuildQualityPresentationTests
 
         Assert.AreEqual("No coverage data is available in scope.", message);
     }
+
+    [TestMethod]
+    public void FormatThresholdStatus_ReturnsFriendlyStateLabel()
+    {
+        Assert.AreEqual("met", BuildQualityPresentation.FormatThresholdStatus(true));
+        Assert.AreEqual("not met", BuildQualityPresentation.FormatThresholdStatus(false));
+    }
 }
