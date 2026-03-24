@@ -2,6 +2,14 @@
   {
     "date": "2026-03-24",
     "type": "Changed",
+    "title": "Trends workspace tiles now show live signal badges",
+    "impact": "The Trends workspace now shows lightweight PR, bug, and pipeline signal badges with graceful fallback states so you can see where attention is needed before opening a detail page.",
+    "area": "Trends",
+    "link": "/home/trends"
+  },
+  {
+    "date": "2026-03-24",
+    "type": "Changed",
     "title": "Health routes and labels are now consistent",
     "impact": "Health now uses consistent Overview and Backlog Health labels, with Backlog Health living at /home/health/backlog-health while the old backlog URL still works for bookmarks.",
     "area": "Health",
