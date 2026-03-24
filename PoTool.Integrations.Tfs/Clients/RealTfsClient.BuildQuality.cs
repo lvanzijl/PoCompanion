@@ -305,12 +305,22 @@ public partial class RealTfsClient
         using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
         var results = ParseCoverageDtos(doc.RootElement, buildId).ToList();
-        _logger.LogInformation(
-            "Retrieved {ResultCount} TFS coverage rows for build {BuildId} via {EndpointPath} with api-version {ApiVersion}.",
-            results.Count,
-            buildId,
-            BuildQualityCoverageEndpointPath,
-            BuildQualityCoverageApiVersion);
+        if (results.Count > 0)
+        {
+            var coverage = results[0];
+            _logger.LogInformation(
+                "Build {BuildId} -> coverage retrieved (Covered={CoveredLines}, Total={TotalLines}).",
+                buildId,
+                coverage.CoveredLines,
+                coverage.TotalLines);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Build {BuildId} -> no coverage data.",
+                buildId);
+        }
+
         _logger.LogInformation(
             "BUILDQUALITY_COVERAGE_BUILD_SUMMARY: buildId={BuildId}, httpRequestCount={HttpRequestCount}, rowCount={RowCount}, elapsedMs={ElapsedMs}",
             buildId,
@@ -358,8 +368,32 @@ public partial class RealTfsClient
         if (!summary.TryGetProperty("coverageData", out var coverageData) ||
             coverageData.ValueKind != JsonValueKind.Array)
         {
+            _logger.LogWarning(
+                "Build {BuildId} -> no coverage data because the payload does not contain a coverageData array.",
+                buildId);
             yield break;
         }
+
+        var coverageEntryCount = coverageData.GetArrayLength();
+        if (coverageEntryCount == 0)
+        {
+            _logger.LogWarning(
+                "Build {BuildId} -> no coverage data because the payload contains no coverageData entries.",
+                buildId);
+            yield break;
+        }
+
+        if (coverageEntryCount > 1)
+        {
+            _logger.LogWarning(
+                "Build {BuildId} -> received multiple coverageData entries; attempting to use the first valid Lines stat only.",
+                buildId);
+        }
+
+        var sawCoverageStats = false;
+        var sawLinesStat = false;
+        var sawMissingCoveredOrTotal = false;
+        var sawInvalidNumericIntegrity = false;
 
         foreach (var coverageEntry in coverageData.EnumerateArray())
         {
@@ -369,6 +403,7 @@ public partial class RealTfsClient
                 continue;
             }
 
+            sawCoverageStats = true;
             JsonElement? linesStat = null;
             foreach (var coverageStat in coverageStats.EnumerateArray())
             {
@@ -385,14 +420,26 @@ public partial class RealTfsClient
                     string.Equals(label, "Lines", StringComparison.OrdinalIgnoreCase))
                 {
                     linesStat = coverageStat;
+                    sawLinesStat = true;
                     break;
                 }
             }
 
-            if (!linesStat.HasValue ||
-                !TryGetIntProperty(linesStat.Value, "covered", out var coveredLines) ||
+            if (!linesStat.HasValue)
+            {
+                continue;
+            }
+
+            if (!TryGetIntProperty(linesStat.Value, "covered", out var coveredLines) ||
                 !TryGetIntProperty(linesStat.Value, "total", out var totalLines))
             {
+                sawMissingCoveredOrTotal = true;
+                continue;
+            }
+
+            if (coveredLines < 0 || totalLines < 0 || coveredLines > totalLines)
+            {
+                sawInvalidNumericIntegrity = true;
                 continue;
             }
 
@@ -402,6 +449,38 @@ public partial class RealTfsClient
                 CoveredLines = coveredLines,
                 TotalLines = totalLines
             };
+            yield break;
+        }
+
+        if (!sawCoverageStats)
+        {
+            _logger.LogWarning(
+                "Build {BuildId} -> no coverage data because no coverageStats array was found.",
+                buildId);
+            yield break;
+        }
+
+        if (!sawLinesStat)
+        {
+            _logger.LogWarning(
+                "Build {BuildId} -> no coverage data because no Lines coverage stat was found.",
+                buildId);
+            yield break;
+        }
+
+        if (sawMissingCoveredOrTotal)
+        {
+            _logger.LogWarning(
+                "Build {BuildId} -> no coverage data because the Lines coverage stat is missing covered or total values.",
+                buildId);
+            yield break;
+        }
+
+        if (sawInvalidNumericIntegrity)
+        {
+            _logger.LogWarning(
+                "Build {BuildId} -> no coverage data because the Lines coverage stat has invalid numeric values.",
+                buildId);
         }
     }
 
