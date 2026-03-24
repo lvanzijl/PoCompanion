@@ -408,6 +408,10 @@
         catch (OperationCanceledException)
         {
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Trend tile signal load failed: {ex.Message}");
+        }
         finally
         {
             if (!cancellationToken.IsCancellationRequested)

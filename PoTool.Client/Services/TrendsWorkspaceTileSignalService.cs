@@ -11,6 +11,7 @@ public static class TrendsWorkspaceTileSignalService
     {
         var orderedValues = sprints?
             .OrderBy(sprint => sprint.StartUtc ?? DateTimeOffset.MaxValue)
+            .ThenBy(sprint => sprint.SprintId)
             .Select(sprint => sprint.MedianTimeToMergeHours);
 
         return BuildTrendSignal(
