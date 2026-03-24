@@ -37,7 +37,7 @@ Notes:
 
 | Tile | Classification | Basis |
 |---|---|---|
-| Bug Trend | DYNAMIC | Adds a `TrendSlopeBadge` when recent bug-added periods are available, otherwise falls back to a runtime status badge. |
+| Bug Trend | DYNAMIC | Adds a `TrendSlopeBadge` when recent bug-creation periods are available, otherwise falls back to a runtime status badge. |
 | PR Trend | DYNAMIC | Adds a `TrendSlopeBadge` driven by runtime PR trend data when enough sprint context exists. |
 | Pipeline Insights | DYNAMIC | Adds a runtime `WorkspaceTileBadge` based on Build Quality evidence when a stable/unstable/no-data signal is available. |
 | PR Delivery Insights | STATIC | Fixed title/subtitle plus a static `Read-only` chip. No live friction/count signal on the tile. |
@@ -57,9 +57,9 @@ Three workspace-entry tiles currently behave as dynamic, signal-driven tiles ins
 
 ### Trends → Bug Trend
 
-- **Code location:** `PoTool.Client/Pages/Home/TrendsWorkspace.razor:151-175`, `:435-519`
+- **Code location:** `PoTool.Client/Pages/Home/TrendsWorkspace.razor:151-175,435-519`
 - **Dynamic elements:** `TrendSlopeBadge` or `WorkspaceTileBadge`
-- **Data source:** bug-added series derived from `WorkItemService.GetAllWithValidationAsync()`
+- **Data source:** bug-creation series derived from `WorkItemService.GetAllWithValidationAsync()`
 - **Driving values:** the two most recent monthly bug-created counts
 - **Trigger condition:**
   - bug data must load successfully for the selected date range
@@ -71,7 +71,7 @@ Three workspace-entry tiles currently behave as dynamic, signal-driven tiles ins
 
 ### Trends → PR Trend
 
-- **Code location:** `PoTool.Client/Pages/Home/TrendsWorkspace.razor:178-203`, `:646-699`
+- **Code location:** `PoTool.Client/Pages/Home/TrendsWorkspace.razor:178-203,646-699`
 - **Dynamic elements:** `TrendSlopeBadge` or `WorkspaceTileBadge`
 - **Data source:** `PullRequestsClient.GetSprintTrendsAsync(selectedSprintIds, productIds: null, teamId: _selectedTeamId, ...)`
 - **Driving values:** first and last usable `MedianTimeToMergeHours` values in the selected sprint range
@@ -87,7 +87,7 @@ Three workspace-entry tiles currently behave as dynamic, signal-driven tiles ins
 
 ### Trends → Pipeline Insights
 
-- **Code location:** `PoTool.Client/Pages/Home/TrendsWorkspace.razor:206-221`, `:701-726`
+- **Code location:** `PoTool.Client/Pages/Home/TrendsWorkspace.razor:206-221,701-726`
 - **Dynamic element:** `WorkspaceTileBadge`
 - **Data source:** `BuildQualityService.GetRollingWindowAsync(...)`
 - **Driving values:** Build Quality success-rate evidence for the current date range and optional product scope

@@ -101,6 +101,11 @@ Rules:
 - signal badges are allowed only when they communicate a real, time-sensitive condition
 - when no real signal exists, the tile falls back to normal navigation copy without blocking the page
 
+Example:
+
+- valid: a Trends tile showing a worsening PR time-to-merge badge or an unstable pipeline badge
+- invalid: a navigation hub tile showing a default warning badge just to make the card look active
+
 Current example:
 
 - `PoTool.Client/Pages/Home/TrendsWorkspace.razor`
