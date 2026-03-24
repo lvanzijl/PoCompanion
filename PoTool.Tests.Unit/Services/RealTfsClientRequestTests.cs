@@ -226,7 +226,7 @@ public class RealTfsClientRequestTests
         Assert.AreEqual(101, coverage[0].BuildId);
         Assert.AreEqual(40, coverage[0].CoveredLines);
         Assert.AreEqual(50, coverage[0].TotalLines);
-        AssertLoggedAtLevel(logger, LogLevel.Warning, "Build 101 -> received 2 coverageData entries; using the first valid Lines stat only.");
+        AssertLoggedAtLevel(logger, LogLevel.Warning, "Build 101 -> received multiple coverageData entries; attempting to use the first valid Lines stat only.");
         AssertLogged(logger, "Build 101 -> coverage retrieved (Covered=40, Total=50).");
         AssertLogged(logger, "BUILDQUALITY_COVERAGE_BUILD_SUMMARY: buildId=101");
     }

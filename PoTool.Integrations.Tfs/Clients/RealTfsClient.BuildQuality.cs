@@ -374,8 +374,8 @@ public partial class RealTfsClient
             yield break;
         }
 
-        var coverageEntries = coverageData.EnumerateArray().ToList();
-        if (coverageEntries.Count == 0)
+        var coverageEntryCount = coverageData.GetArrayLength();
+        if (coverageEntryCount == 0)
         {
             _logger.LogWarning(
                 "Build {BuildId} -> no coverage data because the payload contains no coverageData entries.",
@@ -383,12 +383,11 @@ public partial class RealTfsClient
             yield break;
         }
 
-        if (coverageEntries.Count > 1)
+        if (coverageEntryCount > 1)
         {
             _logger.LogWarning(
-                "Build {BuildId} -> received {CoverageEntryCount} coverageData entries; using the first valid Lines stat only.",
-                buildId,
-                coverageEntries.Count);
+                "Build {BuildId} -> received multiple coverageData entries; attempting to use the first valid Lines stat only.",
+                buildId);
         }
 
         var sawCoverageStats = false;
@@ -396,7 +395,7 @@ public partial class RealTfsClient
         var sawMissingCoveredOrTotal = false;
         var sawInvalidNumericIntegrity = false;
 
-        foreach (var coverageEntry in coverageEntries)
+        foreach (var coverageEntry in coverageData.EnumerateArray())
         {
             if (!coverageEntry.TryGetProperty("coverageStats", out var coverageStats) ||
                 coverageStats.ValueKind != JsonValueKind.Array)
