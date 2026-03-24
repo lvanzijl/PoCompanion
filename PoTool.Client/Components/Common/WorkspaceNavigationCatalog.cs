@@ -30,6 +30,7 @@ public static class WorkspaceNavigationCatalog
                 WorkspaceRoutes.ValidationQueue,
                 WorkspaceRoutes.ValidationFix,
                 WorkspaceRoutes.BacklogOverview,
+                WorkspaceRoutes.BacklogOverviewLegacy,
                 WorkspaceRoutes.BugOverview,
                 WorkspaceRoutes.BugDetail
             ]),

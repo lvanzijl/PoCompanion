@@ -13,9 +13,9 @@
 3. [Profielen kiezen](#3-profielen-kiezen)
 4. [Synchronisatie wachten (Sync Gate)](#4-synchronisatie-wachten-sync-gate)
 5. [Startpagina (Home)](#5-startpagina-home)
-6. [Backlog Overzicht](#6-backlog-overzicht)
-7. [Health-werkruimte — Nu](#7-health-werkruimte--nu)
-   - 7.1 [Health Overview](#71-health-overview)
+6. [Backlog Health](#6-backlog-health)
+7. [Health-werkruimte](#7-health-werkruimte)
+   - 7.1 [Overview](#71-overview)
    - 7.2 [Validatie Triage](#72-validatie-triage)
    - 7.3 [Validatiewachtrij](#73-validatiewachtrij)
    - 7.4 [Validatie-fixsessie](#74-validatie-fixsessie)
@@ -59,14 +59,14 @@ De applicatie is opgebouwd rond vier vragen die een Product Owner zichzelf elke 
 
 | Vraag | Werkruimte |
 |---|---|
-| Wat is er op dit moment aan de hand? | **Health** (Nu) |
+| Wat is er op dit moment aan de hand? | **Health** |
 | Wat hebben we opgeleverd? | **Delivery** |
 | Wat is er in het verleden gebeurd? | **Trends** (Verleden) |
 | Wat moet er als volgende komen? | **Planning** (Toekomst) |
 
 > **Delivery vs. Trends:** De Delivery-werkruimte richt zich op *wat er daadwerkelijk is opgeleverd* — per sprint of geaggregeerd over producten. De Trends-werkruimte richt zich op *patronen over tijd* met een sprinttijdlijn op de X-as. Gebruik Delivery voor sprintinspectie; gebruik Trends voor structurele prestatieanalyse.
 
-Daarnaast is er een **Backlog Overzicht** als primaire startpagina voor backlogbeslissingen: welke epics zijn klaar voor implementatie, welke hebben nog verfijning nodig, en waar zitten structurele problemen?
+Daarnaast is er **Backlog Health** als primaire startpagina voor backlogbeslissingen: welke epics zijn klaar voor implementatie, welke hebben nog verfijning nodig, en waar zitten structurele problemen?
 
 De hiërarchie van werkitems die de tool ondersteunt is:
 
@@ -209,13 +209,15 @@ Ook deze regel verschijnt direct; het sync-tijdstip wordt ingevuld zodra de acht
 
 ---
 
-## 6. Backlog Overzicht
+## 6. Backlog Health
 
-**Pagina:** `/home/backlog-overview`
+**Pagina:** `/home/health/backlog-health`
 
-Het Backlog Overzicht geeft een productgerichte kijk op de volwassenheid van de backlog. Als Product Owner zie je in één scherm welke epics klaar zijn voor implementatie, welke nog verfijning nodig hebben, en hoeveel structurele problemen er zijn.
+Backlog Health geeft een productgerichte kijk op de volwassenheid van de backlog. Als Product Owner zie je in één scherm welke epics klaar zijn voor implementatie, welke nog verfijning nodig hebben, en hoeveel structurele problemen er zijn.
 
-> **Wanneer gebruik je dit?** Gebruik het Backlog Overzicht als je wilt weten wat er gepland kan worden, wat je prioriteit in verfijning moet zijn, en wat er aan structureel onderhoud gedaan moet worden.
+> **Wanneer gebruik je dit?** Gebruik Backlog Health als je wilt weten wat er gepland kan worden, wat je prioriteit in verfijning moet zijn, en wat er aan structureel onderhoud gedaan moet worden.
+
+> **Directe route:** De canonieke route is `/home/health/backlog-health`. De oude route `/home/backlog-overview` blijft beschikbaar voor bestaande bladwijzers en directe links.
 
 ### Wat zie je hier?
 
@@ -255,11 +257,11 @@ Klik op de knop **Open validatiewachtrij** om direct naar de SI-wachtrij te gaan
 
 #### Navigatie naar andere werkruimten
 
-Rechtsonder staan knoppen om direct naar Health (Nu), Trends (Verleden) en Planning (Toekomst) te gaan.
+Rechtsboven staat **Back to Health** om terug te gaan naar de hub. Rechtsonder staan daarnaast knoppen om direct naar Health, Trends (Verleden) en Planning (Toekomst) te gaan.
 
 ---
 
-## 7. Health-werkruimte — Nu
+## 7. Health-werkruimte
 
 **Pagina:** `/home/health`
 
@@ -271,19 +273,19 @@ De Health-werkruimte is nu een **lichte navigatiehub**. Je opent dus eerst `/hom
 |---|---|---|
 | **Overview** | Opent de bestaande Build Quality-samenvatting op een aparte Health-subpagina. | `/home/health/overview` |
 | **Validatie Triage** | Opent het gegroepeerde overzicht van validatieproblemen per categorie. | `/home/validation-triage` |
-| **Backlog Overzicht** | Opent de bestaande backlogdetailpagina zonder die al op de hub te laden. | `/home/backlog-overview` |
+| **Backlog Health** | Opent de backlog readiness- en verfijningsdetailpagina zonder die al op de hub te laden. | `/home/health/backlog-health` |
 
 Daarnaast zie je onderaan compacte knoppen naar **Delivery**, **Trends (Verleden)** en **Planning (Toekomst)**. De hub zelf laadt **geen** Build Quality-data en voert **geen zware query** uit.
 
-> **Belangrijk:** De oude Health-inhoud is niet verdwenen, maar verhuisd naar de subpagina **Health Overview**. Gebruik dus voortaan de Overview-kaart om de bestaande Build Quality-weergave te openen.
+> **Belangrijk:** De oude Health-inhoud is niet verdwenen, maar verhuisd naar de subpagina **Overview**. Gebruik dus voortaan de Overview-kaart om de bestaande Build Quality-weergave te openen.
 
 ---
 
-### 7.1 Health Overview
+### 7.1 Overview
 
 **Pagina:** `/home/health/overview`
 
-De subpagina **Health Overview** bevat de bestaande Build Quality-functionaliteit. De pagina rendert eerst haar vaste structuur en vult daarna progressief de laadstatussen en kaarten, net als voorheen.
+De subpagina **Overview** bevat de bestaande Build Quality-functionaliteit. De pagina rendert eerst haar vaste structuur en vult daarna progressief de laadstatussen en kaarten, net als voorheen.
 
 #### Wat zie je hier?
 
@@ -984,7 +986,7 @@ De Planning-werkruimte is het startpunt voor alle planningstools. Vanuit deze li
 | **Product Roadmaps** | Strategische ordening van epics en productrichting. Klik om de roadmappagina te openen (`/planning/product-roadmaps`). |
 | **Plan Board** | Iteratie-planbord voor het organiseren van aankomend sprintwerk. Klik om het planbord te openen (`/planning/plan-board`). |
 
-Onderaan de pagina bevinden zich knoppen om snel naar andere werkruimtes te navigeren: Backlog Overview, Health (Now), Trends (Past) en Delivery.
+Onderaan de pagina bevinden zich knoppen om snel naar andere werkruimtes te navigeren: Backlog Health, Health, Trends (Past) en Delivery.
 
 ---
 
@@ -1406,7 +1408,7 @@ Op de statusconfiguratiepagina stel je in welke TFS-status overeenkomt met welke
 
 - Correcte voortgangsberekeningen in Sprint Delivery.
 - Structurele integriteitscontroles (SI-regels).
-- Verfijningsscores in het Backlog Overzicht.
+- Verfijningsscores in Backlog Health.
 
 ---
 
@@ -1546,7 +1548,7 @@ A: Nee. PO Companion is een analyse- en inzichttool. Wijzigingen aan werkitems d
 
 ---
 
-**V: Wat betekent de eigenaar-badge (PO / Team / Klaar) bij een Feature in het Backlog Overzicht?**  
+**V: Wat betekent de eigenaar-badge (PO / Team / Klaar) bij een Feature in Backlog Health?**  
 A: De badge geeft aan wie aan zet is:  
 - **PO** — de Product Owner moet actie ondernemen (Refinement Readiness-probleem).  
 - **Team** — het team moet actie ondernemen (Refinement Completeness-probleem).  

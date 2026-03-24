@@ -19,6 +19,7 @@ public class WorkspaceNavigationCatalogTests
     [DataRow("Health", WorkspaceRoutes.HealthOverview, true)]
     [DataRow("Health", WorkspaceRoutes.ValidationTriage, true)]
     [DataRow("Health", WorkspaceRoutes.BacklogOverview, true)]
+    [DataRow("Health", WorkspaceRoutes.BacklogOverviewLegacy, true)]
     [DataRow("Health", WorkspaceRoutes.BugDetail, true)]
     [DataRow("Delivery", WorkspaceRoutes.SprintDelivery, true)]
     [DataRow("Delivery", WorkspaceRoutes.SprintExecution, true)]

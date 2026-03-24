@@ -2,6 +2,14 @@
   {
     "date": "2026-03-24",
     "type": "Changed",
+    "title": "Health routes and labels are now consistent",
+    "impact": "Health now uses consistent Overview and Backlog Health labels, with Backlog Health living at /home/health/backlog-health while the old backlog URL still works for bookmarks.",
+    "area": "Health",
+    "link": "/home/health"
+  },
+  {
+    "date": "2026-03-24",
+    "type": "Changed",
     "title": "Health workspace now opens as a hub",
     "impact": "Health now opens as a navigation hub, while the existing Build Quality page moved to Health Overview at /home/health/overview.",
     "area": "Health",

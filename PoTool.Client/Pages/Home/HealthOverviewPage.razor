@@ -6,7 +6,7 @@
 @inherits WorkspaceBase
 @inject IBuildQualityService BuildQualityService
 
-<PageTitle>Health Overview - PO Companion</PageTitle>
+<PageTitle>Overview - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     <MudPaper Elevation="2" Class="pa-4 mb-4">
@@ -14,7 +14,7 @@
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                     <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Color="Color.Success" Size="Size.Large" />
-                    <MudText Typo="Typo.h4">Health Overview</MudText>
+                    <MudText Typo="Typo.h4">Overview</MudText>
                 </MudStack>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
                     Build Quality overview for the active Product Owner.
@@ -99,7 +99,7 @@
         else if (_buildQualityPage is null || !_buildQualityPage.Products.Any())
         {
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                No Build Quality products are available for the active Product Owner.
+                No Build Quality data is available for the active Product Owner yet.
             </MudAlert>
         }
         else
