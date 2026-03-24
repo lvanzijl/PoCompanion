@@ -271,6 +271,36 @@ public sealed class BuildQualityQueryHandlerTests
     }
 
     [TestMethod]
+    public async Task RollingSprintAndPipelineHandlers_ReturnConsistentResults_ForSinglePipelineProduct()
+    {
+        await SeedProductOwnerScopeAsync();
+
+        var rollingHandler = new GetBuildQualityRollingWindowQueryHandler(_scopeLoader, new BuildQualityProvider());
+        var sprintHandler = new GetBuildQualitySprintQueryHandler(_context, _scopeLoader, new BuildQualityProvider());
+        var pipelineHandler = new GetBuildQualityPipelineDetailQueryHandler(_context, _scopeLoader, new BuildQualityProvider());
+
+        var rolling = await rollingHandler.Handle(
+            new GetBuildQualityRollingWindowQuery(
+                ProductOwnerId: 1,
+                WindowStartUtc: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+                WindowEndUtc: new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc)),
+            CancellationToken.None);
+        var sprint = await sprintHandler.Handle(
+            new GetBuildQualitySprintQuery(ProductOwnerId: 1, SprintId: 77),
+            CancellationToken.None);
+        var pipeline = await pipelineHandler.Handle(
+            new GetBuildQualityPipelineDetailQuery(ProductOwnerId: 1, SprintId: 77, PipelineDefinitionId: 2001),
+            CancellationToken.None);
+
+        AssertEquivalentBuildQualityResult(rolling.Summary, sprint.Summary);
+
+        var rollingProduct = rolling.Products.Single(product => product.ProductId == 2);
+        var sprintProduct = sprint.Products.Single(product => product.ProductId == 2);
+        AssertEquivalentBuildQualityResult(rollingProduct.Result, sprintProduct.Result);
+        AssertEquivalentBuildQualityResult(rollingProduct.Result, pipeline.Result);
+    }
+
+    [TestMethod]
     public async Task SprintHandler_WithMixedMissingChildFacts_KeepsMetricsKnownWhenAnyDataExists()
     {
         await SeedProductOwnerScopeAsync(includeBuildQualityEdgeCases: true);
@@ -560,6 +590,34 @@ public sealed class BuildQualityQueryHandlerTests
 
         Assert.IsNotNull(actual);
         Assert.AreEqual(expected.Value, actual.Value, 0.000001d);
+    }
+
+    private static void AssertEquivalentBuildQualityResult(BuildQualityResultDto expected, BuildQualityResultDto actual)
+    {
+        AssertNullableDouble(expected.Metrics.SuccessRate, actual.Metrics.SuccessRate);
+        AssertNullableDouble(expected.Metrics.TestPassRate, actual.Metrics.TestPassRate);
+        Assert.AreEqual(expected.Metrics.TestVolume, actual.Metrics.TestVolume);
+        AssertNullableDouble(expected.Metrics.Coverage, actual.Metrics.Coverage);
+        Assert.AreEqual(expected.Metrics.Confidence, actual.Metrics.Confidence);
+
+        Assert.AreEqual(expected.Evidence.EligibleBuilds, actual.Evidence.EligibleBuilds);
+        Assert.AreEqual(expected.Evidence.SucceededBuilds, actual.Evidence.SucceededBuilds);
+        Assert.AreEqual(expected.Evidence.FailedBuilds, actual.Evidence.FailedBuilds);
+        Assert.AreEqual(expected.Evidence.PartiallySucceededBuilds, actual.Evidence.PartiallySucceededBuilds);
+        Assert.AreEqual(expected.Evidence.CanceledBuilds, actual.Evidence.CanceledBuilds);
+        Assert.AreEqual(expected.Evidence.TotalTests, actual.Evidence.TotalTests);
+        Assert.AreEqual(expected.Evidence.PassedTests, actual.Evidence.PassedTests);
+        Assert.AreEqual(expected.Evidence.NotApplicableTests, actual.Evidence.NotApplicableTests);
+        Assert.AreEqual(expected.Evidence.CoveredLines, actual.Evidence.CoveredLines);
+        Assert.AreEqual(expected.Evidence.TotalLines, actual.Evidence.TotalLines);
+        Assert.AreEqual(expected.Evidence.BuildThresholdMet, actual.Evidence.BuildThresholdMet);
+        Assert.AreEqual(expected.Evidence.TestThresholdMet, actual.Evidence.TestThresholdMet);
+        Assert.AreEqual(expected.Evidence.SuccessRateUnknown, actual.Evidence.SuccessRateUnknown);
+        Assert.AreEqual(expected.Evidence.SuccessRateUnknownReason, actual.Evidence.SuccessRateUnknownReason);
+        Assert.AreEqual(expected.Evidence.TestPassRateUnknown, actual.Evidence.TestPassRateUnknown);
+        Assert.AreEqual(expected.Evidence.TestPassRateUnknownReason, actual.Evidence.TestPassRateUnknownReason);
+        Assert.AreEqual(expected.Evidence.CoverageUnknown, actual.Evidence.CoverageUnknown);
+        Assert.AreEqual(expected.Evidence.CoverageUnknownReason, actual.Evidence.CoverageUnknownReason);
     }
 
     private sealed record CapturedProviderCall(

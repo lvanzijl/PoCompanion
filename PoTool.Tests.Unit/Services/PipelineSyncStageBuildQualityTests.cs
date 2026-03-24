@@ -518,7 +518,60 @@ public class PipelineSyncStageBuildQualityTests
         AssertLogged(logger, "BUILDQUALITY_COVERAGE_PERSISTENCE_SUMMARY:");
         AssertLogged(logger, "BUILDQUALITY_CHILD_INGEST_SUMMARY:");
         AssertLogged(logger, "requestedBuildCount=2");
+        AssertLogged(logger, "missingTestRunBuildCount=2");
+        AssertLogged(logger, "missingCoverageBuildCount=2");
         AssertLogged(logger, "persistedRowCount=2");
+    }
+
+    [TestMethod]
+    public async Task ExecuteAsync_LogsExplicitReasonsWhenScopedBuildsAreMissingChildData()
+    {
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase($"PipelineSyncStageBuildQuality_{Guid.NewGuid()}")
+            .Options;
+
+        await using var dbContext = new PoToolDbContext(options);
+        SeedPipelineDefinition(dbContext, productOwnerId: 1, pipelineDefinitionId: 42);
+
+        var tfsClient = new Mock<ITfsClient>();
+        tfsClient
+            .Setup(client => client.GetPipelineRunsAsync(
+                It.IsAny<int[]>(),
+                It.IsAny<string?>(),
+                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([CreatePipelineRun(runId: 1001, pipelineId: 42)]);
+        tfsClient
+            .Setup(client => client.GetTestRunsByBuildIdsAsync(
+                It.IsAny<IEnumerable<int>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<TestRunDto>());
+        tfsClient
+            .Setup(client => client.GetCoverageByBuildIdsAsync(
+                It.IsAny<IEnumerable<int>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<CoverageDto>());
+
+        var logger = new Mock<ILogger<PipelineSyncStage>>();
+        var stage = new PipelineSyncStage(tfsClient.Object, dbContext, logger.Object);
+
+        var result = await stage.ExecuteAsync(
+            new SyncContext
+            {
+                ProductOwnerId = 1,
+                RootWorkItemIds = [100],
+                PipelineDefinitionIds = [42]
+            },
+            _ => { },
+            CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        AssertLogged(logger, "BUILDQUALITY_TESTRUN_MISSING_DATA:");
+        AssertLogged(logger, "BUILDQUALITY_COVERAGE_MISSING_DATA:");
+        AssertLogged(logger, "reason=No persisted test runs exist for one or more scoped builds.");
+        AssertLogged(logger, "reason=No persisted coverage rows exist for one or more scoped builds.");
+        AssertLogged(logger, "missingBuildCount=1");
     }
 
     private static int GetMaxBuildQualityBuildBatchSize()

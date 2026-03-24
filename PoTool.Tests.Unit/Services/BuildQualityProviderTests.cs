@@ -81,6 +81,85 @@ public sealed class BuildQualityProviderTests
     }
 
     [TestMethod]
+    public void Compute_FullDataScenario_KeepsAllMetricsKnownAndConfidenceHigh()
+    {
+        var result = _provider.Compute(
+            [
+                new BuildQualityBuildFact(1, "succeeded"),
+                new BuildQualityBuildFact(2, "failed"),
+                new BuildQualityBuildFact(3, "succeeded")
+            ],
+            [
+                new BuildQualityTestRunFact(1, 12, 11, 0),
+                new BuildQualityTestRunFact(2, 11, 10, 0)
+            ],
+            [
+                new BuildQualityCoverageFact(1, 50, 60),
+                new BuildQualityCoverageFact(2, 45, 60)
+            ]);
+
+        Assert.IsNotNull(result.Metrics.SuccessRate);
+        Assert.IsNotNull(result.Metrics.TestPassRate);
+        Assert.IsNotNull(result.Metrics.Coverage);
+        Assert.IsGreaterThan(0d, result.Metrics.SuccessRate!.Value);
+        Assert.IsGreaterThan(0d, result.Metrics.TestPassRate!.Value);
+        Assert.IsGreaterThan(0d, result.Metrics.Coverage!.Value);
+        Assert.AreEqual(2, result.Metrics.Confidence);
+    }
+
+    [TestMethod]
+    public void Compute_TestsOnlyScenario_KeepsTestPassRateKnownAndCoverageUnknownWithReducedConfidence()
+    {
+        var result = _provider.Compute(
+            [new BuildQualityBuildFact(1, "succeeded")],
+            [new BuildQualityTestRunFact(1, 25, 23, 0)],
+            Array.Empty<BuildQualityCoverageFact>());
+
+        Assert.IsNotNull(result.Metrics.TestPassRate);
+        Assert.IsGreaterThan(0d, result.Metrics.TestPassRate!.Value);
+        Assert.IsNull(result.Metrics.Coverage);
+        Assert.IsTrue(result.Evidence.CoverageUnknown);
+        Assert.AreEqual(BuildQualityUnknownReasons.NoCoverage, result.Evidence.CoverageUnknownReason);
+        Assert.AreEqual(1, result.Metrics.Confidence);
+    }
+
+    [TestMethod]
+    public void Compute_CoverageOnlyScenario_KeepsCoverageKnownAndTestPassRateUnknownWithReducedConfidence()
+    {
+        var result = _provider.Compute(
+            [
+                new BuildQualityBuildFact(1, "succeeded"),
+                new BuildQualityBuildFact(2, "failed"),
+                new BuildQualityBuildFact(3, "succeeded")
+            ],
+            Array.Empty<BuildQualityTestRunFact>(),
+            [new BuildQualityCoverageFact(1, 150, 200)]);
+
+        Assert.IsNotNull(result.Metrics.Coverage);
+        Assert.IsGreaterThan(0d, result.Metrics.Coverage!.Value);
+        Assert.IsNull(result.Metrics.TestPassRate);
+        Assert.IsTrue(result.Evidence.TestPassRateUnknown);
+        Assert.AreEqual(BuildQualityUnknownReasons.NoTestRuns, result.Evidence.TestPassRateUnknownReason);
+        Assert.AreEqual(1, result.Metrics.Confidence);
+    }
+
+    [TestMethod]
+    public void Compute_NoChildDataScenario_LeavesOnlyBuildSuccessKnownAndConfidenceMinimal()
+    {
+        var result = _provider.Compute(
+            [new BuildQualityBuildFact(1, "failed")],
+            Array.Empty<BuildQualityTestRunFact>(),
+            Array.Empty<BuildQualityCoverageFact>());
+
+        Assert.IsNotNull(result.Metrics.SuccessRate);
+        Assert.IsNull(result.Metrics.TestPassRate);
+        Assert.IsNull(result.Metrics.Coverage);
+        Assert.IsTrue(result.Evidence.TestPassRateUnknown);
+        Assert.IsTrue(result.Evidence.CoverageUnknown);
+        Assert.AreEqual(0, result.Metrics.Confidence);
+    }
+
+    [TestMethod]
     public void Compute_NoBuilds_MarksSuccessRateUnknown()
     {
         var result = _provider.Compute(
