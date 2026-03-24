@@ -234,6 +234,9 @@ public class RealTfsClientRequestTests
         Assert.AreEqual(12, testRuns[0].TotalTests);
         Assert.AreEqual(102, testRuns[1].BuildId);
         Assert.AreEqual(5002, testRuns[1].ExternalId);
+        CollectionAssert.AreEquivalent([5001, 5002], testRuns.Select(run => run.ExternalId).ToList());
+        CollectionAssert.DoesNotContain(testRuns.Select(run => run.ExternalId).ToList(), 5999);
+        CollectionAssert.DoesNotContain(testRuns.Select(run => run.ExternalId).ToList(), 5998);
         Assert.HasCount(4, requests);
         StringAssert.Contains(requests[0].AbsoluteUri, "_apis/test/runs?buildIds=101");
         StringAssert.Contains(requests[1].AbsoluteUri, "_apis/test/runs?buildIds=101");
