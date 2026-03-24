@@ -61,6 +61,105 @@
 - The top workspace navigation uses `WorkspaceNavigationBar` and `WorkspaceNavItem` and must not be implemented using buttons.
 - Navigation MUST remain explicit, reversible, and allow users to exit a flow without side effects.
 
+### 6.1 Workspace entry types
+
+Workspace entry pages are divided into two explicit categories:
+
+- **Navigation workspaces** — Health, Delivery, and Planning
+- **Signal workspace** — Trends
+
+The category determines what the entry page is allowed to do.
+
+#### Navigation workspaces
+
+Navigation workspaces exist to route the user to the next page with minimal friction.
+
+Rules:
+
+- the entry page is a **navigation hub**, not a dashboard
+- the hub contains **no heavy data loading** on entry
+- the hub renders immediately and remains lightweight
+- hub tiles are **STATIC**
+- tiles represent navigation intent, not runtime status
+- tiles stay visible regardless of data availability
+- signal badges, counts, warnings, or runtime summaries do **not** belong on the hub tiles
+
+Current examples:
+
+- `PoTool.Client/Pages/Home/HealthWorkspace.razor`
+- `PoTool.Client/Pages/Home/DeliveryWorkspace.razor`
+- `PoTool.Client/Pages/Home/PlanningWorkspace.razor`
+
+#### Signal workspace
+
+The Trends entry page is the only workspace entry page that may expose runtime signal badges on its tiles.
+
+Rules:
+
+- the workspace still renders its tile shell immediately
+- dynamic tile signals must answer **"why click now?"**
+- signal badges are allowed only when they communicate a real, time-sensitive condition
+- when no real signal exists, the tile falls back to normal navigation copy without blocking the page
+
+Current example:
+
+- `PoTool.Client/Pages/Home/TrendsWorkspace.razor`
+
+### 6.2 Tile behavior rules
+
+#### STATIC tiles
+
+STATIC tiles:
+
+- describe the destination purpose or user goal
+- have no runtime dependency
+- are always visible
+- remain understandable without live data
+
+STATIC tiles must not:
+
+- wait for queries before rendering
+- imply urgency through fake defaults
+- show placeholder badges that look like real signals
+
+#### DYNAMIC tiles
+
+DYNAMIC tiles are allowed **only** in signal workspaces.
+
+DYNAMIC tiles must:
+
+- represent a time-sensitive signal
+- justify navigation with a clear reason to investigate now
+- degrade gracefully when the signal is missing, insufficient, or unavailable
+- load progressively without blocking the tile shell or surrounding navigation
+- keep data retrieval lightweight enough for an entry-page signal
+
+DYNAMIC tiles must not:
+
+- require heavy hub-entry queries just to make navigation usable
+- hide the tile when the signal cannot be calculated
+- show misleading defaults that imply health, urgency, or stability without evidence
+
+### 6.3 Hub constraints
+
+Navigation hubs must:
+
+- avoid heavy data loading on entry
+- act as a navigation layer first
+- keep cross-workspace movement explicit
+- avoid duplicate navigation structures inside child pages
+
+Navigation hubs must not:
+
+- become summary dashboards
+- duplicate subpage navigation with tabs inside the destination pages
+- add secondary menu systems that compete with workspace navigation
+
+Current implementation reference:
+
+- Health, Delivery, and Planning are navigation hubs with STATIC tiles.
+- Trends is the signal workspace and may mix STATIC tiles with DYNAMIC tiles when a real signal exists.
+
 ## 7. UX Authority
 - **UX principles override UI or technical convenience.**
 - When UX principles conflict with implementation simplicity, UX wins.

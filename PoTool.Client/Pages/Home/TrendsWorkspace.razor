@@ -131,130 +131,130 @@
         </MudStack>
     </MudPaper>
 
+    @* Trend Signals Grid *@
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudText Typo="Typo.h5" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.Insights" Class="mr-2" />
+            Trend Signals
+        </MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+            Structural behavior over time — click to explore details
+        </MudText>
+        
+        <MudGrid>
+            @* Bug Trend Signal *@
+            <MudItem xs="12" sm="6" md="4">
+                <NavigationTileCard Title="Bug Trend"
+                                    Subtitle="Bug patterns over time"
+                                    Icon="@Icons.Material.Filled.BugReport"
+                                    IconColor="Color.Error"
+                                    AriaLabel="Bug Trend — Bug patterns over time"
+                                    OnClick="NavigateToBugTrend">
+                    @if (_bugTrendSignal?.HasTrendValues == true)
+                    {
+                        <TrendSlopeBadge StartValue="@_bugTrendSignal.StartValue"
+                                         EndValue="@_bugTrendSignal.EndValue"
+                                         LowerIsBetter="true"
+                                         MetricLabel="bug creation rate"
+                                         PositiveLabel="Decreasing"
+                                         NegativeLabel="Increasing"
+                                         NeutralLabel="Stable" />
+                    }
+                    else if (_bugTrendSignal?.FallbackSignal is not null)
+                    {
+                        <WorkspaceTileBadge Signal="@_bugTrendSignal.FallbackSignal"
+                                           AriaLabel="Bug Trend signal status"
+                                           Class="mt-1" />
+                    }
+                </NavigationTileCard>
+            </MudItem>
+
+            @* PR Trend Signal (Read-Only) *@
+            <MudItem xs="12" sm="6" md="4">
+                <NavigationTileCard Title="PR Trend"
+                                    Subtitle="Pull request insights"
+                                    Icon="@Icons.Material.Filled.MergeType"
+                                    IconColor="Color.Info"
+                                    AriaLabel="PR Trend — Pull request insights"
+                                    OnClick="NavigateToPrOverview">
+                    @* Slope badge: summarises median time-to-merge over the selected horizon.
+                       Median TTM is chosen as the primary signal because it captures end-to-end
+                       flow efficiency and is the most actionable metric for a PO. *@
+                    @if (_prTrendSignal?.HasTrendValues == true)
+                    {
+                        <TrendSlopeBadge StartValue="@_prTrendSignal.StartValue"
+                                         EndValue="@_prTrendSignal.EndValue"
+                                         LowerIsBetter="true"
+                                         MetricLabel="median time to merge" />
+                    }
+                    else if (_prTrendSignal?.FallbackSignal is not null)
+                    {
+                        <WorkspaceTileBadge Signal="@_prTrendSignal.FallbackSignal"
+                                           AriaLabel="PR Trend signal status"
+                                           Class="mt-1" />
+                    }
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
+                </NavigationTileCard>
+            </MudItem>
+
+            @* Pipeline Insights Signal (Read-Only) *@
+            <MudItem xs="12" sm="6" md="4">
+                <NavigationTileCard Title="Pipeline Insights"
+                                    Subtitle="PO-first sprint stability per product"
+                                    Icon="@Icons.Material.Filled.HealthAndSafety"
+                                    IconColor="Color.Warning"
+                                    AriaLabel="Pipeline Insights — PO-first sprint stability per product"
+                                    OnClick="NavigateToPipelineInsights">
+                    @if (_pipelineSignal is not null)
+                    {
+                        <WorkspaceTileBadge Signal="@_pipelineSignal"
+                                           AriaLabel="Pipeline Insights signal status"
+                                           Class="mt-1" />
+                    }
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
+                </NavigationTileCard>
+            </MudItem>
+
+            @* PR Delivery Insights Signal (Read-Only) *@
+            <MudItem xs="12" sm="6" md="4">
+                <NavigationTileCard Title="PR Delivery Insights"
+                                    Subtitle="PR classification by Epic/Feature hierarchy"
+                                    Icon="@Icons.Material.Filled.LocalShipping"
+                                    IconColor="Color.Success"
+                                    AriaLabel="PR Delivery Insights — PR classification by Epic/Feature hierarchy"
+                                    OnClick="NavigateToPrDeliveryInsights">
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
+                </NavigationTileCard>
+            </MudItem>
+
+            @* Portfolio Progress Trend Signal *@
+            <MudItem xs="12" sm="6" md="4">
+                <NavigationTileCard Title="Portfolio Progress"
+                                    Subtitle="Strategic progress over sprint range"
+                                    Icon="@Icons.Material.Filled.Insights"
+                                    IconColor="Color.Warning"
+                                    AriaLabel="Portfolio Progress — Strategic progress over sprint range"
+                                    OnClick="NavigateToPortfolioProgress" />
+            </MudItem>
+
+            @* Delivery Trends Signal *@
+            <MudItem xs="12" sm="6" md="4">
+                <NavigationTileCard Title="Delivery Trends"
+                                    Subtitle="PBI & effort throughput over time"
+                                    Icon="@Icons.Material.Filled.LocalShipping"
+                                    IconColor="Color.Success"
+                                    AriaLabel="Delivery Trends — PBI & effort throughput over time"
+                                    OnClick="NavigateToDeliveryTrends" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
     @if (_isLoading)
     {
         <LoadingIndicator IsLoading="true" />
     }
     else
     {
-        @* Trend Signals Grid *@
-        <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudText Typo="Typo.h5" Class="mb-3">
-                <MudIcon Icon="@Icons.Material.Filled.Insights" Class="mr-2" />
-                Trend Signals
-            </MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-                Structural behavior over time — click to explore details
-            </MudText>
-            
-            <MudGrid>
-                @* Bug Trend Signal *@
-                <MudItem xs="12" sm="6" md="4">
-                    <NavigationTileCard Title="Bug Trend"
-                                        Subtitle="Bug patterns over time"
-                                        Icon="@Icons.Material.Filled.BugReport"
-                                        IconColor="Color.Error"
-                                        AriaLabel="Bug Trend — Bug patterns over time"
-                                        OnClick="NavigateToBugTrend">
-                        @if (_bugTrendSignal?.HasTrendValues == true)
-                        {
-                            <TrendSlopeBadge StartValue="@_bugTrendSignal.StartValue"
-                                             EndValue="@_bugTrendSignal.EndValue"
-                                             LowerIsBetter="true"
-                                             MetricLabel="bug creation rate"
-                                             PositiveLabel="Decreasing"
-                                             NegativeLabel="Increasing"
-                                             NeutralLabel="Stable" />
-                        }
-                        else if (_bugTrendSignal?.FallbackSignal is not null)
-                        {
-                            <WorkspaceTileBadge Signal="@_bugTrendSignal.FallbackSignal"
-                                               AriaLabel="Bug Trend signal status"
-                                               Class="mt-1" />
-                        }
-                    </NavigationTileCard>
-                </MudItem>
-
-                @* PR Trend Signal (Read-Only) *@
-                <MudItem xs="12" sm="6" md="4">
-                    <NavigationTileCard Title="PR Trend"
-                                        Subtitle="Pull request insights"
-                                        Icon="@Icons.Material.Filled.MergeType"
-                                        IconColor="Color.Info"
-                                        AriaLabel="PR Trend — Pull request insights"
-                                        OnClick="NavigateToPrOverview">
-                        @* Slope badge: summarises median time-to-merge over the selected horizon.
-                           Median TTM is chosen as the primary signal because it captures end-to-end
-                           flow efficiency and is the most actionable metric for a PO. *@
-                        @if (_prTrendSignal?.HasTrendValues == true)
-                        {
-                            <TrendSlopeBadge StartValue="@_prTrendSignal.StartValue"
-                                             EndValue="@_prTrendSignal.EndValue"
-                                             LowerIsBetter="true"
-                                             MetricLabel="median time to merge" />
-                        }
-                        else if (_prTrendSignal?.FallbackSignal is not null)
-                        {
-                            <WorkspaceTileBadge Signal="@_prTrendSignal.FallbackSignal"
-                                               AriaLabel="PR Trend signal status"
-                                               Class="mt-1" />
-                        }
-                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
-                    </NavigationTileCard>
-                </MudItem>
-
-                @* Pipeline Insights Signal (Read-Only) *@
-                <MudItem xs="12" sm="6" md="4">
-                    <NavigationTileCard Title="Pipeline Insights"
-                                        Subtitle="PO-first sprint stability per product"
-                                        Icon="@Icons.Material.Filled.HealthAndSafety"
-                                        IconColor="Color.Warning"
-                                        AriaLabel="Pipeline Insights — PO-first sprint stability per product"
-                                        OnClick="NavigateToPipelineInsights">
-                        @if (_pipelineSignal is not null)
-                        {
-                            <WorkspaceTileBadge Signal="@_pipelineSignal"
-                                               AriaLabel="Pipeline Insights signal status"
-                                               Class="mt-1" />
-                        }
-                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
-                    </NavigationTileCard>
-                </MudItem>
-
-                @* PR Delivery Insights Signal (Read-Only) *@
-                <MudItem xs="12" sm="6" md="4">
-                    <NavigationTileCard Title="PR Delivery Insights"
-                                        Subtitle="PR classification by Epic/Feature hierarchy"
-                                        Icon="@Icons.Material.Filled.LocalShipping"
-                                        IconColor="Color.Success"
-                                        AriaLabel="PR Delivery Insights — PR classification by Epic/Feature hierarchy"
-                                        OnClick="NavigateToPrDeliveryInsights">
-                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-1">Read-only</MudChip>
-                    </NavigationTileCard>
-                </MudItem>
-
-                @* Portfolio Progress Trend Signal *@
-                <MudItem xs="12" sm="6" md="4">
-                    <NavigationTileCard Title="Portfolio Progress"
-                                        Subtitle="Strategic progress over sprint range"
-                                        Icon="@Icons.Material.Filled.Insights"
-                                        IconColor="Color.Warning"
-                                        AriaLabel="Portfolio Progress — Strategic progress over sprint range"
-                                        OnClick="NavigateToPortfolioProgress" />
-                </MudItem>
-
-                @* Delivery Trends Signal *@
-                <MudItem xs="12" sm="6" md="4">
-                    <NavigationTileCard Title="Delivery Trends"
-                                        Subtitle="PBI & effort throughput over time"
-                                        Icon="@Icons.Material.Filled.LocalShipping"
-                                        IconColor="Color.Success"
-                                        AriaLabel="Delivery Trends — PBI & effort throughput over time"
-                                        OnClick="NavigateToDeliveryTrends" />
-                </MudItem>
-            </MudGrid>
-        </MudPaper>
-
         @* Information Notice *@
         <MudAlert Severity="Severity.Info" Class="mb-4">
             <MudText Typo="Typo.body2">
@@ -276,38 +276,38 @@
                 OnPeriodClick="OnBugTrendPeriodClick"
                 MaxPeriods="6" />
         </MudPaper>
-
-        @* Cross-Workspace Navigation *@
-        <MudPaper Elevation="2" Class="pa-4">
-            <MudText Typo="Typo.h6" Class="mb-3">
-                <MudIcon Icon="@Icons.Material.Filled.Explore" Class="mr-2" />
-                Navigate to Other Workspaces
-            </MudText>
-            
-            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
-                <CompactButton ButtonRole="ButtonRole.Action"
-                               Icon="@Icons.Material.Filled.Inventory2"
-                               OnClick="NavigateToBacklogOverview">
-                    Backlog Health
-                </CompactButton>
-                <CompactButton ButtonRole="ButtonRole.Action"
-                               Icon="@Icons.Material.Filled.HealthAndSafety"
-                               OnClick="NavigateToHealth">
-                    Health
-                </CompactButton>
-                <CompactButton ButtonRole="ButtonRole.Action"
-                               Icon="@Icons.Material.Filled.CheckCircle"
-                               OnClick="NavigateToDelivery">
-                    Delivery
-                </CompactButton>
-                <CompactButton ButtonRole="ButtonRole.Action"
-                               Icon="@Icons.Material.Filled.CalendarMonth"
-                               OnClick="NavigateToPlanning">
-                    Planning (Future)
-                </CompactButton>
-            </MudStack>
-        </MudPaper>
     }
+
+    @* Cross-Workspace Navigation *@
+    <MudPaper Elevation="2" Class="pa-4">
+        <MudText Typo="Typo.h6" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.Explore" Class="mr-2" />
+            Navigate to Other Workspaces
+        </MudText>
+        
+        <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+            <CompactButton ButtonRole="ButtonRole.Action"
+                           Icon="@Icons.Material.Filled.Inventory2"
+                           OnClick="NavigateToBacklogOverview">
+                Backlog Health
+            </CompactButton>
+            <CompactButton ButtonRole="ButtonRole.Action"
+                           Icon="@Icons.Material.Filled.HealthAndSafety"
+                           OnClick="NavigateToHealth">
+                Health
+            </CompactButton>
+            <CompactButton ButtonRole="ButtonRole.Action"
+                           Icon="@Icons.Material.Filled.CheckCircle"
+                           OnClick="NavigateToDelivery">
+                Delivery
+            </CompactButton>
+            <CompactButton ButtonRole="ButtonRole.Action"
+                           Icon="@Icons.Material.Filled.CalendarMonth"
+                           OnClick="NavigateToPlanning">
+                Planning (Future)
+            </CompactButton>
+        </MudStack>
+    </MudPaper>
 </MudContainer>
 
 @code {

@@ -168,7 +168,7 @@ Global header (available on every page) ◄────────────�
 | Functionality | Description |
 |---|---|
 | Breadcrumb | `Home › Health` — provides clear location context. |
-| Navigation hub | Shows navigation cards only; no Build Quality or backlog queries run on hub load. |
+| Navigation hub | Shows STATIC navigation cards only; no Build Quality or backlog queries run on hub load. |
 | Overview card | Opens `/home/health/overview`, which now hosts the existing Build Quality experience. |
 | Validation Triage card | Opens `/home/validation-triage` for grouped validation follow-up. |
 | Backlog Health card | Opens `/home/health/backlog-health` for backlog detail without loading it inside the hub. |
@@ -258,7 +258,7 @@ Global header (available on every page) ◄────────────�
 
 ### 2.5 Trends (Past) Workspace — `/home/trends`
 
-**Purpose:** Shows time-based structural behavior patterns over the last 6 months (configurable via sprint selection). Contains only pages whose primary axis is a sprint timeline. Designed for understanding "why is this happening?" from historical data.
+**Purpose:** Signal workspace for time-based structural behavior patterns over the last 6 months (configurable via sprint selection). Contains only pages whose primary axis is a sprint timeline. Designed for understanding "why is this happening?" from historical data.
 
 | Functionality | Description |
 |---|---|
@@ -266,10 +266,12 @@ Global header (available on every page) ◄────────────�
 | Team selector | Filters the sprint range selector to a specific team. When "All Teams" is selected, defaults to last 6 months. |
 | From Sprint / To Sprint selectors | Appear once a team is selected. Allow the user to define a custom time window for trend analysis. Sprint name and start month are shown. |
 | "Last 6 Months" chip | Shown when no sprint range is explicitly set. |
-| Bug Trend signal card | Represents bug patterns over time. Click navigates to Bug Insights (Bug Overview). |
-| PR Trend signal card | Read-only insight about pull request patterns. Click navigates to Pull Request Insights. |
-| Pipeline Insights signal card | Read-only insight about pipeline stability per product. Click navigates to Pipeline Insights. |
-| Portfolio Progress signal card | Represents strategic product-level progress over a sprint range. Click navigates to Portfolio Progress Trend. |
+| Signal tiles | Tile shells render immediately. Only tiles with a real signal may show a runtime badge; tiles without a current signal remain normal navigation cards. |
+| Bug Trend signal tile | Represents bug patterns over time and may show a runtime trend badge when enough recent data exists. Click navigates to Bug Insights (Bug Overview). |
+| PR Trend signal tile | Read-only insight about pull request patterns and may show a runtime trend badge when enough sprint data exists. Click navigates to Pull Request Insights. |
+| Pipeline Insights signal tile | Read-only insight about pipeline stability per product and may show a runtime status badge when enough Build Quality evidence exists. Click navigates to Pipeline Insights. |
+| Portfolio Progress navigation tile | Strategic product-level progress over a sprint range. Click navigates to Portfolio Progress Trend. |
+| Delivery Trends navigation tile | Historical PBI/effort throughput over time. Click navigates to Delivery Trends. |
 | Bug Trend chart (interactive) | Three-series chart (Total bugs, Fixed bugs, Added bugs) for the selected time range. Clicking a bar navigates to Bug Insights filtered to that period. Hovering highlights the bar. |
 | Cross-workspace navigation | Buttons to Backlog Health, Health, Delivery, and Planning (Future). |
 | Home button | Returns to `/home`. |
@@ -311,9 +313,10 @@ Global header (available on every page) ◄────────────�
 | Functionality | Description |
 |---|---|
 | Breadcrumb | `Home › Delivery`. |
-| Sprint Delivery signal card | Stakeholder sprint delivery report. Click navigates to Sprint Delivery. |
-| Portfolio Delivery signal card | Aggregated delivery view across products. Click navigates to Portfolio Delivery. |
-| Sprint Execution signal card | Internal sprint diagnostics. Click navigates to Sprint Execution. |
+| Navigation hub | Shows STATIC navigation cards only; delivery data loads in the destination pages, not in the hub itself. |
+| Sprint Delivery navigation card | Stakeholder sprint delivery report. Click navigates to Sprint Delivery. |
+| Portfolio Delivery navigation card | Aggregated delivery view across products. Click navigates to Portfolio Delivery. |
+| Sprint Execution navigation card | Internal sprint diagnostics. Click navigates to Sprint Execution. |
 | Cross-workspace navigation | Buttons to Backlog Health, Health, Trends (Past), and Planning (Future). |
 | Home button | Returns to `/home`. |
 
@@ -358,6 +361,7 @@ Global header (available on every page) ◄────────────�
 | Functionality | Description |
 |---|---|
 | Breadcrumb | `Home › Planning`. |
+| Navigation hub | Shows STATIC navigation cards only; no planning data is loaded before the user chooses a destination. |
 | Product Roadmaps card | Strategic ordering of epics and product direction. Click navigates to Product Roadmaps (`/planning/product-roadmaps`). |
 | Plan Board card | Iteration planning board for organizing PBIs and bugs in upcoming sprints. Click navigates to the Plan Board (`/planning/plan-board`). |
 | Cross-workspace navigation | Buttons to Backlog Health, Health, Trends (Past), and Delivery. |
