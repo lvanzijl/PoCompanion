@@ -13,14 +13,10 @@
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@Subtitle</MudText>
                         }
                     </MudStack>
-
-                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Info">
-                        Confidence: @Result.Metrics.Confidence
-                    </MudChip>
                 </MudStack>
 
                 <MudGrid Spacing="2">
-                    <MudItem xs="12" md="4">
+                    <MudItem xs="12" sm="6" xl="3">
                         <div class="build-quality-summary__panel">
                             <MudStack Spacing="1">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
@@ -42,7 +38,7 @@
                         </div>
                     </MudItem>
 
-                    <MudItem xs="12" md="4">
+                    <MudItem xs="12" sm="6" xl="3">
                         <div class="build-quality-summary__panel">
                             <MudStack Spacing="1">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
@@ -64,7 +60,7 @@
                         </div>
                     </MudItem>
 
-                    <MudItem xs="12" md="4">
+                    <MudItem xs="12" sm="6" xl="3">
                         <div class="build-quality-summary__panel">
                             <MudStack Spacing="1">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
@@ -82,6 +78,31 @@
                                     @BuildQualityPresentation.FormatPercent(Result.Metrics.Coverage, Result.Evidence.CoverageUnknown)
                                 </MudText>
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Total lines: @Result.Evidence.TotalLines</MudText>
+                            </MudStack>
+                        </div>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6" xl="3">
+                        <div class="build-quality-summary__panel">
+                            <MudStack Spacing="1">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.subtitle2">Confidence</MudText>
+                                    <MudTooltip Placement="Placement.Bottom" Arrow="true">
+                                        <ChildContent>
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" />
+                                        </ChildContent>
+                                        <TooltipContent>
+                                            <MudStack Spacing="0">
+                                                <MudText Typo="Typo.caption">Build threshold: @BuildQualityPresentation.FormatThresholdStatus(Result.Evidence.BuildThresholdMet)</MudText>
+                                                <MudText Typo="Typo.caption">Test threshold: @BuildQualityPresentation.FormatThresholdStatus(Result.Evidence.TestThresholdMet)</MudText>
+                                            </MudStack>
+                                        </TooltipContent>
+                                    </MudTooltip>
+                                </MudStack>
+                                <MudText Typo="Typo.h5">@Result.Metrics.Confidence</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Build: @BuildQualityPresentation.FormatThresholdStatus(Result.Evidence.BuildThresholdMet) · Test: @BuildQualityPresentation.FormatThresholdStatus(Result.Evidence.TestThresholdMet)
+                                </MudText>
                             </MudStack>
                         </div>
                     </MudItem>

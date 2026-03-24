@@ -17,8 +17,8 @@
 
     <MudText Typo="Typo.subtitle2">Confidence</MudText>
     <MudText Typo="Typo.caption">Score: @Result.Metrics.Confidence</MudText>
-    <MudText Typo="Typo.caption">Build threshold: @(Result.Evidence.BuildThresholdMet ? "met" : "not met")</MudText>
-    <MudText Typo="Typo.caption">Test threshold: @(Result.Evidence.TestThresholdMet ? "met" : "not met")</MudText>
+    <MudText Typo="Typo.caption">Build threshold: @BuildQualityPresentation.FormatThresholdStatus(Result.Evidence.BuildThresholdMet)</MudText>
+    <MudText Typo="Typo.caption">Test threshold: @BuildQualityPresentation.FormatThresholdStatus(Result.Evidence.TestThresholdMet)</MudText>
 </MudStack>
 
 @code {
