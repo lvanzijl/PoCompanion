@@ -183,7 +183,96 @@ public class RealTfsClientRequestTests
 
         AssertLogged(logger, "BUILDQUALITY_COVERAGE_BUILD_SUMMARY: buildId=101");
         AssertLogged(logger, "BUILDQUALITY_COVERAGE_BUILD_SUMMARY: buildId=102");
+        AssertLogged(logger, "Build 101 -> no coverage data.");
+        AssertLogged(logger, "Build 102 -> no coverage data.");
         AssertLogged(logger, "BUILDQUALITY_COVERAGE_REQUEST_SUMMARY:");
+    }
+
+    [TestMethod]
+    public async Task GetCoverageByBuildIdsAsync_UsesFirstValidLinesCoverageAndLogsMultipleEntries()
+    {
+        var config = CreateConfig();
+        var logger = new Mock<ILogger<RealTfsClient>>();
+
+        var handler = new CaptureHttpMessageHandler((request, _) =>
+        {
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""
+                    {
+                      "coverageData": [
+                        {
+                          "coverageStats": [
+                            { "label": "Branches", "covered": 1, "total": 2 },
+                            { "label": "Lines", "covered": 40, "total": 50 }
+                          ]
+                        },
+                        {
+                          "coverageStats": [
+                            { "label": "Lines", "covered": 90, "total": 100 }
+                          ]
+                        }
+                      ]
+                    }
+                    """)
+            });
+        });
+
+        var client = CreateClient(config, handler, logger);
+
+        var coverage = (await client.GetCoverageByBuildIdsAsync([101])).ToList();
+
+        Assert.HasCount(1, coverage);
+        Assert.AreEqual(101, coverage[0].BuildId);
+        Assert.AreEqual(40, coverage[0].CoveredLines);
+        Assert.AreEqual(50, coverage[0].TotalLines);
+        AssertLoggedAtLevel(logger, LogLevel.Warning, "Build 101 -> received 2 coverageData entries; using the first valid Lines stat only.");
+        AssertLogged(logger, "Build 101 -> coverage retrieved (Covered=40, Total=50).");
+        AssertLogged(logger, "BUILDQUALITY_COVERAGE_BUILD_SUMMARY: buildId=101");
+    }
+
+    [TestMethod]
+    public async Task GetCoverageByBuildIdsAsync_LogsPerBuildWarningsForMalformedCoveragePayloads()
+    {
+        var config = CreateConfig();
+        var logger = new Mock<ILogger<RealTfsClient>>();
+        var requests = new List<Uri>();
+
+        var handler = new CaptureHttpMessageHandler((request, _) =>
+        {
+            requests.Add(request.RequestUri!);
+            var payload = request.RequestUri!.AbsoluteUri switch
+            {
+                var uri when uri.Contains("buildId=101", StringComparison.Ordinal) => """{"value":[]}""",
+                var uri when uri.Contains("buildId=102", StringComparison.Ordinal) => """{"coverageData":[{}]}""",
+                var uri when uri.Contains("buildId=103", StringComparison.Ordinal) => """{"coverageData":[{"coverageStats":[{"label":"Branches","covered":1,"total":2}]}]}""",
+                var uri when uri.Contains("buildId=104", StringComparison.Ordinal) => """{"coverageData":[{"coverageStats":[{"label":"Lines","covered":4}]}]}""",
+                var uri when uri.Contains("buildId=105", StringComparison.Ordinal) => """{"coverageData":[{"coverageStats":[{"label":"Lines","covered":9,"total":3}]}]}""",
+                _ => """{"coverageData":[]}"""
+            };
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(payload)
+            });
+        });
+
+        var client = CreateClient(config, handler, logger);
+
+        var coverage = (await client.GetCoverageByBuildIdsAsync([101, 102, 103, 104, 105])).ToList();
+
+        Assert.IsFalse(coverage.Any());
+        Assert.HasCount(5, requests);
+        AssertLoggedAtLevel(logger, LogLevel.Warning, "Build 101 -> no coverage data because the payload does not contain a coverageData array.");
+        AssertLoggedAtLevel(logger, LogLevel.Warning, "Build 102 -> no coverage data because no coverageStats array was found.");
+        AssertLoggedAtLevel(logger, LogLevel.Warning, "Build 103 -> no coverage data because no Lines coverage stat was found.");
+        AssertLoggedAtLevel(logger, LogLevel.Warning, "Build 104 -> no coverage data because the Lines coverage stat is missing covered or total values.");
+        AssertLoggedAtLevel(logger, LogLevel.Warning, "Build 105 -> no coverage data because the Lines coverage stat has invalid numeric values.");
+        AssertLogged(logger, "Build 101 -> no coverage data.");
+        AssertLogged(logger, "Build 102 -> no coverage data.");
+        AssertLogged(logger, "Build 103 -> no coverage data.");
+        AssertLogged(logger, "Build 104 -> no coverage data.");
+        AssertLogged(logger, "Build 105 -> no coverage data.");
     }
 
     [TestMethod]
@@ -339,7 +428,23 @@ public class RealTfsClientRequestTests
     }
 
     private static void AssertLogged(Mock<ILogger<RealTfsClient>> logger, string messageFragment)
+        => AssertLoggedAtLevel(logger, null, messageFragment);
+
+    private static void AssertLoggedAtLevel(Mock<ILogger<RealTfsClient>> logger, LogLevel? level, string messageFragment)
     {
+        if (level.HasValue)
+        {
+            logger.Verify(
+                instance => instance.Log(
+                    It.Is<LogLevel>(value => value == level.Value),
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains(messageFragment, StringComparison.Ordinal)),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.AtLeastOnce);
+            return;
+        }
+
         logger.Verify(
             instance => instance.Log(
                 It.IsAny<LogLevel>(),
