@@ -12,7 +12,7 @@ public partial class RealTfsClient
     private const string BuildQualityCoverageEndpointPath = "_apis/testresults/codecoverage";
     private const string BuildQualityTestRunsApiVersion = "7.0";
     private const string BuildQualityCoverageApiVersion = "7.0-preview";
-    private const string BuildQualityTestRunsQueryShape = "buildUri";
+    private const string BuildQualityTestRunsQueryShape = "buildIds";
     private const int TestRunPageSize = 200;
 
     public async Task<IEnumerable<TestRunDto>> GetTestRunsByBuildIdsAsync(
@@ -159,7 +159,7 @@ public partial class RealTfsClient
             BuildQualityTestRunsQueryShape);
 
         var buildStopwatch = Stopwatch.StartNew();
-        var requestedBuildUri = GetTestRunBuildUri(buildId);
+        var requestedBuildUri = $"vstfs:///Build/Build/{buildId}";
         var skip = 0;
         var rawRunCount = 0;
         var parsedRunCount = 0;
@@ -170,7 +170,7 @@ public partial class RealTfsClient
         {
             var url = ProjectUrlWithApiVersionOverride(
                 config,
-                $"{BuildQualityTestRunsEndpointPath}?buildUri={Uri.EscapeDataString(requestedBuildUri)}" +
+                $"{BuildQualityTestRunsEndpointPath}?buildIds={buildId}" +
                 $"&$top={TestRunPageSize}&$skip={skip}",
                 BuildQualityTestRunsApiVersion);
             _logger.LogDebug(
@@ -361,11 +361,6 @@ public partial class RealTfsClient
         var path = relativePath.TrimStart('/');
         var separator = path.Contains('?') ? "&" : "?";
         return $"{config.Url.TrimEnd('/')}/{encodedProject}/{path}{separator}api-version={Uri.EscapeDataString(apiVersion)}";
-    }
-
-    private static string GetTestRunBuildUri(int buildId)
-    {
-        return $"vstfs:///Build/Build/{buildId}";
     }
 
     private TestRunDto? ParseTestRunDto(JsonElement run, int requestedBuildId)
