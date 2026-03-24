@@ -1,0 +1,269 @@
+@page "/home/health/overview"
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Models
+@implements IDisposable
+@inherits WorkspaceBase
+@inject IBuildQualityService BuildQualityService
+
+<PageTitle>Health Overview - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Color="Color.Success" Size="Size.Large" />
+                    <MudText Typo="Typo.h4">Health Overview</MudText>
+                </MudStack>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Build Quality overview for the active Product Owner.
+                </MudText>
+                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+            </MudStack>
+
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                <MudChip T="string"
+                         Icon="@Icons.Material.Filled.DateRange"
+                         Size="Size.Small"
+                         Color="Color.Info">
+                    Last @DefaultRollingWindowDays days
+                </MudChip>
+
+                @if (!string.IsNullOrWhiteSpace(_selectedProductName))
+                {
+                    <MudChip T="string"
+                             Icon="@Icons.Material.Filled.FilterAlt"
+                             Size="Size.Small"
+                             Color="Color.Primary"
+                             OnClose="ClearProductFilter">
+                        @_selectedProductName
+                    </MudChip>
+                }
+
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               Icon="@Icons.Material.Filled.HealthAndSafety"
+                               OnClick="NavigateToHealthWorkspace">
+                    Back to Health
+                </CompactButton>
+
+                <CompactButton ButtonRole="ButtonRole.Utility"
+                               Icon="@Icons.Material.Filled.Home"
+                               OnClick="NavigateToHome">
+                    Home
+                </CompactButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    <MudPaper Elevation="1" Class="pa-4 mb-4">
+        @if (!string.IsNullOrWhiteSpace(_loadError))
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap">
+                    <MudText Typo="Typo.body2">@_loadError</MudText>
+                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                   Icon="@Icons.Material.Filled.Refresh"
+                                   OnClick="RetryLoadAsync">
+                        Retry
+                    </CompactButton>
+                </MudStack>
+            </MudAlert>
+        }
+        else if (_isLoading)
+        {
+            <MudGrid Spacing="2">
+                @for (var index = 0; index < 3; index++)
+                {
+                    <MudItem xs="12" md="6" lg="4" @key="@($"build-quality-placeholder-{index}")">
+                        <MudCard Elevation="2">
+                            <MudCardContent>
+                                <MudSkeleton SkeletonType="SkeletonType.Text" Height="28px" Width="160px" Class="mb-3" />
+                                <MudGrid Spacing="2">
+                                    <MudItem xs="12" md="4">
+                                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="120px" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="4">
+                                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="120px" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="4">
+                                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="120px" />
+                                    </MudItem>
+                                </MudGrid>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+        else if (_buildQualityPage is null || !_buildQualityPage.Products.Any())
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                No Build Quality products are available for the active Product Owner.
+            </MudAlert>
+        }
+        else
+        {
+            <MudStack Spacing="2" Class="mb-4">
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Showing default-branch Build Quality for @GetWindowLabel().
+                </MudText>
+
+                <BuildQualitySummaryComponent Title="Overall Build Quality"
+                                              Subtitle="@GetOverallSummarySubtitle()"
+                                              Result="@_buildQualityPage.Summary" />
+
+                <MudText Typo="Typo.subtitle2">Products</MudText>
+
+                <MudGrid Spacing="2">
+                    @foreach (var product in GetProductsInDisplayOrder())
+                    {
+                        <MudItem xs="12" md="6" lg="4" @key="product.ProductId">
+                            <BuildQualitySummaryComponent Title="@product.ProductName"
+                                                          Subtitle="@GetProductSubtitle(product)"
+                                                          Result="@product.Result" />
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudStack>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private const int DefaultRollingWindowDays = 30;
+
+    private readonly CancellationTokenSource _lifetimeCts = new();
+    private readonly List<BreadcrumbItem> _breadcrumbs = new();
+
+    private BuildQualityPageDto? _buildQualityPage;
+    private string? _loadError;
+    private string? _selectedProductName;
+    private bool _isLoading = true;
+    private DateTimeOffset _windowStartUtc;
+    private DateTimeOffset _windowEndUtc;
+
+    protected override void OnInitialized()
+    {
+        ParseContextQueryParameters();
+        _windowEndUtc = DateTimeOffset.UtcNow;
+        _windowStartUtc = _windowEndUtc.AddDays(-DefaultRollingWindowDays);
+
+        _breadcrumbs.Add(new BreadcrumbItem("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home));
+        _breadcrumbs.Add(new BreadcrumbItem("Health", WorkspaceRoutes.HealthWorkspace, icon: Icons.Material.Filled.HealthAndSafety));
+        _breadcrumbs.Add(new BreadcrumbItem("Overview", null, disabled: true, icon: Icons.Material.Filled.Assessment));
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _ = LoadOverviewAsync();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task LoadOverviewAsync()
+    {
+        _isLoading = true;
+        _loadError = null;
+        _buildQualityPage = null;
+        _selectedProductName = null;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            if (!await EnsureProfileAsync())
+            {
+                return;
+            }
+
+            var activeProfile = await ProfileService.GetActiveProfileAsync(_lifetimeCts.Token);
+            if (activeProfile is null)
+            {
+                _loadError = "No active profile selected.";
+                return;
+            }
+
+            _buildQualityPage = await BuildQualityService.GetRollingWindowAsync(
+                activeProfile.Id,
+                _windowStartUtc,
+                _windowEndUtc,
+                _lifetimeCts.Token);
+
+            if (ProductId.HasValue)
+            {
+                _selectedProductName = _buildQualityPage.Products
+                    .FirstOrDefault(product => product.ProductId == ProductId.Value)
+                    ?.ProductName;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _loadError = $"Build Quality overview unavailable right now: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private Task RetryLoadAsync()
+    {
+        if (_lifetimeCts.IsCancellationRequested)
+        {
+            return Task.CompletedTask;
+        }
+
+        return LoadOverviewAsync();
+    }
+
+    private IEnumerable<BuildQualityProductDto> GetProductsInDisplayOrder()
+    {
+        if (_buildQualityPage is null)
+        {
+            return Array.Empty<BuildQualityProductDto>();
+        }
+
+        return _buildQualityPage.Products
+            .OrderByDescending(product => ProductId.HasValue && product.ProductId == ProductId.Value)
+            .ThenBy(product => product.ProductName, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private string GetProductSubtitle(BuildQualityProductDto product)
+    {
+        var pipelineCount = product.PipelineDefinitionIds?.Count ?? 0;
+        var repositoryCount = product.RepositoryIds?.Count ?? 0;
+        return $"{pipelineCount} pipeline{(pipelineCount == 1 ? string.Empty : "s")} · {repositoryCount} repositor{(repositoryCount == 1 ? "y" : "ies")}";
+    }
+
+    private string GetOverallSummarySubtitle()
+    {
+        var productCount = _buildQualityPage?.Products.Count ?? 0;
+        return $"{productCount} product{(productCount == 1 ? string.Empty : "s")} · {GetWindowLabel()}";
+    }
+
+    private string GetWindowLabel() =>
+        $"{_windowStartUtc:MMM d, yyyy} — {_windowEndUtc:MMM d, yyyy}";
+
+    private void ClearProductFilter()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.HealthOverview);
+    }
+
+    private void NavigateToHealthWorkspace()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.HealthWorkspace}{BuildContextQuery()}");
+    }
+
+    public void Dispose()
+    {
+        _lifetimeCts.Cancel();
+        _lifetimeCts.Dispose();
+    }
+}

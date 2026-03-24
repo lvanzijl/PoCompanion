@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-24",
+    "type": "Changed",
+    "title": "Health workspace now opens as a hub",
+    "impact": "Health now opens as a navigation hub, while the existing Build Quality page moved to Health Overview at /home/health/overview.",
+    "area": "Health",
+    "link": "/home/health"
+  },
+  {
+    "date": "2026-03-24",
     "type": "Fixed",
     "title": "Mock Health Build Quality now shows seeded metrics",
     "impact": "Mock-mode Health now shows realistic builds, tests, coverage, and confidence values for Incident Response Control after a normal sync.",

@@ -2,7 +2,7 @@
 
 **Doelgroep:** Product Owners  
 **Taal:** Nederlands  
-**Laatste bijwerking:** 2026-03-12
+**Laatste bijwerking:** 2026-03-24
 
 ---
 
@@ -15,9 +15,10 @@
 5. [Startpagina (Home)](#5-startpagina-home)
 6. [Backlog Overzicht](#6-backlog-overzicht)
 7. [Health-werkruimte — Nu](#7-health-werkruimte--nu)
-   - 7.1 [Validatie Triage](#71-validatie-triage)
-   - 7.2 [Validatiewachtrij](#72-validatiewachtrij)
-   - 7.3 [Validatie-fixsessie](#73-validatie-fixsessie)
+   - 7.1 [Health Overview](#71-health-overview)
+   - 7.2 [Validatie Triage](#72-validatie-triage)
+   - 7.3 [Validatiewachtrij](#73-validatiewachtrij)
+   - 7.4 [Validatie-fixsessie](#74-validatie-fixsessie)
 8. [Delivery-werkruimte](#8-delivery-werkruimte)
    - 8.1 [Sprint Delivery](#81-sprint-delivery)
    - 8.2 [Sprint-activiteit](#82-sprint-activiteit)
@@ -262,46 +263,38 @@ Rechtsonder staan knoppen om direct naar Health (Nu), Trends (Verleden) en Plann
 
 **Pagina:** `/home/health`
 
-De Health-werkruimte beantwoordt de vraag: *Wat is er op dit moment aan de hand met mijn backlog?* De pagina rendert nu eerst haar vaste structuur en vult daarna progressief: de signaalbalk en productkaarten laden onafhankelijk van elkaar, elk met een eigen placeholder of compacte foutstatus.
+De Health-werkruimte is nu een **lichte navigatiehub**. Je opent dus eerst `/home/health`, kiest daarna de juiste health-pagina, en alleen die gekozen subpagina haalt data op. Zo sluit Health aan op dezelfde werkruimtestructuur als Delivery en Trends.
 
-### Verfijningssignalen
+### Wat zie je hier?
 
-| Signaalkaart | Wat meet het? | Doorklik |
+| Kaart | Wat doet deze? | Doorklik |
 |---|---|---|
-| **Refinement Readiness (RR)** | Werkitems die verfijning blokkeren (RR-regels). Oranje als > 0. | `/home/validation-queue?category=RR` |
-| **Refinement Completeness (RC)** | Werkitems die verfijning nodig hebben (RC-regels). Oranje als > 0. | `/home/validation-queue?category=RC` |
+| **Overview** | Opent de bestaande Build Quality-samenvatting op een aparte Health-subpagina. | `/home/health/overview` |
+| **Validatie Triage** | Opent het gegroepeerde overzicht van validatieproblemen per categorie. | `/home/validation-triage` |
+| **Backlog Overzicht** | Opent de bestaande backlogdetailpagina zonder die al op de hub te laden. | `/home/backlog-overview` |
 
-### Integriteit (onderhoud)
+Daarnaast zie je onderaan compacte knoppen naar **Delivery**, **Trends (Verleden)** en **Planning (Toekomst)**. De hub zelf laadt **geen** Build Quality-data en voert **geen zware query** uit.
 
-| Signaalkaart | Wat meet het? | Doorklik |
-|---|---|---|
-| **Structural Integrity (SI)** | Werkitems met structurele integriteitsfouten (SI-regels). Rood als > 0. | `/home/validation-queue?category=SI` |
-
-> **Onthoud:** SI-bevindingen blokkeren de backlog **niet** voor planning. Ze zijn zichtbaar als onderhoudssignaal en worden apart bijgehouden.
-
-### Productkaarten
-
-Onder de signaalbalk staat per product een compacte kaart. Elke kaart laadt zelfstandig en toont alleen de samenvatting die je op de Health-pagina nodig hebt:
-
-- **ready story points** — zichtbare story points onder epics die volledig klaar zijn;
-- **features ready in pending epics** — features die al klaar zijn terwijl het bovenliggende epic nog niet klaar is;
-- **Closest to ready** — de top-3 epics die het dichtst bij volledige verfijning zitten.
-
-Als één kaart niet kan laden, blijven de andere kaarten bruikbaar. Gebruik **Backlog Overview** op de kaart om naar de detailpagina voor dat product te gaan.
-
-### Primaire actie: Validatie Triage
-
-De knop **Validatie Triage** bovenaan de pagina is de aanbevolen manier om validatiewerk te starten. Die brengt je naar een gestructureerd overzicht per categorie, zodat je kunt beslissen waar je je aandacht op richt.
-
-### Overige acties
-
-- **Bug Triage** — opent direct `/bugs-triage`.
-- **Home** — terug naar `/home`.
-- Onderaan staan knoppen naar **Backlog Overzicht**, **Trends (Past)** en **Planning (Future)**.
+> **Belangrijk:** De oude Health-inhoud is niet verdwenen, maar verhuisd naar de subpagina **Health Overview**. Gebruik dus voortaan de Overview-kaart om de bestaande Build Quality-weergave te openen.
 
 ---
 
-### 7.1 Validatie Triage
+### 7.1 Health Overview
+
+**Pagina:** `/home/health/overview`
+
+De subpagina **Health Overview** bevat de bestaande Build Quality-functionaliteit. De pagina rendert eerst haar vaste structuur en vult daarna progressief de laadstatussen en kaarten, net als voorheen.
+
+#### Wat zie je hier?
+
+| Onderdeel | Beschrijving |
+|---|---|
+| **Overall Build Quality** | Samenvattingskaart over de gekozen rolling window. |
+| **Productkaarten** | Eén Build Quality-kaart per product met pipelines, repositories en confidence. |
+| **Productfilterchip** | Verschijnt als je vanaf Home met een productcontext opent. |
+| **Back to Health** | Gaat terug naar de hub op `/home/health`. |
+
+### 7.2 Validatie Triage
 
 **Pagina:** `/home/validation-triage`
 
@@ -328,7 +321,7 @@ Elke kaart heeft een knop **Open wachtrij** om door te klikken naar de detailwac
 
 ---
 
-### 7.2 Validatiewachtrij
+### 7.3 Validatiewachtrij
 
 **Pagina:** `/home/validation-queue?category={SI|RR|RC|EFF}`
 
@@ -350,7 +343,7 @@ Als er helemaal geen problemen zijn in de geselecteerde categorie, zie je een gr
 
 ---
 
-### 7.3 Validatie-fixsessie
+### 7.4 Validatie-fixsessie
 
 **Pagina:** `/home/validation-fix?category={...}&ruleId={...}`
 

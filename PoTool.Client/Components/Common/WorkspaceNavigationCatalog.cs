@@ -25,6 +25,7 @@ public static class WorkspaceNavigationCatalog
             "var(--color-success)",
             [
                 WorkspaceRoutes.HealthWorkspace,
+                WorkspaceRoutes.HealthOverview,
                 WorkspaceRoutes.ValidationTriage,
                 WorkspaceRoutes.ValidationQueue,
                 WorkspaceRoutes.ValidationFix,
