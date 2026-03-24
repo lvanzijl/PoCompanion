@@ -239,14 +239,14 @@ public class RealTfsClientRequestTests
         StringAssert.Contains(requests[1].AbsoluteUri, "_apis/test/runs?buildIds=101");
         StringAssert.Contains(requests[2].AbsoluteUri, "_apis/test/runs?buildIds=102");
         StringAssert.Contains(requests[3].AbsoluteUri, "_apis/test/runs?buildIds=102");
-        Assert.IsFalse(requests[0].Query.Contains("minLastUpdatedDate", StringComparison.Ordinal));
-        Assert.IsFalse(requests[0].Query.Contains("buildUri=", StringComparison.Ordinal));
         StringAssert.Contains(requests[0].Query, "api-version=7.0");
         StringAssert.Contains(requests[1].Query, "$skip=200");
         StringAssert.Contains(requests[3].Query, "$skip=200");
         foreach (var request in requests)
         {
             Assert.IsFalse(request.AbsoluteUri.Contains("_apis/build/builds", StringComparison.OrdinalIgnoreCase));
+            Assert.IsFalse(request.Query.Contains("minLastUpdatedDate", StringComparison.Ordinal));
+            Assert.IsFalse(request.Query.Contains("buildUri=", StringComparison.Ordinal));
             Assert.AreEqual(1, request.Query.Split("buildIds=").Length - 1);
         }
 
