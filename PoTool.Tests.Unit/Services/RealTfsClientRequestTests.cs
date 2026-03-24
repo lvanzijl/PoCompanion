@@ -234,7 +234,7 @@ public class RealTfsClientRequestTests
         Assert.AreEqual(12, testRuns[0].TotalTests);
         Assert.AreEqual(102, testRuns[1].BuildId);
         Assert.AreEqual(5002, testRuns[1].ExternalId);
-        CollectionAssert.AreEquivalent([5001, 5002], testRuns.Select(run => run.ExternalId).ToList());
+        CollectionAssert.AreEquivalent(new[] { 5001, 5002 }, testRuns.Select(run => run.ExternalId).ToList());
         CollectionAssert.DoesNotContain(testRuns.Select(run => run.ExternalId).ToList(), 5999);
         CollectionAssert.DoesNotContain(testRuns.Select(run => run.ExternalId).ToList(), 5998);
         Assert.HasCount(4, requests);
