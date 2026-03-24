@@ -8,7 +8,7 @@ namespace PoTool.Integrations.Tfs.Clients;
 
 public partial class RealTfsClient
 {
-    private const string BuildQualityTestRunsEndpointPath = "_apis/testresults/runs";
+    private const string BuildQualityTestRunsEndpointPath = "_apis/test/runs";
     private const string BuildQualityCoverageEndpointPath = "_apis/testresults/codecoverage";
     private const string BuildQualityTestRunsApiVersion = "7.0";
     private const string BuildQualityCoverageApiVersion = "7.0-preview";
@@ -202,8 +202,15 @@ public partial class RealTfsClient
             foreach (var run in EnumerateTestRunElements(doc.RootElement))
             {
                 pageRetrievedCount++;
+                var hasBuildId = TryGetBuildIdFromTestRun(run, out _);
+                var hasBuildUri = TryGetBuildUriFromTestRun(run, out _);
                 if (!MatchesRequestedBuild(run, buildId, requestedBuildUri))
                 {
+                    _logger.LogDebug(
+                        "Skipping TFS test run for requested build {BuildId} because the payload build linkage does not match (hasBuildId={HasBuildId}, hasBuildUri={HasBuildUri}).",
+                        buildId,
+                        hasBuildId,
+                        hasBuildUri);
                     continue;
                 }
 
@@ -457,17 +464,19 @@ public partial class RealTfsClient
 
     private bool MatchesRequestedBuild(JsonElement run, int requestedBuildId, string requestedBuildUri)
     {
-        if (TryGetBuildIdFromTestRun(run, out var runBuildId))
+        var hasBuildId = TryGetBuildIdFromTestRun(run, out var runBuildId);
+        if (hasBuildId)
         {
             return runBuildId == requestedBuildId;
         }
 
-        if (TryGetBuildUriFromTestRun(run, out var runBuildUri))
+        var hasBuildUri = TryGetBuildUriFromTestRun(run, out var runBuildUri);
+        if (hasBuildUri)
         {
             return string.Equals(runBuildUri, requestedBuildUri, StringComparison.OrdinalIgnoreCase);
         }
 
-        return true;
+        return false;
     }
 
     private static bool TryGetBuildUriFromTestRun(JsonElement run, out string buildUri)
