@@ -17,6 +17,16 @@ public class WorkspaceRoutesTests
     }
 
     [TestMethod]
+    public void HealthOverview_ReturnsExpectedRoute()
+    {
+        var route = typeof(WorkspaceRoutes)
+            .GetField(nameof(WorkspaceRoutes.HealthOverview))?
+            .GetRawConstantValue() as string;
+
+        Assert.AreEqual("/home/health/overview", route);
+    }
+
+    [TestMethod]
     public void GetProductRoadmapEditor_ReturnsProductSpecificRoute()
     {
         var result = WorkspaceRoutes.GetProductRoadmapEditor(42);

@@ -16,6 +16,7 @@ public class WorkspaceNavigationCatalogTests
 
     [TestMethod]
     [DataRow("Health", WorkspaceRoutes.HealthWorkspace, true)]
+    [DataRow("Health", WorkspaceRoutes.HealthOverview, true)]
     [DataRow("Health", WorkspaceRoutes.ValidationTriage, true)]
     [DataRow("Health", WorkspaceRoutes.BacklogOverview, true)]
     [DataRow("Health", WorkspaceRoutes.BugDetail, true)]

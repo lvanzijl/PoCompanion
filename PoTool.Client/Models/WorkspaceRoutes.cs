@@ -56,6 +56,11 @@ public static class WorkspaceRoutes
     public const string HealthWorkspace = "/home/health";
 
     /// <summary>
+    /// Health overview route — canonical page for Build Quality overview content.
+    /// </summary>
+    public const string HealthOverview = "/home/health/overview";
+
+    /// <summary>
     /// Overview/Trends (Past) workspace route.
     /// </summary>
     public const string TrendsWorkspace = "/home/trends";
