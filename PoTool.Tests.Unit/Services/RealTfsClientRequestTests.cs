@@ -187,7 +187,7 @@ public class RealTfsClientRequestTests
     }
 
     [TestMethod]
-    public async Task GetTestRunsByBuildIdsAsync_UsesStrictBuildUriFilteringWithSupportedApiVersion()
+    public async Task GetTestRunsByBuildIdsAsync_UsesStrictBuildIdsQueryShapeWithSupportedApiVersion()
     {
         var config = CreateConfig();
         var requests = new List<Uri>();
@@ -199,7 +199,7 @@ public class RealTfsClientRequestTests
 
             var query = request.RequestUri!.Query;
             string payload;
-            if (query.Contains("buildUri=vstfs%3A%2F%2F%2FBuild%2FBuild%2F101", StringComparison.Ordinal) &&
+            if (query.Contains("buildIds=101", StringComparison.Ordinal) &&
                 query.Contains("$skip=0", StringComparison.Ordinal))
             {
                 payload = "[" +
@@ -208,7 +208,7 @@ public class RealTfsClientRequestTests
                           "{\"id\":5998,\"totalTests\":7,\"passedTests\":6,\"notApplicableTests\":1}" +
                           "]";
             }
-            else if (query.Contains("buildUri=vstfs%3A%2F%2F%2FBuild%2FBuild%2F102", StringComparison.Ordinal) &&
+            else if (query.Contains("buildIds=102", StringComparison.Ordinal) &&
                      query.Contains("$skip=0", StringComparison.Ordinal))
             {
                 payload = "[{\"id\":5002,\"build\":{\"id\":102},\"totalTests\":8,\"passedTests\":6,\"notApplicableTests\":2}]";
@@ -235,20 +235,20 @@ public class RealTfsClientRequestTests
         Assert.AreEqual(102, testRuns[1].BuildId);
         Assert.AreEqual(5002, testRuns[1].ExternalId);
         Assert.HasCount(4, requests);
-        StringAssert.Contains(requests[0].AbsoluteUri, "_apis/test/runs?buildUri=vstfs%3A%2F%2F%2FBuild%2FBuild%2F101");
-        StringAssert.Contains(requests[1].AbsoluteUri, "_apis/test/runs?buildUri=vstfs%3A%2F%2F%2FBuild%2FBuild%2F101");
-        StringAssert.Contains(requests[2].AbsoluteUri, "_apis/test/runs?buildUri=vstfs%3A%2F%2F%2FBuild%2FBuild%2F102");
-        StringAssert.Contains(requests[3].AbsoluteUri, "_apis/test/runs?buildUri=vstfs%3A%2F%2F%2FBuild%2FBuild%2F102");
-        StringAssert.Contains(requests[0].Query, "buildUri=vstfs%3A%2F%2F%2FBuild%2FBuild%2F101");
+        StringAssert.Contains(requests[0].AbsoluteUri, "_apis/test/runs?buildIds=101");
+        StringAssert.Contains(requests[1].AbsoluteUri, "_apis/test/runs?buildIds=101");
+        StringAssert.Contains(requests[2].AbsoluteUri, "_apis/test/runs?buildIds=102");
+        StringAssert.Contains(requests[3].AbsoluteUri, "_apis/test/runs?buildIds=102");
+        StringAssert.Contains(requests[0].Query, "buildIds=101");
         Assert.IsFalse(requests[0].Query.Contains("minLastUpdatedDate", StringComparison.Ordinal));
-        Assert.IsFalse(requests[0].Query.Contains("buildIds=", StringComparison.Ordinal));
+        Assert.IsFalse(requests[0].Query.Contains("buildUri=", StringComparison.Ordinal));
         StringAssert.Contains(requests[0].Query, "api-version=7.0");
         StringAssert.Contains(requests[1].Query, "$skip=200");
         StringAssert.Contains(requests[3].Query, "$skip=200");
         foreach (var request in requests)
         {
             Assert.IsFalse(request.AbsoluteUri.Contains("_apis/build/builds", StringComparison.OrdinalIgnoreCase));
-            Assert.AreEqual(1, request.Query.Split("buildUri=").Length - 1);
+            Assert.AreEqual(1, request.Query.Split("buildIds=").Length - 1);
         }
 
         AssertLogged(logger, "BUILDQUALITY_TESTRUN_BUILD_SUMMARY: buildId=101");
