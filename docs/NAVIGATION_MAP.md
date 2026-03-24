@@ -3,7 +3,7 @@
 **Audience:** Product Owners and stakeholders  
 **Scope:** All non-legacy, non-settings pages  
 **Purpose:** Human-readable reference of available navigation and functionality; basis for improvement analysis  
-**Last Updated:** 2026-03-10 (Home dashboard refocused around dominant workspace navigation, a horizontal product bar, and a compact sync footer)
+**Last Updated:** 2026-03-24 (Health workspace routing, labels, and documentation finalized around the hub model)
 
 ---
 
@@ -37,7 +37,8 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       │               └──► /home/validation-fix?category=EFF&ruleId=RC-2 (EFF maps to RC-2) │
   │       ├──► /home/validation-queue?category=SI|RR|RC  (signal cards — direct queue entry) │
   │       ├──► /home/bugs                                              │
-  │       ├──► /home/backlog-overview  (cross-workspace)               │
+  │       ├──► /home/health/backlog-health  (Backlog Health — primary) │
+  │       ├──► /home/backlog-overview  (Backlog Health — legacy direct route) │
   │       ├──► /home/trends  (cross-workspace)                         │
   │       └──► /home/planning  (cross-workspace)                       │
   │                                                                   │
@@ -55,7 +56,7 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       ├──► /home/pipeline-insights  (PO-first stability overview) │
   │       ├──► /home/portfolio-progress  (portfolio trend)            │
   │       ├──► /home/trends/delivery  (delivery trends)               │
-  │       ├──► /home/backlog-overview  (cross-workspace)               │
+  │       ├──► /home/health/backlog-health  (cross-workspace)          │
   │       ├──► /home/health  (cross-workspace)                        │
   │       ├──► /home/delivery  (cross-workspace)                      │
   │       └──► /home/planning  (cross-workspace)                      │
@@ -65,7 +66,7 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       │       └──► /planning/product-roadmaps/{productId}  (Editor) │
   │       ├──► /planning/plan-board  (Plan Board — sprint planning)   │
   │       ├──► /home/dependencies  (read-only)                        │
-  │       ├──► /home/backlog-overview  (cross-workspace)               │
+  │       ├──► /home/health/backlog-health  (cross-workspace)          │
   │       ├──► /home/health  (cross-workspace)                        │
   │       ├──► /home/trends  (cross-workspace)                        │
   │       └──► /home/delivery  (cross-workspace)                      │
@@ -138,25 +139,29 @@ Global header (available on every page) ◄────────────�
 
 ---
 
-### 2.3a Backlog Overview — `/home/backlog-overview`
+### 2.3a Backlog Health — `/home/health/backlog-health`
 
 **Purpose:** Product-centered backlog maturity view. Shows refinement readiness per Epic → Feature → PBI based on the Backlog State Model. Primary entry point for the PO to understand what is plan-ready, what needs refinement, and what requires structural maintenance.
 
 | Functionality | Description |
 |---|---|
-| Breadcrumb | `Home › Backlog Overview` — clear location context. |
+| Breadcrumb | `Home › Health › Backlog Health` — clear Health workspace context. |
 | Product selector | Dropdown when multiple products exist; auto-selects when only one product is configured. Respects `?productId=` context from Home. |
 | Ready for Implementation section | Lists Epics with score = 100%. Each Epic shown as a card with feature count. Click → Work Item Explorer scoped to that Epic. |
 | Needs Refinement section | Lists Epics with score < 100%, sorted descending by score. Each Epic is an expandable panel showing its Features with score, owner badge (PO/Team/Ready), and progress bar. Click any Feature row → Work Item Explorer scoped to the parent Epic. |
 | Integrity Maintenance section | Shows count of Structural Integrity findings (product-scoped). Chip turns red when > 0. "Open Validation Queue" button navigates to `/home/validation-queue?category=SI`. SI findings do **not** affect refinement scores. |
-| Cross-workspace navigation | Buttons to Health (Now), Trends (Past), and Planning (Future). |
+| Empty state | Shows an intentional info state when no backlog health data is available for the selected product yet. |
+| Back to Health button | Returns to `/home/health`. |
+| Cross-workspace navigation | Buttons to Health, Trends (Past), and Planning (Future). |
 | Home button | Returns to `/home`. |
+
+**Direct routes:** Canonical route `/home/health/backlog-health`; legacy direct route `/home/backlog-overview` remains available for existing bookmarks.
 
 **Outgoing navigation:** `/workitems?rootWorkItemId={epicId}`, `/home/validation-queue?category=SI`, `/home/health`, `/home/trends`, `/home/planning`, `/home`
 
 ---
 
-### 2.3b Health (Now) Workspace — `/home/health`
+### 2.3b Health Workspace — `/home/health`
 
 **Purpose:** Lightweight navigation hub for Health. Renders immediately, loads no Health data on entry, and routes the user to the appropriate health-related page.
 
@@ -166,15 +171,15 @@ Global header (available on every page) ◄────────────�
 | Navigation hub | Shows navigation cards only; no Build Quality or backlog queries run on hub load. |
 | Overview card | Opens `/home/health/overview`, which now hosts the existing Build Quality experience. |
 | Validation Triage card | Opens `/home/validation-triage` for grouped validation follow-up. |
-| Backlog Overview card | Opens `/home/backlog-overview` for backlog detail without loading it inside the hub. |
+| Backlog Health card | Opens `/home/health/backlog-health` for backlog detail without loading it inside the hub. |
 | Cross-workspace navigation | Buttons to Delivery, Trends (Past), and Planning (Future). |
 | Home button | Returns to `/home`. |
 
-**Outgoing navigation:** `/home/health/overview`, `/home/validation-triage`, `/home/backlog-overview`, `/home/delivery`, `/home/trends`, `/home/planning`, `/home`
+**Outgoing navigation:** `/home/health/overview`, `/home/validation-triage`, `/home/health/backlog-health`, `/home/delivery`, `/home/trends`, `/home/planning`, `/home`
 
 ---
 
-### 2.3c Health Overview — `/home/health/overview`
+### 2.3c Overview — `/home/health/overview`
 
 **Purpose:** Canonical Health subpage for the existing Build Quality overview. This page keeps the current functionality while moving Health data loading behind the Health hub.
 
@@ -187,7 +192,7 @@ Global header (available on every page) ◄────────────�
 | Back to Health button | Returns to `/home/health`. |
 | Home button | Returns to `/home`. |
 
-**Outgoing navigation:** `/home/health`, `/home/backlog-overview`, `/home`
+**Outgoing navigation:** `/home/health`, `/home`
 
 ---
 
@@ -197,13 +202,13 @@ Global header (available on every page) ◄────────────�
 
 | Functionality | Description |
 |---|---|
-| Breadcrumb | `Home › Health (Now) › Validation Triage` — clear position in the Health path. |
+| Breadcrumb | `Home › Health › Validation Triage` — clear position in the Health path. |
 | Product context chip | Shows active product filter (if any) with a clear button. |
 | SI card | Total items with Structural Integrity violations + top 3 rule groups. "Open queue" button navigates to `/home/validation-queue?category=SI`. |
 | RR card | Total items with Refinement Readiness violations + top 3 rule groups. "Open queue" button navigates to `/home/validation-queue?category=RR`. |
 | RC card | Total items with Refinement Completeness violations + top 3 rule groups. "Open queue" button navigates to `/home/validation-queue?category=RC`. |
 | EFF card | Total items missing effort estimates (RC-2 rule). "Open queue" button navigates to `/home/validation-queue?category=EFF`. |
-| Health (Now) button | Returns to the Health workspace. |
+| Health button | Returns to the Health workspace. |
 | Home button | Returns to `/home`. |
 
 **Outgoing navigation:** `/home/validation-queue?category=SI|RR|RC|EFF`, `/home/health`, `/home`
@@ -216,7 +221,7 @@ Global header (available on every page) ◄────────────�
 
 | Functionality | Description |
 |---|---|
-| Breadcrumb | `Home › Health (Now) › Validation Triage › {Category} Queue` — full context path. |
+| Breadcrumb | `Home › Health › Validation Triage › {Category} Queue` — full context path. |
 | Product context chip | Shows active product filter (if any) with a clear button. |
 | Category summary header | Displays category icon, label, total item count, and total rule group count. |
 | Rule group cards | One card per rule ID, sorted by item count descending. Shows RuleId, short title, and affected item count. |
@@ -235,7 +240,7 @@ Global header (available on every page) ◄────────────�
 
 | Functionality | Description |
 |---|---|
-| Breadcrumb | `Home › Health (Now) › Validation Triage › {Category} Queue › Fix Session` — full context path. |
+| Breadcrumb | `Home › Health › Validation Triage › {Category} Queue › Fix Session` — full context path. |
 | Product context chip | Shows active product filter (if any) with a clear button. |
 | Rule context banner | Displays category icon, rule ID, rule title, and category label. Shows a progress chip: "N dismissed · M remaining of total". |
 | Item card | Shows current item: Type chip, State chip, Effort chip (if set), TFS ID, Title, violation message, Area Path, Iteration Path, Parent TFS ID (if set), and Description (if present). |
@@ -266,12 +271,12 @@ Global header (available on every page) ◄────────────�
 | Pipeline Insights signal card | Read-only insight about pipeline stability per product. Click navigates to Pipeline Insights. |
 | Portfolio Progress signal card | Represents strategic product-level progress over a sprint range. Click navigates to Portfolio Progress Trend. |
 | Bug Trend chart (interactive) | Three-series chart (Total bugs, Fixed bugs, Added bugs) for the selected time range. Clicking a bar navigates to Bug Insights filtered to that period. Hovering highlights the bar. |
-| Cross-workspace navigation | Buttons to Backlog Overview, Health (Now), Delivery, and Planning (Future). |
+| Cross-workspace navigation | Buttons to Backlog Health, Health, Delivery, and Planning (Future). |
 | Home button | Returns to `/home`. |
 
 > **Note:** Sprint Delivery (formerly Sprint Trend) has moved to the Delivery workspace. Velocity and predictability signals (median velocity, P25–P75 band, median predictability) are embedded in Sprint Delivery (calibration panel) and Planning (Capacity Confidence block).
 
-**Outgoing navigation:** `/home/portfolio-progress`, `/home/trends/delivery`, `/home/bugs`, `/home/pull-requests`, `/home/pr-delivery-insights`, `/home/pipeline-insights`, `/home/delivery`, `/home/backlog-overview`, `/home/health`, `/home/planning`, `/home`
+**Outgoing navigation:** `/home/portfolio-progress`, `/home/trends/delivery`, `/home/bugs`, `/home/pull-requests`, `/home/pr-delivery-insights`, `/home/pipeline-insights`, `/home/delivery`, `/home/health/backlog-health`, `/home/health`, `/home/planning`, `/home`
 
 ---
 
@@ -309,7 +314,7 @@ Global header (available on every page) ◄────────────�
 | Sprint Delivery signal card | Stakeholder sprint delivery report. Click navigates to Sprint Delivery. |
 | Portfolio Delivery signal card | Aggregated delivery view across products. Click navigates to Portfolio Delivery. |
 | Sprint Execution signal card | Internal sprint diagnostics. Click navigates to Sprint Execution. |
-| Cross-workspace navigation | Buttons to Backlog Overview, Health (Now), Trends (Past), and Planning (Future). |
+| Cross-workspace navigation | Buttons to Backlog Health, Health, Trends (Past), and Planning (Future). |
 | Home button | Returns to `/home`. |
 
 **Workspace structure after redesign:**
@@ -320,7 +325,7 @@ Global header (available on every page) ◄────────────�
 | Sprint Execution | Internal sprint diagnostics — scope changes, completion order, starved work detection. For POs, scrum masters, and engineering teams. |
 | Portfolio Delivery | Aggregated delivery view across products for a selected sprint range. |
 
-**Outgoing navigation:** `/home/delivery/sprint`, `/home/delivery/execution`, `/home/delivery/portfolio`, `/home/backlog-overview`, `/home/health`, `/home/trends`, `/home/planning`, `/home`
+**Outgoing navigation:** `/home/delivery/sprint`, `/home/delivery/execution`, `/home/delivery/portfolio`, `/home/health/backlog-health`, `/home/health`, `/home/trends`, `/home/planning`, `/home`
 
 ---
 
@@ -355,10 +360,10 @@ Global header (available on every page) ◄────────────�
 | Breadcrumb | `Home › Planning`. |
 | Product Roadmaps card | Strategic ordering of epics and product direction. Click navigates to Product Roadmaps (`/planning/product-roadmaps`). |
 | Plan Board card | Iteration planning board for organizing PBIs and bugs in upcoming sprints. Click navigates to the Plan Board (`/planning/plan-board`). |
-| Cross-workspace navigation | Buttons to Backlog Overview, Health (Now), Trends (Past), and Delivery. |
+| Cross-workspace navigation | Buttons to Backlog Health, Health, Trends (Past), and Delivery. |
 | Home button | Returns to `/home`. |
 
-**Outgoing navigation:** `/planning/product-roadmaps`, `/planning/plan-board`, `/home/backlog-overview`, `/home/health`, `/home/trends`, `/home/delivery`, `/home`
+**Outgoing navigation:** `/planning/product-roadmaps`, `/planning/plan-board`, `/home/health/backlog-health`, `/home/health`, `/home/trends`, `/home/delivery`, `/home`
 
 ---
 
@@ -511,7 +516,7 @@ When multiple linked work items resolve to different categories, the highest-pri
 | Roadmap epic cards | Each card shows: order number (#1, #2, …), epic title, TFS ID, an "Open in TFS" icon link, and compact planning signals. **Progress signals:** total effort (delivered + remaining), delivered effort, remaining effort, and a progress bar with percentage. **Dependency signal:** a dependency indicator when the epic has dependency relationships (DependsOn/Blocks). **Forecast signals:** estimated sprints, velocity warnings, confidence level. **Health signals:** refinement/validation health, epic age, last activity. All signals are informational only and do not change roadmap ordering or membership. |
 | Empty lane placeholder | When a product has no roadmap epics, an informational message is displayed. |
 | Home button | Returns to `/home`. |
-| Cross-workspace navigation | Buttons to Planning (Future) and Health (Now). |
+| Cross-workspace navigation | Buttons to Planning (Future) and Health. |
 | Reporting menu | Dropdown menu (disabled when no products are loaded) with actions: **Generate Visual Roadmap** (copies a Markdown roadmap to clipboard), **Export Structured Data (JSON)** (copies structured JSON to clipboard), and **AI Prompt Templates** (Executive Roadmap, Customer-Facing Roadmap, Milestone Infographic — each copies a ready-to-use AI prompt with embedded roadmap data to clipboard). All reporting actions are read-only and never modify TFS data. |
 | Snapshots menu | Dropdown menu with snapshot actions: **Create Snapshot** (captures the current roadmap state — product order, epic order, titles, TFS IDs — into the application database via API; disabled when no products are loaded), **View Snapshots** (opens a dialog listing all stored snapshots with timestamp, description, product/epic counts, and actions to compare or delete). Snapshots are stored in persistent application-side storage (database) and never modify TFS data. Snapshots persist across browser sessions and are visible across devices/users. |
 | Drift detection | From the snapshot list, the PO can compare any snapshot against the current roadmap. The comparison dialog shows per-product drift: unchanged epics, epics moved earlier or later, newly added epics, and removed epics. Visual drift indicators use color-coded chips (green=unchanged, blue=earlier, orange=later, green-filled=added, red=removed). |
@@ -756,8 +761,9 @@ Each level only appears when the user drills into the previous one. Users naviga
 | Profiles Home | `/profiles` | App start, redirect | Select profile | `/home` |
 | Sync Gate | `/sync-gate` | Post-profile-select | Wait/Retry | `/home`, `/profiles` |
 | Home | `/home` | Global header, direct | Choose workspace, set product context, launch triage, sync | `/home/health`, `/home/delivery`, `/home/trends`, `/home/planning`, `/home/validation-triage`, `/bugs-triage` |
-| Health (Now) | `/home/health` | Home workspace card | Navigation hub: Overview, Validation Triage, Backlog Overview | `/home/health/overview`, `/home/validation-triage`, `/home/backlog-overview`, `/home/delivery`, `/home/trends`, `/home/planning` |
-| Health Overview | `/home/health/overview` | Health workspace | View existing Build Quality summary and jump to backlog detail | `/home/health`, `/home/backlog-overview`, `/home` |
+| Backlog Health | `/home/health/backlog-health` | Health workspace Backlog Health card; legacy `/home/backlog-overview` bookmarks | View backlog readiness, refinement detail, and structural maintenance state | `/workitems?rootWorkItemId={epicId}`, `/home/validation-queue?category=SI`, `/home/health`, `/home/trends`, `/home/planning`, `/home` |
+| Health | `/home/health` | Home workspace card | Navigation hub: Overview, Validation Triage, Backlog Health | `/home/health/overview`, `/home/validation-triage`, `/home/health/backlog-health`, `/home/delivery`, `/home/trends`, `/home/planning` |
+| Overview | `/home/health/overview` | Health workspace | View existing Build Quality summary | `/home/health`, `/home` |
 | Validation Triage | `/home/validation-triage` | Health workspace Validation Triage button | Open queue per category | `/home/validation-queue?category=SI\|RR\|RC\|EFF`, `/home/health`, `/home` |
 | Validation Queue | `/home/validation-queue` | Validation Triage "Open queue" | Start fix session per rule | `/home/validation-fix?category=...&ruleId=...`, `/home/validation-triage`, `/home` |
 | Validation Fix Session | `/home/validation-fix` | Validation Queue "Start fix session" | Review items one-by-one, dismiss or skip | `/home/validation-queue?category=...`, `/home` |
@@ -767,7 +773,7 @@ Each level only appears when the user drills into the previous one. Users naviga
 | Portfolio Delivery | `/home/delivery/portfolio` | Delivery workspace | Select sprint range, view aggregated delivery snapshot | `/home/delivery` |
 | Trends (Past) | `/home/trends` | Home workspace card | Click trend signal | `/home/portfolio-progress`, `/home/trends/delivery`, `/home/bugs`, `/home/pull-requests`, `/home/pr-delivery-insights`, `/home/pipelines`, `/home/pipeline-insights`, `/home/delivery`, `/home/health`, `/home/planning` |
 | Delivery Trends | `/home/trends/delivery` | Trends workspace | Select sprint range | `/home/trends`, `/home` |
-| Planning | `/home/planning` | Home workspace card | Navigation hub: Product Roadmaps, Plan Board | `/planning/product-roadmaps`, `/planning/plan-board`, `/home/backlog-overview`, `/home/health`, `/home/trends`, `/home/delivery` |
+| Planning | `/home/planning` | Home workspace card | Navigation hub: Product Roadmaps, Plan Board | `/planning/product-roadmaps`, `/planning/plan-board`, `/home/health/backlog-health`, `/home/health`, `/home/trends`, `/home/delivery` |
 | Plan Board | `/planning/plan-board` | Planning workspace card | Drag-and-drop sprint planning for PBIs and bugs with capacity indicators | `/home/planning` |
 | Bug Insights | `/home/bugs` | Health signal, Trends chart click | View/filter bugs | `/bugs-triage`, `/home/bugs/detail/{id}`, `/home` |
 | Bug Detail | `/home/bugs/detail/{id}` | Bug Insights | Edit severity/tags | `/home/bugs` |
@@ -793,7 +799,7 @@ The following suggestions are derived from analysing the current navigation stru
 
 ### Suggestion 1 — Promote the "Return to workspace" breadcrumb consistently
 
-**Current situation:** Some pages show breadcrumbs (`Home › Health (Now) › ...`), but several leaf pages (Bug Triage, PR Insights, Pipeline Trend) do not. The user must rely on the global "Home" button or the browser back button.
+**Current situation:** Some pages show breadcrumbs (`Home › Health › ...`), but several leaf pages (Bug Triage, PR Insights, Pipeline Trend) do not. The user must rely on the global "Home" button or the browser back button.
 
 **Suggestion:** Add a consistent breadcrumb trail to every page that reflects the path by which it was reached. This gives the user a mental model of where they are and allows them to step back one level without losing context. Breadcrumbs should carry product/team context forward.
 
@@ -803,7 +809,7 @@ The following suggestions are derived from analysing the current navigation stru
 
 ### Suggestion 2 — Expose cross-workspace navigation on all leaf pages
 
-**Current situation:** Health (Now), Trends (Past), and Planning (Future) each have a "Navigate to Other Workspaces" section, but leaf pages (Bug Insights, Sprint Trend, Work Item Explorer) do not. The user must navigate back to a workspace to switch.
+**Current situation:** Health, Trends (Past), and Planning (Future) each have a "Navigate to Other Workspaces" section, but leaf pages (Bug Insights, Sprint Trend, Work Item Explorer) do not. The user must navigate back to a workspace to switch.
 
 **Suggestion:** Add a compact cross-workspace navigation bar (or persistent sidebar strip) showing Health / Trends / Planning entry points on all pages. This removes unnecessary back-and-forth navigation and mirrors the three-workspace mental model throughout the entire session.
 

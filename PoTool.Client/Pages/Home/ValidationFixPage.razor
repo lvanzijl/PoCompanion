@@ -340,7 +340,7 @@
         _breadcrumbs = new List<BreadcrumbItem>
         {
             new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
-            new("Health (Now)", WorkspaceRoutes.HealthWorkspace, icon: Icons.Material.Filled.HealthAndSafety),
+            new("Health", WorkspaceRoutes.HealthWorkspace, icon: Icons.Material.Filled.HealthAndSafety),
             new("Validation Triage", WorkspaceRoutes.ValidationTriage, icon: Icons.Material.Filled.FactCheck),
             new($"{categoryLabel} Queue",
                 $"{WorkspaceRoutes.ValidationQueue}{BuildContextQuery($"category={Uri.EscapeDataString(_categoryKey)}")}",

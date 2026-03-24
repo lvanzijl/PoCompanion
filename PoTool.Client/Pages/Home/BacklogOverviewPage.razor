@@ -1,3 +1,4 @@
+@page "/home/health/backlog-health"
 @page "/home/backlog-overview"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
@@ -8,7 +9,7 @@
 @inject WorkItemService WorkItemService
 @inject ProductService ProductService
 
-<PageTitle>Backlog Overview - PO Companion</PageTitle>
+<PageTitle>Backlog Health - PO Companion</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     @* Workspace Header *@
@@ -17,7 +18,7 @@
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                     <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" Size="Size.Large" />
-                    <MudText Typo="Typo.h4">Backlog Overview</MudText>
+                    <MudText Typo="Typo.h4">Backlog Health</MudText>
                 </MudStack>
                 <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
             </MudStack>
@@ -49,12 +50,16 @@
                     </MudChip>
                 }
 
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Default"
-                           StartIcon="@Icons.Material.Filled.Home"
-                           OnClick="NavigateToHome">
+                <CompactButton ButtonRole="ButtonRole.Action"
+                               Icon="@Icons.Material.Filled.HealthAndSafety"
+                               OnClick="NavigateToHealth">
+                    Back to Health
+                </CompactButton>
+                <CompactButton ButtonRole="ButtonRole.Utility"
+                               Icon="@Icons.Material.Filled.Home"
+                               OnClick="NavigateToHome">
                     Home
-                </MudButton>
+                </CompactButton>
             </MudStack>
         </MudStack>
     </MudPaper>
@@ -69,7 +74,7 @@
     }
     else if (_selectedProductId == null)
     {
-        <MudAlert Severity="Severity.Info">Select a product to view its backlog overview.</MudAlert>
+        <MudAlert Severity="Severity.Info">Select a product to view its backlog health.</MudAlert>
     }
     else if (_state != null)
     {
@@ -295,7 +300,7 @@
                            Color="Color.Success"
                            StartIcon="@Icons.Material.Filled.HealthAndSafety"
                            OnClick="NavigateToHealth">
-                    Health (Now)
+                    Health
                 </MudButton>
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Info"
@@ -311,6 +316,12 @@
                 </MudButton>
             </MudStack>
         </MudPaper>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+            No backlog health data is available for the selected product yet.
+        </MudAlert>
     }
 </MudContainer>
 
@@ -379,7 +390,7 @@
         }
         catch (Exception ex)
         {
-            _loadError = $"Failed to load backlog overview: {ex.Message}";
+            _loadError = $"Failed to load backlog health: {ex.Message}";
             Console.WriteLine($"[BacklogOverview] {_loadError}");
         }
         finally
@@ -402,7 +413,7 @@
             }
             catch (Exception ex)
             {
-                _loadError = $"Failed to load backlog overview: {ex.Message}";
+                _loadError = $"Failed to load backlog health: {ex.Message}";
                 Console.WriteLine($"[BacklogOverview] {_loadError}");
             }
             finally
@@ -442,7 +453,8 @@
         _breadcrumbs = new List<BreadcrumbItem>
         {
             new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
-            new("Backlog Overview", null, disabled: true, icon: Icons.Material.Filled.Inventory2)
+            new("Health", WorkspaceRoutes.HealthWorkspace, icon: Icons.Material.Filled.HealthAndSafety),
+            new("Backlog Health", null, disabled: true, icon: Icons.Material.Filled.Inventory2)
         };
     }
 

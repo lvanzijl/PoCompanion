@@ -35,17 +35,17 @@
                     Choose a health view
                 </MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="workspace-hub__section-copy">
-                    Start from the health hub, then open the current build-quality overview or jump straight into validation and backlog follow-up.
+                    Start from the health hub, then open the Build Quality overview, validation triage, or backlog health detail you need.
                 </MudText>
             </MudStack>
 
             <MudGrid Spacing="2" Class="mt-1">
                 <MudItem xs="12" sm="6" md="4">
                     <NavigationTileCard Title="Overview"
-                                        Subtitle="Open the existing Build Quality summary"
+                                        Subtitle="Review the current Build Quality summary"
                                         Icon="@Icons.Material.Filled.Assessment"
                                         IconColor="Color.Success"
-                                        AriaLabel="Overview — Open the existing Build Quality summary"
+                                        AriaLabel="Overview — Review the current Build Quality summary"
                                         OnClick="NavigateToOverview" />
                 </MudItem>
                 <MudItem xs="12" sm="6" md="4">
@@ -57,11 +57,11 @@
                                         OnClick="NavigateToValidationTriage" />
                 </MudItem>
                 <MudItem xs="12" sm="6" md="4">
-                    <NavigationTileCard Title="Backlog Overview"
-                                        Subtitle="Open backlog detail without loading it here"
+                    <NavigationTileCard Title="Backlog Health"
+                                        Subtitle="Open backlog readiness and refinement detail"
                                         Icon="@Icons.Material.Filled.Inventory2"
                                         IconColor="Color.Info"
-                                        AriaLabel="Backlog Overview — Open backlog detail without loading it here"
+                                        AriaLabel="Backlog Health — Open backlog readiness and refinement detail"
                                         OnClick="NavigateToBacklogOverview" />
                 </MudItem>
             </MudGrid>

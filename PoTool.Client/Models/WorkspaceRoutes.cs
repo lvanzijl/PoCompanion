@@ -51,7 +51,7 @@ public static class WorkspaceRoutes
     #region Workspace Navigation Routes
 
     /// <summary>
-    /// Health (Now) workspace route.
+    /// Health workspace route.
     /// </summary>
     public const string HealthWorkspace = "/home/health";
 
@@ -179,9 +179,14 @@ public static class WorkspaceRoutes
     public const string ValidationFix = "/home/validation-fix";
 
     /// <summary>
-    /// Backlog Overview route — product-scoped refinement maturity view (Backlog State Model).
+    /// Backlog Health route — canonical Health subpage for product-scoped refinement maturity.
     /// </summary>
-    public const string BacklogOverview = "/home/backlog-overview";
+    public const string BacklogOverview = "/home/health/backlog-health";
+
+    /// <summary>
+    /// Legacy Backlog Health route kept for direct links and existing bookmarks.
+    /// </summary>
+    public const string BacklogOverviewLegacy = "/home/backlog-overview";
 
     /// <summary>
     /// Portfolio Progress Trend route — strategic, product-level progress insight over a sprint range.

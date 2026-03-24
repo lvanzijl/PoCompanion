@@ -27,6 +27,26 @@ public class WorkspaceRoutesTests
     }
 
     [TestMethod]
+    public void BacklogOverview_ReturnsExpectedCanonicalRoute()
+    {
+        var route = typeof(WorkspaceRoutes)
+            .GetField(nameof(WorkspaceRoutes.BacklogOverview))?
+            .GetRawConstantValue() as string;
+
+        Assert.AreEqual("/home/health/backlog-health", route);
+    }
+
+    [TestMethod]
+    public void BacklogOverviewLegacy_ReturnsExpectedLegacyRoute()
+    {
+        var route = typeof(WorkspaceRoutes)
+            .GetField(nameof(WorkspaceRoutes.BacklogOverviewLegacy))?
+            .GetRawConstantValue() as string;
+
+        Assert.AreEqual("/home/backlog-overview", route);
+    }
+
+    [TestMethod]
     public void GetProductRoadmapEditor_ReturnsProductSpecificRoute()
     {
         var result = WorkspaceRoutes.GetProductRoadmapEditor(42);

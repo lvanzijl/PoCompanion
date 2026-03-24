@@ -36,7 +36,7 @@
                            Color="Color.Default"
                            StartIcon="@Icons.Material.Filled.HealthAndSafety"
                            OnClick="NavigateToHealth">
-                    Health (Now)
+                    Health
                 </MudButton>
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
@@ -153,7 +153,7 @@
         _breadcrumbs = new List<BreadcrumbItem>
         {
             new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
-            new("Health (Now)", WorkspaceRoutes.HealthWorkspace, icon: Icons.Material.Filled.HealthAndSafety),
+            new("Health", WorkspaceRoutes.HealthWorkspace, icon: Icons.Material.Filled.HealthAndSafety),
             new("Validation Triage", null, disabled: true, icon: Icons.Material.Filled.FactCheck)
         };
     }
