@@ -208,6 +208,8 @@ public class PipelineSyncStage : ISyncStage
         var coveragePersistenceElapsedMs = 0L;
         var requestedTestRunBuildCount = 0;
         var requestedCoverageBuildCount = 0;
+        var missingTestRunBuildCount = 0;
+        var missingCoverageBuildCount = 0;
         var returnedTestRunDtoCount = 0;
         var returnedCoverageDtoCount = 0;
         var persistedTestRunRowCount = 0;
@@ -221,6 +223,8 @@ public class PipelineSyncStage : ISyncStage
                 childIngestionStopwatch.ElapsedMilliseconds,
                 requestedTestRunBuildCount,
                 requestedCoverageBuildCount,
+                missingTestRunBuildCount,
+                missingCoverageBuildCount,
                 returnedTestRunDtoCount,
                 returnedCoverageDtoCount,
                 persistedTestRunRowCount,
@@ -261,6 +265,26 @@ public class PipelineSyncStage : ISyncStage
             .Distinct()
             .OrderBy(runId => runId)
             .ToArray();
+        missingTestRunBuildCount = missingTestRunTfsRunIds.Count;
+        missingCoverageBuildCount = missingCoverageTfsRunIds.Count;
+
+        if (missingTestRunBuildCount != 0)
+        {
+            _logger.LogInformation(
+                "BUILDQUALITY_TESTRUN_MISSING_DATA: productOwnerId={ProductOwnerId}, missingBuildCount={MissingBuildCount}, reason={Reason}",
+                productOwnerId,
+                missingTestRunBuildCount,
+                "No persisted test runs exist for one or more scoped builds.");
+        }
+
+        if (missingCoverageBuildCount != 0)
+        {
+            _logger.LogInformation(
+                "BUILDQUALITY_COVERAGE_MISSING_DATA: productOwnerId={ProductOwnerId}, missingBuildCount={MissingBuildCount}, reason={Reason}",
+                productOwnerId,
+                missingCoverageBuildCount,
+                "No persisted coverage rows exist for one or more scoped builds.");
+        }
 
         var backfillRunIds = missingBuildRunIds
             .Where(runId => !requestedRunIdSet.Contains(runId))
@@ -286,6 +310,8 @@ public class PipelineSyncStage : ISyncStage
                 childIngestionStopwatch.ElapsedMilliseconds,
                 requestedTestRunBuildCount,
                 requestedCoverageBuildCount,
+                missingTestRunBuildCount,
+                missingCoverageBuildCount,
                 returnedTestRunDtoCount,
                 returnedCoverageDtoCount,
                 persistedTestRunRowCount,
@@ -310,6 +336,8 @@ public class PipelineSyncStage : ISyncStage
                 childIngestionStopwatch.ElapsedMilliseconds,
                 requestedTestRunBuildCount,
                 requestedCoverageBuildCount,
+                missingTestRunBuildCount,
+                missingCoverageBuildCount,
                 returnedTestRunDtoCount,
                 returnedCoverageDtoCount,
                 persistedTestRunRowCount,
@@ -392,6 +420,8 @@ public class PipelineSyncStage : ISyncStage
             childIngestionStopwatch.ElapsedMilliseconds,
             requestedTestRunBuildCount,
             requestedCoverageBuildCount,
+            missingTestRunBuildCount,
+            missingCoverageBuildCount,
             returnedTestRunDtoCount,
             returnedCoverageDtoCount,
             persistedTestRunRowCount,
@@ -570,6 +600,8 @@ public class PipelineSyncStage : ISyncStage
         long childIngestionElapsedMs,
         int requestedTestRunBuildCount,
         int requestedCoverageBuildCount,
+        int missingTestRunBuildCount,
+        int missingCoverageBuildCount,
         int returnedTestRunDtoCount,
         int returnedCoverageDtoCount,
         int persistedTestRunRowCount,
@@ -581,11 +613,13 @@ public class PipelineSyncStage : ISyncStage
         int warningCount)
     {
         _logger.LogInformation(
-            "BUILDQUALITY_CHILD_INGEST_SUMMARY: productOwnerId={ProductOwnerId}, childIngestionElapsedMs={ChildIngestionElapsedMs}, requestedTestRunBuildCount={RequestedTestRunBuildCount}, requestedCoverageBuildCount={RequestedCoverageBuildCount}, returnedTestRunDtoCount={ReturnedTestRunDtoCount}, returnedCoverageDtoCount={ReturnedCoverageDtoCount}, persistedTestRunRowCount={PersistedTestRunRowCount}, persistedCoverageRowCount={PersistedCoverageRowCount}, testRunRetrievalElapsedMs={TestRunRetrievalElapsedMs}, coverageRetrievalElapsedMs={CoverageRetrievalElapsedMs}, testRunPersistenceElapsedMs={TestRunPersistenceElapsedMs}, coveragePersistenceElapsedMs={CoveragePersistenceElapsedMs}, warningCount={WarningCount}",
+            "BUILDQUALITY_CHILD_INGEST_SUMMARY: productOwnerId={ProductOwnerId}, childIngestionElapsedMs={ChildIngestionElapsedMs}, requestedTestRunBuildCount={RequestedTestRunBuildCount}, requestedCoverageBuildCount={RequestedCoverageBuildCount}, missingTestRunBuildCount={MissingTestRunBuildCount}, missingCoverageBuildCount={MissingCoverageBuildCount}, returnedTestRunDtoCount={ReturnedTestRunDtoCount}, returnedCoverageDtoCount={ReturnedCoverageDtoCount}, persistedTestRunRowCount={PersistedTestRunRowCount}, persistedCoverageRowCount={PersistedCoverageRowCount}, testRunRetrievalElapsedMs={TestRunRetrievalElapsedMs}, coverageRetrievalElapsedMs={CoverageRetrievalElapsedMs}, testRunPersistenceElapsedMs={TestRunPersistenceElapsedMs}, coveragePersistenceElapsedMs={CoveragePersistenceElapsedMs}, warningCount={WarningCount}",
             productOwnerId,
             childIngestionElapsedMs,
             requestedTestRunBuildCount,
             requestedCoverageBuildCount,
+            missingTestRunBuildCount,
+            missingCoverageBuildCount,
             returnedTestRunDtoCount,
             returnedCoverageDtoCount,
             persistedTestRunRowCount,
