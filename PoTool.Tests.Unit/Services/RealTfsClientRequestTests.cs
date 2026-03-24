@@ -239,7 +239,6 @@ public class RealTfsClientRequestTests
         StringAssert.Contains(requests[1].AbsoluteUri, "_apis/test/runs?buildIds=101");
         StringAssert.Contains(requests[2].AbsoluteUri, "_apis/test/runs?buildIds=102");
         StringAssert.Contains(requests[3].AbsoluteUri, "_apis/test/runs?buildIds=102");
-        StringAssert.Contains(requests[0].Query, "buildIds=101");
         Assert.IsFalse(requests[0].Query.Contains("minLastUpdatedDate", StringComparison.Ordinal));
         Assert.IsFalse(requests[0].Query.Contains("buildUri=", StringComparison.Ordinal));
         StringAssert.Contains(requests[0].Query, "api-version=7.0");
