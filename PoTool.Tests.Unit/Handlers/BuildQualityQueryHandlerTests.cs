@@ -270,6 +270,59 @@ public sealed class BuildQualityQueryHandlerTests
             testThresholdMet: false);
     }
 
+    [TestMethod]
+    public async Task SprintHandler_WithMixedMissingChildFacts_KeepsMetricsKnownWhenAnyDataExists()
+    {
+        await SeedProductOwnerScopeAsync(includeBuildQualityEdgeCases: true);
+
+        var handler = new GetBuildQualitySprintQueryHandler(_context, _scopeLoader, new BuildQualityProvider());
+
+        var result = await handler.Handle(
+            new GetBuildQualitySprintQuery(ProductOwnerId: 1, SprintId: 77),
+            CancellationToken.None);
+
+        var productA = result.Products.Single(product => product.ProductId == 1);
+
+        Assert.IsNotNull(productA.Result.Metrics.SuccessRate);
+        Assert.IsNotNull(productA.Result.Metrics.TestPassRate);
+        Assert.IsNotNull(productA.Result.Metrics.Coverage);
+        Assert.IsGreaterThan(0d, productA.Result.Metrics.SuccessRate!.Value);
+        Assert.IsGreaterThan(0d, productA.Result.Metrics.TestPassRate!.Value);
+        Assert.IsGreaterThan(0d, productA.Result.Metrics.Coverage!.Value);
+        Assert.IsGreaterThan(0, productA.Result.Metrics.Confidence);
+        Assert.IsFalse(productA.Result.Evidence.SuccessRateUnknown);
+        Assert.IsFalse(productA.Result.Evidence.TestPassRateUnknown);
+        Assert.IsFalse(productA.Result.Evidence.CoverageUnknown);
+        Assert.AreEqual(5, productA.Result.Evidence.EligibleBuilds);
+        Assert.AreEqual(3, productA.Result.Evidence.FailedBuilds + productA.Result.Evidence.PartiallySucceededBuilds);
+        Assert.AreEqual(365, productA.Result.Evidence.TotalTests);
+        Assert.AreEqual(307, productA.Result.Evidence.PassedTests);
+        Assert.AreEqual(10, productA.Result.Evidence.NotApplicableTests);
+        Assert.AreEqual(10340, productA.Result.Evidence.CoveredLines);
+        Assert.AreEqual(15200, productA.Result.Evidence.TotalLines);
+    }
+
+    [TestMethod]
+    public void Provider_WithOnlyBuildsAndNoChildFacts_LeavesOnlyBuildSuccessKnown()
+    {
+        var result = new BuildQualityProvider().Compute(
+            [
+                new BuildQualityBuildFact(1, "Succeeded"),
+                new BuildQualityBuildFact(2, "Failed"),
+                new BuildQualityBuildFact(3, "PartiallySucceeded")
+            ],
+            Array.Empty<BuildQualityTestRunFact>(),
+            Array.Empty<BuildQualityCoverageFact>());
+
+        Assert.IsNotNull(result.Metrics.SuccessRate);
+        Assert.AreEqual(1d / 3d, result.Metrics.SuccessRate!.Value, 0.000001d);
+        Assert.IsNull(result.Metrics.TestPassRate);
+        Assert.IsNull(result.Metrics.Coverage);
+        Assert.IsFalse(result.Evidence.SuccessRateUnknown);
+        Assert.IsTrue(result.Evidence.TestPassRateUnknown);
+        Assert.IsTrue(result.Evidence.CoverageUnknown);
+    }
+
     private List<CapturedProviderCall> CaptureProviderCalls(BuildQualityResultDto expectedResult)
     {
         var capturedCalls = new List<CapturedProviderCall>();
@@ -291,7 +344,7 @@ public sealed class BuildQualityQueryHandlerTests
         return capturedCalls;
     }
 
-    private async Task SeedProductOwnerScopeAsync()
+    private async Task SeedProductOwnerScopeAsync(bool includeBuildQualityEdgeCases = false)
     {
         _context.Profiles.Add(new ProfileEntity
         {
@@ -379,6 +432,23 @@ public sealed class BuildQualityQueryHandlerTests
             new CoverageEntity { Id = 2, BuildId = 1002, CoveredLines = 10, TotalLines = 100, CachedAt = DateTimeOffset.UtcNow },
             new CoverageEntity { Id = 3, BuildId = 1003, CoveredLines = 70, TotalLines = 100, CachedAt = DateTimeOffset.UtcNow },
             new CoverageEntity { Id = 4, BuildId = 2001, CoveredLines = 80, TotalLines = 100, CachedAt = DateTimeOffset.UtcNow });
+
+        if (includeBuildQualityEdgeCases)
+        {
+            _context.CachedPipelineRuns.AddRange(
+                CreateBuild(id: 1004, pipelineDefinitionDbId: 101, result: "Failed", branch: "refs/heads/main", finishedUtc: new DateTime(2026, 3, 8, 0, 0, 0, DateTimeKind.Utc)),
+                CreateBuild(id: 1005, pipelineDefinitionDbId: 101, result: "PartiallySucceeded", branch: "refs/heads/main", finishedUtc: new DateTime(2026, 3, 9, 0, 0, 0, DateTimeKind.Utc)),
+                CreateBuild(id: 1006, pipelineDefinitionDbId: 101, result: "Succeeded", branch: "refs/heads/main", finishedUtc: new DateTime(2026, 3, 10, 0, 0, 0, DateTimeKind.Utc)),
+                CreateBuild(id: 1007, pipelineDefinitionDbId: 101, result: "Failed", branch: "refs/heads/main", finishedUtc: new DateTime(2026, 3, 11, 0, 0, 0, DateTimeKind.Utc)));
+
+            _context.TestRuns.AddRange(
+                new TestRunEntity { Id = 5, BuildId = 1004, TotalTests = 210, PassedTests = 162, NotApplicableTests = 6, CachedAt = DateTimeOffset.UtcNow },
+                new TestRunEntity { Id = 6, BuildId = 1005, TotalTests = 145, PassedTests = 136, NotApplicableTests = 3, CachedAt = DateTimeOffset.UtcNow });
+
+            _context.Coverages.AddRange(
+                new CoverageEntity { Id = 5, BuildId = 1004, CoveredLines = 4950, TotalLines = 7500, CachedAt = DateTimeOffset.UtcNow },
+                new CoverageEntity { Id = 6, BuildId = 1006, CoveredLines = 5300, TotalLines = 7600, CachedAt = DateTimeOffset.UtcNow });
+        }
 
         await _context.SaveChangesAsync();
     }

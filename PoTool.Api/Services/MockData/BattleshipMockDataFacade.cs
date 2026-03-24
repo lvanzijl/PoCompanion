@@ -42,8 +42,13 @@ public class BattleshipMockDataFacade : ITfsClient
     private List<PrWorkItemLink>? _cachedPrWorkItemLinks;
     private List<PipelineDto>? _cachedPipelines;
     private List<PipelineRunDto>? _cachedPipelineRuns;
+    private List<TestRunDto>? _cachedTestRuns;
+    private List<CoverageDto>? _cachedCoverages;
     private ValidationReport? _cachedValidationReport;
     private readonly object _cacheLock = new object();
+
+    private const string BuildQualityScenarioProductName = "Incident Response Control";
+    private const int BuildQualityScenarioRunIdStart = 910000;
 
     public BattleshipMockDataFacade(
         BattleshipWorkItemGenerator workItemGenerator,
@@ -357,7 +362,11 @@ public class BattleshipMockDataFacade : ITfsClient
             var startTime = DateTimeOffset.UtcNow;
 
             var pipelines = GetMockPipelines();
-            _cachedPipelineRuns = _pipelineGenerator.GenerateRuns(pipelines);
+            _cachedPipelineRuns = _pipelineGenerator
+                .GenerateRuns(pipelines)
+                .Concat(CreateBuildQualityScenarioRuns(pipelines))
+                .OrderByDescending(run => run.StartTime)
+                .ToList();
 
             var elapsed = (DateTimeOffset.UtcNow - startTime).TotalSeconds;
             _logger.LogInformation(
@@ -366,6 +375,62 @@ public class BattleshipMockDataFacade : ITfsClient
                 elapsed);
 
             return _cachedPipelineRuns;
+        }
+    }
+
+    /// <summary>
+    /// Gets mock build-quality test runs (with caching)
+    /// </summary>
+    public List<TestRunDto> GetMockTestRuns()
+    {
+        if (_cachedTestRuns != null)
+            return _cachedTestRuns;
+
+        lock (_cacheLock)
+        {
+            if (_cachedTestRuns != null)
+                return _cachedTestRuns;
+
+            _logger.LogInformation("Generating mock build-quality test runs...");
+            var startTime = DateTimeOffset.UtcNow;
+
+            _cachedTestRuns = CreateBuildQualityScenarioTestRuns();
+
+            var elapsed = (DateTimeOffset.UtcNow - startTime).TotalSeconds;
+            _logger.LogInformation(
+                "Generated {Count} build-quality test runs in {Elapsed:F2} seconds",
+                _cachedTestRuns.Count,
+                elapsed);
+
+            return _cachedTestRuns;
+        }
+    }
+
+    /// <summary>
+    /// Gets mock build-quality coverage facts (with caching)
+    /// </summary>
+    public List<CoverageDto> GetMockCoverages()
+    {
+        if (_cachedCoverages != null)
+            return _cachedCoverages;
+
+        lock (_cacheLock)
+        {
+            if (_cachedCoverages != null)
+                return _cachedCoverages;
+
+            _logger.LogInformation("Generating mock build-quality coverage facts...");
+            var startTime = DateTimeOffset.UtcNow;
+
+            _cachedCoverages = CreateBuildQualityScenarioCoverage();
+
+            var elapsed = (DateTimeOffset.UtcNow - startTime).TotalSeconds;
+            _logger.LogInformation(
+                "Generated {Count} build-quality coverage rows in {Elapsed:F2} seconds",
+                _cachedCoverages.Count,
+                elapsed);
+
+            return _cachedCoverages;
         }
     }
 
@@ -386,6 +451,8 @@ public class BattleshipMockDataFacade : ITfsClient
             _cachedPrWorkItemLinks = null;
             _cachedPipelines = null;
             _cachedPipelineRuns = null;
+            _cachedTestRuns = null;
+            _cachedCoverages = null;
             _cachedValidationReport = null;
         }
     }
@@ -407,6 +474,8 @@ public class BattleshipMockDataFacade : ITfsClient
         GetMockPrWorkItemLinks();
         GetMockPipelines();
         GetMockPipelineRuns();
+        GetMockTestRuns();
+        GetMockCoverages();
         ValidateData();
 
         var elapsed = (DateTimeOffset.UtcNow - overallStartTime).TotalSeconds;
@@ -1422,7 +1491,13 @@ public class BattleshipMockDataFacade : ITfsClient
             "Mock TFS client: GetTestRunsByBuildIdsAsync called for {Count} builds",
             requestedBuildIds.Length);
 
-        return Task.FromResult<IEnumerable<TestRunDto>>([]);
+        var requestedBuildIdSet = requestedBuildIds.ToHashSet();
+        var result = GetMockTestRuns()
+            .Where(testRun => requestedBuildIdSet.Contains(testRun.BuildId))
+            .OrderBy(testRun => testRun.Timestamp)
+            .ToList();
+
+        return Task.FromResult<IEnumerable<TestRunDto>>(result);
     }
 
     public Task<IEnumerable<CoverageDto>> GetCoverageByBuildIdsAsync(
@@ -1435,7 +1510,135 @@ public class BattleshipMockDataFacade : ITfsClient
             "Mock TFS client: GetCoverageByBuildIdsAsync called for {Count} builds",
             requestedBuildIds.Length);
 
-        return Task.FromResult<IEnumerable<CoverageDto>>([]);
+        var requestedBuildIdSet = requestedBuildIds.ToHashSet();
+        var result = GetMockCoverages()
+            .Where(coverage => requestedBuildIdSet.Contains(coverage.BuildId))
+            .OrderBy(coverage => coverage.Timestamp)
+            .ToList();
+
+        return Task.FromResult<IEnumerable<CoverageDto>>(result);
+    }
+
+    private static IReadOnlyList<PipelineRunDto> CreateBuildQualityScenarioRuns(IReadOnlyList<PipelineDto> pipelines)
+    {
+        var productRepositoryNames = MockDevOpsSeedCatalog.GetRepositoryNamesForProduct(BuildQualityScenarioProductName);
+        var repositoryPipelines = productRepositoryNames
+            .SelectMany(repositoryName => MockDevOpsSeedCatalog.GetPipelineDefinitionsForRepository(repositoryName, pipelines, DateTimeOffset.UtcNow))
+            .Select(definition => definition.PipelineDefinitionId)
+            .Distinct()
+            .ToHashSet();
+
+        var buildPipelines = pipelines
+            .Where(pipeline => repositoryPipelines.Contains(pipeline.Id) && pipeline.Type == PipelineType.Build)
+            .OrderBy(pipeline => pipeline.Id)
+            .ToArray();
+
+        if (buildPipelines.Length < 2)
+        {
+            return [];
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var primaryPipeline = buildPipelines[0];
+        var secondaryPipeline = buildPipelines[1];
+
+        return
+        [
+            CreateScenarioRun(BuildQualityScenarioRunIdStart + 1, primaryPipeline, now.AddHours(-4), now.AddHours(-3).AddMinutes(-35), PipelineRunResult.Succeeded, "build-quality-bot@battleship.mil"),
+            CreateScenarioRun(BuildQualityScenarioRunIdStart + 2, primaryPipeline, now.AddHours(-18), now.AddHours(-17).AddMinutes(-27), PipelineRunResult.Failed, "build-quality-bot@battleship.mil"),
+            CreateScenarioRun(BuildQualityScenarioRunIdStart + 3, primaryPipeline, now.AddDays(-2).AddHours(-2), now.AddDays(-2).AddHours(-1).AddMinutes(-31), PipelineRunResult.PartiallySucceeded, "crew.safety@battleship.mil"),
+            CreateScenarioRun(BuildQualityScenarioRunIdStart + 4, secondaryPipeline, now.AddDays(-4).AddHours(-5), now.AddDays(-4).AddHours(-4).AddMinutes(-12), PipelineRunResult.Succeeded, "ops.engineer@battleship.mil"),
+            CreateScenarioRun(BuildQualityScenarioRunIdStart + 5, secondaryPipeline, now.AddDays(-6).AddHours(-3), now.AddDays(-6).AddHours(-2).AddMinutes(-8), PipelineRunResult.Failed, "ops.engineer@battleship.mil")
+        ];
+    }
+
+    private static PipelineRunDto CreateScenarioRun(
+        int runId,
+        PipelineDto pipeline,
+        DateTimeOffset startTime,
+        DateTimeOffset finishTime,
+        PipelineRunResult result,
+        string requestedFor)
+    {
+        return new PipelineRunDto(
+            RunId: runId,
+            PipelineId: pipeline.Id,
+            PipelineName: pipeline.Name,
+            StartTime: startTime,
+            FinishTime: finishTime,
+            Duration: finishTime - startTime,
+            Result: result,
+            Trigger: PipelineRunTrigger.ContinuousIntegration,
+            TriggerInfo: "refs/heads/main",
+            Branch: "refs/heads/main",
+            RequestedFor: requestedFor,
+            RetrievedAt: finishTime);
+    }
+
+    private static List<TestRunDto> CreateBuildQualityScenarioTestRuns()
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        return
+        [
+            new TestRunDto
+            {
+                BuildId = BuildQualityScenarioRunIdStart + 1,
+                ExternalId = BuildQualityScenarioRunIdStart + 101,
+                TotalTests = 180,
+                PassedTests = 176,
+                NotApplicableTests = 2,
+                Timestamp = now.AddHours(-3).AddMinutes(-30)
+            },
+            new TestRunDto
+            {
+                BuildId = BuildQualityScenarioRunIdStart + 2,
+                ExternalId = BuildQualityScenarioRunIdStart + 102,
+                TotalTests = 210,
+                PassedTests = 162,
+                NotApplicableTests = 6,
+                Timestamp = now.AddHours(-17).AddMinutes(-20)
+            },
+            new TestRunDto
+            {
+                BuildId = BuildQualityScenarioRunIdStart + 3,
+                ExternalId = BuildQualityScenarioRunIdStart + 103,
+                TotalTests = 145,
+                PassedTests = 136,
+                NotApplicableTests = 3,
+                Timestamp = now.AddDays(-2).AddHours(-1).AddMinutes(-20)
+            }
+        ];
+    }
+
+    private static List<CoverageDto> CreateBuildQualityScenarioCoverage()
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        return
+        [
+            new CoverageDto
+            {
+                BuildId = BuildQualityScenarioRunIdStart + 1,
+                CoveredLines = 6800,
+                TotalLines = 8000,
+                Timestamp = now.AddHours(-3).AddMinutes(-28)
+            },
+            new CoverageDto
+            {
+                BuildId = BuildQualityScenarioRunIdStart + 2,
+                CoveredLines = 4950,
+                TotalLines = 7500,
+                Timestamp = now.AddHours(-17).AddMinutes(-18)
+            },
+            new CoverageDto
+            {
+                BuildId = BuildQualityScenarioRunIdStart + 4,
+                CoveredLines = 5300,
+                TotalLines = 7600,
+                Timestamp = now.AddDays(-4).AddHours(-4)
+            }
+        ];
     }
 
     // ============================================
