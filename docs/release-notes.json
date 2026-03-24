@@ -2,6 +2,14 @@
   {
     "date": "2026-03-24",
     "type": "Fixed",
+    "title": "Mock Health Build Quality now shows seeded metrics",
+    "impact": "Mock-mode Health now shows realistic builds, tests, coverage, and confidence values for Incident Response Control after a normal sync.",
+    "area": "Health",
+    "link": "/home/health"
+  },
+  {
+    "date": "2026-03-24",
+    "type": "Fixed",
     "title": "Health now shows overall Build Quality summary",
     "impact": "Health now shows the combined rolling Build Quality summary with confidence, alongside the existing per-product quality cards.",
     "area": "Health",
