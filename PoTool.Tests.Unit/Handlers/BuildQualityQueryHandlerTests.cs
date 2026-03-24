@@ -78,6 +78,8 @@ public sealed class BuildQualityQueryHandlerTests
         Assert.AreSame(expectedResult, result.Summary);
         Assert.HasCount(3, capturedCalls);
         CollectionAssert.AreEqual(new[] { 1001, 2001 }, capturedCalls[0].Builds.Select(build => build.BuildId).OrderBy(id => id).ToArray());
+        CollectionAssert.AreEqual(new[] { 1001, 2001 }, capturedCalls[0].TestRuns.Select(testRun => testRun.BuildId).Distinct().OrderBy(id => id).ToArray());
+        CollectionAssert.AreEqual(new[] { 1001, 2001 }, capturedCalls[0].Coverages.Select(coverage => coverage.BuildId).Distinct().OrderBy(id => id).ToArray());
     }
 
     [TestMethod]
@@ -99,6 +101,173 @@ public sealed class BuildQualityQueryHandlerTests
         Assert.AreEqual(2, result.ProductId);
         Assert.HasCount(1, capturedCalls);
         CollectionAssert.AreEqual(new[] { 2001 }, capturedCalls[0].Builds.Select(build => build.BuildId).ToArray());
+        CollectionAssert.AreEqual(new[] { 2001 }, capturedCalls[0].TestRuns.Select(testRun => testRun.BuildId).Distinct().ToArray());
+        CollectionAssert.AreEqual(new[] { 2001 }, capturedCalls[0].Coverages.Select(coverage => coverage.BuildId).Distinct().ToArray());
+    }
+
+    [TestMethod]
+    public async Task RollingWindowHandler_WithRealProvider_ComputesExpectedSummaryAndProductResults()
+    {
+        await SeedProductOwnerScopeAsync();
+
+        var handler = new GetBuildQualityRollingWindowQueryHandler(_scopeLoader, new BuildQualityProvider());
+
+        var result = await handler.Handle(
+            new GetBuildQualityRollingWindowQuery(
+                ProductOwnerId: 1,
+                WindowStartUtc: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+                WindowEndUtc: new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc)),
+            CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { 1, 2 }, result.ProductIds.ToArray());
+        CollectionAssert.AreEqual(new[] { "refs/heads/main" }, result.DefaultBranches.ToArray());
+        AssertBuildQualityResult(
+            result.Summary,
+            successRate: 0.5d,
+            testPassRate: 20d / 21d,
+            testVolume: 21,
+            coverage: 0.85d,
+            confidence: 1,
+            eligibleBuilds: 2,
+            succeededBuilds: 1,
+            failedBuilds: 0,
+            partiallySucceededBuilds: 1,
+            canceledBuilds: 0,
+            totalTests: 22,
+            passedTests: 20,
+            notApplicableTests: 1,
+            coveredLines: 170,
+            totalLines: 200,
+            buildThresholdMet: false,
+            testThresholdMet: true);
+        Assert.HasCount(2, result.Products);
+        Assert.AreEqual(1, result.Products[0].ProductId);
+        Assert.AreEqual("Product A", result.Products[0].ProductName);
+        AssertBuildQualityResult(
+            result.Products[0].Result,
+            successRate: 1d,
+            testPassRate: 1d,
+            testVolume: 9,
+            coverage: 0.9d,
+            confidence: 0,
+            eligibleBuilds: 1,
+            succeededBuilds: 1,
+            failedBuilds: 0,
+            partiallySucceededBuilds: 0,
+            canceledBuilds: 0,
+            totalTests: 10,
+            passedTests: 9,
+            notApplicableTests: 1,
+            coveredLines: 90,
+            totalLines: 100,
+            buildThresholdMet: false,
+            testThresholdMet: false);
+        Assert.AreEqual(2, result.Products[1].ProductId);
+        Assert.AreEqual("Product B", result.Products[1].ProductName);
+        AssertBuildQualityResult(
+            result.Products[1].Result,
+            successRate: 0d,
+            testPassRate: 11d / 12d,
+            testVolume: 12,
+            coverage: 0.8d,
+            confidence: 0,
+            eligibleBuilds: 1,
+            succeededBuilds: 0,
+            failedBuilds: 0,
+            partiallySucceededBuilds: 1,
+            canceledBuilds: 0,
+            totalTests: 12,
+            passedTests: 11,
+            notApplicableTests: 0,
+            coveredLines: 80,
+            totalLines: 100,
+            buildThresholdMet: false,
+            testThresholdMet: false);
+    }
+
+    [TestMethod]
+    public async Task SprintHandler_WithRealProvider_ComputesExpectedSummaryAndProductResults()
+    {
+        await SeedProductOwnerScopeAsync();
+
+        var handler = new GetBuildQualitySprintQueryHandler(_context, _scopeLoader, new BuildQualityProvider());
+
+        var result = await handler.Handle(
+            new GetBuildQualitySprintQuery(ProductOwnerId: 1, SprintId: 77),
+            CancellationToken.None);
+
+        Assert.AreEqual(1, result.ProductOwnerId);
+        Assert.AreEqual(77, result.SprintId);
+        Assert.AreEqual("Sprint 77", result.SprintName);
+        Assert.AreEqual(7, result.TeamId);
+        Assert.AreEqual(new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), result.SprintStartUtc);
+        Assert.AreEqual(new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc), result.SprintEndUtc);
+        CollectionAssert.AreEqual(new[] { 1, 2 }, result.ProductIds.ToArray());
+        CollectionAssert.AreEqual(new[] { "refs/heads/main" }, result.DefaultBranches.ToArray());
+        AssertBuildQualityResult(
+            result.Summary,
+            successRate: 0.5d,
+            testPassRate: 20d / 21d,
+            testVolume: 21,
+            coverage: 0.85d,
+            confidence: 1,
+            eligibleBuilds: 2,
+            succeededBuilds: 1,
+            failedBuilds: 0,
+            partiallySucceededBuilds: 1,
+            canceledBuilds: 0,
+            totalTests: 22,
+            passedTests: 20,
+            notApplicableTests: 1,
+            coveredLines: 170,
+            totalLines: 200,
+            buildThresholdMet: false,
+            testThresholdMet: true);
+        Assert.HasCount(2, result.Products);
+    }
+
+    [TestMethod]
+    public async Task PipelineDetailHandler_WithPipelineScope_ComputesExpectedResult()
+    {
+        await SeedProductOwnerScopeAsync();
+
+        var handler = new GetBuildQualityPipelineDetailQueryHandler(_context, _scopeLoader, new BuildQualityProvider());
+
+        var result = await handler.Handle(
+            new GetBuildQualityPipelineDetailQuery(ProductOwnerId: 1, SprintId: 77, PipelineDefinitionId: 2001),
+            CancellationToken.None);
+
+        Assert.AreEqual(1, result.ProductOwnerId);
+        Assert.AreEqual(77, result.SprintId);
+        Assert.AreEqual("Sprint 77", result.SprintName);
+        Assert.AreEqual(7, result.TeamId);
+        Assert.AreEqual(new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), result.SprintStartUtc);
+        Assert.AreEqual(new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc), result.SprintEndUtc);
+        Assert.AreEqual(2, result.ProductId);
+        Assert.IsNull(result.RepositoryId);
+        Assert.IsNull(result.RepositoryName);
+        Assert.AreEqual(2001, result.PipelineDefinitionId);
+        Assert.AreEqual("Pipeline B", result.PipelineName);
+        CollectionAssert.AreEqual(new[] { "refs/heads/main" }, result.DefaultBranches.ToArray());
+        AssertBuildQualityResult(
+            result.Result,
+            successRate: 0d,
+            testPassRate: 11d / 12d,
+            testVolume: 12,
+            coverage: 0.8d,
+            confidence: 0,
+            eligibleBuilds: 1,
+            succeededBuilds: 0,
+            failedBuilds: 0,
+            partiallySucceededBuilds: 1,
+            canceledBuilds: 0,
+            totalTests: 12,
+            passedTests: 11,
+            notApplicableTests: 0,
+            coveredLines: 80,
+            totalLines: 100,
+            buildThresholdMet: false,
+            testThresholdMet: false);
     }
 
     private List<CapturedProviderCall> CaptureProviderCalls(BuildQualityResultDto expectedResult)
@@ -263,6 +432,64 @@ public sealed class BuildQualityQueryHandlerTests
                 TestThresholdMet = true
             }
         };
+    }
+
+    private static void AssertBuildQualityResult(
+        BuildQualityResultDto result,
+        double? successRate,
+        double? testPassRate,
+        int testVolume,
+        double? coverage,
+        int confidence,
+        int eligibleBuilds,
+        int succeededBuilds,
+        int failedBuilds,
+        int partiallySucceededBuilds,
+        int canceledBuilds,
+        int totalTests,
+        int passedTests,
+        int notApplicableTests,
+        int coveredLines,
+        int totalLines,
+        bool buildThresholdMet,
+        bool testThresholdMet)
+    {
+        AssertNullableDouble(successRate, result.Metrics.SuccessRate);
+        AssertNullableDouble(testPassRate, result.Metrics.TestPassRate);
+        Assert.AreEqual(testVolume, result.Metrics.TestVolume);
+        AssertNullableDouble(coverage, result.Metrics.Coverage);
+        Assert.AreEqual(confidence, result.Metrics.Confidence);
+
+        Assert.AreEqual(eligibleBuilds, result.Evidence.EligibleBuilds);
+        Assert.AreEqual(succeededBuilds, result.Evidence.SucceededBuilds);
+        Assert.AreEqual(failedBuilds, result.Evidence.FailedBuilds);
+        Assert.AreEqual(partiallySucceededBuilds, result.Evidence.PartiallySucceededBuilds);
+        Assert.AreEqual(canceledBuilds, result.Evidence.CanceledBuilds);
+        Assert.AreEqual(totalTests, result.Evidence.TotalTests);
+        Assert.AreEqual(passedTests, result.Evidence.PassedTests);
+        Assert.AreEqual(notApplicableTests, result.Evidence.NotApplicableTests);
+        Assert.AreEqual(coveredLines, result.Evidence.CoveredLines);
+        Assert.AreEqual(totalLines, result.Evidence.TotalLines);
+        Assert.AreEqual(buildThresholdMet, result.Evidence.BuildThresholdMet);
+        Assert.AreEqual(testThresholdMet, result.Evidence.TestThresholdMet);
+        Assert.IsFalse(result.Evidence.SuccessRateUnknown);
+        Assert.IsNull(result.Evidence.SuccessRateUnknownReason);
+        Assert.IsFalse(result.Evidence.TestPassRateUnknown);
+        Assert.IsNull(result.Evidence.TestPassRateUnknownReason);
+        Assert.IsFalse(result.Evidence.CoverageUnknown);
+        Assert.IsNull(result.Evidence.CoverageUnknownReason);
+    }
+
+    private static void AssertNullableDouble(double? expected, double? actual)
+    {
+        if (expected is null)
+        {
+            Assert.IsNull(actual);
+            return;
+        }
+
+        Assert.IsNotNull(actual);
+        Assert.AreEqual(expected.Value, actual.Value, 0.000001d);
     }
 
     private sealed record CapturedProviderCall(
