@@ -292,7 +292,6 @@ De subpagina **Health Overview** bevat de bestaande Build Quality-functionalitei
 | **Overall Build Quality** | Samenvattingskaart over de gekozen rolling window. |
 | **Productkaarten** | Eén Build Quality-kaart per product met pipelines, repositories en confidence. |
 | **Productfilterchip** | Verschijnt als je vanaf Home met een productcontext opent. |
-| **Backlog Health-tab** | Snelkoppeling naar `/home/backlog-overview`. |
 | **Back to Health** | Gaat terug naar de hub op `/home/health`. |
 
 ### 7.2 Validatie Triage

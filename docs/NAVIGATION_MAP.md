@@ -184,7 +184,6 @@ Global header (available on every page) ◄────────────�
 | Progressive first paint | Breadcrumbs, page shell, and loading placeholders render before Build Quality data finishes loading. |
 | Build Quality overview | Shows the existing rolling-window Build Quality summary and per-product Build Quality cards. |
 | Product context chip | Shows the active product filter when one is supplied via query string. |
-| Backlog Health tab | Keeps the existing shortcut to `/home/backlog-overview`. |
 | Back to Health button | Returns to `/home/health`. |
 | Home button | Returns to `/home`. |
 

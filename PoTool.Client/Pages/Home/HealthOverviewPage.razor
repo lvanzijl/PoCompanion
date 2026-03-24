@@ -56,99 +56,77 @@
         </MudStack>
     </MudPaper>
 
-    <MudPaper Elevation="1" Class="pa-2 mb-4">
-        <MudTabs Rounded="true" ApplyEffectsToContainer="true" PanelClass="pt-4">
-            <MudTabPanel Text="Overview (Build Quality)">
-                @if (!string.IsNullOrWhiteSpace(_loadError))
+    <MudPaper Elevation="1" Class="pa-4 mb-4">
+        @if (!string.IsNullOrWhiteSpace(_loadError))
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap">
+                    <MudText Typo="Typo.body2">@_loadError</MudText>
+                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                   Icon="@Icons.Material.Filled.Refresh"
+                                   OnClick="RetryLoadAsync">
+                        Retry
+                    </CompactButton>
+                </MudStack>
+            </MudAlert>
+        }
+        else if (_isLoading)
+        {
+            <MudGrid Spacing="2">
+                @for (var index = 0; index < 3; index++)
                 {
-                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap">
-                            <MudText Typo="Typo.body2">@_loadError</MudText>
-                            <CompactButton ButtonRole="ButtonRole.Utility"
-                                           Icon="@Icons.Material.Filled.Refresh"
-                                           OnClick="RetryLoadAsync">
-                                Retry
-                            </CompactButton>
-                        </MudStack>
-                    </MudAlert>
+                    <MudItem xs="12" md="6" lg="4" @key="@($"build-quality-placeholder-{index}")">
+                        <MudCard Elevation="2">
+                            <MudCardContent>
+                                <MudSkeleton SkeletonType="SkeletonType.Text" Height="28px" Width="160px" Class="mb-3" />
+                                <MudGrid Spacing="2">
+                                    <MudItem xs="12" md="4">
+                                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="120px" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="4">
+                                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="120px" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="4">
+                                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="120px" />
+                                    </MudItem>
+                                </MudGrid>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
                 }
-                else if (_isLoading)
-                {
-                    <MudGrid Spacing="2">
-                        @for (var index = 0; index < 3; index++)
-                        {
-                            <MudItem xs="12" md="6" lg="4" @key="@($"build-quality-placeholder-{index}")">
-                                <MudCard Elevation="2">
-                                    <MudCardContent>
-                                        <MudSkeleton SkeletonType="SkeletonType.Text" Height="28px" Width="160px" Class="mb-3" />
-                                        <MudGrid Spacing="2">
-                                            <MudItem xs="12" md="4">
-                                                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="120px" />
-                                            </MudItem>
-                                            <MudItem xs="12" md="4">
-                                                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="120px" />
-                                            </MudItem>
-                                            <MudItem xs="12" md="4">
-                                                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="120px" />
-                                            </MudItem>
-                                        </MudGrid>
-                                    </MudCardContent>
-                                </MudCard>
-                            </MudItem>
-                        }
-                    </MudGrid>
-                }
-                else if (_buildQualityPage is null || !_buildQualityPage.Products.Any())
-                {
-                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                        No Build Quality products are available for the active Product Owner.
-                    </MudAlert>
-                }
-                else
-                {
-                    <MudStack Spacing="2" Class="mb-4">
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            Showing default-branch Build Quality for @GetWindowLabel().
-                        </MudText>
+            </MudGrid>
+        }
+        else if (_buildQualityPage is null || !_buildQualityPage.Products.Any())
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                No Build Quality products are available for the active Product Owner.
+            </MudAlert>
+        }
+        else
+        {
+            <MudStack Spacing="2" Class="mb-4">
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Showing default-branch Build Quality for @GetWindowLabel().
+                </MudText>
 
-                        <BuildQualitySummaryComponent Title="Overall Build Quality"
-                                                      Subtitle="@GetOverallSummarySubtitle()"
-                                                      Result="@_buildQualityPage.Summary" />
+                <BuildQualitySummaryComponent Title="Overall Build Quality"
+                                              Subtitle="@GetOverallSummarySubtitle()"
+                                              Result="@_buildQualityPage.Summary" />
 
-                        <MudText Typo="Typo.subtitle2">Products</MudText>
+                <MudText Typo="Typo.subtitle2">Products</MudText>
 
-                        <MudGrid Spacing="2">
-                            @foreach (var product in GetProductsInDisplayOrder())
-                            {
-                                <MudItem xs="12" md="6" lg="4" @key="product.ProductId">
-                                    <BuildQualitySummaryComponent Title="@product.ProductName"
-                                                                  Subtitle="@GetProductSubtitle(product)"
-                                                                  Result="@product.Result" />
-                                </MudItem>
-                            }
-                        </MudGrid>
-                    </MudStack>
-                }
-            </MudTabPanel>
-
-            <MudTabPanel Text="Backlog Health">
-                <MudPaper Elevation="0" Class="pa-4">
-                    <MudStack Spacing="2">
-                        <MudText Typo="Typo.h6">Backlog Health</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            Backlog Health remains on its existing page. Use the action below to open it without changing that workflow.
-                        </MudText>
-                        <MudStack Row="true" Spacing="2">
-                            <CompactButton ButtonRole="ButtonRole.Action"
-                                           Icon="@Icons.Material.Filled.Inventory2"
-                                           OnClick="NavigateToBacklogOverview">
-                                Open Backlog Health
-                            </CompactButton>
-                        </MudStack>
-                    </MudStack>
-                </MudPaper>
-            </MudTabPanel>
-        </MudTabs>
+                <MudGrid Spacing="2">
+                    @foreach (var product in GetProductsInDisplayOrder())
+                    {
+                        <MudItem xs="12" md="6" lg="4" @key="product.ProductId">
+                            <BuildQualitySummaryComponent Title="@product.ProductName"
+                                                          Subtitle="@GetProductSubtitle(product)"
+                                                          Result="@product.Result" />
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudStack>
+        }
     </MudPaper>
 </MudContainer>
 
@@ -272,11 +250,6 @@
 
     private string GetWindowLabel() =>
         $"{_windowStartUtc:MMM d, yyyy} — {_windowEndUtc:MMM d, yyyy}";
-
-    private void NavigateToBacklogOverview()
-    {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.BacklogOverview}{BuildContextQuery()}");
-    }
 
     private void ClearProductFilter()
     {
