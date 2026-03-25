@@ -220,7 +220,9 @@ public class ValidationComputeStage : ISyncStage
             IsBlocked: entity.IsBlocked,
             Relations: relations,
             BusinessValue: entity.BusinessValue,
-            BacklogPriority: entity.BacklogPriority
+            BacklogPriority: entity.BacklogPriority,
+            StoryPoints: entity.StoryPoints,
+            TimeCriticality: entity.TimeCriticality
         );
     }
 }

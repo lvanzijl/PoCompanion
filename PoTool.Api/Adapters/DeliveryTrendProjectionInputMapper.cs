@@ -17,7 +17,8 @@ internal static class DeliveryTrendProjectionInputMapper
             entity.Effort,
             entity.StoryPoints,
             entity.BusinessValue,
-            entity.CreatedDate);
+            entity.CreatedDate,
+            entity.TimeCriticality);
     }
 
     public static DeliveryTrendResolvedWorkItem ToDeliveryTrendResolvedWorkItem(this ResolvedWorkItemEntity entity)

@@ -62,6 +62,28 @@ public sealed class DeliveryProgressRollupServiceTests
     }
 
     [TestMethod]
+    public void ComputeFeatureProgress_IncludesOverrideForFeatureWithoutPbis()
+    {
+        var service = CreateService();
+
+        var result = service.ComputeFeatureProgress(new DeliveryFeatureProgressRequest(
+            [
+                CreateResolvedWorkItem(100, CanonicalWorkItemTypes.Feature)
+            ],
+            new Dictionary<int, DeliveryTrendWorkItem>
+            {
+                [100] = CreateWorkItem(100, CanonicalWorkItemTypes.Feature, "Feature A", state: "Active", timeCriticality: 150)
+            },
+            [1]));
+
+        Assert.HasCount(1, result);
+        Assert.IsNull(result[0].CalculatedProgress);
+        Assert.AreEqual(150d, result[0].Override!.Value, 0.001d);
+        Assert.AreEqual(100d, result[0].EffectiveProgress!.Value, 0.001d);
+        CollectionAssert.Contains(result[0].ValidationSignals.ToList(), FeatureProgressValidationSignals.OverrideOutOfRange);
+    }
+
+    [TestMethod]
     public void ComputeEpicProgress_AggregatesFeatureRollups()
     {
         var service = CreateService();
@@ -182,7 +204,8 @@ public sealed class DeliveryProgressRollupServiceTests
         int? effort = null,
         int? storyPoints = null,
         int? businessValue = null,
-        DateTimeOffset? createdDate = null)
+        DateTimeOffset? createdDate = null,
+        double? timeCriticality = null)
     {
         return new DeliveryTrendWorkItem(
             workItemId,
@@ -194,7 +217,8 @@ public sealed class DeliveryProgressRollupServiceTests
             effort,
             storyPoints,
             businessValue,
-            createdDate);
+            createdDate,
+            timeCriticality);
     }
 
     private static FieldChangeEvent CreateFieldChangeEvent(

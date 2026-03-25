@@ -729,7 +729,7 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
-    public void ComputeFeatureProgress_CanonicallyDoneFeature_Shows100Percent()
+    public void ComputeFeatureProgress_CanonicallyDoneFeature_UsesChildCompletionForProgress()
     {
         var workItems = new Dictionary<int, WorkItemEntity>
         {
@@ -748,12 +748,14 @@ public class SprintTrendProjectionServiceTests
         var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
 
         Assert.HasCount(1, result);
-        Assert.AreEqual(100, result[0].ProgressPercent, "Canonically done feature should show 100%");
+        Assert.AreEqual(50, result[0].ProgressPercent, "Feature progress should come from child PBIs, not the parent feature state.");
+        Assert.AreEqual(50d, result[0].CalculatedProgress!.Value, 0.001d);
+        Assert.AreEqual(50d, result[0].EffectiveProgress!.Value, 0.001d);
         Assert.IsTrue(result[0].IsDone);
     }
 
     [TestMethod]
-    public void ComputeFeatureProgress_UsesCanonicalDoneMappingForResolvedStates()
+    public void ComputeFeatureProgress_UsesCanonicalDoneMappingForChildCompletionOnly()
     {
         var workItems = new Dictionary<int, WorkItemEntity>
         {
@@ -778,13 +780,13 @@ public class SprintTrendProjectionServiceTests
                 (WorkItemType.Pbi, "Resolved", StateClassification.Done)));
 
         Assert.HasCount(1, result);
-        Assert.AreEqual(100, result[0].ProgressPercent, "Resolved feature should be treated as done when canonically mapped");
+        Assert.AreEqual(50, result[0].ProgressPercent, "Resolved feature state should not override child-completion-based progress.");
         Assert.AreEqual(5, result[0].DoneStoryPoints, "Resolved PBI should contribute to done effort");
         Assert.IsTrue(result[0].IsDone);
     }
 
     [TestMethod]
-    public void ComputeFeatureProgress_NonDoneFeature_CappedAt90Percent()
+    public void ComputeFeatureProgress_NonDoneFeature_Reaches100PercentWhenAllPbisAreDone()
     {
         var workItems = new Dictionary<int, WorkItemEntity>
         {
@@ -803,7 +805,8 @@ public class SprintTrendProjectionServiceTests
         var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
 
         Assert.HasCount(1, result);
-        Assert.AreEqual(90, result[0].ProgressPercent, "Non-done feature with all PBIs done should be capped at 90%");
+        Assert.AreEqual(100, result[0].ProgressPercent, "Feature progress should not be capped below 100 when all PBIs are done.");
+        Assert.AreEqual(100d, result[0].CalculatedProgress!.Value, 0.001d);
         Assert.IsFalse(result[0].IsDone);
     }
 
@@ -832,7 +835,7 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
-    public void ComputeFeatureProgress_SkipsFeaturesWithoutPbis()
+    public void ComputeFeatureProgress_IncludesFeaturesWithoutPbisWithNullCalculatedProgress()
     {
         var workItems = new Dictionary<int, WorkItemEntity>
         {
@@ -846,7 +849,10 @@ public class SprintTrendProjectionServiceTests
 
         var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
 
-        Assert.IsEmpty(result, "Features with no child PBIs should be skipped");
+        Assert.HasCount(1, result);
+        Assert.IsNull(result[0].CalculatedProgress);
+        Assert.IsNull(result[0].EffectiveProgress);
+        Assert.AreEqual(0, result[0].ProgressPercent);
     }
 
     [TestMethod]

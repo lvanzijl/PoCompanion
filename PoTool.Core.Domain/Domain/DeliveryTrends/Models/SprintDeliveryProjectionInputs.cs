@@ -15,7 +15,8 @@ public sealed record DeliveryTrendWorkItem(
     int? Effort,
     int? StoryPoints,
     int? BusinessValue,
-    DateTimeOffset? CreatedDate);
+    DateTimeOffset? CreatedDate,
+    double? TimeCriticality = null);
 
 /// <summary>
 /// Product-scoped hierarchy resolution data required by sprint delivery projection calculations.
@@ -67,7 +68,8 @@ public sealed record DeliveryFeatureProgressRequest(
     IReadOnlyCollection<int>? SprintCompletedPbiIds = null,
     IReadOnlyDictionary<int, int>? SprintEffortDeltaByWorkItem = null,
     IReadOnlyCollection<int>? SprintAssignedPbiIds = null,
-    IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? StateLookup = null);
+    IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? StateLookup = null,
+    FeatureProgressMode Mode = FeatureProgressMode.StoryPoints);
 
 /// <summary>
 /// Prepared domain inputs required to compute epic progress rollups.

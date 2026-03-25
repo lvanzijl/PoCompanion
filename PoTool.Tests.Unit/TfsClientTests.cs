@@ -637,7 +637,8 @@ public class TfsClientTests
                         ["System.IterationPath"] = "Sprint 1",
                         ["Microsoft.VSTS.Scheduling.Effort"] = 13,
                         ["Microsoft.VSTS.Scheduling.StoryPoints"] = 8,
-                        ["Microsoft.VSTS.Common.BusinessValue"] = 21
+                        ["Microsoft.VSTS.Common.BusinessValue"] = 21,
+                        ["Microsoft.VSTS.Common.TimeCriticality"] = 72.5
                     }
                 }
             }
@@ -650,6 +651,7 @@ public class TfsClientTests
         Assert.AreEqual(13, results[0].Effort);
         Assert.AreEqual(8, results[0].StoryPoints);
         Assert.AreEqual(21, results[0].BusinessValue);
+        Assert.AreEqual(72.5d, results[0].TimeCriticality!.Value, 0.001d);
     }
 
     [TestMethod]

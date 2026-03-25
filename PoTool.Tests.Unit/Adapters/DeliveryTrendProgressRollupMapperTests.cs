@@ -17,6 +17,10 @@ public sealed class DeliveryTrendProgressRollupMapperTests
             epicId: 42,
             epicTitle: "Epic A",
             progressPercent: 60,
+            calculatedProgress: 55.5,
+            overrideProgress: 70,
+            effectiveProgress: 70,
+            validationSignals: [FeatureProgressValidationSignals.OverrideOutOfRange],
             totalScopeStoryPoints: 13.5,
             deliveredStoryPoints: 8.25,
             donePbiCount: 3,
@@ -29,6 +33,10 @@ public sealed class DeliveryTrendProgressRollupMapperTests
 
         var dto = featureProgress.ToFeatureProgressDto(Array.Empty<CompletedPbiDto>());
 
+        Assert.AreEqual(55.5d, dto.CalculatedProgress!.Value, 0.001d);
+        Assert.AreEqual(70d, dto.Override!.Value, 0.001d);
+        Assert.AreEqual(70d, dto.EffectiveProgress!.Value, 0.001d);
+        CollectionAssert.Contains(dto.ValidationSignals.ToList(), FeatureProgressValidationSignals.OverrideOutOfRange);
         Assert.AreEqual(13.5d, dto.TotalStoryPoints, 0.001d);
         Assert.AreEqual(8.25d, dto.DoneStoryPoints, 0.001d);
         Assert.AreEqual(8.25d, dto.DeliveredStoryPoints, 0.001d);

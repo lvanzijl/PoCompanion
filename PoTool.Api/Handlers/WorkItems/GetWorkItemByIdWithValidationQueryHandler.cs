@@ -75,7 +75,8 @@ public sealed class GetWorkItemByIdWithValidationQueryHandler
             workItem.IsBlocked,
             workItem.BusinessValue,
             workItem.BacklogPriority,
-            workItem.StoryPoints
+            workItem.StoryPoints,
+            workItem.TimeCriticality
         );
     }
 }

@@ -384,9 +384,30 @@ public record FeatureProgressDto
 
     /// <summary>
     /// Progress percentage (0-100).
-    /// Feature.State == Done => 100%, otherwise min(raw, 90%).
+    /// Compatibility alias for the effective feature progress value.
     /// </summary>
     public int ProgressPercent { get; init; }
+
+    /// <summary>
+    /// Progress calculated from child PBIs before override handling.
+    /// Null when no PBIs exist or when SP-mode has no usable story-point scope.
+    /// </summary>
+    public double? CalculatedProgress { get; init; }
+
+    /// <summary>
+    /// Raw manual progress override sourced from Microsoft.VSTS.Common.TimeCriticality.
+    /// </summary>
+    public double? Override { get; init; }
+
+    /// <summary>
+    /// Effective feature progress after applying the clamped override when present.
+    /// </summary>
+    public double? EffectiveProgress { get; init; }
+
+    /// <summary>
+    /// Non-blocking planning-quality validation signals emitted by the feature progress engine.
+    /// </summary>
+    public IReadOnlyList<string> ValidationSignals { get; init; } = Array.Empty<string>();
 
     /// <summary>
     /// Total canonical story-point scope of all PBIs under this feature.

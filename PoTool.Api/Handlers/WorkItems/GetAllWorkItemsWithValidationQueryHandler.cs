@@ -135,7 +135,8 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
             wi.IsBlocked,
             wi.BusinessValue,
             wi.BacklogPriority,
-            wi.StoryPoints
+            wi.StoryPoints,
+            wi.TimeCriticality
         )).ToList();
     }
 }

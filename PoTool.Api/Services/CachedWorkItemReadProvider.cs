@@ -183,7 +183,9 @@ public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
             Relations: relations,
             ChangedDate: entity.TfsChangedDate,
             BusinessValue: entity.BusinessValue,
-            BacklogPriority: entity.BacklogPriority
+            BacklogPriority: entity.BacklogPriority,
+            StoryPoints: entity.StoryPoints,
+            TimeCriticality: entity.TimeCriticality
         );
     }
 }

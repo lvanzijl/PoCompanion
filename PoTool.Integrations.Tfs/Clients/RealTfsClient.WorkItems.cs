@@ -354,6 +354,7 @@ public partial class RealTfsClient
 
             // Extract backlog priority from TFS (Microsoft.VSTS.Common.BacklogPriority)
             double? backlogPriority = ParseBacklogPriorityField(fields);
+            double? timeCriticality = ParseTimeCriticalityField(fields);
 
             var workItem = new WorkItemDto(
                 TfsId: id,
@@ -375,7 +376,8 @@ public partial class RealTfsClient
                 IsBlocked: isBlocked,
                 Relations: relations, // Use relations from Phase 1
                 BacklogPriority: backlogPriority,
-                StoryPoints: storyPoints
+                StoryPoints: storyPoints,
+                TimeCriticality: timeCriticality
             );
 
             _logger.LogInformation("Retrieved work item {WorkItemId} from TFS: {Title}", id, title);
@@ -735,6 +737,7 @@ public partial class RealTfsClient
 
                     // Extract backlog priority from TFS (Microsoft.VSTS.Common.BacklogPriority)
                     double? backlogPriority = ParseBacklogPriorityField(fields);
+                    double? timeCriticality = ParseTimeCriticalityField(fields);
 
                     results.Add(new WorkItemDto(
                         TfsId: id,
@@ -754,7 +757,8 @@ public partial class RealTfsClient
                         Tags: tags,
                         ChangedDate: changedDate,
                         BacklogPriority: backlogPriority,
-                        StoryPoints: storyPoints
+                        StoryPoints: storyPoints,
+                        TimeCriticality: timeCriticality
                     ));
                 }
 
@@ -859,6 +863,28 @@ public partial class RealTfsClient
 
         if (priorityField.ValueKind == JsonValueKind.String &&
             double.TryParse(priorityField.GetString(), System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out value))
+        {
+            return value;
+        }
+
+        return null;
+    }
+
+    private static double? ParseTimeCriticalityField(JsonElement fields)
+    {
+        if (!fields.TryGetProperty(TfsFieldTimeCriticality, out var timeCriticalityField))
+        {
+            return null;
+        }
+
+        if (timeCriticalityField.ValueKind == JsonValueKind.Number && timeCriticalityField.TryGetDouble(out var value))
+        {
+            return value;
+        }
+
+        if (timeCriticalityField.ValueKind == JsonValueKind.String &&
+            double.TryParse(timeCriticalityField.GetString(), System.Globalization.NumberStyles.Any,
                 System.Globalization.CultureInfo.InvariantCulture, out value))
         {
             return value;

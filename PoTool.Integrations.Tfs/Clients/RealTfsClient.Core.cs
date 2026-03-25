@@ -27,6 +27,7 @@ public partial class RealTfsClient
     private const string TfsFieldStoryPoints = "Microsoft.VSTS.Scheduling.StoryPoints";
     private const string TfsFieldBusinessValue = "Microsoft.VSTS.Common.BusinessValue";
     private const string TfsFieldBacklogPriority = "Microsoft.VSTS.Common.BacklogPriority";
+    private const string TfsFieldTimeCriticality = "Microsoft.VSTS.Common.TimeCriticality";
     private const string TfsFieldState = "System.State";
     private const string TfsFieldSeverity = "Microsoft.VSTS.Common.Severity";
     private const string TfsFieldBlocked = "Microsoft.VSTS.CMMI.Blocked";
@@ -49,7 +50,8 @@ public partial class RealTfsClient
         TfsFieldBusinessValue,
         TfsFieldEffort,
         TfsFieldStoryPoints,
-        TfsFieldBacklogPriority
+        TfsFieldBacklogPriority,
+        TfsFieldTimeCriticality
     };
 
     // Batch size for Work Items Batch API calls

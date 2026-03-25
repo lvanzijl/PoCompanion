@@ -142,6 +142,7 @@ public class WorkItemRepository : IWorkItemRepository
                     existing.Effort = dto.Effort;
                     existing.StoryPoints = dto.StoryPoints;
                     existing.BusinessValue = dto.BusinessValue;
+                    existing.TimeCriticality = dto.TimeCriticality;
                     existing.Description = dto.Description;
                     existing.CreatedDate = dto.CreatedDate;
                     existing.ClosedDate = dto.ClosedDate;
@@ -192,6 +193,7 @@ public class WorkItemRepository : IWorkItemRepository
                     entity.Effort = dto.Effort;
                     entity.StoryPoints = dto.StoryPoints;
                     entity.BusinessValue = dto.BusinessValue;
+                    entity.TimeCriticality = dto.TimeCriticality;
                     entity.Description = dto.Description;
                     entity.CreatedDate = dto.CreatedDate;
                     entity.ClosedDate = dto.ClosedDate;
@@ -257,7 +259,8 @@ public class WorkItemRepository : IWorkItemRepository
                 ChangedDate: entity.TfsChangedDate,
                 BusinessValue: entity.BusinessValue,
                 BacklogPriority: entity.BacklogPriority,
-                StoryPoints: entity.StoryPoints
+                StoryPoints: entity.StoryPoints,
+                TimeCriticality: entity.TimeCriticality
             );
     }
 
@@ -276,6 +279,7 @@ public class WorkItemRepository : IWorkItemRepository
             Effort = dto.Effort,
             StoryPoints = dto.StoryPoints,
             BusinessValue = dto.BusinessValue,
+            TimeCriticality = dto.TimeCriticality,
             Description = dto.Description,
             CreatedDate = dto.CreatedDate,
             ClosedDate = dto.ClosedDate,

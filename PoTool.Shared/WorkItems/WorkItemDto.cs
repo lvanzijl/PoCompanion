@@ -24,5 +24,6 @@ public sealed record WorkItemDto(
     DateTimeOffset? ChangedDate = null,
     int? BusinessValue = null,
     double? BacklogPriority = null,
-    int? StoryPoints = null
+    int? StoryPoints = null,
+    double? TimeCriticality = null
 );
