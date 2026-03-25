@@ -62,7 +62,7 @@ These are the clearest match for a future Integrity model.
 | Current rule | Current implementation | What it does | Notes |
 | --- | --- | --- | --- |
 | `SI-1` | `PoTool.Core.Domain/BacklogQuality/Rules/CanonicalBacklogQualityRules.cs` and legacy `PoTool.Core/WorkItems/Validators/Rules/DoneParentWithUnfinishedDescendantsRule.cs` | Parent in `Done` with any descendant not in `Done` or `Removed` is invalid. | Canonical metadata classifies it as `StructuralIntegrity`. |
-| `SI-2` | `PoTool.Core.Domain/BacklogQuality/Rules/CanonicalBacklogQualityRules.cs` and legacy `PoTool.Core/WorkItems/Validators/Rules/RemovedParentWithUnfinishedDescendantsRule.cs` | Parent in `Removed` with any descendant not in `Done` or `Removed` is invalid. | Same recursive tree shape as `SI-1`. |
+| `SI-2` | `PoTool.Core.Domain/BacklogQuality/Rules/CanonicalBacklogQualityRules.cs` and legacy `PoTool.Core/WorkItems/Validators/Rules/RemovedParentWithUnfinishedDescendantsRule.cs` | Parent in `Removed` with any descendant not in `Done` or `Removed` is invalid. | Uses the same recursive descendant traversal pattern as `SI-1`. |
 | `SI-3` | `PoTool.Core.Domain/BacklogQuality/Rules/CanonicalBacklogQualityRules.cs` and legacy `PoTool.Core/WorkItems/Validators/Rules/NewParentWithInProgressDescendantsRule.cs` | Parent in `New` with started descendants is invalid. | Canonical rule fires on `InProgress` **or** `Done` descendants; older feature/spec text still describes only in-progress descendants. |
 
 ### 2.2 Classification rules
