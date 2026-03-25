@@ -16,6 +16,7 @@ public sealed class StateClassificationsAnalysisDocumentTests
         StringAssert.Contains(report, "# State Classifications & Refinement Gating Analysis");
         StringAssert.Contains(report, "## 1. Canonical classification model");
         StringAssert.Contains(report, "## 2. Where classifications are defined");
+        StringAssert.Contains(report, "## 3. Mapping and lookup mechanics");
         StringAssert.Contains(report, "## 4. How classifications are used");
         StringAssert.Contains(report, "## 5. Existing concepts related to “Approved” or “Refinement Ready”");
         StringAssert.Contains(report, "## 6. Gaps vs desired “Approved = refinement ready” behavior");
