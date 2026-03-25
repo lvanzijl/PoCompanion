@@ -37,9 +37,9 @@ Notes:
 
 | Tile | Classification | Basis |
 |---|---|---|
-| Bug Trend | STATIC | Fixed title/subtitle only. No badge, count, or trend value on the tile. |
+| Bug Trend | DYNAMIC | Adds a `TrendSlopeBadge` when recent bug-creation periods are available, otherwise falls back to a runtime status badge. |
 | PR Trend | DYNAMIC | Adds a `TrendSlopeBadge` driven by runtime PR trend data when enough sprint context exists. |
-| Pipeline Insights | STATIC | Fixed title/subtitle plus a static `Read-only` chip. No live pipeline health indicator on the tile. |
+| Pipeline Insights | DYNAMIC | Adds a runtime `WorkspaceTileBadge` based on Build Quality evidence when a stable/unstable/no-data signal is available. |
 | PR Delivery Insights | STATIC | Fixed title/subtitle plus a static `Read-only` chip. No live friction/count signal on the tile. |
 | Portfolio Progress | STATIC | Fixed title/subtitle only. No runtime signal binding. |
 | Delivery Trends | STATIC | Fixed title/subtitle only. No runtime signal binding. |
@@ -53,22 +53,56 @@ Notes:
 
 ## 2. Dynamic tiles
 
-Only one workspace-hub tile currently behaves as a dynamic, signal-driven tile inside the analyzed scope.
+Three workspace-entry tiles currently behave as dynamic, signal-driven tiles inside the analyzed scope.
+
+### Trends → Bug Trend
+
+- **Code location:** `PoTool.Client/Pages/Home/TrendsWorkspace.razor:151-175,435-519`
+- **Dynamic elements:** `TrendSlopeBadge` or `WorkspaceTileBadge`
+- **Data source:** bug-creation series derived from `WorkItemService.GetAllWithValidationAsync()`
+- **Driving values:** the two most recent monthly bug-created counts
+- **Trigger condition:**
+  - bug data must load successfully for the selected date range
+  - at least two usable periods produce a slope badge
+  - one usable period produces an `Insufficient data` fallback badge
+  - no usable periods produce a `No data` fallback badge
+- **Communicated signal:** whether recent bug creation is **decreasing**, **stable**, or **increasing**
+- **Rendering rule:** the tile remains visible even if the signal cannot be calculated
 
 ### Trends → PR Trend
 
-- **Code location:** `PoTool.Client/Pages/Home/TrendsWorkspace.razor:161-175`, `:567-612`
-- **Dynamic element:** `TrendSlopeBadge`
+- **Code location:** `PoTool.Client/Pages/Home/TrendsWorkspace.razor:178-203,646-699`
+- **Dynamic elements:** `TrendSlopeBadge` or `WorkspaceTileBadge`
 - **Data source:** `PullRequestsClient.GetSprintTrendsAsync(selectedSprintIds, productIds: null, teamId: _selectedTeamId, ...)`
-- **Driving values:** `_prTtmSlopeStart` and `_prTtmSlopeEnd`, taken from the first and last available `MedianTimeToMergeHours` values in the selected sprint range
+- **Driving values:** first and last usable `MedianTimeToMergeHours` values in the selected sprint range
 - **Trigger condition:**
   - a team must be selected
   - both `fromSprintId` and `toSprintId` must be selected
   - sprint trend data must load successfully
-  - at least one usable median time-to-merge value must exist at the start/end of the selected range
+  - at least two usable medians produce a slope badge
+  - one usable median produces an `Insufficient data` fallback badge
+  - load failures produce a `No data` fallback badge
 - **Communicated signal:** whether median PR time-to-merge is **improving**, **stable**, or **worsening**
-- **Signal meaning for navigation:** this is the only tile that tries to answer *why click now?* with an explicit flow-efficiency cue rather than only naming the destination page
-- **Important rendering rule:** if the required sprint context or data is missing, the badge disappears entirely and the tile falls back to a generic static card
+- **Rendering rule:** the tile remains visible and degrades gracefully when sprint context or data is missing
+
+### Trends → Pipeline Insights
+
+- **Code location:** `PoTool.Client/Pages/Home/TrendsWorkspace.razor:206-221,701-726`
+- **Dynamic element:** `WorkspaceTileBadge`
+- **Data source:** `BuildQualityService.GetRollingWindowAsync(...)`
+- **Driving values:** Build Quality success-rate evidence for the current date range and optional product scope
+- **Trigger condition:**
+  - an active profile must exist
+  - Build Quality evidence must contain usable success-rate data
+  - enough evidence returns `Stable` or `Unstable`
+  - missing or unavailable evidence returns `No data`
+- **Communicated signal:** whether recent pipeline behavior is **stable** or **unstable**
+- **Rendering rule:** the tile remains navigable even when only a fallback badge is available
+
+### Signal meaning for navigation
+
+- **Bug Trend**, **PR Trend**, and **Pipeline Insights** each try to answer *why click now?* with an explicit runtime cue rather than only naming the destination page.
+- The remaining Trends tiles stay intentionally static and serve as normal navigation cards inside the signal workspace.
 
 ### What is not dynamic, even if the page around it is dynamic
 
@@ -119,20 +153,20 @@ These tiles mostly communicate *what the page is* rather than *why now*:
 ### Intent pattern by workspace
 
 - **Health, Delivery, Planning:** mostly deliberate static navigation hubs. They prioritize clear routing over live status.
-- **Trends:** positioned as a signal workspace, but only one tile actually behaves like a signal-driven tile.
+- **Trends:** positioned as a signal workspace and currently uses dynamic tile signals only where a real runtime signal exists.
 
 ## 4. Issues found
 
 ### Unclear or weak dynamic intent
 
-- **PR Trend is the only truly dynamic tile, but its signal is conditional and often absent.**  
-  When no full sprint range is selected, the tile loses its strongest “why click?” signal and becomes a generic destination card.
+- **Dynamic intent is concentrated in only part of the Trends grid.**  
+  Bug Trend, PR Trend, and Pipeline Insights now carry runtime signals, but the other three Trends tiles remain descriptive navigation cards.
 
 ### Static tiles that may appear signal-driven without actually being so
 
-- **Trends labels the section as “Trend Signals,” but 5 of the 6 tiles are static.**  
-  This creates a mismatch between the page framing and the actual behavior of the cards.
-- **Pipeline Insights** and **PR Delivery Insights** sound like insight/signal surfaces, but the tiles do not expose any live indicator, count, or anomaly.
+- **Trends labels the section as “Trend Signals,” but half of the grid remains static.**  
+  This is acceptable under the current rules because the workspace allows dynamic tiles only where a real signal exists, but the wording still sets a high expectation for live indicators.
+- **PR Delivery Insights** sounds like an insight surface, but the tile does not expose any live indicator, count, or anomaly.
 
 ### Static tiles that should become dynamic?
 
@@ -158,7 +192,7 @@ Their subtitles identify topic areas, but not the decision or problem that shoul
 
 ### Navigation-impact observation
 
-- The strongest signal-led navigation in the analyzed scope is concentrated in one place: **Trends → PR Trend**.
+- The strongest signal-led navigation in the analyzed scope is concentrated in the **Trends** workspace.
 - Elsewhere, navigation is primarily **taxonomy-driven** (“go to this page type”) rather than **signal-driven** (“something needs attention here”).
 
 ## 5. Risk assessment
@@ -167,8 +201,10 @@ Their subtitles identify topic areas, but not the decision or problem that shoul
 
 - **Health hub should remain lightweight and non-loading on entry.**  
   `docs/NAVIGATION_MAP.md` explicitly says the Health workspace hub “loads no Health data on entry” and only routes to subpages.
-- **PR Trend dynamic badge should remain dynamic.**  
-  It is the only current example of a runtime signal affecting click intent on a hub tile.
+- **Health, Delivery, and Planning tiles should remain static.**  
+  They are navigation workspaces, not signal dashboards.
+- **Bug Trend, PR Trend, and Pipeline Insights should remain dynamic only when a real signal exists.**  
+  Their current runtime badges are the implementation examples for signal-driven workspace tiles.
 - **Current tile titles align closely with docs and user guide terminology.**  
   Changing labels casually would risk breaking navigation comprehension and documentation consistency.
 
@@ -177,16 +213,16 @@ Their subtitles identify topic areas, but not the decision or problem that shoul
 - Clarifying **why to click** for static tiles without changing routing behavior
 - Improving subtitle precision for the weaker Trends tiles
 - Making the distinction between PR-focused and delivery-focused trend tiles more explicit
-- Reconsidering whether the Trends section should be called “Trend Signals” if most cards remain static
+- Reconsidering whether the Trends section should be called “Trend Signals” if the team wants a lower expectation for static cards in the same grid
 
 ### Needs redesign later
 
 - **Trends workspace signal strategy**  
-  The workspace is framed as a signal entry point, but most tiles behave like static navigation labels. A later redesign should choose one of two directions:
+  The workspace is framed as a signal entry point, but only half of the tiles currently expose runtime signals. A later redesign should choose one of two directions:
   - make more tiles genuinely signal-driven, or
   - rename/reframe the section so it no longer implies live signals on every card
-- **Conditional visibility of PR Trend’s badge**  
-  The signal is valuable, but it is gated behind team + sprint-range selection. That makes the tile’s intent fluctuate between strong and weak.
+- **Conditional visibility of PR Trend’s slope badge**  
+  The signal is valuable, but its strongest form is still gated behind team + sprint-range selection. The fallback badge helps, but the tile’s urgency still varies with context.
 
 ### Wording changes that could break UX intent
 
@@ -199,15 +235,15 @@ Their subtitles identify topic areas, but not the decision or problem that shoul
 Overall hub quality is **structurally clear but weakly signal-driven**.
 
 - **Health, Delivery, and Planning** behave as intentional static navigation hubs.
-- **Trends** is the only workspace that meaningfully attempts signal-led navigation, but only **PR Trend** currently delivers that behavior.
+- **Trends** is the only workspace that meaningfully uses signal-led navigation, currently through **Bug Trend**, **PR Trend**, and **Pipeline Insights**.
 - Most analyzed tiles tell the user **what page exists**, not **why this page deserves attention now**.
-- The biggest semantic gap is in **Trends**, where the section framing promises signal cards but most tiles remain static.
+- The biggest semantic gap is in **Trends**, where the section framing still promises a stronger all-grid signal story than the current 3 dynamic / 3 static split.
 
 In short:
 
 - the hub architecture is understandable
 - the routing intent is mostly clear
-- genuine signal-driven navigation is rare inside the workspace hubs
+- genuine signal-driven navigation exists, but is intentionally limited to the signal workspace
 - future improvement should focus first on the **Trends** tile set, not on Health/Delivery/Planning
 
 ## Reviewer notes
