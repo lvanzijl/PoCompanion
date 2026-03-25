@@ -475,6 +475,7 @@ public class SprintTrendProjectionService
     /// </summary>
     public virtual async Task<IReadOnlyList<FeatureProgressDto>> ComputeFeatureProgressAsync(
         int productOwnerId,
+        FeatureProgressMode progressMode,
         DateTime? sprintStartUtc = null,
         DateTime? sprintEndUtc = null,
         CancellationToken cancellationToken = default,
@@ -588,6 +589,7 @@ public class SprintTrendProjectionService
             resolvedItems,
             workItemsByTfsId,
             productIds,
+            progressMode,
             _deliveryProgressRollupService,
             _storyPointResolutionService,
             activeWorkItemIds,
@@ -603,6 +605,7 @@ public class SprintTrendProjectionService
         IReadOnlyList<ResolvedWorkItemEntity> resolvedItems,
         IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
         IReadOnlyList<int> productIds,
+        FeatureProgressMode progressMode,
         IDeliveryProgressRollupService deliveryProgressRollupService,
         ICanonicalStoryPointResolutionService storyPointResolutionService,
         IReadOnlyCollection<int>? activeWorkItemIds = null,
@@ -618,6 +621,7 @@ public class SprintTrendProjectionService
             resolvedItems.Select(resolvedItem => resolvedItem.ToDeliveryTrendResolvedWorkItem()).ToList(),
             deliveryTrendWorkItems,
             productIds,
+            progressMode,
             activeWorkItemIds,
             sprintCompletedPbiIds,
             sprintEffortDeltaByWorkItem,

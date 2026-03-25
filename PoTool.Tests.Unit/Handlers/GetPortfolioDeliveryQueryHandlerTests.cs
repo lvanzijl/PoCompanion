@@ -118,6 +118,7 @@ public sealed class GetPortfolioDeliveryQueryHandlerTests
         Assert.AreEqual(1, result.SprintCount);
         Assert.AreEqual(3, result.Summary.TotalCompletedPbis);
         Assert.AreEqual(10d, result.Summary.TotalCompletedEffort, 0.001d);
+        Assert.AreEqual(FeatureProgressMode.StoryPoints, projectionService.LastProgressMode);
         Assert.AreEqual(10d, result.Summary.TotalDeliveredStoryPoints, 0.001d);
         Assert.AreEqual(1, result.Summary.TotalCompletedBugs);
         Assert.HasCount(2, result.Products);
@@ -165,6 +166,7 @@ public sealed class GetPortfolioDeliveryQueryHandlerTests
     private sealed class StubSprintTrendProjectionService : SprintTrendProjectionService
     {
         private readonly IReadOnlyList<FeatureProgressDto> _featureProgress;
+        public FeatureProgressMode? LastProgressMode { get; private set; }
 
         public StubSprintTrendProjectionService(IReadOnlyList<FeatureProgressDto> featureProgress)
             : base(
@@ -193,11 +195,13 @@ public sealed class GetPortfolioDeliveryQueryHandlerTests
 
         public override Task<IReadOnlyList<FeatureProgressDto>> ComputeFeatureProgressAsync(
             int productOwnerId,
+            FeatureProgressMode progressMode,
             DateTime? sprintStartUtc = null,
             DateTime? sprintEndUtc = null,
             CancellationToken cancellationToken = default,
             int? sprintId = null)
         {
+            LastProgressMode = progressMode;
             return Task.FromResult(_featureProgress);
         }
     }

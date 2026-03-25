@@ -28,6 +28,7 @@ public sealed class DeliveryProgressRollupServiceTests
                 [202] = CreateWorkItem(202, CanonicalWorkItemTypes.ProductBacklogItem, "Active PBI", parentId: 100, state: "Active", storyPoints: 10)
             },
             [1],
+            FeatureProgressMode.StoryPoints,
             SprintCompletedPbiIds: new HashSet<int> { 201 }));
 
         Assert.HasCount(1, result);
@@ -54,6 +55,7 @@ public sealed class DeliveryProgressRollupServiceTests
                 [201] = CreateWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, "Assigned PBI", parentId: 100, state: "Active", storyPoints: 8)
             },
             [1],
+            FeatureProgressMode.StoryPoints,
             ActiveWorkItemIds: Array.Empty<int>(),
             SprintAssignedPbiIds: new HashSet<int> { 201 }));
 
@@ -74,7 +76,8 @@ public sealed class DeliveryProgressRollupServiceTests
             {
                 [100] = CreateWorkItem(100, CanonicalWorkItemTypes.Feature, "Feature A", state: "Active", timeCriticality: 150)
             },
-            [1]));
+            [1],
+            FeatureProgressMode.StoryPoints));
 
         Assert.HasCount(1, result);
         Assert.IsNull(result[0].CalculatedProgress);

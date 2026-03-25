@@ -64,12 +64,12 @@ public sealed record DeliveryFeatureProgressRequest(
     IReadOnlyList<DeliveryTrendResolvedWorkItem> ResolvedItems,
     IReadOnlyDictionary<int, DeliveryTrendWorkItem> WorkItemsById,
     IReadOnlyList<int> ProductIds,
+    FeatureProgressMode Mode,
     IReadOnlyCollection<int>? ActiveWorkItemIds = null,
     IReadOnlyCollection<int>? SprintCompletedPbiIds = null,
     IReadOnlyDictionary<int, int>? SprintEffortDeltaByWorkItem = null,
     IReadOnlyCollection<int>? SprintAssignedPbiIds = null,
-    IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? StateLookup = null,
-    FeatureProgressMode Mode = FeatureProgressMode.StoryPoints);
+    IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? StateLookup = null);
 
 /// <summary>
 /// Prepared domain inputs required to compute epic progress rollups.
