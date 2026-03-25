@@ -7,7 +7,7 @@ public sealed class HierarchyAggregationAnalysisDocumentTests
     public void HierarchyAggregationAnalysis_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analyze", "hierarchy-aggregation.md");
+        var reportPath = $"{repositoryRoot}/docs/analyze/hierarchy-aggregation.md";
 
         Assert.IsTrue(File.Exists(reportPath), "The hierarchy aggregation analysis report should exist under docs/analyze.");
 
@@ -35,9 +35,10 @@ public sealed class HierarchyAggregationAnalysisDocumentTests
 
         while (current is not null)
         {
-            if (File.Exists(Path.Combine(current.FullName, "PoTool.sln")))
+            var currentPath = current.FullName.Replace('\\', '/');
+            if (File.Exists($"{currentPath}/PoTool.sln"))
             {
-                return current.FullName;
+                return currentPath;
             }
 
             current = current.Parent;
