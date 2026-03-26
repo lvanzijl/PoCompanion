@@ -111,6 +111,7 @@ public class ServiceCollectionTests
         var productAggregationService = scope.ServiceProvider.GetService<IProductAggregationService>();
         var planningQualityService = scope.ServiceProvider.GetService<IPlanningQualityService>();
         var snapshotComparisonService = scope.ServiceProvider.GetService<ISnapshotComparisonService>();
+        var insightService = scope.ServiceProvider.GetService<IInsightService>();
         var deliveryProgressRollupService = scope.ServiceProvider.GetService<IDeliveryProgressRollupService>();
         var portfolioDeliverySummaryService = scope.ServiceProvider.GetService<IPortfolioDeliverySummaryService>();
         var sprintCommitmentService = scope.ServiceProvider.GetService<ISprintCommitmentService>();
@@ -136,6 +137,7 @@ public class ServiceCollectionTests
         Assert.IsNotNull(productAggregationService, "Product aggregation service should be registered.");
         Assert.IsNotNull(planningQualityService, "Planning Quality service should be registered.");
         Assert.IsNotNull(snapshotComparisonService, "Snapshot comparison service should be registered.");
+        Assert.IsNotNull(insightService, "Insight service should be registered.");
         Assert.IsNotNull(deliveryProgressRollupService, "Delivery progress rollup service should be registered.");
         Assert.IsNotNull(portfolioDeliverySummaryService, "Portfolio delivery summary service should be registered.");
         Assert.IsNotNull(sprintCommitmentService, "Sprint commitment CDC service should be registered.");
