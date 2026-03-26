@@ -1,0 +1,328 @@
+@using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Services
+@using PoTool.Shared.Metrics
+@inject IMetricsClient MetricsClient
+@inject IProfileService ProfileService
+@inject ProductService ProductService
+
+<MudPaper Elevation="2" Class="pa-4 mt-4">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+        <MudStack Spacing="0">
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Visibility" Class="mr-2" />
+                CDC Portfolio Snapshot View
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Read-only snapshot and comparison data from the canonical CDC services.
+            </MudText>
+        </MudStack>
+
+        <MudButton Variant="Variant.Outlined"
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Refresh"
+                   OnClick="LoadAsync">
+            Refresh
+        </MudButton>
+    </MudStack>
+
+    @if (_isLoading)
+    {
+        <LoadingIndicator IsLoading="true" />
+    }
+    else if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-3">@_errorMessage</MudAlert>
+    }
+    else
+    {
+        <MudGrid Class="mb-3">
+            <MudItem xs="12" md="3">
+                <MudSelect T="int?"
+                           Label="Product"
+                           Value="_productId"
+                           ValueChanged="OnProductChangedAsync"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Clearable="true">
+                    <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
+                    @foreach (var product in _products)
+                    {
+                        <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="2">
+                <MudTextField T="string"
+                              Label="Project"
+                              Value="_projectNumber"
+                              ValueChanged="OnProjectChangedAsync"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Clearable="true" />
+            </MudItem>
+            <MudItem xs="12" md="2">
+                <MudTextField T="string"
+                              Label="Work Package"
+                              Value="_workPackage"
+                              ValueChanged="OnWorkPackageChangedAsync"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Clearable="true" />
+            </MudItem>
+            <MudItem xs="12" md="2">
+                <MudSelect T="PortfolioLifecycleState?"
+                           Label="Lifecycle"
+                           Value="_lifecycleState"
+                           ValueChanged="OnLifecycleChangedAsync"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Clearable="true">
+                    <MudSelectItem T="PortfolioLifecycleState?" Value="@((PortfolioLifecycleState?)null)">All</MudSelectItem>
+                    <MudSelectItem T="PortfolioLifecycleState?" Value="@PortfolioLifecycleState.Active">Active</MudSelectItem>
+                    <MudSelectItem T="PortfolioLifecycleState?" Value="@PortfolioLifecycleState.Retired">Retired</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="1">
+                <MudSelect T="PortfolioReadSortBy"
+                           Label="Sort"
+                           Value="_sortBy"
+                           ValueChanged="OnSortChangedAsync"
+                           Variant="Variant.Outlined"
+                           Dense="true">
+                    <MudSelectItem T="PortfolioReadSortBy" Value="@PortfolioReadSortBy.Default">Default</MudSelectItem>
+                    <MudSelectItem T="PortfolioReadSortBy" Value="@PortfolioReadSortBy.Progress">Progress</MudSelectItem>
+                    <MudSelectItem T="PortfolioReadSortBy" Value="@PortfolioReadSortBy.Weight">Weight</MudSelectItem>
+                    <MudSelectItem T="PortfolioReadSortBy" Value="@PortfolioReadSortBy.Delta">Delta</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="1">
+                <MudSelect T="PortfolioReadGroupBy"
+                           Label="Group"
+                           Value="_groupBy"
+                           ValueChanged="OnGroupChangedAsync"
+                           Variant="Variant.Outlined"
+                           Dense="true">
+                    <MudSelectItem T="PortfolioReadGroupBy" Value="@PortfolioReadGroupBy.None">None</MudSelectItem>
+                    <MudSelectItem T="PortfolioReadGroupBy" Value="@PortfolioReadGroupBy.Product">Product</MudSelectItem>
+                    <MudSelectItem T="PortfolioReadGroupBy" Value="@PortfolioReadGroupBy.Project">Project</MudSelectItem>
+                    <MudSelectItem T="PortfolioReadGroupBy" Value="@PortfolioReadGroupBy.WorkPackage">Package</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+
+        @if (_progress?.HasData == true)
+        {
+            <MudGrid Class="mb-3">
+                <MudItem xs="12" md="4">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Latest snapshot</MudText>
+                        <MudText Typo="Typo.subtitle1">@_progress.SnapshotLabel</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@_progress.SnapshotTimestamp.ToString("yyyy-MM-dd")</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Portfolio progress</MudText>
+                        <MudText Typo="Typo.subtitle1">@FormatPercent(_progress.PortfolioProgress)</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Visible rows</MudText>
+                        <MudText Typo="Typo.subtitle1">@($"{_progress.FilteredItemCount} / {_progress.TotalItemCount}")</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        }
+
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Current snapshot</MudText>
+        @if (_snapshot?.HasData == true)
+        {
+            <MudTable T="PortfolioSnapshotItemDto" Items="_snapshot.Items" Dense="true" Hover="true">
+                <HeaderContent>
+                    <MudTh>Product</MudTh>
+                    <MudTh>Project</MudTh>
+                    <MudTh>Work Package</MudTh>
+                    <MudTh>Lifecycle</MudTh>
+                    <MudTh>Progress</MudTh>
+                    <MudTh>Weight</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Product">@context.ProductName</MudTd>
+                    <MudTd DataLabel="Project">@context.ProjectNumber</MudTd>
+                    <MudTd DataLabel="Work Package">@(context.WorkPackage ?? "—")</MudTd>
+                    <MudTd DataLabel="Lifecycle">@context.LifecycleState</MudTd>
+                    <MudTd DataLabel="Progress">@FormatRatio(context.Progress)</MudTd>
+                    <MudTd DataLabel="Weight">@($"{context.Weight:F1}")</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2">No snapshot rows available.</MudText>
+        }
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Snapshot comparison</MudText>
+        @if (_comparison?.HasData == true)
+        {
+            <MudTable T="PortfolioComparisonItemDto" Items="_comparison.Items" Dense="true" Hover="true">
+                <HeaderContent>
+                    <MudTh>Product</MudTh>
+                    <MudTh>Project</MudTh>
+                    <MudTh>Work Package</MudTh>
+                    <MudTh>Previous</MudTh>
+                    <MudTh>Current</MudTh>
+                    <MudTh>Δ Progress</MudTh>
+                    <MudTh>Δ Weight</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Product">@context.ProductName</MudTd>
+                    <MudTd DataLabel="Project">@context.ProjectNumber</MudTd>
+                    <MudTd DataLabel="Work Package">@(context.WorkPackage ?? "—")</MudTd>
+                    <MudTd DataLabel="Previous">@($"{FormatLifecycle(context.PreviousLifecycleState)} / {FormatRatio(context.PreviousProgress)}")</MudTd>
+                    <MudTd DataLabel="Current">@($"{FormatLifecycle(context.CurrentLifecycleState)} / {FormatRatio(context.CurrentProgress)}")</MudTd>
+                    <MudTd DataLabel="Δ Progress">@FormatSignedRatio(context.ProgressDelta)</MudTd>
+                    <MudTd DataLabel="Δ Weight">@FormatSignedNumber(context.WeightDelta)</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2">No comparison rows available.</MudText>
+        }
+    }
+</MudPaper>
+
+@code {
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private int? _profileId;
+    private int? _productId;
+    private string? _projectNumber;
+    private string? _workPackage;
+    private PortfolioLifecycleState? _lifecycleState;
+    private PortfolioReadSortBy _sortBy = PortfolioReadSortBy.Default;
+    private PortfolioReadGroupBy _groupBy = PortfolioReadGroupBy.None;
+    private readonly PortfolioReadSortDirection _sortDirection = PortfolioReadSortDirection.Desc;
+    private IReadOnlyList<ProductDto> _products = Array.Empty<ProductDto>();
+    private PortfolioProgressDto? _progress;
+    private PortfolioSnapshotDto? _snapshot;
+    private PortfolioComparisonDto? _comparison;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile is null)
+            {
+                _errorMessage = "Select an active profile to load portfolio snapshot data.";
+                return;
+            }
+
+            _profileId = activeProfile.Id;
+            _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+
+            _progress = await MetricsClient.GetPortfolioProgressAsync(
+                activeProfile.Id,
+                _productId,
+                NullIfWhiteSpace(_projectNumber),
+                NullIfWhiteSpace(_workPackage),
+                _lifecycleState,
+                _sortBy,
+                _sortDirection,
+                _groupBy);
+            _snapshot = await MetricsClient.GetPortfolioSnapshotsAsync(
+                activeProfile.Id,
+                _productId,
+                NullIfWhiteSpace(_projectNumber),
+                NullIfWhiteSpace(_workPackage),
+                _lifecycleState,
+                _sortBy,
+                _sortDirection,
+                _groupBy);
+            _comparison = await MetricsClient.GetPortfolioComparisonAsync(
+                activeProfile.Id,
+                _productId,
+                NullIfWhiteSpace(_projectNumber),
+                NullIfWhiteSpace(_workPackage),
+                _lifecycleState,
+                _sortBy,
+                _sortDirection,
+                _groupBy);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Unable to load CDC portfolio data: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OnProductChangedAsync(int? value)
+    {
+        _productId = value;
+        await LoadAsync();
+    }
+
+    private async Task OnProjectChangedAsync(string? value)
+    {
+        _projectNumber = value;
+        await LoadAsync();
+    }
+
+    private async Task OnWorkPackageChangedAsync(string? value)
+    {
+        _workPackage = value;
+        await LoadAsync();
+    }
+
+    private async Task OnLifecycleChangedAsync(PortfolioLifecycleState? value)
+    {
+        _lifecycleState = value;
+        await LoadAsync();
+    }
+
+    private async Task OnSortChangedAsync(PortfolioReadSortBy value)
+    {
+        _sortBy = value;
+        await LoadAsync();
+    }
+
+    private async Task OnGroupChangedAsync(PortfolioReadGroupBy value)
+    {
+        _groupBy = value;
+        await LoadAsync();
+    }
+
+    private static string FormatPercent(double? value)
+        => value.HasValue ? $"{value.Value:F0}%" : "—";
+
+    private static string FormatRatio(double? value)
+        => value.HasValue ? $"{value.Value:P0}" : "—";
+
+    private static string FormatSignedRatio(double? value)
+        => value.HasValue ? $"{value.Value:+0%;-0%;0%}" : "—";
+
+    private static string FormatSignedNumber(double? value)
+        => value.HasValue ? $"{value.Value:+0.0;-0.0;0.0}" : "—";
+
+    private static string FormatLifecycle(PortfolioLifecycleState? value)
+        => value?.ToString() ?? "—";
+
+    private static string? NullIfWhiteSpace(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}
