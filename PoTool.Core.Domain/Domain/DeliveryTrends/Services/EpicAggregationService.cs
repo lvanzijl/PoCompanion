@@ -1,4 +1,5 @@
 using PoTool.Core.Domain.DeliveryTrends.Models;
+using PoTool.Core.Domain.WorkItems;
 
 namespace PoTool.Core.Domain.DeliveryTrends.Services;
 
@@ -18,24 +19,31 @@ public interface IEpicAggregationService
 /// </summary>
 public sealed class EpicAggregationService : IEpicAggregationService
 {
+    private readonly IEpicProgressService _epicProgressService;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EpicAggregationService"/> class.
+    /// </summary>
+    public EpicAggregationService(IEpicProgressService? epicProgressService = null)
+    {
+        _epicProgressService = epicProgressService ?? new EpicProgressService();
+    }
+
     /// <inheritdoc />
     public EpicAggregationResult Compute(EpicAggregationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var features = request.Features ?? [];
-        var excludedFeaturesCount = features.Count(feature => feature.IsExcluded);
-
-        var includedFeatures = features
-            .Where(feature => !feature.IsExcluded
-                && feature.Weight > 0
-                && feature.EffectiveProgress.HasValue)
+        var features = (request.Features ?? [])
+            .Where(feature => CanonicalWorkItemTypes.IsFeature(feature.Feature.WorkItemType))
             .ToList();
-
-        var totalWeight = includedFeatures.Sum(feature => feature.Weight);
-        double? epicProgress = totalWeight > 0
-            ? includedFeatures.Sum(feature => feature.EffectiveProgress!.Value * feature.Weight) / totalWeight
-            : null;
+        var epicProgress = _epicProgressService.Compute(new EpicProgressCalculationRequest(
+            request.Epic,
+            features.Select(feature => new EpicFeatureProgress(
+                feature.Feature,
+                feature.EffectiveProgress,
+                feature.TotalEffort))
+            .ToList()));
 
         var consumedForecasts = features
             .Where(feature => feature.ForecastConsumedEffort.HasValue)
@@ -47,11 +55,11 @@ public sealed class EpicAggregationService : IEpicAggregationService
             .ToList();
 
         return new EpicAggregationResult(
-            epicProgress,
+            epicProgress.EpicProgress * 100d,
             consumedForecasts.Count > 0 ? consumedForecasts.Sum() : null,
             remainingForecasts.Count > 0 ? remainingForecasts.Sum() : null,
-            excludedFeaturesCount,
-            includedFeatures.Count,
-            totalWeight);
+            epicProgress.ExcludedFeaturesCount,
+            epicProgress.IncludedFeaturesCount,
+            epicProgress.TotalWeight);
     }
 }

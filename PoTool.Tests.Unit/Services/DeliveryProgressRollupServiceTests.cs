@@ -154,7 +154,9 @@ public sealed class DeliveryProgressRollupServiceTests
             ],
             new Dictionary<int, DeliveryTrendWorkItem>
             {
-                [100] = CreateWorkItem(100, "Epic", "Epic X", state: "Active")
+                [100] = CreateWorkItem(100, "Epic", "Epic X", state: "Active"),
+                [200] = CreateWorkItem(200, CanonicalWorkItemTypes.Feature, "Feature A", parentId: 100, state: "Active", effort: 2),
+                [201] = CreateWorkItem(201, CanonicalWorkItemTypes.Feature, "Feature B", parentId: 100, state: "Active", effort: 1)
             }));
 
         Assert.HasCount(1, result);
@@ -182,7 +184,8 @@ public sealed class DeliveryProgressRollupServiceTests
             ],
             new Dictionary<int, DeliveryTrendWorkItem>
             {
-                [100] = CreateWorkItem(100, "Epic", "Epic X", state: "Active")
+                [100] = CreateWorkItem(100, "Epic", "Epic X", state: "Active"),
+                [200] = CreateWorkItem(200, CanonicalWorkItemTypes.Feature, "Feature A", parentId: 100, state: "Active", effort: 2)
             }));
 
         Assert.HasCount(1, result);
@@ -196,10 +199,10 @@ public sealed class DeliveryProgressRollupServiceTests
     }
 
     [TestMethod]
-    public void ComputeEpicProgress_PreservesNullProgress_WhenAggregationIsUnknown()
+    public void ComputeEpicProgress_MapsZeroProgress_WhenAggregationHasNoIncludedWeight()
     {
         var service = CreateService(epicAggregationService: new StubEpicAggregationService(
-            new EpicAggregationResult(null, 1.25d, 8.75d, 3, 0, 0)));
+            new EpicAggregationResult(0d, 1.25d, 8.75d, 3, 0, 0)));
 
         var result = service.ComputeEpicProgress(new DeliveryEpicProgressRequest(
             [
@@ -207,14 +210,33 @@ public sealed class DeliveryProgressRollupServiceTests
             ],
             new Dictionary<int, DeliveryTrendWorkItem>
             {
-                [100] = CreateWorkItem(100, "Epic", "Epic X", state: "Active")
+                [100] = CreateWorkItem(100, "Epic", "Epic X", state: "Active"),
+                [200] = CreateWorkItem(200, CanonicalWorkItemTypes.Feature, "Feature A", parentId: 100, state: "Active", effort: 0)
             }));
 
         Assert.HasCount(1, result);
-        Assert.IsNull(result[0].AggregatedProgress);
-        Assert.IsNull(result[0].ProgressPercent, "Unknown epic progress must stay null and must not be coerced to zero.");
+        Assert.AreEqual(0d, result[0].AggregatedProgress!.Value, 0.001d);
+        Assert.AreEqual(0, result[0].ProgressPercent);
         Assert.AreEqual(1.25d, result[0].ForecastConsumedEffort!.Value, 0.001d);
         Assert.AreEqual(8.75d, result[0].ForecastRemainingEffort!.Value, 0.001d);
+    }
+
+    [TestMethod]
+    public void ComputeEpicProgress_IgnoresNonEpicParentWorkItems()
+    {
+        var service = CreateService();
+
+        var result = service.ComputeEpicProgress(new DeliveryEpicProgressRequest(
+            [
+                new FeatureProgress(200, "Feature A", 1, 100, "Epic X", 50, 40, 20, 2, false, 10, new ProgressionDelta(25), 4, 1, false, effectiveProgress: 50, weight: 2)
+            ],
+            new Dictionary<int, DeliveryTrendWorkItem>
+            {
+                [100] = CreateWorkItem(100, CanonicalWorkItemTypes.Feature, "Not Epic", state: "Active"),
+                [200] = CreateWorkItem(200, CanonicalWorkItemTypes.Feature, "Feature A", parentId: 100, state: "Active", effort: 2)
+            }));
+
+        Assert.IsEmpty(result);
     }
 
     [TestMethod]

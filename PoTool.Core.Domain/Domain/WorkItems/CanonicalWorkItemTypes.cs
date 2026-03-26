@@ -22,6 +22,11 @@ public static class CanonicalWorkItemTypes
         return workItemType == Feature;
     }
 
+    public static bool IsEpic(string workItemType)
+    {
+        return workItemType == Epic;
+    }
+
     public static bool IsAuthoritativePbi(string workItemType)
     {
         return workItemType == Pbi;

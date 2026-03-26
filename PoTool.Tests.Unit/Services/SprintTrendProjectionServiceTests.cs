@@ -1334,6 +1334,8 @@ public class SprintTrendProjectionServiceTests
         var workItems = new Dictionary<int, WorkItemEntity>
         {
             [100] = CreateWorkItem(100, WorkItemType.Epic, "Epic X", state: "Active"),
+            [200] = CreateWorkItem(200, WorkItemType.Feature, "Feature A", parentId: 100, state: "Active", effort: 20),
+            [201] = CreateWorkItem(201, WorkItemType.Feature, "Feature B", parentId: 100, state: "Active", effort: 10),
         };
         var resolvedItems = new List<ResolvedWorkItemEntity>();
 
@@ -1377,6 +1379,7 @@ public class SprintTrendProjectionServiceTests
         var workItems = new Dictionary<int, WorkItemEntity>
         {
             [100] = CreateWorkItem(100, WorkItemType.Epic, "Done Epic", state: "Resolved"),
+            [200] = CreateWorkItem(200, WorkItemType.Feature, "Feature A", parentId: 100, state: "Active", effort: 10),
         };
         var resolvedItems = new List<ResolvedWorkItemEntity>();
 
@@ -1412,6 +1415,7 @@ public class SprintTrendProjectionServiceTests
         var workItems = new Dictionary<int, WorkItemEntity>
         {
             [100] = CreateWorkItem(100, WorkItemType.Epic, "Resolved Epic", state: "Resolved"),
+            [200] = CreateWorkItem(200, WorkItemType.Feature, "Feature A", parentId: 100, state: "Active", effort: 10),
         };
 
         var result = ComputeEpicProgress(
@@ -1465,6 +1469,8 @@ public class SprintTrendProjectionServiceTests
         var workItems = new Dictionary<int, WorkItemEntity>
         {
             [100] = CreateWorkItem(100, WorkItemType.Epic, "Active Epic", state: "Active"),
+            [200] = CreateWorkItem(200, WorkItemType.Feature, "Feature A", parentId: 100, state: "Active", effort: 2),
+            [201] = CreateWorkItem(201, WorkItemType.Feature, "Excluded Feature", parentId: 100, state: "Active", effort: 0),
         };
         var resolvedItems = new List<ResolvedWorkItemEntity>();
 
@@ -2125,6 +2131,7 @@ public class SprintTrendProjectionServiceTests
         var workItems = new Dictionary<int, WorkItemEntity>
         {
             [100] = CreateWorkItem(100, WorkItemType.Epic, "Epic X", state: "Active"),
+            [200] = CreateWorkItem(200, WorkItemType.Feature, "Feature A", parentId: 100, state: "Active", effort: 0),
         };
         var resolvedItems = new List<ResolvedWorkItemEntity>();
 
@@ -2162,6 +2169,7 @@ public class SprintTrendProjectionServiceTests
         var workItems = new Dictionary<int, WorkItemEntity>
         {
             [100] = CreateWorkItem(100, WorkItemType.Epic, "Epic X", state: "Active"),
+            [200] = CreateWorkItem(200, WorkItemType.Feature, "Feature A", parentId: 100, state: "Active", effort: 0),
         };
         var resolvedItems = new List<ResolvedWorkItemEntity>();
 
@@ -2169,8 +2177,8 @@ public class SprintTrendProjectionServiceTests
 
         Assert.HasCount(1, result);
         Assert.AreEqual(0.0, result[0].SprintProgressionDelta, "Sprint delta should be 0 when total effort is 0");
-        Assert.IsNull(result[0].AggregatedProgress, "Weighted epic progress should be null when all features are excluded.");
-        Assert.IsNull(result[0].ProgressPercent, "Unknown epic progress must not fall back to zero.");
+        Assert.AreEqual(0d, result[0].AggregatedProgress!.Value, 0.001d, "Weighted epic progress should be 0 when all features have zero weight.");
+        Assert.AreEqual(0, result[0].ProgressPercent, "Deterministic epic progress should fall back to zero when no feature weight is available.");
         Assert.AreEqual(1, result[0].ExcludedFeaturesCount);
     }
 

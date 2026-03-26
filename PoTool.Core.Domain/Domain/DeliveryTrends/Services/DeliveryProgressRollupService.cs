@@ -204,14 +204,35 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                 continue;
             }
 
+            if (!CanonicalWorkItemTypes.IsEpic(epicWorkItem.WorkItemType))
+            {
+                continue;
+            }
+
             var features = group.ToList();
-            var aggregation = _epicAggregationService.Compute(new EpicAggregationRequest(features));
+            var aggregation = _epicAggregationService.Compute(new EpicAggregationRequest(
+                epicWorkItem.ToCanonicalWorkItem(),
+                features
+                    .Select(feature =>
+                    {
+                        if (!request.WorkItemsById.TryGetValue(feature.FeatureId, out var featureWorkItem))
+                        {
+                            return null;
+                        }
+
+                        return new EpicFeatureProgress(
+                            featureWorkItem.ToCanonicalWorkItem(),
+                            (feature.EffectiveProgress ?? 0d) / 100d,
+                            feature.Weight,
+                            feature.ForecastConsumedEffort,
+                            feature.ForecastRemainingEffort);
+                    })
+                    .OfType<EpicFeatureProgress>()
+                    .ToList()));
             var totalScopeStoryPoints = features.Sum(feature => feature.TotalScopeStoryPoints);
             var deliveredStoryPoints = features.Sum(feature => feature.DeliveredStoryPoints);
             var epicIsDone = StateClassificationLookup.IsDone(request.StateLookup, epicWorkItem.WorkItemType, epicWorkItem.State);
-            int? progressPercent = aggregation.EpicProgress.HasValue
-                ? (int)Math.Round(aggregation.EpicProgress.Value, MidpointRounding.AwayFromZero)
-                : null;
+            int? progressPercent = (int)Math.Round(aggregation.EpicProgress, MidpointRounding.AwayFromZero);
             var sprintDeliveredStoryPoints = features.Sum(feature => feature.SprintDeliveredStoryPoints);
             var sprintProgressionDelta = totalScopeStoryPoints > 0
                 ? new ProgressionDelta(Math.Round(sprintDeliveredStoryPoints / totalScopeStoryPoints * 100, 2))

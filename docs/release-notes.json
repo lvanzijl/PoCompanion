@@ -2,6 +2,14 @@
   {
     "date": "2026-03-26",
     "type": "Changed",
+    "title": "Epic progress now uses deterministic feature rollups",
+    "impact": "Sprint Delivery epic progress now comes only from weighted Feature progress, ignores non-Feature children and epic overrides, and returns 0% when no Feature weight is available.",
+    "area": "Trends",
+    "link": "/home/delivery/sprint"
+  },
+  {
+    "date": "2026-03-26",
+    "type": "Changed",
     "title": "Feature progress inputs are now canonicalized",
     "impact": "Sprint Delivery now ignores invalid TimeCriticality overrides, uses canonical work item typing on the feature-progress path, and keeps feature progress calculation details internal to the backend progress engine.",
     "area": "Trends",
