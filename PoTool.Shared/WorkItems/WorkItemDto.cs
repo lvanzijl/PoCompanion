@@ -25,5 +25,7 @@ public sealed record WorkItemDto(
     int? BusinessValue = null,
     double? BacklogPriority = null,
     int? StoryPoints = null,
-    double? TimeCriticality = null
+    double? TimeCriticality = null,
+    string? ProjectNumber = null,
+    string? ProjectElement = null
 );

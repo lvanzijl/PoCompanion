@@ -393,21 +393,22 @@ public partial class RealTfsClient
 
                 var fields = doc.RootElement.GetProperty("value").EnumerateArray()
                     .Select(f => f.GetProperty("referenceName").GetString())
-                    .ToList();
+                    .OfType<string>()
+                    .ToHashSet(StringComparer.Ordinal);
 
-                // Check for required fields
-                var requiredFields = new[] { "System.Id", "System.Title", "System.State", "System.WorkItemType" };
-                var missingFields = requiredFields.Where(rf => !fields.Contains(rf)).ToList();
+                var missingFields = RequiredWorkItemFields
+                    .Where(requiredField => !fields.Contains(requiredField))
+                    .ToList();
 
                 if (missingFields.Any())
                 {
                     return CreateFailureResult(
                         "work-item-fields",
                         "Work item display and processing",
-                        "Required work item fields are accessible",
+                        "Required runtime and analytics work item fields are accessible",
                         $"Missing fields: {string.Join(", ", missingFields)}",
                         FailureCategory.MissingField,
-                        $"Found {fields.Count} fields but missing required fields");
+                        $"Found {fields.Count} fields but missing required runtime fields");
                 }
 
                 return new TfsCapabilityCheckResult
@@ -415,8 +416,8 @@ public partial class RealTfsClient
                     CapabilityId = "work-item-fields",
                     Success = true,
                     ImpactedFunctionality = "Work item display and processing",
-                    ExpectedBehavior = "Required work item fields are accessible",
-                    ObservedBehavior = $"All required fields present ({fields.Count} total fields)"
+                    ExpectedBehavior = "Required runtime and analytics work item fields are accessible",
+                    ObservedBehavior = $"All required runtime fields present ({fields.Count} total fields)"
                 };
             }
 

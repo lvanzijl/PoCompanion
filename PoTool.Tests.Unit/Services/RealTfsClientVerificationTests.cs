@@ -240,6 +240,40 @@ public class RealTfsClientVerificationTests
     }
 
     [TestMethod]
+    public async Task VerifyCapabilitiesAsync_MissingAnalyticsField_FailsWorkItemFieldVerification()
+    {
+        SetupSuccessfulHttpResponses();
+        SetupHttpResponse("_apis/wit/fields", HttpStatusCode.OK,
+            "{\"value\":[" +
+            "{\"referenceName\":\"System.Id\"}," +
+            "{\"referenceName\":\"System.WorkItemType\"}," +
+            "{\"referenceName\":\"System.Title\"}," +
+            "{\"referenceName\":\"System.State\"}," +
+            "{\"referenceName\":\"System.AreaPath\"}," +
+            "{\"referenceName\":\"System.IterationPath\"}," +
+            "{\"referenceName\":\"System.Description\"}," +
+            "{\"referenceName\":\"System.CreatedDate\"}," +
+            "{\"referenceName\":\"System.ChangedDate\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.ClosedDate\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.Severity\"}," +
+            "{\"referenceName\":\"System.Tags\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.BusinessValue\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Scheduling.Effort\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Scheduling.StoryPoints\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.BacklogPriority\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.TimeCriticality\"}," +
+            "{\"referenceName\":\"Rhodium.Funding.ProjectNumber\"}" +
+            "]}");
+
+        var result = await _sut.VerifyCapabilitiesAsync(includeWriteChecks: false);
+
+        Assert.IsFalse(result.Success);
+        var workItemFieldsCheck = result.Checks.Single(check => check.CapabilityId == "work-item-fields");
+        Assert.IsFalse(workItemFieldsCheck.Success);
+        StringAssert.Contains(workItemFieldsCheck.ObservedBehavior ?? string.Empty, "Rhodium.Funding.ProjectElement");
+    }
+
+    [TestMethod]
     public async Task ValidateConnectionAsync_WhenAnalyticsMetadataEndpointFails_ReturnsFalse()
     {
         // Arrange
@@ -270,9 +304,24 @@ public class RealTfsClientVerificationTests
         SetupHttpResponse("_apis/wit/fields", HttpStatusCode.OK,
             "{\"value\":[" +
             "{\"referenceName\":\"System.Id\"}," +
+            "{\"referenceName\":\"System.WorkItemType\"}," +
             "{\"referenceName\":\"System.Title\"}," +
             "{\"referenceName\":\"System.State\"}," +
-            "{\"referenceName\":\"System.WorkItemType\"}" +
+            "{\"referenceName\":\"System.AreaPath\"}," +
+            "{\"referenceName\":\"System.IterationPath\"}," +
+            "{\"referenceName\":\"System.Description\"}," +
+            "{\"referenceName\":\"System.CreatedDate\"}," +
+            "{\"referenceName\":\"System.ChangedDate\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.ClosedDate\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.Severity\"}," +
+            "{\"referenceName\":\"System.Tags\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.BusinessValue\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Scheduling.Effort\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Scheduling.StoryPoints\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.BacklogPriority\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.TimeCriticality\"}," +
+            "{\"referenceName\":\"Rhodium.Funding.ProjectNumber\"}," +
+            "{\"referenceName\":\"Rhodium.Funding.ProjectElement\"}" +
             "]}");
 
         // Batch read
@@ -283,6 +332,10 @@ public class RealTfsClientVerificationTests
 
         // Pull requests (repositories)
         SetupHttpResponse("_apis/git/repositories", HttpStatusCode.OK, "{\"value\":[]}");
+
+        // Pipelines
+        SetupHttpResponse("_apis/build/definitions", HttpStatusCode.OK, "{\"value\":[]}");
+        SetupHttpResponse("_apis/release/definitions", HttpStatusCode.OK, "{\"value\":[]}");
 
         // Work item get for write check
         SetupHttpResponse("_apis/wit/workitems/", HttpStatusCode.OK, "{\"id\":12345}");
@@ -296,13 +349,30 @@ public class RealTfsClientVerificationTests
         SetupHttpResponse("_apis/wit/fields", HttpStatusCode.OK,
             "{\"value\":[" +
             "{\"referenceName\":\"System.Id\"}," +
+            "{\"referenceName\":\"System.WorkItemType\"}," +
             "{\"referenceName\":\"System.Title\"}," +
             "{\"referenceName\":\"System.State\"}," +
-            "{\"referenceName\":\"System.WorkItemType\"}" +
+            "{\"referenceName\":\"System.AreaPath\"}," +
+            "{\"referenceName\":\"System.IterationPath\"}," +
+            "{\"referenceName\":\"System.Description\"}," +
+            "{\"referenceName\":\"System.CreatedDate\"}," +
+            "{\"referenceName\":\"System.ChangedDate\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.ClosedDate\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.Severity\"}," +
+            "{\"referenceName\":\"System.Tags\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.BusinessValue\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Scheduling.Effort\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Scheduling.StoryPoints\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.BacklogPriority\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.TimeCriticality\"}," +
+            "{\"referenceName\":\"Rhodium.Funding.ProjectNumber\"}," +
+            "{\"referenceName\":\"Rhodium.Funding.ProjectElement\"}" +
             "]}");
         SetupHttpResponse("_apis/wit/workitems", HttpStatusCode.OK, "{\"value\":[]}");
         SetupHttpResponse("_apis/wit/workitems/1/revisions", HttpStatusCode.OK, "{\"value\":[]}");
         SetupHttpResponse("_apis/git/repositories", HttpStatusCode.OK, "{\"value\":[]}");
+        SetupHttpResponse("_apis/build/definitions", HttpStatusCode.OK, "{\"value\":[]}");
+        SetupHttpResponse("_apis/release/definitions", HttpStatusCode.OK, "{\"value\":[]}");
     }
 
     private void SetupSuccessfulHttpResponsesExceptProjectAccess()
@@ -312,13 +382,30 @@ public class RealTfsClientVerificationTests
         SetupHttpResponse("_apis/wit/fields", HttpStatusCode.OK,
             "{\"value\":[" +
             "{\"referenceName\":\"System.Id\"}," +
+            "{\"referenceName\":\"System.WorkItemType\"}," +
             "{\"referenceName\":\"System.Title\"}," +
             "{\"referenceName\":\"System.State\"}," +
-            "{\"referenceName\":\"System.WorkItemType\"}" +
+            "{\"referenceName\":\"System.AreaPath\"}," +
+            "{\"referenceName\":\"System.IterationPath\"}," +
+            "{\"referenceName\":\"System.Description\"}," +
+            "{\"referenceName\":\"System.CreatedDate\"}," +
+            "{\"referenceName\":\"System.ChangedDate\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.ClosedDate\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.Severity\"}," +
+            "{\"referenceName\":\"System.Tags\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.BusinessValue\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Scheduling.Effort\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Scheduling.StoryPoints\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.BacklogPriority\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Common.TimeCriticality\"}," +
+            "{\"referenceName\":\"Rhodium.Funding.ProjectNumber\"}," +
+            "{\"referenceName\":\"Rhodium.Funding.ProjectElement\"}" +
             "]}");
         SetupHttpResponse("_apis/wit/workitems", HttpStatusCode.OK, "{\"value\":[]}");
         SetupHttpResponse("_apis/wit/workitems/1/revisions", HttpStatusCode.OK, "{\"value\":[]}");
         SetupHttpResponse("_apis/git/repositories", HttpStatusCode.OK, "{\"value\":[]}");
+        SetupHttpResponse("_apis/build/definitions", HttpStatusCode.OK, "{\"value\":[]}");
+        SetupHttpResponse("_apis/release/definitions", HttpStatusCode.OK, "{\"value\":[]}");
     }
 
     private void SetupHttpResponse(string uriContains, HttpStatusCode statusCode, string content)

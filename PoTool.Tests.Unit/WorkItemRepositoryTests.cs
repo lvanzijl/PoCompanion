@@ -343,6 +343,34 @@ public sealed class WorkItemRepositoryTests
     }
 
     [TestMethod]
+    public async Task UpsertManyAsync_PersistsFundingFields()
+    {
+        using var context = CreateInMemoryContext();
+        var repository = new WorkItemRepository(context);
+
+        var workItem = new WorkItemDto(
+            TfsId: 303,
+            Type: "Epic",
+            Title: "Epic with funding metadata",
+            ParentTfsId: null,
+            AreaPath: "Project\\Team",
+            IterationPath: "Sprint 3",
+            State: "Active",
+            RetrievedAt: DateTimeOffset.UtcNow,
+            Effort: 8,
+            Description: "Epic description",
+            ProjectNumber: "PRJ-2026-01",
+            ProjectElement: "ELM-42");
+
+        await repository.UpsertManyAsync(new[] { workItem });
+        var result = await repository.GetByTfsIdAsync(303);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual("PRJ-2026-01", result.ProjectNumber);
+        Assert.AreEqual("ELM-42", result.ProjectElement);
+    }
+
+    [TestMethod]
     public async Task UpsertManyAsync_PreservesStoryPointsSeparatelyFromEffortAndBusinessValue()
     {
         using var context = CreateInMemoryContext();

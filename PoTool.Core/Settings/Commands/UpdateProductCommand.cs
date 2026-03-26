@@ -18,5 +18,6 @@ public sealed record UpdateProductCommand(
     List<int> BacklogRootWorkItemIds,
     ProductPictureType? PictureType = null,
     int? DefaultPictureId = null,
-    string? CustomPicturePath = null
+    string? CustomPicturePath = null,
+    EstimationMode? EstimationMode = null
 ) : ICommand<ProductDto>;

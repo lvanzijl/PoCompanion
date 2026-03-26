@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Repositories;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Tests.Unit.Repositories;
 
@@ -170,5 +171,37 @@ public class ProductTeamLinkRepositoryTests
         Assert.HasCount(2, updatedProduct.TeamIds, "Product should have 2 linked teams");
         CollectionAssert.Contains(updatedProduct.TeamIds, team1.Id, "Product should contain team1");
         CollectionAssert.Contains(updatedProduct.TeamIds, team2.Id, "Product should contain team2");
+    }
+
+    [TestMethod]
+    public async Task CreateAndUpdateProductAsync_PersistsExplicitEstimationMode()
+    {
+        var profile = await _profileRepository.CreateProfileAsync("Test Owner", new List<int>());
+
+        var created = await _productRepository.CreateProductAsync(
+            productOwnerId: profile.Id,
+            name: "Estimation Product",
+            backlogRootWorkItemIds: new List<int> { 12345 },
+            pictureType: ProductPictureType.Default,
+            defaultPictureId: 0,
+            customPicturePath: null,
+            estimationMode: EstimationMode.NoSpMode);
+
+        Assert.AreEqual(EstimationMode.NoSpMode, created.EstimationMode);
+
+        var updated = await _productRepository.UpdateProductAsync(
+            id: created.Id,
+            name: "Estimation Product",
+            backlogRootWorkItemIds: new List<int> { 54321 },
+            pictureType: null,
+            defaultPictureId: null,
+            customPicturePath: null,
+            estimationMode: EstimationMode.Mixed);
+
+        Assert.AreEqual(EstimationMode.Mixed, updated.EstimationMode);
+
+        var persisted = await _productRepository.GetProductByIdAsync(created.Id);
+        Assert.IsNotNull(persisted);
+        Assert.AreEqual(EstimationMode.Mixed, persisted.EstimationMode);
     }
 }

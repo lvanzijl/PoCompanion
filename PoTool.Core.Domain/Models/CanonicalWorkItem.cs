@@ -8,4 +8,7 @@ public sealed record CanonicalWorkItem(
     string WorkItemType,
     int? ParentWorkItemId,
     int? BusinessValue,
-    int? StoryPoints);
+    int? StoryPoints,
+    double? TimeCriticality = null,
+    string? ProjectNumber = null,
+    string? ProjectElement = null);

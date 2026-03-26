@@ -204,6 +204,7 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
                     Order = productOrder,
                     PictureType = (int)ProductPictureType.Default,
                     DefaultPictureId = productSeed.DefaultPictureId,
+                    EstimationMode = (int)Shared.Settings.EstimationMode.StoryPoints,
                     CreatedAt = now,
                     LastModified = now
                 };

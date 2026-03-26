@@ -143,6 +143,8 @@ public class WorkItemRepository : IWorkItemRepository
                     existing.StoryPoints = dto.StoryPoints;
                     existing.BusinessValue = dto.BusinessValue;
                     existing.TimeCriticality = dto.TimeCriticality;
+                    existing.ProjectNumber = dto.ProjectNumber;
+                    existing.ProjectElement = dto.ProjectElement;
                     existing.Description = dto.Description;
                     existing.CreatedDate = dto.CreatedDate;
                     existing.ClosedDate = dto.ClosedDate;
@@ -194,6 +196,8 @@ public class WorkItemRepository : IWorkItemRepository
                     entity.StoryPoints = dto.StoryPoints;
                     entity.BusinessValue = dto.BusinessValue;
                     entity.TimeCriticality = dto.TimeCriticality;
+                    entity.ProjectNumber = dto.ProjectNumber;
+                    entity.ProjectElement = dto.ProjectElement;
                     entity.Description = dto.Description;
                     entity.CreatedDate = dto.CreatedDate;
                     entity.ClosedDate = dto.ClosedDate;
@@ -260,7 +264,9 @@ public class WorkItemRepository : IWorkItemRepository
                 BusinessValue: entity.BusinessValue,
                 BacklogPriority: entity.BacklogPriority,
                 StoryPoints: entity.StoryPoints,
-                TimeCriticality: entity.TimeCriticality
+                TimeCriticality: entity.TimeCriticality,
+                ProjectNumber: entity.ProjectNumber,
+                ProjectElement: entity.ProjectElement
             );
     }
 
@@ -280,6 +286,8 @@ public class WorkItemRepository : IWorkItemRepository
             StoryPoints = dto.StoryPoints,
             BusinessValue = dto.BusinessValue,
             TimeCriticality = dto.TimeCriticality,
+            ProjectNumber = dto.ProjectNumber,
+            ProjectElement = dto.ProjectElement,
             Description = dto.Description,
             CreatedDate = dto.CreatedDate,
             ClosedDate = dto.ClosedDate,

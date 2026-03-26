@@ -18,5 +18,6 @@ public sealed record CreateProductCommand(
     List<int> BacklogRootWorkItemIds,
     ProductPictureType PictureType = ProductPictureType.Default,
     int DefaultPictureId = 0,
-    string? CustomPicturePath = null
+    string? CustomPicturePath = null,
+    EstimationMode EstimationMode = EstimationMode.StoryPoints
 ) : ICommand<ProductDto>;
