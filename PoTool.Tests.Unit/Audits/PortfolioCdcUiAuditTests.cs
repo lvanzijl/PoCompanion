@@ -16,11 +16,16 @@ public sealed class PortfolioCdcUiAuditTests
         StringAssert.Contains(panel, "PortfolioProgressDto");
         StringAssert.Contains(panel, "PortfolioSnapshotDto");
         StringAssert.Contains(panel, "PortfolioComparisonDto");
+        StringAssert.Contains(panel, "PortfolioTrendDto");
+        StringAssert.Contains(panel, "PortfolioDecisionSignalDto");
         StringAssert.Contains(panel, "GetPortfolioProgressAsync");
         StringAssert.Contains(panel, "GetPortfolioSnapshotsAsync");
         StringAssert.Contains(panel, "GetPortfolioComparisonAsync");
+        StringAssert.Contains(panel, "GetPortfolioTrendsAsync");
+        StringAssert.Contains(panel, "GetPortfolioSignalsAsync");
         Assert.IsFalse(panel.Contains(".Sum(", StringComparison.Ordinal), "The UI component should not aggregate domain values.");
         Assert.IsFalse(panel.Contains(".Average(", StringComparison.Ordinal), "The UI component should not calculate averages.");
+        Assert.IsFalse(panel.Contains(".GroupBy(", StringComparison.Ordinal), "The UI component should not regroup trend data.");
         StringAssert.Contains(page, "<PortfolioCdcReadOnlyPanel />");
     }
 

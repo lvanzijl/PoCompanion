@@ -199,6 +199,65 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
         }
     }
 
+    [TestMethod]
+    public async Task GetPortfolioSnapshotsAsync_ReturnsLatestNInTimestampThenSnapshotIdOrder()
+    {
+        await using var context = new PoToolDbContext(_options);
+        var mapper = new PortfolioSnapshotPersistenceMapper();
+        var persistenceService = new PortfolioSnapshotPersistenceService(context, mapper);
+        var selectionService = new PortfolioSnapshotSelectionService(context, mapper);
+        var timestamp = new DateTimeOffset(2026, 3, 8, 0, 0, 0, TimeSpan.Zero);
+
+        await persistenceService.PersistAsync(1, "Sprint 1", null, CreateSnapshot(timestamp.AddDays(-7), 1, 0.2d), CancellationToken.None);
+        await persistenceService.PersistAsync(1, "Sprint 2A", null, CreateSnapshot(timestamp, 1, 0.4d), CancellationToken.None);
+        await persistenceService.PersistAsync(1, "Sprint 2B", null, CreateSnapshot(timestamp, 1, 0.6d), CancellationToken.None);
+        await persistenceService.PersistAsync(1, "Sprint 3", null, CreateSnapshot(timestamp.AddDays(7), 1, 0.8d), CancellationToken.None);
+
+        var snapshots = await selectionService.GetPortfolioSnapshotsAsync(
+            [1],
+            count: 3,
+            rangeStartUtc: null,
+            rangeEndUtc: null,
+            CancellationToken.None);
+
+        CollectionAssert.AreEqual(
+            new[] { "Sprint 3", "Sprint 2B", "Sprint 2A" },
+            snapshots.Select(snapshot => snapshot.Source).ToArray());
+    }
+
+    [TestMethod]
+    public async Task GetPortfolioSnapshotsAsync_ExcludesArchivedSnapshotsByDefault()
+    {
+        await using var context = new PoToolDbContext(_options);
+        var mapper = new PortfolioSnapshotPersistenceMapper();
+        var selectionService = new PortfolioSnapshotSelectionService(context, mapper);
+
+        context.PortfolioSnapshots.Add(mapper.ToEntity(
+            1,
+            "Sprint 1",
+            createdBy: null,
+            isArchived: false,
+            CreateSnapshot(new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero), 1, 0.3d)));
+        context.PortfolioSnapshots.Add(mapper.ToEntity(
+            1,
+            "Sprint 2",
+            createdBy: null,
+            isArchived: true,
+            CreateSnapshot(new DateTimeOffset(2026, 3, 8, 0, 0, 0, TimeSpan.Zero), 1, 0.6d)));
+        await context.SaveChangesAsync();
+
+        var snapshots = await selectionService.GetPortfolioSnapshotsAsync(
+            [1],
+            count: 5,
+            rangeStartUtc: null,
+            rangeEndUtc: null,
+            CancellationToken.None);
+
+        Assert.HasCount(1, snapshots);
+        Assert.AreEqual("Sprint 1", snapshots[0].Source);
+        Assert.IsTrue(await selectionService.HasArchivedPortfolioSnapshotsAsync([1], null, null, CancellationToken.None));
+    }
+
     private static PortfolioSnapshot CreateSnapshot(DateTimeOffset timestamp, int productId, double progress)
         => new(
             timestamp,

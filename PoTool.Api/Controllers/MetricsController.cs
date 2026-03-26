@@ -32,7 +32,12 @@ public class MetricsController : ControllerBase
         PortfolioLifecycleState? lifecycleState,
         PortfolioReadSortBy sortBy,
         PortfolioReadSortDirection sortDirection,
-        PortfolioReadGroupBy groupBy)
+        PortfolioReadGroupBy groupBy,
+        int snapshotCount = 6,
+        DateTimeOffset? rangeStartUtc = null,
+        DateTimeOffset? rangeEndUtc = null,
+        bool includeArchivedSnapshots = false,
+        long? compareToSnapshotId = null)
         => new(
             productId,
             projectNumber,
@@ -40,7 +45,12 @@ public class MetricsController : ControllerBase
             lifecycleState,
             sortBy,
             sortDirection,
-            groupBy);
+            groupBy,
+            snapshotCount,
+            rangeStartUtc,
+            rangeEndUtc,
+            includeArchivedSnapshots,
+            compareToSnapshotId);
 
     /// <summary>
     /// Gets historical metrics for a specific sprint window.
@@ -299,7 +309,7 @@ public class MetricsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets the read-only comparison between the latest two available portfolio snapshots.
+    /// Gets the read-only comparison between the latest snapshot and either the previous snapshot or an explicitly selected earlier snapshot.
     /// </summary>
     [HttpGet("/api/portfolio/comparison")]
     public async Task<ActionResult<PortfolioComparisonDto>> GetPortfolioComparison(
@@ -311,6 +321,10 @@ public class MetricsController : ControllerBase
         [FromQuery] PortfolioReadSortBy sortBy = PortfolioReadSortBy.Default,
         [FromQuery] PortfolioReadSortDirection sortDirection = PortfolioReadSortDirection.Desc,
         [FromQuery] PortfolioReadGroupBy groupBy = PortfolioReadGroupBy.None,
+        [FromQuery] DateTimeOffset? rangeStartUtc = null,
+        [FromQuery] DateTimeOffset? rangeEndUtc = null,
+        [FromQuery] bool includeArchivedSnapshots = false,
+        [FromQuery] long? compareToSnapshotId = null,
         CancellationToken cancellationToken = default)
     {
         try
@@ -318,7 +332,18 @@ public class MetricsController : ControllerBase
             var comparison = await _mediator.Send(
                 new GetPortfolioComparisonQuery(
                     productOwnerId,
-                    BuildPortfolioReadOptions(productId, projectNumber, workPackage, lifecycleState, sortBy, sortDirection, groupBy)),
+                    BuildPortfolioReadOptions(
+                        productId,
+                        projectNumber,
+                        workPackage,
+                        lifecycleState,
+                        sortBy,
+                        sortDirection,
+                        groupBy,
+                        rangeStartUtc: rangeStartUtc,
+                        rangeEndUtc: rangeEndUtc,
+                        includeArchivedSnapshots: includeArchivedSnapshots,
+                        compareToSnapshotId: compareToSnapshotId)),
                 cancellationToken);
 
             return Ok(comparison);
@@ -327,6 +352,102 @@ public class MetricsController : ControllerBase
         {
             _logger.LogError(ex, "Error retrieving portfolio comparison for ProductOwner {ProductOwnerId}", productOwnerId);
             return StatusCode(500, "Error retrieving portfolio comparison");
+        }
+    }
+
+    /// <summary>
+    /// Gets persisted multi-snapshot portfolio trend history.
+    /// </summary>
+    [HttpGet("/api/portfolio/trends")]
+    public async Task<ActionResult<PortfolioTrendDto>> GetPortfolioTrends(
+        [FromQuery][Required] int productOwnerId,
+        [FromQuery] int? productId = null,
+        [FromQuery] string? projectNumber = null,
+        [FromQuery] string? workPackage = null,
+        [FromQuery] PortfolioLifecycleState? lifecycleState = null,
+        [FromQuery] PortfolioReadSortBy sortBy = PortfolioReadSortBy.Default,
+        [FromQuery] PortfolioReadSortDirection sortDirection = PortfolioReadSortDirection.Desc,
+        [FromQuery] PortfolioReadGroupBy groupBy = PortfolioReadGroupBy.None,
+        [FromQuery] int snapshotCount = 6,
+        [FromQuery] DateTimeOffset? rangeStartUtc = null,
+        [FromQuery] DateTimeOffset? rangeEndUtc = null,
+        [FromQuery] bool includeArchivedSnapshots = false,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var trend = await _mediator.Send(
+                new GetPortfolioTrendsQuery(
+                    productOwnerId,
+                    BuildPortfolioReadOptions(
+                        productId,
+                        projectNumber,
+                        workPackage,
+                        lifecycleState,
+                        sortBy,
+                        sortDirection,
+                        groupBy,
+                        snapshotCount,
+                        rangeStartUtc,
+                        rangeEndUtc,
+                        includeArchivedSnapshots)),
+                cancellationToken);
+
+            return Ok(trend);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving portfolio trends for ProductOwner {ProductOwnerId}", productOwnerId);
+            return StatusCode(500, "Error retrieving portfolio trends");
+        }
+    }
+
+    /// <summary>
+    /// Gets deterministic decision-support signals derived from persisted portfolio history.
+    /// </summary>
+    [HttpGet("/api/portfolio/signals")]
+    public async Task<ActionResult<IReadOnlyList<PortfolioDecisionSignalDto>>> GetPortfolioSignals(
+        [FromQuery][Required] int productOwnerId,
+        [FromQuery] int? productId = null,
+        [FromQuery] string? projectNumber = null,
+        [FromQuery] string? workPackage = null,
+        [FromQuery] PortfolioLifecycleState? lifecycleState = null,
+        [FromQuery] PortfolioReadSortBy sortBy = PortfolioReadSortBy.Default,
+        [FromQuery] PortfolioReadSortDirection sortDirection = PortfolioReadSortDirection.Desc,
+        [FromQuery] PortfolioReadGroupBy groupBy = PortfolioReadGroupBy.None,
+        [FromQuery] int snapshotCount = 6,
+        [FromQuery] DateTimeOffset? rangeStartUtc = null,
+        [FromQuery] DateTimeOffset? rangeEndUtc = null,
+        [FromQuery] bool includeArchivedSnapshots = false,
+        [FromQuery] long? compareToSnapshotId = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var signals = await _mediator.Send(
+                new GetPortfolioSignalsQuery(
+                    productOwnerId,
+                    BuildPortfolioReadOptions(
+                        productId,
+                        projectNumber,
+                        workPackage,
+                        lifecycleState,
+                        sortBy,
+                        sortDirection,
+                        groupBy,
+                        snapshotCount,
+                        rangeStartUtc,
+                        rangeEndUtc,
+                        includeArchivedSnapshots,
+                        compareToSnapshotId)),
+                cancellationToken);
+
+            return Ok(signals);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving portfolio signals for ProductOwner {ProductOwnerId}", productOwnerId);
+            return StatusCode(500, "Error retrieving portfolio signals");
         }
     }
 

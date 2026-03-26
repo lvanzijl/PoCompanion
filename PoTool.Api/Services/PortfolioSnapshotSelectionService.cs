@@ -8,7 +8,8 @@ namespace PoTool.Api.Services;
 public sealed record PortfolioSnapshotGroupSelection(
     long SnapshotId,
     string Source,
-    PortfolioSnapshot Snapshot);
+    PortfolioSnapshot Snapshot,
+    bool IncludesArchivedSnapshot);
 
 public interface IPortfolioSnapshotSelectionService
 {
@@ -33,8 +34,22 @@ public interface IPortfolioSnapshotSelectionService
         CancellationToken cancellationToken,
         bool includeArchived = false);
 
+    Task<IReadOnlyList<PortfolioSnapshotGroupSelection>> GetPortfolioSnapshotsAsync(
+        IReadOnlyCollection<int> productIds,
+        int count,
+        DateTimeOffset? rangeStartUtc,
+        DateTimeOffset? rangeEndUtc,
+        CancellationToken cancellationToken,
+        bool includeArchived = false);
+
     Task<PortfolioSnapshotGroupSelection?> GetPreviousPortfolioSnapshotAsync(
         IReadOnlyCollection<int> productIds,
+        CancellationToken cancellationToken,
+        bool includeArchived = false);
+
+    Task<PortfolioSnapshotGroupSelection?> GetPortfolioSnapshotByIdAsync(
+        IReadOnlyCollection<int> productIds,
+        long snapshotId,
         CancellationToken cancellationToken,
         bool includeArchived = false);
 
@@ -44,6 +59,12 @@ public interface IPortfolioSnapshotSelectionService
         string source,
         CancellationToken cancellationToken,
         bool includeArchived = false);
+
+    Task<bool> HasArchivedPortfolioSnapshotsAsync(
+        IReadOnlyCollection<int> productIds,
+        DateTimeOffset? rangeStartUtc,
+        DateTimeOffset? rangeEndUtc,
+        CancellationToken cancellationToken);
 }
 
 public sealed class PortfolioSnapshotSelectionService : IPortfolioSnapshotSelectionService
@@ -106,27 +127,98 @@ public sealed class PortfolioSnapshotSelectionService : IPortfolioSnapshotSelect
         IReadOnlyCollection<int> productIds,
         CancellationToken cancellationToken,
         bool includeArchived = false)
-    {
-        var group = (await GetOrderedPortfolioGroupsAsync(productIds, includeArchived, cancellationToken))
+        => (await GetPortfolioSnapshotsAsync(
+                productIds,
+                count: 1,
+                rangeStartUtc: null,
+                rangeEndUtc: null,
+                cancellationToken,
+                includeArchived))
             .FirstOrDefault();
 
-        return group is null
-            ? null
-            : await GetPortfolioSnapshotBySourceAsync(productIds, new DateTimeOffset(group.TimestampUtc, TimeSpan.Zero), group.Source, cancellationToken, includeArchived);
+    public async Task<IReadOnlyList<PortfolioSnapshotGroupSelection>> GetPortfolioSnapshotsAsync(
+        IReadOnlyCollection<int> productIds,
+        int count,
+        DateTimeOffset? rangeStartUtc,
+        DateTimeOffset? rangeEndUtc,
+        CancellationToken cancellationToken,
+        bool includeArchived = false)
+    {
+        if (count <= 0)
+        {
+            return [];
+        }
+
+        var groups = await GetOrderedPortfolioGroupsAsync(
+            productIds,
+            rangeStartUtc,
+            rangeEndUtc,
+            includeArchived,
+            count,
+            cancellationToken);
+
+        var results = new List<PortfolioSnapshotGroupSelection>(groups.Count);
+        foreach (var group in groups)
+        {
+            var selection = await GetPortfolioSnapshotBySourceAsync(
+                productIds,
+                new DateTimeOffset(group.TimestampUtc, TimeSpan.Zero),
+                group.Source,
+                cancellationToken,
+                includeArchived);
+
+            if (selection is not null)
+            {
+                results.Add(selection);
+            }
+        }
+
+        return results;
     }
 
     public async Task<PortfolioSnapshotGroupSelection?> GetPreviousPortfolioSnapshotAsync(
         IReadOnlyCollection<int> productIds,
         CancellationToken cancellationToken,
         bool includeArchived = false)
-    {
-        var group = (await GetOrderedPortfolioGroupsAsync(productIds, includeArchived, cancellationToken))
+        => (await GetPortfolioSnapshotsAsync(
+                productIds,
+                count: 2,
+                rangeStartUtc: null,
+                rangeEndUtc: null,
+                cancellationToken,
+                includeArchived))
             .Skip(1)
             .FirstOrDefault();
 
-        return group is null
+    public async Task<PortfolioSnapshotGroupSelection?> GetPortfolioSnapshotByIdAsync(
+        IReadOnlyCollection<int> productIds,
+        long snapshotId,
+        CancellationToken cancellationToken,
+        bool includeArchived = false)
+    {
+        ArgumentNullException.ThrowIfNull(productIds);
+
+        if (productIds.Count == 0)
+        {
+            return null;
+        }
+
+        var header = await BuildPortfolioQuery(productIds, includeArchived)
+            .Where(snapshot => snapshot.SnapshotId == snapshotId)
+            .Select(snapshot => new PortfolioSnapshotGroupHeader(
+                snapshot.TimestampUtc,
+                snapshot.Source,
+                snapshot.SnapshotId))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return header is null
             ? null
-            : await GetPortfolioSnapshotBySourceAsync(productIds, new DateTimeOffset(group.TimestampUtc, TimeSpan.Zero), group.Source, cancellationToken, includeArchived);
+            : await GetPortfolioSnapshotBySourceAsync(
+                productIds,
+                new DateTimeOffset(header.TimestampUtc, TimeSpan.Zero),
+                header.Source,
+                cancellationToken,
+                includeArchived);
     }
 
     public async Task<PortfolioSnapshotGroupSelection?> GetPortfolioSnapshotBySourceAsync(
@@ -177,7 +269,25 @@ public sealed class PortfolioSnapshotSelectionService : IPortfolioSnapshotSelect
         return new PortfolioSnapshotGroupSelection(
             snapshots.Max(snapshot => snapshot.SnapshotId),
             snapshots[0].Source,
-            combinedSnapshot);
+            combinedSnapshot,
+            entities.Any(entity => entity.IsArchived));
+    }
+
+    public Task<bool> HasArchivedPortfolioSnapshotsAsync(
+        IReadOnlyCollection<int> productIds,
+        DateTimeOffset? rangeStartUtc,
+        DateTimeOffset? rangeEndUtc,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(productIds);
+
+        if (productIds.Count == 0)
+        {
+            return Task.FromResult(false);
+        }
+
+        return ApplyRange(BuildPortfolioQuery(productIds, includeArchived: true), rangeStartUtc, rangeEndUtc)
+            .AnyAsync(snapshot => snapshot.IsArchived, cancellationToken);
     }
 
     private IQueryable<PortfolioSnapshotEntity> BuildProductQuery(int productId, bool includeArchived)
@@ -207,32 +317,55 @@ public sealed class PortfolioSnapshotSelectionService : IPortfolioSnapshotSelect
 
     private async Task<IReadOnlyList<PortfolioSnapshotGroupHeader>> GetOrderedPortfolioGroupsAsync(
         IReadOnlyCollection<int> productIds,
+        DateTimeOffset? rangeStartUtc,
+        DateTimeOffset? rangeEndUtc,
         bool includeArchived,
+        int count,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(productIds);
 
-        if (productIds.Count == 0)
+        if (productIds.Count == 0 || count <= 0)
         {
             return [];
         }
 
-        var headers = await BuildPortfolioQuery(productIds, includeArchived)
-            .Select(snapshot => new PortfolioSnapshotGroupHeader(
-                snapshot.TimestampUtc,
-                snapshot.Source,
-                snapshot.SnapshotId))
-            .ToListAsync(cancellationToken);
-
-        return headers
-            .GroupBy(header => new { header.TimestampUtc, header.Source })
-            .Select(group => new PortfolioSnapshotGroupHeader(
+        return await ApplyRange(BuildPortfolioQuery(productIds, includeArchived), rangeStartUtc, rangeEndUtc)
+            .GroupBy(snapshot => new { snapshot.TimestampUtc, snapshot.Source })
+            .Select(group => new
+            {
                 group.Key.TimestampUtc,
                 group.Key.Source,
-                group.Max(header => header.MaxSnapshotId)))
+                MaxSnapshotId = group.Max(snapshot => snapshot.SnapshotId)
+            })
             .OrderByDescending(group => group.TimestampUtc)
             .ThenByDescending(group => group.MaxSnapshotId)
-            .ToList();
+            .Take(count)
+            .Select(group => new PortfolioSnapshotGroupHeader(
+                group.TimestampUtc,
+                group.Source,
+                group.MaxSnapshotId))
+            .ToListAsync(cancellationToken);
+    }
+
+    private static IQueryable<PortfolioSnapshotEntity> ApplyRange(
+        IQueryable<PortfolioSnapshotEntity> query,
+        DateTimeOffset? rangeStartUtc,
+        DateTimeOffset? rangeEndUtc)
+    {
+        if (rangeStartUtc.HasValue)
+        {
+            var startUtc = rangeStartUtc.Value.UtcDateTime;
+            query = query.Where(snapshot => snapshot.TimestampUtc >= startUtc);
+        }
+
+        if (rangeEndUtc.HasValue)
+        {
+            var endUtc = rangeEndUtc.Value.UtcDateTime;
+            query = query.Where(snapshot => snapshot.TimestampUtc <= endUtc);
+        }
+
+        return query;
     }
 
     private sealed record PortfolioSnapshotGroupHeader(
