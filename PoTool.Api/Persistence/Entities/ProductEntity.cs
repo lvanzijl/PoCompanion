@@ -68,6 +68,11 @@ public class ProductEntity
     public DateTimeOffset? LastSyncedAt { get; set; }
 
     /// <summary>
+    /// Explicit configured estimation mode for the product.
+    /// </summary>
+    public int EstimationMode { get; set; } = (int)Shared.Settings.EstimationMode.StoryPoints;
+
+    /// <summary>
     /// Navigation property to the Product Owner.
     /// Null if product is orphaned.
     /// </summary>

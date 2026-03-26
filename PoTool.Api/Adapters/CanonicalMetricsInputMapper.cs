@@ -13,7 +13,10 @@ internal static class CanonicalMetricsInputMapper
             entity.Type,
             entity.ParentTfsId,
             entity.BusinessValue,
-            entity.StoryPoints);
+            entity.StoryPoints,
+            entity.TimeCriticality,
+            entity.ProjectNumber,
+            entity.ProjectElement);
     }
 
     public static CanonicalWorkItem ToCanonicalWorkItem(this WorkItemDto dto)
@@ -23,6 +26,9 @@ internal static class CanonicalMetricsInputMapper
             dto.Type,
             dto.ParentTfsId,
             dto.BusinessValue,
-            dto.StoryPoints);
+            dto.StoryPoints,
+            dto.TimeCriticality,
+            dto.ProjectNumber,
+            dto.ProjectElement);
     }
 }

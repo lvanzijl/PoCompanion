@@ -26,6 +26,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand,
             command.PictureType,
             command.DefaultPictureId,
             command.CustomPicturePath,
+            command.EstimationMode,
             cancellationToken);
     }
 }

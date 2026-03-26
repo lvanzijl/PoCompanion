@@ -53,6 +53,7 @@ public class ProductRepository : IProductRepository
         ProductPictureType pictureType,
         int defaultPictureId,
         string? customPicturePath,
+        EstimationMode estimationMode = EstimationMode.StoryPoints,
         CancellationToken cancellationToken = default)
     {
         // Get max order for this product owner (or 0 if no owner)
@@ -72,6 +73,7 @@ public class ProductRepository : IProductRepository
             PictureType = (int)pictureType,
             DefaultPictureId = defaultPictureId,
             CustomPicturePath = customPicturePath,
+            EstimationMode = (int)estimationMode,
             CreatedAt = DateTimeOffset.UtcNow,
             LastModified = DateTimeOffset.UtcNow
         };
@@ -103,6 +105,7 @@ public class ProductRepository : IProductRepository
         ProductPictureType? pictureType,
         int? defaultPictureId,
         string? customPicturePath,
+        EstimationMode? estimationMode = null,
         CancellationToken cancellationToken = default)
     {
         var entity = await _context.Products
@@ -141,6 +144,10 @@ public class ProductRepository : IProductRepository
         if (customPicturePath != null)
         {
             entity.CustomPicturePath = customPicturePath;
+        }
+        if (estimationMode.HasValue)
+        {
+            entity.EstimationMode = (int)estimationMode.Value;
         }
 
         entity.LastModified = DateTimeOffset.UtcNow;
@@ -340,7 +347,8 @@ public class ProductRepository : IProductRepository
             entity.LastModified,
             entity.LastSyncedAt,
             teamIds,
-            repositories
+            repositories,
+            (EstimationMode)entity.EstimationMode
         );
     }
 }

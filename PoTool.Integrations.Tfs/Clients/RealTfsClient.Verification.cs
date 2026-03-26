@@ -13,6 +13,9 @@ namespace PoTool.Integrations.Tfs.Clients;
 /// </summary>
 public partial class RealTfsClient
 {
+    private const int VerificationSampleWorkItemCount = 5;
+    private const string VerificationWorkItemTypeField = "System.WorkItemType";
+
     public async Task<TfsVerificationReport> VerifyCapabilitiesAsync(
         bool includeWriteChecks = false,
         int? workItemIdForWriteCheck = null,
@@ -393,21 +396,28 @@ public partial class RealTfsClient
 
                 var fields = doc.RootElement.GetProperty("value").EnumerateArray()
                     .Select(f => f.GetProperty("referenceName").GetString())
-                    .ToList();
+                    .OfType<string>()
+                    .ToHashSet(StringComparer.Ordinal);
 
-                // Check for required fields
-                var requiredFields = new[] { "System.Id", "System.Title", "System.State", "System.WorkItemType" };
-                var missingFields = requiredFields.Where(rf => !fields.Contains(rf)).ToList();
+                var missingFields = RequiredWorkItemFields
+                    .Where(requiredField => !fields.Contains(requiredField))
+                    .ToList();
 
                 if (missingFields.Any())
                 {
                     return CreateFailureResult(
                         "work-item-fields",
                         "Work item display and processing",
-                        "Required work item fields are accessible",
+                        "Required runtime and analytics work item fields are accessible",
                         $"Missing fields: {string.Join(", ", missingFields)}",
                         FailureCategory.MissingField,
-                        $"Found {fields.Count} fields but missing required fields");
+                        $"Found {fields.Count} fields but missing required runtime fields");
+                }
+
+                var sampleValidation = await ValidateWorkItemFieldPayloadAsync(httpClient, config, cancellationToken);
+                if (!sampleValidation.Success)
+                {
+                    return sampleValidation;
                 }
 
                 return new TfsCapabilityCheckResult
@@ -415,8 +425,8 @@ public partial class RealTfsClient
                     CapabilityId = "work-item-fields",
                     Success = true,
                     ImpactedFunctionality = "Work item display and processing",
-                    ExpectedBehavior = "Required work item fields are accessible",
-                    ObservedBehavior = $"All required fields present ({fields.Count} total fields)"
+                    ExpectedBehavior = "Required runtime and analytics work item fields are accessible",
+                    ObservedBehavior = $"All required runtime fields present ({fields.Count} total fields). {sampleValidation.ObservedBehavior}"
                 };
             }
 
@@ -437,6 +447,195 @@ public partial class RealTfsClient
                 $"Exception: {ex.GetType().Name}",
                 FailureCategory.EndpointUnavailable,
                 SanitizeErrorMessage(ex.Message));
+        }
+    }
+
+    private async Task<TfsCapabilityCheckResult> ValidateWorkItemFieldPayloadAsync(
+        HttpClient httpClient,
+        TfsConfigEntity config,
+        CancellationToken cancellationToken)
+    {
+        var wiql = new
+        {
+            query = $"Select Top {VerificationSampleWorkItemCount} [System.Id] From WorkItems Order By [System.Id] Desc"
+        };
+
+        var wiqlUrl = ProjectUrl(config, "_apis/wit/wiql");
+        using var wiqlContent = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
+        var wiqlResponse = await SendPostAsync(httpClient, config, wiqlUrl, wiqlContent, cancellationToken, handleErrors: false);
+        if (!wiqlResponse.IsSuccessStatusCode)
+        {
+            return CreateFailureResult(
+                "work-item-fields",
+                "Work item display and processing",
+                "Required runtime and analytics work item fields are accessible",
+                $"Sample WIQL query failed: HTTP {(int)wiqlResponse.StatusCode}",
+                CategorizeHttpError(wiqlResponse.StatusCode),
+                await wiqlResponse.Content.ReadAsStringAsync(cancellationToken));
+        }
+
+        using var wiqlStream = await wiqlResponse.Content.ReadAsStreamAsync(cancellationToken);
+        using var wiqlDoc = await JsonDocument.ParseAsync(wiqlStream, cancellationToken: cancellationToken);
+        var sampleIds = wiqlDoc.RootElement.TryGetProperty("workItems", out var workItems)
+            ? workItems.EnumerateArray()
+                .Where(item => item.TryGetProperty("id", out _))
+                .Select(item => item.GetProperty("id").GetInt32())
+                .Where(id => id > 0)
+                .Take(VerificationSampleWorkItemCount)
+                .ToArray()
+            : Array.Empty<int>();
+
+        if (sampleIds.Length == 0)
+        {
+            return new TfsCapabilityCheckResult
+            {
+                CapabilityId = "work-item-fields",
+                Success = true,
+                ImpactedFunctionality = "Work item display and processing",
+                ExpectedBehavior = "Required runtime and analytics work item fields are accessible",
+                ObservedBehavior = "Schema validated. Sample payload validation skipped because no work items were returned by WIQL."
+            };
+        }
+
+        var batchRequest = new WorkItemBatchRequest
+        {
+            Ids = sampleIds,
+            Fields = [TfsFieldProjectNumber, TfsFieldProjectElement, TfsFieldTimeCriticality, VerificationWorkItemTypeField]
+        };
+
+        var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
+        using var batchContent = new StringContent(JsonSerializer.Serialize(batchRequest), System.Text.Encoding.UTF8, "application/json");
+        var batchResponse = await SendPostAsync(httpClient, config, batchUrl, batchContent, cancellationToken, handleErrors: false);
+        if (!batchResponse.IsSuccessStatusCode)
+        {
+            return CreateFailureResult(
+                "work-item-fields",
+                "Work item display and processing",
+                "Required runtime and analytics work item fields are accessible",
+                $"Sample batch query failed: HTTP {(int)batchResponse.StatusCode}",
+                CategorizeHttpError(batchResponse.StatusCode),
+                await batchResponse.Content.ReadAsStringAsync(cancellationToken));
+        }
+
+        using var batchStream = await batchResponse.Content.ReadAsStreamAsync(cancellationToken);
+        using var batchDoc = await JsonDocument.ParseAsync(batchStream, cancellationToken: cancellationToken);
+        var items = batchDoc.RootElement.TryGetProperty("value", out var value)
+            ? value.EnumerateArray().Select(item => item.Clone()).ToList()
+            : [];
+
+        var missingPayloadFields = new HashSet<string>(StringComparer.Ordinal);
+        var typeMismatches = new List<string>();
+        var nullOnlyFields = new HashSet<string>(StringComparer.Ordinal)
+        {
+            TfsFieldProjectNumber,
+            TfsFieldProjectElement,
+            TfsFieldTimeCriticality
+        };
+
+        foreach (var item in items)
+        {
+            if (!item.TryGetProperty("fields", out var payloadFields) || payloadFields.ValueKind != JsonValueKind.Object)
+            {
+                missingPayloadFields.UnionWith(nullOnlyFields);
+                continue;
+            }
+
+            ValidatePayloadField(payloadFields, TfsFieldProjectNumber, JsonValueKind.String, missingPayloadFields, nullOnlyFields, typeMismatches);
+            ValidatePayloadField(payloadFields, TfsFieldProjectElement, JsonValueKind.String, missingPayloadFields, nullOnlyFields, typeMismatches);
+            ValidatePayloadField(payloadFields, TfsFieldTimeCriticality, JsonValueKind.Number, missingPayloadFields, nullOnlyFields, typeMismatches);
+        }
+
+        if (missingPayloadFields.Count > 0 || typeMismatches.Count > 0)
+        {
+            var problems = new List<string>();
+            if (missingPayloadFields.Count > 0)
+            {
+                problems.Add($"Missing in payload: {string.Join(", ", missingPayloadFields)}");
+            }
+
+            if (typeMismatches.Count > 0)
+            {
+                problems.Add($"Type mismatch: {string.Join("; ", typeMismatches)}");
+            }
+
+            _logger.LogWarning("TFS payload validation failed for analytics fields. {Problems}", string.Join(". ", problems));
+
+            return CreateFailureResult(
+                "work-item-fields",
+                "Work item display and processing",
+                "Required runtime and analytics work item fields are accessible",
+                string.Join(". ", problems),
+                FailureCategory.MissingField,
+                $"Validated {items.Count} sampled work items");
+        }
+
+        if (nullOnlyFields.Count > 0)
+        {
+            _logger.LogWarning(
+                "TFS payload validation sampled {WorkItemCount} work items. Fields present but null/empty in all samples: {Fields}",
+                items.Count,
+                string.Join(", ", nullOnlyFields));
+        }
+
+        return new TfsCapabilityCheckResult
+        {
+            CapabilityId = "work-item-fields",
+            Success = true,
+            ImpactedFunctionality = "Work item display and processing",
+            ExpectedBehavior = "Required runtime and analytics work item fields are accessible",
+            ObservedBehavior = nullOnlyFields.Count > 0
+                ? $"Sample payload validated on {items.Count} work items. Null-only sampled fields: {string.Join(", ", nullOnlyFields)}"
+                : $"Sample payload validated on {items.Count} work items with expected field types."
+        };
+    }
+
+    private static void ValidatePayloadField(
+        JsonElement payloadFields,
+        string fieldRefName,
+        JsonValueKind expectedKind,
+        ISet<string> missingPayloadFields,
+        ISet<string> nullOnlyFields,
+        ICollection<string> typeMismatches)
+    {
+        if (!payloadFields.TryGetProperty(fieldRefName, out var fieldValue))
+        {
+            missingPayloadFields.Add(fieldRefName);
+            nullOnlyFields.Remove(fieldRefName);
+            return;
+        }
+
+        if (fieldValue.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+        {
+            return;
+        }
+
+        if (expectedKind == JsonValueKind.String)
+        {
+            if (fieldValue.ValueKind == JsonValueKind.String)
+            {
+                if (!string.IsNullOrWhiteSpace(fieldValue.GetString()))
+                {
+                    nullOnlyFields.Remove(fieldRefName);
+                }
+
+                return;
+            }
+
+            typeMismatches.Add($"{fieldRefName} expected string but was {fieldValue.ValueKind}");
+            nullOnlyFields.Remove(fieldRefName);
+            return;
+        }
+
+        if (expectedKind == JsonValueKind.Number)
+        {
+            if (fieldValue.ValueKind == JsonValueKind.Number)
+            {
+                nullOnlyFields.Remove(fieldRefName);
+                return;
+            }
+
+            typeMismatches.Add($"{fieldRefName} expected numeric but was {fieldValue.ValueKind}");
+            nullOnlyFields.Remove(fieldRefName);
         }
     }
 

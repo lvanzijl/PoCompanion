@@ -34,5 +34,6 @@ public sealed record ProductDto(
     DateTimeOffset LastModified,
     DateTimeOffset? LastSyncedAt,
     List<int> TeamIds,
-    List<RepositoryDto> Repositories
+    List<RepositoryDto> Repositories,
+    EstimationMode EstimationMode = EstimationMode.StoryPoints
 );

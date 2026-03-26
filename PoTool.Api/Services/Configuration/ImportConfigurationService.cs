@@ -223,6 +223,7 @@ public sealed class ImportConfigurationService
                     PictureType = (int)product.PictureType,
                     DefaultPictureId = product.DefaultPictureId,
                     CustomPicturePath = product.CustomPicturePath,
+                    EstimationMode = (int)product.EstimationMode,
                     CreatedAt = product.CreatedAt,
                     LastModified = product.LastModified,
                     LastSyncedAt = product.LastSyncedAt

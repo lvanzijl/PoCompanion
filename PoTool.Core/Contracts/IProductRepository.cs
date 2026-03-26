@@ -27,6 +27,7 @@ public interface IProductRepository
         ProductPictureType pictureType,
         int defaultPictureId,
         string? customPicturePath,
+        EstimationMode estimationMode = EstimationMode.StoryPoints,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -39,6 +40,7 @@ public interface IProductRepository
         ProductPictureType? pictureType,
         int? defaultPictureId,
         string? customPicturePath,
+        EstimationMode? estimationMode = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

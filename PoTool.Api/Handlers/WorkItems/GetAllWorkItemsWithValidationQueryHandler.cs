@@ -136,7 +136,9 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
             wi.BusinessValue,
             wi.BacklogPriority,
             wi.StoryPoints,
-            wi.TimeCriticality
+            wi.TimeCriticality,
+            wi.ProjectNumber,
+            wi.ProjectElement
         )).ToList();
     }
 }

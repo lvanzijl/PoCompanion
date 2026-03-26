@@ -272,7 +272,9 @@ public sealed class SyncChangesSummaryService
             BusinessValue: entity.BusinessValue,
             BacklogPriority: entity.BacklogPriority,
             StoryPoints: entity.StoryPoints,
-            TimeCriticality: entity.TimeCriticality
+            TimeCriticality: entity.TimeCriticality,
+            ProjectNumber: entity.ProjectNumber,
+            ProjectElement: entity.ProjectElement
         );
     }
 }

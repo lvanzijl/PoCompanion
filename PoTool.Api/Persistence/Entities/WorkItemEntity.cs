@@ -86,6 +86,20 @@ public class WorkItemEntity
     public double? TimeCriticality { get; set; }
 
     /// <summary>
+    /// Funding project number from TFS (Rhodium.Funding.ProjectNumber).
+    /// Semantically relevant for Epic work items.
+    /// </summary>
+    [MaxLength(200)]
+    public string? ProjectNumber { get; set; }
+
+    /// <summary>
+    /// Funding project element from TFS (Rhodium.Funding.ProjectElement).
+    /// Semantically relevant for Epic work items.
+    /// </summary>
+    [MaxLength(200)]
+    public string? ProjectElement { get; set; }
+
+    /// <summary>
     /// Work item description (nullable).
     /// </summary>
     public string? Description { get; set; }

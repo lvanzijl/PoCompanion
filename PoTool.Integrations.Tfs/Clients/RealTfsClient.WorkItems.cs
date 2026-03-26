@@ -355,6 +355,8 @@ public partial class RealTfsClient
             // Extract backlog priority from TFS (Microsoft.VSTS.Common.BacklogPriority)
             double? backlogPriority = ParseBacklogPriorityField(fields);
             double? timeCriticality = ParseTimeCriticalityField(fields);
+            string? projectNumber = ParseStringField(fields, TfsFieldProjectNumber);
+            string? projectElement = ParseStringField(fields, TfsFieldProjectElement);
 
             var workItem = new WorkItemDto(
                 TfsId: id,
@@ -377,7 +379,9 @@ public partial class RealTfsClient
                 Relations: relations, // Use relations from Phase 1
                 BacklogPriority: backlogPriority,
                 StoryPoints: storyPoints,
-                TimeCriticality: timeCriticality
+                TimeCriticality: timeCriticality,
+                ProjectNumber: projectNumber,
+                ProjectElement: projectElement
             );
 
             _logger.LogInformation("Retrieved work item {WorkItemId} from TFS: {Title}", id, title);
@@ -738,6 +742,8 @@ public partial class RealTfsClient
                     // Extract backlog priority from TFS (Microsoft.VSTS.Common.BacklogPriority)
                     double? backlogPriority = ParseBacklogPriorityField(fields);
                     double? timeCriticality = ParseTimeCriticalityField(fields);
+                    string? projectNumber = ParseStringField(fields, TfsFieldProjectNumber);
+                    string? projectElement = ParseStringField(fields, TfsFieldProjectElement);
 
                     results.Add(new WorkItemDto(
                         TfsId: id,
@@ -758,7 +764,9 @@ public partial class RealTfsClient
                         ChangedDate: changedDate,
                         BacklogPriority: backlogPriority,
                         StoryPoints: storyPoints,
-                        TimeCriticality: timeCriticality
+                        TimeCriticality: timeCriticality,
+                        ProjectNumber: projectNumber,
+                        ProjectElement: projectElement
                     ));
                 }
 
@@ -891,5 +899,20 @@ public partial class RealTfsClient
         }
 
         return null;
+    }
+
+    private static string? ParseStringField(JsonElement fields, string fieldRefName)
+    {
+        if (!fields.TryGetProperty(fieldRefName, out var field))
+        {
+            return null;
+        }
+
+        return field.ValueKind switch
+        {
+            JsonValueKind.String => field.GetString(),
+            JsonValueKind.Null or JsonValueKind.Undefined => null,
+            _ => field.ToString()
+        };
     }
 }

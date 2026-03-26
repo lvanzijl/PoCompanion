@@ -179,6 +179,8 @@ public class WorkItemSyncStage : ISyncStage
         entity.Effort = dto.Effort;
         entity.BusinessValue = dto.BusinessValue;
         entity.TimeCriticality = dto.TimeCriticality;
+        entity.ProjectNumber = dto.ProjectNumber;
+        entity.ProjectElement = dto.ProjectElement;
         entity.Description = dto.Description;
         entity.CreatedDate = dto.CreatedDate;
         entity.ClosedDate = dto.ClosedDate;
@@ -207,6 +209,8 @@ public class WorkItemSyncStage : ISyncStage
             Effort = dto.Effort,
             BusinessValue = dto.BusinessValue,
             TimeCriticality = dto.TimeCriticality,
+            ProjectNumber = dto.ProjectNumber,
+            ProjectElement = dto.ProjectElement,
             Description = dto.Description,
             CreatedDate = dto.CreatedDate,
             ClosedDate = dto.ClosedDate,

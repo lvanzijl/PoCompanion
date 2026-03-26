@@ -638,7 +638,9 @@ public class TfsClientTests
                         ["Microsoft.VSTS.Scheduling.Effort"] = 13,
                         ["Microsoft.VSTS.Scheduling.StoryPoints"] = 8,
                         ["Microsoft.VSTS.Common.BusinessValue"] = 21,
-                        ["Microsoft.VSTS.Common.TimeCriticality"] = 72.5
+                        ["Microsoft.VSTS.Common.TimeCriticality"] = 72.5,
+                        ["Rhodium.Funding.ProjectNumber"] = "PRJ-100",
+                        ["Rhodium.Funding.ProjectElement"] = "ELM-200"
                     }
                 }
             }
@@ -652,6 +654,8 @@ public class TfsClientTests
         Assert.AreEqual(8, results[0].StoryPoints);
         Assert.AreEqual(21, results[0].BusinessValue);
         Assert.AreEqual(72.5d, results[0].TimeCriticality!.Value, 0.001d);
+        Assert.AreEqual("PRJ-100", results[0].ProjectNumber);
+        Assert.AreEqual("ELM-200", results[0].ProjectElement);
     }
 
     [TestMethod]

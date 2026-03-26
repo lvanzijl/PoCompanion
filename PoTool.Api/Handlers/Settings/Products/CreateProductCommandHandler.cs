@@ -26,6 +26,7 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
             command.PictureType,
             command.DefaultPictureId,
             command.CustomPicturePath,
+            command.EstimationMode,
             cancellationToken);
     }
 }
