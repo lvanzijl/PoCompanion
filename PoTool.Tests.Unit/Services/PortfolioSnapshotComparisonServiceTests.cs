@@ -21,6 +21,8 @@ public sealed class PortfolioSnapshotComparisonServiceTests
         var result = Service.Compare(new PortfolioSnapshotComparisonRequest(previous, current));
 
         Assert.HasCount(1, result.Items);
+        Assert.AreEqual(WorkPackageLifecycleState.Active, result.Items[0].PreviousLifecycleState);
+        Assert.AreEqual(WorkPackageLifecycleState.Active, result.Items[0].CurrentLifecycleState);
         Assert.AreEqual(0.25d, result.Items[0].ProgressDelta!.Value, 0.001d);
     }
 
@@ -53,6 +55,8 @@ public sealed class PortfolioSnapshotComparisonServiceTests
         var result = Service.Compare(new PortfolioSnapshotComparisonRequest(previous, current));
         var addedRow = result.Items.Single(item => item.WorkPackage == "WP-2");
 
+        Assert.IsNull(addedRow.PreviousLifecycleState);
+        Assert.AreEqual(WorkPackageLifecycleState.Active, addedRow.CurrentLifecycleState);
         Assert.IsNull(addedRow.PreviousProgress);
         Assert.AreEqual(0.55d, addedRow.CurrentProgress!.Value, 0.001d);
         Assert.IsNull(addedRow.ProgressDelta);
@@ -75,6 +79,8 @@ public sealed class PortfolioSnapshotComparisonServiceTests
         var result = Service.Compare(new PortfolioSnapshotComparisonRequest(previous, current));
         var removedRow = result.Items.Single(item => item.WorkPackage == "WP-2");
 
+        Assert.AreEqual(WorkPackageLifecycleState.Active, removedRow.PreviousLifecycleState);
+        Assert.IsNull(removedRow.CurrentLifecycleState);
         Assert.AreEqual(0.55d, removedRow.PreviousProgress!.Value, 0.001d);
         Assert.IsNull(removedRow.CurrentProgress);
         Assert.IsNull(removedRow.ProgressDelta);
@@ -153,9 +159,55 @@ public sealed class PortfolioSnapshotComparisonServiceTests
             Service.Compare(new PortfolioSnapshotComparisonRequest(previous, current)));
     }
 
+    [TestMethod]
+    public void Compare_ReportsActiveToRetiredLifecycleTransitionAsRemoval()
+    {
+        var previous = CreateSnapshot(
+            new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
+            (1, "PRJ-100", "WP-1", 0.4d, 10d, WorkPackageLifecycleState.Active));
+        var current = CreateSnapshot(
+            previous.Timestamp.AddDays(7),
+            (1, "PRJ-100", "WP-1", 0.4d, 10d, WorkPackageLifecycleState.Retired));
+
+        var result = Service.Compare(new PortfolioSnapshotComparisonRequest(previous, current));
+        var item = result.Items.Single();
+
+        Assert.AreEqual(WorkPackageLifecycleState.Active, item.PreviousLifecycleState);
+        Assert.AreEqual(WorkPackageLifecycleState.Retired, item.CurrentLifecycleState);
+        Assert.AreEqual(0.4d, item.PreviousProgress!.Value, 0.001d);
+        Assert.IsNull(item.CurrentProgress);
+        Assert.IsNull(item.ProgressDelta);
+        Assert.AreEqual(10d, item.PreviousWeight!.Value, 0.001d);
+        Assert.IsNull(item.CurrentWeight);
+        Assert.IsNull(item.WeightDelta);
+    }
+
+    [TestMethod]
+    public void Compare_TreatsRetiredRowsAsNonContributingForDeltaCalculation()
+    {
+        var previous = CreateSnapshot(
+            new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
+            (1, "PRJ-100", "WP-1", 0.4d, 10d, WorkPackageLifecycleState.Retired));
+        var current = CreateSnapshot(
+            previous.Timestamp.AddDays(7),
+            (1, "PRJ-100", "WP-1", 0.6d, 12d, WorkPackageLifecycleState.Retired));
+
+        var result = Service.Compare(new PortfolioSnapshotComparisonRequest(previous, current));
+        var item = result.Items.Single();
+
+        Assert.AreEqual(WorkPackageLifecycleState.Retired, item.PreviousLifecycleState);
+        Assert.AreEqual(WorkPackageLifecycleState.Retired, item.CurrentLifecycleState);
+        Assert.IsNull(item.PreviousProgress);
+        Assert.IsNull(item.CurrentProgress);
+        Assert.IsNull(item.ProgressDelta);
+        Assert.IsNull(item.PreviousWeight);
+        Assert.IsNull(item.CurrentWeight);
+        Assert.IsNull(item.WeightDelta);
+    }
+
     private static PortfolioSnapshot CreateSnapshot(
         DateTimeOffset timestamp,
-        params (int ProductId, string ProjectNumber, string? WorkPackage, double Progress, double TotalWeight)[] rows)
+        params (int ProductId, string ProjectNumber, string? WorkPackage, double Progress, double TotalWeight, WorkPackageLifecycleState LifecycleState)[] rows)
     {
         return new PortfolioSnapshot(
             timestamp,
@@ -164,7 +216,24 @@ public sealed class PortfolioSnapshotComparisonServiceTests
                     row.ProjectNumber,
                     row.WorkPackage,
                     row.Progress,
-                    row.TotalWeight))
+                    row.TotalWeight,
+                    row.LifecycleState))
+                .ToArray());
+    }
+
+    private static PortfolioSnapshot CreateSnapshot(
+        DateTimeOffset timestamp,
+        params (int ProductId, string ProjectNumber, string? WorkPackage, double Progress, double TotalWeight)[] rows)
+    {
+        return CreateSnapshot(
+            timestamp,
+            rows.Select(row => (
+                    row.ProductId,
+                    row.ProjectNumber,
+                    row.WorkPackage,
+                    row.Progress,
+                    row.TotalWeight,
+                    WorkPackageLifecycleState.Active))
                 .ToArray());
     }
 
@@ -174,6 +243,8 @@ public sealed class PortfolioSnapshotComparisonServiceTests
             item.ProductId,
             item.ProjectNumber,
             item.WorkPackage ?? "<project>",
+            item.PreviousLifecycleState?.ToString() ?? "null",
+            item.CurrentLifecycleState?.ToString() ?? "null",
             item.PreviousProgress?.ToString("0.###") ?? "null",
             item.CurrentProgress?.ToString("0.###") ?? "null",
             item.ProgressDelta?.ToString("0.###") ?? "null",

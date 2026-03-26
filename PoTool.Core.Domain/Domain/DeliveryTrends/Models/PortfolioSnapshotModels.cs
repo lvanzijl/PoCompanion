@@ -1,5 +1,11 @@
 namespace PoTool.Core.Domain.DeliveryTrends.Models;
 
+public enum WorkPackageLifecycleState
+{
+    Active = 0,
+    Retired = 1
+}
+
 /// <summary>
 /// Canonical portfolio snapshot captured at a single point in time for CDC delivery comparison.
 /// </summary>
@@ -56,7 +62,8 @@ public sealed record PortfolioSnapshotItem
         string projectNumber,
         string? workPackage,
         double progress,
-        double totalWeight)
+        double totalWeight,
+        WorkPackageLifecycleState lifecycleState = WorkPackageLifecycleState.Active)
     {
         DeliveryTrendModelValidation.ValidatePositiveId(productId, nameof(productId), "ProductId");
         DeliveryTrendModelValidation.ValidateRequiredText(projectNumber, nameof(projectNumber), "ProjectNumber");
@@ -74,6 +81,7 @@ public sealed record PortfolioSnapshotItem
         WorkPackage = workPackage;
         Progress = progress;
         TotalWeight = totalWeight;
+        LifecycleState = lifecycleState;
     }
 
     public int ProductId { get; }
@@ -86,9 +94,66 @@ public sealed record PortfolioSnapshotItem
 
     public double TotalWeight { get; }
 
+    public WorkPackageLifecycleState LifecycleState { get; }
+
     internal PortfolioSnapshotProjectKey ProjectKey => new(ProductId, ProjectNumber);
 
     internal PortfolioSnapshotBusinessKey BusinessKey => new(ProductId, ProjectNumber, WorkPackage);
+}
+
+/// <summary>
+/// Deterministic capture request for a new portfolio snapshot.
+/// </summary>
+public sealed record PortfolioSnapshotFactoryRequest(
+    DateTimeOffset Timestamp,
+    IReadOnlyList<PortfolioSnapshotFactoryEpicInput> Epics,
+    PortfolioSnapshot? PreviousSnapshot)
+{
+    public PortfolioSnapshotFactoryRequest(DateTimeOffset timestamp, IReadOnlyList<PortfolioSnapshotFactoryEpicInput> epics)
+        : this(timestamp, epics, null)
+    {
+    }
+}
+
+/// <summary>
+/// Canonical current-state input row for deterministic portfolio snapshot capture.
+/// </summary>
+public sealed record PortfolioSnapshotFactoryEpicInput
+{
+    public PortfolioSnapshotFactoryEpicInput(
+        int productId,
+        string projectNumber,
+        string? workPackage,
+        double progress,
+        double weight)
+    {
+        DeliveryTrendModelValidation.ValidatePositiveId(productId, nameof(productId), "ProductId");
+        DeliveryTrendModelValidation.ValidateRequiredText(projectNumber, nameof(projectNumber), "ProjectNumber");
+
+        if (workPackage is not null)
+        {
+            DeliveryTrendModelValidation.ValidateRequiredText(workPackage, nameof(workPackage), "WorkPackage");
+        }
+
+        DeliveryTrendModelValidation.ValidateUnitInterval(progress, nameof(progress), "Progress");
+        DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(weight, nameof(weight), "Weight");
+
+        ProductId = productId;
+        ProjectNumber = projectNumber;
+        WorkPackage = workPackage;
+        Progress = progress;
+        Weight = weight;
+    }
+
+    public int ProductId { get; }
+
+    public string ProjectNumber { get; }
+
+    public string? WorkPackage { get; }
+
+    public double Progress { get; }
+
+    public double Weight { get; }
 }
 
 /// <summary>
@@ -105,6 +170,8 @@ public sealed record PortfolioSnapshotComparisonItem(
     int ProductId,
     string ProjectNumber,
     string? WorkPackage,
+    WorkPackageLifecycleState? PreviousLifecycleState,
+    WorkPackageLifecycleState? CurrentLifecycleState,
     double? PreviousProgress,
     double? CurrentProgress,
     double? ProgressDelta,
@@ -131,4 +198,32 @@ internal readonly record struct PortfolioSnapshotBusinessKey(
     string? WorkPackage)
 {
     public override string ToString() => $"{ProductId}:{ProjectNumber}:{WorkPackage ?? "<project>"}";
+}
+
+internal sealed class PortfolioSnapshotBusinessKeyComparer : IComparer<PortfolioSnapshotBusinessKey>
+{
+    public static PortfolioSnapshotBusinessKeyComparer Instance { get; } = new();
+
+    public int Compare(PortfolioSnapshotBusinessKey x, PortfolioSnapshotBusinessKey y)
+    {
+        var productComparison = x.ProductId.CompareTo(y.ProductId);
+        if (productComparison != 0)
+        {
+            return productComparison;
+        }
+
+        var projectComparison = StringComparer.Ordinal.Compare(x.ProjectNumber, y.ProjectNumber);
+        if (projectComparison != 0)
+        {
+            return projectComparison;
+        }
+
+        var workPackageKindComparison = (x.WorkPackage is null ? 0 : 1).CompareTo(y.WorkPackage is null ? 0 : 1);
+        if (workPackageKindComparison != 0)
+        {
+            return workPackageKindComparison;
+        }
+
+        return StringComparer.Ordinal.Compare(x.WorkPackage, y.WorkPackage);
+    }
 }
