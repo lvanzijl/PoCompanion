@@ -23,10 +23,15 @@ public sealed class PortfolioReadModelMapper : IPortfolioReadModelMapper
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(productNames);
 
+        if (!productNames.TryGetValue(item.ProductId, out var productName) || string.IsNullOrWhiteSpace(productName))
+        {
+            throw new InvalidOperationException($"Product name mapping is missing for ProductId {item.ProductId}.");
+        }
+
         return new PortfolioSnapshotItemDto
         {
             ProductId = item.ProductId,
-            ProductName = productNames.GetValueOrDefault(item.ProductId, $"Product {item.ProductId}"),
+            ProductName = productName,
             ProjectNumber = item.ProjectNumber,
             WorkPackage = item.WorkPackage,
             LifecycleState = ToLifecycleState(item.LifecycleState),
@@ -42,10 +47,15 @@ public sealed class PortfolioReadModelMapper : IPortfolioReadModelMapper
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(productNames);
 
+        if (!productNames.TryGetValue(item.ProductId, out var productName) || string.IsNullOrWhiteSpace(productName))
+        {
+            throw new InvalidOperationException($"Product name mapping is missing for ProductId {item.ProductId}.");
+        }
+
         return new PortfolioComparisonItemDto
         {
             ProductId = item.ProductId,
-            ProductName = productNames.GetValueOrDefault(item.ProductId, $"Product {item.ProductId}"),
+            ProductName = productName,
             ProjectNumber = item.ProjectNumber,
             WorkPackage = item.WorkPackage,
             PreviousLifecycleState = item.PreviousLifecycleState.HasValue ? ToLifecycleState(item.PreviousLifecycleState.Value) : null,

@@ -61,4 +61,13 @@ public sealed class PortfolioReadModelMapperTests
         Assert.IsNull(dto.CurrentWeight);
         Assert.IsNull(dto.WeightDelta);
     }
+
+    [TestMethod]
+    public void ToSnapshotItemDto_ThrowsWhenProductNameMappingIsMissing()
+    {
+        Assert.ThrowsExactly<InvalidOperationException>(() =>
+            Mapper.ToSnapshotItemDto(
+                new PortfolioSnapshotItem(7, "PRJ-100", "WP-3", 0.65d, 12d, WorkPackageLifecycleState.Retired),
+                new Dictionary<int, string>()));
+    }
 }

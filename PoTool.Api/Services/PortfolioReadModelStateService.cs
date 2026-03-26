@@ -1,10 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using PoTool.Api.Adapters;
 using PoTool.Api.Persistence;
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.DeliveryTrends.Services;
-using PoTool.Shared.Metrics;
 
 namespace PoTool.Api.Services;
 
@@ -25,23 +22,26 @@ public sealed record PortfolioReadModelState(
 public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateService
 {
     private readonly PoToolDbContext _context;
-    private readonly SprintTrendProjectionService _projectionService;
+    private readonly IPortfolioSnapshotCaptureDataService _captureDataService;
     private readonly IPortfolioSnapshotFactory _portfolioSnapshotFactory;
+    private readonly IPortfolioSnapshotPersistenceService _persistenceService;
+    private readonly IPortfolioSnapshotSelectionService _selectionService;
     private readonly IProductAggregationService _productAggregationService;
-    private readonly ILogger<PortfolioReadModelStateService> _logger;
 
     public PortfolioReadModelStateService(
         PoToolDbContext context,
-        SprintTrendProjectionService projectionService,
+        IPortfolioSnapshotCaptureDataService captureDataService,
         IPortfolioSnapshotFactory portfolioSnapshotFactory,
-        IProductAggregationService productAggregationService,
-        ILogger<PortfolioReadModelStateService> logger)
+        IPortfolioSnapshotPersistenceService persistenceService,
+        IPortfolioSnapshotSelectionService selectionService,
+        IProductAggregationService productAggregationService)
     {
         _context = context;
-        _projectionService = projectionService;
+        _captureDataService = captureDataService;
         _portfolioSnapshotFactory = portfolioSnapshotFactory;
+        _persistenceService = persistenceService;
+        _selectionService = selectionService;
         _productAggregationService = productAggregationService;
-        _logger = logger;
     }
 
     public async Task<PortfolioReadModelState?> GetLatestStateAsync(int productOwnerId, CancellationToken cancellationToken)
@@ -60,173 +60,80 @@ public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateSer
         var productNames = products.ToDictionary(product => product.Id, product => product.Name);
         var productIds = productNames.Keys.ToList();
 
-        var snapshotSources = (await _context.ResolvedWorkItems
-            .AsNoTracking()
-            .Where(item =>
-                item.ResolvedProductId != null
-                && productIds.Contains(item.ResolvedProductId.Value)
-                && item.ResolvedSprintId != null)
-            .Select(item => item.ResolvedSprintId!.Value)
-            .Distinct()
-            .Join(
-                _context.Sprints.AsNoTracking().Where(sprint => sprint.StartDateUtc != null && sprint.EndDateUtc != null),
-                sprintId => sprintId,
-                sprint => sprint.Id,
-                (sprintId, sprint) => new
-                {
-                    sprintId,
-                    sprint.Name,
-                    StartDateUtc = sprint.StartDateUtc!.Value,
-                    EndDateUtc = sprint.EndDateUtc!.Value
-                })
-            .OrderByDescending(source => source.EndDateUtc)
-            .ThenByDescending(source => source.sprintId)
-            .Take(2)
-            .ToListAsync(cancellationToken))
-            .Select(source => new PortfolioSnapshotSource(
-                source.sprintId,
-                source.Name,
-                DateTime.SpecifyKind(source.StartDateUtc, DateTimeKind.Utc),
-                DateTime.SpecifyKind(source.EndDateUtc, DateTimeKind.Utc)))
-            .ToList();
+        await EnsureLatestSourcesPersistedAsync(productOwnerId, productIds, cancellationToken);
 
-        if (snapshotSources.Count == 0)
-        {
-            return null;
-        }
-
-        var orderedSources = snapshotSources
-            .OrderBy(source => source.EndDateUtc)
-            .ThenBy(source => source.SprintId)
-            .ToList();
-
-        PortfolioSnapshotBuildResult? previous = null;
-        PortfolioSnapshotBuildResult? current = null;
-
-        foreach (var source in orderedSources)
-        {
-            var build = await BuildSnapshotAsync(productOwnerId, source, previous?.Snapshot, cancellationToken);
-            if (build is null)
-            {
-                continue;
-            }
-
-            previous = current;
-            current = build;
-        }
-
+        var current = await _selectionService.GetLatestPortfolioSnapshotAsync(productIds, cancellationToken);
         if (current is null)
         {
             return null;
         }
 
+        var previous = await _selectionService.GetPreviousPortfolioSnapshotAsync(productIds, cancellationToken);
+
         var portfolioAggregation = _productAggregationService.Compute(new ProductAggregationRequest(
-            current.EpicInputs
-                .Select(input => new ProductAggregationEpicInput(
-                    input.Progress * 100d,
+            current.Snapshot.Items
+                .Where(item => item.LifecycleState == WorkPackageLifecycleState.Active)
+                .Select(item => new ProductAggregationEpicInput(
+                    item.Progress * 100d,
                     EpicForecastConsumed: null,
                     EpicForecastRemaining: null,
-                    input.Weight,
-                    IsExcluded: input.Weight <= 0d))
+                    item.TotalWeight,
+                    IsExcluded: item.TotalWeight <= 0d))
                 .ToList()));
 
         return new PortfolioReadModelState(
             current.Snapshot,
-            current.Label,
+            current.Source,
             previous?.Snapshot,
-            previous?.Label,
+            previous?.Source,
             portfolioAggregation.ProductProgress,
             portfolioAggregation.TotalWeight,
             productNames);
     }
 
-    private async Task<PortfolioSnapshotBuildResult?> BuildSnapshotAsync(
+    private async Task EnsureLatestSourcesPersistedAsync(
         int productOwnerId,
-        PortfolioSnapshotSource source,
-        PortfolioSnapshot? previousSnapshot,
+        IReadOnlyCollection<int> productIds,
         CancellationToken cancellationToken)
     {
-        var featureProgress = await _projectionService.ComputeFeatureProgressAsync(
-            productOwnerId,
-            FeatureProgressMode.StoryPoints,
-            source.StartDateUtc,
-            source.EndDateUtc,
-            cancellationToken,
-            source.SprintId);
+        var snapshotSources = await _captureDataService.GetLatestSourcesAsync(productIds, cancellationToken);
 
-        if (featureProgress.Count == 0)
+        foreach (var source in snapshotSources
+                     .OrderBy(snapshotSource => snapshotSource.EndDateUtc)
+                     .ThenBy(snapshotSource => snapshotSource.SprintId))
         {
-            return null;
-        }
+            var inputsByProduct = await _captureDataService.BuildSnapshotInputsByProductAsync(productOwnerId, source, cancellationToken);
 
-        var epicProgress = await _projectionService.ComputeEpicProgressAsync(
-            productOwnerId,
-            featureProgress,
-            cancellationToken);
-
-        if (epicProgress.Count == 0)
-        {
-            return null;
-        }
-
-        var epicIds = epicProgress
-            .Select(progress => progress.EpicId)
-            .Distinct()
-            .ToList();
-
-        var epicsById = await _context.WorkItems
-            .AsNoTracking()
-            .Where(workItem => epicIds.Contains(workItem.TfsId))
-            .Select(workItem => new
+            foreach (var productGroup in inputsByProduct.OrderBy(group => group.Key))
             {
-                workItem.TfsId,
-                workItem.ProjectNumber,
-                workItem.ProjectElement
-            })
-            .ToDictionaryAsync(workItem => workItem.TfsId, cancellationToken);
-
-        var snapshotInputs = epicProgress
-            .Select(progress =>
-            {
-                if (!epicsById.TryGetValue(progress.EpicId, out var epic) || string.IsNullOrWhiteSpace(epic.ProjectNumber))
+                var existing = await _persistenceService.GetBySourceAsync(
+                    productGroup.Key,
+                    source.Source,
+                    source.Timestamp,
+                    cancellationToken);
+                if (existing is not null)
                 {
-                    _logger.LogWarning(
-                        "Skipping portfolio snapshot row for Epic {EpicId} because ProjectNumber is unavailable.",
-                        progress.EpicId);
-                    return null;
+                    continue;
                 }
 
-                return new PortfolioSnapshotFactoryEpicInput(
-                    progress.ProductId,
-                    epic.ProjectNumber.Trim(),
-                    string.IsNullOrWhiteSpace(epic.ProjectElement) ? null : epic.ProjectElement.Trim(),
-                    (progress.AggregatedProgress ?? 0d) / 100d,
-                    progress.TotalWeight);
-            })
-            .OfType<PortfolioSnapshotFactoryEpicInput>()
-            .ToList();
+                var previousSnapshot = await _selectionService.GetLatestBeforeAsync(
+                    productGroup.Key,
+                    source.Timestamp,
+                    cancellationToken,
+                    includeArchived: true);
 
-        if (snapshotInputs.Count == 0)
-        {
-            return null;
+                var snapshot = _portfolioSnapshotFactory.Create(new PortfolioSnapshotFactoryRequest(
+                    source.Timestamp,
+                    productGroup.Value,
+                    previousSnapshot?.Snapshot));
+
+                await _persistenceService.PersistAsync(
+                    productGroup.Key,
+                    source.Source,
+                    createdBy: null,
+                    snapshot,
+                    cancellationToken);
+            }
         }
-
-        var snapshot = _portfolioSnapshotFactory.Create(new PortfolioSnapshotFactoryRequest(
-            new DateTimeOffset(source.EndDateUtc, TimeSpan.Zero),
-            snapshotInputs,
-            previousSnapshot));
-
-        return new PortfolioSnapshotBuildResult(snapshot, source.Name, snapshotInputs);
     }
-
-    private record struct PortfolioSnapshotSource(
-        int SprintId,
-        string Name,
-        DateTime StartDateUtc,
-        DateTime EndDateUtc);
-
-    private sealed record PortfolioSnapshotBuildResult(
-        PortfolioSnapshot Snapshot,
-        string Label,
-        IReadOnlyList<PortfolioSnapshotFactoryEpicInput> EpicInputs);
 }
