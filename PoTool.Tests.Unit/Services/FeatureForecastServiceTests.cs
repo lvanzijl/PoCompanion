@@ -53,6 +53,17 @@ public sealed class FeatureForecastServiceTests
     }
 
     [TestMethod]
+    public void Compute_ReturnsNullForecast_WhenEffectiveProgressIsMissing()
+    {
+        var result = Service.Compute(new FeatureForecastCalculationRequest(
+            EffectiveProgress: null,
+            Effort: 80d));
+
+        Assert.IsNull(result.ForecastConsumedEffort);
+        Assert.IsNull(result.ForecastRemainingEffort);
+    }
+
+    [TestMethod]
     public void Compute_HandlesDecimalProgressDeterministically()
     {
         var result = Service.Compute(new FeatureForecastCalculationRequest(

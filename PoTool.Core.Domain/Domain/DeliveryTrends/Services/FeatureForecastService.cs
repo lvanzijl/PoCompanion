@@ -23,7 +23,7 @@ public sealed class FeatureForecastService : IFeatureForecastService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (!request.Effort.HasValue)
+        if (!request.Effort.HasValue || !request.EffectiveProgress.HasValue)
         {
             return new FeatureForecastResult(
                 request.Effort,
@@ -32,7 +32,7 @@ public sealed class FeatureForecastService : IFeatureForecastService
                 ForecastRemainingEffort: null);
         }
 
-        var clampedProgressRatio = Math.Clamp((request.EffectiveProgress ?? 0d) / 100d, 0d, 1d);
+        var clampedProgressRatio = Math.Clamp(request.EffectiveProgress.Value / 100d, 0d, 1d);
         var forecastConsumedEffort = request.Effort.Value * clampedProgressRatio;
         var forecastRemainingEffort = Math.Max(0d, request.Effort.Value - forecastConsumedEffort);
 
