@@ -175,7 +175,8 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                     featureForecast.ForecastConsumedEffort,
                     featureForecast.ForecastRemainingEffort,
                     weight,
-                    isExcluded));
+                    isExcluded,
+                    featureWorkItem.Effort));
             }
         }
 

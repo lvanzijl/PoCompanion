@@ -110,6 +110,7 @@ public sealed class DeliveryProgressRollupServiceTests
             FeatureProgressMode.StoryPoints));
 
         Assert.HasCount(1, result);
+        Assert.AreEqual(100d, result[0].Effort!.Value, 0.001d);
         Assert.AreEqual(12.34d, result[0].ForecastConsumedEffort!.Value, 0.001d);
         Assert.AreEqual(56.78d, result[0].ForecastRemainingEffort!.Value, 0.001d);
     }
