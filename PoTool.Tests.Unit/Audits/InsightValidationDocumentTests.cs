@@ -23,6 +23,7 @@ public sealed class InsightValidationDocumentTests
         StringAssert.Contains(report, "InsightResult");
         StringAssert.Contains(report, "Insight");
         StringAssert.Contains(report, "IN-1");
+        StringAssert.Contains(report, "IN-8");
         StringAssert.Contains(report, "IN-7");
         StringAssert.Contains(report, "InsightServiceTests");
         StringAssert.Contains(report, "ServiceCollectionTests");

@@ -12,6 +12,7 @@ public static class InsightCodes
     public const string LowPlanningQuality = "IN-5";
     public const string VeryLowPlanningQuality = "IN-6";
     public const string ForecastUnreliable = "IN-7";
+    public const string ProgressUnknown = "IN-8";
 }
 
 /// <summary>

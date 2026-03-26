@@ -14,15 +14,17 @@ public sealed class InsightServiceTests
         var result = Service.Analyze(CreateRequest(progressDelta: 0d, forecastRemainingDelta: 0d, planningQualityScore: 100));
 
         AssertInsight(result, InsightCodes.ProgressStalled, InsightSeverity.Warning, 0d, 0d, 100);
+        Assert.IsFalse(result.Insights.Any(insight => insight.Code == InsightCodes.ProgressUnknown));
         Assert.HasCount(1, result.Insights);
     }
 
     [TestMethod]
-    public void Analyze_EmitsProgressStalledInsight_WhenProgressDeltaIsNull()
+    public void Analyze_EmitsProgressUnknownInsight_WhenProgressDeltaIsNull()
     {
         var result = Service.Analyze(CreateRequest(progressDelta: null, forecastRemainingDelta: 5d, planningQualityScore: 100));
 
-        AssertInsight(result, InsightCodes.ProgressStalled, InsightSeverity.Warning, null, 5d, 100);
+        AssertInsight(result, InsightCodes.ProgressUnknown, InsightSeverity.Warning, null, 5d, 100);
+        Assert.IsFalse(result.Insights.Any(insight => insight.Code == InsightCodes.ProgressStalled));
         Assert.HasCount(1, result.Insights);
     }
 
@@ -33,6 +35,7 @@ public sealed class InsightServiceTests
 
         AssertInsight(result, InsightCodes.ProgressReversed, InsightSeverity.Critical, -10d, 12d, 100);
         AssertInsight(result, InsightCodes.ScopeIncreasedFasterThanDelivery, InsightSeverity.Critical, -10d, 12d, 100);
+        Assert.IsFalse(result.Insights.Any(insight => insight.Code is InsightCodes.ProgressStalled or InsightCodes.ProgressUnknown));
         Assert.HasCount(2, result.Insights);
     }
 
@@ -61,6 +64,21 @@ public sealed class InsightServiceTests
         AssertInsight(result, InsightCodes.LowPlanningQuality, InsightSeverity.Warning, 4d, 2d, 40);
         AssertInsight(result, InsightCodes.VeryLowPlanningQuality, InsightSeverity.Critical, 4d, 2d, 40);
         AssertInsight(result, InsightCodes.ForecastUnreliable, InsightSeverity.Warning, 4d, 2d, 40);
+        Assert.HasCount(3, result.Insights);
+    }
+
+    [TestMethod]
+    public void Analyze_EmitsProgressUnknownAlongsidePlanningQualityInsights_WhenProgressCannotBeMeasured()
+    {
+        var result = Service.Analyze(CreateRequest(
+            progressDelta: null,
+            forecastRemainingDelta: 6d,
+            planningQualityScore: 40));
+
+        AssertInsight(result, InsightCodes.ProgressUnknown, InsightSeverity.Warning, null, 6d, 40);
+        AssertInsight(result, InsightCodes.LowPlanningQuality, InsightSeverity.Warning, null, 6d, 40);
+        AssertInsight(result, InsightCodes.VeryLowPlanningQuality, InsightSeverity.Critical, null, 6d, 40);
+        Assert.IsFalse(result.Insights.Any(insight => insight.Code == InsightCodes.ProgressStalled));
         Assert.HasCount(3, result.Insights);
     }
 

@@ -35,12 +35,21 @@ public sealed class InsightService : IInsightService
         var forecastRemainingDelta = request.Comparison.ForecastRemainingDelta;
         var planningQualityScore = request.PlanningQuality.Score;
 
-        if (!progressDelta.HasValue || progressDelta.Value == 0d)
+        if (progressDelta.HasValue && progressDelta.Value == 0d)
         {
             insights.Add(CreateInsight(
                 InsightCodes.ProgressStalled,
                 InsightSeverity.Warning,
                 "Progress has stalled since the last snapshot.",
+                context));
+        }
+
+        if (!progressDelta.HasValue)
+        {
+            insights.Add(CreateInsight(
+                InsightCodes.ProgressUnknown,
+                InsightSeverity.Warning,
+                "Progress cannot be determined due to missing or incomplete snapshot data.",
                 context));
         }
 

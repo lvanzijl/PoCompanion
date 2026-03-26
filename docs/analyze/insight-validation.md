@@ -20,13 +20,14 @@
 
 Implemented mappings:
 
-- `IN-1` — Progress stalled (`Warning`) when `ProgressDelta == null` or `ProgressDelta == 0`
+- `IN-1` — Progress stalled (`Warning`) when `ProgressDelta == 0`
 - `IN-2` — Progress reversed (`Critical`) when `ProgressDelta < 0`
 - `IN-3` — Scope increased faster than delivery (`Critical`) when `ForecastRemainingDelta > 0` and `ProgressDelta <= 0`
 - `IN-4` — Healthy progress (`Info`) when `ProgressDelta > 0` and `ForecastRemainingDelta <= 0`
 - `IN-5` — Low planning quality (`Warning`) when `PlanningQualityScore < 70`
 - `IN-6` — Very low planning quality (`Critical`) when `PlanningQualityScore < 50`
 - `IN-7` — Forecast unreliable (`Warning`) when Planning Quality contains `PQ-1`, `PQ-2`, or `PQ-7`
+- `IN-8` — Progress unknown (`Warning`) when `ProgressDelta == null`
 
 Each `Insight` carries an `InsightContext` with:
 
@@ -42,8 +43,8 @@ This keeps every message explainable without introducing new calculations or hid
 
 1. Progress = `0` emits `IN-1`
    - Verified by `InsightServiceTests.Analyze_EmitsProgressStalledInsight_WhenProgressDeltaIsZero`
-2. Progress = `null` emits `IN-1`
-   - Verified by `InsightServiceTests.Analyze_EmitsProgressStalledInsight_WhenProgressDeltaIsNull`
+2. Progress = `null` emits `IN-8`
+   - Verified by `InsightServiceTests.Analyze_EmitsProgressUnknownInsight_WhenProgressDeltaIsNull`
 3. Progress `< 0` emits `IN-2`
    - Verified by `InsightServiceTests.Analyze_EmitsProgressReversedAndScopeIncreaseInsights_WhenDeliveryFallsBehind`
 4. Remaining increases while progress is non-positive emits `IN-3`
@@ -56,6 +57,8 @@ This keeps every message explainable without introducing new calculations or hid
    - Verified by `InsightServiceTests.Analyze_EmitsPlanningQualityInsights_AndForecastUnreliable_WhenThresholdsAndSignalsMatch`
 8. `PQ-1`, `PQ-2`, or `PQ-7` emits `IN-7`
    - Verified by `InsightServiceTests.Analyze_EmitsPlanningQualityInsights_AndForecastUnreliable_WhenThresholdsAndSignalsMatch`
+9. `ProgressDelta = null` can still combine with planning-quality warnings without becoming `IN-1`
+   - Verified by `InsightServiceTests.Analyze_EmitsProgressUnknownAlongsidePlanningQualityInsights_WhenProgressCannotBeMeasured`
 
 ### Structural checks
 
@@ -69,6 +72,10 @@ This keeps every message explainable without introducing new calculations or hid
   - Verified: `InsightService` only reads already-computed result objects and emits new immutable records.
 - No new calculations
   - Verified: the service does not compute progress, forecast totals, deltas, or planning quality score.
+- Null is not treated as zero
+  - Verified: `IN-1` now requires an explicit measured `0`, while missing progress emits `IN-8`.
+- Mutual exclusivity preserved
+  - Verified: no tested path emits both `IN-1` and `IN-8`.
 
 Note: `IN-5` and `IN-6` are intentionally cumulative. When `PlanningQualityScore < 50`, both explicit conditions are true, so the service emits both a warning and a critical insight rather than inventing a suppression rule.
 
@@ -76,6 +83,8 @@ Note: `IN-5` and `IN-6` are intentionally cumulative. When `PlanningQualityScore
 
 - `ProgressDelta = 0`, `ForecastRemainingDelta = 5`, `PlanningQualityScore = 100`
   - Emits `IN-1`
+- `ProgressDelta = null`, `ForecastRemainingDelta = 5`, `PlanningQualityScore = 100`
+  - Emits `IN-8`
 - `ProgressDelta = -10`, `ForecastRemainingDelta = 12`, `PlanningQualityScore = 100`
   - Emits `IN-2`
   - Emits `IN-3`
