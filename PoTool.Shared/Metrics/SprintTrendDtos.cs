@@ -273,14 +273,16 @@ public record ProductSprintMetricsDto
     /// <summary>
     /// Net scope change in effort for this product during the sprint.
     /// Populated for the current or most recent sprint in the request.
+    /// Null when no canonical summary is available for this sprint-product row.
     /// </summary>
-    public int ScopeChangeEffort { get; init; }
+    public int? ScopeChangeEffort { get; init; }
 
     /// <summary>
     /// Number of features completed for this product during the sprint.
     /// Populated for the current or most recent sprint in the request.
+    /// Null when no canonical summary is available for this sprint-product row.
     /// </summary>
-    public int CompletedFeatureCount { get; init; }
+    public int? CompletedFeatureCount { get; init; }
 }
 
 /// <summary>
@@ -339,6 +341,11 @@ public record GetSprintTrendMetricsResponse
     /// Epic-level progress derived from child Feature progress.
     /// </summary>
     public IReadOnlyList<EpicProgressDto>? EpicProgress { get; init; }
+
+    /// <summary>
+    /// Canonical product-level analytics exposed for the current or most recent sprint in the request.
+    /// </summary>
+    public IReadOnlyList<ProductDeliveryAnalyticsDto>? ProductAnalytics { get; init; }
 
     /// <summary>
     /// Whether the cached projections may be stale.
@@ -413,6 +420,12 @@ public record FeatureProgressDto
     /// Forecast-only remaining effort-hours derived from effective progress and feature effort.
     /// </summary>
     public double? ForecastRemainingEffort { get; init; }
+
+    /// <summary>
+    /// Canonical feature effort-hours used by forecast and planning-quality analysis.
+    /// Null when effort is unavailable.
+    /// </summary>
+    public double? Effort { get; init; }
 
     /// <summary>
     /// Canonical feature weight already normalized by upstream mode handling.

@@ -6,6 +6,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Domain.DeliveryTrends.Models;
+using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
 
@@ -19,15 +20,27 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
 {
     private readonly PoToolDbContext _context;
     private readonly SprintTrendProjectionService _projectionService;
+    private readonly IProductAggregationService _productAggregationService;
+    private readonly IPlanningQualityService _planningQualityService;
+    private readonly ISnapshotComparisonService _snapshotComparisonService;
+    private readonly IInsightService _insightService;
     private readonly ILogger<GetSprintTrendMetricsQueryHandler> _logger;
 
     public GetSprintTrendMetricsQueryHandler(
         PoToolDbContext context,
         SprintTrendProjectionService projectionService,
+        IProductAggregationService productAggregationService,
+        IPlanningQualityService planningQualityService,
+        ISnapshotComparisonService snapshotComparisonService,
+        IInsightService insightService,
         ILogger<GetSprintTrendMetricsQueryHandler> logger)
     {
         _context = context;
         _projectionService = projectionService;
+        _productAggregationService = productAggregationService;
+        _planningQualityService = planningQualityService;
+        _snapshotComparisonService = snapshotComparisonService;
+        _insightService = insightService;
         _logger = logger;
     }
 
@@ -91,36 +104,31 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                 .Where(s => query.SprintIds.Contains(s.Id))
                 .ToDictionaryAsync(s => s.Id, s => s, cancellationToken);
 
-            // Get products for names
-            var productIds = projections.Select(p => p.ProductId).Distinct().ToList();
-            var products = await _context.Products
-                .Where(p => productIds.Contains(p.Id))
-                .ToDictionaryAsync(p => p.Id, p => p, cancellationToken);
-
             IReadOnlyList<FeatureProgressDto> featureProgress = Array.Empty<FeatureProgressDto>();
             IReadOnlyList<EpicProgressDto> epicProgress = Array.Empty<EpicProgressDto>();
+            IReadOnlyList<FeatureProgressDto> currentFeatureProgress = Array.Empty<FeatureProgressDto>();
+            IReadOnlyList<EpicProgressDto> currentEpicProgress = Array.Empty<EpicProgressDto>();
+            IReadOnlyList<ProductDeliveryAnalyticsDto> productAnalytics = Array.Empty<ProductDeliveryAnalyticsDto>();
             IReadOnlyDictionary<int, ProductDeliveryProgressSummary> deliverySummaryByProduct = new Dictionary<int, ProductDeliveryProgressSummary>();
             int? mostRecentSprintId = null;
+            IReadOnlyList<FeatureProgressDto> previousFeatureProgress = Array.Empty<FeatureProgressDto>();
+            IReadOnlyList<EpicProgressDto> previousEpicProgress = Array.Empty<EpicProgressDto>();
 
             if (query.SprintIds.Count > 0)
             {
                 // Determine the most recent sprint's date range for activity-based filtering
-                var mostRecentSprint = sprints.Values
+                var analyticsSprints = sprints.Values
                     .Where(s => s.StartDateUtc != null)
                     .OrderByDescending(s => s.StartDateUtc)
-                    .FirstOrDefault();
+                    .ToList();
+                var mostRecentSprint = analyticsSprints.FirstOrDefault();
+                var previousSprint = analyticsSprints.Skip(1).FirstOrDefault();
 
                 mostRecentSprintId = mostRecentSprint?.Id;
-
-                DateTime? sprintStartForFilter = mostRecentSprint?.StartDateUtc is { } startDate
-                    ? DateTime.SpecifyKind(startDate, DateTimeKind.Utc)
-                    : null;
-                DateTime? sprintEndForFilter = mostRecentSprint?.EndDateUtc is { } endDate
-                    ? DateTime.SpecifyKind(endDate, DateTimeKind.Utc)
-                    : null;
+                var (sprintStartForFilter, sprintEndForFilter) = GetSprintWindow(mostRecentSprint);
 
                 // Compute real feature progress from resolved hierarchy, filtered to sprint activity
-                featureProgress = await _projectionService.ComputeFeatureProgressAsync(
+                currentFeatureProgress = await _projectionService.ComputeFeatureProgressAsync(
                     query.ProductOwnerId,
                     FeatureProgressMode.StoryPoints,
                     sprintStartForFilter,
@@ -129,18 +137,103 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                     mostRecentSprint?.Id);
 
                 // Compute epic progress from feature progress
-                epicProgress = await _projectionService.ComputeEpicProgressAsync(
+                currentEpicProgress = await _projectionService.ComputeEpicProgressAsync(
                     query.ProductOwnerId,
-                    featureProgress,
+                    currentFeatureProgress,
                     cancellationToken);
 
-                deliverySummaryByProduct = epicProgress.ToProductDeliveryProgressSummaries();
+                deliverySummaryByProduct = currentEpicProgress.ToProductDeliveryProgressSummaries();
 
-                if (!query.IncludeDetails)
+                if (previousSprint is not null)
                 {
-                    featureProgress = Array.Empty<FeatureProgressDto>();
-                    epicProgress = Array.Empty<EpicProgressDto>();
+                    var (previousSprintStartForFilter, previousSprintEndForFilter) = GetSprintWindow(previousSprint);
+
+                    previousFeatureProgress = await _projectionService.ComputeFeatureProgressAsync(
+                        query.ProductOwnerId,
+                        FeatureProgressMode.StoryPoints,
+                        previousSprintStartForFilter,
+                        previousSprintEndForFilter,
+                        cancellationToken,
+                        previousSprint.Id);
+
+                    previousEpicProgress = await _projectionService.ComputeEpicProgressAsync(
+                        query.ProductOwnerId,
+                        previousFeatureProgress,
+                        cancellationToken);
                 }
+
+                featureProgress = query.IncludeDetails
+                    ? currentFeatureProgress
+                    : Array.Empty<FeatureProgressDto>();
+                epicProgress = query.IncludeDetails
+                    ? currentEpicProgress
+                    : Array.Empty<EpicProgressDto>();
+            }
+
+            var productIds = projections.Select(p => p.ProductId)
+                .Concat(currentFeatureProgress.Select(progress => progress.ProductId))
+                .Concat(currentEpicProgress.Select(progress => progress.ProductId))
+                .Concat(previousFeatureProgress.Select(progress => progress.ProductId))
+                .Concat(previousEpicProgress.Select(progress => progress.ProductId))
+                .Distinct()
+                .ToList();
+            var products = await _context.Products
+                .Where(p => productIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, p => p, cancellationToken);
+
+            if (previousEpicProgress.Count > 0 || currentEpicProgress.Count > 0)
+            {
+                var currentFeatureProgressByProduct = currentFeatureProgress
+                    .Select(progress => progress.ToFeatureProgress())
+                    .GroupBy(progress => progress.ProductId)
+                    .ToDictionary(group => group.Key, group => (IReadOnlyList<FeatureProgress>)group.ToList());
+                var currentEpicProgressByProduct = currentEpicProgress
+                    .Select(progress => progress.ToEpicProgress())
+                    .GroupBy(progress => progress.ProductId)
+                    .ToDictionary(group => group.Key, group => (IReadOnlyList<EpicProgress>)group.ToList());
+                var currentProducts = currentEpicProgress
+                    .GroupBy(progress => progress.ProductId)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => _productAggregationService.Compute(new ProductAggregationRequest(
+                            group.Select(progress => progress.ToProductAggregationEpicInput()).ToList())));
+                var previousProducts = previousEpicProgress
+                    .GroupBy(progress => progress.ProductId)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => _productAggregationService.Compute(new ProductAggregationRequest(
+                            group.Select(progress => progress.ToProductAggregationEpicInput()).ToList())));
+
+                productAnalytics = currentProducts
+                    .Select(pair =>
+                    {
+                        var productId = pair.Key;
+                        var currentProduct = pair.Value;
+                        previousProducts.TryGetValue(productId, out var previousProduct);
+
+                        var comparison = _snapshotComparisonService.Compare(new SnapshotComparisonRequest(
+                            previousProduct?.ToProductSnapshot(),
+                            currentProduct.ToProductSnapshot()));
+                        var planningQuality = _planningQualityService.Analyze(new PlanningQualityRequest(
+                            productId,
+                            currentFeatureProgressByProduct.GetValueOrDefault(productId) ?? Array.Empty<FeatureProgress>(),
+                            currentEpicProgressByProduct.GetValueOrDefault(productId) ?? Array.Empty<EpicProgress>(),
+                            currentProduct));
+                        var insights = _insightService.Analyze(new InsightRequest(
+                            currentProduct,
+                            comparison,
+                            planningQuality));
+
+                        return DeliveryTrendAnalyticsExposureMapper.ToProductDeliveryAnalyticsDto(
+                            productId,
+                            products.GetValueOrDefault(productId)?.Name ?? "Unknown",
+                            currentProduct,
+                            comparison,
+                            planningQuality,
+                            insights);
+                    })
+                    .OrderBy(analytics => analytics.ProductName)
+                    .ToList();
             }
 
             // Group by sprint
@@ -183,8 +276,8 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                             DerivedStoryPoints = p.DerivedStoryPoints,
                             UnestimatedDeliveryCount = p.UnestimatedDeliveryCount,
                             IsApproximate = p.IsApproximate,
-                            ScopeChangeEffort = deliverySummary?.ScopeChangeEffort ?? 0,
-                            CompletedFeatureCount = deliverySummary?.CompletedFeatureCount ?? 0
+                            ScopeChangeEffort = deliverySummary?.ScopeChangeEffort,
+                            CompletedFeatureCount = deliverySummary?.CompletedFeatureCount
                         };
                     }).ToList();
 
@@ -245,6 +338,7 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                 Metrics = metricsBySprint,
                 FeatureProgress = featureProgress,
                 EpicProgress = epicProgress,
+                ProductAnalytics = productAnalytics,
                 IsStale = isStale,
                 ProjectionsAsOfUtc = projectionsAsOf
             };
@@ -258,5 +352,17 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                 ErrorMessage = ex.Message
             };
         }
+    }
+
+    private static (DateTime? StartUtc, DateTime? EndUtc) GetSprintWindow(SprintEntity? sprint)
+    {
+        DateTime? startUtc = sprint?.StartDateUtc is { } startDate
+            ? DateTime.SpecifyKind(startDate, DateTimeKind.Utc)
+            : null;
+        DateTime? endUtc = sprint?.EndDateUtc is { } endDate
+            ? DateTime.SpecifyKind(endDate, DateTimeKind.Utc)
+            : null;
+
+        return (startUtc, endUtc);
     }
 }

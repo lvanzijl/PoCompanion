@@ -66,6 +66,7 @@ public sealed class DtoContractCleanupTests
             FeatureTitle = "Feature",
             ProductId = 2,
             ProgressPercent = 50,
+            Effort = 16,
             TotalStoryPoints = 10.5,
             DoneStoryPoints = 7.5
         };
@@ -95,6 +96,7 @@ public sealed class DtoContractCleanupTests
         StringAssert.Contains(featureJson, "\"TotalStoryPoints\":10.5");
         StringAssert.Contains(featureJson, "\"DoneStoryPoints\":7.5");
         StringAssert.Contains(featureJson, "\"DeliveredStoryPoints\":7.5");
+        StringAssert.Contains(featureJson, "\"Effort\":16");
         StringAssert.Contains(epicJson, "\"TotalStoryPoints\":20.5");
         StringAssert.Contains(epicJson, "\"DoneStoryPoints\":12.5");
         StringAssert.Contains(epicJson, "\"DeliveredStoryPoints\":12.5");
@@ -124,6 +126,95 @@ public sealed class DtoContractCleanupTests
 
         StringAssert.Contains(json, "\"ProgressPercent\":null");
         StringAssert.Contains(json, "\"AggregatedProgress\":null");
+    }
+
+    [TestMethod]
+    public void SprintTrendResponseDtos_SerializeCanonicalProductAnalyticsAndNullableCompatibilityFields()
+    {
+        var response = new GetSprintTrendMetricsResponse
+        {
+            Success = true,
+            Metrics =
+            [
+                new SprintTrendMetricsDto
+                {
+                    SprintId = 1,
+                    SprintName = "Sprint 1",
+                    ProductMetrics =
+                    [
+                        new ProductSprintMetricsDto
+                        {
+                            ProductId = 2,
+                            ProductName = "Product",
+                            ScopeChangeEffort = null,
+                            CompletedFeatureCount = null
+                        }
+                    ]
+                }
+            ],
+            ProductAnalytics =
+            [
+                new ProductDeliveryAnalyticsDto
+                {
+                    ProductId = 2,
+                    ProductName = "Product",
+                    Progress = new ProductProgressSummaryDto
+                    {
+                        ProductProgress = null,
+                        ProductForecastConsumed = 12.5,
+                        ProductForecastRemaining = null,
+                        ExcludedEpicsCount = 1
+                    },
+                    Comparison = new SnapshotComparisonDto
+                    {
+                        ProgressDelta = null,
+                        ForecastConsumedDelta = -2.5,
+                        ForecastRemainingDelta = null
+                    },
+                    PlanningQuality = new PlanningQualityDto
+                    {
+                        PlanningQualityScore = 55,
+                        PlanningQualitySignals =
+                        [
+                            new PlanningQualitySignalDto
+                            {
+                                Code = "PQ-6",
+                                Severity = "Warning",
+                                Scope = "Product",
+                                Message = "Excluded epics remain.",
+                                EntityId = 2
+                            }
+                        ]
+                    },
+                    Insights =
+                    [
+                        new InsightDto
+                        {
+                            Code = "IN-8",
+                            Severity = "Warning",
+                            Message = "Progress is unknown.",
+                            Context = new InsightContextDto
+                            {
+                                ProgressDelta = null,
+                                ForecastRemainingDelta = null,
+                                PlanningQualityScore = 55
+                            }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var json = JsonSerializer.Serialize(response);
+
+        StringAssert.Contains(json, "\"ScopeChangeEffort\":null");
+        StringAssert.Contains(json, "\"CompletedFeatureCount\":null");
+        StringAssert.Contains(json, "\"ProductAnalytics\"");
+        StringAssert.Contains(json, "\"ProductProgress\":null");
+        StringAssert.Contains(json, "\"ForecastConsumedDelta\":-2.5");
+        StringAssert.Contains(json, "\"PlanningQualityScore\":55");
+        StringAssert.Contains(json, "\"PlanningQualitySignals\"");
+        StringAssert.Contains(json, "\"Insights\"");
     }
 
     [TestMethod]
