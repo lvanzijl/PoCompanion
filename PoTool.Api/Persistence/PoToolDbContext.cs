@@ -212,6 +212,16 @@ public class PoToolDbContext : DbContext
     public DbSet<PortfolioFlowProjectionEntity> PortfolioFlowProjections => Set<PortfolioFlowProjectionEntity>();
 
     /// <summary>
+    /// Durable CDC portfolio snapshot headers.
+    /// </summary>
+    public DbSet<PortfolioSnapshotEntity> PortfolioSnapshots => Set<PortfolioSnapshotEntity>();
+
+    /// <summary>
+    /// Durable CDC portfolio snapshot rows.
+    /// </summary>
+    public DbSet<PortfolioSnapshotItemEntity> PortfolioSnapshotItems => Set<PortfolioSnapshotItemEntity>();
+
+    /// <summary>
     /// Roadmap snapshots — point-in-time captures of roadmap state.
     /// Stored application-side. Never modifies TFS.
     /// </summary>
@@ -692,6 +702,34 @@ public class PoToolDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PortfolioSnapshotEntity>(entity =>
+        {
+            entity.HasKey(e => e.SnapshotId);
+
+            entity.HasIndex(e => new { e.ProductId, e.TimestampUtc });
+            entity.HasIndex(e => new { e.ProductId, e.IsArchived, e.TimestampUtc, e.SnapshotId });
+
+            entity.Property(e => e.Source).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.CreatedBy).HasMaxLength(200);
+
+            entity.HasOne(e => e.Product)
+                .WithMany()
+                .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(e => e.Items)
+                .WithOne(i => i.Snapshot)
+                .HasForeignKey(i => i.SnapshotId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PortfolioSnapshotItemEntity>(entity =>
+        {
+            entity.HasIndex(e => e.SnapshotId);
+            entity.Property(e => e.ProjectNumber).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.WorkPackage).HasMaxLength(200);
         });
 
         // Roadmap snapshots

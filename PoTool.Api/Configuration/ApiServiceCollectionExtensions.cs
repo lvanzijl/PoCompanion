@@ -279,11 +279,15 @@ public static class ApiServiceCollectionExtensions
         services.AddSingleton<IPortfolioSnapshotValidationService, PortfolioSnapshotValidationService>();
         services.AddSingleton<IPortfolioSnapshotComparisonService, PortfolioSnapshotComparisonService>();
         services.AddSingleton<IPortfolioSnapshotFactory, PortfolioSnapshotFactory>();
+        services.AddSingleton<IPortfolioSnapshotPersistenceMapper, PortfolioSnapshotPersistenceMapper>();
         services.AddSingleton<IInsightService, InsightService>();
         services.AddSingleton<IDeliveryProgressRollupService, DeliveryProgressRollupService>();
         services.AddSingleton<IPortfolioDeliverySummaryService, PortfolioDeliverySummaryService>();
         services.AddSingleton<ISprintDeliveryProjectionService, SprintDeliveryProjectionService>();
         services.AddSingleton<IPortfolioFlowSummaryService, PortfolioFlowSummaryService>();
+        services.AddScoped<IPortfolioSnapshotCaptureDataService, PortfolioSnapshotCaptureDataService>();
+        services.AddScoped<IPortfolioSnapshotPersistenceService, PortfolioSnapshotPersistenceService>();
+        services.AddScoped<IPortfolioSnapshotSelectionService, PortfolioSnapshotSelectionService>();
         services.AddScoped<IPortfolioReadModelStateService, PortfolioReadModelStateService>();
         services.AddScoped<IPortfolioReadModelMapper, PortfolioReadModelMapper>();
         services.AddScoped<PortfolioProgressQueryService>();
