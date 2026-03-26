@@ -40,37 +40,82 @@ public sealed class PortfolioSnapshotValidationService : IPortfolioSnapshotValid
             .OrderBy(snapshot => snapshot.Timestamp)
             .ToList();
 
+        var historicalWorkPackageProjects = priorSnapshots
+            .SelectMany(snapshot => snapshot.Items)
+            .Where(item => item.WorkPackage is not null)
+            .Select(item => item.ProjectKey)
+            .Distinct()
+            .ToArray();
+
         foreach (var projectGroup in candidateSnapshot.Items.GroupBy(item => item.ProjectKey))
         {
-            var latestHistoricalBreakdown = priorSnapshots
-                .Where(snapshot => snapshot.Items.Any(item => item.ProjectKey == projectGroup.Key && item.WorkPackage is not null))
-                .LastOrDefault();
-
-            if (latestHistoricalBreakdown is null)
-            {
-                continue;
-            }
-
-            if (projectGroup.Any(item => item.WorkPackage is null))
+            if (historicalWorkPackageProjects.Contains(projectGroup.Key)
+                && projectGroup.Any(item => item.WorkPackage is null))
             {
                 throw new InvalidOperationException(
                     $"Project '{projectGroup.Key}' previously used work-package breakdown and cannot revert to project-level rows.");
             }
+        }
 
-            var requiredWorkPackages = latestHistoricalBreakdown.Items
-                .Where(item => item.ProjectKey == projectGroup.Key && item.WorkPackage is not null)
-                .Select(item => item.WorkPackage!)
-                .ToHashSet(StringComparer.Ordinal);
-            var candidateWorkPackages = projectGroup
-                .Select(item => item.WorkPackage!)
-                .ToHashSet(StringComparer.Ordinal);
+        var projectKeysToValidate = historicalWorkPackageProjects
+            .Concat(candidateSnapshot.Items.Where(item => item.WorkPackage is not null).Select(item => item.ProjectKey))
+            .Distinct()
+            .ToArray();
 
-            if (!requiredWorkPackages.IsSubsetOf(candidateWorkPackages))
+        foreach (var projectKey in projectKeysToValidate)
+        {
+            var latestHistoricalLifecycleByKey = GetLatestHistoricalLifecycleByKey(priorSnapshots, projectKey);
+            if (latestHistoricalLifecycleByKey.Count == 0)
+            {
+                continue;
+            }
+
+            var candidateItems = candidateSnapshot.Items
+                .Where(item => item.ProjectKey == projectKey && item.WorkPackage is not null)
+                .ToArray();
+
+            var retiredKeys = latestHistoricalLifecycleByKey
+                .Where(entry => entry.Value == WorkPackageLifecycleState.Retired)
+                .Select(entry => entry.Key)
+                .ToHashSet();
+            if (candidateItems.Any(item =>
+                    item.LifecycleState == WorkPackageLifecycleState.Active
+                    && retiredKeys.Contains(item.BusinessKey)))
             {
                 throw new InvalidOperationException(
-                    $"Project '{projectGroup.Key}' omits one or more required work packages from the latest breakdown snapshot.");
+                    $"Project '{projectKey}' cannot reactivate a retired work package.");
+            }
+
+            var requiredActiveKeys = latestHistoricalLifecycleByKey
+                .Where(entry => entry.Value == WorkPackageLifecycleState.Active)
+                .Select(entry => entry.Key)
+                .ToHashSet();
+            var candidateKeys = candidateItems
+                .Select(item => item.BusinessKey)
+                .ToHashSet();
+
+            if (!requiredActiveKeys.IsSubsetOf(candidateKeys))
+            {
+                throw new InvalidOperationException(
+                    $"Project '{projectKey}' omits one or more required active work packages from the latest breakdown snapshot.");
             }
         }
+    }
+
+    private static Dictionary<PortfolioSnapshotBusinessKey, WorkPackageLifecycleState> GetLatestHistoricalLifecycleByKey(
+        IEnumerable<PortfolioSnapshot> priorSnapshots,
+        PortfolioSnapshotProjectKey projectKey)
+    {
+        var lifecycleByKey = new Dictionary<PortfolioSnapshotBusinessKey, WorkPackageLifecycleState>();
+
+        foreach (var item in priorSnapshots
+                     .SelectMany(snapshot => snapshot.Items)
+                     .Where(item => item.ProjectKey == projectKey && item.WorkPackage is not null))
+        {
+            lifecycleByKey[item.BusinessKey] = item.LifecycleState;
+        }
+
+        return lifecycleByKey;
     }
 }
 
@@ -96,10 +141,7 @@ public sealed class PortfolioSnapshotComparisonService : IPortfolioSnapshotCompa
         var allKeys = previousItems.Keys
             .Concat(currentItems.Keys)
             .Distinct()
-            .OrderBy(key => key.ProductId)
-            .ThenBy(key => key.ProjectNumber, StringComparer.Ordinal)
-            .ThenBy(key => key.WorkPackage is null ? 0 : 1)
-            .ThenBy(key => key.WorkPackage, StringComparer.Ordinal)
+            .OrderBy(key => key, PortfolioSnapshotBusinessKeyComparer.Instance)
             .ToArray();
 
         var items = allKeys
@@ -107,17 +149,21 @@ public sealed class PortfolioSnapshotComparisonService : IPortfolioSnapshotCompa
             {
                 previousItems.TryGetValue(key, out var previousItem);
                 currentItems.TryGetValue(key, out var currentItem);
+                var previousAggregationItem = previousItem?.LifecycleState == WorkPackageLifecycleState.Active ? previousItem : null;
+                var currentAggregationItem = currentItem?.LifecycleState == WorkPackageLifecycleState.Active ? currentItem : null;
 
                 return new PortfolioSnapshotComparisonItem(
                     key.ProductId,
                     key.ProjectNumber,
                     key.WorkPackage,
-                    previousItem?.Progress,
-                    currentItem?.Progress,
-                    ComputeDelta(previousItem?.Progress, currentItem?.Progress),
-                    previousItem?.TotalWeight,
-                    currentItem?.TotalWeight,
-                    ComputeDelta(previousItem?.TotalWeight, currentItem?.TotalWeight));
+                    previousItem?.LifecycleState,
+                    currentItem?.LifecycleState,
+                    previousAggregationItem?.Progress,
+                    currentAggregationItem?.Progress,
+                    ComputeDelta(previousAggregationItem?.Progress, currentAggregationItem?.Progress),
+                    previousAggregationItem?.TotalWeight,
+                    currentAggregationItem?.TotalWeight,
+                    ComputeDelta(previousAggregationItem?.TotalWeight, currentAggregationItem?.TotalWeight));
             })
             .ToArray();
 

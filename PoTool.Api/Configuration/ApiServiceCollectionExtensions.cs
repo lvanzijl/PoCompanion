@@ -278,6 +278,7 @@ public static class ApiServiceCollectionExtensions
         services.AddSingleton<ISnapshotComparisonService, SnapshotComparisonService>();
         services.AddSingleton<IPortfolioSnapshotValidationService, PortfolioSnapshotValidationService>();
         services.AddSingleton<IPortfolioSnapshotComparisonService, PortfolioSnapshotComparisonService>();
+        services.AddSingleton<IPortfolioSnapshotFactory, PortfolioSnapshotFactory>();
         services.AddSingleton<IInsightService, InsightService>();
         services.AddSingleton<IDeliveryProgressRollupService, DeliveryProgressRollupService>();
         services.AddSingleton<IPortfolioDeliverySummaryService, PortfolioDeliverySummaryService>();

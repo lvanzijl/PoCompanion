@@ -26,6 +26,7 @@ public sealed class PortfolioSnapshotValidationServiceTests
         Assert.IsNull(snapshot.Items[0].WorkPackage);
         Assert.AreEqual(0.4d, snapshot.Items[0].Progress, 0.001d);
         Assert.AreEqual(20d, snapshot.Items[0].TotalWeight, 0.001d);
+        Assert.AreEqual(WorkPackageLifecycleState.Active, snapshot.Items[0].LifecycleState);
     }
 
     [TestMethod]
@@ -122,6 +123,73 @@ public sealed class PortfolioSnapshotValidationServiceTests
 
         Assert.ThrowsExactly<InvalidOperationException>(() =>
             ValidationService.ValidateCreation([previousSnapshot], candidateSnapshot));
+    }
+
+    [TestMethod]
+    public void ValidateCreation_RejectsMissingHistoricalActiveWorkPackageWhenProjectIsOmitted()
+    {
+        var previousTimestamp = new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero);
+        var currentTimestamp = previousTimestamp.AddDays(7);
+
+        var previousSnapshot = new PortfolioSnapshot(previousTimestamp,
+        [
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-1", 0.4d, 10)
+        ]);
+
+        var candidateSnapshot = new PortfolioSnapshot(currentTimestamp,
+        [
+            new PortfolioSnapshotItem(2, "PRJ-200", null, 0.65d, 12)
+        ]);
+
+        Assert.ThrowsExactly<InvalidOperationException>(() =>
+            ValidationService.ValidateCreation([previousSnapshot], candidateSnapshot));
+    }
+
+    [TestMethod]
+    public void ValidateCreation_AllowsRetiredItemsToDropOutOfFutureSnapshots()
+    {
+        var initialTimestamp = new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero);
+        var retiredTimestamp = initialTimestamp.AddDays(7);
+        var futureTimestamp = retiredTimestamp.AddDays(7);
+
+        var initialSnapshot = new PortfolioSnapshot(initialTimestamp,
+        [
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-1", 0.4d, 10)
+        ]);
+        var retiredSnapshot = new PortfolioSnapshot(retiredTimestamp,
+        [
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-1", 0.4d, 10, WorkPackageLifecycleState.Retired)
+        ]);
+        var candidateSnapshot = new PortfolioSnapshot(futureTimestamp,
+        [
+            new PortfolioSnapshotItem(2, "PRJ-200", null, 0.65d, 12)
+        ]);
+
+        ValidationService.ValidateCreation([initialSnapshot, retiredSnapshot], candidateSnapshot);
+    }
+
+    [TestMethod]
+    public void ValidateCreation_RejectsReactivatingRetiredWorkPackage()
+    {
+        var initialTimestamp = new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero);
+        var retiredTimestamp = initialTimestamp.AddDays(7);
+        var futureTimestamp = retiredTimestamp.AddDays(7);
+
+        var initialSnapshot = new PortfolioSnapshot(initialTimestamp,
+        [
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-1", 0.4d, 10)
+        ]);
+        var retiredSnapshot = new PortfolioSnapshot(retiredTimestamp,
+        [
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-1", 0.4d, 10, WorkPackageLifecycleState.Retired)
+        ]);
+        var candidateSnapshot = new PortfolioSnapshot(futureTimestamp,
+        [
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-1", 0.65d, 12)
+        ]);
+
+        Assert.ThrowsExactly<InvalidOperationException>(() =>
+            ValidationService.ValidateCreation([initialSnapshot, retiredSnapshot], candidateSnapshot));
     }
 
     [TestMethod]
