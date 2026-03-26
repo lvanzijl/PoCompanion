@@ -1,0 +1,146 @@
+namespace PoTool.Core.Domain.DeliveryTrends.Models;
+
+/// <summary>
+/// Canonical portfolio snapshot captured at a single point in time for CDC delivery comparison.
+/// </summary>
+public sealed record PortfolioSnapshot
+{
+    public PortfolioSnapshot(DateTimeOffset timestamp, IReadOnlyList<PortfolioSnapshotItem> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        if (items.Count == 0)
+        {
+            throw new ArgumentException("Portfolio snapshot must contain at least one item.", nameof(items));
+        }
+
+        var duplicateKey = items
+            .GroupBy(item => item.BusinessKey)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateKey is not null)
+        {
+            throw new ArgumentException(
+                $"Portfolio snapshot contains duplicate business key '{duplicateKey.Key}'.",
+                nameof(items));
+        }
+
+        var mismatchedTimestamp = items.FirstOrDefault(item => item.Timestamp != timestamp);
+        if (mismatchedTimestamp is not null)
+        {
+            throw new ArgumentException(
+                "Portfolio snapshot items must use the same timestamp as the snapshot header.",
+                nameof(items));
+        }
+
+        foreach (var projectGroup in items.GroupBy(item => item.ProjectKey))
+        {
+            var hasProjectLevelRows = projectGroup.Any(item => item.WorkPackage is null);
+            var hasWorkPackageRows = projectGroup.Any(item => item.WorkPackage is not null);
+
+            if (hasProjectLevelRows && hasWorkPackageRows)
+            {
+                throw new ArgumentException(
+                    $"Project '{projectGroup.Key}' mixes project-level and work-package rows in the same snapshot.",
+                    nameof(items));
+            }
+        }
+
+        Timestamp = timestamp;
+        Items = items.ToArray();
+    }
+
+    public DateTimeOffset Timestamp { get; }
+
+    public IReadOnlyList<PortfolioSnapshotItem> Items { get; }
+}
+
+/// <summary>
+/// Canonical project or work-package row captured inside a CDC portfolio snapshot.
+/// </summary>
+public sealed record PortfolioSnapshotItem
+{
+    public PortfolioSnapshotItem(
+        DateTimeOffset timestamp,
+        int productId,
+        string projectNumber,
+        string? workPackage,
+        double progress,
+        double totalWeight)
+    {
+        DeliveryTrendModelValidation.ValidatePositiveId(productId, nameof(productId), "ProductId");
+        DeliveryTrendModelValidation.ValidateRequiredText(projectNumber, nameof(projectNumber), "ProjectNumber");
+
+        if (workPackage is not null)
+        {
+            DeliveryTrendModelValidation.ValidateRequiredText(workPackage, nameof(workPackage), "WorkPackage");
+        }
+
+        DeliveryTrendModelValidation.ValidateBoundedPercentage(progress, nameof(progress), "Progress");
+        DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(totalWeight, nameof(totalWeight), "TotalWeight");
+
+        Timestamp = timestamp;
+        ProductId = productId;
+        ProjectNumber = projectNumber;
+        WorkPackage = workPackage;
+        Progress = progress;
+        TotalWeight = totalWeight;
+    }
+
+    public DateTimeOffset Timestamp { get; }
+
+    public int ProductId { get; }
+
+    public string ProjectNumber { get; }
+
+    public string? WorkPackage { get; }
+
+    public double Progress { get; }
+
+    public double TotalWeight { get; }
+
+    internal PortfolioSnapshotProjectKey ProjectKey => new(ProductId, ProjectNumber);
+
+    internal PortfolioSnapshotBusinessKey BusinessKey => new(ProductId, ProjectNumber, WorkPackage);
+}
+
+/// <summary>
+/// Comparison request for two CDC portfolio snapshots.
+/// </summary>
+public sealed record PortfolioSnapshotComparisonRequest(
+    PortfolioSnapshot? Previous,
+    PortfolioSnapshot Current);
+
+/// <summary>
+/// Delta output for one exact business key across two portfolio snapshots.
+/// </summary>
+public sealed record PortfolioSnapshotComparisonItem(
+    int ProductId,
+    string ProjectNumber,
+    string? WorkPackage,
+    double? PreviousProgress,
+    double? CurrentProgress,
+    double? ProgressDelta,
+    double? PreviousWeight,
+    double? CurrentWeight,
+    double? WeightDelta);
+
+/// <summary>
+/// Deterministic comparison result for a portfolio snapshot delta calculation.
+/// </summary>
+public sealed record PortfolioSnapshotComparisonResult(
+    IReadOnlyList<PortfolioSnapshotComparisonItem> Items);
+
+internal readonly record struct PortfolioSnapshotProjectKey(
+    int ProductId,
+    string ProjectNumber)
+{
+    public override string ToString() => $"{ProductId}:{ProjectNumber}";
+}
+
+internal readonly record struct PortfolioSnapshotBusinessKey(
+    int ProductId,
+    string ProjectNumber,
+    string? WorkPackage)
+{
+    public override string ToString() => $"{ProductId}:{ProjectNumber}:{WorkPackage ?? "<project>"}";
+}
