@@ -1,0 +1,43 @@
+namespace PoTool.Tests.Unit.Audits;
+
+[TestClass]
+public sealed class PortfolioCdcUiAuditTests
+{
+    [TestMethod]
+    public void PortfolioCdcReadOnlyPanel_ConsumesReadOnlyDtosWithoutUiAggregations()
+    {
+        var repositoryRoot = GetRepositoryRoot();
+        var panelPath = Path.Combine(repositoryRoot, "PoTool.Client", "Pages", "Home", "Components", "PortfolioCdcReadOnlyPanel.razor");
+        var pagePath = Path.Combine(repositoryRoot, "PoTool.Client", "Pages", "Home", "PortfolioProgressPage.razor");
+
+        var panel = File.ReadAllText(panelPath);
+        var page = File.ReadAllText(pagePath);
+
+        StringAssert.Contains(panel, "PortfolioProgressDto");
+        StringAssert.Contains(panel, "PortfolioSnapshotDto");
+        StringAssert.Contains(panel, "PortfolioComparisonDto");
+        StringAssert.Contains(panel, "GetPortfolioProgressAsync");
+        StringAssert.Contains(panel, "GetPortfolioSnapshotsAsync");
+        StringAssert.Contains(panel, "GetPortfolioComparisonAsync");
+        Assert.IsFalse(panel.Contains(".Sum(", StringComparison.Ordinal), "The UI component should not aggregate domain values.");
+        Assert.IsFalse(panel.Contains(".Average(", StringComparison.Ordinal), "The UI component should not calculate averages.");
+        StringAssert.Contains(page, "<PortfolioCdcReadOnlyPanel />");
+    }
+
+    private static string GetRepositoryRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "PoTool.sln")))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Could not locate the repository root containing PoTool.sln.");
+    }
+}

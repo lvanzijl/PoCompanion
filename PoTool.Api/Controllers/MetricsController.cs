@@ -12,8 +12,8 @@ namespace PoTool.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class MetricsController : ControllerBase
-{
+    public class MetricsController : ControllerBase
+    {
     private readonly IMediator _mediator;
     private readonly ILogger<MetricsController> _logger;
 
@@ -24,6 +24,23 @@ public class MetricsController : ControllerBase
         _mediator = mediator;
         _logger = logger;
     }
+
+    private static PortfolioReadQueryOptions BuildPortfolioReadOptions(
+        int? productId,
+        string? projectNumber,
+        string? workPackage,
+        PortfolioLifecycleState? lifecycleState,
+        PortfolioReadSortBy sortBy,
+        PortfolioReadSortDirection sortDirection,
+        PortfolioReadGroupBy groupBy)
+        => new(
+            productId,
+            projectNumber,
+            workPackage,
+            lifecycleState,
+            sortBy,
+            sortDirection,
+            groupBy);
 
     /// <summary>
     /// Gets historical metrics for a specific sprint window.
@@ -214,6 +231,102 @@ public class MetricsController : ControllerBase
         {
             _logger.LogError(ex, "Error retrieving sprint capacity plan for iteration: {IterationPath}", iterationPath);
             return StatusCode(500, "Error retrieving sprint capacity plan");
+        }
+    }
+
+    /// <summary>
+    /// Gets the latest available read-only portfolio progress snapshot.
+    /// </summary>
+    [HttpGet("/api/portfolio/progress")]
+    public async Task<ActionResult<PortfolioProgressDto>> GetPortfolioProgress(
+        [FromQuery][Required] int productOwnerId,
+        [FromQuery] int? productId = null,
+        [FromQuery] string? projectNumber = null,
+        [FromQuery] string? workPackage = null,
+        [FromQuery] PortfolioLifecycleState? lifecycleState = null,
+        [FromQuery] PortfolioReadSortBy sortBy = PortfolioReadSortBy.Default,
+        [FromQuery] PortfolioReadSortDirection sortDirection = PortfolioReadSortDirection.Desc,
+        [FromQuery] PortfolioReadGroupBy groupBy = PortfolioReadGroupBy.None,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var progress = await _mediator.Send(
+                new GetPortfolioProgressQuery(
+                    productOwnerId,
+                    BuildPortfolioReadOptions(productId, projectNumber, workPackage, lifecycleState, sortBy, sortDirection, groupBy)),
+                cancellationToken);
+
+            return Ok(progress);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving portfolio progress for ProductOwner {ProductOwnerId}", productOwnerId);
+            return StatusCode(500, "Error retrieving portfolio progress");
+        }
+    }
+
+    /// <summary>
+    /// Gets the latest available read-only portfolio snapshot.
+    /// </summary>
+    [HttpGet("/api/portfolio/snapshots")]
+    public async Task<ActionResult<PortfolioSnapshotDto>> GetPortfolioSnapshots(
+        [FromQuery][Required] int productOwnerId,
+        [FromQuery] int? productId = null,
+        [FromQuery] string? projectNumber = null,
+        [FromQuery] string? workPackage = null,
+        [FromQuery] PortfolioLifecycleState? lifecycleState = null,
+        [FromQuery] PortfolioReadSortBy sortBy = PortfolioReadSortBy.Default,
+        [FromQuery] PortfolioReadSortDirection sortDirection = PortfolioReadSortDirection.Desc,
+        [FromQuery] PortfolioReadGroupBy groupBy = PortfolioReadGroupBy.None,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var snapshot = await _mediator.Send(
+                new GetPortfolioSnapshotsQuery(
+                    productOwnerId,
+                    BuildPortfolioReadOptions(productId, projectNumber, workPackage, lifecycleState, sortBy, sortDirection, groupBy)),
+                cancellationToken);
+
+            return Ok(snapshot);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving portfolio snapshots for ProductOwner {ProductOwnerId}", productOwnerId);
+            return StatusCode(500, "Error retrieving portfolio snapshots");
+        }
+    }
+
+    /// <summary>
+    /// Gets the read-only comparison between the latest two available portfolio snapshots.
+    /// </summary>
+    [HttpGet("/api/portfolio/comparison")]
+    public async Task<ActionResult<PortfolioComparisonDto>> GetPortfolioComparison(
+        [FromQuery][Required] int productOwnerId,
+        [FromQuery] int? productId = null,
+        [FromQuery] string? projectNumber = null,
+        [FromQuery] string? workPackage = null,
+        [FromQuery] PortfolioLifecycleState? lifecycleState = null,
+        [FromQuery] PortfolioReadSortBy sortBy = PortfolioReadSortBy.Default,
+        [FromQuery] PortfolioReadSortDirection sortDirection = PortfolioReadSortDirection.Desc,
+        [FromQuery] PortfolioReadGroupBy groupBy = PortfolioReadGroupBy.None,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var comparison = await _mediator.Send(
+                new GetPortfolioComparisonQuery(
+                    productOwnerId,
+                    BuildPortfolioReadOptions(productId, projectNumber, workPackage, lifecycleState, sortBy, sortDirection, groupBy)),
+                cancellationToken);
+
+            return Ok(comparison);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving portfolio comparison for ProductOwner {ProductOwnerId}", productOwnerId);
+            return StatusCode(500, "Error retrieving portfolio comparison");
         }
     }
 

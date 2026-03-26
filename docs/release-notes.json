@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-26",
+    "type": "Changed",
+    "title": "Portfolio Progress now includes CDC snapshot views",
+    "impact": "Portfolio Progress now shows read-only CDC snapshot rows, snapshot comparison deltas, lifecycle state, and output filtering without adding any UI-side portfolio calculations.",
+    "area": "Trends",
+    "link": "/home/portfolio-progress"
+  },
+  {
+    "date": "2026-03-26",
     "type": "Fixed",
     "title": "Error recovery button now uses sentence case",
     "impact": "The global error screen now labels its recovery action as \"Try again\" for consistent UI wording.",
