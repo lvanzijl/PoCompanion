@@ -405,6 +405,16 @@ public record FeatureProgressDto
     public double? EffectiveProgress { get; init; }
 
     /// <summary>
+    /// Forecast-only consumed effort-hours derived from effective progress and feature effort.
+    /// </summary>
+    public double? ForecastConsumedEffort { get; init; }
+
+    /// <summary>
+    /// Forecast-only remaining effort-hours derived from effective progress and feature effort.
+    /// </summary>
+    public double? ForecastRemainingEffort { get; init; }
+
+    /// <summary>
     /// Non-blocking planning-quality validation signals emitted by the feature progress engine.
     /// </summary>
     public IReadOnlyList<string> ValidationSignals { get; init; } = Array.Empty<string>();

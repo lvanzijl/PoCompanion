@@ -27,7 +27,9 @@ public sealed record FeatureProgress
         double? calculatedProgress = null,
         double? overrideProgress = null,
         double? effectiveProgress = null,
-        IReadOnlyList<string>? validationSignals = null)
+        IReadOnlyList<string>? validationSignals = null,
+        double? forecastConsumedEffort = null,
+        double? forecastRemainingEffort = null)
     {
         DeliveryTrendModelValidation.ValidatePositiveId(featureId, nameof(featureId), "Feature ID");
         DeliveryTrendModelValidation.ValidatePositiveId(productId, nameof(productId), "Product ID");
@@ -69,6 +71,8 @@ public sealed record FeatureProgress
         Override = overrideProgress;
         EffectiveProgress = effectiveProgress;
         ValidationSignals = validationSignals ?? Array.Empty<string>();
+        ForecastConsumedEffort = forecastConsumedEffort;
+        ForecastRemainingEffort = forecastRemainingEffort;
     }
 
     public int FeatureId { get; }
@@ -108,4 +112,8 @@ public sealed record FeatureProgress
     public double? EffectiveProgress { get; }
 
     public IReadOnlyList<string> ValidationSignals { get; }
+
+    public double? ForecastConsumedEffort { get; }
+
+    public double? ForecastRemainingEffort { get; }
 }

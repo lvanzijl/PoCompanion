@@ -36,6 +36,7 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
     private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
     private readonly IHierarchyRollupService _hierarchyRollupService;
     private readonly IFeatureProgressService _featureProgressService;
+    private readonly IFeatureForecastService _featureForecastService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DeliveryProgressRollupService"/> class.
@@ -43,11 +44,13 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
     public DeliveryProgressRollupService(
         ICanonicalStoryPointResolutionService storyPointResolutionService,
         IHierarchyRollupService hierarchyRollupService,
-        IFeatureProgressService? featureProgressService = null)
+        IFeatureProgressService? featureProgressService = null,
+        IFeatureForecastService? featureForecastService = null)
     {
         _storyPointResolutionService = storyPointResolutionService ?? throw new ArgumentNullException(nameof(storyPointResolutionService));
         _hierarchyRollupService = hierarchyRollupService ?? throw new ArgumentNullException(nameof(hierarchyRollupService));
         _featureProgressService = featureProgressService ?? new FeatureProgressService();
+        _featureForecastService = featureForecastService ?? new FeatureForecastService();
     }
 
     /// <inheritdoc />
@@ -107,6 +110,9 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                     featureScope.Total,
                     featureScope.Completed,
                     featureWorkItem.TimeCriticality));
+                var featureForecast = _featureForecastService.Compute(new FeatureForecastCalculationRequest(
+                    featureProgress.EffectiveProgress,
+                    featureWorkItem.Effort));
                 var featureIsDone = StateClassificationLookup.IsDone(request.StateLookup, featureWorkItem.WorkItemType, featureWorkItem.State);
                 var progressPercent = featureProgress.EffectiveProgress.HasValue
                     ? (int)Math.Round(featureProgress.EffectiveProgress.Value, MidpointRounding.AwayFromZero)
@@ -158,7 +164,9 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                     featureProgress.CalculatedProgress,
                     featureProgress.Override,
                     featureProgress.EffectiveProgress,
-                    featureProgress.ValidationSignals));
+                    featureProgress.ValidationSignals,
+                    featureForecast.ForecastConsumedEffort,
+                    featureForecast.ForecastRemainingEffort));
             }
         }
 

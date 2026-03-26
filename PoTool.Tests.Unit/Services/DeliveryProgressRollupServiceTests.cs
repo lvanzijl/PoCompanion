@@ -87,6 +87,60 @@ public sealed class DeliveryProgressRollupServiceTests
     }
 
     [TestMethod]
+    public void ComputeFeatureProgress_DelegatesForecastCalculationToFeatureForecastService()
+    {
+        var service = CreateService(featureForecastService: new StubFeatureForecastService(
+            new FeatureForecastResult(
+                Effort: 100d,
+                EffectiveProgress: 50d,
+                ForecastConsumedEffort: 12.34d,
+                ForecastRemainingEffort: 56.78d)));
+
+        var result = service.ComputeFeatureProgress(new DeliveryFeatureProgressRequest(
+            [
+                CreateResolvedWorkItem(100, CanonicalWorkItemTypes.Feature),
+                CreateResolvedWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, resolvedFeatureId: 100)
+            ],
+            new Dictionary<int, DeliveryTrendWorkItem>
+            {
+                [100] = CreateWorkItem(100, CanonicalWorkItemTypes.Feature, "Feature A", state: "Active", effort: 100),
+                [201] = CreateWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, "Done PBI", parentId: 100, state: "Done", storyPoints: 5)
+            },
+            [1],
+            FeatureProgressMode.StoryPoints));
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(12.34d, result[0].ForecastConsumedEffort!.Value, 0.001d);
+        Assert.AreEqual(56.78d, result[0].ForecastRemainingEffort!.Value, 0.001d);
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_ComputesFeatureForecastFromEffectiveProgressAndFeatureEffort()
+    {
+        var service = CreateService();
+
+        var result = service.ComputeFeatureProgress(new DeliveryFeatureProgressRequest(
+            [
+                CreateResolvedWorkItem(100, CanonicalWorkItemTypes.Feature),
+                CreateResolvedWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, resolvedFeatureId: 100),
+                CreateResolvedWorkItem(202, CanonicalWorkItemTypes.ProductBacklogItem, resolvedFeatureId: 100)
+            ],
+            new Dictionary<int, DeliveryTrendWorkItem>
+            {
+                [100] = CreateWorkItem(100, CanonicalWorkItemTypes.Feature, "Feature A", state: "Active", effort: 80),
+                [201] = CreateWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, "Done PBI", parentId: 100, state: "Done", storyPoints: 5),
+                [202] = CreateWorkItem(202, CanonicalWorkItemTypes.ProductBacklogItem, "Active PBI", parentId: 100, state: "Active", storyPoints: 5)
+            },
+            [1],
+            FeatureProgressMode.StoryPoints));
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(50d, result[0].EffectiveProgress!.Value, 0.001d);
+        Assert.AreEqual(40d, result[0].ForecastConsumedEffort!.Value, 0.001d);
+        Assert.AreEqual(40d, result[0].ForecastRemainingEffort!.Value, 0.001d);
+    }
+
+    [TestMethod]
     public void ComputeEpicProgress_AggregatesFeatureRollups()
     {
         var service = CreateService();
@@ -173,11 +227,19 @@ public sealed class DeliveryProgressRollupServiceTests
         Assert.AreEqual(50d, result.Percentage, 0.001d);
     }
 
-    private static IDeliveryProgressRollupService CreateService()
+    private static IDeliveryProgressRollupService CreateService(IFeatureForecastService? featureForecastService = null)
     {
         var storyPointResolutionService = new CanonicalStoryPointResolutionService();
         var hierarchyRollupService = new HierarchyRollupService(storyPointResolutionService);
-        return new DeliveryProgressRollupService(storyPointResolutionService, hierarchyRollupService);
+        return new DeliveryProgressRollupService(
+            storyPointResolutionService,
+            hierarchyRollupService,
+            featureForecastService: featureForecastService);
+    }
+
+    private sealed class StubFeatureForecastService(FeatureForecastResult result) : IFeatureForecastService
+    {
+        public FeatureForecastResult Compute(FeatureForecastCalculationRequest request) => result;
     }
 
     private static DeliveryTrendResolvedWorkItem CreateResolvedWorkItem(
