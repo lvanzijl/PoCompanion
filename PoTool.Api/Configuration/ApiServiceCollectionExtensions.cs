@@ -290,9 +290,13 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IPortfolioSnapshotSelectionService, PortfolioSnapshotSelectionService>();
         services.AddScoped<IPortfolioReadModelStateService, PortfolioReadModelStateService>();
         services.AddScoped<IPortfolioReadModelMapper, PortfolioReadModelMapper>();
+        services.AddScoped<IPortfolioTrendAnalysisService, PortfolioTrendAnalysisService>();
+        services.AddSingleton<IPortfolioDecisionSignalService, PortfolioDecisionSignalService>();
         services.AddScoped<PortfolioProgressQueryService>();
         services.AddScoped<PortfolioSnapshotQueryService>();
         services.AddScoped<PortfolioComparisonQueryService>();
+        services.AddScoped<PortfolioTrendQueryService>();
+        services.AddScoped<PortfolioDecisionSignalQueryService>();
         services.AddSingleton<ICompletionForecastService, CompletionForecastService>();
         services.AddSingleton<IVelocityCalibrationService, VelocityCalibrationService>();
         services.AddSingleton<IEffortTrendForecastService, EffortTrendForecastService>();

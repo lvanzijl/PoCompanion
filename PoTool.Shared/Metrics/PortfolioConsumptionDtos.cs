@@ -61,6 +61,46 @@ public enum PortfolioReadGroupBy
 }
 
 /// <summary>
+/// Deterministic trend direction for persisted portfolio history.
+/// </summary>
+public enum PortfolioTrendDirection
+{
+    /// <summary>Latest value is lower than the previous value.</summary>
+    Decreasing = 0,
+
+    /// <summary>Latest value matches the previous value.</summary>
+    Stable = 1,
+
+    /// <summary>Latest value is higher than the previous value.</summary>
+    Increasing = 2
+}
+
+/// <summary>
+/// Read-only decision-signal types derived from persisted portfolio history.
+/// </summary>
+public enum PortfolioDecisionSignalType
+{
+    ProgressImproving = 0,
+    ProgressDeclining = 1,
+    WeightIncreasing = 2,
+    WeightDecreasing = 3,
+    NewWorkPackage = 4,
+    RetiredWorkPackage = 5,
+    RepeatedNoChange = 6,
+    ArchivedSnapshotExcludedNotice = 7
+}
+
+/// <summary>
+/// Visual tone for read-only portfolio decision signals.
+/// </summary>
+public enum PortfolioDecisionSignalTone
+{
+    Info = 0,
+    Positive = 1,
+    Warning = 2
+}
+
+/// <summary>
 /// Read-only filter and presentational options for portfolio queries.
 /// Filtering is applied after domain computation.
 /// </summary>
@@ -71,7 +111,12 @@ public sealed record PortfolioReadQueryOptions(
     PortfolioLifecycleState? LifecycleState = null,
     PortfolioReadSortBy SortBy = PortfolioReadSortBy.Default,
     PortfolioReadSortDirection SortDirection = PortfolioReadSortDirection.Desc,
-    PortfolioReadGroupBy GroupBy = PortfolioReadGroupBy.None);
+    PortfolioReadGroupBy GroupBy = PortfolioReadGroupBy.None,
+    int SnapshotCount = 6,
+    DateTimeOffset? RangeStartUtc = null,
+    DateTimeOffset? RangeEndUtc = null,
+    bool IncludeArchivedSnapshots = false,
+    long? CompareToSnapshotId = null);
 
 /// <summary>
 /// Read-only portfolio progress response projected from the latest available portfolio snapshot.
@@ -251,4 +296,178 @@ public sealed record PortfolioComparisonItemDto
 
     /// <summary>Weight delta when available.</summary>
     public double? WeightDelta { get; init; }
+}
+
+/// <summary>
+/// Read-only historical snapshot option used for trend history and explicit comparison selection.
+/// </summary>
+public sealed record PortfolioHistoricalSnapshotDto
+{
+    /// <summary>Persisted snapshot identifier used for deterministic selection.</summary>
+    public required long SnapshotId { get; init; }
+
+    /// <summary>Snapshot label/source.</summary>
+    public required string SnapshotLabel { get; init; }
+
+    /// <summary>Snapshot timestamp.</summary>
+    public required DateTimeOffset Timestamp { get; init; }
+
+    /// <summary>Whether the selected snapshot group contains archived persisted snapshots.</summary>
+    public required bool IncludesArchivedSnapshot { get; init; }
+}
+
+/// <summary>
+/// Point in a persisted portfolio trend series.
+/// </summary>
+public sealed record PortfolioTrendPointDto
+{
+    /// <summary>Persisted snapshot identifier.</summary>
+    public required long SnapshotId { get; init; }
+
+    /// <summary>Snapshot label/source.</summary>
+    public required string SnapshotLabel { get; init; }
+
+    /// <summary>Snapshot timestamp.</summary>
+    public required DateTimeOffset Timestamp { get; init; }
+
+    /// <summary>Projected value at the selected snapshot, or null when no persisted active baseline exists.</summary>
+    public double? Value { get; init; }
+
+    /// <summary>Whether the selected point includes archived persisted snapshots.</summary>
+    public required bool IncludesArchivedSnapshot { get; init; }
+}
+
+/// <summary>
+/// Read-only trend metric projected from persisted snapshot history.
+/// </summary>
+public sealed record PortfolioMetricTrendDto
+{
+    /// <summary>Latest value in the selected series.</summary>
+    public double? CurrentValue { get; init; }
+
+    /// <summary>Previous value in the selected series.</summary>
+    public double? PreviousValue { get; init; }
+
+    /// <summary>Latest minus previous value when both exist.</summary>
+    public double? Delta { get; init; }
+
+    /// <summary>Deterministic direction derived from the latest two values when both exist.</summary>
+    public PortfolioTrendDirection? Direction { get; init; }
+
+    /// <summary>Persisted historical points that back this series.</summary>
+    public required IReadOnlyList<PortfolioTrendPointDto> Points { get; init; }
+}
+
+/// <summary>
+/// Read-only project/work-package trend summary projected from persisted snapshot history.
+/// </summary>
+public sealed record PortfolioScopedTrendDto
+{
+    /// <summary>Product identifier.</summary>
+    public required int ProductId { get; init; }
+
+    /// <summary>Product display name.</summary>
+    public required string ProductName { get; init; }
+
+    /// <summary>Project number business key.</summary>
+    public required string ProjectNumber { get; init; }
+
+    /// <summary>Optional work-package business key.</summary>
+    public string? WorkPackage { get; init; }
+
+    /// <summary>Latest lifecycle state in the selected history when available.</summary>
+    public PortfolioLifecycleState? CurrentLifecycleState { get; init; }
+
+    /// <summary>Previous lifecycle state in the selected history when available.</summary>
+    public PortfolioLifecycleState? PreviousLifecycleState { get; init; }
+
+    /// <summary>Progress trend summary.</summary>
+    public required PortfolioMetricTrendDto ProgressTrend { get; init; }
+
+    /// <summary>Weight trend summary.</summary>
+    public required PortfolioMetricTrendDto WeightTrend { get; init; }
+}
+
+/// <summary>
+/// Read-only portfolio trend response based only on persisted snapshot history.
+/// </summary>
+public sealed record PortfolioTrendDto
+{
+    /// <summary>Selected historical snapshots in deterministic latest-first order.</summary>
+    public required IReadOnlyList<PortfolioHistoricalSnapshotDto> Snapshots { get; init; }
+
+    /// <summary>Overall portfolio progress trend.</summary>
+    public required PortfolioMetricTrendDto PortfolioProgressTrend { get; init; }
+
+    /// <summary>Overall portfolio total-weight trend.</summary>
+    public required PortfolioMetricTrendDto TotalWeightTrend { get; init; }
+
+    /// <summary>Per-project trend summaries.</summary>
+    public required IReadOnlyList<PortfolioScopedTrendDto> Projects { get; init; }
+
+    /// <summary>Per-work-package trend summaries.</summary>
+    public required IReadOnlyList<PortfolioScopedTrendDto> WorkPackages { get; init; }
+
+    /// <summary>Applied snapshot-count bound.</summary>
+    public required int SnapshotCount { get; init; }
+
+    /// <summary>Optional lower time bound for history selection.</summary>
+    public DateTimeOffset? RangeStartUtc { get; init; }
+
+    /// <summary>Optional upper time bound for history selection.</summary>
+    public DateTimeOffset? RangeEndUtc { get; init; }
+
+    /// <summary>Whether archived persisted snapshots were explicitly included.</summary>
+    public required bool IncludesArchivedSnapshots { get; init; }
+
+    /// <summary>Whether archived snapshots remain excluded by default.</summary>
+    public required bool ArchivedSnapshotsExcludedByDefault { get; init; }
+
+    /// <summary>Whether excluded archived snapshots exist for the selected history window.</summary>
+    public required bool ArchivedSnapshotsExcludedNotice { get; init; }
+
+    /// <summary>Whether the response contains historical data.</summary>
+    public required bool HasData { get; init; }
+}
+
+/// <summary>
+/// Read-only decision-support signal projected from persisted portfolio history.
+/// </summary>
+public sealed record PortfolioDecisionSignalDto
+{
+    /// <summary>Signal type.</summary>
+    public required PortfolioDecisionSignalType Type { get; init; }
+
+    /// <summary>UI tone hint for this signal.</summary>
+    public required PortfolioDecisionSignalTone Tone { get; init; }
+
+    /// <summary>Short signal title.</summary>
+    public required string Title { get; init; }
+
+    /// <summary>Signal description.</summary>
+    public required string Description { get; init; }
+
+    /// <summary>Optional product identifier.</summary>
+    public int? ProductId { get; init; }
+
+    /// <summary>Optional product name.</summary>
+    public string? ProductName { get; init; }
+
+    /// <summary>Optional project number.</summary>
+    public string? ProjectNumber { get; init; }
+
+    /// <summary>Optional work-package key.</summary>
+    public string? WorkPackage { get; init; }
+
+    /// <summary>Optional lifecycle state for the signal scope.</summary>
+    public PortfolioLifecycleState? LifecycleState { get; init; }
+
+    /// <summary>Optional snapshot identifier associated with the signal.</summary>
+    public long? SnapshotId { get; init; }
+
+    /// <summary>Optional snapshot label associated with the signal.</summary>
+    public string? SnapshotLabel { get; init; }
+
+    /// <summary>Optional snapshot timestamp associated with the signal.</summary>
+    public DateTimeOffset? SnapshotTimestamp { get; init; }
 }

@@ -5,6 +5,8 @@ namespace PoTool.Api.Services;
 
 public interface IPortfolioReadModelMapper
 {
+    PortfolioLifecycleState ToLifecycleState(WorkPackageLifecycleState lifecycleState);
+
     PortfolioSnapshotItemDto ToSnapshotItemDto(
         PortfolioSnapshotItem item,
         IReadOnlyDictionary<int, string> productNames);
@@ -16,6 +18,14 @@ public interface IPortfolioReadModelMapper
 
 public sealed class PortfolioReadModelMapper : IPortfolioReadModelMapper
 {
+    public PortfolioLifecycleState ToLifecycleState(WorkPackageLifecycleState lifecycleState)
+        => lifecycleState switch
+        {
+            WorkPackageLifecycleState.Active => PortfolioLifecycleState.Active,
+            WorkPackageLifecycleState.Retired => PortfolioLifecycleState.Retired,
+            _ => throw new ArgumentOutOfRangeException(nameof(lifecycleState), lifecycleState, "Unsupported lifecycle state.")
+        };
+
     public PortfolioSnapshotItemDto ToSnapshotItemDto(
         PortfolioSnapshotItem item,
         IReadOnlyDictionary<int, string> productNames)
@@ -68,12 +78,4 @@ public sealed class PortfolioReadModelMapper : IPortfolioReadModelMapper
             WeightDelta = item.WeightDelta
         };
     }
-
-    private static PortfolioLifecycleState ToLifecycleState(WorkPackageLifecycleState lifecycleState)
-        => lifecycleState switch
-        {
-            WorkPackageLifecycleState.Active => PortfolioLifecycleState.Active,
-            WorkPackageLifecycleState.Retired => PortfolioLifecycleState.Retired,
-            _ => throw new ArgumentOutOfRangeException(nameof(lifecycleState), lifecycleState, "Unsupported lifecycle state.")
-        };
 }

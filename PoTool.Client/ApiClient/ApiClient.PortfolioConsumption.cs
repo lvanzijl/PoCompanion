@@ -39,6 +39,41 @@ public partial interface IMetricsClient
         PortfolioReadSortBy sortBy,
         PortfolioReadSortDirection sortDirection,
         PortfolioReadGroupBy groupBy,
+        DateTimeOffset? rangeStartUtc,
+        DateTimeOffset? rangeEndUtc,
+        bool includeArchivedSnapshots,
+        long? compareToSnapshotId,
+        CancellationToken cancellationToken = default);
+
+    Task<PortfolioTrendDto> GetPortfolioTrendsAsync(
+        int productOwnerId,
+        int? productId,
+        string? projectNumber,
+        string? workPackage,
+        PortfolioLifecycleState? lifecycleState,
+        PortfolioReadSortBy sortBy,
+        PortfolioReadSortDirection sortDirection,
+        PortfolioReadGroupBy groupBy,
+        int snapshotCount,
+        DateTimeOffset? rangeStartUtc,
+        DateTimeOffset? rangeEndUtc,
+        bool includeArchivedSnapshots,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PortfolioDecisionSignalDto>> GetPortfolioSignalsAsync(
+        int productOwnerId,
+        int? productId,
+        string? projectNumber,
+        string? workPackage,
+        PortfolioLifecycleState? lifecycleState,
+        PortfolioReadSortBy sortBy,
+        PortfolioReadSortDirection sortDirection,
+        PortfolioReadGroupBy groupBy,
+        int snapshotCount,
+        DateTimeOffset? rangeStartUtc,
+        DateTimeOffset? rangeEndUtc,
+        bool includeArchivedSnapshots,
+        long? compareToSnapshotId,
         CancellationToken cancellationToken = default);
 }
 
@@ -67,6 +102,11 @@ public partial class MetricsClient
             sortBy,
             sortDirection,
             groupBy,
+            snapshotCount: null,
+            rangeStartUtc: null,
+            rangeEndUtc: null,
+            includeArchivedSnapshots: false,
+            compareToSnapshotId: null,
             cancellationToken);
 
     public Task<PortfolioSnapshotDto> GetPortfolioSnapshotsAsync(
@@ -89,6 +129,11 @@ public partial class MetricsClient
             sortBy,
             sortDirection,
             groupBy,
+            snapshotCount: null,
+            rangeStartUtc: null,
+            rangeEndUtc: null,
+            includeArchivedSnapshots: false,
+            compareToSnapshotId: null,
             cancellationToken);
 
     public Task<PortfolioComparisonDto> GetPortfolioComparisonAsync(
@@ -100,6 +145,10 @@ public partial class MetricsClient
         PortfolioReadSortBy sortBy,
         PortfolioReadSortDirection sortDirection,
         PortfolioReadGroupBy groupBy,
+        DateTimeOffset? rangeStartUtc,
+        DateTimeOffset? rangeEndUtc,
+        bool includeArchivedSnapshots,
+        long? compareToSnapshotId,
         CancellationToken cancellationToken = default)
         => GetPortfolioReadModelAsync<PortfolioComparisonDto>(
             "api/portfolio/comparison",
@@ -111,6 +160,74 @@ public partial class MetricsClient
             sortBy,
             sortDirection,
             groupBy,
+            snapshotCount: null,
+            rangeStartUtc,
+            rangeEndUtc,
+            includeArchivedSnapshots,
+            compareToSnapshotId,
+            cancellationToken);
+
+    public Task<PortfolioTrendDto> GetPortfolioTrendsAsync(
+        int productOwnerId,
+        int? productId,
+        string? projectNumber,
+        string? workPackage,
+        PortfolioLifecycleState? lifecycleState,
+        PortfolioReadSortBy sortBy,
+        PortfolioReadSortDirection sortDirection,
+        PortfolioReadGroupBy groupBy,
+        int snapshotCount,
+        DateTimeOffset? rangeStartUtc,
+        DateTimeOffset? rangeEndUtc,
+        bool includeArchivedSnapshots,
+        CancellationToken cancellationToken = default)
+        => GetPortfolioReadModelAsync<PortfolioTrendDto>(
+            "api/portfolio/trends",
+            productOwnerId,
+            productId,
+            projectNumber,
+            workPackage,
+            lifecycleState,
+            sortBy,
+            sortDirection,
+            groupBy,
+            snapshotCount,
+            rangeStartUtc,
+            rangeEndUtc,
+            includeArchivedSnapshots,
+            compareToSnapshotId: null,
+            cancellationToken);
+
+    public Task<IReadOnlyList<PortfolioDecisionSignalDto>> GetPortfolioSignalsAsync(
+        int productOwnerId,
+        int? productId,
+        string? projectNumber,
+        string? workPackage,
+        PortfolioLifecycleState? lifecycleState,
+        PortfolioReadSortBy sortBy,
+        PortfolioReadSortDirection sortDirection,
+        PortfolioReadGroupBy groupBy,
+        int snapshotCount,
+        DateTimeOffset? rangeStartUtc,
+        DateTimeOffset? rangeEndUtc,
+        bool includeArchivedSnapshots,
+        long? compareToSnapshotId,
+        CancellationToken cancellationToken = default)
+        => GetPortfolioReadModelAsync<IReadOnlyList<PortfolioDecisionSignalDto>>(
+            "api/portfolio/signals",
+            productOwnerId,
+            productId,
+            projectNumber,
+            workPackage,
+            lifecycleState,
+            sortBy,
+            sortDirection,
+            groupBy,
+            snapshotCount,
+            rangeStartUtc,
+            rangeEndUtc,
+            includeArchivedSnapshots,
+            compareToSnapshotId,
             cancellationToken);
 
     private async Task<TResponse> GetPortfolioReadModelAsync<TResponse>(
@@ -123,6 +240,11 @@ public partial class MetricsClient
         PortfolioReadSortBy sortBy,
         PortfolioReadSortDirection sortDirection,
         PortfolioReadGroupBy groupBy,
+        int? snapshotCount,
+        DateTimeOffset? rangeStartUtc,
+        DateTimeOffset? rangeEndUtc,
+        bool includeArchivedSnapshots,
+        long? compareToSnapshotId,
         CancellationToken cancellationToken)
     {
         var client_ = _httpClient;
@@ -153,6 +275,11 @@ public partial class MetricsClient
             AppendOptionalQuery(urlBuilder_, "sortBy", sortBy);
             AppendOptionalQuery(urlBuilder_, "sortDirection", sortDirection);
             AppendOptionalQuery(urlBuilder_, "groupBy", groupBy);
+            AppendOptionalQuery(urlBuilder_, "snapshotCount", snapshotCount);
+            AppendOptionalQuery(urlBuilder_, "rangeStartUtc", rangeStartUtc);
+            AppendOptionalQuery(urlBuilder_, "rangeEndUtc", rangeEndUtc);
+            AppendOptionalQuery(urlBuilder_, "includeArchivedSnapshots", includeArchivedSnapshots);
+            AppendOptionalQuery(urlBuilder_, "compareToSnapshotId", compareToSnapshotId);
 
             urlBuilder_.Length--;
 

@@ -25,7 +25,7 @@ public sealed class PortfolioComparisonQueryService
         PortfolioReadQueryOptions? options,
         CancellationToken cancellationToken)
     {
-        var state = await _stateService.GetLatestStateAsync(productOwnerId, cancellationToken);
+        var state = await _stateService.GetComparisonStateAsync(productOwnerId, options, cancellationToken);
         if (state is null)
         {
             return new PortfolioComparisonDto
@@ -45,8 +45,8 @@ public sealed class PortfolioComparisonQueryService
         }
 
         var comparison = _comparisonService.Compare(new PortfolioSnapshotComparisonRequest(
-            state.PreviousSnapshot,
-            state.CurrentSnapshot));
+            state.ComparisonSnapshot?.Snapshot,
+            state.CurrentSnapshot.Snapshot));
 
         var mappedItems = comparison.Items
             .Select(item => _mapper.ToComparisonItemDto(item, state.ProductNames));
@@ -54,10 +54,10 @@ public sealed class PortfolioComparisonQueryService
 
         return new PortfolioComparisonDto
         {
-            PreviousSnapshotLabel = state.PreviousSnapshotLabel,
-            CurrentSnapshotLabel = state.CurrentSnapshotLabel,
-            PreviousTimestamp = state.PreviousSnapshot?.Timestamp,
-            CurrentTimestamp = state.CurrentSnapshot.Timestamp,
+            PreviousSnapshotLabel = state.ComparisonSnapshot?.Source,
+            CurrentSnapshotLabel = state.CurrentSnapshot.Source,
+            PreviousTimestamp = state.ComparisonSnapshot?.Snapshot.Timestamp,
+            CurrentTimestamp = state.CurrentSnapshot.Snapshot.Timestamp,
             TotalItemCount = comparison.Items.Count,
             FilteredItemCount = filteredItems.Count,
             GroupBy = options?.GroupBy ?? PortfolioReadGroupBy.None,

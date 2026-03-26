@@ -121,9 +121,13 @@ public class ServiceCollectionTests
         var portfolioSnapshotSelectionService = scope.ServiceProvider.GetService<IPortfolioSnapshotSelectionService>();
         var portfolioReadModelStateService = scope.ServiceProvider.GetService<IPortfolioReadModelStateService>();
         var portfolioReadModelMapper = scope.ServiceProvider.GetService<IPortfolioReadModelMapper>();
+        var portfolioTrendAnalysisService = scope.ServiceProvider.GetService<IPortfolioTrendAnalysisService>();
+        var portfolioDecisionSignalService = scope.ServiceProvider.GetService<IPortfolioDecisionSignalService>();
         var portfolioProgressQueryService = scope.ServiceProvider.GetService<PortfolioProgressQueryService>();
         var portfolioSnapshotQueryService = scope.ServiceProvider.GetService<PortfolioSnapshotQueryService>();
         var portfolioComparisonQueryService = scope.ServiceProvider.GetService<PortfolioComparisonQueryService>();
+        var portfolioTrendQueryService = scope.ServiceProvider.GetService<PortfolioTrendQueryService>();
+        var portfolioDecisionSignalQueryService = scope.ServiceProvider.GetService<PortfolioDecisionSignalQueryService>();
         var insightService = scope.ServiceProvider.GetService<IInsightService>();
         var deliveryProgressRollupService = scope.ServiceProvider.GetService<IDeliveryProgressRollupService>();
         var portfolioDeliverySummaryService = scope.ServiceProvider.GetService<IPortfolioDeliverySummaryService>();
@@ -160,9 +164,13 @@ public class ServiceCollectionTests
         Assert.IsNotNull(portfolioSnapshotSelectionService, "Portfolio snapshot selection service should be registered.");
         Assert.IsNotNull(portfolioReadModelStateService, "Portfolio read-model state service should be registered.");
         Assert.IsNotNull(portfolioReadModelMapper, "Portfolio read-model mapper should be registered.");
+        Assert.IsNotNull(portfolioTrendAnalysisService, "Portfolio trend analysis service should be registered.");
+        Assert.IsNotNull(portfolioDecisionSignalService, "Portfolio decision-signal service should be registered.");
         Assert.IsNotNull(portfolioProgressQueryService, "Portfolio progress query service should be registered.");
         Assert.IsNotNull(portfolioSnapshotQueryService, "Portfolio snapshot query service should be registered.");
         Assert.IsNotNull(portfolioComparisonQueryService, "Portfolio comparison query service should be registered.");
+        Assert.IsNotNull(portfolioTrendQueryService, "Portfolio trend query service should be registered.");
+        Assert.IsNotNull(portfolioDecisionSignalQueryService, "Portfolio decision-signal query service should be registered.");
         Assert.IsNotNull(insightService, "Insight service should be registered.");
         Assert.IsNotNull(deliveryProgressRollupService, "Delivery progress rollup service should be registered.");
         Assert.IsNotNull(portfolioDeliverySummaryService, "Portfolio delivery summary service should be registered.");

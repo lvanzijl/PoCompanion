@@ -111,4 +111,97 @@ public sealed class MetricsControllerPortfolioReadTests
 
         Assert.IsInstanceOfType<OkObjectResult>(result.Result);
     }
+
+    [TestMethod]
+    public async Task GetPortfolioComparison_MapsHistoricalSelectionParametersIntoQuery()
+    {
+        var mediator = new Mock<IMediator>(MockBehavior.Strict);
+        mediator
+            .Setup(service => service.Send(
+                It.Is<GetPortfolioComparisonQuery>(query =>
+                    query.ProductOwnerId == 7
+                    && query.Options!.IncludeArchivedSnapshots
+                    && query.Options.CompareToSnapshotId == 99
+                    && query.Options.RangeStartUtc == new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero)
+                    && query.Options.RangeEndUtc == new DateTimeOffset(2026, 3, 31, 0, 0, 0, TimeSpan.Zero)),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PortfolioComparisonDto
+            {
+                PreviousSnapshotLabel = "Sprint 1",
+                CurrentSnapshotLabel = "Sprint 3",
+                PreviousTimestamp = new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
+                CurrentTimestamp = new DateTimeOffset(2026, 3, 31, 0, 0, 0, TimeSpan.Zero),
+                TotalItemCount = 0,
+                FilteredItemCount = 0,
+                GroupBy = PortfolioReadGroupBy.None,
+                SortBy = PortfolioReadSortBy.Default,
+                SortDirection = PortfolioReadSortDirection.Desc,
+                Items = Array.Empty<PortfolioComparisonItemDto>(),
+                HasData = true
+            });
+
+        var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
+
+        var result = await controller.GetPortfolioComparison(
+            7,
+            rangeStartUtc: new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
+            rangeEndUtc: new DateTimeOffset(2026, 3, 31, 0, 0, 0, TimeSpan.Zero),
+            includeArchivedSnapshots: true,
+            compareToSnapshotId: 99,
+            cancellationToken: CancellationToken.None);
+
+        Assert.IsInstanceOfType<OkObjectResult>(result.Result);
+        mediator.VerifyAll();
+    }
+
+    [TestMethod]
+    public async Task GetPortfolioTrends_ReturnsOkResponseFromMediator()
+    {
+        var mediator = new Mock<IMediator>(MockBehavior.Strict);
+        mediator
+            .Setup(service => service.Send(It.IsAny<GetPortfolioTrendsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PortfolioTrendDto
+            {
+                Snapshots = Array.Empty<PortfolioHistoricalSnapshotDto>(),
+                PortfolioProgressTrend = new PortfolioMetricTrendDto { Points = Array.Empty<PortfolioTrendPointDto>() },
+                TotalWeightTrend = new PortfolioMetricTrendDto { Points = Array.Empty<PortfolioTrendPointDto>() },
+                Projects = Array.Empty<PortfolioScopedTrendDto>(),
+                WorkPackages = Array.Empty<PortfolioScopedTrendDto>(),
+                SnapshotCount = 6,
+                IncludesArchivedSnapshots = false,
+                ArchivedSnapshotsExcludedByDefault = true,
+                ArchivedSnapshotsExcludedNotice = false,
+                HasData = true
+            });
+
+        var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
+
+        var result = await controller.GetPortfolioTrends(7, snapshotCount: 6, cancellationToken: CancellationToken.None);
+
+        Assert.IsInstanceOfType<OkObjectResult>(result.Result);
+    }
+
+    [TestMethod]
+    public async Task GetPortfolioSignals_ReturnsOkResponseFromMediator()
+    {
+        var mediator = new Mock<IMediator>(MockBehavior.Strict);
+        mediator
+            .Setup(service => service.Send(It.IsAny<GetPortfolioSignalsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new PortfolioDecisionSignalDto
+                {
+                    Type = PortfolioDecisionSignalType.ProgressImproving,
+                    Tone = PortfolioDecisionSignalTone.Positive,
+                    Title = "Portfolio progress is improving",
+                    Description = "Progress increased."
+                }
+            ]);
+
+        var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
+
+        var result = await controller.GetPortfolioSignals(7, snapshotCount: 6, cancellationToken: CancellationToken.None);
+
+        Assert.IsInstanceOfType<OkObjectResult>(result.Result);
+    }
 }
