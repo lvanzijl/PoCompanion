@@ -1,5 +1,7 @@
 # Epic Aggregation Null Semantics Fix
 
+> Historical note: this document describes the pre-Phase C null-semantics correction. The current authoritative epic-progress behavior is documented in `docs/implementation/phase-c-epic-progress.md`, where zero-weight epic aggregation is now deterministic and returns `0` instead of `null`.
+
 ## Exact places corrected
 
 - Updated `/home/runner/work/PoCompanion/PoCompanion/PoTool.Core.Domain/Domain/DeliveryTrends/Models/EpicProgress.cs`
