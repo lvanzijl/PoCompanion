@@ -23,7 +23,13 @@ public sealed record EpicProgress
         ProgressionDelta sprintProgressionDelta,
         int sprintEffortDelta,
         int sprintCompletedPbiCount,
-        int sprintCompletedFeatureCount)
+        int sprintCompletedFeatureCount,
+        double? aggregatedProgress = null,
+        double? forecastConsumedEffort = null,
+        double? forecastRemainingEffort = null,
+        int excludedFeaturesCount = 0,
+        int includedFeaturesCount = 0,
+        double totalWeight = 0)
     {
         DeliveryTrendModelValidation.ValidatePositiveId(epicId, nameof(epicId), "Epic ID");
         DeliveryTrendModelValidation.ValidatePositiveId(productId, nameof(productId), "Product ID");
@@ -37,6 +43,14 @@ public sealed record EpicProgress
         DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(sprintDeliveredStoryPoints, nameof(sprintDeliveredStoryPoints), "Sprint delivered story points");
         DeliveryTrendModelValidation.ValidateCount(sprintCompletedPbiCount, nameof(sprintCompletedPbiCount), "Sprint completed PBI count");
         DeliveryTrendModelValidation.ValidateCount(sprintCompletedFeatureCount, nameof(sprintCompletedFeatureCount), "Sprint completed feature count");
+        DeliveryTrendModelValidation.ValidateCount(excludedFeaturesCount, nameof(excludedFeaturesCount), "Excluded feature count");
+        DeliveryTrendModelValidation.ValidateCount(includedFeaturesCount, nameof(includedFeaturesCount), "Included feature count");
+        DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(totalWeight, nameof(totalWeight), "Total weight");
+
+        if (aggregatedProgress.HasValue)
+        {
+            DeliveryTrendModelValidation.ValidateBoundedPercentage(aggregatedProgress.Value, nameof(aggregatedProgress), "Aggregated progress");
+        }
 
         EpicId = epicId;
         EpicTitle = epicTitle;
@@ -53,6 +67,12 @@ public sealed record EpicProgress
         SprintEffortDelta = sprintEffortDelta;
         SprintCompletedPbiCount = sprintCompletedPbiCount;
         SprintCompletedFeatureCount = sprintCompletedFeatureCount;
+        AggregatedProgress = aggregatedProgress;
+        ForecastConsumedEffort = forecastConsumedEffort;
+        ForecastRemainingEffort = forecastRemainingEffort;
+        ExcludedFeaturesCount = excludedFeaturesCount;
+        IncludedFeaturesCount = includedFeaturesCount;
+        TotalWeight = totalWeight;
     }
 
     public int EpicId { get; }
@@ -84,4 +104,16 @@ public sealed record EpicProgress
     public int SprintCompletedPbiCount { get; }
 
     public int SprintCompletedFeatureCount { get; }
+
+    public double? AggregatedProgress { get; }
+
+    public double? ForecastConsumedEffort { get; }
+
+    public double? ForecastRemainingEffort { get; }
+
+    public int ExcludedFeaturesCount { get; }
+
+    public int IncludedFeaturesCount { get; }
+
+    public double TotalWeight { get; }
 }

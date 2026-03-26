@@ -31,7 +31,9 @@ public sealed class DeliveryTrendProgressRollupMapperTests
             effectiveProgress: 70,
             validationSignals: [FeatureProgressValidationSignals.OverrideOutOfRange],
             forecastConsumedEffort: 9.5,
-            forecastRemainingEffort: 3.5);
+            forecastRemainingEffort: 3.5,
+            weight: 13.5,
+            isExcluded: false);
 
         var dto = featureProgress.ToFeatureProgressDto(Array.Empty<CompletedPbiDto>());
 
@@ -40,6 +42,8 @@ public sealed class DeliveryTrendProgressRollupMapperTests
         Assert.AreEqual(70d, dto.EffectiveProgress!.Value, 0.001d);
         Assert.AreEqual(9.5d, dto.ForecastConsumedEffort!.Value, 0.001d);
         Assert.AreEqual(3.5d, dto.ForecastRemainingEffort!.Value, 0.001d);
+        Assert.AreEqual(13.5d, dto.Weight, 0.001d);
+        Assert.IsFalse(dto.IsExcluded);
         CollectionAssert.Contains(dto.ValidationSignals.ToList(), FeatureProgressValidationSignals.OverrideOutOfRange);
         Assert.AreEqual(13.5d, dto.TotalStoryPoints, 0.001d);
         Assert.AreEqual(8.25d, dto.DoneStoryPoints, 0.001d);
@@ -64,12 +68,24 @@ public sealed class DeliveryTrendProgressRollupMapperTests
             sprintProgressionDelta: new ProgressionDelta(14.5),
             sprintEffortDelta: 6,
             sprintCompletedPbiCount: 2,
-            sprintCompletedFeatureCount: 1);
+            sprintCompletedFeatureCount: 1,
+            aggregatedProgress: 61.63,
+            forecastConsumedEffort: 20.5,
+            forecastRemainingEffort: 34.5,
+            excludedFeaturesCount: 1,
+            includedFeaturesCount: 3,
+            totalWeight: 21.5);
 
         var dto = epicProgress.ToEpicProgressDto();
 
         Assert.AreEqual(21.5d, dto.TotalStoryPoints, 0.001d);
         Assert.AreEqual(13.25d, dto.DoneStoryPoints, 0.001d);
         Assert.AreEqual(13.25d, dto.DeliveredStoryPoints, 0.001d);
+        Assert.AreEqual(61.63d, dto.AggregatedProgress!.Value, 0.001d);
+        Assert.AreEqual(20.5d, dto.ForecastConsumedEffort!.Value, 0.001d);
+        Assert.AreEqual(34.5d, dto.ForecastRemainingEffort!.Value, 0.001d);
+        Assert.AreEqual(1, dto.ExcludedFeaturesCount);
+        Assert.AreEqual(3, dto.IncludedFeaturesCount);
+        Assert.AreEqual(21.5d, dto.TotalWeight, 0.001d);
     }
 }

@@ -415,6 +415,17 @@ public record FeatureProgressDto
     public double? ForecastRemainingEffort { get; init; }
 
     /// <summary>
+    /// Canonical feature weight already normalized by upstream mode handling.
+    /// Story-point mode uses story points; count mode uses PBI count.
+    /// </summary>
+    public double Weight { get; init; }
+
+    /// <summary>
+    /// Indicates that the feature was excluded from weighted epic progress because it had no usable weight.
+    /// </summary>
+    public bool IsExcluded { get; init; }
+
+    /// <summary>
     /// Non-blocking planning-quality validation signals emitted by the feature progress engine.
     /// </summary>
     public IReadOnlyList<string> ValidationSignals { get; init; } = Array.Empty<string>();
@@ -511,10 +522,40 @@ public record EpicProgressDto
 
     /// <summary>
     /// Progress percentage (0-100).
-    /// Derived from child feature story-point rollups.
-    /// Epic.State == Done => 100%, otherwise min(raw, 90%).
+    /// Compatibility alias for the aggregated epic progress value rounded to an integer.
     /// </summary>
     public int ProgressPercent { get; init; }
+
+    /// <summary>
+    /// Weighted epic progress derived only from canonical feature outputs.
+    /// Null when all features are excluded or the included weight sum is zero.
+    /// </summary>
+    public double? AggregatedProgress { get; init; }
+
+    /// <summary>
+    /// Forecast-only consumed effort-hours summed from child feature forecasts.
+    /// </summary>
+    public double? ForecastConsumedEffort { get; init; }
+
+    /// <summary>
+    /// Forecast-only remaining effort-hours summed from child feature forecasts.
+    /// </summary>
+    public double? ForecastRemainingEffort { get; init; }
+
+    /// <summary>
+    /// Number of child features excluded from weighted epic progress.
+    /// </summary>
+    public int ExcludedFeaturesCount { get; init; }
+
+    /// <summary>
+    /// Number of child features included in weighted epic progress.
+    /// </summary>
+    public int IncludedFeaturesCount { get; init; }
+
+    /// <summary>
+    /// Total weight of included child features used for epic progress.
+    /// </summary>
+    public double TotalWeight { get; init; }
 
     /// <summary>
     /// Total canonical story-point scope of all PBIs under this epic's features.

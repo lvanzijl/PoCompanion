@@ -23,6 +23,8 @@ internal static class DeliveryTrendProgressRollupMapper
             EffectiveProgress = featureProgress.EffectiveProgress,
             ForecastConsumedEffort = featureProgress.ForecastConsumedEffort,
             ForecastRemainingEffort = featureProgress.ForecastRemainingEffort,
+            Weight = featureProgress.Weight,
+            IsExcluded = featureProgress.IsExcluded,
             ValidationSignals = featureProgress.ValidationSignals,
             TotalStoryPoints = featureProgress.TotalScopeStoryPoints,
             DoneStoryPoints = featureProgress.DeliveredStoryPoints,
@@ -70,7 +72,9 @@ internal static class DeliveryTrendProgressRollupMapper
             featureProgress.EffectiveProgress,
             featureProgress.ValidationSignals,
             featureProgress.ForecastConsumedEffort,
-            featureProgress.ForecastRemainingEffort);
+            featureProgress.ForecastRemainingEffort,
+            featureProgress.Weight,
+            featureProgress.IsExcluded);
     }
 
     public static EpicProgressDto ToEpicProgressDto(this EpicProgress epicProgress)
@@ -81,6 +85,12 @@ internal static class DeliveryTrendProgressRollupMapper
             EpicTitle = epicProgress.EpicTitle,
             ProductId = epicProgress.ProductId,
             ProgressPercent = epicProgress.ProgressPercent,
+            AggregatedProgress = epicProgress.AggregatedProgress,
+            ForecastConsumedEffort = epicProgress.ForecastConsumedEffort,
+            ForecastRemainingEffort = epicProgress.ForecastRemainingEffort,
+            ExcludedFeaturesCount = epicProgress.ExcludedFeaturesCount,
+            IncludedFeaturesCount = epicProgress.IncludedFeaturesCount,
+            TotalWeight = epicProgress.TotalWeight,
             TotalStoryPoints = epicProgress.TotalScopeStoryPoints,
             DoneStoryPoints = epicProgress.DeliveredStoryPoints,
             FeatureCount = epicProgress.FeatureCount,
@@ -112,7 +122,13 @@ internal static class DeliveryTrendProgressRollupMapper
             new ProgressionDelta(epicProgress.SprintProgressionDelta),
             epicProgress.SprintEffortDelta,
             epicProgress.SprintCompletedPbiCount,
-            epicProgress.SprintCompletedFeatureCount);
+            epicProgress.SprintCompletedFeatureCount,
+            epicProgress.AggregatedProgress,
+            epicProgress.ForecastConsumedEffort,
+            epicProgress.ForecastRemainingEffort,
+            epicProgress.ExcludedFeaturesCount,
+            epicProgress.IncludedFeaturesCount,
+            epicProgress.TotalWeight);
     }
 
     public static IReadOnlyDictionary<int, ProductDeliveryProgressSummary> ToProductDeliveryProgressSummaries(
