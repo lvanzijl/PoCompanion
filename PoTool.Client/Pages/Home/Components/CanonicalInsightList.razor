@@ -1,0 +1,61 @@
+@using PoTool.Shared.Metrics
+
+@if (Insights.Count == 0)
+{
+    <MudText Typo="Typo.body2" Color="Color.Secondary">
+        No insights were emitted for this product.
+    </MudText>
+}
+else
+{
+    <div style="overflow-x:auto;">
+        <MudSimpleTable Dense="true" Striped="true" Hover="true">
+            <thead>
+                <tr>
+                    <th style="width: 110px;">Code</th>
+                    <th style="width: 110px;">Severity</th>
+                    <th>Message</th>
+                    <th style="min-width: 240px;">Context</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var insight in Insights)
+                {
+                    <tr>
+                        <td>
+                            <MudText Typo="Typo.body2"><strong>@insight.Code</strong></MudText>
+                        </td>
+                        <td>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default">
+                                @insight.Severity
+                            </MudChip>
+                        </td>
+                        <td>
+                            <MudText Typo="Typo.body2">@insight.Message</MudText>
+                        </td>
+                        <td>
+                            <MudStack Spacing="1">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Wrap="Wrap.Wrap">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Progress Delta:</MudText>
+                                    <CanonicalDeltaValue Value="@insight.Context.ProgressDelta" Typo="Typo.caption" />
+                                </MudStack>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Wrap="Wrap.Wrap">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Forecast Remaining Delta:</MudText>
+                                    <CanonicalDeltaValue Value="@insight.Context.ForecastRemainingDelta" Typo="Typo.caption" />
+                                </MudStack>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Planning Quality Score: @insight.Context.PlanningQualityScore
+                                </MudText>
+                            </MudStack>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public IReadOnlyList<InsightDto> Insights { get; set; } = Array.Empty<InsightDto>();
+}

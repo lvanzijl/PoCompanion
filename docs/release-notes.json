@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-26",
+    "type": "Changed",
+    "title": "Sprint Delivery now shows canonical analytics",
+    "impact": "Sprint Delivery now shows canonical product, epic, and feature progress, forecast, delta, planning quality, and insight values directly from backend analytics without UI recalculation.",
+    "area": "Trends",
+    "link": "/home/delivery/sprint"
+  },
+  {
     "date": "2026-03-25",
     "type": "Changed",
     "title": "Feature progress now uses one canonical engine",
