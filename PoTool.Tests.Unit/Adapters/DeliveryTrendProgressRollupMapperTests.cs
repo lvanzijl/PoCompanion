@@ -17,10 +17,6 @@ public sealed class DeliveryTrendProgressRollupMapperTests
             epicId: 42,
             epicTitle: "Epic A",
             progressPercent: 60,
-            calculatedProgress: 55.5,
-            overrideProgress: 70,
-            effectiveProgress: 70,
-            validationSignals: [FeatureProgressValidationSignals.OverrideOutOfRange],
             totalScopeStoryPoints: 13.5,
             deliveredStoryPoints: 8.25,
             donePbiCount: 3,
@@ -29,13 +25,21 @@ public sealed class DeliveryTrendProgressRollupMapperTests
             sprintProgressionDelta: new ProgressionDelta(18.5),
             sprintEffortDelta: 4,
             sprintCompletedPbiCount: 1,
-            sprintCompletedInSprint: false);
+            sprintCompletedInSprint: false,
+            calculatedProgress: 55.5,
+            overrideProgress: 70,
+            effectiveProgress: 70,
+            validationSignals: [FeatureProgressValidationSignals.OverrideOutOfRange],
+            forecastConsumedEffort: 9.5,
+            forecastRemainingEffort: 3.5);
 
         var dto = featureProgress.ToFeatureProgressDto(Array.Empty<CompletedPbiDto>());
 
         Assert.AreEqual(55.5d, dto.CalculatedProgress!.Value, 0.001d);
         Assert.AreEqual(70d, dto.Override!.Value, 0.001d);
         Assert.AreEqual(70d, dto.EffectiveProgress!.Value, 0.001d);
+        Assert.AreEqual(9.5d, dto.ForecastConsumedEffort!.Value, 0.001d);
+        Assert.AreEqual(3.5d, dto.ForecastRemainingEffort!.Value, 0.001d);
         CollectionAssert.Contains(dto.ValidationSignals.ToList(), FeatureProgressValidationSignals.OverrideOutOfRange);
         Assert.AreEqual(13.5d, dto.TotalStoryPoints, 0.001d);
         Assert.AreEqual(8.25d, dto.DoneStoryPoints, 0.001d);

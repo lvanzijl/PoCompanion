@@ -21,6 +21,8 @@ internal static class DeliveryTrendProgressRollupMapper
             CalculatedProgress = featureProgress.CalculatedProgress,
             Override = featureProgress.Override,
             EffectiveProgress = featureProgress.EffectiveProgress,
+            ForecastConsumedEffort = featureProgress.ForecastConsumedEffort,
+            ForecastRemainingEffort = featureProgress.ForecastRemainingEffort,
             ValidationSignals = featureProgress.ValidationSignals,
             TotalStoryPoints = featureProgress.TotalScopeStoryPoints,
             DoneStoryPoints = featureProgress.DeliveredStoryPoints,
@@ -66,7 +68,9 @@ internal static class DeliveryTrendProgressRollupMapper
             featureProgress.CalculatedProgress,
             featureProgress.Override,
             featureProgress.EffectiveProgress,
-            featureProgress.ValidationSignals);
+            featureProgress.ValidationSignals,
+            featureProgress.ForecastConsumedEffort,
+            featureProgress.ForecastRemainingEffort);
     }
 
     public static EpicProgressDto ToEpicProgressDto(this EpicProgress epicProgress)
