@@ -272,6 +272,7 @@ public static class ApiServiceCollectionExtensions
         services.AddSingleton<ISprintFactService, SprintFactService>();
         services.AddSingleton<IHierarchyRollupService, HierarchyRollupService>();
         services.AddSingleton<IEpicAggregationService, EpicAggregationService>();
+        services.AddSingleton<IProductAggregationService, ProductAggregationService>();
         services.AddSingleton<IDeliveryProgressRollupService, DeliveryProgressRollupService>();
         services.AddSingleton<IPortfolioDeliverySummaryService, PortfolioDeliverySummaryService>();
         services.AddSingleton<ISprintDeliveryProjectionService, SprintDeliveryProjectionService>();
