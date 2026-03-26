@@ -83,11 +83,14 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                     continue;
                 }
 
-                var childPbis = productResolved
-                    .Where(resolvedItem => CanonicalWorkItemTypes.IsAuthoritativePbi(resolvedItem.WorkItemType)
+                var childProgressItems = productResolved
+                    .Where(resolvedItem => CanonicalWorkItemTypes.IsFeatureProgressContributor(resolvedItem.WorkItemType)
                         && resolvedItem.ResolvedFeatureId == feature.WorkItemId)
                     .Select(resolvedItem => request.WorkItemsById.GetValueOrDefault(resolvedItem.WorkItemId))
                     .OfType<DeliveryTrendWorkItem>()
+                    .ToList();
+                var childPbis = childProgressItems
+                    .Where(child => CanonicalWorkItemTypes.IsAuthoritativePbi(child.WorkItemType))
                     .ToList();
 
                 if (activeHierarchyIds != null)
@@ -104,22 +107,22 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                 var featureScope = childPbis.Count > 0
                     ? ComputeFeatureScope(featureWorkItem, childPbis, request.StateLookup)
                     : HierarchyScopeRollup.Empty;
-                var donePbiCount = childPbis.Count(childPbi =>
-                    StateClassificationLookup.IsDone(request.StateLookup, childPbi.WorkItemType, childPbi.State));
                 var featureProgress = _featureProgressService.Compute(new FeatureProgressCalculationRequest(
-                    request.Mode,
-                    childPbis.Count,
-                    donePbiCount,
-                    featureScope.Total,
-                    featureScope.Completed,
-                    featureWorkItem.TimeCriticality));
+                    featureWorkItem.ToCanonicalWorkItem(),
+                    childProgressItems
+                        .Select(child => new FeatureProgressChild(
+                            child.ToCanonicalWorkItem(),
+                            StateClassificationLookup.GetClassification(request.StateLookup, child.WorkItemType, child.State)))
+                        .ToList()));
+                var donePbiCount = childProgressItems.Count(child =>
+                    StateClassificationLookup.GetClassification(request.StateLookup, child.WorkItemType, child.State) == StateClassification.Done);
                 var featureForecast = _featureForecastService.Compute(new FeatureForecastCalculationRequest(
                     featureProgress.EffectiveProgress,
                     featureWorkItem.Effort));
                 var featureIsDone = StateClassificationLookup.IsDone(request.StateLookup, featureWorkItem.WorkItemType, featureWorkItem.State);
-                var progressPercent = featureProgress.EffectiveProgress.HasValue
-                    ? (int)Math.Round(featureProgress.EffectiveProgress.Value, MidpointRounding.AwayFromZero)
-                    : 0;
+                var calculatedProgressPercent = featureProgress.CalculatedProgress * 100d;
+                var effectiveProgressPercent = featureProgress.EffectiveProgress * 100d;
+                var progressPercent = (int)Math.Round(effectiveProgressPercent, MidpointRounding.AwayFromZero);
 
                 var sprintCompletedScopeStoryPoints = request.SprintCompletedPbiIds == null
                     ? 0d
@@ -140,9 +143,7 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                 var sprintEffortDelta = request.SprintEffortDeltaByWorkItem == null
                     ? 0
                     : childPbis.Sum(childPbi => request.SprintEffortDeltaByWorkItem.GetValueOrDefault(childPbi.WorkItemId, 0));
-                var weight = request.Mode == FeatureProgressMode.Count
-                    ? childPbis.Count
-                    : featureScope.Total;
+                var weight = featureProgress.TotalEffort;
                 var isExcluded = weight <= 0;
 
                 int? epicId = feature.ResolvedEpicId;
@@ -168,9 +169,9 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                     sprintEffortDelta,
                     sprintCompletedPbiCount,
                     sprintCompletedInSprint,
-                    featureProgress.CalculatedProgress,
+                    calculatedProgressPercent,
                     featureProgress.Override,
-                    featureProgress.EffectiveProgress,
+                    effectiveProgressPercent,
                     featureProgress.ValidationSignals,
                     featureForecast.ForecastConsumedEffort,
                     featureForecast.ForecastRemainingEffort,

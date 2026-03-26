@@ -381,7 +381,8 @@ internal static class SprintDeliveryProjectionServiceMappings
             workItem.StoryPoints,
             workItem.TimeCriticality,
             workItem.ProjectNumber,
-            workItem.ProjectElement);
+            workItem.ProjectElement,
+            workItem.Effort);
     }
 
     public static IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>> GroupByWorkItemId(this IEnumerable<FieldChangeEvent> fieldChanges)

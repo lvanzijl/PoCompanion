@@ -1,3 +1,5 @@
+using PoTool.Core.Domain.Models;
+
 namespace PoTool.Core.Domain.DeliveryTrends.Models;
 
 /// <summary>
@@ -26,21 +28,26 @@ public static class FeatureProgressValidationSignals
 }
 
 /// <summary>
+/// Feature child input required by the canonical feature progress engine.
+/// </summary>
+public sealed record FeatureProgressChild(
+    CanonicalWorkItem WorkItem,
+    StateClassification StateClassification);
+
+/// <summary>
 /// Pure calculation request for the canonical feature progress engine.
 /// </summary>
 public sealed record FeatureProgressCalculationRequest(
-    FeatureProgressMode Mode,
-    int TotalPbiCount,
-    int CompletedPbiCount,
-    double TotalStoryPoints,
-    double CompletedStoryPoints,
-    double? Override);
+    CanonicalWorkItem Feature,
+    IReadOnlyList<FeatureProgressChild> Children);
 
 /// <summary>
 /// Canonical feature progress engine result.
 /// </summary>
 public sealed record FeatureProgressResult(
-    double? CalculatedProgress,
+    double CalculatedProgress,
     double? Override,
-    double? EffectiveProgress,
+    double EffectiveProgress,
+    double CompletedEffort,
+    double TotalEffort,
     IReadOnlyList<string> ValidationSignals);

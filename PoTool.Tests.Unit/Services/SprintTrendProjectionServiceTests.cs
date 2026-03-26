@@ -855,7 +855,7 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
-    public void ComputeFeatureProgress_SwitchingExplicitModeChangesResultDeterministically()
+    public void ComputeFeatureProgress_IgnoresExplicitModeForProgressCalculation()
     {
         var workItems = new Dictionary<int, WorkItemEntity>
         {
@@ -885,9 +885,9 @@ public class SprintTrendProjectionServiceTests
         Assert.HasCount(1, storyPointModeResult);
         Assert.HasCount(1, countModeResult);
         Assert.AreEqual(10, storyPointModeResult[0].ProgressPercent);
-        Assert.AreEqual(50, countModeResult[0].ProgressPercent);
+        Assert.AreEqual(10, countModeResult[0].ProgressPercent);
         Assert.AreEqual(10d, storyPointModeResult[0].CalculatedProgress!.Value, 0.001d);
-        Assert.AreEqual(50d, countModeResult[0].CalculatedProgress!.Value, 0.001d);
+        Assert.AreEqual(10d, countModeResult[0].CalculatedProgress!.Value, 0.001d);
     }
 
     [TestMethod]
@@ -940,7 +940,7 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
-    public void ComputeFeatureProgress_IncludesFeaturesWithoutPbisWithNullCalculatedProgress()
+    public void ComputeFeatureProgress_IncludesFeaturesWithoutPbisWithZeroCalculatedProgress()
     {
         var workItems = new Dictionary<int, WorkItemEntity>
         {
@@ -955,8 +955,8 @@ public class SprintTrendProjectionServiceTests
         var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result);
-        Assert.IsNull(result[0].CalculatedProgress);
-        Assert.IsNull(result[0].EffectiveProgress);
+        Assert.AreEqual(0d, result[0].CalculatedProgress!.Value, 0.001d);
+        Assert.AreEqual(0d, result[0].EffectiveProgress!.Value, 0.001d);
         Assert.AreEqual(0, result[0].ProgressPercent);
     }
 
@@ -1201,10 +1201,10 @@ public class SprintTrendProjectionServiceTests
         var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result);
-        // PBI2 missing effort → sibling avg = 10, so total = 10 + 10 = 20, done = 10
-        Assert.AreEqual(20, result[0].TotalStoryPoints, "Total should use sibling average for missing effort");
+        // Story-point scope still uses sibling averaging, but feature progress now treats null effort as zero.
+        Assert.AreEqual(20, result[0].TotalStoryPoints, "Total should use sibling average for missing story-point scope");
         Assert.AreEqual(10, result[0].DoneStoryPoints);
-        Assert.AreEqual(50, result[0].ProgressPercent);
+        Assert.AreEqual(100, result[0].ProgressPercent);
     }
 
     [TestMethod]
@@ -1259,7 +1259,7 @@ public class SprintTrendProjectionServiceTests
         Assert.HasCount(1, result);
         Assert.AreEqual(10.5d, result[0].TotalStoryPoints, 0.001d);
         Assert.AreEqual(3d, result[0].DoneStoryPoints, 0.001d);
-        Assert.AreEqual(29, result[0].ProgressPercent);
+        Assert.AreEqual(43, result[0].ProgressPercent);
     }
 
     [TestMethod]

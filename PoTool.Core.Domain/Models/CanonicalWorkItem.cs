@@ -14,7 +14,8 @@ public sealed record CanonicalWorkItem
         int? storyPoints,
         double? timeCriticality = null,
         string? projectNumber = null,
-        string? projectElement = null)
+        string? projectElement = null,
+        double? effort = null)
     {
         WorkItemId = workItemId;
         WorkItemType = workItemType;
@@ -24,6 +25,7 @@ public sealed record CanonicalWorkItem
         TimeCriticality = WorkItemFieldSemantics.NormalizeTimeCriticality(workItemType, timeCriticality);
         ProjectNumber = WorkItemFieldSemantics.NormalizeProjectNumber(workItemType, projectNumber);
         ProjectElement = WorkItemFieldSemantics.NormalizeProjectElement(workItemType, projectElement);
+        Effort = effort;
     }
 
     public int WorkItemId { get; }
@@ -41,4 +43,6 @@ public sealed record CanonicalWorkItem
     public string? ProjectNumber { get; }
 
     public string? ProjectElement { get; }
+
+    public double? Effort { get; }
 }

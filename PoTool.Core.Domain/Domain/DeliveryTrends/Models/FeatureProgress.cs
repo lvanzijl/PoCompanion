@@ -1,7 +1,7 @@
 namespace PoTool.Core.Domain.DeliveryTrends.Models;
 
 /// <summary>
-/// Represents canonical feature progress derived from child PBIs.
+/// Represents canonical feature progress derived from child feature contributors.
 /// </summary>
 public sealed record FeatureProgress
 {

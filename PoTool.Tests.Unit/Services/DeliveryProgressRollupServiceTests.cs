@@ -64,7 +64,7 @@ public sealed class DeliveryProgressRollupServiceTests
     }
 
     [TestMethod]
-    public void ComputeFeatureProgress_IncludesOverrideForFeatureWithoutPbis()
+    public void ComputeFeatureProgress_UsesStrictOverridePercentForFeatureWithoutChildren()
     {
         var service = CreateService();
 
@@ -74,16 +74,17 @@ public sealed class DeliveryProgressRollupServiceTests
             ],
             new Dictionary<int, DeliveryTrendWorkItem>
             {
-                [100] = CreateWorkItem(100, CanonicalWorkItemTypes.Feature, "Feature A", state: "Active", timeCriticality: 150)
+                [100] = CreateWorkItem(100, CanonicalWorkItemTypes.Feature, "Feature A", state: "Active", timeCriticality: 50)
             },
             [1],
             FeatureProgressMode.StoryPoints));
 
         Assert.HasCount(1, result);
-        Assert.IsNull(result[0].CalculatedProgress);
-        Assert.AreEqual(150d, result[0].Override!.Value, 0.001d);
-        Assert.AreEqual(100d, result[0].EffectiveProgress!.Value, 0.001d);
-        CollectionAssert.Contains(result[0].ValidationSignals.ToList(), FeatureProgressValidationSignals.OverrideOutOfRange);
+        Assert.AreEqual(0d, result[0].CalculatedProgress!.Value, 0.001d);
+        Assert.AreEqual(50d, result[0].Override!.Value, 0.001d);
+        Assert.AreEqual(50d, result[0].EffectiveProgress!.Value, 0.001d);
+        Assert.AreEqual(0d, result[0].Weight, 0.001d);
+        Assert.IsTrue(result[0].IsExcluded);
     }
 
     [TestMethod]
@@ -332,6 +333,8 @@ public sealed class DeliveryProgressRollupServiceTests
         DateTimeOffset? createdDate = null,
         double? timeCriticality = null)
     {
+        effort ??= storyPoints;
+
         return new DeliveryTrendWorkItem(
             workItemId,
             workItemType,

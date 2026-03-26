@@ -16,7 +16,8 @@ internal static class CanonicalMetricsInputMapper
             entity.StoryPoints,
             entity.TimeCriticality,
             entity.ProjectNumber,
-            entity.ProjectElement);
+            entity.ProjectElement,
+            entity.Effort);
     }
 
     public static CanonicalWorkItem ToCanonicalWorkItem(this WorkItemDto dto)
@@ -29,6 +30,7 @@ internal static class CanonicalMetricsInputMapper
             dto.StoryPoints,
             dto.TimeCriticality,
             dto.ProjectNumber,
-            dto.ProjectElement);
+            dto.ProjectElement,
+            dto.Effort);
     }
 }
