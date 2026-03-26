@@ -125,8 +125,8 @@ Required checks executed:
 
 Status at implementation time:
 
-- targeted validation pending final rerun
-- final Release build pending final rerun
+- `dotnet build PoTool.sln --configuration Release` — passed
+- targeted Phase C unit/doc tests — passed (106/106)
 
 ## Risks for Phase D
 
