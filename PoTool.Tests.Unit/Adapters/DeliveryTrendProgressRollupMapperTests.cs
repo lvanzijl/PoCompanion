@@ -33,7 +33,8 @@ public sealed class DeliveryTrendProgressRollupMapperTests
             forecastConsumedEffort: 9.5,
             forecastRemainingEffort: 3.5,
             weight: 13.5,
-            isExcluded: false);
+            isExcluded: false,
+            effort: 16);
 
         var dto = featureProgress.ToFeatureProgressDto(Array.Empty<CompletedPbiDto>());
 
@@ -42,12 +43,40 @@ public sealed class DeliveryTrendProgressRollupMapperTests
         Assert.AreEqual(70d, dto.EffectiveProgress!.Value, 0.001d);
         Assert.AreEqual(9.5d, dto.ForecastConsumedEffort!.Value, 0.001d);
         Assert.AreEqual(3.5d, dto.ForecastRemainingEffort!.Value, 0.001d);
+        Assert.AreEqual(16d, dto.Effort!.Value, 0.001d);
         Assert.AreEqual(13.5d, dto.Weight, 0.001d);
         Assert.IsFalse(dto.IsExcluded);
         CollectionAssert.Contains(dto.ValidationSignals.ToList(), FeatureProgressValidationSignals.OverrideOutOfRange);
         Assert.AreEqual(13.5d, dto.TotalStoryPoints, 0.001d);
         Assert.AreEqual(8.25d, dto.DoneStoryPoints, 0.001d);
         Assert.AreEqual(8.25d, dto.DeliveredStoryPoints, 0.001d);
+    }
+
+    [TestMethod]
+    public void ToFeatureProgress_MapsCanonicalEffortWithoutWorkItemLookup()
+    {
+        var dto = new FeatureProgressDto
+        {
+            FeatureId = 101,
+            FeatureTitle = "Feature A",
+            ProductId = 5,
+            ProgressPercent = 60,
+            CalculatedProgress = 55.5,
+            EffectiveProgress = 60,
+            ForecastConsumedEffort = 9.5,
+            ForecastRemainingEffort = 3.5,
+            Effort = 16,
+            Weight = 13.5,
+            IsExcluded = false,
+            TotalStoryPoints = 13.5,
+            DoneStoryPoints = 8.25
+        };
+
+        var featureProgress = dto.ToFeatureProgress();
+
+        Assert.AreEqual(16d, featureProgress.Effort!.Value, 0.001d);
+        Assert.AreEqual(9.5d, featureProgress.ForecastConsumedEffort!.Value, 0.001d);
+        Assert.AreEqual(3.5d, featureProgress.ForecastRemainingEffort!.Value, 0.001d);
     }
 
     [TestMethod]

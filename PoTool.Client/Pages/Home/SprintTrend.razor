@@ -1140,8 +1140,8 @@
         _bugsWorkedCount = filteredProductMetrics.Sum(metric => metric.BugsWorkedCount);
         _bugsClosedCount = filteredProductMetrics.Sum(metric => metric.BugsClosedCount);
         _missingEffortCount = filteredProductMetrics.Sum(metric => metric.MissingEffortCount);
-        _sprintEffortDelta = filteredProductMetrics.Sum(metric => metric.ScopeChangeEffort);
-        _completedFeatureCount = filteredProductMetrics.Sum(metric => metric.CompletedFeatureCount);
+        _sprintEffortDelta = filteredProductMetrics.Sum(metric => metric.ScopeChangeEffort ?? 0);
+        _completedFeatureCount = filteredProductMetrics.Sum(metric => metric.CompletedFeatureCount ?? 0);
         _isApproximate = filteredProductMetrics.Any(metric => metric.IsApproximate);
         _approximateProducts = filteredProductMetrics
             .Where(metric => metric.IsApproximate)
@@ -1468,7 +1468,7 @@
 
     private int GetProductCompletedFeatures(int productId)
     {
-        return _productMetrics.TryGetValue(productId, out var metrics) ? metrics.CompletedFeatures : 0;
+        return _productMetrics.TryGetValue(productId, out var metrics) ? metrics.CompletedFeatures ?? 0 : 0;
     }
 
     private string GetProductApproximationTooltip(int productId, string productName)
@@ -1547,12 +1547,12 @@
             || metrics.BugsCreated > 0
             || metrics.BugsWorked > 0
             || metrics.BugsClosed > 0
-            || metrics.ScopeChangeEffort != 0;
+            || metrics.ScopeChangeEffort is not null and not 0;
     }
 
     private int GetProductSprintEffortDelta(int productId)
     {
-        return _productMetrics.TryGetValue(productId, out var metrics) ? metrics.ScopeChangeEffort : 0;
+        return _productMetrics.TryGetValue(productId, out var metrics) ? metrics.ScopeChangeEffort ?? 0 : 0;
     }
 
     private string GetEpicColor(int index)
@@ -1634,6 +1634,6 @@
         int BugsCreated,
         int BugsWorked,
         int BugsClosed,
-        int ScopeChangeEffort,
-        int CompletedFeatures);
+        int? ScopeChangeEffort,
+        int? CompletedFeatures);
 }

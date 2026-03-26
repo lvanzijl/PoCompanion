@@ -42,6 +42,10 @@ public class GetSprintTrendMetricsQueryHandlerTests
         _handler = new GetSprintTrendMetricsQueryHandler(
             _context,
             _projectionService,
+            new ProductAggregationService(),
+            new PlanningQualityService(),
+            new SnapshotComparisonService(),
+            new InsightService(),
             _mockLogger.Object);
     }
 
@@ -467,8 +471,10 @@ public class GetSprintTrendMetricsQueryHandlerTests
         Assert.HasCount(1, result.Metrics);
         Assert.IsNotNull(result.FeatureProgress);
         Assert.IsNotNull(result.EpicProgress);
+        Assert.IsNotNull(result.ProductAnalytics);
         Assert.IsEmpty(result.FeatureProgress);
         Assert.IsEmpty(result.EpicProgress);
+        Assert.HasCount(1, result.ProductAnalytics);
         Assert.AreEqual(8, result.Metrics[0].ProductMetrics[0].ScopeChangeEffort);
         Assert.AreEqual(2, result.Metrics[0].ProductMetrics[0].CompletedFeatureCount);
     }
@@ -576,9 +582,168 @@ public class GetSprintTrendMetricsQueryHandlerTests
         Assert.IsTrue(result.Success);
         Assert.IsNotNull(result.Metrics);
         // Product-level progress summaries should only decorate the most recent sprint in the response.
-        Assert.AreEqual(0, result.Metrics[0].ProductMetrics[0].ScopeChangeEffort, "Only the most recent sprint should receive progress summaries.");
+        Assert.IsNull(result.Metrics[0].ProductMetrics[0].ScopeChangeEffort, "Only the most recent sprint should receive progress summaries.");
+        Assert.IsNull(result.Metrics[0].ProductMetrics[0].CompletedFeatureCount, "Only the most recent sprint should receive progress summaries.");
         Assert.AreEqual(5, result.Metrics[1].ProductMetrics[0].ScopeChangeEffort);
         Assert.AreEqual(3, result.Metrics[1].ProductMetrics[0].CompletedFeatureCount);
+    }
+
+    [TestMethod]
+    [Description("Should expose canonical product analytics with preserved null and negative delta semantics")]
+    public async Task Handle_ExposesCanonicalProductAnalytics()
+    {
+        var team = new TeamEntity { Name = "Test Team", TeamAreaPath = "Project\\Team" };
+        _context.Teams.Add(team);
+        await _context.SaveChangesAsync();
+
+        var previousSprint = new SprintEntity
+        {
+            Name = "Sprint 0",
+            Path = "Project\\Sprint 0",
+            TeamId = team.Id,
+            StartUtc = DateTimeOffset.UtcNow.AddDays(-28),
+            StartDateUtc = DateTime.UtcNow.AddDays(-28),
+            EndUtc = DateTimeOffset.UtcNow.AddDays(-14),
+            EndDateUtc = DateTime.UtcNow.AddDays(-14)
+        };
+        var currentSprint = new SprintEntity
+        {
+            Name = "Sprint 1",
+            Path = "Project\\Sprint 1",
+            TeamId = team.Id,
+            StartUtc = DateTimeOffset.UtcNow.AddDays(-14),
+            StartDateUtc = DateTime.UtcNow.AddDays(-14),
+            EndUtc = DateTimeOffset.UtcNow,
+            EndDateUtc = DateTime.UtcNow
+        };
+        _context.Sprints.AddRange(previousSprint, currentSprint);
+
+        var product = new ProductEntity
+        {
+            Name = "Product A",
+            BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 100 } },
+            ProductOwnerId = 1
+        };
+        _context.Products.Add(product);
+        await _context.SaveChangesAsync();
+
+        _projectionService.GetProjectionsAsyncHandler = (_, _, _) =>
+            Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(
+            [
+                new SprintMetricsProjectionEntity
+                {
+                    SprintId = previousSprint.Id,
+                    ProductId = product.Id,
+                    LastComputedAt = DateTimeOffset.UtcNow,
+                    IncludedUpToRevisionId = 1
+                },
+                new SprintMetricsProjectionEntity
+                {
+                    SprintId = currentSprint.Id,
+                    ProductId = product.Id,
+                    LastComputedAt = DateTimeOffset.UtcNow,
+                    IncludedUpToRevisionId = 2
+                }
+            ]);
+        _projectionService.ComputeFeatureProgressAsyncHandler = (_, _, _, _, _, sprintId) =>
+            Task.FromResult<IReadOnlyList<FeatureProgressDto>>(
+                sprintId == currentSprint.Id
+                    ?
+                    [
+                        new FeatureProgressDto
+                        {
+                            FeatureId = 200,
+                            FeatureTitle = "Feature A",
+                            ProductId = product.Id,
+                            EpicId = 300,
+                            EpicTitle = "Epic A",
+                            ProgressPercent = 50,
+                            CalculatedProgress = 50d,
+                            EffectiveProgress = 50d,
+                            ForecastConsumedEffort = 8d,
+                            ForecastRemainingEffort = 8d,
+                            Effort = 16d,
+                            Weight = 8d,
+                            IsExcluded = false
+                        }
+                    ]
+                    :
+                    [
+                        new FeatureProgressDto
+                        {
+                            FeatureId = 201,
+                            FeatureTitle = "Feature A",
+                            ProductId = product.Id,
+                            EpicId = 300,
+                            EpicTitle = "Epic A",
+                            ProgressPercent = 75,
+                            CalculatedProgress = 75d,
+                            EffectiveProgress = 75d,
+                            ForecastConsumedEffort = 12d,
+                            ForecastRemainingEffort = 4d,
+                            Effort = 16d,
+                            Weight = 8d,
+                            IsExcluded = false
+                        }
+                    ]);
+        _projectionService.ComputeEpicProgressAsyncHandler = (_, features, _) =>
+            Task.FromResult<IReadOnlyList<EpicProgressDto>>(
+                features[0].FeatureId == 200
+                    ?
+                    [
+                        new EpicProgressDto
+                        {
+                            EpicId = 300,
+                            EpicTitle = "Epic A",
+                            ProductId = product.Id,
+                            ProgressPercent = 50,
+                            AggregatedProgress = 50d,
+                            ForecastConsumedEffort = 8d,
+                            ForecastRemainingEffort = 8d,
+                            IncludedFeaturesCount = 1,
+                            ExcludedFeaturesCount = 0,
+                            TotalWeight = 8d
+                        }
+                    ]
+                    :
+                    [
+                        new EpicProgressDto
+                        {
+                            EpicId = 300,
+                            EpicTitle = "Epic A",
+                            ProductId = product.Id,
+                            ProgressPercent = 75,
+                            AggregatedProgress = 75d,
+                            ForecastConsumedEffort = 12d,
+                            ForecastRemainingEffort = 4d,
+                            IncludedFeaturesCount = 1,
+                            ExcludedFeaturesCount = 0,
+                            TotalWeight = 8d
+                        }
+                    ]);
+
+        var result = await _handler.Handle(
+            new GetSprintTrendMetricsQuery(1, new[] { previousSprint.Id, currentSprint.Id }, false, true),
+            CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.IsNotNull(result.ProductAnalytics);
+        Assert.HasCount(1, result.ProductAnalytics);
+
+        var analytics = result.ProductAnalytics[0];
+        Assert.AreEqual(product.Id, analytics.ProductId);
+        Assert.AreEqual("Product A", analytics.ProductName);
+        Assert.AreEqual(50d, analytics.Progress.ProductProgress!.Value, 0.001d);
+        Assert.AreEqual(8d, analytics.Progress.ProductForecastConsumed!.Value, 0.001d);
+        Assert.AreEqual(8d, analytics.Progress.ProductForecastRemaining!.Value, 0.001d);
+        Assert.AreEqual(-25d, analytics.Comparison.ProgressDelta!.Value, 0.001d);
+        Assert.AreEqual(-4d, analytics.Comparison.ForecastConsumedDelta!.Value, 0.001d);
+        Assert.AreEqual(4d, analytics.Comparison.ForecastRemainingDelta!.Value, 0.001d);
+        Assert.AreEqual(100, analytics.PlanningQuality.PlanningQualityScore);
+        Assert.IsEmpty(analytics.PlanningQuality.PlanningQualitySignals);
+        Assert.AreEqual("IN-2", analytics.Insights[0].Code);
+        Assert.AreEqual("Critical", analytics.Insights[0].Severity);
+        Assert.AreEqual(-25d, analytics.Insights[0].Context.ProgressDelta!.Value, 0.001d);
     }
 
     [TestMethod]
@@ -656,8 +821,10 @@ public class GetSprintTrendMetricsQueryHandlerTests
         Assert.IsTrue(result.Success);
         Assert.IsNotNull(result.FeatureProgress);
         Assert.IsNotNull(result.EpicProgress);
+        Assert.IsNotNull(result.ProductAnalytics);
         Assert.HasCount(1, result.FeatureProgress);
         Assert.HasCount(1, result.EpicProgress);
+        Assert.HasCount(1, result.ProductAnalytics);
     }
 
     private sealed class TestSprintTrendProjectionService : SprintTrendProjectionService

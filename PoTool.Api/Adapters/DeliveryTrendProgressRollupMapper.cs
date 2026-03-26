@@ -23,6 +23,7 @@ internal static class DeliveryTrendProgressRollupMapper
             EffectiveProgress = featureProgress.EffectiveProgress,
             ForecastConsumedEffort = featureProgress.ForecastConsumedEffort,
             ForecastRemainingEffort = featureProgress.ForecastRemainingEffort,
+            Effort = featureProgress.Effort,
             Weight = featureProgress.Weight,
             IsExcluded = featureProgress.IsExcluded,
             ValidationSignals = featureProgress.ValidationSignals,
@@ -74,7 +75,39 @@ internal static class DeliveryTrendProgressRollupMapper
             featureProgress.ForecastConsumedEffort,
             featureProgress.ForecastRemainingEffort,
             featureProgress.Weight,
-            featureProgress.IsExcluded);
+            featureProgress.IsExcluded,
+            featureProgress.Effort);
+    }
+
+    public static FeatureProgress ToFeatureProgress(this FeatureProgressDto featureProgress)
+    {
+        ArgumentNullException.ThrowIfNull(featureProgress);
+
+        return new FeatureProgress(
+            featureProgress.FeatureId,
+            featureProgress.FeatureTitle,
+            featureProgress.ProductId,
+            featureProgress.EpicId,
+            featureProgress.EpicTitle,
+            featureProgress.ProgressPercent,
+            featureProgress.TotalStoryPoints,
+            featureProgress.DoneStoryPoints,
+            featureProgress.DonePbiCount,
+            featureProgress.IsDone,
+            featureProgress.SprintCompletedEffort,
+            new ProgressionDelta(featureProgress.SprintProgressionDelta),
+            featureProgress.SprintEffortDelta,
+            featureProgress.SprintCompletedPbiCount,
+            featureProgress.SprintCompletedInSprint,
+            featureProgress.CalculatedProgress,
+            featureProgress.Override,
+            featureProgress.EffectiveProgress,
+            featureProgress.ValidationSignals,
+            featureProgress.ForecastConsumedEffort,
+            featureProgress.ForecastRemainingEffort,
+            featureProgress.Weight,
+            featureProgress.IsExcluded,
+            featureProgress.Effort);
     }
 
     public static EpicProgressDto ToEpicProgressDto(this EpicProgress epicProgress)
