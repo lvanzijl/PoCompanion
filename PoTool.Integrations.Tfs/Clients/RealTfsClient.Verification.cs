@@ -13,6 +13,9 @@ namespace PoTool.Integrations.Tfs.Clients;
 /// </summary>
 public partial class RealTfsClient
 {
+    private const int VerificationSampleWorkItemCount = 5;
+    private const string VerificationWorkItemTypeField = "System.WorkItemType";
+
     public async Task<TfsVerificationReport> VerifyCapabilitiesAsync(
         bool includeWriteChecks = false,
         int? workItemIdForWriteCheck = null,
@@ -454,7 +457,7 @@ public partial class RealTfsClient
     {
         var wiql = new
         {
-            query = "Select Top 5 [System.Id] From WorkItems Order By [System.Id] Desc"
+            query = $"Select Top {VerificationSampleWorkItemCount} [System.Id] From WorkItems Order By [System.Id] Desc"
         };
 
         var wiqlUrl = ProjectUrl(config, "_apis/wit/wiql");
@@ -478,7 +481,7 @@ public partial class RealTfsClient
                 .Where(item => item.TryGetProperty("id", out _))
                 .Select(item => item.GetProperty("id").GetInt32())
                 .Where(id => id > 0)
-                .Take(5)
+                .Take(VerificationSampleWorkItemCount)
                 .ToArray()
             : Array.Empty<int>();
 
@@ -497,7 +500,7 @@ public partial class RealTfsClient
         var batchRequest = new WorkItemBatchRequest
         {
             Ids = sampleIds,
-            Fields = [TfsFieldProjectNumber, TfsFieldProjectElement, TfsFieldTimeCriticality, "System.WorkItemType"]
+            Fields = [TfsFieldProjectNumber, TfsFieldProjectElement, TfsFieldTimeCriticality, VerificationWorkItemTypeField]
         };
 
         var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");

@@ -73,7 +73,7 @@ public class SprintTrendProjectionServiceTests
             instance => instance.Log(
                 It.Is<LogLevel>(level => level == LogLevel.Warning),
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("Product 1 is configured with EstimationMode Mixed", StringComparison.Ordinal)),
+                It.Is<It.IsAnyType>((state, _) => state != null && state.ToString()!.Contains("Product 1 is configured with EstimationMode Mixed", StringComparison.Ordinal)),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.AtLeastOnce);
