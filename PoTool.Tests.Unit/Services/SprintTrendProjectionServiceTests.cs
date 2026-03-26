@@ -5,6 +5,7 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Cdc.Sprints;
+using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Hierarchy;
@@ -98,6 +99,7 @@ public class SprintTrendProjectionServiceTests
         IReadOnlyList<ResolvedWorkItemEntity> resolvedItems,
         IReadOnlyDictionary<int, WorkItemEntity> workItemsByTfsId,
         IReadOnlyList<int> productIds,
+        FeatureProgressMode progressMode,
         IReadOnlyCollection<int>? activeWorkItemIds = null,
         IReadOnlyCollection<int>? sprintCompletedPbiIds = null,
         IReadOnlyDictionary<int, int>? sprintEffortDeltaByWorkItem = null,
@@ -110,6 +112,7 @@ public class SprintTrendProjectionServiceTests
             resolvedItems,
             workItemsByTfsId,
             productIds,
+            progressMode,
             services.GetRequiredService<IDeliveryProgressRollupService>(),
             services.GetRequiredService<ICanonicalStoryPointResolutionService>(),
             activeWorkItemIds,
@@ -692,7 +695,7 @@ public class SprintTrendProjectionServiceTests
         var workItems = new Dictionary<int, WorkItemEntity>();
         var productIds = new List<int> { 1 };
 
-        var result = ComputeFeatureProgress(resolved, workItems, productIds);
+        var result = ComputeFeatureProgress(resolved, workItems, productIds, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.IsEmpty(result, "Should return empty when no features");
     }
@@ -716,7 +719,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 203, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
         };
 
-        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result);
         var feature = result[0];
@@ -729,7 +732,7 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
-    public void ComputeFeatureProgress_CanonicallyDoneFeature_Shows100Percent()
+    public void ComputeFeatureProgress_CanonicallyDoneFeature_UsesChildCompletionForProgress()
     {
         var workItems = new Dictionary<int, WorkItemEntity>
         {
@@ -745,15 +748,17 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
         };
 
-        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result);
-        Assert.AreEqual(100, result[0].ProgressPercent, "Canonically done feature should show 100%");
+        Assert.AreEqual(50, result[0].ProgressPercent, "Feature progress should come from child PBIs, not the parent feature state.");
+        Assert.AreEqual(50d, result[0].CalculatedProgress!.Value, 0.001d);
+        Assert.AreEqual(50d, result[0].EffectiveProgress!.Value, 0.001d);
         Assert.IsTrue(result[0].IsDone);
     }
 
     [TestMethod]
-    public void ComputeFeatureProgress_UsesCanonicalDoneMappingForResolvedStates()
+    public void ComputeFeatureProgress_UsesCanonicalDoneMappingForChildCompletionOnly()
     {
         var workItems = new Dictionary<int, WorkItemEntity>
         {
@@ -775,16 +780,52 @@ public class SprintTrendProjectionServiceTests
             new List<int> { 1 },
             stateLookup: BuildStateLookup(
                 (WorkItemType.Feature, "Resolved", StateClassification.Done),
-                (WorkItemType.Pbi, "Resolved", StateClassification.Done)));
+                (WorkItemType.Pbi, "Resolved", StateClassification.Done)), progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result);
-        Assert.AreEqual(100, result[0].ProgressPercent, "Resolved feature should be treated as done when canonically mapped");
+        Assert.AreEqual(50, result[0].ProgressPercent, "Resolved feature state should not override child-completion-based progress.");
         Assert.AreEqual(5, result[0].DoneStoryPoints, "Resolved PBI should contribute to done effort");
         Assert.IsTrue(result[0].IsDone);
     }
 
     [TestMethod]
-    public void ComputeFeatureProgress_NonDoneFeature_CappedAt90Percent()
+    public void ComputeFeatureProgress_SwitchingExplicitModeChangesResultDeterministically()
+    {
+        var workItems = new Dictionary<int, WorkItemEntity>
+        {
+            [100] = CreateWorkItem(100, WorkItemType.Feature, "Feature A", state: "Active"),
+            [201] = CreateWorkItem(201, WorkItemType.Pbi, "Small done PBI", effort: 1, state: "Done", parentId: 100, storyPoints: 1),
+            [202] = CreateWorkItem(202, WorkItemType.Pbi, "Large active PBI", effort: 9, state: "Active", parentId: 100, storyPoints: 9),
+        };
+
+        var resolved = new List<ResolvedWorkItemEntity>
+        {
+            new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
+            new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+            new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
+        };
+
+        var storyPointModeResult = ComputeFeatureProgress(
+            resolved,
+            workItems,
+            new List<int> { 1 },
+            progressMode: FeatureProgressMode.StoryPoints);
+        var countModeResult = ComputeFeatureProgress(
+            resolved,
+            workItems,
+            new List<int> { 1 },
+            progressMode: FeatureProgressMode.Count);
+
+        Assert.HasCount(1, storyPointModeResult);
+        Assert.HasCount(1, countModeResult);
+        Assert.AreEqual(10, storyPointModeResult[0].ProgressPercent);
+        Assert.AreEqual(50, countModeResult[0].ProgressPercent);
+        Assert.AreEqual(10d, storyPointModeResult[0].CalculatedProgress!.Value, 0.001d);
+        Assert.AreEqual(50d, countModeResult[0].CalculatedProgress!.Value, 0.001d);
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_NonDoneFeature_Reaches100PercentWhenAllPbisAreDone()
     {
         var workItems = new Dictionary<int, WorkItemEntity>
         {
@@ -800,10 +841,11 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
         };
 
-        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result);
-        Assert.AreEqual(90, result[0].ProgressPercent, "Non-done feature with all PBIs done should be capped at 90%");
+        Assert.AreEqual(100, result[0].ProgressPercent, "Feature progress should not be capped below 100 when all PBIs are done.");
+        Assert.AreEqual(100d, result[0].CalculatedProgress!.Value, 0.001d);
         Assert.IsFalse(result[0].IsDone);
     }
 
@@ -824,7 +866,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 201, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
         };
 
-        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result);
         Assert.AreEqual(50, result[0].EpicId);
@@ -832,7 +874,7 @@ public class SprintTrendProjectionServiceTests
     }
 
     [TestMethod]
-    public void ComputeFeatureProgress_SkipsFeaturesWithoutPbis()
+    public void ComputeFeatureProgress_IncludesFeaturesWithoutPbisWithNullCalculatedProgress()
     {
         var workItems = new Dictionary<int, WorkItemEntity>
         {
@@ -844,9 +886,12 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 100, WorkItemType = WorkItemType.Feature, ResolvedProductId = 1 },
         };
 
-        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, progressMode: FeatureProgressMode.StoryPoints);
 
-        Assert.IsEmpty(result, "Features with no child PBIs should be skipped");
+        Assert.HasCount(1, result);
+        Assert.IsNull(result[0].CalculatedProgress);
+        Assert.IsNull(result[0].EffectiveProgress);
+        Assert.AreEqual(0, result[0].ProgressPercent);
     }
 
     [TestMethod]
@@ -871,7 +916,12 @@ public class SprintTrendProjectionServiceTests
         // Only PBI 201 had activity — Feature 101 / PBI 202 had none
         var activeWorkItemIds = new HashSet<int> { 201 };
 
-        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, activeWorkItemIds);
+        var result = ComputeFeatureProgress(
+            resolved,
+            workItems,
+            new List<int> { 1 },
+            progressMode: FeatureProgressMode.StoryPoints,
+            activeWorkItemIds: activeWorkItemIds);
 
         Assert.HasCount(1, result, "Only the feature with child PBI activity should be returned");
         Assert.AreEqual(100, result[0].FeatureId);
@@ -895,7 +945,12 @@ public class SprintTrendProjectionServiceTests
         // Feature itself had direct activity (e.g. title change), but no PBI activity
         var activeWorkItemIds = new HashSet<int> { 100 };
 
-        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, activeWorkItemIds);
+        var result = ComputeFeatureProgress(
+            resolved,
+            workItems,
+            new List<int> { 1 },
+            progressMode: FeatureProgressMode.StoryPoints,
+            activeWorkItemIds: activeWorkItemIds);
 
         Assert.HasCount(1, result, "Feature with direct activity should be included even without PBI activity");
         Assert.AreEqual(100, result[0].FeatureId);
@@ -924,7 +979,7 @@ public class SprintTrendProjectionServiceTests
             resolved,
             workItems,
             new List<int> { 1 },
-            activeWorkItemIds: activeWorkItemIds);
+            activeWorkItemIds: activeWorkItemIds, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result, "Feature should remain visible when only a task descendant changed during the sprint.");
         Assert.AreEqual(100, result[0].FeatureId);
@@ -950,7 +1005,12 @@ public class SprintTrendProjectionServiceTests
         };
 
         // No activity filter — both features should be returned
-        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, null);
+        var result = ComputeFeatureProgress(
+            resolved,
+            workItems,
+            new List<int> { 1 },
+            progressMode: FeatureProgressMode.StoryPoints,
+            activeWorkItemIds: null);
 
         Assert.HasCount(2, result, "Without activity filter, all features with PBIs should be returned");
     }
@@ -984,7 +1044,7 @@ public class SprintTrendProjectionServiceTests
         var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: activeWorkItemIds,
-            sprintAssignedPbiIds: sprintAssignedPbiIds);
+            sprintAssignedPbiIds: sprintAssignedPbiIds, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(2, result, "Both features should be returned: one with activity, one with sprint-assigned PBI");
         CollectionAssert.Contains(result.Select(f => f.FeatureId).ToList(), 100, "Feature 100 (activity) must be included");
@@ -1018,7 +1078,7 @@ public class SprintTrendProjectionServiceTests
         var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: activeWorkItemIds,
-            sprintAssignedPbiIds: sprintAssignedPbiIds);
+            sprintAssignedPbiIds: sprintAssignedPbiIds, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result, "Only the feature with activity should be returned");
         Assert.AreEqual(100, result[0].FeatureId);
@@ -1049,7 +1109,7 @@ public class SprintTrendProjectionServiceTests
         var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: activeWorkItemIds,
-            sprintAssignedPbiIds: null);
+            sprintAssignedPbiIds: null, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result, "Without sprintAssignedPbiIds, only activity-based filter applies");
         Assert.AreEqual(100, result[0].FeatureId);
@@ -1072,7 +1132,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
         };
 
-        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result);
         // PBI2 missing effort → sibling avg = 10, so total = 10 + 10 = 20, done = 10
@@ -1100,7 +1160,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 202, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 101 },
         };
 
-        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(2, result);
         Assert.AreEqual(8d, result.Single(f => f.FeatureId == 100).TotalStoryPoints);
@@ -1128,7 +1188,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 203, WorkItemType = WorkItemType.Pbi, ResolvedProductId = 1, ResolvedFeatureId = 100 },
         };
 
-        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result);
         Assert.AreEqual(10.5d, result[0].TotalStoryPoints, 0.001d);
@@ -1155,7 +1215,7 @@ public class SprintTrendProjectionServiceTests
             new() { WorkItemId = 203, WorkItemType = WorkItemType.Task, ResolvedProductId = 1 },
         };
 
-        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 });
+        var result = ComputeFeatureProgress(resolved, workItems, new List<int> { 1 }, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result);
         Assert.AreEqual(5d, result[0].TotalStoryPoints);
@@ -1861,7 +1921,7 @@ public class SprintTrendProjectionServiceTests
 
         var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
-            activeWorkItemIds: null, sprintCompletedPbiIds: sprintCompletedPbiIds);
+            activeWorkItemIds: null, sprintCompletedPbiIds: sprintCompletedPbiIds, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result);
         Assert.AreEqual(50, result[0].SprintCompletedEffort, "Sprint scored effort should equal effort of PBI closed in sprint");
@@ -1887,7 +1947,7 @@ public class SprintTrendProjectionServiceTests
 
         var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
-            activeWorkItemIds: null, sprintCompletedPbiIds: null);
+            activeWorkItemIds: null, sprintCompletedPbiIds: null, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result);
         Assert.AreEqual(0, result[0].SprintCompletedEffort, "Sprint scored effort should be 0 when no sprint filter provided");
@@ -1914,7 +1974,7 @@ public class SprintTrendProjectionServiceTests
 
         var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
-            activeWorkItemIds: null, sprintCompletedPbiIds: sprintCompletedPbiIds);
+            activeWorkItemIds: null, sprintCompletedPbiIds: sprintCompletedPbiIds, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result);
         Assert.AreEqual(0, result[0].SprintCompletedEffort, "Sprint scored effort should be 0 when no PBIs closed in sprint");
@@ -2028,7 +2088,7 @@ public class SprintTrendProjectionServiceTests
 
         var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
-            activeWorkItemIds: null, sprintCompletedPbiIds: sprintCompletedPbiIds);
+            activeWorkItemIds: null, sprintCompletedPbiIds: sprintCompletedPbiIds, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result);
         Assert.AreEqual(2, result[0].SprintCompletedPbiCount, "SprintCompletedPbiCount should count only PBIs closed in sprint");
@@ -2056,7 +2116,7 @@ public class SprintTrendProjectionServiceTests
 
         var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
-            activeWorkItemIds: null, sprintCompletedPbiIds: sprintCompletedPbiIds);
+            activeWorkItemIds: null, sprintCompletedPbiIds: sprintCompletedPbiIds, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result);
         Assert.IsTrue(result[0].SprintCompletedInSprint, "Feature closed in sprint should be marked SprintCompletedInSprint=true");
@@ -2080,7 +2140,7 @@ public class SprintTrendProjectionServiceTests
 
         var result = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
-            activeWorkItemIds: null, sprintCompletedPbiIds: null);
+            activeWorkItemIds: null, sprintCompletedPbiIds: null, progressMode: FeatureProgressMode.StoryPoints);
 
         Assert.HasCount(1, result);
         Assert.AreEqual(0, result[0].SprintCompletedPbiCount, "SprintCompletedPbiCount should be 0 when no sprint filter");
@@ -2174,7 +2234,7 @@ public class SprintTrendProjectionServiceTests
         var featureProgress = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: activeWorkItemIds,
-            sprintCompletedPbiIds: new HashSet<int>());
+            sprintCompletedPbiIds: new HashSet<int>(), progressMode: FeatureProgressMode.StoryPoints);
 
         var epicProgress = ComputeEpicProgress(
             featureProgress, resolved, workItems);
@@ -2222,7 +2282,7 @@ public class SprintTrendProjectionServiceTests
         var featureProgress = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: activeWorkItemIds,
-            sprintCompletedPbiIds: new HashSet<int>());
+            sprintCompletedPbiIds: new HashSet<int>(), progressMode: FeatureProgressMode.StoryPoints);
 
         var epicProgress = ComputeEpicProgress(
             featureProgress, resolved, workItems);
@@ -2258,7 +2318,7 @@ public class SprintTrendProjectionServiceTests
         var featureProgress = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: activeWorkItemIds,
-            sprintAssignedPbiIds: new HashSet<int>());
+            sprintAssignedPbiIds: new HashSet<int>(), progressMode: FeatureProgressMode.StoryPoints);
 
         var epicProgress = ComputeEpicProgress(
             featureProgress, resolved, workItems);
@@ -2294,7 +2354,7 @@ public class SprintTrendProjectionServiceTests
         var featureProgress = ComputeFeatureProgress(
             resolved, workItems, new List<int> { 1 },
             activeWorkItemIds: activeWorkItemIds,
-            sprintAssignedPbiIds: sprintAssignedPbiIds);
+            sprintAssignedPbiIds: sprintAssignedPbiIds, progressMode: FeatureProgressMode.StoryPoints);
 
         var epicProgress = ComputeEpicProgress(
             featureProgress, resolved, workItems);

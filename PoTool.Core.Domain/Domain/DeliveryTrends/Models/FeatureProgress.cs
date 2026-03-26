@@ -23,7 +23,11 @@ public sealed record FeatureProgress
         ProgressionDelta sprintProgressionDelta,
         int sprintEffortDelta,
         int sprintCompletedPbiCount,
-        bool sprintCompletedInSprint)
+        bool sprintCompletedInSprint,
+        double? calculatedProgress = null,
+        double? overrideProgress = null,
+        double? effectiveProgress = null,
+        IReadOnlyList<string>? validationSignals = null)
     {
         DeliveryTrendModelValidation.ValidatePositiveId(featureId, nameof(featureId), "Feature ID");
         DeliveryTrendModelValidation.ValidatePositiveId(productId, nameof(productId), "Product ID");
@@ -61,6 +65,10 @@ public sealed record FeatureProgress
         SprintEffortDelta = sprintEffortDelta;
         SprintCompletedPbiCount = sprintCompletedPbiCount;
         SprintCompletedInSprint = sprintCompletedInSprint;
+        CalculatedProgress = calculatedProgress;
+        Override = overrideProgress;
+        EffectiveProgress = effectiveProgress;
+        ValidationSignals = validationSignals ?? Array.Empty<string>();
     }
 
     public int FeatureId { get; }
@@ -92,4 +100,12 @@ public sealed record FeatureProgress
     public int SprintCompletedPbiCount { get; }
 
     public bool SprintCompletedInSprint { get; }
+
+    public double? CalculatedProgress { get; }
+
+    public double? Override { get; }
+
+    public double? EffectiveProgress { get; }
+
+    public IReadOnlyList<string> ValidationSignals { get; }
 }

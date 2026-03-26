@@ -28,6 +28,7 @@ public sealed class DeliveryProgressRollupServiceTests
                 [202] = CreateWorkItem(202, CanonicalWorkItemTypes.ProductBacklogItem, "Active PBI", parentId: 100, state: "Active", storyPoints: 10)
             },
             [1],
+            FeatureProgressMode.StoryPoints,
             SprintCompletedPbiIds: new HashSet<int> { 201 }));
 
         Assert.HasCount(1, result);
@@ -54,11 +55,35 @@ public sealed class DeliveryProgressRollupServiceTests
                 [201] = CreateWorkItem(201, CanonicalWorkItemTypes.ProductBacklogItem, "Assigned PBI", parentId: 100, state: "Active", storyPoints: 8)
             },
             [1],
+            FeatureProgressMode.StoryPoints,
             ActiveWorkItemIds: Array.Empty<int>(),
             SprintAssignedPbiIds: new HashSet<int> { 201 }));
 
         Assert.HasCount(1, result, "Sprint-assigned PBIs should keep the parent feature visible even without activity.");
         Assert.AreEqual(100, result[0].FeatureId);
+    }
+
+    [TestMethod]
+    public void ComputeFeatureProgress_IncludesOverrideForFeatureWithoutPbis()
+    {
+        var service = CreateService();
+
+        var result = service.ComputeFeatureProgress(new DeliveryFeatureProgressRequest(
+            [
+                CreateResolvedWorkItem(100, CanonicalWorkItemTypes.Feature)
+            ],
+            new Dictionary<int, DeliveryTrendWorkItem>
+            {
+                [100] = CreateWorkItem(100, CanonicalWorkItemTypes.Feature, "Feature A", state: "Active", timeCriticality: 150)
+            },
+            [1],
+            FeatureProgressMode.StoryPoints));
+
+        Assert.HasCount(1, result);
+        Assert.IsNull(result[0].CalculatedProgress);
+        Assert.AreEqual(150d, result[0].Override!.Value, 0.001d);
+        Assert.AreEqual(100d, result[0].EffectiveProgress!.Value, 0.001d);
+        CollectionAssert.Contains(result[0].ValidationSignals.ToList(), FeatureProgressValidationSignals.OverrideOutOfRange);
     }
 
     [TestMethod]
@@ -182,7 +207,8 @@ public sealed class DeliveryProgressRollupServiceTests
         int? effort = null,
         int? storyPoints = null,
         int? businessValue = null,
-        DateTimeOffset? createdDate = null)
+        DateTimeOffset? createdDate = null,
+        double? timeCriticality = null)
     {
         return new DeliveryTrendWorkItem(
             workItemId,
@@ -194,7 +220,8 @@ public sealed class DeliveryProgressRollupServiceTests
             effort,
             storyPoints,
             businessValue,
-            createdDate);
+            createdDate,
+            timeCriticality);
     }
 
     private static FieldChangeEvent CreateFieldChangeEvent(

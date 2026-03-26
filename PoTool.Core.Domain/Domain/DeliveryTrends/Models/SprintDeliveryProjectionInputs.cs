@@ -15,7 +15,8 @@ public sealed record DeliveryTrendWorkItem(
     int? Effort,
     int? StoryPoints,
     int? BusinessValue,
-    DateTimeOffset? CreatedDate);
+    DateTimeOffset? CreatedDate,
+    double? TimeCriticality = null);
 
 /// <summary>
 /// Product-scoped hierarchy resolution data required by sprint delivery projection calculations.
@@ -63,6 +64,7 @@ public sealed record DeliveryFeatureProgressRequest(
     IReadOnlyList<DeliveryTrendResolvedWorkItem> ResolvedItems,
     IReadOnlyDictionary<int, DeliveryTrendWorkItem> WorkItemsById,
     IReadOnlyList<int> ProductIds,
+    FeatureProgressMode Mode,
     IReadOnlyCollection<int>? ActiveWorkItemIds = null,
     IReadOnlyCollection<int>? SprintCompletedPbiIds = null,
     IReadOnlyDictionary<int, int>? SprintEffortDeltaByWorkItem = null,

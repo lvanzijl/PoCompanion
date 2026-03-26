@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-25",
+    "type": "Changed",
+    "title": "Feature progress now uses one canonical engine",
+    "impact": "Feature progress now comes from one backend calculation that applies TimeCriticality overrides, clamps invalid override values, and preserves empty-scope features for downstream delivery views.",
+    "area": "Trends",
+    "link": "/home/delivery/sprint"
+  },
+  {
     "date": "2026-03-24",
     "type": "Changed",
     "title": "Trends workspace tiles now show live signal badges",

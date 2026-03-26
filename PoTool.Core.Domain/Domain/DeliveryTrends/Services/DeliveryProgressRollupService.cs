@@ -35,16 +35,19 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
 {
     private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
     private readonly IHierarchyRollupService _hierarchyRollupService;
+    private readonly IFeatureProgressService _featureProgressService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DeliveryProgressRollupService"/> class.
     /// </summary>
     public DeliveryProgressRollupService(
         ICanonicalStoryPointResolutionService storyPointResolutionService,
-        IHierarchyRollupService hierarchyRollupService)
+        IHierarchyRollupService hierarchyRollupService,
+        IFeatureProgressService? featureProgressService = null)
     {
         _storyPointResolutionService = storyPointResolutionService ?? throw new ArgumentNullException(nameof(storyPointResolutionService));
         _hierarchyRollupService = hierarchyRollupService ?? throw new ArgumentNullException(nameof(hierarchyRollupService));
+        _featureProgressService = featureProgressService ?? new FeatureProgressService();
     }
 
     /// <inheritdoc />
@@ -81,11 +84,6 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                     .OfType<DeliveryTrendWorkItem>()
                     .ToList();
 
-                if (childPbis.Count == 0)
-                {
-                    continue;
-                }
-
                 if (activeHierarchyIds != null)
                 {
                     var hasActivity = activeHierarchyIds.Contains(feature.WorkItemId);
@@ -97,21 +95,22 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                     }
                 }
 
-                var (canonicalFeatureWorkItem, canonicalFeatureWorkItems, doneByWorkItemId) = DeliveryProgressRollupMath.BuildFeatureRollupContext(
-                    featureWorkItem,
-                    childPbis,
-                    request.StateLookup);
-                var featureScope = _hierarchyRollupService.RollupCanonicalScope(canonicalFeatureWorkItem, canonicalFeatureWorkItems, doneByWorkItemId);
+                var featureScope = childPbis.Count > 0
+                    ? ComputeFeatureScope(featureWorkItem, childPbis, request.StateLookup)
+                    : HierarchyScopeRollup.Empty;
                 var donePbiCount = childPbis.Count(childPbi =>
                     StateClassificationLookup.IsDone(request.StateLookup, childPbi.WorkItemType, childPbi.State));
-
+                var featureProgress = _featureProgressService.Compute(new FeatureProgressCalculationRequest(
+                    request.Mode,
+                    childPbis.Count,
+                    donePbiCount,
+                    featureScope.Total,
+                    featureScope.Completed,
+                    featureWorkItem.TimeCriticality));
                 var featureIsDone = StateClassificationLookup.IsDone(request.StateLookup, featureWorkItem.WorkItemType, featureWorkItem.State);
-                var rawPercent = featureScope.Total > 0
-                    ? (int)Math.Round(featureScope.Completed / featureScope.Total * 100)
+                var progressPercent = featureProgress.EffectiveProgress.HasValue
+                    ? (int)Math.Round(featureProgress.EffectiveProgress.Value, MidpointRounding.AwayFromZero)
                     : 0;
-                var progressPercent = featureIsDone
-                    ? 100
-                    : Math.Min(rawPercent, 90);
 
                 var sprintCompletedScopeStoryPoints = request.SprintCompletedPbiIds == null
                     ? 0d
@@ -155,7 +154,11 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                     sprintProgressionDelta,
                     sprintEffortDelta,
                     sprintCompletedPbiCount,
-                    sprintCompletedInSprint));
+                    sprintCompletedInSprint,
+                    featureProgress.CalculatedProgress,
+                    featureProgress.Override,
+                    featureProgress.EffectiveProgress,
+                    featureProgress.ValidationSignals));
             }
         }
 
@@ -284,6 +287,18 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
         }
 
         return new ProgressionDelta(featureCount > 0 ? Math.Round(totalFeatureProgression / featureCount, 2) : 0);
+    }
+
+    private HierarchyScopeRollup ComputeFeatureScope(
+        DeliveryTrendWorkItem featureWorkItem,
+        IReadOnlyList<DeliveryTrendWorkItem> childPbis,
+        IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? stateLookup)
+    {
+        var (canonicalFeatureWorkItem, canonicalFeatureWorkItems, doneByWorkItemId) = DeliveryProgressRollupMath.BuildFeatureRollupContext(
+            featureWorkItem,
+            childPbis,
+            stateLookup);
+        return _hierarchyRollupService.RollupCanonicalScope(canonicalFeatureWorkItem, canonicalFeatureWorkItems, doneByWorkItemId);
     }
 }
 

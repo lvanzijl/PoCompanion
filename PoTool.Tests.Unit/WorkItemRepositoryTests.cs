@@ -317,6 +317,32 @@ public sealed class WorkItemRepositoryTests
     }
 
     [TestMethod]
+    public async Task UpsertManyAsync_PersistsTimeCriticality()
+    {
+        using var context = CreateInMemoryContext();
+        var repository = new WorkItemRepository(context);
+
+        var workItem = new WorkItemDto(
+            TfsId: 302,
+            Type: "Feature",
+            Title: "Feature with override",
+            ParentTfsId: null,
+            AreaPath: "Project\\Team",
+            IterationPath: "Sprint 3",
+            State: "Active",
+            RetrievedAt: DateTimeOffset.UtcNow,
+            Effort: 5,
+            Description: "Feature description",
+            TimeCriticality: 72.5);
+
+        await repository.UpsertManyAsync(new[] { workItem });
+        var result = await repository.GetByTfsIdAsync(302);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(72.5d, result.TimeCriticality!.Value, 0.001d);
+    }
+
+    [TestMethod]
     public async Task UpsertManyAsync_PreservesStoryPointsSeparatelyFromEffortAndBusinessValue()
     {
         using var context = CreateInMemoryContext();

@@ -8,6 +8,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Domain.Cdc.Sprints;
+using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Hierarchy;
@@ -431,8 +432,10 @@ public class GetSprintTrendMetricsQueryHandlerTests
                     IncludedUpToRevisionId = 1
                 }
             ]);
-        _projectionService.ComputeFeatureProgressAsyncHandler = (_, _, _, _, _) =>
-            Task.FromResult<IReadOnlyList<FeatureProgressDto>>(
+        _projectionService.ComputeFeatureProgressAsyncHandler = (_, mode, _, _, _, _) =>
+        {
+            Assert.AreEqual(FeatureProgressMode.StoryPoints, mode);
+            return Task.FromResult<IReadOnlyList<FeatureProgressDto>>(
             [
                 new FeatureProgressDto
                 {
@@ -441,6 +444,7 @@ public class GetSprintTrendMetricsQueryHandlerTests
                     ProductId = product.Id
                 }
             ]);
+        };
         _projectionService.ComputeEpicProgressAsyncHandler = (_, _, _) =>
             Task.FromResult<IReadOnlyList<EpicProgressDto>>(
             [
@@ -637,8 +641,11 @@ public class GetSprintTrendMetricsQueryHandlerTests
                     IncludedUpToRevisionId = 1
                 }
             ]);
-        _projectionService.ComputeFeatureProgressAsyncHandler = (_, _, _, _, _) =>
-            Task.FromResult<IReadOnlyList<FeatureProgressDto>>(featureProgress);
+        _projectionService.ComputeFeatureProgressAsyncHandler = (_, mode, _, _, _, _) =>
+        {
+            Assert.AreEqual(FeatureProgressMode.StoryPoints, mode);
+            return Task.FromResult<IReadOnlyList<FeatureProgressDto>>(featureProgress);
+        };
         _projectionService.ComputeEpicProgressAsyncHandler = (_, _, _) =>
             Task.FromResult<IReadOnlyList<EpicProgressDto>>(epicProgress);
 
@@ -689,8 +696,8 @@ public class GetSprintTrendMetricsQueryHandlerTests
         public Func<int, IEnumerable<int>, CancellationToken, Task<IReadOnlyList<SprintMetricsProjectionEntity>>> ComputeProjectionsAsyncHandler { get; set; }
             = (_, _, _) => Task.FromResult<IReadOnlyList<SprintMetricsProjectionEntity>>(Array.Empty<SprintMetricsProjectionEntity>());
 
-        public Func<int, DateTime?, DateTime?, CancellationToken, int?, Task<IReadOnlyList<FeatureProgressDto>>> ComputeFeatureProgressAsyncHandler { get; set; }
-            = (_, _, _, _, _) => Task.FromResult<IReadOnlyList<FeatureProgressDto>>(Array.Empty<FeatureProgressDto>());
+        public Func<int, FeatureProgressMode, DateTime?, DateTime?, CancellationToken, int?, Task<IReadOnlyList<FeatureProgressDto>>> ComputeFeatureProgressAsyncHandler { get; set; }
+            = (_, _, _, _, _, _) => Task.FromResult<IReadOnlyList<FeatureProgressDto>>(Array.Empty<FeatureProgressDto>());
 
         public Func<int, IReadOnlyList<FeatureProgressDto>, CancellationToken, Task<IReadOnlyList<EpicProgressDto>>> ComputeEpicProgressAsyncHandler { get; set; }
             = (_, _, _) => Task.FromResult<IReadOnlyList<EpicProgressDto>>(Array.Empty<EpicProgressDto>());
@@ -725,12 +732,13 @@ public class GetSprintTrendMetricsQueryHandlerTests
 
         public override Task<IReadOnlyList<FeatureProgressDto>> ComputeFeatureProgressAsync(
             int productOwnerId,
+            FeatureProgressMode progressMode,
             DateTime? sprintStartUtc = null,
             DateTime? sprintEndUtc = null,
             CancellationToken cancellationToken = default,
             int? sprintId = null)
         {
-            return ComputeFeatureProgressAsyncHandler(productOwnerId, sprintStartUtc, sprintEndUtc, cancellationToken, sprintId);
+            return ComputeFeatureProgressAsyncHandler(productOwnerId, progressMode, sprintStartUtc, sprintEndUtc, cancellationToken, sprintId);
         }
 
         public override Task<IReadOnlyList<EpicProgressDto>> ComputeEpicProgressAsync(

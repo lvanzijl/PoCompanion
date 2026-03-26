@@ -178,6 +178,7 @@ public class WorkItemSyncStage : ISyncStage
         entity.RetrievedAt = dto.RetrievedAt;
         entity.Effort = dto.Effort;
         entity.BusinessValue = dto.BusinessValue;
+        entity.TimeCriticality = dto.TimeCriticality;
         entity.Description = dto.Description;
         entity.CreatedDate = dto.CreatedDate;
         entity.ClosedDate = dto.ClosedDate;
@@ -205,6 +206,7 @@ public class WorkItemSyncStage : ISyncStage
             RetrievedAt = dto.RetrievedAt,
             Effort = dto.Effort,
             BusinessValue = dto.BusinessValue,
+            TimeCriticality = dto.TimeCriticality,
             Description = dto.Description,
             CreatedDate = dto.CreatedDate,
             ClosedDate = dto.ClosedDate,

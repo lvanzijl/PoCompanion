@@ -22,5 +22,6 @@ public sealed record WorkItemWithValidationDto(
     bool? IsBlocked = null,
     int? BusinessValue = null,
     double? BacklogPriority = null,
-    int? StoryPoints = null
+    int? StoryPoints = null,
+    double? TimeCriticality = null
 );

@@ -81,6 +81,11 @@ public class WorkItemEntity
     public int? BusinessValue { get; set; }
 
     /// <summary>
+    /// Manual feature-progress override from TFS (Microsoft.VSTS.Common.TimeCriticality).
+    /// </summary>
+    public double? TimeCriticality { get; set; }
+
+    /// <summary>
     /// Work item description (nullable).
     /// </summary>
     public string? Description { get; set; }

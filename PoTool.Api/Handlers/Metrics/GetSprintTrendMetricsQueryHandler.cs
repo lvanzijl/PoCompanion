@@ -122,6 +122,7 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                 // Compute real feature progress from resolved hierarchy, filtered to sprint activity
                 featureProgress = await _projectionService.ComputeFeatureProgressAsync(
                     query.ProductOwnerId,
+                    FeatureProgressMode.StoryPoints,
                     sprintStartForFilter,
                     sprintEndForFilter,
                     cancellationToken,

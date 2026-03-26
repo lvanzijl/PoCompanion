@@ -18,6 +18,10 @@ internal static class DeliveryTrendProgressRollupMapper
             EpicTitle = featureProgress.EpicTitle,
             ProductId = featureProgress.ProductId,
             ProgressPercent = featureProgress.ProgressPercent,
+            CalculatedProgress = featureProgress.CalculatedProgress,
+            Override = featureProgress.Override,
+            EffectiveProgress = featureProgress.EffectiveProgress,
+            ValidationSignals = featureProgress.ValidationSignals,
             TotalStoryPoints = featureProgress.TotalScopeStoryPoints,
             DoneStoryPoints = featureProgress.DeliveredStoryPoints,
             DonePbiCount = featureProgress.DonePbiCount,
@@ -58,7 +62,11 @@ internal static class DeliveryTrendProgressRollupMapper
             new ProgressionDelta(featureProgress.SprintProgressionDelta),
             featureProgress.SprintEffortDelta,
             featureProgress.SprintCompletedPbiCount,
-            featureProgress.SprintCompletedInSprint);
+            featureProgress.SprintCompletedInSprint,
+            featureProgress.CalculatedProgress,
+            featureProgress.Override,
+            featureProgress.EffectiveProgress,
+            featureProgress.ValidationSignals);
     }
 
     public static EpicProgressDto ToEpicProgressDto(this EpicProgress epicProgress)

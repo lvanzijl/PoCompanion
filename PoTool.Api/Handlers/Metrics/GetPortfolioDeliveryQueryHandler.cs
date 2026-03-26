@@ -97,6 +97,7 @@ public sealed class GetPortfolioDeliveryQueryHandler
 
         var featureProgress = await _projectionService.ComputeFeatureProgressAsync(
             query.ProductOwnerId,
+            FeatureProgressMode.StoryPoints,
             sprintRangeStart,
             sprintRangeEnd,
             cancellationToken);

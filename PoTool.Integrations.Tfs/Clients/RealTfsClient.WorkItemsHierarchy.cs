@@ -293,6 +293,7 @@ public partial class RealTfsClient
             string? severity = ParseSeverityField(fields);
             string? tags = ParseTagsField(fields);
             double? backlogPriority = ParseBacklogPriorityField(fields);
+            double? timeCriticality = ParseTimeCriticalityField(fields);
 
             results.Add(new WorkItemDto(
                 TfsId: id,
@@ -312,7 +313,8 @@ public partial class RealTfsClient
                 Tags: tags,
                 ChangedDate: changedDate,
                 BacklogPriority: backlogPriority,
-                StoryPoints: storyPoints
+                StoryPoints: storyPoints,
+                TimeCriticality: timeCriticality
             ));
          }
 
