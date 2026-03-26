@@ -147,8 +147,8 @@ public sealed class DeliveryProgressRollupServiceTests
 
         var result = service.ComputeEpicProgress(new DeliveryEpicProgressRequest(
             [
-                new FeatureProgress(200, "Feature A", 1, 100, "Epic X", 50, 40, 20, 2, false, 10, new ProgressionDelta(25), 4, 1, false),
-                new FeatureProgress(201, "Feature B", 1, 100, "Epic X", 80, 60, 48, 3, false, 20, new ProgressionDelta(33.33), 6, 2, true)
+                new FeatureProgress(200, "Feature A", 1, 100, "Epic X", 50, 40, 20, 2, false, 10, new ProgressionDelta(25), 4, 1, false, effectiveProgress: 50, forecastConsumedEffort: 20, forecastRemainingEffort: 80, weight: 2),
+                new FeatureProgress(201, "Feature B", 1, 100, "Epic X", 80, 60, 48, 3, false, 20, new ProgressionDelta(33.33), 6, 2, true, effectiveProgress: 100, forecastConsumedEffort: 30, forecastRemainingEffort: 70, weight: 1)
             ],
             new Dictionary<int, DeliveryTrendWorkItem>
             {
@@ -158,10 +158,61 @@ public sealed class DeliveryProgressRollupServiceTests
         Assert.HasCount(1, result);
         Assert.AreEqual(100, result[0].TotalScopeStoryPoints, 0.001d);
         Assert.AreEqual(68, result[0].DeliveredStoryPoints, 0.001d);
+        Assert.AreEqual(66.67d, result[0].AggregatedProgress!.Value, 0.01d);
+        Assert.AreEqual(50d, result[0].ForecastConsumedEffort!.Value, 0.001d);
+        Assert.AreEqual(150d, result[0].ForecastRemainingEffort!.Value, 0.001d);
+        Assert.AreEqual(0, result[0].ExcludedFeaturesCount);
         Assert.AreEqual(30d, result[0].SprintDeliveredStoryPoints, 0.001d);
         Assert.AreEqual(30d, result[0].SprintProgressionDelta.Percentage, 0.001d);
         Assert.AreEqual(10, result[0].SprintEffortDelta);
         Assert.AreEqual(1, result[0].SprintCompletedFeatureCount);
+    }
+
+    [TestMethod]
+    public void ComputeEpicProgress_DelegatesCanonicalAggregationToEpicAggregationService()
+    {
+        var service = CreateService(epicAggregationService: new StubEpicAggregationService(
+            new EpicAggregationResult(12.5d, 1.25d, 8.75d, 3, 2, 5)));
+
+        var result = service.ComputeEpicProgress(new DeliveryEpicProgressRequest(
+            [
+                new FeatureProgress(200, "Feature A", 1, 100, "Epic X", 50, 40, 20, 2, false, 10, new ProgressionDelta(25), 4, 1, false, effectiveProgress: 50, weight: 2)
+            ],
+            new Dictionary<int, DeliveryTrendWorkItem>
+            {
+                [100] = CreateWorkItem(100, "Epic", "Epic X", state: "Active")
+            }));
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(12.5d, result[0].AggregatedProgress!.Value, 0.001d);
+        Assert.AreEqual(13, result[0].ProgressPercent);
+        Assert.AreEqual(1.25d, result[0].ForecastConsumedEffort!.Value, 0.001d);
+        Assert.AreEqual(8.75d, result[0].ForecastRemainingEffort!.Value, 0.001d);
+        Assert.AreEqual(3, result[0].ExcludedFeaturesCount);
+        Assert.AreEqual(2, result[0].IncludedFeaturesCount);
+        Assert.AreEqual(5d, result[0].TotalWeight, 0.001d);
+    }
+
+    [TestMethod]
+    public void ComputeEpicProgress_PreservesNullProgress_WhenAggregationIsUnknown()
+    {
+        var service = CreateService(epicAggregationService: new StubEpicAggregationService(
+            new EpicAggregationResult(null, 1.25d, 8.75d, 3, 0, 0)));
+
+        var result = service.ComputeEpicProgress(new DeliveryEpicProgressRequest(
+            [
+                new FeatureProgress(200, "Feature A", 1, 100, "Epic X", 0, 0, 0, 0, false, 0, new ProgressionDelta(0), 0, 0, false, weight: 0, isExcluded: true)
+            ],
+            new Dictionary<int, DeliveryTrendWorkItem>
+            {
+                [100] = CreateWorkItem(100, "Epic", "Epic X", state: "Active")
+            }));
+
+        Assert.HasCount(1, result);
+        Assert.IsNull(result[0].AggregatedProgress);
+        Assert.IsNull(result[0].ProgressPercent, "Unknown epic progress must stay null and must not be coerced to zero.");
+        Assert.AreEqual(1.25d, result[0].ForecastConsumedEffort!.Value, 0.001d);
+        Assert.AreEqual(8.75d, result[0].ForecastRemainingEffort!.Value, 0.001d);
     }
 
     [TestMethod]
@@ -227,19 +278,27 @@ public sealed class DeliveryProgressRollupServiceTests
         Assert.AreEqual(50d, result.Percentage, 0.001d);
     }
 
-    private static IDeliveryProgressRollupService CreateService(IFeatureForecastService? featureForecastService = null)
+    private static IDeliveryProgressRollupService CreateService(
+        IFeatureForecastService? featureForecastService = null,
+        IEpicAggregationService? epicAggregationService = null)
     {
         var storyPointResolutionService = new CanonicalStoryPointResolutionService();
         var hierarchyRollupService = new HierarchyRollupService(storyPointResolutionService);
         return new DeliveryProgressRollupService(
             storyPointResolutionService,
             hierarchyRollupService,
-            featureForecastService: featureForecastService);
+            featureForecastService: featureForecastService,
+            epicAggregationService: epicAggregationService);
     }
 
     private sealed class StubFeatureForecastService(FeatureForecastResult result) : IFeatureForecastService
     {
         public FeatureForecastResult Compute(FeatureForecastCalculationRequest request) => result;
+    }
+
+    private sealed class StubEpicAggregationService(EpicAggregationResult result) : IEpicAggregationService
+    {
+        public EpicAggregationResult Compute(EpicAggregationRequest request) => result;
     }
 
     private static DeliveryTrendResolvedWorkItem CreateResolvedWorkItem(

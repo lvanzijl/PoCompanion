@@ -107,6 +107,7 @@ public class ServiceCollectionTests
 
         var storyPointResolutionService = scope.ServiceProvider.GetService<ICanonicalStoryPointResolutionService>();
         var hierarchyRollupService = scope.ServiceProvider.GetService<IHierarchyRollupService>();
+        var epicAggregationService = scope.ServiceProvider.GetService<IEpicAggregationService>();
         var deliveryProgressRollupService = scope.ServiceProvider.GetService<IDeliveryProgressRollupService>();
         var portfolioDeliverySummaryService = scope.ServiceProvider.GetService<IPortfolioDeliverySummaryService>();
         var sprintCommitmentService = scope.ServiceProvider.GetService<ISprintCommitmentService>();
@@ -128,6 +129,7 @@ public class ServiceCollectionTests
 
         Assert.IsNotNull(storyPointResolutionService, "Canonical story-point resolution service should be registered.");
         Assert.IsNotNull(hierarchyRollupService, "Hierarchy rollup service should be registered.");
+        Assert.IsNotNull(epicAggregationService, "Epic aggregation service should be registered.");
         Assert.IsNotNull(deliveryProgressRollupService, "Delivery progress rollup service should be registered.");
         Assert.IsNotNull(portfolioDeliverySummaryService, "Portfolio delivery summary service should be registered.");
         Assert.IsNotNull(sprintCommitmentService, "Sprint commitment CDC service should be registered.");

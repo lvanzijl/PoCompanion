@@ -1239,8 +1239,12 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Epic X",
                 ProductId = 1,
                 ProgressPercent = 50,
+                EffectiveProgress = 50,
+                Weight = 20,
                 TotalStoryPoints = 20,
                 DoneStoryPoints = 10,
+                ForecastConsumedEffort = 20,
+                ForecastRemainingEffort = 80,
                 IsDone = false
             },
             new()
@@ -1251,8 +1255,12 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Epic X",
                 ProductId = 1,
                 ProgressPercent = 80,
+                EffectiveProgress = 80,
+                Weight = 10,
                 TotalStoryPoints = 10,
                 DoneStoryPoints = 8,
+                ForecastConsumedEffort = 30,
+                ForecastRemainingEffort = 70,
                 IsDone = false
             }
         };
@@ -1270,14 +1278,17 @@ public class SprintTrendProjectionServiceTests
         Assert.AreEqual("Epic X", result[0].EpicTitle);
         Assert.AreEqual(30, result[0].TotalStoryPoints, "Total effort should be 20+10=30");
         Assert.AreEqual(18, result[0].DoneStoryPoints, "Done effort should be 10+8=18");
-        Assert.AreEqual(60, result[0].ProgressPercent, "Progress should be ~60% (18/30)");
+        Assert.AreEqual(60, result[0].ProgressPercent, "Progress should be the weighted average rounded from child feature progress.");
+        Assert.AreEqual(60d, result[0].AggregatedProgress!.Value, 0.001d);
+        Assert.AreEqual(50d, result[0].ForecastConsumedEffort!.Value, 0.001d);
+        Assert.AreEqual(150d, result[0].ForecastRemainingEffort!.Value, 0.001d);
         Assert.AreEqual(2, result[0].FeatureCount);
         Assert.AreEqual(0, result[0].DoneFeatureCount);
         Assert.IsFalse(result[0].IsDone);
     }
 
     [TestMethod]
-    public void ComputeEpicProgress_CanonicallyDoneEpic_Shows100Percent()
+    public void ComputeEpicProgress_DoneEpic_PreservesWeightedAverageProgress()
     {
         var featureProgress = new List<FeatureProgressDto>
         {
@@ -1289,6 +1300,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Done Epic",
                 ProductId = 1,
                 ProgressPercent = 50,
+                EffectiveProgress = 50,
+                Weight = 10,
                 TotalStoryPoints = 10,
                 DoneStoryPoints = 5,
                 IsDone = false
@@ -1304,12 +1317,13 @@ public class SprintTrendProjectionServiceTests
         var result = ComputeEpicProgress(featureProgress, resolvedItems, workItems);
 
         Assert.HasCount(1, result);
-        Assert.AreEqual(100, result[0].ProgressPercent, "Canonically done epic should show 100%");
+        Assert.AreEqual(50, result[0].ProgressPercent, "Epic state should not override weighted feature progress.");
+        Assert.AreEqual(50d, result[0].AggregatedProgress!.Value, 0.001d);
         Assert.IsTrue(result[0].IsDone);
     }
 
     [TestMethod]
-    public void ComputeEpicProgress_UsesCanonicalDoneMappingForResolvedState()
+    public void ComputeEpicProgress_UsesCanonicalDoneMappingForStateWithoutOverridingProgress()
     {
         var featureProgress = new List<FeatureProgressDto>
         {
@@ -1321,6 +1335,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Resolved Epic",
                 ProductId = 1,
                 ProgressPercent = 50,
+                EffectiveProgress = 50,
+                Weight = 10,
                 TotalStoryPoints = 10,
                 DoneStoryPoints = 5,
                 IsDone = false
@@ -1339,12 +1355,13 @@ public class SprintTrendProjectionServiceTests
             BuildStateLookup((WorkItemType.Epic, "Resolved", StateClassification.Done)));
 
         Assert.HasCount(1, result);
-        Assert.AreEqual(100, result[0].ProgressPercent, "Resolved epic should be treated as done when canonically mapped");
+        Assert.AreEqual(50, result[0].ProgressPercent, "Resolved epic should still use weighted child progress when canonically mapped done.");
+        Assert.AreEqual(50d, result[0].AggregatedProgress!.Value, 0.001d);
         Assert.IsTrue(result[0].IsDone);
     }
 
     [TestMethod]
-    public void ComputeEpicProgress_NonDoneEpic_CappedAt90Percent()
+    public void ComputeEpicProgress_ExcludedFeaturesDoNotAffectProgress()
     {
         var featureProgress = new List<FeatureProgressDto>
         {
@@ -1355,10 +1372,27 @@ public class SprintTrendProjectionServiceTests
                 EpicId = 100,
                 EpicTitle = "Active Epic",
                 ProductId = 1,
-                ProgressPercent = 90,
+                ProgressPercent = 50,
+                EffectiveProgress = 50,
+                Weight = 2,
                 TotalStoryPoints = 10,
-                DoneStoryPoints = 10,
-                IsDone = true
+                DoneStoryPoints = 5,
+                IsDone = false
+            },
+            new()
+            {
+                FeatureId = 201,
+                FeatureTitle = "Excluded Feature",
+                EpicId = 100,
+                EpicTitle = "Active Epic",
+                ProductId = 1,
+                ProgressPercent = 100,
+                EffectiveProgress = 100,
+                Weight = 0,
+                IsExcluded = true,
+                TotalStoryPoints = 0,
+                DoneStoryPoints = 0,
+                IsDone = false
             }
         };
 
@@ -1371,9 +1405,10 @@ public class SprintTrendProjectionServiceTests
         var result = ComputeEpicProgress(featureProgress, resolvedItems, workItems);
 
         Assert.HasCount(1, result);
-        Assert.AreEqual(90, result[0].ProgressPercent, "Non-done epic should be capped at 90%");
+        Assert.AreEqual(50, result[0].ProgressPercent, "Excluded features should not contribute to weighted epic progress.");
+        Assert.AreEqual(50d, result[0].AggregatedProgress!.Value, 0.001d);
         Assert.IsFalse(result[0].IsDone);
-        Assert.AreEqual(1, result[0].DoneFeatureCount);
+        Assert.AreEqual(1, result[0].ExcludedFeaturesCount);
     }
 
     [TestMethod]
@@ -1995,6 +2030,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Epic X",
                 ProductId = 1,
                 ProgressPercent = 50,
+                EffectiveProgress = 50,
+                Weight = 40,
                 TotalStoryPoints = 40,
                 DoneStoryPoints = 20,
                 IsDone = false,
@@ -2009,6 +2046,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Epic X",
                 ProductId = 1,
                 ProgressPercent = 80,
+                EffectiveProgress = 80,
+                Weight = 60,
                 TotalStoryPoints = 60,
                 DoneStoryPoints = 48,
                 IsDone = false,
@@ -2044,6 +2083,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Epic X",
                 ProductId = 1,
                 ProgressPercent = 0,
+                Weight = 0,
+                IsExcluded = true,
                 TotalStoryPoints = 0,
                 DoneStoryPoints = 0,
                 IsDone = false,
@@ -2062,6 +2103,9 @@ public class SprintTrendProjectionServiceTests
 
         Assert.HasCount(1, result);
         Assert.AreEqual(0.0, result[0].SprintProgressionDelta, "Sprint delta should be 0 when total effort is 0");
+        Assert.IsNull(result[0].AggregatedProgress, "Weighted epic progress should be null when all features are excluded.");
+        Assert.IsNull(result[0].ProgressPercent, "Unknown epic progress must not fall back to zero.");
+        Assert.AreEqual(1, result[0].ExcludedFeaturesCount);
     }
 
     [TestMethod]
@@ -2161,6 +2205,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Epic X",
                 ProductId = 1,
                 ProgressPercent = 100,
+                EffectiveProgress = 100,
+                Weight = 30,
                 TotalStoryPoints = 30,
                 DoneStoryPoints = 30,
                 IsDone = true,
@@ -2177,6 +2223,8 @@ public class SprintTrendProjectionServiceTests
                 EpicTitle = "Epic X",
                 ProductId = 1,
                 ProgressPercent = 50,
+                EffectiveProgress = 50,
+                Weight = 40,
                 TotalStoryPoints = 40,
                 DoneStoryPoints = 20,
                 IsDone = false,

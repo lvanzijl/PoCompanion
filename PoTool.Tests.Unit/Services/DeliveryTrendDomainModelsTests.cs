@@ -123,7 +123,10 @@ public sealed class DeliveryTrendDomainModelsTests
             new ProgressionDelta(25.58),
             -8,
             2,
-            true);
+            true,
+            effectiveProgress: 60,
+            weight: 21.5,
+            isExcluded: false);
 
         var epicProgress = new EpicProgress(
             500,
@@ -140,19 +143,63 @@ public sealed class DeliveryTrendDomainModelsTests
             new ProgressionDelta(15.32),
             12,
             3,
-            1);
+            1,
+            aggregatedProgress: 62.16,
+            forecastConsumedEffort: 20.25,
+            forecastRemainingEffort: 35.25,
+            excludedFeaturesCount: 1,
+            includedFeaturesCount: 3,
+            totalWeight: 55.5);
 
         Assert.AreEqual(21.5d, featureProgress.TotalScopeStoryPoints);
         Assert.AreEqual(13.5d, featureProgress.DeliveredStoryPoints);
         Assert.AreEqual(5.5d, featureProgress.SprintDeliveredStoryPoints);
         Assert.AreEqual(-8, featureProgress.SprintEffortDelta);
         Assert.AreEqual(25.58d, featureProgress.SprintProgressionDelta.Percentage);
+        Assert.AreEqual(21.5d, featureProgress.Weight);
+        Assert.IsFalse(featureProgress.IsExcluded);
 
         Assert.AreEqual(55.5d, epicProgress.TotalScopeStoryPoints);
         Assert.AreEqual(34.5d, epicProgress.DeliveredStoryPoints);
         Assert.AreEqual(8.5d, epicProgress.SprintDeliveredStoryPoints);
         Assert.AreEqual(12, epicProgress.SprintEffortDelta);
         Assert.AreEqual(15.32d, epicProgress.SprintProgressionDelta.Percentage);
+        Assert.AreEqual(62.16d, epicProgress.AggregatedProgress!.Value, 0.001d);
+        Assert.AreEqual(20.25d, epicProgress.ForecastConsumedEffort!.Value, 0.001d);
+        Assert.AreEqual(35.25d, epicProgress.ForecastRemainingEffort!.Value, 0.001d);
+        Assert.AreEqual(1, epicProgress.ExcludedFeaturesCount);
+        Assert.AreEqual(3, epicProgress.IncludedFeaturesCount);
+        Assert.AreEqual(55.5d, epicProgress.TotalWeight, 0.001d);
+    }
+
+    [TestMethod]
+    public void EpicProgress_AllowsNullCompatibilityProgress_WhenAggregationIsUnknown()
+    {
+        var epicProgress = new EpicProgress(
+            500,
+            "Epic A",
+            7,
+            null,
+            0,
+            0,
+            1,
+            0,
+            0,
+            false,
+            0,
+            new ProgressionDelta(0),
+            0,
+            0,
+            0,
+            aggregatedProgress: null,
+            forecastConsumedEffort: null,
+            forecastRemainingEffort: null,
+            excludedFeaturesCount: 1,
+            includedFeaturesCount: 0,
+            totalWeight: 0);
+
+        Assert.IsNull(epicProgress.ProgressPercent);
+        Assert.IsNull(epicProgress.AggregatedProgress);
     }
 
     [TestMethod]

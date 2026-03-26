@@ -37,6 +37,7 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
     private readonly IHierarchyRollupService _hierarchyRollupService;
     private readonly IFeatureProgressService _featureProgressService;
     private readonly IFeatureForecastService _featureForecastService;
+    private readonly IEpicAggregationService _epicAggregationService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DeliveryProgressRollupService"/> class.
@@ -45,12 +46,14 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
         ICanonicalStoryPointResolutionService storyPointResolutionService,
         IHierarchyRollupService hierarchyRollupService,
         IFeatureProgressService? featureProgressService = null,
-        IFeatureForecastService? featureForecastService = null)
+        IFeatureForecastService? featureForecastService = null,
+        IEpicAggregationService? epicAggregationService = null)
     {
         _storyPointResolutionService = storyPointResolutionService ?? throw new ArgumentNullException(nameof(storyPointResolutionService));
         _hierarchyRollupService = hierarchyRollupService ?? throw new ArgumentNullException(nameof(hierarchyRollupService));
         _featureProgressService = featureProgressService ?? new FeatureProgressService();
         _featureForecastService = featureForecastService ?? new FeatureForecastService();
+        _epicAggregationService = epicAggregationService ?? new EpicAggregationService();
     }
 
     /// <inheritdoc />
@@ -137,6 +140,10 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                 var sprintEffortDelta = request.SprintEffortDeltaByWorkItem == null
                     ? 0
                     : childPbis.Sum(childPbi => request.SprintEffortDeltaByWorkItem.GetValueOrDefault(childPbi.WorkItemId, 0));
+                var weight = request.Mode == FeatureProgressMode.Count
+                    ? childPbis.Count
+                    : featureScope.Total;
+                var isExcluded = weight <= 0;
 
                 int? epicId = feature.ResolvedEpicId;
                 string? epicTitle = null;
@@ -166,7 +173,9 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                     featureProgress.EffectiveProgress,
                     featureProgress.ValidationSignals,
                     featureForecast.ForecastConsumedEffort,
-                    featureForecast.ForecastRemainingEffort));
+                    featureForecast.ForecastRemainingEffort,
+                    weight,
+                    isExcluded));
             }
         }
 
@@ -196,15 +205,13 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
             }
 
             var features = group.ToList();
+            var aggregation = _epicAggregationService.Compute(new EpicAggregationRequest(features));
             var totalScopeStoryPoints = features.Sum(feature => feature.TotalScopeStoryPoints);
             var deliveredStoryPoints = features.Sum(feature => feature.DeliveredStoryPoints);
             var epicIsDone = StateClassificationLookup.IsDone(request.StateLookup, epicWorkItem.WorkItemType, epicWorkItem.State);
-            var rawPercent = totalScopeStoryPoints > 0
-                ? (int)Math.Round(deliveredStoryPoints / totalScopeStoryPoints * 100)
-                : 0;
-            var progressPercent = epicIsDone
-                ? 100
-                : Math.Min(rawPercent, 90);
+            int? progressPercent = aggregation.EpicProgress.HasValue
+                ? (int)Math.Round(aggregation.EpicProgress.Value, MidpointRounding.AwayFromZero)
+                : null;
             var sprintDeliveredStoryPoints = features.Sum(feature => feature.SprintDeliveredStoryPoints);
             var sprintProgressionDelta = totalScopeStoryPoints > 0
                 ? new ProgressionDelta(Math.Round(sprintDeliveredStoryPoints / totalScopeStoryPoints * 100, 2))
@@ -225,7 +232,13 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                 sprintProgressionDelta,
                 features.Sum(feature => feature.SprintEffortDelta),
                 features.Sum(feature => feature.SprintCompletedPbiCount),
-                features.Count(feature => feature.SprintCompletedInSprint)));
+                features.Count(feature => feature.SprintCompletedInSprint),
+                aggregation.EpicProgress,
+                aggregation.EpicForecastConsumed,
+                aggregation.EpicForecastRemaining,
+                aggregation.ExcludedFeaturesCount,
+                aggregation.IncludedFeaturesCount,
+                aggregation.TotalWeight));
         }
 
         return results

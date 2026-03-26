@@ -29,7 +29,9 @@ public sealed record FeatureProgress
         double? effectiveProgress = null,
         IReadOnlyList<string>? validationSignals = null,
         double? forecastConsumedEffort = null,
-        double? forecastRemainingEffort = null)
+        double? forecastRemainingEffort = null,
+        double weight = 0,
+        bool isExcluded = false)
     {
         DeliveryTrendModelValidation.ValidatePositiveId(featureId, nameof(featureId), "Feature ID");
         DeliveryTrendModelValidation.ValidatePositiveId(productId, nameof(productId), "Product ID");
@@ -51,6 +53,7 @@ public sealed record FeatureProgress
         DeliveryTrendModelValidation.ValidateCount(donePbiCount, nameof(donePbiCount), "Done PBI count");
         DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(sprintDeliveredStoryPoints, nameof(sprintDeliveredStoryPoints), "Sprint delivered story points");
         DeliveryTrendModelValidation.ValidateCount(sprintCompletedPbiCount, nameof(sprintCompletedPbiCount), "Sprint completed PBI count");
+        DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(weight, nameof(weight), "Feature weight");
 
         FeatureId = featureId;
         FeatureTitle = featureTitle;
@@ -73,6 +76,8 @@ public sealed record FeatureProgress
         ValidationSignals = validationSignals ?? Array.Empty<string>();
         ForecastConsumedEffort = forecastConsumedEffort;
         ForecastRemainingEffort = forecastRemainingEffort;
+        Weight = weight;
+        IsExcluded = isExcluded;
     }
 
     public int FeatureId { get; }
@@ -116,4 +121,8 @@ public sealed record FeatureProgress
     public double? ForecastConsumedEffort { get; }
 
     public double? ForecastRemainingEffort { get; }
+
+    public double Weight { get; }
+
+    public bool IsExcluded { get; }
 }

@@ -12,7 +12,7 @@ public sealed record EpicProgress
         int epicId,
         string epicTitle,
         int productId,
-        int progressPercent,
+        int? progressPercent,
         double totalScopeStoryPoints,
         double deliveredStoryPoints,
         int featureCount,
@@ -23,12 +23,21 @@ public sealed record EpicProgress
         ProgressionDelta sprintProgressionDelta,
         int sprintEffortDelta,
         int sprintCompletedPbiCount,
-        int sprintCompletedFeatureCount)
+        int sprintCompletedFeatureCount,
+        double? aggregatedProgress = null,
+        double? forecastConsumedEffort = null,
+        double? forecastRemainingEffort = null,
+        int excludedFeaturesCount = 0,
+        int includedFeaturesCount = 0,
+        double totalWeight = 0)
     {
         DeliveryTrendModelValidation.ValidatePositiveId(epicId, nameof(epicId), "Epic ID");
         DeliveryTrendModelValidation.ValidatePositiveId(productId, nameof(productId), "Product ID");
         DeliveryTrendModelValidation.ValidateRequiredText(epicTitle, nameof(epicTitle), "Epic title");
-        DeliveryTrendModelValidation.ValidateBoundedPercentage(progressPercent, nameof(progressPercent), "Progress percent");
+        if (progressPercent.HasValue)
+        {
+            DeliveryTrendModelValidation.ValidateBoundedPercentage(progressPercent.Value, nameof(progressPercent), "Progress percent");
+        }
         DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(totalScopeStoryPoints, nameof(totalScopeStoryPoints), "Total scope story points");
         DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(deliveredStoryPoints, nameof(deliveredStoryPoints), "Delivered story points");
         DeliveryTrendModelValidation.ValidateCount(featureCount, nameof(featureCount), "Feature count");
@@ -37,6 +46,14 @@ public sealed record EpicProgress
         DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(sprintDeliveredStoryPoints, nameof(sprintDeliveredStoryPoints), "Sprint delivered story points");
         DeliveryTrendModelValidation.ValidateCount(sprintCompletedPbiCount, nameof(sprintCompletedPbiCount), "Sprint completed PBI count");
         DeliveryTrendModelValidation.ValidateCount(sprintCompletedFeatureCount, nameof(sprintCompletedFeatureCount), "Sprint completed feature count");
+        DeliveryTrendModelValidation.ValidateCount(excludedFeaturesCount, nameof(excludedFeaturesCount), "Excluded feature count");
+        DeliveryTrendModelValidation.ValidateCount(includedFeaturesCount, nameof(includedFeaturesCount), "Included feature count");
+        DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(totalWeight, nameof(totalWeight), "Total weight");
+
+        if (aggregatedProgress.HasValue)
+        {
+            DeliveryTrendModelValidation.ValidateBoundedPercentage(aggregatedProgress.Value, nameof(aggregatedProgress), "Aggregated progress");
+        }
 
         EpicId = epicId;
         EpicTitle = epicTitle;
@@ -53,6 +70,12 @@ public sealed record EpicProgress
         SprintEffortDelta = sprintEffortDelta;
         SprintCompletedPbiCount = sprintCompletedPbiCount;
         SprintCompletedFeatureCount = sprintCompletedFeatureCount;
+        AggregatedProgress = aggregatedProgress;
+        ForecastConsumedEffort = forecastConsumedEffort;
+        ForecastRemainingEffort = forecastRemainingEffort;
+        ExcludedFeaturesCount = excludedFeaturesCount;
+        IncludedFeaturesCount = includedFeaturesCount;
+        TotalWeight = totalWeight;
     }
 
     public int EpicId { get; }
@@ -61,7 +84,7 @@ public sealed record EpicProgress
 
     public int ProductId { get; }
 
-    public int ProgressPercent { get; }
+    public int? ProgressPercent { get; }
 
     public double TotalScopeStoryPoints { get; }
 
@@ -84,4 +107,16 @@ public sealed record EpicProgress
     public int SprintCompletedPbiCount { get; }
 
     public int SprintCompletedFeatureCount { get; }
+
+    public double? AggregatedProgress { get; }
+
+    public double? ForecastConsumedEffort { get; }
+
+    public double? ForecastRemainingEffort { get; }
+
+    public int ExcludedFeaturesCount { get; }
+
+    public int IncludedFeaturesCount { get; }
+
+    public double TotalWeight { get; }
 }
