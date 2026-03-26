@@ -72,7 +72,9 @@ public sealed class UiSemanticLabelsTests
         Assert.DoesNotContain(portfolioDelivery, " pts", "Portfolio delivery should not show misleading pts suffixes for effort-hour values.");
 
         var sprintTrend = File.ReadAllText(Path.Combine(repositoryRoot, "PoTool.Client", "Pages", "Home", "SprintTrend.razor"));
-        StringAssert.Contains(sprintTrend, "Δ Effort (hours)");
+        StringAssert.Contains(sprintTrend, "Forecast Consumed");
+        StringAssert.Contains(sprintTrend, "Forecast Remaining");
+        StringAssert.Contains(sprintTrend, " hours");
         Assert.DoesNotContain(sprintTrend, "Δ Effort (pts)", "Sprint trend effort deltas should use hours.");
     }
 

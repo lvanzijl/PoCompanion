@@ -1,0 +1,44 @@
+@if (Value.HasValue)
+{
+    <MudStack Spacing="1">
+        <MudText Typo="@Typo" Color="@ValueColor" Class="@Class">
+            @($"{Value.Value:0.##}%")
+        </MudText>
+
+        @if (ShowProgressBar)
+        {
+            <MudProgressLinear Value="@Value.Value"
+                               Max="100"
+                               Rounded="true"
+                               Size="Size.Small"
+                               Color="@ProgressColor" />
+        }
+    </MudStack>
+}
+else
+{
+    <MudText Typo="@Typo" Color="Color.Secondary" Class="@Class">@UnknownLabel</MudText>
+}
+
+@code {
+    [Parameter]
+    public double? Value { get; set; }
+
+    [Parameter]
+    public string UnknownLabel { get; set; } = "Unknown";
+
+    [Parameter]
+    public bool ShowProgressBar { get; set; }
+
+    [Parameter]
+    public Typo Typo { get; set; } = Typo.body2;
+
+    [Parameter]
+    public Color ValueColor { get; set; } = Color.Default;
+
+    [Parameter]
+    public Color ProgressColor { get; set; } = Color.Primary;
+
+    [Parameter]
+    public string Class { get; set; } = string.Empty;
+}

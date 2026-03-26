@@ -1,0 +1,21 @@
+<MudPaper Elevation="@Elevation" Class="@($"pa-3 {Class}")">
+    <MudText Typo="Typo.caption" Color="Color.Secondary">@Title</MudText>
+    <MudStack Spacing="1" Class="mt-1">
+        @ChildContent
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public int Elevation { get; set; } = 0;
+
+    [Parameter]
+    public string Class { get; set; } = string.Empty;
+}

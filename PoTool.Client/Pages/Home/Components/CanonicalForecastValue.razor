@@ -1,0 +1,30 @@
+<MudText Typo="@Typo" Color="@(Value.HasValue ? ValueColor : Color.Secondary)" Class="@Class">
+    @GetDisplayText()
+</MudText>
+
+@code {
+    [Parameter]
+    public double? Value { get; set; }
+
+    [Parameter]
+    public string UnknownLabel { get; set; } = "Unknown";
+
+    [Parameter]
+    public string Suffix { get; set; } = string.Empty;
+
+    [Parameter]
+    public Typo Typo { get; set; } = Typo.body2;
+
+    [Parameter]
+    public Color ValueColor { get; set; } = Color.Default;
+
+    [Parameter]
+    public string Class { get; set; } = string.Empty;
+
+    private string GetDisplayText()
+    {
+        return Value.HasValue
+            ? $"{Value.Value:0.##}{Suffix}"
+            : UnknownLabel;
+    }
+}

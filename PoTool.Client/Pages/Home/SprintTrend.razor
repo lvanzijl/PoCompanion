@@ -473,7 +473,95 @@
 
     @if (_drillDownLevel == DrillDownLevel.Product && _selectedProductId.HasValue)
     {
+        var selectedProductAnalytics = GetProductAnalytics(_selectedProductId.Value);
         var productEpics = GetVisibleEpicsForProduct(_selectedProductId.Value);
+        if (selectedProductAnalytics is not null)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.subtitle1" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Analytics" Class="mr-1" />
+                    Canonical Product Summary — @_selectedProductName
+                </MudText>
+
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6" lg="2">
+                        <AnalyticsMetricCard Title="Product Progress">
+                            <CanonicalNullablePercentage Value="@selectedProductAnalytics.Progress.ProductProgress"
+                                                         ShowProgressBar="true"
+                                                         ProgressColor="Color.Success"
+                                                         ValueColor="Color.Success" />
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" lg="2">
+                        <AnalyticsMetricCard Title="Forecast Consumed">
+                            <CanonicalForecastValue Value="@selectedProductAnalytics.Progress.ProductForecastConsumed"
+                                                    Suffix=" hours"
+                                                    ValueColor="Color.Info" />
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" lg="2">
+                        <AnalyticsMetricCard Title="Forecast Remaining">
+                            <CanonicalForecastValue Value="@selectedProductAnalytics.Progress.ProductForecastRemaining"
+                                                    Suffix=" hours"
+                                                    ValueColor="Color.Warning" />
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" lg="2">
+                        <AnalyticsMetricCard Title="Excluded Epics">
+                            <MudText Typo="Typo.body2">@selectedProductAnalytics.Progress.ExcludedEpicsCount</MudText>
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" lg="2">
+                        <AnalyticsMetricCard Title="Included Epics">
+                            <MudText Typo="Typo.body2">@selectedProductAnalytics.Progress.IncludedEpicsCount</MudText>
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" lg="2">
+                        <AnalyticsMetricCard Title="Total Weight">
+                            <MudText Typo="Typo.body2">@selectedProductAnalytics.Progress.TotalWeight.ToString("0.##")</MudText>
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                </MudGrid>
+
+                <MudDivider Class="my-3" />
+
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Snapshot Comparison</MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="4">
+                        <AnalyticsMetricCard Title="Progress Delta">
+                            <CanonicalDeltaValue Value="@selectedProductAnalytics.Comparison.ProgressDelta" Suffix="%" />
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <AnalyticsMetricCard Title="Forecast Consumed Delta">
+                            <CanonicalDeltaValue Value="@selectedProductAnalytics.Comparison.ForecastConsumedDelta" Suffix=" hours" />
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <AnalyticsMetricCard Title="Forecast Remaining Delta">
+                            <CanonicalDeltaValue Value="@selectedProductAnalytics.Comparison.ForecastRemainingDelta" Suffix=" hours" />
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                </MudGrid>
+
+                <MudDivider Class="my-3" />
+
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Planning Quality</MudText>
+                <CanonicalPlanningQuality PlanningQuality="@selectedProductAnalytics.PlanningQuality" />
+
+                <MudDivider Class="my-3" />
+
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Insights</MudText>
+                <CanonicalInsightList Insights="@selectedProductAnalytics.Insights" />
+            </MudPaper>
+        }
+        else if (!_isSummaryLoading && string.IsNullOrWhiteSpace(_summaryErrorMessage))
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">
+                Canonical product analytics are unavailable for the selected sprint.
+            </MudAlert>
+        }
+
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudText Typo="Typo.subtitle1" Class="mb-3">
                 <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="mr-1" />
@@ -505,82 +593,81 @@
             }
             else
             {
-                <MudSimpleTable Dense="true" Striped="true" Hover="true">
-                    <thead>
-                        <tr>
-                            <th>Epic</th>
-                            <th style="width: 200px;">Progress</th>
-                            <th style="width: 150px; text-align: right;">Delivered Story Points</th>
-                            <th style="width: 130px; text-align: right;">Δ Effort (hours)</th>
-                            <th style="width: 90px; text-align: right;">Features ✓</th>
-                            <th style="width: 80px; text-align: right;">PBIs ✓</th>
-                            <th style="width: 60px; text-align: center;">History</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var epic in productEpics)
-                        {
-                            <tr style="cursor: pointer;"
-                                role="button"
-                                tabindex="0"
-                                @onclick="@(() => DrillIntoEpicAsync(epic.EpicId, epic.EpicTitle))"
-                                @onkeydown="@(args => HandleDrillDownKeyAsync(args, () => DrillIntoEpicAsync(epic.EpicId, epic.EpicTitle)))">
-                                <td>
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                        <span style="@GetEpicColorSquareStyle(_selectedProductId.Value, epic.EpicId)"></span>
-                                        @if (_tfsConfig != null && !string.IsNullOrEmpty(_tfsConfig.Url) && !string.IsNullOrEmpty(_tfsConfig.Project))
-                                        {
-                                            <MudLink Href="@TfsUrlBuilder.BuildWorkItemUrl(_tfsConfig.Url, _tfsConfig.Project, epic.EpicId)"
-                                                     Target="_blank"
-                                                     Typo="Typo.body2"
-                                                     @onclick:stopPropagation="true">#@epic.EpicId</MudLink>
-                                        }
-                                        else
-                                        {
-                                            <MudText Typo="Typo.body2" Class="mr-1">#@epic.EpicId</MudText>
-                                        }
-                                        <MudText Typo="Typo.body2"><strong>@epic.EpicTitle</strong></MudText>
-                                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Color="Color.Default" />
-                                    </MudStack>
-                                </td>
-                                <td>
-                                    @if (epic.ProgressPercent.HasValue)
-                                    {
-                                        <MudProgressLinear Color="@GetProgressColor(epic.ProgressPercent.Value)"
-                                                           Value="@epic.ProgressPercent.Value"
-                                                           Max="100" />
-                                    }
-                                    else
-                                    {
-                                        <MudText Typo="Typo.body2" Color="Color.Secondary">Unknown</MudText>
-                                    }
-                                </td>
-                                <td style="text-align: right;">
-                                    <MudText Typo="Typo.body2">@epic.SprintCompletedEffort</MudText>
-                                </td>
-                                <td style="text-align: right;">
-                                    <MudText Typo="Typo.body2"
-                                             Color="@(epic.SprintEffortDelta > 0 ? Color.Warning : epic.SprintEffortDelta < 0 ? Color.Info : Color.Default)">
-                                        @FormatSignedInt(epic.SprintEffortDelta)
-                                    </MudText>
-                                </td>
-                                <td style="text-align: right;">
-                                    <MudText Typo="Typo.body2">@epic.SprintCompletedFeatureCount</MudText>
-                                </td>
-                                <td style="text-align: right;">
-                                    <MudText Typo="Typo.body2">@epic.SprintCompletedPbiCount</MudText>
-                                </td>
-                                <td style="text-align: center;" @onclick:stopPropagation="true">
-                                    <MudIconButton Icon="@Icons.Material.Filled.History"
-                                                   Size="Size.Small"
-                                                   Color="Color.Info"
-                                                   aria-label="Show activities for this epic"
-                                                   Href="@BuildWorkItemActivityUrl(epic.EpicId)" />
-                                </td>
+                <div style="overflow-x:auto;">
+                    <MudSimpleTable Dense="true" Striped="true" Hover="true">
+                        <thead>
+                            <tr>
+                                <th>Epic</th>
+                                <th style="width: 180px;">Progress</th>
+                                <th style="width: 140px; text-align: right;">Forecast Consumed</th>
+                                <th style="width: 140px; text-align: right;">Forecast Remaining</th>
+                                <th style="width: 120px; text-align: right;">Excluded Features</th>
+                                <th style="width: 120px; text-align: right;">Included Features</th>
+                                <th style="width: 100px; text-align: right;">Total Weight</th>
+                                <th style="width: 60px; text-align: center;">History</th>
                             </tr>
-                        }
-                    </tbody>
-                </MudSimpleTable>
+                        </thead>
+                        <tbody>
+                            @foreach (var epic in productEpics)
+                            {
+                                <tr style="cursor: pointer;"
+                                    role="button"
+                                    tabindex="0"
+                                    @onclick="@(() => DrillIntoEpicAsync(epic.EpicId, epic.EpicTitle))"
+                                    @onkeydown="@(args => HandleDrillDownKeyAsync(args, () => DrillIntoEpicAsync(epic.EpicId, epic.EpicTitle)))">
+                                    <td>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                            <span style="@GetEpicColorSquareStyle(_selectedProductId.Value, epic.EpicId)"></span>
+                                            @if (_tfsConfig != null && !string.IsNullOrEmpty(_tfsConfig.Url) && !string.IsNullOrEmpty(_tfsConfig.Project))
+                                            {
+                                                <MudLink Href="@TfsUrlBuilder.BuildWorkItemUrl(_tfsConfig.Url, _tfsConfig.Project, epic.EpicId)"
+                                                         Target="_blank"
+                                                         Typo="Typo.body2"
+                                                         @onclick:stopPropagation="true">#@epic.EpicId</MudLink>
+                                            }
+                                            else
+                                            {
+                                                <MudText Typo="Typo.body2" Class="mr-1">#@epic.EpicId</MudText>
+                                            }
+                                            <MudText Typo="Typo.body2"><strong>@epic.EpicTitle</strong></MudText>
+                                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Color="Color.Default" />
+                                        </MudStack>
+                                    </td>
+                                    <td>
+                                        <CanonicalNullablePercentage Value="@epic.AggregatedProgress"
+                                                                     ShowProgressBar="true"
+                                                                     ProgressColor="Color.Success"
+                                                                     ValueColor="Color.Success" />
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <CanonicalForecastValue Value="@epic.ForecastConsumedEffort"
+                                                                Suffix=" hours" />
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <CanonicalForecastValue Value="@epic.ForecastRemainingEffort"
+                                                                Suffix=" hours" />
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <MudText Typo="Typo.body2">@epic.ExcludedFeaturesCount</MudText>
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <MudText Typo="Typo.body2">@epic.IncludedFeaturesCount</MudText>
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <MudText Typo="Typo.body2">@epic.TotalWeight.ToString("0.##")</MudText>
+                                    </td>
+                                    <td style="text-align: center;" @onclick:stopPropagation="true">
+                                        <MudIconButton Icon="@Icons.Material.Filled.History"
+                                                       Size="Size.Small"
+                                                       Color="Color.Info"
+                                                       aria-label="Show activities for this epic"
+                                                       Href="@BuildWorkItemActivityUrl(epic.EpicId)" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </div>
             }
         </MudPaper>
     }
@@ -619,71 +706,168 @@
             }
             else
             {
-                <MudSimpleTable Dense="true" Striped="true" Hover="true">
-                    <thead>
-                        <tr>
-                            <th>Feature</th>
-                            <th style="width: 180px;">Progress</th>
-                            <th style="width: 150px; text-align: right;">Delivered Story Points</th>
-                            <th style="width: 130px; text-align: right;">Δ Effort (hours)</th>
-                            <th style="width: 80px; text-align: right;">PBIs ✓</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var feature in epicFeatures)
-                        {
-                            <tr style="cursor: pointer;"
-                                role="button"
-                                tabindex="0"
-                                @onclick="@(() => DrillIntoFeatureAsync(feature.FeatureId, feature.FeatureTitle))"
-                                @onkeydown="@(args => HandleDrillDownKeyAsync(args, () => DrillIntoFeatureAsync(feature.FeatureId, feature.FeatureTitle)))">
-                                <td>
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                        @if (_tfsConfig != null && !string.IsNullOrEmpty(_tfsConfig.Url) && !string.IsNullOrEmpty(_tfsConfig.Project))
-                                        {
-                                            <MudLink Href="@TfsUrlBuilder.BuildWorkItemUrl(_tfsConfig.Url, _tfsConfig.Project, feature.FeatureId)"
-                                                     Target="_blank"
-                                                     Typo="Typo.body2"
-                                                     @onclick:stopPropagation="true">#@feature.FeatureId</MudLink>
-                                        }
-                                        else
-                                        {
-                                            <MudText Typo="Typo.body2">#@feature.FeatureId</MudText>
-                                        }
-                                        <MudText Typo="Typo.body2"><strong>@feature.FeatureTitle</strong></MudText>
-                                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Color="Color.Default" />
-                                    </MudStack>
-                                </td>
-                                <td>
-                                    <MudProgressLinear Color="@GetProgressColor(feature.ProgressPercent)"
-                                                       Value="@feature.ProgressPercent"
-                                                       Max="100"
-                                                       Size="Size.Small"
-                                                       Style="opacity: 0.75;" />
-                                </td>
-                                <td style="text-align: right;">
-                                    <MudText Typo="Typo.body2">@feature.SprintCompletedEffort</MudText>
-                                </td>
-                                <td style="text-align: right;">
-                                    <MudText Typo="Typo.body2"
-                                             Color="@(feature.SprintEffortDelta > 0 ? Color.Warning : feature.SprintEffortDelta < 0 ? Color.Info : Color.Default)">
-                                        @FormatSignedInt(feature.SprintEffortDelta)
-                                    </MudText>
-                                </td>
-                                <td style="text-align: right;">
-                                    <MudText Typo="Typo.body2">@feature.SprintCompletedPbiCount</MudText>
-                                </td>
+                <div style="overflow-x:auto;">
+                    <MudSimpleTable Dense="true" Striped="true" Hover="true">
+                        <thead>
+                            <tr>
+                                <th>Feature</th>
+                                <th style="width: 120px;">Calculated</th>
+                                <th style="width: 120px;">Override</th>
+                                <th style="width: 120px;">Effective</th>
+                                <th style="width: 120px; text-align: right;">Effort</th>
+                                <th style="width: 140px; text-align: right;">Forecast Consumed</th>
+                                <th style="width: 140px; text-align: right;">Forecast Remaining</th>
+                                <th style="width: 100px; text-align: right;">Weight</th>
+                                <th style="width: 100px; text-align: center;">Excluded</th>
+                                <th style="width: 80px; text-align: right;">PBIs ✓</th>
                             </tr>
-                        }
-                    </tbody>
-                </MudSimpleTable>
+                        </thead>
+                        <tbody>
+                            @foreach (var feature in epicFeatures)
+                            {
+                                <tr style="cursor: pointer;"
+                                    role="button"
+                                    tabindex="0"
+                                    @onclick="@(() => DrillIntoFeatureAsync(feature.FeatureId, feature.FeatureTitle))"
+                                    @onkeydown="@(args => HandleDrillDownKeyAsync(args, () => DrillIntoFeatureAsync(feature.FeatureId, feature.FeatureTitle)))">
+                                    <td>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                            @if (_tfsConfig != null && !string.IsNullOrEmpty(_tfsConfig.Url) && !string.IsNullOrEmpty(_tfsConfig.Project))
+                                            {
+                                                <MudLink Href="@TfsUrlBuilder.BuildWorkItemUrl(_tfsConfig.Url, _tfsConfig.Project, feature.FeatureId)"
+                                                         Target="_blank"
+                                                         Typo="Typo.body2"
+                                                         @onclick:stopPropagation="true">#@feature.FeatureId</MudLink>
+                                            }
+                                            else
+                                            {
+                                                <MudText Typo="Typo.body2">#@feature.FeatureId</MudText>
+                                            }
+                                            <MudText Typo="Typo.body2"><strong>@feature.FeatureTitle</strong></MudText>
+                                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Color="Color.Default" />
+                                        </MudStack>
+                                    </td>
+                                    <td>
+                                        <CanonicalNullablePercentage Value="@feature.CalculatedProgress" />
+                                    </td>
+                                    <td>
+                                        <CanonicalNullablePercentage Value="@feature.Override" UnknownLabel="Not set" />
+                                    </td>
+                                    <td>
+                                        <CanonicalNullablePercentage Value="@feature.EffectiveProgress"
+                                                                     ShowProgressBar="true"
+                                                                     ProgressColor="Color.Success"
+                                                                     ValueColor="Color.Success" />
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <CanonicalForecastValue Value="@feature.Effort" Suffix=" hours" />
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <CanonicalForecastValue Value="@feature.ForecastConsumedEffort" Suffix=" hours" />
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <CanonicalForecastValue Value="@feature.ForecastRemainingEffort" Suffix=" hours" />
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <MudText Typo="Typo.body2">@feature.Weight.ToString("0.##")</MudText>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Default">
+                                            @(feature.IsExcluded ? "Yes" : "No")
+                                        </MudChip>
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <MudText Typo="Typo.body2">@feature.SprintCompletedPbiCount</MudText>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </div>
             }
         </MudPaper>
     }
 
     @if (_drillDownLevel == DrillDownLevel.Feature && _selectedFeatureId.HasValue)
     {
+        var selectedFeature = GetFeatureProgress(_selectedFeatureId.Value);
         var completedPbis = GetCompletedPbisForFeature(_selectedFeatureId.Value);
+        if (selectedFeature is not null)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.subtitle1" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Tune" Class="mr-1" />
+                    Canonical Feature Summary — @_selectedFeatureName
+                </MudText>
+
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6" md="3">
+                        <AnalyticsMetricCard Title="Calculated Progress">
+                            <CanonicalNullablePercentage Value="@selectedFeature.CalculatedProgress" />
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <AnalyticsMetricCard Title="Override">
+                            <CanonicalNullablePercentage Value="@selectedFeature.Override" UnknownLabel="Not set" />
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <AnalyticsMetricCard Title="Effective Progress">
+                            <CanonicalNullablePercentage Value="@selectedFeature.EffectiveProgress"
+                                                         ShowProgressBar="true"
+                                                         ProgressColor="Color.Success"
+                                                         ValueColor="Color.Success" />
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <AnalyticsMetricCard Title="Effort">
+                            <CanonicalForecastValue Value="@selectedFeature.Effort" Suffix=" hours" />
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <AnalyticsMetricCard Title="Forecast Consumed">
+                            <CanonicalForecastValue Value="@selectedFeature.ForecastConsumedEffort" Suffix=" hours" />
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <AnalyticsMetricCard Title="Forecast Remaining">
+                            <CanonicalForecastValue Value="@selectedFeature.ForecastRemainingEffort" Suffix=" hours" />
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <AnalyticsMetricCard Title="Weight">
+                            <MudText Typo="Typo.body2">@selectedFeature.Weight.ToString("0.##")</MudText>
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <AnalyticsMetricCard Title="Excluded">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default">
+                                @(selectedFeature.IsExcluded ? "Yes" : "No")
+                            </MudChip>
+                        </AnalyticsMetricCard>
+                    </MudItem>
+                </MudGrid>
+
+                @if (selectedFeature.ValidationSignals.Count > 0)
+                {
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Validation Signals</MudText>
+                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                        @foreach (var signal in selectedFeature.ValidationSignals)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default">@signal</MudChip>
+                        }
+                    </MudStack>
+                }
+            </MudPaper>
+        }
+        else if (!_isDetailsLoading && string.IsNullOrWhiteSpace(_detailsErrorMessage))
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">
+                Canonical feature analytics are unavailable for this sprint.
+            </MudAlert>
+        }
+
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudText Typo="Typo.subtitle1" Class="mb-3">
                 <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Class="mr-1" />
@@ -811,6 +995,7 @@
     private double _prevCompletedPbiStoryPoints;
     private bool _hasPreviousSprint;
 
+    private List<ProductDeliveryAnalyticsDto> _productAnalytics = new();
     private List<FeatureProgressDto> _featureProgress = new();
     private List<EpicProgressDto> _epicProgress = new();
 
@@ -1126,6 +1311,7 @@
         _trendMetrics = response.Metrics?
             .OrderBy(metric => metric.StartUtc ?? DateTimeOffset.MaxValue)
             .ToList() ?? new List<SprintTrendMetricsDto>();
+        _productAnalytics = response.ProductAnalytics?.ToList() ?? new List<ProductDeliveryAnalyticsDto>();
 
         var currentMetrics = _trendMetrics.LastOrDefault();
         if (currentMetrics is null)
@@ -1230,6 +1416,7 @@
         _projectionsAsOfUtc = null;
         _approximateProducts.Clear();
         _productMetrics.Clear();
+        _productAnalytics.Clear();
         _trendMetrics.Clear();
         _prevCompletedPbiCount = 0;
         _prevCompletedPbiStoryPoints = 0;
@@ -1530,6 +1717,16 @@
         return feature?.CompletedPbis?.ToList() ?? new List<CompletedPbiDto>();
     }
 
+    private ProductDeliveryAnalyticsDto? GetProductAnalytics(int productId)
+    {
+        return _productAnalytics.FirstOrDefault(analytics => analytics.ProductId == productId);
+    }
+
+    private FeatureProgressDto? GetFeatureProgress(int featureId)
+    {
+        return _featureProgress.FirstOrDefault(feature => feature.FeatureId == featureId);
+    }
+
     private List<ProductDto> GetActiveProducts()
     {
         return _filteredProducts.Where(product => IsProductActive(product.Id)).ToList();
@@ -1574,9 +1771,6 @@
         var color = index < 0 ? "#9E9E9E" : GetEpicColor(index);
         return $"width: 10px; height: 10px; border-radius: 2px; display: inline-block; background-color: {color};";
     }
-
-    private static Color GetProgressColor(int progress) =>
-        SprintProgressColorHelper.GetProgressColor(progress);
 
     private void NavigateToDelivery()
     {

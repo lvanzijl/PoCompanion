@@ -1,0 +1,72 @@
+@using PoTool.Shared.Metrics
+
+@if (PlanningQuality is null)
+{
+    <MudAlert Severity="Severity.Info" Dense="true">
+        Planning Quality is unavailable for this product.
+    </MudAlert>
+}
+else
+{
+    <MudStack Spacing="2">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Wrap="Wrap.Wrap">
+            <MudChip T="string"
+                     Size="Size.Small"
+                     Color="Color.Info"
+                     Icon="@Icons.Material.Filled.Rule">
+                PQ Score: @PlanningQuality.PlanningQualityScore
+            </MudChip>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                @PlanningQuality.PlanningQualitySignals.Count signal(s)
+            </MudText>
+        </MudStack>
+
+        @if (PlanningQuality.PlanningQualitySignals.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                No planning quality signals were emitted for this product.
+            </MudText>
+        }
+        else
+        {
+            <div style="overflow-x:auto;">
+                <MudSimpleTable Dense="true" Striped="true" Hover="true">
+                    <thead>
+                        <tr>
+                            <th style="width: 110px;">Code</th>
+                            <th style="width: 110px;">Severity</th>
+                            <th>Message</th>
+                            <th style="width: 160px;">Entity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var signal in PlanningQuality.PlanningQualitySignals)
+                        {
+                            <tr>
+                                <td>
+                                    <MudText Typo="Typo.body2"><strong>@signal.Code</strong></MudText>
+                                </td>
+                                <td>
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Default">
+                                        @signal.Severity
+                                    </MudChip>
+                                </td>
+                                <td>
+                                    <MudText Typo="Typo.body2">@signal.Message</MudText>
+                                </td>
+                                <td>
+                                    <MudText Typo="Typo.body2">@signal.Scope #@signal.EntityId</MudText>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </div>
+        }
+    </MudStack>
+}
+
+@code {
+    [Parameter]
+    public PlanningQualityDto? PlanningQuality { get; set; }
+}
