@@ -6,6 +6,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Domain.DeliveryTrends.Models;
+using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
 
