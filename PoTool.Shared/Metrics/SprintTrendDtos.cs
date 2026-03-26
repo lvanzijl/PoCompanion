@@ -521,10 +521,11 @@ public record EpicProgressDto
     public required int ProductId { get; init; }
 
     /// <summary>
-    /// Progress percentage (0-100).
+    /// Progress percentage (0-100) when epic progress is computable.
     /// Compatibility alias for the aggregated epic progress value rounded to an integer.
+    /// Null when epic progress is unknown or not computable.
     /// </summary>
-    public int ProgressPercent { get; init; }
+    public int? ProgressPercent { get; init; }
 
     /// <summary>
     /// Weighted epic progress derived only from canonical feature outputs.

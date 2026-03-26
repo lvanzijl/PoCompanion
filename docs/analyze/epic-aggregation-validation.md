@@ -47,7 +47,7 @@
 
 3. All features excluded
    - Verified by `EpicAggregationServiceTests.Compute_ReturnsNullProgress_WhenAllFeaturesAreExcluded` and `SprintTrendProjectionServiceTests.ComputeEpicProgress_ZeroTotalStoryPoints_SprintDeltaIsZero`.
-   - Result: `EpicProgress = null`, compatibility `ProgressPercent = 0`, and `ExcludedFeaturesCount = N`.
+   - Result: `EpicProgress = null`, compatibility fields preserve `null`, and `ExcludedFeaturesCount = N`.
 
 4. Forecast sum
    - Verified by `EpicAggregationServiceTests.Compute_SumsForecastsAcrossFeatures`.

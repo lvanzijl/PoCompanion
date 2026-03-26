@@ -173,6 +173,36 @@ public sealed class DeliveryTrendDomainModelsTests
     }
 
     [TestMethod]
+    public void EpicProgress_AllowsNullCompatibilityProgress_WhenAggregationIsUnknown()
+    {
+        var epicProgress = new EpicProgress(
+            500,
+            "Epic A",
+            7,
+            null,
+            0,
+            0,
+            1,
+            0,
+            0,
+            false,
+            0,
+            new ProgressionDelta(0),
+            0,
+            0,
+            0,
+            aggregatedProgress: null,
+            forecastConsumedEffort: null,
+            forecastRemainingEffort: null,
+            excludedFeaturesCount: 1,
+            includedFeaturesCount: 0,
+            totalWeight: 0);
+
+        Assert.IsNull(epicProgress.ProgressPercent);
+        Assert.IsNull(epicProgress.AggregatedProgress);
+    }
+
+    [TestMethod]
     public void ProductDeliveryProgressSummary_PreservesProductLevelSprintDiagnostics()
     {
         var summary = new ProductDeliveryProgressSummary(7, -3, 2);

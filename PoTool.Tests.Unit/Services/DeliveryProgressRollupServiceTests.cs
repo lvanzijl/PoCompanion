@@ -194,6 +194,28 @@ public sealed class DeliveryProgressRollupServiceTests
     }
 
     [TestMethod]
+    public void ComputeEpicProgress_PreservesNullProgress_WhenAggregationIsUnknown()
+    {
+        var service = CreateService(epicAggregationService: new StubEpicAggregationService(
+            new EpicAggregationResult(null, 1.25d, 8.75d, 3, 0, 0)));
+
+        var result = service.ComputeEpicProgress(new DeliveryEpicProgressRequest(
+            [
+                new FeatureProgress(200, "Feature A", 1, 100, "Epic X", 0, 0, 0, 0, false, 0, new ProgressionDelta(0), 0, 0, false, weight: 0, isExcluded: true)
+            ],
+            new Dictionary<int, DeliveryTrendWorkItem>
+            {
+                [100] = CreateWorkItem(100, "Epic", "Epic X", state: "Active")
+            }));
+
+        Assert.HasCount(1, result);
+        Assert.IsNull(result[0].AggregatedProgress);
+        Assert.IsNull(result[0].ProgressPercent, "Unknown epic progress must stay null and must not be coerced to zero.");
+        Assert.AreEqual(1.25d, result[0].ForecastConsumedEffort!.Value, 0.001d);
+        Assert.AreEqual(8.75d, result[0].ForecastRemainingEffort!.Value, 0.001d);
+    }
+
+    [TestMethod]
     public void ComputeProductSummaries_AggregatesEpicOutputsByProduct()
     {
         var result = DeliveryProgressSummaryCalculator.ComputeProductSummaries(

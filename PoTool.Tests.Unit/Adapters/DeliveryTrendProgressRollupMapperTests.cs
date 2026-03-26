@@ -88,4 +88,36 @@ public sealed class DeliveryTrendProgressRollupMapperTests
         Assert.AreEqual(3, dto.IncludedFeaturesCount);
         Assert.AreEqual(21.5d, dto.TotalWeight, 0.001d);
     }
+
+    [TestMethod]
+    public void ToEpicProgressDto_PreservesNullProgressPercent()
+    {
+        var epicProgress = new EpicProgress(
+            epicId: 42,
+            epicTitle: "Epic A",
+            productId: 5,
+            progressPercent: null,
+            totalScopeStoryPoints: 0,
+            deliveredStoryPoints: 0,
+            featureCount: 1,
+            doneFeatureCount: 0,
+            donePbiCount: 0,
+            isDone: false,
+            sprintDeliveredStoryPoints: 0,
+            sprintProgressionDelta: new ProgressionDelta(0),
+            sprintEffortDelta: 0,
+            sprintCompletedPbiCount: 0,
+            sprintCompletedFeatureCount: 0,
+            aggregatedProgress: null,
+            forecastConsumedEffort: null,
+            forecastRemainingEffort: null,
+            excludedFeaturesCount: 1,
+            includedFeaturesCount: 0,
+            totalWeight: 0);
+
+        var dto = epicProgress.ToEpicProgressDto();
+
+        Assert.IsNull(dto.ProgressPercent);
+        Assert.IsNull(dto.AggregatedProgress);
+    }
 }

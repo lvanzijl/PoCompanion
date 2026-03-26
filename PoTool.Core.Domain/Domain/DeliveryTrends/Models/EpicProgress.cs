@@ -12,7 +12,7 @@ public sealed record EpicProgress
         int epicId,
         string epicTitle,
         int productId,
-        int progressPercent,
+        int? progressPercent,
         double totalScopeStoryPoints,
         double deliveredStoryPoints,
         int featureCount,
@@ -34,7 +34,10 @@ public sealed record EpicProgress
         DeliveryTrendModelValidation.ValidatePositiveId(epicId, nameof(epicId), "Epic ID");
         DeliveryTrendModelValidation.ValidatePositiveId(productId, nameof(productId), "Product ID");
         DeliveryTrendModelValidation.ValidateRequiredText(epicTitle, nameof(epicTitle), "Epic title");
-        DeliveryTrendModelValidation.ValidateBoundedPercentage(progressPercent, nameof(progressPercent), "Progress percent");
+        if (progressPercent.HasValue)
+        {
+            DeliveryTrendModelValidation.ValidateBoundedPercentage(progressPercent.Value, nameof(progressPercent), "Progress percent");
+        }
         DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(totalScopeStoryPoints, nameof(totalScopeStoryPoints), "Total scope story points");
         DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(deliveredStoryPoints, nameof(deliveredStoryPoints), "Delivered story points");
         DeliveryTrendModelValidation.ValidateCount(featureCount, nameof(featureCount), "Feature count");
@@ -81,7 +84,7 @@ public sealed record EpicProgress
 
     public int ProductId { get; }
 
-    public int ProgressPercent { get; }
+    public int? ProgressPercent { get; }
 
     public double TotalScopeStoryPoints { get; }
 

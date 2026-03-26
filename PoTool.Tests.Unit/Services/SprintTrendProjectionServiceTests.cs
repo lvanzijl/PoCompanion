@@ -2104,6 +2104,7 @@ public class SprintTrendProjectionServiceTests
         Assert.HasCount(1, result);
         Assert.AreEqual(0.0, result[0].SprintProgressionDelta, "Sprint delta should be 0 when total effort is 0");
         Assert.IsNull(result[0].AggregatedProgress, "Weighted epic progress should be null when all features are excluded.");
+        Assert.IsNull(result[0].ProgressPercent, "Unknown epic progress must not fall back to zero.");
         Assert.AreEqual(1, result[0].ExcludedFeaturesCount);
     }
 

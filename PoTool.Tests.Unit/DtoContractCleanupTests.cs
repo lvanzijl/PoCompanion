@@ -107,6 +107,26 @@ public sealed class DtoContractCleanupTests
     }
 
     [TestMethod]
+    public void EpicProgressDto_SerializesNullProgressPercent_WhenEpicProgressIsUnknown()
+    {
+        var epicProgress = new EpicProgressDto
+        {
+            EpicId = 11,
+            EpicTitle = "Epic",
+            ProductId = 2,
+            ProgressPercent = null,
+            AggregatedProgress = null,
+            TotalStoryPoints = 0,
+            DoneStoryPoints = 0
+        };
+
+        var json = JsonSerializer.Serialize(epicProgress);
+
+        StringAssert.Contains(json, "\"ProgressPercent\":null");
+        StringAssert.Contains(json, "\"AggregatedProgress\":null");
+    }
+
+    [TestMethod]
     public void SprintForecast_SerializesCanonicalStoryPointAliases()
     {
         var dto = new SprintForecast(

@@ -544,9 +544,16 @@
                                     </MudStack>
                                 </td>
                                 <td>
-                                    <MudProgressLinear Color="@GetProgressColor(epic.ProgressPercent)"
-                                                       Value="@epic.ProgressPercent"
-                                                       Max="100" />
+                                    @if (epic.ProgressPercent.HasValue)
+                                    {
+                                        <MudProgressLinear Color="@GetProgressColor(epic.ProgressPercent.Value)"
+                                                           Value="@epic.ProgressPercent.Value"
+                                                           Max="100" />
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">Unknown</MudText>
+                                    }
                                 </td>
                                 <td style="text-align: right;">
                                     <MudText Typo="Typo.body2">@epic.SprintCompletedEffort</MudText>

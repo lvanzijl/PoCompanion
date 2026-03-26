@@ -209,9 +209,9 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
             var totalScopeStoryPoints = features.Sum(feature => feature.TotalScopeStoryPoints);
             var deliveredStoryPoints = features.Sum(feature => feature.DeliveredStoryPoints);
             var epicIsDone = StateClassificationLookup.IsDone(request.StateLookup, epicWorkItem.WorkItemType, epicWorkItem.State);
-            var progressPercent = aggregation.EpicProgress.HasValue
+            int? progressPercent = aggregation.EpicProgress.HasValue
                 ? (int)Math.Round(aggregation.EpicProgress.Value, MidpointRounding.AwayFromZero)
-                : 0;
+                : null;
             var sprintDeliveredStoryPoints = features.Sum(feature => feature.SprintDeliveredStoryPoints);
             var sprintProgressionDelta = totalScopeStoryPoints > 0
                 ? new ProgressionDelta(Math.Round(sprintDeliveredStoryPoints / totalScopeStoryPoints * 100, 2))
