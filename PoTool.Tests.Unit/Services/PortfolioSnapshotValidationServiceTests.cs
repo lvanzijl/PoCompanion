@@ -21,6 +21,11 @@ public sealed class PortfolioSnapshotValidationServiceTests
 
         Assert.AreEqual(timestamp, snapshot.Timestamp);
         Assert.HasCount(2, snapshot.Items);
+        Assert.AreEqual(1, snapshot.Items[0].ProductId);
+        Assert.AreEqual("PRJ-100", snapshot.Items[0].ProjectNumber);
+        Assert.IsNull(snapshot.Items[0].WorkPackage);
+        Assert.AreEqual(40d, snapshot.Items[0].Progress, 0.001d);
+        Assert.AreEqual(20d, snapshot.Items[0].TotalWeight, 0.001d);
     }
 
     [TestMethod]
@@ -36,6 +41,11 @@ public sealed class PortfolioSnapshotValidationServiceTests
 
         Assert.AreEqual(timestamp, snapshot.Timestamp);
         Assert.HasCount(2, snapshot.Items);
+        CollectionAssert.AreEqual(
+            ["WP-1", "WP-2"],
+            snapshot.Items.Select(item => item.WorkPackage).ToArray());
+        Assert.AreEqual(40d, snapshot.Items[0].Progress, 0.001d);
+        Assert.AreEqual(15d, snapshot.Items[1].TotalWeight, 0.001d);
     }
 
     [TestMethod]
