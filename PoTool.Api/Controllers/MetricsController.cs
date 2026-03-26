@@ -12,8 +12,8 @@ namespace PoTool.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-    public class MetricsController : ControllerBase
-    {
+public class MetricsController : ControllerBase
+{
     private readonly IMediator _mediator;
     private readonly ILogger<MetricsController> _logger;
 
@@ -23,7 +23,7 @@ namespace PoTool.Api.Controllers;
     {
         _mediator = mediator;
         _logger = logger;
-    }
+}
 
     private static PortfolioReadQueryOptions BuildPortfolioReadOptions(
         int? productId,

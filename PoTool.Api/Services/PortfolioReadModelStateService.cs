@@ -219,7 +219,7 @@ public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateSer
         return new PortfolioSnapshotBuildResult(snapshot, source.Name, snapshotInputs);
     }
 
-    private readonly record struct PortfolioSnapshotSource(
+    private record struct PortfolioSnapshotSource(
         int SprintId,
         string Name,
         DateTime StartDateUtc,
