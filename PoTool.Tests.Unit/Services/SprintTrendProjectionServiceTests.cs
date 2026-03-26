@@ -1,6 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.EntityFrameworkCore;
+using Moq;
 using PoTool.Api.Adapters;
+using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Domain.Models;
@@ -26,6 +30,53 @@ public class SprintTrendProjectionServiceTests
         var projections = await service.ComputeProjectionsAsync(1, Array.Empty<int>());
 
         Assert.HasCount(0, projections);
+    }
+
+    [TestMethod]
+    public async Task ComputeFeatureProgressAsync_NonDefaultEstimationMode_LogsWarning()
+    {
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase($"SprintTrendProjection_EstimationGuard_{Guid.NewGuid()}")
+            .Options;
+
+        await using var context = new PoToolDbContext(options);
+        context.Products.Add(new ProductEntity
+        {
+            Id = 1,
+            ProductOwnerId = 7,
+            Name = "Product A",
+            EstimationMode = (int)PoTool.Shared.Settings.EstimationMode.Mixed,
+            CreatedAt = DateTimeOffset.UtcNow,
+            LastModified = DateTimeOffset.UtcNow
+        });
+        await context.SaveChangesAsync();
+
+        using var services = CreateDefaultServices();
+        var logger = new Mock<ILogger<SprintTrendProjectionService>>();
+        var scopeFactory = BuildScopeFactory(context, services);
+        var service = new SprintTrendProjectionService(
+            scopeFactory,
+            logger.Object,
+            stateClassificationService: null,
+            services.GetRequiredService<ICanonicalStoryPointResolutionService>(),
+            services.GetRequiredService<IHierarchyRollupService>(),
+            services.GetRequiredService<IDeliveryProgressRollupService>(),
+            services.GetRequiredService<ISprintCommitmentService>(),
+            services.GetRequiredService<ISprintCompletionService>(),
+            services.GetRequiredService<ISprintSpilloverService>(),
+            services.GetRequiredService<ISprintDeliveryProjectionService>());
+
+        var result = await service.ComputeFeatureProgressAsync(7, FeatureProgressMode.StoryPoints);
+
+        Assert.HasCount(0, result);
+        logger.Verify(
+            instance => instance.Log(
+                It.Is<LogLevel>(level => level == LogLevel.Warning),
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("Product 1 is configured with EstimationMode Mixed", StringComparison.Ordinal)),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
     }
 
     private static SprintMetricsProjectionEntity ComputeProductSprintProjection(
@@ -179,6 +230,21 @@ public class SprintTrendProjectionServiceTests
             services.GetRequiredService<ISprintCompletionService>(),
             services.GetRequiredService<ISprintSpilloverService>(),
             services.GetRequiredService<ISprintDeliveryProjectionService>());
+    }
+
+    private static IServiceScopeFactory BuildScopeFactory(PoToolDbContext context, ServiceProvider domainServices)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(context);
+        services.AddSingleton<PoToolDbContext>(context);
+        services.AddSingleton(domainServices.GetRequiredService<ISprintCommitmentService>());
+        services.AddSingleton(domainServices.GetRequiredService<ISprintCompletionService>());
+        services.AddSingleton(domainServices.GetRequiredService<ISprintSpilloverService>());
+        services.AddSingleton(domainServices.GetRequiredService<ICanonicalStoryPointResolutionService>());
+        services.AddSingleton(domainServices.GetRequiredService<IHierarchyRollupService>());
+        services.AddSingleton(domainServices.GetRequiredService<IDeliveryProgressRollupService>());
+        services.AddSingleton(domainServices.GetRequiredService<ISprintDeliveryProjectionService>());
+        return services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
     }
 
     [TestMethod]

@@ -3,22 +3,67 @@ using PoTool.Core.Domain.Models;
 namespace PoTool.Core.Domain.DeliveryTrends.Models;
 
 /// <summary>
-/// Minimal work item data required by sprint delivery projection calculations.
+/// Minimal delivery-trend work item data required by sprint delivery calculations.
+/// Irrelevant funding/override fields are normalized away in the domain model.
 /// </summary>
-public sealed record DeliveryTrendWorkItem(
-    int WorkItemId,
-    string WorkItemType,
-    string Title,
-    int? ParentWorkItemId,
-    string? State,
-    string? IterationPath,
-    int? Effort,
-    int? StoryPoints,
-    int? BusinessValue,
-    DateTimeOffset? CreatedDate,
-    double? TimeCriticality = null,
-    string? ProjectNumber = null,
-    string? ProjectElement = null);
+public sealed record DeliveryTrendWorkItem
+{
+    public DeliveryTrendWorkItem(
+        int workItemId,
+        string workItemType,
+        string title,
+        int? parentWorkItemId,
+        string? state,
+        string? iterationPath,
+        int? effort,
+        int? storyPoints,
+        int? businessValue,
+        DateTimeOffset? createdDate,
+        double? timeCriticality = null,
+        string? projectNumber = null,
+        string? projectElement = null)
+    {
+        WorkItemId = workItemId;
+        WorkItemType = workItemType;
+        Title = title;
+        ParentWorkItemId = parentWorkItemId;
+        State = state;
+        IterationPath = iterationPath;
+        Effort = effort;
+        StoryPoints = storyPoints;
+        BusinessValue = businessValue;
+        CreatedDate = createdDate;
+        TimeCriticality = WorkItemFieldSemantics.NormalizeTimeCriticality(workItemType, timeCriticality);
+        ProjectNumber = WorkItemFieldSemantics.NormalizeProjectNumber(workItemType, projectNumber);
+        ProjectElement = WorkItemFieldSemantics.NormalizeProjectElement(workItemType, projectElement);
+    }
+
+    public int WorkItemId { get; }
+
+    public string WorkItemType { get; }
+
+    public string Title { get; }
+
+    public int? ParentWorkItemId { get; }
+
+    public string? State { get; }
+
+    public string? IterationPath { get; }
+
+    public int? Effort { get; }
+
+    public int? StoryPoints { get; }
+
+    public int? BusinessValue { get; }
+
+    public DateTimeOffset? CreatedDate { get; }
+
+    public double? TimeCriticality { get; }
+
+    public string? ProjectNumber { get; }
+
+    public string? ProjectElement { get; }
+}
 
 /// <summary>
 /// Product-scoped hierarchy resolution data required by sprint delivery projection calculations.
@@ -71,8 +116,7 @@ public sealed record DeliveryFeatureProgressRequest(
     IReadOnlyCollection<int>? SprintCompletedPbiIds = null,
     IReadOnlyDictionary<int, int>? SprintEffortDeltaByWorkItem = null,
     IReadOnlyCollection<int>? SprintAssignedPbiIds = null,
-    IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? StateLookup = null,
-    PoTool.Core.Domain.Models.EstimationMode? DeclaredEstimationMode = null);
+    IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification>? StateLookup = null);
 
 /// <summary>
 /// Prepared domain inputs required to compute epic progress rollups.

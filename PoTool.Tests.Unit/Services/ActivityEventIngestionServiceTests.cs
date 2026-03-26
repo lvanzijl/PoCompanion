@@ -198,4 +198,71 @@ public class ActivityEventIngestionServiceTests
         Assert.AreEqual("5", ledgerRow.NewValue);
         Assert.AreEqual(11, ledgerRow.UpdateId);
     }
+
+    [TestMethod]
+    public async Task IngestAsync_PhaseACorrectionFields_ArePersistedToActivityLedger()
+    {
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase($"ActivityEventIngestion_PhaseACorrections_{Guid.NewGuid()}")
+            .Options;
+
+        await using var dbContext = new PoToolDbContext(options);
+        dbContext.WorkItems.Add(new WorkItemEntity
+        {
+            TfsId = 404,
+            Type = "Epic",
+            Title = "Funded Epic",
+            AreaPath = "Area",
+            IterationPath = "Iteration A",
+            State = "New",
+            RetrievedAt = DateTimeOffset.UtcNow,
+            TfsChangedDate = DateTimeOffset.UtcNow,
+            TfsChangedDateUtc = DateTime.UtcNow
+        });
+        dbContext.ProductOwnerCacheStates.Add(new ProductOwnerCacheStateEntity
+        {
+            ProductOwnerId = 1
+        });
+        await dbContext.SaveChangesAsync();
+
+        var revisedDate = DateTimeOffset.UtcNow;
+        var tfsClient = new Mock<ITfsClient>(MockBehavior.Strict);
+        tfsClient.Setup(client => client.GetWorkItemUpdatesAsync(404, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new WorkItemUpdate
+                {
+                    WorkItemId = 404,
+                    UpdateId = 12,
+                    RevisedDate = revisedDate,
+                    FieldChanges = new Dictionary<string, WorkItemUpdateFieldChange>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["Rhodium.Funding.ProjectNumber"] = new("Rhodium.Funding.ProjectNumber", "PRJ-1", "PRJ-2"),
+                        ["Rhodium.Funding.ProjectElement"] = new("Rhodium.Funding.ProjectElement", "ELM-1", "ELM-2"),
+                        ["Microsoft.VSTS.Common.TimeCriticality"] = new("Microsoft.VSTS.Common.TimeCriticality", "25", "50")
+                    }
+                }
+            ]);
+
+        var service = new ActivityEventIngestionService(
+            dbContext,
+            tfsClient.Object,
+            Options.Create(new ActivityIngestionOptions { ActivityBackfillDays = 0 }),
+            NullLogger<ActivityEventIngestionService>.Instance);
+
+        await service.IngestAsync(1);
+
+        var events = await dbContext.ActivityEventLedgerEntries
+            .OrderBy(entry => entry.FieldRefName)
+            .ToListAsync();
+
+        Assert.HasCount(3, events);
+        CollectionAssert.AreEquivalent(
+            new[]
+            {
+                "Microsoft.VSTS.Common.TimeCriticality",
+                "Rhodium.Funding.ProjectElement",
+                "Rhodium.Funding.ProjectNumber"
+            },
+            events.Select(entry => entry.FieldRefName).ToArray());
+    }
 }

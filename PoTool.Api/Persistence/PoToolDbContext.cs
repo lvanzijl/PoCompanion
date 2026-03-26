@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Api.Persistence.Entities.UiRoadmap;
 
 namespace PoTool.Api.Persistence;
 

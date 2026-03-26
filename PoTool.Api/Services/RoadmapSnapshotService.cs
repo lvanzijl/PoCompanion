@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
-using PoTool.Api.Persistence.Entities;
+using PoTool.Api.Persistence.Entities.UiRoadmap;
 using PoTool.Shared.Planning;
 
 namespace PoTool.Api.Services;

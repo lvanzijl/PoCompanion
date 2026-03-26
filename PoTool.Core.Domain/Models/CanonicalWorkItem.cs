@@ -1,14 +1,44 @@
 namespace PoTool.Core.Domain.Models;
 
 /// <summary>
-/// Minimal work item data required by canonical story-point and hierarchy rollup services.
+/// Minimal canonical work item data required by CDC/domain rollup services.
+/// Irrelevant field combinations are normalized away in the domain model.
 /// </summary>
-public sealed record CanonicalWorkItem(
-    int WorkItemId,
-    string WorkItemType,
-    int? ParentWorkItemId,
-    int? BusinessValue,
-    int? StoryPoints,
-    double? TimeCriticality = null,
-    string? ProjectNumber = null,
-    string? ProjectElement = null);
+public sealed record CanonicalWorkItem
+{
+    public CanonicalWorkItem(
+        int workItemId,
+        string workItemType,
+        int? parentWorkItemId,
+        int? businessValue,
+        int? storyPoints,
+        double? timeCriticality = null,
+        string? projectNumber = null,
+        string? projectElement = null)
+    {
+        WorkItemId = workItemId;
+        WorkItemType = workItemType;
+        ParentWorkItemId = parentWorkItemId;
+        BusinessValue = businessValue;
+        StoryPoints = storyPoints;
+        TimeCriticality = WorkItemFieldSemantics.NormalizeTimeCriticality(workItemType, timeCriticality);
+        ProjectNumber = WorkItemFieldSemantics.NormalizeProjectNumber(workItemType, projectNumber);
+        ProjectElement = WorkItemFieldSemantics.NormalizeProjectElement(workItemType, projectElement);
+    }
+
+    public int WorkItemId { get; }
+
+    public string WorkItemType { get; }
+
+    public int? ParentWorkItemId { get; }
+
+    public int? BusinessValue { get; }
+
+    public int? StoryPoints { get; }
+
+    public double? TimeCriticality { get; }
+
+    public string? ProjectNumber { get; }
+
+    public string? ProjectElement { get; }
+}

@@ -5,6 +5,7 @@ namespace PoTool.Core.Domain.WorkItems;
 /// </summary>
 public static class CanonicalWorkItemTypes
 {
+    public const string Epic = "Epic";
     public const string Feature = "Feature";
     public const string ProductBacklogItem = "Product Backlog Item";
     public const string PbiShort = "PBI";

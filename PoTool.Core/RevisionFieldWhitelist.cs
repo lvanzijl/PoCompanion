@@ -50,6 +50,9 @@ public static class RevisionFieldWhitelist
         Scalar("Microsoft.VSTS.Scheduling.Effort", "Effort"),
         Scalar("Microsoft.VSTS.Scheduling.StoryPoints", "StoryPoints"),
         Scalar("Microsoft.VSTS.Common.BusinessValue", "BusinessValue"),
+        Scalar("Microsoft.VSTS.Common.TimeCriticality", "TimeCriticality"),
+        Scalar("Rhodium.Funding.ProjectNumber", "ProjectNumber"),
+        Scalar("Rhodium.Funding.ProjectElement", "ProjectElement"),
         Scalar("System.Tags", "TagNames"),
         Scalar("Microsoft.VSTS.Common.Severity", "Severity")
     };

@@ -15,6 +15,8 @@ using PoTool.Core.Domain.Sprints;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.WorkItems;
 using PoTool.Shared.Metrics;
+using SharedEstimationMode = PoTool.Shared.Settings.EstimationMode;
+using DomainEstimationMode = PoTool.Core.Domain.Models.EstimationMode;
 
 namespace PoTool.Api.Services;
 
@@ -484,15 +486,18 @@ public class SprintTrendProjectionService
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
 
-        var productIds = await context.Products
+        var productSettings = await context.Products
             .Where(p => p.ProductOwnerId == productOwnerId)
-            .Select(p => p.Id)
+            .Select(p => new ProductEstimationSetting(p.Id, p.EstimationMode))
             .ToListAsync(cancellationToken);
+        var productIds = productSettings.Select(product => product.Id).ToList();
 
         if (productIds.Count == 0)
         {
             return Array.Empty<FeatureProgressDto>();
         }
+
+        LogNonDefaultEstimationModes(productSettings);
 
         var resolvedItems = await context.ResolvedWorkItems
             .Where(r => r.ResolvedProductId != null && productIds.Contains(r.ResolvedProductId.Value))
@@ -598,6 +603,39 @@ public class SprintTrendProjectionService
             sprintAssignedPbiIds,
             stateLookup);
     }
+
+    private void LogNonDefaultEstimationModes(IEnumerable<ProductEstimationSetting> productSettings)
+    {
+        foreach (var product in productSettings)
+        {
+            var sharedMode = Enum.IsDefined(typeof(SharedEstimationMode), product.EstimationMode)
+                ? (SharedEstimationMode)product.EstimationMode
+                : SharedEstimationMode.StoryPoints;
+            var domainMode = MapToDomainEstimationMode(sharedMode);
+
+            if (domainMode == DomainEstimationMode.StoryPoints)
+            {
+                continue;
+            }
+
+            _logger.LogWarning(
+                "Product {ProductId} is configured with EstimationMode {EstimationMode}; StoryPoints runtime calculation remains active until Phase B.",
+                product.Id,
+                domainMode);
+        }
+    }
+
+    private static DomainEstimationMode MapToDomainEstimationMode(SharedEstimationMode mode)
+        => mode switch
+        {
+            SharedEstimationMode.StoryPoints => DomainEstimationMode.StoryPoints,
+            SharedEstimationMode.EffortHours => DomainEstimationMode.EffortHours,
+            SharedEstimationMode.Mixed => DomainEstimationMode.Mixed,
+            SharedEstimationMode.NoSpMode => DomainEstimationMode.NoSpMode,
+            _ => DomainEstimationMode.StoryPoints
+        };
+
+    private readonly record struct ProductEstimationSetting(int Id, int EstimationMode);
 
     private const string EffortFieldRef = "Microsoft.VSTS.Scheduling.Effort";
 

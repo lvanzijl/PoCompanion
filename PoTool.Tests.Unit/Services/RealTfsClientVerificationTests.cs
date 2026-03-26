@@ -243,26 +243,13 @@ public class RealTfsClientVerificationTests
     public async Task VerifyCapabilitiesAsync_MissingAnalyticsField_FailsWorkItemFieldVerification()
     {
         SetupSuccessfulHttpResponses();
-        SetupHttpResponse("_apis/wit/fields", HttpStatusCode.OK,
+        SetupHttpResponse("_apis/wit/workitemsbatch", HttpStatusCode.OK,
             "{\"value\":[" +
-            "{\"referenceName\":\"System.Id\"}," +
-            "{\"referenceName\":\"System.WorkItemType\"}," +
-            "{\"referenceName\":\"System.Title\"}," +
-            "{\"referenceName\":\"System.State\"}," +
-            "{\"referenceName\":\"System.AreaPath\"}," +
-            "{\"referenceName\":\"System.IterationPath\"}," +
-            "{\"referenceName\":\"System.Description\"}," +
-            "{\"referenceName\":\"System.CreatedDate\"}," +
-            "{\"referenceName\":\"System.ChangedDate\"}," +
-            "{\"referenceName\":\"Microsoft.VSTS.Common.ClosedDate\"}," +
-            "{\"referenceName\":\"Microsoft.VSTS.Common.Severity\"}," +
-            "{\"referenceName\":\"System.Tags\"}," +
-            "{\"referenceName\":\"Microsoft.VSTS.Common.BusinessValue\"}," +
-            "{\"referenceName\":\"Microsoft.VSTS.Scheduling.Effort\"}," +
-            "{\"referenceName\":\"Microsoft.VSTS.Scheduling.StoryPoints\"}," +
-            "{\"referenceName\":\"Microsoft.VSTS.Common.BacklogPriority\"}," +
-            "{\"referenceName\":\"Microsoft.VSTS.Common.TimeCriticality\"}," +
-            "{\"referenceName\":\"Rhodium.Funding.ProjectNumber\"}" +
+            "{\"id\":101,\"fields\":{" +
+            "\"System.WorkItemType\":\"Epic\"," +
+            "\"Rhodium.Funding.ProjectNumber\":\"PRJ-1\"," +
+            "\"Microsoft.VSTS.Common.TimeCriticality\":42.5" +
+            "}}" +
             "]}");
 
         var result = await _sut.VerifyCapabilitiesAsync(includeWriteChecks: false);
@@ -271,6 +258,50 @@ public class RealTfsClientVerificationTests
         var workItemFieldsCheck = result.Checks.Single(check => check.CapabilityId == "work-item-fields");
         Assert.IsFalse(workItemFieldsCheck.Success);
         StringAssert.Contains(workItemFieldsCheck.ObservedBehavior ?? string.Empty, "Rhodium.Funding.ProjectElement");
+    }
+
+    [TestMethod]
+    public async Task VerifyCapabilitiesAsync_WrongFieldTypeInSamplePayload_FailsWorkItemFieldVerification()
+    {
+        SetupSuccessfulHttpResponses();
+        SetupHttpResponse("_apis/wit/workitemsbatch", HttpStatusCode.OK,
+            "{\"value\":[" +
+            "{\"id\":101,\"fields\":{" +
+            "\"System.WorkItemType\":\"Feature\"," +
+            "\"Rhodium.Funding.ProjectNumber\":\"PRJ-1\"," +
+            "\"Rhodium.Funding.ProjectElement\":\"ELM-1\"," +
+            "\"Microsoft.VSTS.Common.TimeCriticality\":\"not-a-number\"" +
+            "}}" +
+            "]}");
+
+        var result = await _sut.VerifyCapabilitiesAsync(includeWriteChecks: false);
+
+        Assert.IsFalse(result.Success);
+        var workItemFieldsCheck = result.Checks.Single(check => check.CapabilityId == "work-item-fields");
+        Assert.IsFalse(workItemFieldsCheck.Success);
+        StringAssert.Contains(workItemFieldsCheck.ObservedBehavior ?? string.Empty, "Type mismatch");
+    }
+
+    [TestMethod]
+    public async Task VerifyCapabilitiesAsync_NullOnlySampleValues_LogsWarningButSucceeds()
+    {
+        SetupSuccessfulHttpResponses();
+        SetupHttpResponse("_apis/wit/workitemsbatch", HttpStatusCode.OK,
+            "{\"value\":[" +
+            "{\"id\":101,\"fields\":{" +
+            "\"System.WorkItemType\":\"Epic\"," +
+            "\"Rhodium.Funding.ProjectNumber\":null," +
+            "\"Rhodium.Funding.ProjectElement\":\"\"," +
+            "\"Microsoft.VSTS.Common.TimeCriticality\":null" +
+            "}}" +
+            "]}");
+
+        var result = await _sut.VerifyCapabilitiesAsync(includeWriteChecks: false);
+
+        Assert.IsTrue(result.Success);
+        var workItemFieldsCheck = result.Checks.Single(check => check.CapabilityId == "work-item-fields");
+        Assert.IsTrue(workItemFieldsCheck.Success);
+        StringAssert.Contains(workItemFieldsCheck.ObservedBehavior ?? string.Empty, "Null-only sampled fields");
     }
 
     [TestMethod]
@@ -298,7 +329,7 @@ public class RealTfsClientVerificationTests
             $"{{\"name\":\"{_testConfig.Project}\"}}");
 
         // WIQL query
-        SetupHttpResponse("_apis/wit/wiql", HttpStatusCode.OK, "{\"workItems\":[]}");
+        SetupHttpResponse("_apis/wit/wiql", HttpStatusCode.OK, "{\"workItems\":[{\"id\":101}]}");
 
         // Work item fields
         SetupHttpResponse("_apis/wit/fields", HttpStatusCode.OK,
@@ -324,8 +355,16 @@ public class RealTfsClientVerificationTests
             "{\"referenceName\":\"Rhodium.Funding.ProjectElement\"}" +
             "]}");
 
-        // Batch read
-        SetupHttpResponse("_apis/wit/workitems", HttpStatusCode.OK, "{\"value\":[]}");
+        // Batch read and sample payload validation
+        SetupHttpResponse("_apis/wit/workitemsbatch", HttpStatusCode.OK,
+            "{\"value\":[" +
+            "{\"id\":101,\"fields\":{" +
+            "\"System.WorkItemType\":\"Feature\"," +
+            "\"Rhodium.Funding.ProjectNumber\":\"PRJ-1\"," +
+            "\"Rhodium.Funding.ProjectElement\":\"ELM-1\"," +
+            "\"Microsoft.VSTS.Common.TimeCriticality\":42.5" +
+            "}}" +
+            "]}");
 
         // Revisions
         SetupHttpResponse("_apis/wit/workitems/1/revisions", HttpStatusCode.OK, "{\"value\":[]}");
@@ -345,7 +384,7 @@ public class RealTfsClientVerificationTests
     {
         SetupHttpResponse($"_apis/projects/{_testConfig.Project}", HttpStatusCode.OK,
             $"{{\"name\":\"{_testConfig.Project}\"}}");
-        SetupHttpResponse("_apis/wit/wiql", HttpStatusCode.OK, "{\"workItems\":[]}");
+        SetupHttpResponse("_apis/wit/wiql", HttpStatusCode.OK, "{\"workItems\":[{\"id\":101}]}");
         SetupHttpResponse("_apis/wit/fields", HttpStatusCode.OK,
             "{\"value\":[" +
             "{\"referenceName\":\"System.Id\"}," +
@@ -368,7 +407,15 @@ public class RealTfsClientVerificationTests
             "{\"referenceName\":\"Rhodium.Funding.ProjectNumber\"}," +
             "{\"referenceName\":\"Rhodium.Funding.ProjectElement\"}" +
             "]}");
-        SetupHttpResponse("_apis/wit/workitems", HttpStatusCode.OK, "{\"value\":[]}");
+        SetupHttpResponse("_apis/wit/workitemsbatch", HttpStatusCode.OK,
+            "{\"value\":[" +
+            "{\"id\":101,\"fields\":{" +
+            "\"System.WorkItemType\":\"Feature\"," +
+            "\"Rhodium.Funding.ProjectNumber\":\"PRJ-1\"," +
+            "\"Rhodium.Funding.ProjectElement\":\"ELM-1\"," +
+            "\"Microsoft.VSTS.Common.TimeCriticality\":42.5" +
+            "}}" +
+            "]}");
         SetupHttpResponse("_apis/wit/workitems/1/revisions", HttpStatusCode.OK, "{\"value\":[]}");
         SetupHttpResponse("_apis/git/repositories", HttpStatusCode.OK, "{\"value\":[]}");
         SetupHttpResponse("_apis/build/definitions", HttpStatusCode.OK, "{\"value\":[]}");
@@ -378,7 +425,7 @@ public class RealTfsClientVerificationTests
     private void SetupSuccessfulHttpResponsesExceptProjectAccess()
     {
         SetupHttpResponse("_apis/projects", HttpStatusCode.OK, "{\"value\":[]}");
-        SetupHttpResponse("_apis/wit/wiql", HttpStatusCode.OK, "{\"workItems\":[]}");
+        SetupHttpResponse("_apis/wit/wiql", HttpStatusCode.OK, "{\"workItems\":[{\"id\":101}]}");
         SetupHttpResponse("_apis/wit/fields", HttpStatusCode.OK,
             "{\"value\":[" +
             "{\"referenceName\":\"System.Id\"}," +
@@ -401,7 +448,15 @@ public class RealTfsClientVerificationTests
             "{\"referenceName\":\"Rhodium.Funding.ProjectNumber\"}," +
             "{\"referenceName\":\"Rhodium.Funding.ProjectElement\"}" +
             "]}");
-        SetupHttpResponse("_apis/wit/workitems", HttpStatusCode.OK, "{\"value\":[]}");
+        SetupHttpResponse("_apis/wit/workitemsbatch", HttpStatusCode.OK,
+            "{\"value\":[" +
+            "{\"id\":101,\"fields\":{" +
+            "\"System.WorkItemType\":\"Feature\"," +
+            "\"Rhodium.Funding.ProjectNumber\":\"PRJ-1\"," +
+            "\"Rhodium.Funding.ProjectElement\":\"ELM-1\"," +
+            "\"Microsoft.VSTS.Common.TimeCriticality\":42.5" +
+            "}}" +
+            "]}");
         SetupHttpResponse("_apis/wit/workitems/1/revisions", HttpStatusCode.OK, "{\"value\":[]}");
         SetupHttpResponse("_apis/git/repositories", HttpStatusCode.OK, "{\"value\":[]}");
         SetupHttpResponse("_apis/build/definitions", HttpStatusCode.OK, "{\"value\":[]}");
@@ -416,7 +471,7 @@ public class RealTfsClientVerificationTests
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => req.RequestUri!.ToString().Contains(uriContains)),
                 ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage
+            .ReturnsAsync(() => new HttpResponseMessage
             {
                 StatusCode = statusCode,
                 Content = new StringContent(content)

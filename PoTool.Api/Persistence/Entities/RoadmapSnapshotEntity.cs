@@ -1,10 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace PoTool.Api.Persistence.Entities;
+namespace PoTool.Api.Persistence.Entities.UiRoadmap;
 
 /// <summary>
 /// A point-in-time capture of the roadmap state.
 /// Stored in the application database. Never modifies TFS.
+/// Not part of the CDC / analytics domain.
 /// </summary>
 public class RoadmapSnapshotEntity
 {

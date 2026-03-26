@@ -1,9 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace PoTool.Api.Persistence.Entities;
+namespace PoTool.Api.Persistence.Entities.UiRoadmap;
 
 /// <summary>
 /// A single epic entry within a roadmap snapshot.
+/// Not part of the CDC / analytics domain.
 /// </summary>
 public class RoadmapSnapshotItemEntity
 {
