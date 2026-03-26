@@ -1,4 +1,5 @@
 using PoTool.Core.Domain.Models;
+using PoTool.Core.Domain.WorkItems;
 
 namespace PoTool.Core.Domain.Sprints;
 
@@ -15,50 +16,50 @@ public static class StateClassificationDefaults
         return
         [
             // Goal
-            new("goal", "Proposed", StateClassification.New),
-            new("goal", "Active", StateClassification.InProgress),
-            new("goal", "Completed", StateClassification.Done),
-            new("goal", "Removed", StateClassification.Removed),
+            new(CanonicalWorkItemTypes.Goal, "Proposed", StateClassification.New),
+            new(CanonicalWorkItemTypes.Goal, "Active", StateClassification.InProgress),
+            new(CanonicalWorkItemTypes.Goal, "Completed", StateClassification.Done),
+            new(CanonicalWorkItemTypes.Goal, "Removed", StateClassification.Removed),
 
             // Objective
-            new("Objective", "Proposed", StateClassification.New),
-            new("Objective", "Active", StateClassification.InProgress),
-            new("Objective", "Completed", StateClassification.Done),
-            new("Objective", "Removed", StateClassification.Removed),
+            new(CanonicalWorkItemTypes.Objective, "Proposed", StateClassification.New),
+            new(CanonicalWorkItemTypes.Objective, "Active", StateClassification.InProgress),
+            new(CanonicalWorkItemTypes.Objective, "Completed", StateClassification.Done),
+            new(CanonicalWorkItemTypes.Objective, "Removed", StateClassification.Removed),
 
             // Epic
-            new("Epic", "New", StateClassification.New),
-            new("Epic", "Active", StateClassification.InProgress),
-            new("Epic", "Resolved", StateClassification.Done),
-            new("Epic", "Closed", StateClassification.Done),
-            new("Epic", "Removed", StateClassification.Removed),
+            new(CanonicalWorkItemTypes.Epic, "New", StateClassification.New),
+            new(CanonicalWorkItemTypes.Epic, "Active", StateClassification.InProgress),
+            new(CanonicalWorkItemTypes.Epic, "Resolved", StateClassification.Done),
+            new(CanonicalWorkItemTypes.Epic, "Closed", StateClassification.Done),
+            new(CanonicalWorkItemTypes.Epic, "Removed", StateClassification.Removed),
 
             // Feature
-            new("Feature", "New", StateClassification.New),
-            new("Feature", "Active", StateClassification.InProgress),
-            new("Feature", "Resolved", StateClassification.Done),
-            new("Feature", "Closed", StateClassification.Done),
-            new("Feature", "Removed", StateClassification.Removed),
+            new(CanonicalWorkItemTypes.Feature, "New", StateClassification.New),
+            new(CanonicalWorkItemTypes.Feature, "Active", StateClassification.InProgress),
+            new(CanonicalWorkItemTypes.Feature, "Resolved", StateClassification.Done),
+            new(CanonicalWorkItemTypes.Feature, "Closed", StateClassification.Done),
+            new(CanonicalWorkItemTypes.Feature, "Removed", StateClassification.Removed),
 
             // Product Backlog Item
-            new("Product Backlog Item", "New", StateClassification.New),
-            new("Product Backlog Item", "Approved", StateClassification.New),
-            new("Product Backlog Item", "Committed", StateClassification.InProgress),
-            new("Product Backlog Item", "Done", StateClassification.Done),
-            new("Product Backlog Item", "Removed", StateClassification.Removed),
+            new(CanonicalWorkItemTypes.Pbi, "New", StateClassification.New),
+            new(CanonicalWorkItemTypes.Pbi, "Approved", StateClassification.New),
+            new(CanonicalWorkItemTypes.Pbi, "Committed", StateClassification.InProgress),
+            new(CanonicalWorkItemTypes.Pbi, "Done", StateClassification.Done),
+            new(CanonicalWorkItemTypes.Pbi, "Removed", StateClassification.Removed),
 
             // Bug
-            new("Bug", "New", StateClassification.New),
-            new("Bug", "Approved", StateClassification.New),
-            new("Bug", "Committed", StateClassification.InProgress),
-            new("Bug", "Done", StateClassification.Done),
-            new("Bug", "Removed", StateClassification.Removed),
+            new(CanonicalWorkItemTypes.Bug, "New", StateClassification.New),
+            new(CanonicalWorkItemTypes.Bug, "Approved", StateClassification.New),
+            new(CanonicalWorkItemTypes.Bug, "Committed", StateClassification.InProgress),
+            new(CanonicalWorkItemTypes.Bug, "Done", StateClassification.Done),
+            new(CanonicalWorkItemTypes.Bug, "Removed", StateClassification.Removed),
 
             // Task
-            new("Task", "To Do", StateClassification.New),
-            new("Task", "In Progress", StateClassification.InProgress),
-            new("Task", "Done", StateClassification.Done),
-            new("Task", "Removed", StateClassification.Removed)
+            new(CanonicalWorkItemTypes.Task, "To Do", StateClassification.New),
+            new(CanonicalWorkItemTypes.Task, "In Progress", StateClassification.InProgress),
+            new(CanonicalWorkItemTypes.Task, "Done", StateClassification.Done),
+            new(CanonicalWorkItemTypes.Task, "Removed", StateClassification.Removed)
         ];
     }
 }

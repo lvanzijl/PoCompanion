@@ -23,8 +23,13 @@ public static class WorkItemFieldSemantics
         => IsProjectElementRelevant(workItemType) ? projectElement : null;
 
     public static double? NormalizeTimeCriticality(string workItemType, double? timeCriticality)
-        => IsTimeCriticalityRelevant(workItemType) ? timeCriticality : null;
+        => IsTimeCriticalityRelevant(workItemType) && IsValidTimeCriticality(timeCriticality)
+            ? timeCriticality
+            : null;
+
+    public static bool IsValidTimeCriticality(double? timeCriticality)
+        => !timeCriticality.HasValue || (timeCriticality.Value >= 0d && timeCriticality.Value <= 100d);
 
     private static bool IsEpic(string workItemType)
-        => string.Equals(workItemType, CanonicalWorkItemTypes.Epic, StringComparison.OrdinalIgnoreCase);
+        => workItemType == CanonicalWorkItemTypes.Epic;
 }

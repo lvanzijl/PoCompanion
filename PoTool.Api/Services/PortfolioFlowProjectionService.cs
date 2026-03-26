@@ -344,7 +344,7 @@ public class PortfolioFlowProjectionService
                     workItemsByTfsId,
                     resolvedItemsByWorkItemId,
                     stateLookup,
-                    StateClassificationLookup.IsDone(stateLookup, workItem.Type, stateAtEntry),
+                    StateClassificationLookup.IsDone(stateLookup, workItem.Type.ToCanonicalWorkItemType(), stateAtEntry),
                     stateEventsByWorkItem,
                     storyPointEventsByWorkItem,
                     businessValueEventsByWorkItem);
@@ -379,7 +379,7 @@ public class PortfolioFlowProjectionService
     {
         var historicalWorkItem = new CanonicalWorkItem(
             workItem.TfsId,
-            workItem.Type,
+            workItem.Type.ToCanonicalWorkItemType(),
             workItem.ParentTfsId,
             GetNullableIntAtTimestamp(
                 workItem.BusinessValue,
@@ -443,7 +443,7 @@ public class PortfolioFlowProjectionService
                 return new StoryPointResolutionCandidate(
                     new CanonicalWorkItem(
                         candidate.WorkItem.TfsId,
-                        candidate.WorkItem.Type,
+                        candidate.WorkItem.Type.ToCanonicalWorkItemType(),
                         candidate.WorkItem.ParentTfsId,
                         GetNullableIntAtTimestamp(
                             candidate.WorkItem.BusinessValue,
@@ -455,7 +455,7 @@ public class PortfolioFlowProjectionService
                             storyPointEventsByWorkItem?.GetValueOrDefault(candidate.WorkItem.TfsId),
                             StoryPointsFieldRefName,
                             targetTimestamp)),
-                    StateClassificationLookup.IsDone(stateLookup, candidate.WorkItem.Type, reconstructedState));
+                    StateClassificationLookup.IsDone(stateLookup, candidate.WorkItem.Type.ToCanonicalWorkItemType(), reconstructedState));
             })
             .ToList();
     }
@@ -469,7 +469,7 @@ public class PortfolioFlowProjectionService
         }
 
         var response = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
-        return StateClassificationLookup.Create(response.Classifications.ToDomainStateClassifications());
+        return StateClassificationLookup.Create(response.Classifications.ToCanonicalDomainStateClassifications());
     }
 
     private static void ApplyProjection(

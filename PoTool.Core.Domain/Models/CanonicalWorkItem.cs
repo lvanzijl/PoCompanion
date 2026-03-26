@@ -1,3 +1,5 @@
+using PoTool.Core.Domain.WorkItems;
+
 namespace PoTool.Core.Domain.Models;
 
 /// <summary>
@@ -17,6 +19,8 @@ public sealed record CanonicalWorkItem
         string? projectElement = null,
         double? effort = null)
     {
+        CanonicalWorkItemTypes.EnsureCanonical(workItemType, nameof(workItemType));
+
         WorkItemId = workItemId;
         WorkItemType = workItemType;
         ParentWorkItemId = parentWorkItemId;

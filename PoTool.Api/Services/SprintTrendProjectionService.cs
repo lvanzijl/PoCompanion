@@ -12,6 +12,7 @@ using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Sprints;
+using PoTool.Core.Domain.WorkItems;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.WorkItems;
 using PoTool.Shared.Metrics;
@@ -115,6 +116,7 @@ public class SprintTrendProjectionService
             .ToListAsync(cancellationToken);
 
         var workItemsByTfsId = workItems.ToDictionary(w => w.TfsId, w => w);
+        LogInvalidTimeCriticalityOverrides(workItems);
 
         // Filter to sprints with valid dates
         var validSprints = sprints
@@ -399,12 +401,12 @@ public class SprintTrendProjectionService
         var candidates = featurePbis
             .Select(candidate => new StoryPointResolutionCandidate(
                 candidate.ToCanonicalWorkItem(),
-                StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, candidate.State)))
+                StateClassificationLookup.IsDone(stateLookup, CanonicalWorkItemTypes.Pbi, candidate.State)))
             .ToArray();
 
         return storyPointResolutionService.Resolve(new StoryPointResolutionRequest(
             pbi.ToCanonicalWorkItem(),
-            StateClassificationLookup.IsDone(stateLookup, WorkItemType.Pbi, pbi.State),
+            StateClassificationLookup.IsDone(stateLookup, CanonicalWorkItemTypes.Pbi, pbi.State),
             candidates));
     }
 
@@ -422,7 +424,7 @@ public class SprintTrendProjectionService
         }
 
         var childPbis = resolvedItems
-            .Where(resolvedItem => string.Equals(resolvedItem.WorkItemType, WorkItemType.Pbi, StringComparison.OrdinalIgnoreCase)
+            .Where(resolvedItem => resolvedItem.WorkItemType.ToCanonicalWorkItemType() == CanonicalWorkItemTypes.Pbi
                 && resolvedItem.ResolvedFeatureId == featureId)
             .Select(resolvedItem => workItemsByTfsId.GetValueOrDefault(resolvedItem.WorkItemId))
             .OfType<WorkItemEntity>()
@@ -510,6 +512,7 @@ public class SprintTrendProjectionService
             .ToListAsync(cancellationToken);
 
         var workItemsByTfsId = workItems.ToDictionary(w => w.TfsId, w => w);
+        LogInvalidTimeCriticalityOverrides(workItems);
 
         HashSet<int>? activeWorkItemIds = null;
         HashSet<int>? sprintCompletedPbiIds = null;
@@ -538,7 +541,7 @@ public class SprintTrendProjectionService
 
             var donePbiStates = StateClassificationLookup.GetStatesForClassification(
                 stateLookup,
-                WorkItemType.Pbi,
+                CanonicalWorkItemTypes.Pbi,
                 StateClassification.Done);
 
             // Load PBI IDs that transitioned to Done during this sprint
@@ -581,7 +584,7 @@ public class SprintTrendProjectionService
             if (sprintId.HasValue)
             {
                 sprintAssignedPbiIds = resolvedItems
-                    .Where(r => r.WorkItemType == WorkItemType.Pbi
+                    .Where(r => r.WorkItemType.ToCanonicalWorkItemType() == CanonicalWorkItemTypes.Pbi
                         && r.ResolvedSprintId == sprintId.Value
                         && r.ResolvedProductId != null
                         && productIds.Contains(r.ResolvedProductId.Value))
@@ -634,6 +637,20 @@ public class SprintTrendProjectionService
             SharedEstimationMode.NoSpMode => DomainEstimationMode.NoSpMode,
             _ => DomainEstimationMode.StoryPoints
         };
+
+    private void LogInvalidTimeCriticalityOverrides(IEnumerable<WorkItemEntity> workItems)
+    {
+        foreach (var workItem in workItems)
+        {
+            if (!WorkItemFieldSemantics.IsValidTimeCriticality(workItem.TimeCriticality))
+            {
+                _logger.LogWarning(
+                    "Ignoring invalid TimeCriticality override for feature progress. WorkItemId: {WorkItemId}, Value: {TimeCriticality}",
+                    workItem.TfsId,
+                    workItem.TimeCriticality);
+            }
+        }
+    }
 
     private readonly record struct ProductEstimationSetting(int Id, int EstimationMode);
 
@@ -746,6 +763,6 @@ public class SprintTrendProjectionService
         }
 
         var response = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
-        return StateClassificationLookup.Create(response.Classifications.ToDomainStateClassifications());
+        return StateClassificationLookup.Create(response.Classifications.ToCanonicalDomainStateClassifications());
     }
 }

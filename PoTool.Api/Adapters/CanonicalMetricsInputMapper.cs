@@ -10,7 +10,7 @@ internal static class CanonicalMetricsInputMapper
     {
         return new CanonicalWorkItem(
             entity.TfsId,
-            entity.Type,
+            entity.Type.ToCanonicalWorkItemType(),
             entity.ParentTfsId,
             entity.BusinessValue,
             entity.StoryPoints,
@@ -24,7 +24,7 @@ internal static class CanonicalMetricsInputMapper
     {
         return new CanonicalWorkItem(
             dto.TfsId,
-            dto.Type,
+            dto.Type.ToCanonicalWorkItemType(),
             dto.ParentTfsId,
             dto.BusinessValue,
             dto.StoryPoints,

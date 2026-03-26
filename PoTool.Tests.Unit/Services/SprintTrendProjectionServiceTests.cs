@@ -2625,7 +2625,7 @@ public class SprintTrendProjectionServiceTests
         params (string WorkItemType, string StateName, StateClassification Classification)[] classifications)
     {
         return classifications.ToDictionary(
-            classification => (classification.WorkItemType, classification.StateName),
+            classification => (classification.WorkItemType.ToCanonicalWorkItemType(), classification.StateName),
             classification => classification.Classification);
     }
 }

@@ -19,12 +19,8 @@ public sealed class FeatureProgressServiceTests
                 CreateChild(202, CanonicalWorkItemTypes.Bug, StateClassification.Done, effort: 5)
             ]));
 
-        Assert.AreEqual(1d, result.CalculatedProgress, 0.001d);
+        Assert.AreEqual(1d, result.BaseProgress, 0.001d);
         Assert.AreEqual(1d, result.EffectiveProgress, 0.001d);
-        Assert.AreEqual(8d, result.CompletedEffort, 0.001d);
-        Assert.AreEqual(8d, result.TotalEffort, 0.001d);
-        Assert.IsNull(result.Override);
-        Assert.IsEmpty(result.ValidationSignals);
     }
 
     [TestMethod]
@@ -36,10 +32,8 @@ public sealed class FeatureProgressServiceTests
                 CreateChild(202, CanonicalWorkItemTypes.Bug, StateClassification.InProgress, effort: 5)
             ]));
 
-        Assert.AreEqual(0d, result.CalculatedProgress, 0.001d);
+        Assert.AreEqual(0d, result.BaseProgress, 0.001d);
         Assert.AreEqual(0d, result.EffectiveProgress, 0.001d);
-        Assert.AreEqual(0d, result.CompletedEffort, 0.001d);
-        Assert.AreEqual(8d, result.TotalEffort, 0.001d);
     }
 
     [TestMethod]
@@ -52,10 +46,8 @@ public sealed class FeatureProgressServiceTests
                 CreateChild(203, CanonicalWorkItemTypes.Bug, StateClassification.New, effort: 2)
             ]));
 
-        Assert.AreEqual(0.3d, result.CalculatedProgress, 0.001d);
+        Assert.AreEqual(0.3d, result.BaseProgress, 0.001d);
         Assert.AreEqual(0.3d, result.EffectiveProgress, 0.001d);
-        Assert.AreEqual(3d, result.CompletedEffort, 0.001d);
-        Assert.AreEqual(10d, result.TotalEffort, 0.001d);
     }
 
     [TestMethod]
@@ -63,10 +55,8 @@ public sealed class FeatureProgressServiceTests
     {
         var result = Service.Compute(CreateRequest([]));
 
-        Assert.AreEqual(0d, result.CalculatedProgress, 0.001d);
+        Assert.AreEqual(0d, result.BaseProgress, 0.001d);
         Assert.AreEqual(0d, result.EffectiveProgress, 0.001d);
-        Assert.AreEqual(0d, result.CompletedEffort, 0.001d);
-        Assert.AreEqual(0d, result.TotalEffort, 0.001d);
     }
 
     [TestMethod]
@@ -78,10 +68,8 @@ public sealed class FeatureProgressServiceTests
                 CreateChild(202, CanonicalWorkItemTypes.Bug, StateClassification.InProgress, effort: null)
             ]));
 
-        Assert.AreEqual(0d, result.CalculatedProgress, 0.001d);
+        Assert.AreEqual(0d, result.BaseProgress, 0.001d);
         Assert.AreEqual(0d, result.EffectiveProgress, 0.001d);
-        Assert.AreEqual(0d, result.CompletedEffort, 0.001d);
-        Assert.AreEqual(0d, result.TotalEffort, 0.001d);
     }
 
     [TestMethod]
@@ -93,9 +81,7 @@ public sealed class FeatureProgressServiceTests
                 CreateChild(202, CanonicalWorkItemTypes.Bug, StateClassification.Removed, effort: 7)
             ]));
 
-        Assert.AreEqual(1d, result.CalculatedProgress, 0.001d);
-        Assert.AreEqual(3d, result.CompletedEffort, 0.001d);
-        Assert.AreEqual(3d, result.TotalEffort, 0.001d);
+        Assert.AreEqual(1d, result.BaseProgress, 0.001d);
     }
 
     [TestMethod]
@@ -107,9 +93,7 @@ public sealed class FeatureProgressServiceTests
                 CreateChild(202, CanonicalWorkItemTypes.Task, StateClassification.Done, effort: 7)
             ]));
 
-        Assert.AreEqual(1d, result.CalculatedProgress, 0.001d);
-        Assert.AreEqual(3d, result.CompletedEffort, 0.001d);
-        Assert.AreEqual(3d, result.TotalEffort, 0.001d);
+        Assert.AreEqual(1d, result.BaseProgress, 0.001d);
     }
 
     [TestMethod]
@@ -119,9 +103,8 @@ public sealed class FeatureProgressServiceTests
             [CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.Done, effort: 5)],
             timeCriticality: 0));
 
-        Assert.AreEqual(1d, result.CalculatedProgress, 0.001d);
+        Assert.AreEqual(1d, result.BaseProgress, 0.001d);
         Assert.AreEqual(0d, result.EffectiveProgress, 0.001d);
-        Assert.AreEqual(0d, result.Override!.Value, 0.001d);
     }
 
     [TestMethod]
@@ -131,9 +114,8 @@ public sealed class FeatureProgressServiceTests
             [CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.Done, effort: 5)],
             timeCriticality: 50));
 
-        Assert.AreEqual(1d, result.CalculatedProgress, 0.001d);
+        Assert.AreEqual(1d, result.BaseProgress, 0.001d);
         Assert.AreEqual(0.5d, result.EffectiveProgress, 0.001d);
-        Assert.AreEqual(50d, result.Override!.Value, 0.001d);
     }
 
     [TestMethod]
@@ -143,9 +125,8 @@ public sealed class FeatureProgressServiceTests
             [CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.New, effort: 5)],
             timeCriticality: 100));
 
-        Assert.AreEqual(0d, result.CalculatedProgress, 0.001d);
+        Assert.AreEqual(0d, result.BaseProgress, 0.001d);
         Assert.AreEqual(1d, result.EffectiveProgress, 0.001d);
-        Assert.AreEqual(100d, result.Override!.Value, 0.001d);
     }
 
     [TestMethod]
@@ -158,8 +139,30 @@ public sealed class FeatureProgressServiceTests
             ],
             timeCriticality: 50));
 
-        Assert.AreEqual(0.2d, result.CalculatedProgress, 0.001d);
+        Assert.AreEqual(0.2d, result.BaseProgress, 0.001d);
         Assert.AreEqual(0.5d, result.EffectiveProgress, 0.001d);
+    }
+
+    [TestMethod]
+    public void Compute_TreatsNegativeTimeCriticalityAsMissingOverride()
+    {
+        var result = Service.Compute(CreateRequest(
+            [CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.Done, effort: 5)],
+            timeCriticality: -10));
+
+        Assert.AreEqual(1d, result.BaseProgress, 0.001d);
+        Assert.AreEqual(1d, result.EffectiveProgress, 0.001d);
+    }
+
+    [TestMethod]
+    public void Compute_TreatsAboveRangeTimeCriticalityAsMissingOverride()
+    {
+        var result = Service.Compute(CreateRequest(
+            [CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.New, effort: 5)],
+            timeCriticality: 150));
+
+        Assert.AreEqual(0d, result.BaseProgress, 0.001d);
+        Assert.AreEqual(0d, result.EffectiveProgress, 0.001d);
     }
 
     [TestMethod]
@@ -197,10 +200,8 @@ public sealed class FeatureProgressServiceTests
         var originalResult = Service.Compute(original);
         var reversedResult = Service.Compute(reversed);
 
-        Assert.AreEqual(originalResult.CalculatedProgress, reversedResult.CalculatedProgress, 0.001d);
+        Assert.AreEqual(originalResult.BaseProgress, reversedResult.BaseProgress, 0.001d);
         Assert.AreEqual(originalResult.EffectiveProgress, reversedResult.EffectiveProgress, 0.001d);
-        Assert.AreEqual(originalResult.CompletedEffort, reversedResult.CompletedEffort, 0.001d);
-        Assert.AreEqual(originalResult.TotalEffort, reversedResult.TotalEffort, 0.001d);
     }
 
     private static FeatureProgressCalculationRequest CreateRequest(

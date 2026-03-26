@@ -23,6 +23,18 @@ public sealed class FeatureProgressService : IFeatureProgressService
     /// <inheritdoc />
     public FeatureProgressResult Compute(FeatureProgressCalculationRequest request)
     {
+        var details = FeatureProgressComputation.ComputeDetails(request);
+
+        return new FeatureProgressResult(
+            details.BaseProgress,
+            details.EffectiveProgress);
+    }
+}
+
+internal static class FeatureProgressComputation
+{
+    internal static FeatureProgressCalculationDetails ComputeDetails(FeatureProgressCalculationRequest request)
+    {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Feature);
         ArgumentNullException.ThrowIfNull(request.Children);
@@ -30,11 +42,6 @@ public sealed class FeatureProgressService : IFeatureProgressService
         if (!CanonicalWorkItemTypes.IsFeature(request.Feature.WorkItemType))
         {
             throw new ArgumentException("Feature progress can only be computed for Feature work items.", nameof(request));
-        }
-
-        if (request.Feature.TimeCriticality is < 0d or > 100d)
-        {
-            throw new ArgumentOutOfRangeException(nameof(request), "Feature TimeCriticality must be between 0 and 100.");
         }
 
         var progressChildren = request.Children
@@ -63,19 +70,25 @@ public sealed class FeatureProgressService : IFeatureProgressService
             }
         }
 
-        var calculatedProgress = totalEffort > 0d
+        var baseProgress = totalEffort > 0d
             ? completedEffort / totalEffort
             : 0d;
         var effectiveProgress = request.Feature.TimeCriticality.HasValue
             ? request.Feature.TimeCriticality.Value / 100d
-            : calculatedProgress;
+            : baseProgress;
 
-        return new FeatureProgressResult(
-            calculatedProgress,
-            request.Feature.TimeCriticality,
+        return new FeatureProgressCalculationDetails(
+            baseProgress,
             effectiveProgress,
+            request.Feature.TimeCriticality,
             completedEffort,
-            totalEffort,
-            Array.Empty<string>());
+            totalEffort);
     }
 }
+
+internal readonly record struct FeatureProgressCalculationDetails(
+    double BaseProgress,
+    double EffectiveProgress,
+    double? OverrideRaw,
+    double CompletedEffort,
+    double TotalEffort);

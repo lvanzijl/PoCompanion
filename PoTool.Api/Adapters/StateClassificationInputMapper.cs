@@ -20,6 +20,17 @@ internal static class StateClassificationInputMapper
         return classifications.Select(classification => classification.ToDomainStateClassification()).ToList();
     }
 
+    public static IReadOnlyList<WorkItemStateClassification> ToCanonicalDomainStateClassifications(
+        this IEnumerable<WorkItemStateClassificationDto> classifications)
+    {
+        return classifications
+            .Select(classification => new WorkItemStateClassification(
+                classification.WorkItemType.ToCanonicalWorkItemType(),
+                classification.StateName,
+                classification.Classification.ToDomainStateClassification()))
+            .ToList();
+    }
+
     public static WorkItemStateClassificationDto ToDto(this WorkItemStateClassification classification)
     {
         return new WorkItemStateClassificationDto

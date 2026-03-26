@@ -19,7 +19,7 @@ public enum FeatureProgressMode
 }
 
 /// <summary>
-/// Known feature-progress validation signals emitted by the canonical progress engine.
+/// Known feature-progress validation signals retained for compatibility with existing read models.
 /// </summary>
 public static class FeatureProgressValidationSignals
 {
@@ -45,9 +45,5 @@ public sealed record FeatureProgressCalculationRequest(
 /// Canonical feature progress engine result.
 /// </summary>
 public sealed record FeatureProgressResult(
-    double CalculatedProgress,
-    double? Override,
-    double EffectiveProgress,
-    double CompletedEffort,
-    double TotalEffort,
-    IReadOnlyList<string> ValidationSignals);
+    double BaseProgress,
+    double EffectiveProgress);

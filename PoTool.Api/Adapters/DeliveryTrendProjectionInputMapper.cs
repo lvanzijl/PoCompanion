@@ -9,7 +9,7 @@ internal static class DeliveryTrendProjectionInputMapper
     {
         return new DeliveryTrendWorkItem(
             entity.TfsId,
-            entity.Type,
+            entity.Type.ToCanonicalWorkItemType(),
             entity.Title,
             entity.ParentTfsId,
             entity.State,
@@ -27,7 +27,7 @@ internal static class DeliveryTrendProjectionInputMapper
     {
         return new DeliveryTrendResolvedWorkItem(
             entity.WorkItemId,
-            entity.WorkItemType,
+            entity.WorkItemType.ToCanonicalWorkItemType(),
             entity.ResolvedProductId,
             entity.ResolvedFeatureId,
             entity.ResolvedEpicId,

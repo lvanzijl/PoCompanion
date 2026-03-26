@@ -1,4 +1,5 @@
 using PoTool.Core.Domain.Models;
+using PoTool.Core.Domain.WorkItems;
 
 namespace PoTool.Core.Domain.DeliveryTrends.Models;
 
@@ -23,6 +24,8 @@ public sealed record DeliveryTrendWorkItem
         string? projectNumber = null,
         string? projectElement = null)
     {
+        CanonicalWorkItemTypes.EnsureCanonical(workItemType, nameof(workItemType));
+
         WorkItemId = workItemId;
         WorkItemType = workItemType;
         Title = title;
@@ -68,13 +71,38 @@ public sealed record DeliveryTrendWorkItem
 /// <summary>
 /// Product-scoped hierarchy resolution data required by sprint delivery projection calculations.
 /// </summary>
-public sealed record DeliveryTrendResolvedWorkItem(
-    int WorkItemId,
-    string WorkItemType,
-    int? ResolvedProductId,
-    int? ResolvedFeatureId,
-    int? ResolvedEpicId,
-    int? ResolvedSprintId);
+public sealed record DeliveryTrendResolvedWorkItem
+{
+    public DeliveryTrendResolvedWorkItem(
+        int workItemId,
+        string workItemType,
+        int? resolvedProductId,
+        int? resolvedFeatureId,
+        int? resolvedEpicId,
+        int? resolvedSprintId)
+    {
+        CanonicalWorkItemTypes.EnsureCanonical(workItemType, nameof(workItemType));
+
+        WorkItemId = workItemId;
+        WorkItemType = workItemType;
+        ResolvedProductId = resolvedProductId;
+        ResolvedFeatureId = resolvedFeatureId;
+        ResolvedEpicId = resolvedEpicId;
+        ResolvedSprintId = resolvedSprintId;
+    }
+
+    public int WorkItemId { get; }
+
+    public string WorkItemType { get; }
+
+    public int? ResolvedProductId { get; }
+
+    public int? ResolvedFeatureId { get; }
+
+    public int? ResolvedEpicId { get; }
+
+    public int? ResolvedSprintId { get; }
+}
 
 /// <summary>
 /// Prepared domain inputs required to compute one sprint/product delivery projection.
