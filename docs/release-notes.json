@@ -1,6 +1,13 @@
 [
   {
     "date": "2026-03-26",
+    "type": "Fixed",
+    "title": "Error recovery button now uses sentence case",
+    "impact": "The global error screen now labels its recovery action as \"Try again\" for consistent UI wording.",
+    "area": "Home"
+  },
+  {
+    "date": "2026-03-26",
     "type": "Changed",
     "title": "Epic progress now uses deterministic feature rollups",
     "impact": "Sprint Delivery epic progress now comes only from weighted Feature progress, ignores non-Feature children and epic overrides, and returns 0% when no Feature weight is available.",

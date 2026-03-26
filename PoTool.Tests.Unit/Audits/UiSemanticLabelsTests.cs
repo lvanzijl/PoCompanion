@@ -78,6 +78,16 @@ public sealed class UiSemanticLabelsTests
         Assert.DoesNotContain(sprintTrend, "Δ Effort (pts)", "Sprint trend effort deltas should use hours.");
     }
 
+    [TestMethod]
+    public void ErrorBoundaryRetryButton_UsesSentenceCaseLabel()
+    {
+        var repositoryRoot = GetRepositoryRoot();
+        var app = File.ReadAllText(Path.Combine(repositoryRoot, "PoTool.Client", "App.razor"));
+
+        StringAssert.Contains(app, "Try again");
+        Assert.DoesNotContain(app, "Try Again", "Global error boundary button labels should use sentence case.");
+    }
+
     private static string GetRepositoryRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
