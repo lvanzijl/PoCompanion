@@ -26,6 +26,14 @@ internal static class DeliveryTrendModelValidation
         }
     }
 
+    public static void ValidateUnitInterval(double value, string paramName, string displayName)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1)
+        {
+            throw new ArgumentOutOfRangeException(paramName, $"{displayName} must fall within the range [0, 1].");
+        }
+    }
+
     public static void ValidateCount(int value, string paramName, string displayName)
     {
         if (value < 0)

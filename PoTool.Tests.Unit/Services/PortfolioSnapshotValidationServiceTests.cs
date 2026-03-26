@@ -15,8 +15,8 @@ public sealed class PortfolioSnapshotValidationServiceTests
 
         var snapshot = new PortfolioSnapshot(timestamp,
         [
-            new PortfolioSnapshotItem(timestamp, 1, "PRJ-100", null, 40, 20),
-            new PortfolioSnapshotItem(timestamp, 1, "PRJ-200", null, 60, 10)
+            new PortfolioSnapshotItem(1, "PRJ-100", null, 0.4d, 20),
+            new PortfolioSnapshotItem(1, "PRJ-200", null, 0.6d, 10)
         ]);
 
         Assert.AreEqual(timestamp, snapshot.Timestamp);
@@ -24,7 +24,7 @@ public sealed class PortfolioSnapshotValidationServiceTests
         Assert.AreEqual(1, snapshot.Items[0].ProductId);
         Assert.AreEqual("PRJ-100", snapshot.Items[0].ProjectNumber);
         Assert.IsNull(snapshot.Items[0].WorkPackage);
-        Assert.AreEqual(40d, snapshot.Items[0].Progress, 0.001d);
+        Assert.AreEqual(0.4d, snapshot.Items[0].Progress, 0.001d);
         Assert.AreEqual(20d, snapshot.Items[0].TotalWeight, 0.001d);
     }
 
@@ -35,16 +35,16 @@ public sealed class PortfolioSnapshotValidationServiceTests
 
         var snapshot = new PortfolioSnapshot(timestamp,
         [
-            new PortfolioSnapshotItem(timestamp, 1, "PRJ-100", "WP-1", 40, 10),
-            new PortfolioSnapshotItem(timestamp, 1, "PRJ-100", "WP-2", 60, 15)
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-1", 0.4d, 10),
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-2", 0.6d, 15)
         ]);
 
         Assert.AreEqual(timestamp, snapshot.Timestamp);
         Assert.HasCount(2, snapshot.Items);
         CollectionAssert.AreEqual(
-            ["WP-1", "WP-2"],
+            new[] { "WP-1", "WP-2" },
             snapshot.Items.Select(item => item.WorkPackage).ToArray());
-        Assert.AreEqual(40d, snapshot.Items[0].Progress, 0.001d);
+        Assert.AreEqual(0.4d, snapshot.Items[0].Progress, 0.001d);
         Assert.AreEqual(15d, snapshot.Items[1].TotalWeight, 0.001d);
     }
 
@@ -55,9 +55,32 @@ public sealed class PortfolioSnapshotValidationServiceTests
 
         Assert.ThrowsExactly<ArgumentException>(() => new PortfolioSnapshot(timestamp,
         [
-            new PortfolioSnapshotItem(timestamp, 1, "PRJ-100", null, 40, 10),
-            new PortfolioSnapshotItem(timestamp, 1, "PRJ-100", "WP-1", 60, 15)
+            new PortfolioSnapshotItem(1, "PRJ-100", null, 0.4d, 10),
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-1", 0.6d, 15)
         ]));
+    }
+
+    [TestMethod]
+    public void PortfolioSnapshotItem_AllowsUnitIntervalProgress()
+    {
+        var item = new PortfolioSnapshotItem(1, "PRJ-100", null, 0.5d, 10d);
+
+        Assert.AreEqual(0.5d, item.Progress, 0.001d);
+    }
+
+    [TestMethod]
+    public void PortfolioSnapshotItem_RejectsProgressOutsideUnitInterval()
+    {
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
+            new PortfolioSnapshotItem(1, "PRJ-100", null, 50d, 10d));
+    }
+
+    [TestMethod]
+    public void PortfolioSnapshotItem_DoesNotOwnIndependentTimestamp()
+    {
+        var timestampProperty = typeof(PortfolioSnapshotItem).GetProperty(nameof(PortfolioSnapshot.Timestamp));
+
+        Assert.IsNull(timestampProperty);
     }
 
     [TestMethod]
@@ -68,13 +91,13 @@ public sealed class PortfolioSnapshotValidationServiceTests
 
         var previousSnapshot = new PortfolioSnapshot(previousTimestamp,
         [
-            new PortfolioSnapshotItem(previousTimestamp, 1, "PRJ-100", "WP-1", 40, 10),
-            new PortfolioSnapshotItem(previousTimestamp, 1, "PRJ-100", "WP-2", 60, 15)
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-1", 0.4d, 10),
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-2", 0.6d, 15)
         ]);
 
         var candidateSnapshot = new PortfolioSnapshot(currentTimestamp,
         [
-            new PortfolioSnapshotItem(currentTimestamp, 1, "PRJ-100", "WP-1", 65, 12)
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-1", 0.65d, 12)
         ]);
 
         Assert.ThrowsExactly<InvalidOperationException>(() =>
@@ -89,12 +112,12 @@ public sealed class PortfolioSnapshotValidationServiceTests
 
         var previousSnapshot = new PortfolioSnapshot(previousTimestamp,
         [
-            new PortfolioSnapshotItem(previousTimestamp, 1, "PRJ-100", "WP-1", 40, 10)
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-1", 0.4d, 10)
         ]);
 
         var candidateSnapshot = new PortfolioSnapshot(currentTimestamp,
         [
-            new PortfolioSnapshotItem(currentTimestamp, 1, "PRJ-100", null, 65, 12)
+            new PortfolioSnapshotItem(1, "PRJ-100", null, 0.65d, 12)
         ]);
 
         Assert.ThrowsExactly<InvalidOperationException>(() =>
@@ -110,16 +133,16 @@ public sealed class PortfolioSnapshotValidationServiceTests
 
         var earliestSnapshot = new PortfolioSnapshot(earliestTimestamp,
         [
-            new PortfolioSnapshotItem(earliestTimestamp, 1, "PRJ-100", "WP-1", 20, 5)
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-1", 0.2d, 5)
         ]);
         var latestSnapshot = new PortfolioSnapshot(latestTimestamp,
         [
-            new PortfolioSnapshotItem(latestTimestamp, 1, "PRJ-100", "WP-1", 40, 10),
-            new PortfolioSnapshotItem(latestTimestamp, 1, "PRJ-100", "WP-2", 60, 15)
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-1", 0.4d, 10),
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-2", 0.6d, 15)
         ]);
         var candidateSnapshot = new PortfolioSnapshot(candidateTimestamp,
         [
-            new PortfolioSnapshotItem(candidateTimestamp, 1, "PRJ-100", "WP-1", 65, 12)
+            new PortfolioSnapshotItem(1, "PRJ-100", "WP-1", 0.65d, 12)
         ]);
 
         Assert.ThrowsExactly<InvalidOperationException>(() =>

@@ -13,15 +13,15 @@ public sealed class PortfolioSnapshotComparisonServiceTests
     {
         var previous = CreateSnapshot(
             new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
-            (1, "PRJ-100", "WP-1", 40d, 10d));
+            (1, "PRJ-100", "WP-1", 0.4d, 10d));
         var current = CreateSnapshot(
             previous.Timestamp.AddDays(7),
-            (1, "PRJ-100", "WP-1", 65d, 10d));
+            (1, "PRJ-100", "WP-1", 0.65d, 10d));
 
         var result = Service.Compare(new PortfolioSnapshotComparisonRequest(previous, current));
 
         Assert.HasCount(1, result.Items);
-        Assert.AreEqual(25d, result.Items[0].ProgressDelta!.Value, 0.001d);
+        Assert.AreEqual(0.25d, result.Items[0].ProgressDelta!.Value, 0.001d);
     }
 
     [TestMethod]
@@ -29,10 +29,10 @@ public sealed class PortfolioSnapshotComparisonServiceTests
     {
         var previous = CreateSnapshot(
             new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
-            (1, "PRJ-100", "WP-1", 40d, 10d));
+            (1, "PRJ-100", "WP-1", 0.4d, 10d));
         var current = CreateSnapshot(
             previous.Timestamp.AddDays(7),
-            (1, "PRJ-100", "WP-1", 40d, 15d));
+            (1, "PRJ-100", "WP-1", 0.4d, 15d));
 
         var result = Service.Compare(new PortfolioSnapshotComparisonRequest(previous, current));
 
@@ -44,17 +44,17 @@ public sealed class PortfolioSnapshotComparisonServiceTests
     {
         var previous = CreateSnapshot(
             new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
-            (1, "PRJ-100", "WP-1", 40d, 10d));
+            (1, "PRJ-100", "WP-1", 0.4d, 10d));
         var current = CreateSnapshot(
             previous.Timestamp.AddDays(7),
-            (1, "PRJ-100", "WP-1", 40d, 10d),
-            (1, "PRJ-100", "WP-2", 55d, 8d));
+            (1, "PRJ-100", "WP-1", 0.4d, 10d),
+            (1, "PRJ-100", "WP-2", 0.55d, 8d));
 
         var result = Service.Compare(new PortfolioSnapshotComparisonRequest(previous, current));
         var addedRow = result.Items.Single(item => item.WorkPackage == "WP-2");
 
         Assert.IsNull(addedRow.PreviousProgress);
-        Assert.AreEqual(55d, addedRow.CurrentProgress!.Value, 0.001d);
+        Assert.AreEqual(0.55d, addedRow.CurrentProgress!.Value, 0.001d);
         Assert.IsNull(addedRow.ProgressDelta);
         Assert.IsNull(addedRow.PreviousWeight);
         Assert.AreEqual(8d, addedRow.CurrentWeight!.Value, 0.001d);
@@ -66,16 +66,16 @@ public sealed class PortfolioSnapshotComparisonServiceTests
     {
         var previous = CreateSnapshot(
             new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
-            (1, "PRJ-100", "WP-1", 40d, 10d),
-            (1, "PRJ-100", "WP-2", 55d, 8d));
+            (1, "PRJ-100", "WP-1", 0.4d, 10d),
+            (1, "PRJ-100", "WP-2", 0.55d, 8d));
         var current = CreateSnapshot(
             previous.Timestamp.AddDays(7),
-            (1, "PRJ-100", "WP-1", 40d, 10d));
+            (1, "PRJ-100", "WP-1", 0.4d, 10d));
 
         var result = Service.Compare(new PortfolioSnapshotComparisonRequest(previous, current));
         var removedRow = result.Items.Single(item => item.WorkPackage == "WP-2");
 
-        Assert.AreEqual(55d, removedRow.PreviousProgress!.Value, 0.001d);
+        Assert.AreEqual(0.55d, removedRow.PreviousProgress!.Value, 0.001d);
         Assert.IsNull(removedRow.CurrentProgress);
         Assert.IsNull(removedRow.ProgressDelta);
         Assert.AreEqual(8d, removedRow.PreviousWeight!.Value, 0.001d);
@@ -91,25 +91,25 @@ public sealed class PortfolioSnapshotComparisonServiceTests
 
         var orderedPrevious = CreateSnapshot(
             previousTimestamp,
-            (2, "PRJ-200", null, 30d, 12d),
-            (1, "PRJ-100", "WP-1", 40d, 10d),
-            (1, "PRJ-100", "WP-2", 50d, 15d));
+            (2, "PRJ-200", null, 0.3d, 12d),
+            (1, "PRJ-100", "WP-1", 0.4d, 10d),
+            (1, "PRJ-100", "WP-2", 0.5d, 15d));
         var orderedCurrent = CreateSnapshot(
             currentTimestamp,
-            (2, "PRJ-200", null, 45d, 14d),
-            (1, "PRJ-100", "WP-1", 55d, 11d),
-            (1, "PRJ-100", "WP-3", 65d, 9d));
+            (2, "PRJ-200", null, 0.45d, 14d),
+            (1, "PRJ-100", "WP-1", 0.55d, 11d),
+            (1, "PRJ-100", "WP-3", 0.65d, 9d));
 
         var shuffledPrevious = CreateSnapshot(
             previousTimestamp,
-            (1, "PRJ-100", "WP-2", 50d, 15d),
-            (2, "PRJ-200", null, 30d, 12d),
-            (1, "PRJ-100", "WP-1", 40d, 10d));
+            (1, "PRJ-100", "WP-2", 0.5d, 15d),
+            (2, "PRJ-200", null, 0.3d, 12d),
+            (1, "PRJ-100", "WP-1", 0.4d, 10d));
         var shuffledCurrent = CreateSnapshot(
             currentTimestamp,
-            (1, "PRJ-100", "WP-3", 65d, 9d),
-            (1, "PRJ-100", "WP-1", 55d, 11d),
-            (2, "PRJ-200", null, 45d, 14d));
+            (1, "PRJ-100", "WP-3", 0.65d, 9d),
+            (1, "PRJ-100", "WP-1", 0.55d, 11d),
+            (2, "PRJ-200", null, 0.45d, 14d));
 
         var orderedResult = Service.Compare(new PortfolioSnapshotComparisonRequest(orderedPrevious, orderedCurrent));
         var shuffledResult = Service.Compare(new PortfolioSnapshotComparisonRequest(shuffledPrevious, shuffledCurrent));
@@ -124,12 +124,12 @@ public sealed class PortfolioSnapshotComparisonServiceTests
     {
         var previous = CreateSnapshot(
             new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
-            (1, "PRJ-100", null, 40d, 10d),
-            (2, "PRJ-200", "WP-1", 60d, 5d));
+            (1, "PRJ-100", null, 0.4d, 10d),
+            (2, "PRJ-200", "WP-1", 0.6d, 5d));
         var current = CreateSnapshot(
             previous.Timestamp.AddDays(7),
-            (1, "PRJ-100", null, 45d, 10d),
-            (2, "PRJ-200", "WP-1", 70d, 8d));
+            (1, "PRJ-100", null, 0.45d, 10d),
+            (2, "PRJ-200", "WP-1", 0.7d, 8d));
 
         var first = Service.Compare(new PortfolioSnapshotComparisonRequest(previous, current));
         var second = Service.Compare(new PortfolioSnapshotComparisonRequest(previous, current));
@@ -144,10 +144,10 @@ public sealed class PortfolioSnapshotComparisonServiceTests
     {
         var previous = CreateSnapshot(
             new DateTimeOffset(2026, 3, 8, 0, 0, 0, TimeSpan.Zero),
-            (1, "PRJ-100", null, 40d, 10d));
+            (1, "PRJ-100", null, 0.4d, 10d));
         var current = CreateSnapshot(
             new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
-            (1, "PRJ-100", null, 45d, 10d));
+            (1, "PRJ-100", null, 0.45d, 10d));
 
         Assert.ThrowsExactly<ArgumentException>(() =>
             Service.Compare(new PortfolioSnapshotComparisonRequest(previous, current)));
@@ -160,7 +160,6 @@ public sealed class PortfolioSnapshotComparisonServiceTests
         return new PortfolioSnapshot(
             timestamp,
             rows.Select(row => new PortfolioSnapshotItem(
-                    timestamp,
                     row.ProductId,
                     row.ProjectNumber,
                     row.WorkPackage,
