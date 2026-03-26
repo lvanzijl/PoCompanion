@@ -24,14 +24,6 @@ public sealed record PortfolioSnapshot
                 nameof(items));
         }
 
-        var mismatchedTimestamp = items.FirstOrDefault(item => item.Timestamp != timestamp);
-        if (mismatchedTimestamp is not null)
-        {
-            throw new ArgumentException(
-                "Portfolio snapshot items must use the same timestamp as the snapshot header.",
-                nameof(items));
-        }
-
         foreach (var projectGroup in items.GroupBy(item => item.ProjectKey))
         {
             var hasProjectLevelRows = projectGroup.Any(item => item.WorkPackage is null);
@@ -60,7 +52,6 @@ public sealed record PortfolioSnapshot
 public sealed record PortfolioSnapshotItem
 {
     public PortfolioSnapshotItem(
-        DateTimeOffset timestamp,
         int productId,
         string projectNumber,
         string? workPackage,
@@ -75,18 +66,15 @@ public sealed record PortfolioSnapshotItem
             DeliveryTrendModelValidation.ValidateRequiredText(workPackage, nameof(workPackage), "WorkPackage");
         }
 
-        DeliveryTrendModelValidation.ValidateBoundedPercentage(progress, nameof(progress), "Progress");
+        DeliveryTrendModelValidation.ValidateUnitInterval(progress, nameof(progress), "Progress");
         DeliveryTrendModelValidation.ValidateNonNegativeStoryPoints(totalWeight, nameof(totalWeight), "TotalWeight");
 
-        Timestamp = timestamp;
         ProductId = productId;
         ProjectNumber = projectNumber;
         WorkPackage = workPackage;
         Progress = progress;
         TotalWeight = totalWeight;
     }
-
-    public DateTimeOffset Timestamp { get; }
 
     public int ProductId { get; }
 

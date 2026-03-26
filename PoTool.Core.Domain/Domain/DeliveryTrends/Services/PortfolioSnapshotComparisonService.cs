@@ -43,10 +43,7 @@ public sealed class PortfolioSnapshotValidationService : IPortfolioSnapshotValid
         foreach (var projectGroup in candidateSnapshot.Items.GroupBy(item => item.ProjectKey))
         {
             var latestHistoricalBreakdown = priorSnapshots
-                .SelectMany(snapshot => snapshot.Items)
-                .Where(item => item.ProjectKey == projectGroup.Key && item.WorkPackage is not null)
-                .GroupBy(item => item.Timestamp)
-                .OrderBy(group => group.Key)
+                .Where(snapshot => snapshot.Items.Any(item => item.ProjectKey == projectGroup.Key && item.WorkPackage is not null))
                 .LastOrDefault();
 
             if (latestHistoricalBreakdown is null)
@@ -60,7 +57,8 @@ public sealed class PortfolioSnapshotValidationService : IPortfolioSnapshotValid
                     $"Project '{projectGroup.Key}' previously used work-package breakdown and cannot revert to project-level rows.");
             }
 
-            var requiredWorkPackages = latestHistoricalBreakdown
+            var requiredWorkPackages = latestHistoricalBreakdown.Items
+                .Where(item => item.ProjectKey == projectGroup.Key && item.WorkPackage is not null)
                 .Select(item => item.WorkPackage!)
                 .ToHashSet(StringComparer.Ordinal);
             var candidateWorkPackages = projectGroup
