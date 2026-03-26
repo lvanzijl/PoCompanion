@@ -1,5 +1,7 @@
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.DeliveryTrends.Services;
+using PoTool.Core.Domain.Models;
+using PoTool.Core.Domain.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -9,108 +11,229 @@ public sealed class FeatureProgressServiceTests
     private static readonly IFeatureProgressService Service = new FeatureProgressService();
 
     [TestMethod]
-    public void Compute_UsesCalculatedProgress_WhenOverrideIsMissing()
+    public void Compute_ReturnsFullProgress_WhenAllContributorsAreDone()
     {
-        var result = Service.Compute(new FeatureProgressCalculationRequest(
-            FeatureProgressMode.StoryPoints,
-            TotalPbiCount: 2,
-            CompletedPbiCount: 1,
-            TotalStoryPoints: 10,
-            CompletedStoryPoints: 4,
-            Override: null));
+        var result = Service.Compute(CreateRequest(
+            [
+                CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.Done, effort: 3),
+                CreateChild(202, CanonicalWorkItemTypes.Bug, StateClassification.Done, effort: 5)
+            ]));
 
-        Assert.AreEqual(40d, result.CalculatedProgress!.Value, 0.001d);
-        Assert.IsNull(result.Override);
-        Assert.AreEqual(40d, result.EffectiveProgress!.Value, 0.001d);
-        Assert.IsEmpty(result.ValidationSignals);
+        Assert.AreEqual(1d, result.BaseProgress, 0.001d);
+        Assert.AreEqual(1d, result.EffectiveProgress, 0.001d);
     }
 
     [TestMethod]
-    public void Compute_AppliesOverrideAndClampRules()
+    public void Compute_ReturnsZeroProgress_WhenNoContributorIsDone()
     {
-        var overrideResult = Service.Compute(new FeatureProgressCalculationRequest(
-            FeatureProgressMode.StoryPoints,
-            TotalPbiCount: 2,
-            CompletedPbiCount: 1,
-            TotalStoryPoints: 10,
-            CompletedStoryPoints: 4,
-            Override: 70));
-        var highClampResult = Service.Compute(new FeatureProgressCalculationRequest(
-            FeatureProgressMode.StoryPoints,
-            TotalPbiCount: 2,
-            CompletedPbiCount: 1,
-            TotalStoryPoints: 10,
-            CompletedStoryPoints: 4,
-            Override: 150));
-        var lowClampResult = Service.Compute(new FeatureProgressCalculationRequest(
-            FeatureProgressMode.StoryPoints,
-            TotalPbiCount: 2,
-            CompletedPbiCount: 1,
-            TotalStoryPoints: 10,
-            CompletedStoryPoints: 4,
-            Override: -10));
+        var result = Service.Compute(CreateRequest(
+            [
+                CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.New, effort: 3),
+                CreateChild(202, CanonicalWorkItemTypes.Bug, StateClassification.InProgress, effort: 5)
+            ]));
 
-        Assert.AreEqual(70d, overrideResult.EffectiveProgress!.Value, 0.001d);
-        Assert.AreEqual(100d, highClampResult.EffectiveProgress!.Value, 0.001d);
-        CollectionAssert.Contains(highClampResult.ValidationSignals.ToList(), FeatureProgressValidationSignals.OverrideOutOfRange);
-        Assert.AreEqual(0d, lowClampResult.EffectiveProgress!.Value, 0.001d);
-        CollectionAssert.Contains(lowClampResult.ValidationSignals.ToList(), FeatureProgressValidationSignals.OverrideOutOfRange);
+        Assert.AreEqual(0d, result.BaseProgress, 0.001d);
+        Assert.AreEqual(0d, result.EffectiveProgress, 0.001d);
     }
 
     [TestMethod]
-    public void Compute_EmitsWrongScaleWarningWithoutChangingRawOverrideValue()
+    public void Compute_ReturnsExpectedRatio_ForMixedContributorStates()
     {
-        var result = Service.Compute(new FeatureProgressCalculationRequest(
-            FeatureProgressMode.StoryPoints,
-            TotalPbiCount: 2,
-            CompletedPbiCount: 1,
-            TotalStoryPoints: 10,
-            CompletedStoryPoints: 4,
-            Override: 0.5));
+        var result = Service.Compute(CreateRequest(
+            [
+                CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.Done, effort: 3),
+                CreateChild(202, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.InProgress, effort: 5),
+                CreateChild(203, CanonicalWorkItemTypes.Bug, StateClassification.New, effort: 2)
+            ]));
 
-        Assert.AreEqual(40d, result.CalculatedProgress!.Value, 0.001d);
-        Assert.AreEqual(0.5d, result.Override!.Value, 0.001d);
-        Assert.AreEqual(0.5d, result.EffectiveProgress!.Value, 0.001d);
-        CollectionAssert.Contains(result.ValidationSignals.ToList(), FeatureProgressValidationSignals.OverrideLikelyWrongScale);
+        Assert.AreEqual(0.3d, result.BaseProgress, 0.001d);
+        Assert.AreEqual(0.3d, result.EffectiveProgress, 0.001d);
     }
 
     [TestMethod]
-    public void Compute_ReturnsNullCalculatedProgress_WhenNoPbisOrNoStoryPointsExist()
+    public void Compute_ReturnsZero_WhenFeatureHasNoChildren()
     {
-        var noPbisResult = Service.Compute(new FeatureProgressCalculationRequest(
-            FeatureProgressMode.StoryPoints,
-            TotalPbiCount: 0,
-            CompletedPbiCount: 0,
-            TotalStoryPoints: 0,
-            CompletedStoryPoints: 0,
-            Override: null));
-        var noStoryPointsResult = Service.Compute(new FeatureProgressCalculationRequest(
-            FeatureProgressMode.StoryPoints,
-            TotalPbiCount: 2,
-            CompletedPbiCount: 1,
-            TotalStoryPoints: 0,
-            CompletedStoryPoints: 0,
-            Override: null));
-        var countModeResult = Service.Compute(new FeatureProgressCalculationRequest(
-            FeatureProgressMode.Count,
-            TotalPbiCount: 5,
-            CompletedPbiCount: 2,
-            TotalStoryPoints: 0,
-            CompletedStoryPoints: 0,
-            Override: null));
-        var overrideOnlyResult = Service.Compute(new FeatureProgressCalculationRequest(
-            FeatureProgressMode.StoryPoints,
-            TotalPbiCount: 0,
-            CompletedPbiCount: 0,
-            TotalStoryPoints: 0,
-            CompletedStoryPoints: 0,
-            Override: 35));
+        var result = Service.Compute(CreateRequest([]));
 
-        Assert.IsNull(noPbisResult.CalculatedProgress);
-        Assert.IsNull(noPbisResult.EffectiveProgress);
-        Assert.IsNull(noStoryPointsResult.CalculatedProgress);
-        Assert.IsNull(noStoryPointsResult.EffectiveProgress);
-        Assert.AreEqual(40d, countModeResult.CalculatedProgress!.Value, 0.001d);
-        Assert.AreEqual(35d, overrideOnlyResult.EffectiveProgress!.Value, 0.001d);
+        Assert.AreEqual(0d, result.BaseProgress, 0.001d);
+        Assert.AreEqual(0d, result.EffectiveProgress, 0.001d);
+    }
+
+    [TestMethod]
+    public void Compute_TreatsNullEffortAsZeroWithoutExcludingItems()
+    {
+        var result = Service.Compute(CreateRequest(
+            [
+                CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.Done, effort: null),
+                CreateChild(202, CanonicalWorkItemTypes.Bug, StateClassification.InProgress, effort: null)
+            ]));
+
+        Assert.AreEqual(0d, result.BaseProgress, 0.001d);
+        Assert.AreEqual(0d, result.EffectiveProgress, 0.001d);
+    }
+
+    [TestMethod]
+    public void Compute_ExcludesRemovedItemsFromTotalEffort()
+    {
+        var result = Service.Compute(CreateRequest(
+            [
+                CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.Done, effort: 3),
+                CreateChild(202, CanonicalWorkItemTypes.Bug, StateClassification.Removed, effort: 7)
+            ]));
+
+        Assert.AreEqual(1d, result.BaseProgress, 0.001d);
+    }
+
+    [TestMethod]
+    public void Compute_IgnoresTasks()
+    {
+        var result = Service.Compute(CreateRequest(
+            [
+                CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.Done, effort: 3),
+                CreateChild(202, CanonicalWorkItemTypes.Task, StateClassification.Done, effort: 7)
+            ]));
+
+        Assert.AreEqual(1d, result.BaseProgress, 0.001d);
+    }
+
+    [TestMethod]
+    public void Compute_AppliesZeroOverrideStrictly()
+    {
+        var result = Service.Compute(CreateRequest(
+            [CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.Done, effort: 5)],
+            timeCriticality: 0));
+
+        Assert.AreEqual(1d, result.BaseProgress, 0.001d);
+        Assert.AreEqual(0d, result.EffectiveProgress, 0.001d);
+    }
+
+    [TestMethod]
+    public void Compute_AppliesMidpointOverrideStrictly()
+    {
+        var result = Service.Compute(CreateRequest(
+            [CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.Done, effort: 5)],
+            timeCriticality: 50));
+
+        Assert.AreEqual(1d, result.BaseProgress, 0.001d);
+        Assert.AreEqual(0.5d, result.EffectiveProgress, 0.001d);
+    }
+
+    [TestMethod]
+    public void Compute_AppliesFullOverrideStrictly()
+    {
+        var result = Service.Compute(CreateRequest(
+            [CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.New, effort: 5)],
+            timeCriticality: 100));
+
+        Assert.AreEqual(0d, result.BaseProgress, 0.001d);
+        Assert.AreEqual(1d, result.EffectiveProgress, 0.001d);
+    }
+
+    [TestMethod]
+    public void Compute_OverrideIgnoresBaseCalculation()
+    {
+        var result = Service.Compute(CreateRequest(
+            [
+                CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.Done, effort: 2),
+                CreateChild(202, CanonicalWorkItemTypes.Bug, StateClassification.InProgress, effort: 8)
+            ],
+            timeCriticality: 50));
+
+        Assert.AreEqual(0.2d, result.BaseProgress, 0.001d);
+        Assert.AreEqual(0.5d, result.EffectiveProgress, 0.001d);
+    }
+
+    [TestMethod]
+    public void Compute_TreatsNegativeTimeCriticalityAsMissingOverride()
+    {
+        var result = Service.Compute(CreateRequest(
+            [CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.Done, effort: 5)],
+            timeCriticality: -10));
+
+        Assert.AreEqual(1d, result.BaseProgress, 0.001d);
+        Assert.AreEqual(1d, result.EffectiveProgress, 0.001d);
+    }
+
+    [TestMethod]
+    public void Compute_TreatsAboveRangeTimeCriticalityAsMissingOverride()
+    {
+        var result = Service.Compute(CreateRequest(
+            [CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.New, effort: 5)],
+            timeCriticality: 150));
+
+        Assert.AreEqual(0d, result.BaseProgress, 0.001d);
+        Assert.AreEqual(0d, result.EffectiveProgress, 0.001d);
+    }
+
+    [TestMethod]
+    public void Compute_RejectsNonFeatureWorkItem()
+    {
+        var request = new FeatureProgressCalculationRequest(
+            new CanonicalWorkItem(
+                100,
+                CanonicalWorkItemTypes.Epic,
+                parentWorkItemId: null,
+                businessValue: null,
+                storyPoints: null,
+                effort: null),
+            []);
+
+        Assert.ThrowsExactly<ArgumentException>(() => Service.Compute(request));
+    }
+
+    [TestMethod]
+    public void Compute_IsDeterministicRegardlessOfChildOrdering()
+    {
+        var original = CreateRequest(
+            [
+                CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.Done, effort: 2),
+                CreateChild(202, CanonicalWorkItemTypes.Bug, StateClassification.InProgress, effort: 8)
+            ],
+            timeCriticality: 50);
+        var reversed = CreateRequest(
+            [
+                CreateChild(202, CanonicalWorkItemTypes.Bug, StateClassification.InProgress, effort: 8),
+                CreateChild(201, CanonicalWorkItemTypes.ProductBacklogItem, StateClassification.Done, effort: 2)
+            ],
+            timeCriticality: 50);
+
+        var originalResult = Service.Compute(original);
+        var reversedResult = Service.Compute(reversed);
+
+        Assert.AreEqual(originalResult.BaseProgress, reversedResult.BaseProgress, 0.001d);
+        Assert.AreEqual(originalResult.EffectiveProgress, reversedResult.EffectiveProgress, 0.001d);
+    }
+
+    private static FeatureProgressCalculationRequest CreateRequest(
+        IReadOnlyList<FeatureProgressChild> children,
+        double? timeCriticality = null)
+    {
+        return new FeatureProgressCalculationRequest(
+            new CanonicalWorkItem(
+                100,
+                CanonicalWorkItemTypes.Feature,
+                parentWorkItemId: null,
+                businessValue: null,
+                storyPoints: null,
+                timeCriticality: timeCriticality,
+                effort: null),
+            children);
+    }
+
+    private static FeatureProgressChild CreateChild(
+        int workItemId,
+        string workItemType,
+        StateClassification stateClassification,
+        double? effort)
+    {
+        return new FeatureProgressChild(
+            new CanonicalWorkItem(
+                workItemId,
+                workItemType,
+                parentWorkItemId: 100,
+                businessValue: null,
+                storyPoints: null,
+                effort: effort),
+            stateClassification);
     }
 }

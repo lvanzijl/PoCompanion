@@ -5,8 +5,6 @@ using PoTool.Core.Domain.Sprints;
 using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.WorkItems;
-using BacklogWorkItemTypes = PoTool.Core.Domain.BacklogQuality.Models.BacklogWorkItemTypes;
-
 namespace PoTool.Core.Domain.DeliveryTrends.Services;
 
 /// <summary>
@@ -193,7 +191,7 @@ public sealed class SprintDeliveryProjectionService : ISprintDeliveryProjectionS
             functionalActivityByWorkItem,
             request.StateLookup));
 
-        var bugResolved = productResolved.Where(resolvedItem => string.Equals(resolvedItem.WorkItemType, BacklogWorkItemTypes.Bug, StringComparison.OrdinalIgnoreCase)).ToList();
+        var bugResolved = productResolved.Where(resolvedItem => resolvedItem.WorkItemType == CanonicalWorkItemTypes.Bug).ToList();
         var bugsCreated = 0;
         var bugsWorkedOn = 0;
         var bugsClosed = 0;
@@ -222,7 +220,7 @@ public sealed class SprintDeliveryProjectionService : ISprintDeliveryProjectionS
             }
 
             var childTaskHadStateChange = productResolved
-                .Where(resolvedItem => string.Equals(resolvedItem.WorkItemType, BacklogWorkItemTypes.Task, StringComparison.OrdinalIgnoreCase))
+                .Where(resolvedItem => resolvedItem.WorkItemType == CanonicalWorkItemTypes.Task)
                 .Where(resolvedItem =>
                 {
                     if (!request.WorkItemsById.TryGetValue(resolvedItem.WorkItemId, out var taskWorkItem))
@@ -255,7 +253,7 @@ public sealed class SprintDeliveryProjectionService : ISprintDeliveryProjectionS
             .Where(metric => metric.Estimate.HasValue)
             .Sum(metric => metric.Estimate.Value ?? 0d);
         var plannedBugs = productResolved
-            .Count(resolvedItem => string.Equals(resolvedItem.WorkItemType, BacklogWorkItemTypes.Bug, StringComparison.OrdinalIgnoreCase)
+            .Count(resolvedItem => resolvedItem.WorkItemType == CanonicalWorkItemTypes.Bug
                 && request.CommittedWorkItemIds.Contains(resolvedItem.WorkItemId));
 
         var derivedStoryPointCount = plannedStoryPointMetrics.Count(metric => metric.Estimate.Source == StoryPointEstimateSource.Derived);
@@ -381,7 +379,8 @@ internal static class SprintDeliveryProjectionServiceMappings
             workItem.StoryPoints,
             workItem.TimeCriticality,
             workItem.ProjectNumber,
-            workItem.ProjectElement);
+            workItem.ProjectElement,
+            workItem.Effort);
     }
 
     public static IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>> GroupByWorkItemId(this IEnumerable<FieldChangeEvent> fieldChanges)

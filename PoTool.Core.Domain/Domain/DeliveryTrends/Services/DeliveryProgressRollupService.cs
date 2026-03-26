@@ -35,7 +35,6 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
 {
     private readonly ICanonicalStoryPointResolutionService _storyPointResolutionService;
     private readonly IHierarchyRollupService _hierarchyRollupService;
-    private readonly IFeatureProgressService _featureProgressService;
     private readonly IFeatureForecastService _featureForecastService;
     private readonly IEpicAggregationService _epicAggregationService;
 
@@ -45,13 +44,11 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
     public DeliveryProgressRollupService(
         ICanonicalStoryPointResolutionService storyPointResolutionService,
         IHierarchyRollupService hierarchyRollupService,
-        IFeatureProgressService? featureProgressService = null,
         IFeatureForecastService? featureForecastService = null,
         IEpicAggregationService? epicAggregationService = null)
     {
         _storyPointResolutionService = storyPointResolutionService ?? throw new ArgumentNullException(nameof(storyPointResolutionService));
         _hierarchyRollupService = hierarchyRollupService ?? throw new ArgumentNullException(nameof(hierarchyRollupService));
-        _featureProgressService = featureProgressService ?? new FeatureProgressService();
         _featureForecastService = featureForecastService ?? new FeatureForecastService();
         _epicAggregationService = epicAggregationService ?? new EpicAggregationService();
     }
@@ -73,7 +70,7 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                 : DeliveryProgressRollupMath.PropagateActivityToAncestors(request.ActiveWorkItemIds, productResolved, request.WorkItemsById);
 
             var features = productResolved
-                .Where(resolvedItem => string.Equals(resolvedItem.WorkItemType, CanonicalWorkItemTypes.Feature, StringComparison.OrdinalIgnoreCase))
+                .Where(resolvedItem => resolvedItem.WorkItemType == CanonicalWorkItemTypes.Feature)
                 .ToList();
 
             foreach (var feature in features)
@@ -83,11 +80,14 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                     continue;
                 }
 
-                var childPbis = productResolved
-                    .Where(resolvedItem => CanonicalWorkItemTypes.IsAuthoritativePbi(resolvedItem.WorkItemType)
+                var childProgressItems = productResolved
+                    .Where(resolvedItem => CanonicalWorkItemTypes.IsFeatureProgressContributor(resolvedItem.WorkItemType)
                         && resolvedItem.ResolvedFeatureId == feature.WorkItemId)
                     .Select(resolvedItem => request.WorkItemsById.GetValueOrDefault(resolvedItem.WorkItemId))
                     .OfType<DeliveryTrendWorkItem>()
+                    .ToList();
+                var childPbis = childProgressItems
+                    .Where(child => CanonicalWorkItemTypes.IsAuthoritativePbi(child.WorkItemType))
                     .ToList();
 
                 if (activeHierarchyIds != null)
@@ -104,22 +104,23 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                 var featureScope = childPbis.Count > 0
                     ? ComputeFeatureScope(featureWorkItem, childPbis, request.StateLookup)
                     : HierarchyScopeRollup.Empty;
-                var donePbiCount = childPbis.Count(childPbi =>
-                    StateClassificationLookup.IsDone(request.StateLookup, childPbi.WorkItemType, childPbi.State));
-                var featureProgress = _featureProgressService.Compute(new FeatureProgressCalculationRequest(
-                    request.Mode,
-                    childPbis.Count,
-                    donePbiCount,
-                    featureScope.Total,
-                    featureScope.Completed,
-                    featureWorkItem.TimeCriticality));
+                var featureProgressRequest = new FeatureProgressCalculationRequest(
+                    featureWorkItem.ToCanonicalWorkItem(),
+                    childProgressItems
+                        .Select(child => new FeatureProgressChild(
+                            child.ToCanonicalWorkItem(),
+                            StateClassificationLookup.GetClassification(request.StateLookup, child.WorkItemType, child.State)))
+                        .ToList());
+                var featureProgressDetails = FeatureProgressComputation.ComputeDetails(featureProgressRequest);
+                var donePbiCount = childProgressItems.Count(child =>
+                    StateClassificationLookup.GetClassification(request.StateLookup, child.WorkItemType, child.State) == StateClassification.Done);
                 var featureForecast = _featureForecastService.Compute(new FeatureForecastCalculationRequest(
-                    featureProgress.EffectiveProgress,
+                    featureProgressDetails.EffectiveProgress,
                     featureWorkItem.Effort));
                 var featureIsDone = StateClassificationLookup.IsDone(request.StateLookup, featureWorkItem.WorkItemType, featureWorkItem.State);
-                var progressPercent = featureProgress.EffectiveProgress.HasValue
-                    ? (int)Math.Round(featureProgress.EffectiveProgress.Value, MidpointRounding.AwayFromZero)
-                    : 0;
+                var calculatedProgressPercent = featureProgressDetails.BaseProgress * 100d;
+                var effectiveProgressPercent = featureProgressDetails.EffectiveProgress * 100d;
+                var progressPercent = (int)Math.Round(effectiveProgressPercent, MidpointRounding.AwayFromZero);
 
                 var sprintCompletedScopeStoryPoints = request.SprintCompletedPbiIds == null
                     ? 0d
@@ -140,9 +141,7 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                 var sprintEffortDelta = request.SprintEffortDeltaByWorkItem == null
                     ? 0
                     : childPbis.Sum(childPbi => request.SprintEffortDeltaByWorkItem.GetValueOrDefault(childPbi.WorkItemId, 0));
-                var weight = request.Mode == FeatureProgressMode.Count
-                    ? childPbis.Count
-                    : featureScope.Total;
+                var weight = featureProgressDetails.TotalEffort;
                 var isExcluded = weight <= 0;
 
                 int? epicId = feature.ResolvedEpicId;
@@ -168,10 +167,10 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
                     sprintEffortDelta,
                     sprintCompletedPbiCount,
                     sprintCompletedInSprint,
-                    featureProgress.CalculatedProgress,
-                    featureProgress.Override,
-                    featureProgress.EffectiveProgress,
-                    featureProgress.ValidationSignals,
+                    calculatedProgressPercent,
+                    featureProgressDetails.OverrideRaw,
+                    effectiveProgressPercent,
+                    Array.Empty<string>(),
                     featureForecast.ForecastConsumedEffort,
                     featureForecast.ForecastRemainingEffort,
                     weight,
@@ -254,7 +253,7 @@ public sealed class DeliveryProgressRollupService : IDeliveryProgressRollupServi
         ArgumentNullException.ThrowIfNull(request);
 
         var featureResolved = request.ResolvedItems
-            .Where(resolvedItem => string.Equals(resolvedItem.WorkItemType, CanonicalWorkItemTypes.Feature, StringComparison.OrdinalIgnoreCase))
+            .Where(resolvedItem => resolvedItem.WorkItemType == CanonicalWorkItemTypes.Feature)
             .ToList();
         if (featureResolved.Count == 0)
         {

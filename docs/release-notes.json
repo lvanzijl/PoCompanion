@@ -2,6 +2,22 @@
   {
     "date": "2026-03-26",
     "type": "Changed",
+    "title": "Feature progress inputs are now canonicalized",
+    "impact": "Sprint Delivery now ignores invalid TimeCriticality overrides, uses canonical work item typing on the feature-progress path, and keeps feature progress calculation details internal to the backend progress engine.",
+    "area": "Trends",
+    "link": "/home/delivery/sprint"
+  },
+  {
+    "date": "2026-03-26",
+    "type": "Changed",
+    "title": "Feature progress now follows Phase B CDC rules",
+    "impact": "Sprint Delivery feature progress now uses deterministic child effort for PBIs and bugs, ignores tasks, excludes removed scope, and applies TimeCriticality as a strict override.",
+    "area": "Trends",
+    "link": "/home/delivery/sprint"
+  },
+  {
+    "date": "2026-03-26",
+    "type": "Changed",
     "title": "Sprint Delivery now shows canonical analytics",
     "impact": "Sprint Delivery now shows canonical product, epic, and feature progress, forecast, delta, planning quality, and insight values directly from backend analytics without UI recalculation.",
     "area": "Trends",

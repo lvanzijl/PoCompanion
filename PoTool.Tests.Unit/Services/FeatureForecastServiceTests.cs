@@ -12,7 +12,7 @@ public sealed class FeatureForecastServiceTests
     public void Compute_ReturnsExpectedForecast_ForStandardCase()
     {
         var result = Service.Compute(new FeatureForecastCalculationRequest(
-            EffectiveProgress: 50d,
+            EffectiveProgress: 0.5d,
             Effort: 100d));
 
         Assert.AreEqual(50d, result.ForecastConsumedEffort!.Value, 0.001d);
@@ -23,7 +23,7 @@ public sealed class FeatureForecastServiceTests
     public void Compute_ReturnsZeroRemaining_ForFullCompletion()
     {
         var result = Service.Compute(new FeatureForecastCalculationRequest(
-            EffectiveProgress: 100d,
+            EffectiveProgress: 1d,
             Effort: 100d));
 
         Assert.AreEqual(100d, result.ForecastConsumedEffort!.Value, 0.001d);
@@ -45,7 +45,7 @@ public sealed class FeatureForecastServiceTests
     public void Compute_ReturnsNullForecast_WhenEffortIsMissing()
     {
         var result = Service.Compute(new FeatureForecastCalculationRequest(
-            EffectiveProgress: 70d,
+            EffectiveProgress: 0.7d,
             Effort: null));
 
         Assert.IsNull(result.ForecastConsumedEffort);
@@ -67,7 +67,7 @@ public sealed class FeatureForecastServiceTests
     public void Compute_HandlesDecimalProgressDeterministically()
     {
         var result = Service.Compute(new FeatureForecastCalculationRequest(
-            EffectiveProgress: 37.5d,
+            EffectiveProgress: 0.375d,
             Effort: 80d));
 
         Assert.AreEqual(30d, result.ForecastConsumedEffort!.Value, 0.001d);

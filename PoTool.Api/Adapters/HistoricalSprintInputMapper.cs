@@ -11,7 +11,7 @@ internal static class HistoricalSprintInputMapper
     {
         return new WorkItemSnapshot(
             entity.TfsId,
-            entity.Type,
+            entity.Type.ToCanonicalWorkItemType(),
             Normalize(entity.State),
             Normalize(entity.IterationPath));
     }
@@ -20,7 +20,7 @@ internal static class HistoricalSprintInputMapper
     {
         return new WorkItemSnapshot(
             dto.TfsId,
-            dto.Type,
+            dto.Type.ToCanonicalWorkItemType(),
             Normalize(dto.State),
             Normalize(dto.IterationPath));
     }

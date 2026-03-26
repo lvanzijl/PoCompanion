@@ -32,7 +32,7 @@ public sealed class FeatureForecastService : IFeatureForecastService
                 ForecastRemainingEffort: null);
         }
 
-        var clampedProgressRatio = Math.Clamp(request.EffectiveProgress.Value / 100d, 0d, 1d);
+        var clampedProgressRatio = Math.Clamp(request.EffectiveProgress.Value, 0d, 1d);
         var forecastConsumedEffort = request.Effort.Value * clampedProgressRatio;
         var forecastRemainingEffort = Math.Max(0d, request.Effort.Value - forecastConsumedEffort);
 

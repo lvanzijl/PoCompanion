@@ -396,8 +396,8 @@ public record FeatureProgressDto
     public int ProgressPercent { get; init; }
 
     /// <summary>
-    /// Progress calculated from child PBIs before override handling.
-    /// Null when no PBIs exist or when SP-mode has no usable story-point scope.
+    /// Progress calculated from child PBI and Bug effort before override handling.
+    /// Expressed as a percentage for UI/API compatibility.
     /// </summary>
     public double? CalculatedProgress { get; init; }
 
@@ -407,7 +407,8 @@ public record FeatureProgressDto
     public double? Override { get; init; }
 
     /// <summary>
-    /// Effective feature progress after applying the clamped override when present.
+    /// Effective feature progress after applying the strict override when present.
+    /// Expressed as a percentage for UI/API compatibility.
     /// </summary>
     public double? EffectiveProgress { get; init; }
 
@@ -428,8 +429,8 @@ public record FeatureProgressDto
     public double? Effort { get; init; }
 
     /// <summary>
-    /// Canonical feature weight already normalized by upstream mode handling.
-    /// Story-point mode uses story points; count mode uses PBI count.
+    /// Canonical feature aggregation weight.
+    /// Phase B uses the feature's total non-removed contributor effort.
     /// </summary>
     public double Weight { get; init; }
 

@@ -1,4 +1,6 @@
 using PoTool.Core.Domain.DeliveryTrends.Models;
+using PoTool.Core.Domain.Models;
+using PoTool.Core.Domain.WorkItems;
 
 namespace PoTool.Core.Domain.DeliveryTrends.Services;
 
@@ -21,57 +23,72 @@ public sealed class FeatureProgressService : IFeatureProgressService
     /// <inheritdoc />
     public FeatureProgressResult Compute(FeatureProgressCalculationRequest request)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        if (request.TotalPbiCount < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(request.TotalPbiCount));
-        }
-
-        if (request.CompletedPbiCount < 0 || request.CompletedPbiCount > request.TotalPbiCount)
-        {
-            throw new ArgumentOutOfRangeException(nameof(request.CompletedPbiCount));
-        }
-
-        if (request.TotalStoryPoints < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(request.TotalStoryPoints));
-        }
-
-        if (request.CompletedStoryPoints < 0 || request.CompletedStoryPoints > request.TotalStoryPoints)
-        {
-            throw new ArgumentOutOfRangeException(nameof(request.CompletedStoryPoints));
-        }
-
-        var validationSignals = new List<string>();
-        var rawOverride = request.Override;
-        double? clampedOverride = rawOverride.HasValue
-            ? Math.Clamp(rawOverride.Value, 0d, 100d)
-            : null;
-
-        if (rawOverride is < 0d or > 100d)
-        {
-            validationSignals.Add(FeatureProgressValidationSignals.OverrideOutOfRange);
-        }
-
-        if (rawOverride is > 0d and <= 1d)
-        {
-            validationSignals.Add(FeatureProgressValidationSignals.OverrideLikelyWrongScale);
-        }
-
-        double? calculatedProgress = request.Mode switch
-        {
-            FeatureProgressMode.StoryPoints when request.TotalStoryPoints > 0
-                => request.CompletedStoryPoints / request.TotalStoryPoints * 100d,
-            FeatureProgressMode.Count when request.TotalPbiCount > 0
-                => request.CompletedPbiCount / (double)request.TotalPbiCount * 100d,
-            _ => null
-        };
+        var details = FeatureProgressComputation.ComputeDetails(request);
 
         return new FeatureProgressResult(
-            calculatedProgress,
-            rawOverride,
-            clampedOverride ?? calculatedProgress,
-            validationSignals);
+            details.BaseProgress,
+            details.EffectiveProgress);
     }
 }
+
+internal static class FeatureProgressComputation
+{
+    internal static FeatureProgressCalculationDetails ComputeDetails(FeatureProgressCalculationRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Feature);
+        ArgumentNullException.ThrowIfNull(request.Children);
+
+        if (!CanonicalWorkItemTypes.IsFeature(request.Feature.WorkItemType))
+        {
+            throw new ArgumentException("Feature progress can only be computed for Feature work items.", nameof(request));
+        }
+
+        var progressChildren = request.Children
+            .Where(child => CanonicalWorkItemTypes.IsFeatureProgressContributor(child.WorkItem.WorkItemType))
+            .ToList();
+
+        double completedEffort = 0d;
+        double totalEffort = 0d;
+
+        foreach (var child in progressChildren)
+        {
+            var effort = child.WorkItem.Effort ?? 0d;
+            if (effort < 0d)
+            {
+                throw new ArgumentOutOfRangeException(nameof(request), "Child work item effort cannot be negative.");
+            }
+
+            if (child.StateClassification != StateClassification.Removed)
+            {
+                totalEffort += effort;
+            }
+
+            if (child.StateClassification == StateClassification.Done)
+            {
+                completedEffort += effort;
+            }
+        }
+
+        var baseProgress = totalEffort > 0d
+            ? completedEffort / totalEffort
+            : 0d;
+        var effectiveProgress = request.Feature.TimeCriticality.HasValue
+            ? request.Feature.TimeCriticality.Value / 100d
+            : baseProgress;
+
+        return new FeatureProgressCalculationDetails(
+            baseProgress,
+            effectiveProgress,
+            request.Feature.TimeCriticality,
+            completedEffort,
+            totalEffort);
+    }
+}
+
+internal readonly record struct FeatureProgressCalculationDetails(
+    double BaseProgress,
+    double EffectiveProgress,
+    double? OverrideRaw,
+    double CompletedEffort,
+    double TotalEffort);

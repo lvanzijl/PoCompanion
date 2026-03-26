@@ -1,6 +1,6 @@
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.Models;
-using PoTool.Core.WorkItems;
+using PoTool.Core.Domain.WorkItems;
 
 namespace PoTool.Tests.Unit;
 
@@ -12,7 +12,7 @@ public sealed class DomainWorkItemFieldSemanticsTests
     {
         var workItem = new CanonicalWorkItem(
             1,
-            WorkItemType.Epic,
+            CanonicalWorkItemTypes.Epic,
             null,
             null,
             null,
@@ -30,7 +30,7 @@ public sealed class DomainWorkItemFieldSemanticsTests
     {
         var workItem = new CanonicalWorkItem(
             2,
-            WorkItemType.Feature,
+            CanonicalWorkItemTypes.Feature,
             null,
             null,
             null,
@@ -48,7 +48,7 @@ public sealed class DomainWorkItemFieldSemanticsTests
     {
         var workItem = new DeliveryTrendWorkItem(
             3,
-            WorkItemType.Epic,
+            CanonicalWorkItemTypes.Epic,
             "Epic",
             null,
             "Active",
@@ -71,7 +71,7 @@ public sealed class DomainWorkItemFieldSemanticsTests
     {
         var workItem = new DeliveryTrendWorkItem(
             4,
-            WorkItemType.Feature,
+            CanonicalWorkItemTypes.Feature,
             "Feature",
             null,
             "Active",
@@ -87,5 +87,38 @@ public sealed class DomainWorkItemFieldSemanticsTests
         Assert.AreEqual(65d, workItem.TimeCriticality!.Value, 0.001d);
         Assert.IsNull(workItem.ProjectNumber);
         Assert.IsNull(workItem.ProjectElement);
+    }
+
+    [TestMethod]
+    public void CanonicalWorkItem_InvalidTimeCriticality_IsNormalizedToNull()
+    {
+        var low = new CanonicalWorkItem(
+            5,
+            CanonicalWorkItemTypes.Feature,
+            null,
+            null,
+            null,
+            timeCriticality: -10d);
+        var high = new CanonicalWorkItem(
+            6,
+            CanonicalWorkItemTypes.Feature,
+            null,
+            null,
+            null,
+            timeCriticality: 150d);
+
+        Assert.IsNull(low.TimeCriticality);
+        Assert.IsNull(high.TimeCriticality);
+    }
+
+    [TestMethod]
+    public void CanonicalWorkItem_RawPbiType_IsRejectedBecauseDomainRequiresCanonicalType()
+    {
+        Assert.ThrowsExactly<ArgumentException>(() => new CanonicalWorkItem(
+            7,
+            PoTool.Core.WorkItems.WorkItemType.Pbi,
+            null,
+            null,
+            null));
     }
 }
