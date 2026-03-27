@@ -223,8 +223,8 @@ public sealed class MetricsControllerPortfolioReadTests
 
         var captureMethod = typeof(PortfolioSnapshotsController).GetMethod(nameof(PortfolioSnapshotsController.Capture));
         Assert.IsNotNull(captureMethod);
-        Assert.AreEqual(1, captureMethod.GetCustomAttributes(typeof(HttpPostAttribute), inherit: false).Length);
-        Assert.AreEqual(0, captureMethod.GetCustomAttributes(typeof(HttpGetAttribute), inherit: false).Length);
+        Assert.HasCount(1, captureMethod.GetCustomAttributes(typeof(HttpPostAttribute), inherit: false));
+        Assert.IsEmpty(captureMethod.GetCustomAttributes(typeof(HttpGetAttribute), inherit: false));
     }
 
     [TestMethod]

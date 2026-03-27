@@ -54,7 +54,7 @@ public sealed class PortfolioSnapshotCaptureOrchestratorTests
         var persisted = await context.PortfolioSnapshots.Include(snapshot => snapshot.Items).SingleAsync();
         Assert.AreEqual(productId, persisted.ProductId);
         Assert.AreEqual("Sprint 1", persisted.Source);
-        Assert.AreEqual(0, persisted.Items.Count);
+        Assert.IsEmpty(persisted.Items);
     }
 
     [TestMethod]

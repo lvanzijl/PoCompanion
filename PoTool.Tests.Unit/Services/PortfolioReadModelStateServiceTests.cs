@@ -122,7 +122,7 @@ public sealed class PortfolioReadModelStateServiceTests
         Assert.IsFalse(snapshot.HasData);
         Assert.IsFalse(comparison.HasData);
         Assert.IsFalse(trend.HasData);
-        Assert.AreEqual(0, signals.Count);
+        Assert.IsEmpty(signals);
         Assert.AreEqual(0, await context.PortfolioSnapshots.CountAsync());
         Assert.AreEqual(0, await context.PortfolioSnapshotItems.CountAsync());
     }

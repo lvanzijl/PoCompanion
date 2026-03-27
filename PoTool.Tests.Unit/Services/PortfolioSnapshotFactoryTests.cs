@@ -153,7 +153,7 @@ public sealed class PortfolioSnapshotFactoryTests
             Array.Empty<PortfolioSnapshotFactoryEpicInput>()));
 
         Assert.AreEqual(timestamp, snapshot.Timestamp);
-        Assert.AreEqual(0, snapshot.Items.Count);
+        Assert.IsEmpty(snapshot.Items);
     }
 
     private static PortfolioSnapshot CreateSnapshot(

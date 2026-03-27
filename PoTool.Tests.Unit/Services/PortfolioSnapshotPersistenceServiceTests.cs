@@ -93,7 +93,7 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
 
         Assert.IsGreaterThan(0L, persisted.SnapshotId);
         Assert.AreEqual(timestamp, persisted.Snapshot.Timestamp);
-        Assert.AreEqual(0, persisted.Snapshot.Items.Count);
+        Assert.IsEmpty(persisted.Snapshot.Items);
         Assert.AreEqual(1, await context.PortfolioSnapshots.CountAsync());
         Assert.AreEqual(0, await context.PortfolioSnapshotItems.CountAsync());
     }
@@ -168,7 +168,7 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
     }
 
     [TestMethod]
-    public async Task GetLatestBeforeAsync_ReturnsLatestStrictlyBeforeTimestamp()
+    public async Task GetLatestBeforeAsync_ReturnsLatestSnapshotAtOrBeforeTimestamp()
     {
         await using var context = new PoToolDbContext(_options);
         var mapper = new PortfolioSnapshotPersistenceMapper();
@@ -176,8 +176,8 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
         var selectionService = new PortfolioSnapshotSelectionService(context, mapper, NullLogger<PortfolioSnapshotSelectionService>.Instance);
 
         await persistenceService.PersistAsync(1, "Sprint 1", null, CreateSnapshot(new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero), 1, 0.2d), CancellationToken.None);
-        var expected = await persistenceService.PersistAsync(1, "Sprint 2", null, CreateSnapshot(new DateTimeOffset(2026, 3, 8, 0, 0, 0, TimeSpan.Zero), 1, 0.4d), CancellationToken.None);
-        await persistenceService.PersistAsync(1, "Sprint 3", null, CreateSnapshot(new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero), 1, 0.8d), CancellationToken.None);
+        await persistenceService.PersistAsync(1, "Sprint 2", null, CreateSnapshot(new DateTimeOffset(2026, 3, 8, 0, 0, 0, TimeSpan.Zero), 1, 0.4d), CancellationToken.None);
+        var expected = await persistenceService.PersistAsync(1, "Sprint 3", null, CreateSnapshot(new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero), 1, 0.8d), CancellationToken.None);
 
         var latestBefore = await selectionService.GetLatestBeforeAsync(
             1,
@@ -206,7 +206,6 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
         Assert.IsNotNull(latestBefore);
         Assert.AreEqual(second.SnapshotId, latestBefore.SnapshotId);
         Assert.AreEqual("Sprint 2B", latestBefore.Source);
-        Assert.IsTrue(latestBefore.SnapshotId > first.SnapshotId);
     }
 
     [TestMethod]

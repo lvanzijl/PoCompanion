@@ -345,16 +345,24 @@ public sealed class PortfolioSnapshotSelectionService : IPortfolioSnapshotSelect
         bool includeArchived,
         CancellationToken cancellationToken)
     {
-        var headers = await BuildProductQuery(productId, includeArchived)
+        var headers = (await BuildProductQuery(productId, includeArchived)
             .GroupBy(snapshot => new { snapshot.ProductId, snapshot.TimestampUtc, snapshot.Source })
-            .Select(group => new ProductSnapshotHeader(
+            .Select(group => new
+            {
                 group.Key.TimestampUtc,
                 group.Key.Source,
-                group.Max(snapshot => snapshot.SnapshotId),
-                group.Count()))
+                SnapshotId = group.Max(snapshot => snapshot.SnapshotId),
+                DuplicateCount = group.Count()
+            })
             .OrderByDescending(snapshot => snapshot.TimestampUtc)
             .ThenByDescending(snapshot => snapshot.SnapshotId)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken))
+            .Select(snapshot => new ProductSnapshotHeader(
+                snapshot.TimestampUtc,
+                snapshot.Source,
+                snapshot.SnapshotId,
+                snapshot.DuplicateCount))
+            .ToList();
 
         foreach (var duplicate in headers.Where(header => header.DuplicateCount > 1))
         {
