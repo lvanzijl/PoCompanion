@@ -29,6 +29,22 @@ public sealed class PortfolioCdcUiAuditTests
         StringAssert.Contains(page, "<PortfolioCdcReadOnlyPanel />");
     }
 
+    [TestMethod]
+    public void PortfolioCdcReadOnlyPanel_RendersRefinedHistorySections()
+    {
+        var repositoryRoot = GetRepositoryRoot();
+        var panelPath = Path.Combine(repositoryRoot, "PoTool.Client", "Pages", "Home", "Components", "PortfolioCdcReadOnlyPanel.razor");
+
+        var panel = File.ReadAllText(panelPath);
+
+        StringAssert.Contains(panel, "Delta vs previous");
+        StringAssert.Contains(panel, "No project-level changes detected in selected history.");
+        StringAssert.Contains(panel, "Active Work Packages");
+        StringAssert.Contains(panel, "Retired Work Packages");
+        StringAssert.Contains(panel, "No change detected (");
+        StringAssert.Contains(panel, "GetProgressChangeText");
+    }
+
     private static string GetRepositoryRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);

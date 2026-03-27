@@ -2,6 +2,14 @@
   {
     "date": "2026-03-27",
     "type": "Changed",
+    "title": "Portfolio CDC history view is easier to scan",
+    "impact": "Portfolio Progress now groups CDC signals, shows snapshot deltas more clearly, and separates active versus retired work package changes for faster review.",
+    "area": "Trends",
+    "link": "/home/portfolio-progress"
+  },
+  {
+    "date": "2026-03-27",
+    "type": "Changed",
     "title": "Mock portfolio history now uses battleship snapshots",
     "impact": "Mock mode now seeds a realistic battleship CDC snapshot timeline so Portfolio Progress can show empty-to-complete portfolio history without a separate test dataset.",
     "area": "Trends",
