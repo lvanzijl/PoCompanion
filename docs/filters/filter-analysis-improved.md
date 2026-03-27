@@ -25,10 +25,8 @@ Primary verified sources:
 - `PoTool.Api/Controllers/BuildQualityController.cs:22-62`
 - `PoTool.Shared/Metrics/PortfolioConsumptionDtos.cs:1-119`
 - `PoTool.Api/Services/PortfolioReadModelFiltering.cs:6-45`
-- `docs/analyze/filtering.md:1-200`
+- `docs/analyze/filtering.md:1-200` (existing repository analysis document)
 - `docs/domain/rules/hierarchy_rules.md:38-46`
-
----
 
 ## 1. Canonical Filter Definitions
 
@@ -97,8 +95,6 @@ FilterSystem
 4. **Project / Package / State are already canonical in the portfolio backend, but not in the current UI.**
 5. **Repository, validation drill-down, pipeline toggles, tags, and search fields are page-local by nature.**
 
----
-
 ## 2. Applicability Matrix
 
 Definitions:
@@ -138,8 +134,6 @@ Definitions:
 | Bugs Triage | OPTIONAL | NOT APPLICABLE | NOT APPLICABLE | NOT APPLICABLE | NOT APPLICABLE | tag filters REQUIRED |
 | Work Item Explorer | OPTIONAL | NOT APPLICABLE | NOT APPLICABLE | NOT APPLICABLE | NOT APPLICABLE | validation categories/search REQUIRED |
 
----
-
 ## 3. Global Filter Persistence
 
 | Filter | Persist across pages | Exact rule |
@@ -169,14 +163,12 @@ Definitions:
 3. **Project / Package / State must not be promoted globally until there is a UI that consumes the existing `/api/portfolio/*` contracts.**
 4. **Page-local toggles and searches should never leak into cross-page state.**
 
----
-
 ## 4. Filter Conflicts
 
 | Filter | Conflicting behaviors | Pages involved | Required resolution approach |
 | --- | --- | --- | --- |
-| Time | Some pages use a single sprint, others use sprint range, others use arbitrary date range, and others use fixed non-editable windows | Sprint Delivery, Sprint Execution, Portfolio Delivery, Delivery Trends, Portfolio Progress, PR Overview, PR Delivery Insights, Health Overview, Bug Insights, Home Changes | Define `TimeContext` as a discriminated concept: `SingleSprint`, `SprintRange`, `DateRange`, or `FixedWindow`. Never coerce these silently. |
-| Team vs Product | Product is propagated by Home and `WorkspaceBase`; Team is only partially propagated and often only used to load sprint lists rather than to filter backend data directly | Home, Trends workspace, Delivery Trends, Sprint Execution, Portfolio Delivery, PR Overview, PR Delivery Insights, Pipeline Insights | Define precedence: Product is global context; Team is conditional workspace context. If both are set and conflict, destination page must either reconcile through mapped products or prompt reset. |
+| Time | Some pages use a single sprint, others use sprint range, others use arbitrary date range, and others use fixed non-editable windows | Sprint Delivery, Sprint Execution, Portfolio Delivery, Delivery Trends, Portfolio Progress, PR Overview, PR Delivery Insights, Health Overview, Bug Insights, Home Changes | Define `TimeContext` as a discriminated concept: `SingleSprint`, `SprintRange`, `DateRange`, or `FixedWindow`. When a user navigates to a page that cannot consume the current time-context type, the destination must clear the incompatible time filter, fall back to that page’s default time behavior, and surface a lightweight summary message/chip that the prior time context was reset because the destination page uses a different time model. |
+| Team vs Product | Product is propagated by Home and `WorkspaceBase`; Team is only partially propagated and often only used to load sprint lists rather than to filter backend data directly. A conflict means the selected team is not linked to the selected product set for the destination page, or the destination uses Team only as a sprint-loader while Product is treated as true analytical scope. | Home, Trends workspace, Delivery Trends, Sprint Execution, Portfolio Delivery, PR Overview, PR Delivery Insights, Pipeline Insights | Define precedence: Product is global context; Team is conditional workspace context. If the selected team does not belong to the selected product context for the destination page, or the page cannot apply both coherently, the destination must clear `teamId`, reload using product-only scope, and surface a lightweight notice that the team filter was removed because it was incompatible with the destination product scope. |
 | Sprint vs Date Range | PR pages derive date ranges from a selected sprint but do not expose date controls consistently; same conceptual filter is represented differently | PR Overview, PR Delivery Insights | Treat sprint selection as a date-range generator, not as a separate canonical backend dimension on PR pages. Preserve both the derived range and the originating sprint metadata. |
 | Team used as scope vs Team used as loader | Several pages use Team only to fetch sprint lists, while the actual endpoint takes only sprint IDs; other pages actually pass Team into the backend query | Portfolio Delivery, Delivery Trends, Portfolio Progress vs PR Overview / PR Delivery Insights | Document Team’s page role explicitly. Where Team is only a sprint-loader, do not present it as a guaranteed backend scope filter. |
 | Project/Package/State availability | Portfolio read-model endpoints support these filters, but the active portfolio trend page uses sprint-driven metrics endpoints that do not | Portfolio Progress vs `/api/portfolio/*` endpoints | Separate portfolio-read filters from sprint-driven filters. Do not expose Project/Package/State on sprint-driven pages until the backend contract is aligned. |
@@ -187,8 +179,6 @@ Definitions:
 1. **Time conflict is the primary system risk.**
 2. **Team/Product precedence is the second-largest consistency issue.**
 3. **Portfolio read-model filters vs sprint-driven filters is the most important backend/UI contract mismatch.**
-
----
 
 ## 5. Backend Gaps
 
@@ -209,8 +199,6 @@ Definitions:
 2. **Sprint-driven metrics endpoints do not mirror that support.**
 3. **PR endpoints are date-range capable but not product-capable.**
 4. **Bug Insights is the clearest server-side gap because it still loads all work items and filters entirely in the client.**
-
----
 
 ## 6. Filter UI Layering
 
@@ -254,8 +242,6 @@ The following filters should **not** appear in global collapsed summaries becaus
 - SLO
 - Tag filters
 - Search text
-
----
 
 ## 7. Filter System Model
 
@@ -302,8 +288,6 @@ These should remain local and should not be promoted into shared application-wid
 3. **Canonical portfolio advanced context = Project + Package + State.**
 4. **Canonical page context = repository, validation drill-down, operational toggles, tags, search.**
 5. **The main implementation blocker is not frontend structure alone; it is the mismatch between sprint-driven endpoints and richer portfolio read-model filters.**
-
----
 
 ## 8. Feasibility Summary
 
