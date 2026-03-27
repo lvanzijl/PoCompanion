@@ -50,6 +50,32 @@ public sealed class PortfolioQueryServicesTests
     }
 
     [TestMethod]
+    public async Task SnapshotQueryService_ReturnsValidEmptyPayloadForPersistedEmptySnapshot()
+    {
+        var emptySnapshot = new PortfolioSnapshot(
+            new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero),
+            []);
+        var stateService = new StubPortfolioReadModelStateService(
+            new PortfolioReadModelState(
+                emptySnapshot,
+                "Sprint 3",
+                null,
+                null,
+                null,
+                0d,
+                new Dictionary<int, string> { [1] = "Product A" }));
+        var service = new PortfolioSnapshotQueryService(stateService, new PortfolioReadModelMapper());
+
+        var result = await service.GetAsync(42, null, CancellationToken.None);
+
+        Assert.IsTrue(result.HasData);
+        Assert.AreEqual("Sprint 3", result.SnapshotLabel);
+        Assert.AreEqual(0, result.TotalItemCount);
+        Assert.AreEqual(0, result.FilteredItemCount);
+        Assert.IsEmpty(result.Items);
+    }
+
+    [TestMethod]
     public async Task ComparisonQueryService_UsesDomainComparisonThenFiltersOutput()
     {
         var previous = new PortfolioSnapshot(
@@ -223,6 +249,34 @@ public sealed class PortfolioQueryServicesTests
     }
 
     [TestMethod]
+    public async Task TrendQueryService_WithSingleSnapshot_ReturnsNoDeltaOrDirection()
+    {
+        var snapshots = new[]
+        {
+            new PortfolioSnapshotGroupSelection(3, "Sprint 3", CreateSnapshot(0.8d, 18d, new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero)), false)
+        };
+        var stateService = new StubPortfolioReadModelStateService(
+            CreateState(),
+            historyState: new PortfolioReadModelHistoryState(
+                snapshots,
+                new Dictionary<int, string> { [1] = "Product A" },
+                ArchivedSnapshotsExcludedNotice: false));
+        var service = new PortfolioTrendQueryService(
+            stateService,
+            new PortfolioTrendAnalysisService(new ProductAggregationService(), new PortfolioReadModelMapper()));
+
+        var result = await service.GetAsync(42, new PortfolioReadQueryOptions(SnapshotCount: 1), CancellationToken.None);
+
+        Assert.IsTrue(result.HasData);
+        Assert.HasCount(1, result.Snapshots);
+        Assert.HasCount(1, result.PortfolioProgressTrend.Points);
+        Assert.IsNull(result.PortfolioProgressTrend.PreviousValue);
+        Assert.IsNull(result.PortfolioProgressTrend.Delta);
+        Assert.IsNull(result.PortfolioProgressTrend.Direction);
+        Assert.AreEqual(1, result.SnapshotCount);
+    }
+
+    [TestMethod]
     public async Task DecisionSignalQueryService_ReportsNewRetiredNoChangeAndArchivedSignals()
     {
         var history = new[]
@@ -279,6 +333,37 @@ public sealed class PortfolioQueryServicesTests
                 PortfolioDecisionSignalType.ArchivedSnapshotExcludedNotice
             },
             signals.Select(signal => signal.Type).Distinct().ToArray());
+    }
+
+    [TestMethod]
+    public async Task DecisionSignalQueryService_WithSingleSnapshot_ReturnsEmptySignals()
+    {
+        var current = new PortfolioSnapshotGroupSelection(
+            3,
+            "Sprint 3",
+            CreateSnapshot(0.8d, 18d, new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero)),
+            false);
+        var stateService = new StubPortfolioReadModelStateService(
+            CreateState(),
+            historyState: new PortfolioReadModelHistoryState(
+                [current],
+                new Dictionary<int, string> { [1] = "Product A" },
+                ArchivedSnapshotsExcludedNotice: false),
+            comparisonState: new PortfolioReadModelComparisonState(
+                current,
+                ComparisonSnapshot: null,
+                new Dictionary<int, string> { [1] = "Product A" },
+                ArchivedSnapshotsExcludedNotice: false));
+        var service = new PortfolioDecisionSignalQueryService(
+            stateService,
+            new PortfolioTrendAnalysisService(new ProductAggregationService(), new PortfolioReadModelMapper()),
+            new PortfolioDecisionSignalService(),
+            new PortfolioSnapshotComparisonService(),
+            new PortfolioReadModelMapper());
+
+        var signals = await service.GetAsync(42, new PortfolioReadQueryOptions(SnapshotCount: 1), CancellationToken.None);
+
+        Assert.IsEmpty(signals);
     }
 
     private static PortfolioReadModelState CreateState()

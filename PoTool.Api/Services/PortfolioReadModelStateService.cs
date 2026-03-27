@@ -108,7 +108,7 @@ public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateSer
 
         var snapshots = await _selectionService.GetPortfolioSnapshotsAsync(
             portfolioContext.ProductIds,
-            NormalizeSnapshotCount(effectiveOptions.SnapshotCount),
+            effectiveOptions.SnapshotCount,
             effectiveOptions.RangeStartUtc,
             effectiveOptions.RangeEndUtc,
             cancellationToken,
@@ -214,9 +214,6 @@ public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateSer
         var productNames = products.ToDictionary(product => product.Id, product => product.Name);
         return new PortfolioOwnerContext(productNames.Keys.OrderBy(productId => productId).ToArray(), productNames);
     }
-
-    private static int NormalizeSnapshotCount(int snapshotCount)
-        => snapshotCount < 2 ? 2 : snapshotCount;
 
     private static bool IsWithinRange(
         DateTimeOffset timestamp,

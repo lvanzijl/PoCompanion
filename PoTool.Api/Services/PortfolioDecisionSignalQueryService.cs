@@ -37,6 +37,11 @@ public sealed class PortfolioDecisionSignalQueryService
             return Array.Empty<PortfolioDecisionSignalDto>();
         }
 
+        if (historyState.Snapshots.Count < 2 || comparisonState.ComparisonSnapshot is null)
+        {
+            return Array.Empty<PortfolioDecisionSignalDto>();
+        }
+
         var trend = _trendAnalysisService.BuildTrend(historyState.Snapshots, historyState.ProductNames, options) with
         {
             ArchivedSnapshotsExcludedNotice = historyState.ArchivedSnapshotsExcludedNotice
