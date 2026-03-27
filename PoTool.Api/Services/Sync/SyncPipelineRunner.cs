@@ -656,12 +656,10 @@ public class SyncPipelineRunner : ISyncPipeline
             DateTime? prMaxDate = null;
             if (prCount > 0)
             {
-                var prDateRange = await context.PullRequests
-                    .GroupBy(_ => 1)
-                    .Select(g => new { Min = g.Min(p => p.CreatedDateUtc), Max = g.Max(p => p.CreatedDateUtc) })
-                    .FirstOrDefaultAsync(cancellationToken);
-                prMinDate = prDateRange?.Min;
-                prMaxDate = prDateRange?.Max;
+                prMinDate = await context.PullRequests
+                    .MinAsync(p => (DateTime?)p.CreatedDateUtc, cancellationToken);
+                prMaxDate = await context.PullRequests
+                    .MaxAsync(p => (DateTime?)p.CreatedDateUtc, cancellationToken);
             }
 
             _logger.LogInformation(
@@ -681,13 +679,10 @@ public class SyncPipelineRunner : ISyncPipeline
             DateTime? plMaxDate = null;
             if (pipelineCount > 0)
             {
-                var plDateRange = await context.CachedPipelineRuns
-                    .Where(p => p.ProductOwnerId == productOwnerId && p.FinishedDateUtc != null)
-                    .GroupBy(_ => 1)
-                    .Select(g => new { Min = g.Min(p => p.FinishedDateUtc), Max = g.Max(p => p.FinishedDateUtc) })
-                    .FirstOrDefaultAsync(cancellationToken);
-                plMinDate = plDateRange?.Min;
-                plMaxDate = plDateRange?.Max;
+                var datedRuns = context.CachedPipelineRuns
+                    .Where(p => p.ProductOwnerId == productOwnerId && p.FinishedDateUtc != null);
+                plMinDate = await datedRuns.MinAsync(p => p.FinishedDateUtc, cancellationToken);
+                plMaxDate = await datedRuns.MaxAsync(p => p.FinishedDateUtc, cancellationToken);
             }
 
             _logger.LogInformation(

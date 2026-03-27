@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -13,11 +14,10 @@ public class CachedReadProviderDiagnosticsTests
     [TestMethod]
     public async Task CachedPullRequestReadProvider_EmptyDb_ReturnsEmptyAndLogsDiagnostics()
     {
-        var options = new DbContextOptionsBuilder<PoToolDbContext>()
-            .UseInMemoryDatabase($"PRProviderDiag_{Guid.NewGuid()}")
-            .Options;
-
+        await using var connection = await OpenConnectionAsync();
+        var options = CreateOptions(connection);
         await using var dbContext = new PoToolDbContext(options);
+        await dbContext.Database.EnsureCreatedAsync();
         var logger = new Mock<ILogger<CachedPullRequestReadProvider>>();
         var provider = new CachedPullRequestReadProvider(dbContext, logger.Object);
 
@@ -30,11 +30,10 @@ public class CachedReadProviderDiagnosticsTests
     [TestMethod]
     public async Task CachedPullRequestReadProvider_WithProductFilter_EmptyDb_ReturnsEmpty()
     {
-        var options = new DbContextOptionsBuilder<PoToolDbContext>()
-            .UseInMemoryDatabase($"PRProviderDiag_{Guid.NewGuid()}")
-            .Options;
-
+        await using var connection = await OpenConnectionAsync();
+        var options = CreateOptions(connection);
         await using var dbContext = new PoToolDbContext(options);
+        await dbContext.Database.EnsureCreatedAsync();
         var logger = new Mock<ILogger<CachedPullRequestReadProvider>>();
         var provider = new CachedPullRequestReadProvider(dbContext, logger.Object);
 
@@ -47,11 +46,10 @@ public class CachedReadProviderDiagnosticsTests
     [TestMethod]
     public async Task CachedPipelineReadProvider_EmptyDb_ReturnsEmptyRunsList()
     {
-        var options = new DbContextOptionsBuilder<PoToolDbContext>()
-            .UseInMemoryDatabase($"PlProviderDiag_{Guid.NewGuid()}")
-            .Options;
-
+        await using var connection = await OpenConnectionAsync();
+        var options = CreateOptions(connection);
         await using var dbContext = new PoToolDbContext(options);
+        await dbContext.Database.EnsureCreatedAsync();
         var logger = new Mock<ILogger<CachedPipelineReadProvider>>();
         var provider = new CachedPipelineReadProvider(dbContext, logger.Object);
 
@@ -62,5 +60,17 @@ public class CachedReadProviderDiagnosticsTests
 
         Assert.IsNotNull(result);
         Assert.IsFalse(result.Any());
+    }
+
+    private static DbContextOptions<PoToolDbContext> CreateOptions(SqliteConnection connection)
+        => new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+    private static async Task<SqliteConnection> OpenConnectionAsync()
+    {
+        var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        return connection;
     }
 }

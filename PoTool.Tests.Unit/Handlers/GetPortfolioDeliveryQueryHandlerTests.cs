@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -19,27 +20,49 @@ namespace PoTool.Tests.Unit.Handlers;
 [TestClass]
 public sealed class GetPortfolioDeliveryQueryHandlerTests
 {
+    private SqliteConnection _connection = null!;
+    private PoToolDbContext _context = null!;
+
+    [TestInitialize]
+    public async Task SetupAsync()
+    {
+        _connection = new SqliteConnection("Data Source=:memory:");
+        await _connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseSqlite(_connection)
+            .Options;
+
+        _context = new PoToolDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
+    }
+
+    [TestCleanup]
+    public async Task CleanupAsync()
+    {
+        await _context.DisposeAsync();
+        await _connection.DisposeAsync();
+    }
+
     [TestMethod]
     public async Task Handle_DelegatesPortfolioDeliveryRollupsToCdcServiceAndMapsResult()
     {
-        await using var context = CreateContext();
-
         var owner = new ProfileEntity { Name = "PO 1" };
-        context.Profiles.Add(owner);
+        _context.Profiles.Add(owner);
 
         var team = new TeamEntity { Name = "Team 1", TeamAreaPath = "\\Project\\Team 1" };
-        context.Teams.Add(team);
-        await context.SaveChangesAsync();
+        _context.Teams.Add(team);
+        await _context.SaveChangesAsync();
 
         var sprint = CreateSprint(team.Id, 101, "Sprint 1", new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         var productA = new ProductEntity { ProductOwnerId = owner.Id, Name = "Product A" };
         var productB = new ProductEntity { ProductOwnerId = owner.Id, Name = "Product B" };
 
-        context.Sprints.Add(sprint);
-        context.Products.AddRange(productA, productB);
-        await context.SaveChangesAsync();
+        _context.Sprints.Add(sprint);
+        _context.Products.AddRange(productA, productB);
+        await _context.SaveChangesAsync();
 
-        context.SprintMetricsProjections.AddRange(
+        _context.SprintMetricsProjections.AddRange(
             new SprintMetricsProjectionEntity
             {
                 SprintId = sprint.Id,
@@ -62,7 +85,7 @@ public sealed class GetPortfolioDeliveryQueryHandlerTests
                 BugsClosedCount = 0,
                 ProgressionDelta = 10
             });
-        await context.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var projectionService = new StubSprintTrendProjectionService(
             [
@@ -105,7 +128,7 @@ public sealed class GetPortfolioDeliveryQueryHandlerTests
                 ]));
 
         var handler = new GetPortfolioDeliveryQueryHandler(
-            context,
+            _context,
             projectionService,
             portfolioDeliverySummaryService.Object,
             NullLogger<GetPortfolioDeliveryQueryHandler>.Instance);
@@ -134,15 +157,6 @@ public sealed class GetPortfolioDeliveryQueryHandlerTests
         Assert.AreEqual(80d, result.TopFeatures[0].DeliveredSharePercent, 0.001d);
 
         portfolioDeliverySummaryService.VerifyAll();
-    }
-
-    private static PoToolDbContext CreateContext()
-    {
-        var options = new DbContextOptionsBuilder<PoToolDbContext>()
-            .UseInMemoryDatabase($"PortfolioDelivery_{Guid.NewGuid()}")
-            .Options;
-
-        return new PoToolDbContext(options);
     }
 
     private static SprintEntity CreateSprint(int teamId, int suffix, string name, DateTime startUtc)

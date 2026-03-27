@@ -147,6 +147,7 @@ public class WorkItemRepository : IWorkItemRepository
                     existing.ProjectElement = dto.ProjectElement;
                     existing.Description = dto.Description;
                     existing.CreatedDate = dto.CreatedDate;
+                    existing.CreatedDateUtc = dto.CreatedDate?.UtcDateTime;
                     existing.ClosedDate = dto.ClosedDate;
                     existing.Severity = dto.Severity;
                     existing.Tags = dto.Tags;
@@ -200,6 +201,7 @@ public class WorkItemRepository : IWorkItemRepository
                     entity.ProjectElement = dto.ProjectElement;
                     entity.Description = dto.Description;
                     entity.CreatedDate = dto.CreatedDate;
+                    entity.CreatedDateUtc = dto.CreatedDate?.UtcDateTime;
                     entity.ClosedDate = dto.ClosedDate;
                     entity.Severity = dto.Severity;
                     entity.Tags = dto.Tags;
@@ -290,6 +292,7 @@ public class WorkItemRepository : IWorkItemRepository
             ProjectElement = dto.ProjectElement,
             Description = dto.Description,
             CreatedDate = dto.CreatedDate,
+            CreatedDateUtc = dto.CreatedDate?.UtcDateTime,
             ClosedDate = dto.ClosedDate,
             Severity = dto.Severity,
             Tags = dto.Tags,

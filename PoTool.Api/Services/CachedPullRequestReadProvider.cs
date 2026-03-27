@@ -130,9 +130,11 @@ public sealed class CachedPullRequestReadProvider : IPullRequestReadProvider
         var entities = await _dbContext.PullRequestComments
             .AsNoTracking()
             .Where(c => c.PullRequestId == pullRequestId)
+            .OrderBy(c => c.CreatedDateUtc)
+            .ThenBy(c => c.InternalId)
             .ToListAsync(cancellationToken);
 
-        return entities.OrderBy(c => c.CreatedDate).Select(MapCommentToDto);
+        return entities.Select(MapCommentToDto);
     }
 
     /// <summary>
@@ -244,12 +246,10 @@ public sealed class CachedPullRequestReadProvider : IPullRequestReadProvider
 
             if (totalRows > 0)
             {
-                var dateRange = await _dbContext.PullRequests
-                    .GroupBy(_ => 1)
-                    .Select(g => new { Min = g.Min(p => p.CreatedDateUtc), Max = g.Max(p => p.CreatedDateUtc) })
-                    .FirstOrDefaultAsync(cancellationToken);
-                minDate = dateRange?.Min;
-                maxDate = dateRange?.Max;
+                minDate = await _dbContext.PullRequests
+                    .MinAsync(p => (DateTime?)p.CreatedDateUtc, cancellationToken);
+                maxDate = await _dbContext.PullRequests
+                    .MaxAsync(p => (DateTime?)p.CreatedDateUtc, cancellationToken);
             }
 
             _logger.LogDebug(

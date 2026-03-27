@@ -272,13 +272,10 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
 
             if (totalRuns > 0)
             {
-                var dateRange = await _dbContext.CachedPipelineRuns
-                    .Where(r => r.FinishedDateUtc != null)
-                    .GroupBy(_ => 1)
-                    .Select(g => new { Min = g.Min(r => r.FinishedDateUtc), Max = g.Max(r => r.FinishedDateUtc) })
-                    .FirstOrDefaultAsync(cancellationToken);
-                minDate = dateRange?.Min;
-                maxDate = dateRange?.Max;
+                var datedRuns = _dbContext.CachedPipelineRuns
+                    .Where(r => r.FinishedDateUtc != null);
+                minDate = await datedRuns.MinAsync(r => r.FinishedDateUtc, cancellationToken);
+                maxDate = await datedRuns.MaxAsync(r => r.FinishedDateUtc, cancellationToken);
             }
 
             _logger.LogDebug(

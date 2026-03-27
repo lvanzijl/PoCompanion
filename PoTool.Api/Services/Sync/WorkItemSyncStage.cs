@@ -183,6 +183,7 @@ public class WorkItemSyncStage : ISyncStage
         entity.ProjectElement = dto.ProjectElement;
         entity.Description = dto.Description;
         entity.CreatedDate = dto.CreatedDate;
+        entity.CreatedDateUtc = dto.CreatedDate?.UtcDateTime;
         entity.ClosedDate = dto.ClosedDate;
         entity.Severity = dto.Severity;
         entity.Tags = dto.Tags;
@@ -213,6 +214,7 @@ public class WorkItemSyncStage : ISyncStage
             ProjectElement = dto.ProjectElement,
             Description = dto.Description,
             CreatedDate = dto.CreatedDate,
+            CreatedDateUtc = dto.CreatedDate?.UtcDateTime,
             ClosedDate = dto.ClosedDate,
             Severity = dto.Severity,
             Tags = dto.Tags,

@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -17,6 +18,7 @@ namespace PoTool.Tests.Unit.Handlers;
 [TestClass]
 public class GetPipelineInsightsQueryHandlerTests
 {
+    private SqliteConnection _connection = null!;
     private PoToolDbContext _context = null!;
     private Mock<ILogger<GetPipelineInsightsQueryHandler>> _mockLogger = null!;
     private GetPipelineInsightsQueryHandler _handler = null!;
@@ -32,21 +34,24 @@ public class GetPipelineInsightsQueryHandlerTests
     private static readonly DateTime RunInPrevious = new(2026, 1, 20, 12, 0, 0, DateTimeKind.Utc);
 
     [TestInitialize]
-    public void Setup()
+    public async Task SetupAsync()
     {
+        _connection = new SqliteConnection("Data Source=:memory:");
+        await _connection.OpenAsync();
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
-            .UseInMemoryDatabase($"PipelineInsightsTests_{Guid.NewGuid()}")
+            .UseSqlite(_connection)
             .Options;
         _context    = new PoToolDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
         _mockLogger = new Mock<ILogger<GetPipelineInsightsQueryHandler>>();
         _handler    = new GetPipelineInsightsQueryHandler(_context, _mockLogger.Object);
     }
 
     [TestCleanup]
-    public void Cleanup()
+    public async Task CleanupAsync()
     {
-        _context.Database.EnsureDeleted();
-        _context.Dispose();
+        await _context.DisposeAsync();
+        await _connection.DisposeAsync();
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
