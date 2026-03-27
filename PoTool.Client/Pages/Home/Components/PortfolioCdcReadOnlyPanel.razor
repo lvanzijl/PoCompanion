@@ -166,8 +166,8 @@
                             </MudChip>
                         }
                     </MudStack>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Total weight: @FormatNumber(_progress.TotalWeight)</MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary">@GetPortfolioDeltaContext()</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Total weight: @FormatNumber(_progress.TotalWeight)</MudText>
                     @if (!string.IsNullOrWhiteSpace(GetArchivedHistorySummary()))
                     {
                         <MudText Typo="Typo.body2" Color="Color.Secondary">@GetArchivedHistorySummary()</MudText>
@@ -191,11 +191,7 @@
 
             @if (!string.IsNullOrWhiteSpace(GetSecondarySignalSummary()))
             {
-                <MudPaper Outlined="true" Class="pa-2 mb-4">
-                    <MudText Typo="Typo.body2">
-                        <strong>Secondary signals:</strong> @GetSecondarySignalSummary()
-                    </MudText>
-                </MudPaper>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4 ml-1">@GetSecondarySignalSummary()</MudText>
             }
         }
         else
@@ -220,19 +216,20 @@
                     <MudTh>Date</MudTh>
                     <MudTh>Progress</MudTh>
                     <MudTh>Δ</MudTh>
-                    <MudTh>Direction</MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Snapshot">
                         <MudText Typo="Typo.body2">@context.SnapshotLabel</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@(context.IncludesArchivedSnapshot ? "Includes archived" : "Active-only")</MudText>
+                        @if (context.IncludesArchivedSnapshot)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Includes archived</MudText>
+                        }
                     </MudTd>
                     <MudTd DataLabel="Date">@context.Timestamp.ToString("yyyy-MM-dd")</MudTd>
                     <MudTd DataLabel="Progress">@FormatRatio(context.Progress)</MudTd>
-                    <MudTd DataLabel="Δ">@FormatSignedRatio(context.Delta)</MudTd>
-                    <MudTd DataLabel="Direction">
+                    <MudTd DataLabel="Δ">
                         <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetTrendColorFromDirection(context.Direction)">
-                            @GetTrendGlyph(context.Direction)
+                            @FormatDeltaWithDirection(context.Delta)
                         </MudChip>
                     </MudTd>
                 </RowTemplate>
@@ -267,10 +264,13 @@
                     <MudTd DataLabel="Progress">
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                             <MudText Typo="Typo.body2">@FormatRatio(context.CurrentProgress)</MudText>
-                            @if (context.ProgressDelta.HasValue)
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetChangedDeltaColor(context)">
+                                @GetChangedWorkPackageDeltaText(context)
+                            </MudChip>
+                            @foreach (var indicator in GetChangeIndicators(context))
                             {
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetTrendColorFromDirection(GetTrendDirection(context.ProgressDelta))">
-                                    @FormatDeltaWithDirection(context.ProgressDelta)
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
+                                    @indicator
                                 </MudChip>
                             }
                         </MudStack>
@@ -303,10 +303,7 @@
             <MudExpansionPanel Dense="true">
                 <TitleContent>
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        <MudText Typo="Typo.subtitle2">Stable Work Packages</MudText>
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Default">
-                            @GetStableWorkPackageItems().Count
-                        </MudChip>
+                        <MudText Typo="Typo.subtitle2">Stable Work Packages (@GetStableWorkPackageItems().Count unchanged)</MudText>
                     </MudStack>
                 </TitleContent>
                 <ChildContent>
@@ -360,17 +357,15 @@
                                 <MudTh>Project</MudTh>
                                 <MudTh>Progress</MudTh>
                                 <MudTh>Δ</MudTh>
-                                <MudTh>Direction</MudTh>
                                 <MudTh>Weight Δ</MudTh>
                             </HeaderContent>
                             <RowTemplate>
                                 <MudTd DataLabel="Product">@context.ProductName</MudTd>
                                 <MudTd DataLabel="Project">@context.ProjectNumber</MudTd>
                                 <MudTd DataLabel="Progress">@FormatRatio(context.ProgressTrend.CurrentValue)</MudTd>
-                                <MudTd DataLabel="Δ">@FormatSignedRatio(context.ProgressTrend.Delta)</MudTd>
-                                <MudTd DataLabel="Direction">
+                                <MudTd DataLabel="Δ">
                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetTrendColorFromDirection(context.ProgressTrend.Direction)">
-                                        @GetTrendGlyph(context.ProgressTrend.Direction)
+                                        @FormatDeltaWithDirection(context.ProgressTrend.Delta)
                                     </MudChip>
                                 </MudTd>
                                 <MudTd DataLabel="Weight Δ">@FormatSignedNumber(context.WeightTrend.Delta)</MudTd>
@@ -498,6 +493,10 @@
     private PortfolioComparisonDto? _comparison;
     private PortfolioTrendDto? _trend;
     private IReadOnlyList<PortfolioDecisionSignalDto> _signals = Array.Empty<PortfolioDecisionSignalDto>();
+    private IReadOnlyDictionary<string, PortfolioComparisonItemDto> _comparisonItemLookup = new Dictionary<string, PortfolioComparisonItemDto>(StringComparer.Ordinal);
+    private IReadOnlyList<PortfolioComparisonItemDto> _changedWorkPackageItems = Array.Empty<PortfolioComparisonItemDto>();
+    private IReadOnlyList<PortfolioSnapshotItemDto> _stableWorkPackageItems = Array.Empty<PortfolioSnapshotItemDto>();
+    private IReadOnlyList<PortfolioComparisonItemDto> _changedComparisonItems = Array.Empty<PortfolioComparisonItemDto>();
 
     private sealed record PrimarySignalDisplay(
         string Title,
@@ -598,6 +597,8 @@
             {
                 _compareToSnapshotId = null;
             }
+
+            RebuildComparisonViewState();
         }
         catch (Exception ex)
         {
@@ -664,22 +665,27 @@
     }
 
     private static string FormatPercent(double? value)
-        => value.HasValue ? $"{value.Value:F0}%" : "—";
+        => value.HasValue ? $"{RoundWhole(value.Value):0}%" : "—";
 
     private static string FormatRatio(double? value)
-        => value.HasValue ? $"{value.Value:P0}" : "—";
+        => value.HasValue ? $"{RoundWhole(value.Value * 100):0}%" : "—";
 
     private static string FormatNumber(double? value)
         => value.HasValue ? $"{value.Value:F1}" : "—";
 
     private static string FormatSignedRatio(double? value)
-        => value.HasValue ? $"{value.Value:+0%;-0%;0%}" : "—";
+    {
+        if (!value.HasValue)
+        {
+            return "—";
+        }
+
+        var roundedPercent = RoundWhole(value.Value * 100);
+        return $"{roundedPercent:+0;-0;0}%";
+    }
 
     private static string FormatSignedNumber(double? value)
         => value.HasValue ? $"{value.Value:+0.0;-0.0;0.0}" : "—";
-
-    private static string FormatDirection(PortfolioTrendDirection? value)
-        => value?.ToString() ?? "—";
 
     private static string FormatLifecycle(PortfolioLifecycleState? value)
         => value?.ToString() ?? "—";
@@ -688,12 +694,25 @@
         => value.HasValue ? value.Value.ToString("yyyy-MM-dd") : "—";
 
     private double? GetPortfolioProgressDelta()
-        => _comparison?.PreviousTimestamp is null ? null : _trend?.PortfolioProgressTrend.Delta;
+    {
+        var trend = _trend;
+        if (_comparison?.PreviousTimestamp is null || trend is null || trend.Snapshots.Count < 2)
+        {
+            return null;
+        }
+
+        var currentSnapshotId = trend.Snapshots[0].SnapshotId;
+        var previousSnapshotId = trend.Snapshots[1].SnapshotId;
+        var currentProgress = FindPointValue(trend.PortfolioProgressTrend.Points, currentSnapshotId);
+        var previousProgress = FindPointValue(trend.PortfolioProgressTrend.Points, previousSnapshotId);
+
+        return CalculateDisplayedRatioDelta(currentProgress, previousProgress);
+    }
 
     private string GetPortfolioDeltaContext()
         => _comparison?.PreviousSnapshotLabel is null
             ? $"Snapshot date: {_progress?.SnapshotTimestamp:yyyy-MM-dd}"
-            : $"Vs {_comparison.PreviousSnapshotLabel} · {FormatDate(_comparison.PreviousTimestamp)}";
+            : $"Compared to: {_comparison.PreviousSnapshotLabel} — {FormatDate(_comparison.PreviousTimestamp)}";
 
     private string? GetArchivedHistorySummary()
     {
@@ -712,10 +731,7 @@
 
     private PrimarySignalDisplay? GetPrimarySignalDisplay()
     {
-        var primarySignal = _signals
-            .OrderBy(GetSignalPriority)
-            .ThenBy(signal => signal.Title, StringComparer.Ordinal)
-            .FirstOrDefault();
+        var primarySignal = GetPrimarySignal();
 
         return primarySignal is null
             ? null
@@ -724,11 +740,7 @@
 
     private string GetSecondarySignalSummary()
     {
-        var primarySignal = _signals
-            .OrderBy(GetSignalPriority)
-            .ThenBy(signal => signal.Title, StringComparer.Ordinal)
-            .FirstOrDefault();
-
+        var primarySignal = GetPrimarySignal();
         var secondarySignals = _signals
             .Where(signal => !ReferenceEquals(signal, primarySignal))
             .ToArray();
@@ -747,18 +759,6 @@
             summaryParts.Add($"{lifecycleCount} lifecycle update{(lifecycleCount == 1 ? string.Empty : "s")}");
         }
 
-        var improvingCount = secondarySignals.Count(signal => signal.Tone == PortfolioDecisionSignalTone.Positive);
-        if (improvingCount > 0)
-        {
-            summaryParts.Add($"{improvingCount} improving signal{(improvingCount == 1 ? string.Empty : "s")}");
-        }
-
-        var regressionCount = secondarySignals.Count(signal => signal.Tone == PortfolioDecisionSignalTone.Warning);
-        if (regressionCount > 0)
-        {
-            summaryParts.Add($"{regressionCount} regression signal{(regressionCount == 1 ? string.Empty : "s")}");
-        }
-
         var noticeCount = secondarySignals.Count(signal => signal.Type == PortfolioDecisionSignalType.ArchivedSnapshotExcludedNotice);
         if (noticeCount > 0)
         {
@@ -767,6 +767,12 @@
 
         return string.Join(" · ", summaryParts);
     }
+
+    private PortfolioDecisionSignalDto? GetPrimarySignal()
+        => _signals
+            .OrderBy(GetSignalPriority)
+            .ThenBy(signal => signal.Title, StringComparer.Ordinal)
+            .FirstOrDefault();
 
     private IReadOnlyList<TrendOverviewRow> GetTrendOverviewRows()
     {
@@ -785,7 +791,7 @@
             var nextProgress = nextSnapshot is null
                 ? null
                 : FindPointValue(_trend.PortfolioProgressTrend.Points, nextSnapshot.SnapshotId);
-            double? delta = progress.HasValue && nextProgress.HasValue ? progress.Value - nextProgress.Value : null;
+            var delta = CalculateDisplayedRatioDelta(progress, nextProgress);
 
             rows.Add(new TrendOverviewRow(
                 snapshot.SnapshotLabel,
@@ -805,12 +811,38 @@
             .ToArray();
 
     private IReadOnlyList<PortfolioComparisonItemDto> GetChangedWorkPackageItems()
-        => (_comparison?.Items ?? Array.Empty<PortfolioComparisonItemDto>())
+        => _changedWorkPackageItems;
+
+    private IReadOnlyList<PortfolioSnapshotItemDto> GetStableWorkPackageItems()
+        => _stableWorkPackageItems;
+
+    private IReadOnlyList<PortfolioComparisonItemDto> GetChangedComparisonItems()
+        => _changedComparisonItems;
+
+    private static double? FindPointValue(IReadOnlyList<PortfolioTrendPointDto> points, long snapshotId)
+        => points.FirstOrDefault(point => point.SnapshotId == snapshotId)?.Value;
+
+    private PortfolioComparisonItemDto? FindComparisonItem(PortfolioSnapshotItemDto item)
+        => _comparisonItemLookup.GetValueOrDefault(GetComparisonItemKey(item.ProductId, item.ProjectNumber, item.WorkPackage));
+
+    private void RebuildComparisonViewState()
+    {
+        var comparisonItems = _comparison?.Items ?? Array.Empty<PortfolioComparisonItemDto>();
+        var snapshotItems = _snapshot?.Items ?? Array.Empty<PortfolioSnapshotItemDto>();
+
+        _comparisonItemLookup = comparisonItems.ToDictionary(
+            item => GetComparisonItemKey(item.ProductId, item.ProjectNumber, item.WorkPackage),
+            StringComparer.Ordinal);
+
+        _changedWorkPackageItems = comparisonItems
             .Where(item => item.WorkPackage is not null && IsComparisonItemChanged(item))
             .ToArray();
 
-    private IReadOnlyList<PortfolioSnapshotItemDto> GetStableWorkPackageItems()
-        => (_snapshot?.Items ?? Array.Empty<PortfolioSnapshotItemDto>())
+        _changedComparisonItems = comparisonItems
+            .Where(IsComparisonItemChanged)
+            .ToArray();
+
+        _stableWorkPackageItems = snapshotItems
             .Where(item => item.WorkPackage is not null)
             .Where(item =>
             {
@@ -818,20 +850,10 @@
                 return comparisonItem is not null && !IsComparisonItemChanged(comparisonItem);
             })
             .ToArray();
+    }
 
-    private IReadOnlyList<PortfolioComparisonItemDto> GetChangedComparisonItems()
-        => (_comparison?.Items ?? Array.Empty<PortfolioComparisonItemDto>())
-            .Where(IsComparisonItemChanged)
-            .ToArray();
-
-    private static double? FindPointValue(IReadOnlyList<PortfolioTrendPointDto> points, long snapshotId)
-        => points.FirstOrDefault(point => point.SnapshotId == snapshotId)?.Value;
-
-    private PortfolioComparisonItemDto? FindComparisonItem(PortfolioSnapshotItemDto item)
-        => _comparison?.Items.FirstOrDefault(comparisonItem =>
-            comparisonItem.ProductId == item.ProductId
-            && string.Equals(comparisonItem.ProjectNumber, item.ProjectNumber, StringComparison.Ordinal)
-            && string.Equals(comparisonItem.WorkPackage ?? string.Empty, item.WorkPackage ?? string.Empty, StringComparison.Ordinal));
+    private static string GetComparisonItemKey(int productId, string? projectNumber, string? workPackage)
+        => $"{productId}|{projectNumber ?? string.Empty}|{workPackage ?? string.Empty}";
 
     private static Severity GetSignalSeverity(PortfolioDecisionSignalTone tone)
         => tone switch
@@ -908,6 +930,23 @@
         => value.HasValue
             ? $"{FormatSignedRatio(value)} {GetTrendGlyph(GetTrendDirection(value))}"
             : "—";
+
+    // Trend deltas must match the rounded percentages shown to the user, so compare display values instead of raw ratios.
+    private static double? CalculateDisplayedRatioDelta(double? currentValue, double? previousValue)
+    {
+        if (!currentValue.HasValue || !previousValue.HasValue)
+        {
+            return null;
+        }
+
+        var currentPercent = RoundWhole(currentValue.Value * 100);
+        var previousPercent = RoundWhole(previousValue.Value * 100);
+        return (currentPercent - previousPercent) / 100d;
+    }
+
+    // Use AwayFromZero so 22.5% displays as 23%, matching the visible percentage-based trend comparison.
+    private static double RoundWhole(double value)
+        => Math.Round(value, 0, MidpointRounding.AwayFromZero);
 
     private static Color GetTrendColorFromDirection(PortfolioTrendDirection? direction)
         => direction switch
@@ -991,6 +1030,58 @@
 
     private static string GetStableIndicatorText()
         => "0% →";
+
+    private static string GetChangedWorkPackageDeltaText(PortfolioComparisonItemDto comparisonItem)
+    {
+        if (HasNonZeroValue(comparisonItem.ProgressDelta))
+        {
+            return FormatDeltaWithDirection(comparisonItem.ProgressDelta);
+        }
+
+        if (HasNonZeroValue(comparisonItem.WeightDelta))
+        {
+            return GetStableIndicatorText();
+        }
+
+        return "—";
+    }
+
+    private static Color GetChangedDeltaColor(PortfolioComparisonItemDto comparisonItem)
+    {
+        if (HasNonZeroValue(comparisonItem.ProgressDelta))
+        {
+            return GetTrendColorFromDirection(GetTrendDirection(comparisonItem.ProgressDelta));
+        }
+
+        if (HasNonZeroValue(comparisonItem.WeightDelta))
+        {
+            return Color.Default;
+        }
+
+        return Color.Default;
+    }
+
+    private static IReadOnlyList<string> GetChangeIndicators(PortfolioComparisonItemDto comparisonItem)
+    {
+        var indicators = new List<string>();
+
+        if (HasNonZeroValue(comparisonItem.ProgressDelta))
+        {
+            indicators.Add("[P]");
+        }
+
+        if (HasLifecycleDelta(comparisonItem))
+        {
+            indicators.Add("[L]");
+        }
+
+        if (HasNonZeroValue(comparisonItem.WeightDelta))
+        {
+            indicators.Add("[W]");
+        }
+
+        return indicators;
+    }
 
     private static string? NullIfWhiteSpace(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

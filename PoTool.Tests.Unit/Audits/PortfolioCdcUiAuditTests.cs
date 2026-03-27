@@ -54,6 +54,26 @@ public sealed class PortfolioCdcUiAuditTests
             "The CDC layout should render summary, decision signal, trend overview, then changed work packages in order.");
     }
 
+    [TestMethod]
+    public void PortfolioCdcReadOnlyPanel_RendersRefinedTrendAndSignalDetails()
+    {
+        var repositoryRoot = GetRepositoryRoot();
+        var panelPath = $"{repositoryRoot}/PoTool.Client/Pages/Home/Components/PortfolioCdcReadOnlyPanel.razor";
+
+        var panel = File.ReadAllText(panelPath);
+
+        StringAssert.Contains(panel, "Compared to:");
+        StringAssert.Contains(panel, "Stable Work Packages (@GetStableWorkPackageItems().Count unchanged)");
+        StringAssert.Contains(panel, "GetChangedWorkPackageDeltaText");
+        StringAssert.Contains(panel, "GetChangeIndicators");
+        StringAssert.Contains(panel, "FormatDeltaWithDirection(context.Delta)");
+        StringAssert.Contains(panel, "CalculateDisplayedRatioDelta");
+        StringAssert.Contains(panel, "Math.Round(value, 0, MidpointRounding.AwayFromZero)");
+        Assert.IsFalse(panel.Contains("Secondary signals:", StringComparison.Ordinal), "Secondary signal text should be de-emphasized without a prefix label.");
+        Assert.IsFalse(panel.Contains("<MudTh>Direction</MudTh>", StringComparison.Ordinal), "Direction columns should be merged into delta columns.");
+        Assert.IsFalse(panel.Contains("Active-only", StringComparison.Ordinal), "Trend rows should not repeat active-only noise.");
+    }
+
     private static string GetRepositoryRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);

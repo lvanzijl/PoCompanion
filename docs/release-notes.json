@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-27",
+    "type": "Fixed",
+    "title": "Portfolio CDC history now shows corrected delta cues",
+    "impact": "Portfolio Progress now rounds CDC deltas consistently, merges arrows into the delta display, clarifies comparison context, and makes changed work package reasons easier to scan.",
+    "area": "Trends",
+    "link": "/home/portfolio-progress"
+  },
+  {
+    "date": "2026-03-27",
     "type": "Changed",
     "title": "Portfolio CDC history now leads with decisions",
     "impact": "Portfolio Progress now opens with one compact summary, one primary decision signal, a scan-first trend overview, and collapsible secondary CDC sections.",
