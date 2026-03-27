@@ -30,19 +30,28 @@ public sealed class PortfolioCdcUiAuditTests
     }
 
     [TestMethod]
-    public void PortfolioCdcReadOnlyPanel_RendersRefinedHistorySections()
+    public void PortfolioCdcReadOnlyPanel_RendersDecisionFirstStructuralLayout()
     {
         var repositoryRoot = GetRepositoryRoot();
         var panelPath = $"{repositoryRoot}/PoTool.Client/Pages/Home/Components/PortfolioCdcReadOnlyPanel.razor";
 
         var panel = File.ReadAllText(panelPath);
 
-        StringAssert.Contains(panel, "Delta vs previous");
-        StringAssert.Contains(panel, "No project-level changes detected in selected history.");
-        StringAssert.Contains(panel, "Active Work Packages");
-        StringAssert.Contains(panel, "Retired Work Packages");
-        StringAssert.Contains(panel, "No change detected (");
-        StringAssert.Contains(panel, "GetProgressChangeText");
+        StringAssert.Contains(panel, "Portfolio summary");
+        StringAssert.Contains(panel, "Decision signal");
+        StringAssert.Contains(panel, "Trend Overview");
+        StringAssert.Contains(panel, "Changed Work Packages");
+        StringAssert.Contains(panel, "Stable Work Packages");
+        StringAssert.Contains(panel, "Snapshot comparison");
+        StringAssert.Contains(panel, "MudExpansionPanels");
+
+        var summaryIndex = panel.IndexOf("Portfolio summary", StringComparison.Ordinal);
+        var signalIndex = panel.IndexOf("Decision signal", StringComparison.Ordinal);
+        var trendIndex = panel.IndexOf("Trend Overview", StringComparison.Ordinal);
+        var changedWorkPackagesIndex = panel.IndexOf("Changed Work Packages", StringComparison.Ordinal);
+
+        Assert.IsTrue(summaryIndex >= 0 && signalIndex > summaryIndex && trendIndex > signalIndex && changedWorkPackagesIndex > trendIndex,
+            "The CDC layout should render summary, decision signal, trend overview, then changed work packages in order.");
     }
 
     private static string GetRepositoryRoot()
