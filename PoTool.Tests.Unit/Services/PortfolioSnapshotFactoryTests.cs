@@ -143,6 +143,19 @@ public sealed class PortfolioSnapshotFactoryTests
             shuffled.Items.Select(FormatSnapshotRow).ToArray());
     }
 
+    [TestMethod]
+    public void Create_AllowsEmptySnapshotWhenNoInputsExist()
+    {
+        var timestamp = new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero);
+
+        var snapshot = Factory.Create(new PortfolioSnapshotFactoryRequest(
+            timestamp,
+            Array.Empty<PortfolioSnapshotFactoryEpicInput>()));
+
+        Assert.AreEqual(timestamp, snapshot.Timestamp);
+        Assert.AreEqual(0, snapshot.Items.Count);
+    }
+
     private static PortfolioSnapshot CreateSnapshot(
         DateTimeOffset timestamp,
         params (int ProductId, string ProjectNumber, string? WorkPackage, double Progress, double TotalWeight, WorkPackageLifecycleState LifecycleState)[] rows)

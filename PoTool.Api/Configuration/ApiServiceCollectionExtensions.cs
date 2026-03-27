@@ -288,6 +288,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IPortfolioSnapshotCaptureDataService, PortfolioSnapshotCaptureDataService>();
         services.AddScoped<IPortfolioSnapshotPersistenceService, PortfolioSnapshotPersistenceService>();
         services.AddScoped<IPortfolioSnapshotSelectionService, PortfolioSnapshotSelectionService>();
+        services.AddScoped<IPortfolioSnapshotCaptureOrchestrator, PortfolioSnapshotCaptureOrchestrator>();
         services.AddScoped<IPortfolioReadModelStateService, PortfolioReadModelStateService>();
         services.AddScoped<IPortfolioReadModelMapper, PortfolioReadModelMapper>();
         services.AddScoped<IPortfolioTrendAnalysisService, PortfolioTrendAnalysisService>();

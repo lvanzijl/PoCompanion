@@ -1,3 +1,5 @@
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
@@ -131,13 +133,16 @@ public sealed class PortfolioSnapshotPersistenceService : IPortfolioSnapshotPers
 {
     private readonly PoToolDbContext _context;
     private readonly IPortfolioSnapshotPersistenceMapper _mapper;
+    private readonly ILogger<PortfolioSnapshotPersistenceService> _logger;
 
     public PortfolioSnapshotPersistenceService(
         PoToolDbContext context,
-        IPortfolioSnapshotPersistenceMapper mapper)
+        IPortfolioSnapshotPersistenceMapper mapper,
+        ILogger<PortfolioSnapshotPersistenceService> logger)
     {
         _context = context;
         _mapper = mapper;
+        _logger = logger;
     }
 
     public async Task<PersistedPortfolioSnapshot?> GetBySourceAsync(
@@ -168,9 +173,25 @@ public sealed class PortfolioSnapshotPersistenceService : IPortfolioSnapshotPers
 
         var entity = await query
             .OrderByDescending(snapshot => snapshot.SnapshotId)
-            .FirstOrDefaultAsync(cancellationToken);
+            .Take(2)
+            .ToListAsync(cancellationToken);
 
-        return entity is null ? null : _mapper.ToPersistedModel(entity);
+        if (entity.Count == 0)
+        {
+            return null;
+        }
+
+        if (entity.Count > 1)
+        {
+            _logger.LogWarning(
+                "Duplicate logical portfolio snapshots detected for ProductId {ProductId}, TimestampUtc {TimestampUtc}, Source {Source}. Using SnapshotId {SnapshotId} as canonical.",
+                productId,
+                timestampUtc,
+                source.Trim(),
+                entity[0].SnapshotId);
+        }
+
+        return _mapper.ToPersistedModel(entity[0]);
     }
 
     public async Task<PersistedPortfolioSnapshot> PersistAsync(
@@ -181,12 +202,20 @@ public sealed class PortfolioSnapshotPersistenceService : IPortfolioSnapshotPers
         CancellationToken cancellationToken)
     {
         var entity = _mapper.ToEntity(productId, source, createdBy, isArchived: false, snapshot);
-        entity.SnapshotId = (await _context.PortfolioSnapshots
-            .AsNoTracking()
-            .MaxAsync(existing => (long?)existing.SnapshotId, cancellationToken) ?? 0L) + 1L;
-
         _context.PortfolioSnapshots.Add(entity);
-        await _context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+        {
+            _context.ChangeTracker.Clear();
+            _logger.LogInformation(
+                "Portfolio snapshot insert was idempotently de-duplicated for ProductId {ProductId}, TimestampUtc {TimestampUtc}, Source {Source}.",
+                productId,
+                snapshot.Timestamp.UtcDateTime,
+                source.Trim());
+        }
 
         var persisted = await GetBySourceAsync(
             productId,
@@ -197,4 +226,14 @@ public sealed class PortfolioSnapshotPersistenceService : IPortfolioSnapshotPers
 
         return persisted ?? throw new InvalidOperationException("Persisted portfolio snapshot could not be reloaded after save.");
     }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException exception)
+        => exception.InnerException switch
+        {
+            SqliteException sqliteException
+                when sqliteException.SqliteErrorCode == 19 => true,
+            SqlException sqlException
+                when sqlException.Number is 2601 or 2627 => true,
+            _ => false
+        };
 }

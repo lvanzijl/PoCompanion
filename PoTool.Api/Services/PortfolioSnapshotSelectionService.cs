@@ -71,13 +71,16 @@ public sealed class PortfolioSnapshotSelectionService : IPortfolioSnapshotSelect
 {
     private readonly PoToolDbContext _context;
     private readonly IPortfolioSnapshotPersistenceMapper _mapper;
+    private readonly ILogger<PortfolioSnapshotSelectionService> _logger;
 
     public PortfolioSnapshotSelectionService(
         PoToolDbContext context,
-        IPortfolioSnapshotPersistenceMapper mapper)
+        IPortfolioSnapshotPersistenceMapper mapper,
+        ILogger<PortfolioSnapshotSelectionService> logger)
     {
         _context = context;
         _mapper = mapper;
+        _logger = logger;
     }
 
     public async Task<PersistedPortfolioSnapshot?> GetLatestAsync(
@@ -85,12 +88,12 @@ public sealed class PortfolioSnapshotSelectionService : IPortfolioSnapshotSelect
         CancellationToken cancellationToken,
         bool includeArchived = false)
     {
-        var entity = await BuildProductQuery(productId, includeArchived)
-            .OrderByDescending(snapshot => snapshot.TimestampUtc)
-            .ThenByDescending(snapshot => snapshot.SnapshotId)
-            .FirstOrDefaultAsync(cancellationToken);
+        var header = (await GetCanonicalProductHeadersAsync(productId, includeArchived, cancellationToken))
+            .FirstOrDefault();
 
-        return entity is null ? null : _mapper.ToPersistedModel(entity);
+        return header is null
+            ? null
+            : await LoadPersistedSnapshotAsync(header.SnapshotId, cancellationToken);
     }
 
     public async Task<PersistedPortfolioSnapshot?> GetPreviousAsync(
@@ -98,13 +101,13 @@ public sealed class PortfolioSnapshotSelectionService : IPortfolioSnapshotSelect
         CancellationToken cancellationToken,
         bool includeArchived = false)
     {
-        var entity = await BuildProductQuery(productId, includeArchived)
-            .OrderByDescending(snapshot => snapshot.TimestampUtc)
-            .ThenByDescending(snapshot => snapshot.SnapshotId)
+        var header = (await GetCanonicalProductHeadersAsync(productId, includeArchived, cancellationToken))
             .Skip(1)
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefault();
 
-        return entity is null ? null : _mapper.ToPersistedModel(entity);
+        return header is null
+            ? null
+            : await LoadPersistedSnapshotAsync(header.SnapshotId, cancellationToken);
     }
 
     public async Task<PersistedPortfolioSnapshot?> GetLatestBeforeAsync(
@@ -114,13 +117,14 @@ public sealed class PortfolioSnapshotSelectionService : IPortfolioSnapshotSelect
         bool includeArchived = false)
     {
         var timestampUtc = timestamp.UtcDateTime;
-        var entity = await BuildProductQuery(productId, includeArchived)
-            .Where(snapshot => snapshot.TimestampUtc < timestampUtc)
-            .OrderByDescending(snapshot => snapshot.TimestampUtc)
-            .ThenByDescending(snapshot => snapshot.SnapshotId)
-            .FirstOrDefaultAsync(cancellationToken);
+        var header = (await GetCanonicalProductHeadersAsync(productId, includeArchived, cancellationToken))
+            .FirstOrDefault(snapshot =>
+                snapshot.TimestampUtc < timestampUtc
+                || snapshot.TimestampUtc == timestampUtc);
 
-        return entity is null ? null : _mapper.ToPersistedModel(entity);
+        return header is null
+            ? null
+            : await LoadPersistedSnapshotAsync(header.SnapshotId, cancellationToken);
     }
 
     public async Task<PortfolioSnapshotGroupSelection?> GetLatestPortfolioSnapshotAsync(
@@ -252,7 +256,29 @@ public sealed class PortfolioSnapshotSelectionService : IPortfolioSnapshotSelect
             return null;
         }
 
-        var snapshots = entities
+        var canonicalEntities = entities
+            .GroupBy(entity => entity.ProductId)
+            .Select(group =>
+            {
+                var orderedEntities = group
+                    .OrderByDescending(entity => entity.SnapshotId)
+                    .ToArray();
+                if (orderedEntities.Length > 1)
+                {
+                    _logger.LogWarning(
+                        "Duplicate logical portfolio snapshots detected for ProductId {ProductId}, TimestampUtc {TimestampUtc}, Source {Source}. Using SnapshotId {SnapshotId} as canonical.",
+                        group.Key,
+                        timestampUtc,
+                        source.Trim(),
+                        orderedEntities[0].SnapshotId);
+                }
+
+                return orderedEntities[0];
+            })
+            .OrderBy(entity => entity.ProductId)
+            .ToArray();
+
+        var snapshots = canonicalEntities
             .Select(_mapper.ToPersistedModel)
             .ToArray();
 
@@ -270,7 +296,7 @@ public sealed class PortfolioSnapshotSelectionService : IPortfolioSnapshotSelect
             snapshots.Max(snapshot => snapshot.SnapshotId),
             snapshots[0].Source,
             combinedSnapshot,
-            entities.Any(entity => entity.IsArchived));
+            canonicalEntities.Any(entity => entity.IsArchived));
     }
 
     public Task<bool> HasArchivedPortfolioSnapshotsAsync(
@@ -294,7 +320,6 @@ public sealed class PortfolioSnapshotSelectionService : IPortfolioSnapshotSelect
     {
         var query = _context.PortfolioSnapshots
             .AsNoTracking()
-            .Include(snapshot => snapshot.Items)
             .Where(snapshot => snapshot.ProductId == productId);
 
         return includeArchived ? query : query.Where(snapshot => !snapshot.IsArchived);
@@ -313,6 +338,47 @@ public sealed class PortfolioSnapshotSelectionService : IPortfolioSnapshotSelect
     {
         return BuildPortfolioQuery(productIds, includeArchived)
             .Include(snapshot => snapshot.Items);
+    }
+
+    private async Task<IReadOnlyList<ProductSnapshotHeader>> GetCanonicalProductHeadersAsync(
+        int productId,
+        bool includeArchived,
+        CancellationToken cancellationToken)
+    {
+        var headers = await BuildProductQuery(productId, includeArchived)
+            .GroupBy(snapshot => new { snapshot.ProductId, snapshot.TimestampUtc, snapshot.Source })
+            .Select(group => new ProductSnapshotHeader(
+                group.Key.TimestampUtc,
+                group.Key.Source,
+                group.Max(snapshot => snapshot.SnapshotId),
+                group.Count()))
+            .OrderByDescending(snapshot => snapshot.TimestampUtc)
+            .ThenByDescending(snapshot => snapshot.SnapshotId)
+            .ToListAsync(cancellationToken);
+
+        foreach (var duplicate in headers.Where(header => header.DuplicateCount > 1))
+        {
+            _logger.LogWarning(
+                "Duplicate logical portfolio snapshots detected for ProductId {ProductId}, TimestampUtc {TimestampUtc}, Source {Source}. Using SnapshotId {SnapshotId} as canonical.",
+                productId,
+                duplicate.TimestampUtc,
+                duplicate.Source,
+                duplicate.SnapshotId);
+        }
+
+        return headers;
+    }
+
+    private async Task<PersistedPortfolioSnapshot?> LoadPersistedSnapshotAsync(
+        long snapshotId,
+        CancellationToken cancellationToken)
+    {
+        var entity = await _context.PortfolioSnapshots
+            .AsNoTracking()
+            .Include(snapshot => snapshot.Items)
+            .SingleOrDefaultAsync(snapshot => snapshot.SnapshotId == snapshotId, cancellationToken);
+
+        return entity is null ? null : _mapper.ToPersistedModel(entity);
     }
 
     private async Task<IReadOnlyList<PortfolioSnapshotGroupHeader>> GetOrderedPortfolioGroupsAsync(
@@ -372,4 +438,10 @@ public sealed class PortfolioSnapshotSelectionService : IPortfolioSnapshotSelect
         DateTime TimestampUtc,
         string Source,
         long MaxSnapshotId);
+
+    private sealed record ProductSnapshotHeader(
+        DateTime TimestampUtc,
+        string Source,
+        long SnapshotId,
+        int DuplicateCount);
 }

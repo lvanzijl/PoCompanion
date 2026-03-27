@@ -44,24 +44,15 @@ public sealed record PortfolioReadModelComparisonState(
 public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateService
 {
     private readonly PoToolDbContext _context;
-    private readonly IPortfolioSnapshotCaptureDataService _captureDataService;
-    private readonly IPortfolioSnapshotFactory _portfolioSnapshotFactory;
-    private readonly IPortfolioSnapshotPersistenceService _persistenceService;
     private readonly IPortfolioSnapshotSelectionService _selectionService;
     private readonly IProductAggregationService _productAggregationService;
 
     public PortfolioReadModelStateService(
         PoToolDbContext context,
-        IPortfolioSnapshotCaptureDataService captureDataService,
-        IPortfolioSnapshotFactory portfolioSnapshotFactory,
-        IPortfolioSnapshotPersistenceService persistenceService,
         IPortfolioSnapshotSelectionService selectionService,
         IProductAggregationService productAggregationService)
     {
         _context = context;
-        _captureDataService = captureDataService;
-        _portfolioSnapshotFactory = portfolioSnapshotFactory;
-        _persistenceService = persistenceService;
         _selectionService = selectionService;
         _productAggregationService = productAggregationService;
     }
@@ -221,55 +212,7 @@ public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateSer
         }
 
         var productNames = products.ToDictionary(product => product.Id, product => product.Name);
-        var productIds = productNames.Keys.ToList();
-        await EnsureLatestSourcesPersistedAsync(productOwnerId, productIds, cancellationToken);
-        return new PortfolioOwnerContext(productIds, productNames);
-    }
-
-    private async Task EnsureLatestSourcesPersistedAsync(
-        int productOwnerId,
-        IReadOnlyCollection<int> productIds,
-        CancellationToken cancellationToken)
-    {
-        var snapshotSources = await _captureDataService.GetLatestSourcesAsync(productIds, cancellationToken);
-
-        foreach (var source in snapshotSources
-                     .OrderBy(snapshotSource => snapshotSource.EndDateUtc)
-                     .ThenBy(snapshotSource => snapshotSource.SprintId))
-        {
-            var inputsByProduct = await _captureDataService.BuildSnapshotInputsByProductAsync(productOwnerId, source, cancellationToken);
-
-            foreach (var productGroup in inputsByProduct.OrderBy(group => group.Key))
-            {
-                var existing = await _persistenceService.GetBySourceAsync(
-                    productGroup.Key,
-                    source.Source,
-                    source.Timestamp,
-                    cancellationToken);
-                if (existing is not null)
-                {
-                    continue;
-                }
-
-                var previousSnapshot = await _selectionService.GetLatestBeforeAsync(
-                    productGroup.Key,
-                    source.Timestamp,
-                    cancellationToken,
-                    includeArchived: true);
-
-                var snapshot = _portfolioSnapshotFactory.Create(new PortfolioSnapshotFactoryRequest(
-                    source.Timestamp,
-                    productGroup.Value,
-                    previousSnapshot?.Snapshot));
-
-                await _persistenceService.PersistAsync(
-                    productGroup.Key,
-                    source.Source,
-                    createdBy: null,
-                    snapshot,
-                    cancellationToken);
-            }
-        }
+        return new PortfolioOwnerContext(productNames.Keys.OrderBy(productId => productId).ToArray(), productNames);
     }
 
     private static int NormalizeSnapshotCount(int snapshotCount)

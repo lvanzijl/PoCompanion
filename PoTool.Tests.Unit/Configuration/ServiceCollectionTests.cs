@@ -119,6 +119,7 @@ public class ServiceCollectionTests
         var portfolioSnapshotCaptureDataService = scope.ServiceProvider.GetService<IPortfolioSnapshotCaptureDataService>();
         var portfolioSnapshotPersistenceService = scope.ServiceProvider.GetService<IPortfolioSnapshotPersistenceService>();
         var portfolioSnapshotSelectionService = scope.ServiceProvider.GetService<IPortfolioSnapshotSelectionService>();
+        var portfolioSnapshotCaptureOrchestrator = scope.ServiceProvider.GetService<IPortfolioSnapshotCaptureOrchestrator>();
         var portfolioReadModelStateService = scope.ServiceProvider.GetService<IPortfolioReadModelStateService>();
         var portfolioReadModelMapper = scope.ServiceProvider.GetService<IPortfolioReadModelMapper>();
         var portfolioTrendAnalysisService = scope.ServiceProvider.GetService<IPortfolioTrendAnalysisService>();
@@ -162,6 +163,7 @@ public class ServiceCollectionTests
         Assert.IsNotNull(portfolioSnapshotCaptureDataService, "Portfolio snapshot capture-data service should be registered.");
         Assert.IsNotNull(portfolioSnapshotPersistenceService, "Portfolio snapshot persistence service should be registered.");
         Assert.IsNotNull(portfolioSnapshotSelectionService, "Portfolio snapshot selection service should be registered.");
+        Assert.IsNotNull(portfolioSnapshotCaptureOrchestrator, "Portfolio snapshot capture orchestrator should be registered.");
         Assert.IsNotNull(portfolioReadModelStateService, "Portfolio read-model state service should be registered.");
         Assert.IsNotNull(portfolioReadModelMapper, "Portfolio read-model mapper should be registered.");
         Assert.IsNotNull(portfolioTrendAnalysisService, "Portfolio trend analysis service should be registered.");

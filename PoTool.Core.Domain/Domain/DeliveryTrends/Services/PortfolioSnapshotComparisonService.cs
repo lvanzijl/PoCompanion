@@ -36,7 +36,7 @@ public sealed class PortfolioSnapshotValidationService : IPortfolioSnapshotValid
         ArgumentNullException.ThrowIfNull(candidateSnapshot);
 
         var priorSnapshots = existingSnapshots
-            .Where(snapshot => snapshot.Timestamp < candidateSnapshot.Timestamp)
+            .Where(snapshot => snapshot.Timestamp <= candidateSnapshot.Timestamp)
             .OrderBy(snapshot => snapshot.Timestamp)
             .ToList();
 

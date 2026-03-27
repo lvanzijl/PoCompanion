@@ -708,7 +708,8 @@ public class PoToolDbContext : DbContext
         {
             entity.HasKey(e => e.SnapshotId);
 
-            entity.HasIndex(e => new { e.ProductId, e.TimestampUtc });
+            entity.HasIndex(e => new { e.ProductId, e.TimestampUtc, e.Source })
+                .IsUnique();
             entity.HasIndex(e => new { e.ProductId, e.IsArchived, e.TimestampUtc, e.SnapshotId });
 
             entity.Property(e => e.Source).HasMaxLength(200).IsRequired();
