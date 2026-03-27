@@ -238,6 +238,34 @@ public sealed class PortfolioReadModelStateServiceTests
             state.Snapshots.Select(snapshot => snapshot.Source).ToArray());
     }
 
+    [TestMethod]
+    public async Task GetHistoryStateAsync_ReturnsNullWhenSnapshotCountIsNonPositive()
+    {
+        await using var context = new PoToolDbContext(_options);
+        var (profileId, productId) = await SeedOwnerAndProductAsync(context);
+        var persistence = CreatePersistenceService(context);
+        await persistence.PersistAsync(
+            productId,
+            "Sprint 1",
+            null,
+            new PortfolioSnapshot(
+                new DateTimeOffset(2026, 3, 7, 0, 0, 0, TimeSpan.Zero),
+                []),
+            CancellationToken.None);
+
+        var zeroState = await CreateStateService(context).GetHistoryStateAsync(
+            profileId,
+            new PortfolioReadQueryOptions(SnapshotCount: 0),
+            CancellationToken.None);
+        var negativeState = await CreateStateService(context).GetHistoryStateAsync(
+            profileId,
+            new PortfolioReadQueryOptions(SnapshotCount: -1),
+            CancellationToken.None);
+
+        Assert.IsNull(zeroState);
+        Assert.IsNull(negativeState);
+    }
+
     private PortfolioReadModelStateService CreateStateService(PoToolDbContext context)
         => new(
             context,
