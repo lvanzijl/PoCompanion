@@ -13,9 +13,6 @@
                 <MudIcon Icon="@Icons.Material.Filled.Visibility" Class="mr-2" />
                 CDC Portfolio History View
             </MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                Read-only progress, history, lifecycle, and decision signals from persisted CDC snapshots.
-            </MudText>
         </MudStack>
 
         <MudButton Variant="Variant.Outlined"
@@ -153,225 +150,306 @@
 
         @if (_progress?.HasData == true)
         {
-            <MudGrid Class="mb-3">
-                <MudItem xs="12" md="4">
-                    <MudPaper Outlined="true" Class="pa-3">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Latest snapshot</MudText>
-                        <MudText Typo="Typo.subtitle1">@_progress.SnapshotLabel</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@_progress.SnapshotTimestamp.ToString("yyyy-MM-dd")</MudText>
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" md="4">
-                    <MudPaper Outlined="true" Class="pa-3">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Portfolio progress</MudText>
-                        <MudText Typo="Typo.subtitle1">@FormatPercent(_progress.PortfolioProgress)</MudText>
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" md="4">
-                    <MudPaper Outlined="true" Class="pa-3">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Visible rows</MudText>
-                        <MudText Typo="Typo.subtitle1">@($"{_progress.FilteredItemCount} / {_progress.TotalItemCount}")</MudText>
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" md="4">
-                    <MudPaper Outlined="true" Class="pa-3">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Comparison baseline</MudText>
-                        <MudText Typo="Typo.subtitle1">@(_comparison?.PreviousSnapshotLabel ?? "Previous snapshot")</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@FormatDate(_comparison?.PreviousTimestamp)</MudText>
-                    </MudPaper>
-                </MudItem>
-            </MudGrid>
+            <MudPaper Outlined="true" Class="pa-4 mb-4">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Portfolio summary</MudText>
+                    <MudText Typo="Typo.h6">@_progress.SnapshotLabel</MudText>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Wrap="Wrap.Wrap">
+                        <MudText Typo="Typo.h4">Progress: @FormatPercent(_progress.PortfolioProgress)</MudText>
+                        @if (GetPortfolioProgressDelta() is double portfolioDelta)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="@GetTrendColorFromValue(portfolioDelta)" Variant="Variant.Text">
+                                @FormatDeltaWithDirection(portfolioDelta)
+                            </MudChip>
+                        }
+                    </MudStack>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@GetPortfolioDeltaContext()</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Total weight: @FormatNumber(_progress.TotalWeight)</MudText>
+                    @if (!string.IsNullOrWhiteSpace(GetArchivedHistorySummary()))
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@GetArchivedHistorySummary()</MudText>
+                    }
+                </MudStack>
+            </MudPaper>
         }
 
-        @if (_trend?.ArchivedSnapshotsExcludedNotice == true && !_includeArchivedSnapshots)
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Decision signal</MudText>
+        @if (GetPrimarySignalDisplay() is { } primarySignal)
         {
-            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
-                Archived snapshots exist in the selected history window and remain excluded until you enable archived history.
+            <MudAlert Severity="@primarySignal.Severity" Variant="Variant.Filled" Class="mb-2">
+                <MudText Typo="Typo.h6">@primarySignal.Title</MudText>
+                <MudText Typo="Typo.body1">@primarySignal.Summary</MudText>
             </MudAlert>
+
+            @if (!string.IsNullOrWhiteSpace(GetSecondarySignalSummary()))
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-4 ml-1">@GetSecondarySignalSummary()</MudText>
+            }
         }
-        else if (_trend?.IncludesArchivedSnapshots == true)
+        else
         {
-            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
-                Historical trends and signals currently include archived persisted snapshots.
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-4">
+                <MudText Typo="Typo.subtitle2">No dominant signal in the selected history.</MudText>
+                <MudText Typo="Typo.body2">Persisted CDC history is available, but no priority signal stands out for immediate action.</MudText>
             </MudAlert>
         }
 
-        <MudText Typo="Typo.subtitle1" Class="mb-2">Trend history</MudText>
-        @if (_trend?.HasData == true)
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Trend Overview</MudText>
+        @if (GetTrendOverviewRows() is { Count: > 0 } trendOverviewRows)
         {
-            <MudTable T="PortfolioHistoricalSnapshotDto" Items="_trend.Snapshots" Dense="true" Hover="true">
+            <MudTable T="TrendOverviewRow" Items="trendOverviewRows" Dense="true" Hover="true" Class="mb-4">
                 <HeaderContent>
                     <MudTh>Snapshot</MudTh>
                     <MudTh>Date</MudTh>
-                    <MudTh>Portfolio progress</MudTh>
-                    <MudTh>Total weight</MudTh>
-                    <MudTh>Archived</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="Snapshot">@context.SnapshotLabel</MudTd>
-                    <MudTd DataLabel="Date">@context.Timestamp.ToString("yyyy-MM-dd")</MudTd>
-                    <MudTd DataLabel="Portfolio progress">@FormatRatio(FindPointValue(_trend.PortfolioProgressTrend.Points, context.SnapshotId))</MudTd>
-                    <MudTd DataLabel="Total weight">@FormatNumber(FindPointValue(_trend.TotalWeightTrend.Points, context.SnapshotId))</MudTd>
-                    <MudTd DataLabel="Archived">@(context.IncludesArchivedSnapshot ? "Included" : "Active-only")</MudTd>
-                </RowTemplate>
-            </MudTable>
-        }
-        else
-        {
-            <MudText Typo="Typo.body2">No persisted history is available for the selected scope.</MudText>
-        }
-
-        <MudDivider Class="my-4" />
-
-        <MudText Typo="Typo.subtitle1" Class="mb-2">Decision signals</MudText>
-        @if (_signals.Count > 0)
-        {
-            <MudStack Spacing="1" Class="mb-4">
-                @foreach (var signal in _signals)
-                {
-                    <MudAlert Severity="@GetSignalSeverity(signal.Tone)" Dense="true" Variant="Variant.Outlined">
-                        <MudText Typo="Typo.body2"><strong>@signal.Title</strong></MudText>
-                        <MudText Typo="Typo.body2">@signal.Description</MudText>
-                    </MudAlert>
-                }
-            </MudStack>
-        }
-        else
-        {
-            <MudText Typo="Typo.body2" Class="mb-4">No decision signals are available for the selected persisted history.</MudText>
-        }
-
-        <MudText Typo="Typo.subtitle1" Class="mb-2">Project trends</MudText>
-        @if (_trend?.Projects.Count > 0)
-        {
-            <MudTable T="PortfolioScopedTrendDto" Items="_trend.Projects" Dense="true" Hover="true">
-                <HeaderContent>
-                    <MudTh>Product</MudTh>
-                    <MudTh>Project</MudTh>
-                    <MudTh>Lifecycle</MudTh>
-                    <MudTh>Current progress</MudTh>
-                    <MudTh>Previous progress</MudTh>
-                    <MudTh>Δ Progress</MudTh>
-                    <MudTh>Direction</MudTh>
-                    <MudTh>Current weight</MudTh>
-                    <MudTh>Previous weight</MudTh>
-                    <MudTh>Δ Weight</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="Product">@context.ProductName</MudTd>
-                    <MudTd DataLabel="Project">@context.ProjectNumber</MudTd>
-                    <MudTd DataLabel="Lifecycle">@FormatLifecycle(context.CurrentLifecycleState)</MudTd>
-                    <MudTd DataLabel="Current progress">@FormatRatio(context.ProgressTrend.CurrentValue)</MudTd>
-                    <MudTd DataLabel="Previous progress">@FormatRatio(context.ProgressTrend.PreviousValue)</MudTd>
-                    <MudTd DataLabel="Δ Progress">@FormatSignedRatio(context.ProgressTrend.Delta)</MudTd>
-                    <MudTd DataLabel="Direction">@FormatDirection(context.ProgressTrend.Direction)</MudTd>
-                    <MudTd DataLabel="Current weight">@FormatNumber(context.WeightTrend.CurrentValue)</MudTd>
-                    <MudTd DataLabel="Previous weight">@FormatNumber(context.WeightTrend.PreviousValue)</MudTd>
-                    <MudTd DataLabel="Δ Weight">@FormatSignedNumber(context.WeightTrend.Delta)</MudTd>
-                </RowTemplate>
-            </MudTable>
-        }
-        else
-        {
-            <MudText Typo="Typo.body2">No project trends available.</MudText>
-        }
-
-        <MudDivider Class="my-4" />
-
-        <MudText Typo="Typo.subtitle1" Class="mb-2">Work package trends</MudText>
-        @if (_trend?.WorkPackages.Count > 0)
-        {
-            <MudTable T="PortfolioScopedTrendDto" Items="_trend.WorkPackages" Dense="true" Hover="true">
-                <HeaderContent>
-                    <MudTh>Product</MudTh>
-                    <MudTh>Project</MudTh>
-                    <MudTh>Work Package</MudTh>
-                    <MudTh>Lifecycle</MudTh>
-                    <MudTh>Current progress</MudTh>
-                    <MudTh>Previous progress</MudTh>
-                    <MudTh>Δ Progress</MudTh>
-                    <MudTh>Direction</MudTh>
-                    <MudTh>Current weight</MudTh>
-                    <MudTh>Previous weight</MudTh>
-                    <MudTh>Δ Weight</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="Product">@context.ProductName</MudTd>
-                    <MudTd DataLabel="Project">@context.ProjectNumber</MudTd>
-                    <MudTd DataLabel="Work Package">@(context.WorkPackage ?? "—")</MudTd>
-                    <MudTd DataLabel="Lifecycle">@FormatLifecycle(context.CurrentLifecycleState)</MudTd>
-                    <MudTd DataLabel="Current progress">@FormatRatio(context.ProgressTrend.CurrentValue)</MudTd>
-                    <MudTd DataLabel="Previous progress">@FormatRatio(context.ProgressTrend.PreviousValue)</MudTd>
-                    <MudTd DataLabel="Δ Progress">@FormatSignedRatio(context.ProgressTrend.Delta)</MudTd>
-                    <MudTd DataLabel="Direction">@FormatDirection(context.ProgressTrend.Direction)</MudTd>
-                    <MudTd DataLabel="Current weight">@FormatNumber(context.WeightTrend.CurrentValue)</MudTd>
-                    <MudTd DataLabel="Previous weight">@FormatNumber(context.WeightTrend.PreviousValue)</MudTd>
-                    <MudTd DataLabel="Δ Weight">@FormatSignedNumber(context.WeightTrend.Delta)</MudTd>
-                </RowTemplate>
-            </MudTable>
-        }
-        else
-        {
-            <MudText Typo="Typo.body2">No work package trends available.</MudText>
-        }
-
-        <MudText Typo="Typo.subtitle1" Class="mb-2">Current snapshot</MudText>
-        @if (_snapshot?.HasData == true)
-        {
-            <MudTable T="PortfolioSnapshotItemDto" Items="_snapshot.Items" Dense="true" Hover="true">
-                <HeaderContent>
-                    <MudTh>Product</MudTh>
-                    <MudTh>Project</MudTh>
-                    <MudTh>Work Package</MudTh>
-                    <MudTh>Lifecycle</MudTh>
                     <MudTh>Progress</MudTh>
-                    <MudTh>Weight</MudTh>
+                    <MudTh>Δ</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="Product">@context.ProductName</MudTd>
-                    <MudTd DataLabel="Project">@context.ProjectNumber</MudTd>
-                    <MudTd DataLabel="Work Package">@(context.WorkPackage ?? "—")</MudTd>
-                    <MudTd DataLabel="Lifecycle">@context.LifecycleState</MudTd>
+                    <MudTd DataLabel="Snapshot">
+                        <MudText Typo="Typo.body2">@context.SnapshotLabel</MudText>
+                        @if (context.IncludesArchivedSnapshot)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Includes archived</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Date">@context.Timestamp.ToString("yyyy-MM-dd")</MudTd>
                     <MudTd DataLabel="Progress">@FormatRatio(context.Progress)</MudTd>
-                    <MudTd DataLabel="Weight">@($"{context.Weight:F1}")</MudTd>
+                    <MudTd DataLabel="Δ">
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetTrendColorFromDirection(context.Direction)">
+                            @FormatTrendOverviewDelta(context.Delta)
+                        </MudChip>
+                    </MudTd>
                 </RowTemplate>
             </MudTable>
         }
         else
         {
-            <MudText Typo="Typo.body2">No snapshot rows available.</MudText>
+            <MudText Typo="Typo.body2" Class="mb-4">No persisted history is available for the selected scope.</MudText>
         }
 
-        <MudDivider Class="my-4" />
-
-        <MudText Typo="Typo.subtitle1" Class="mb-2">Snapshot comparison</MudText>
-        @if (_comparison?.HasData == true)
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Changed Work Packages</MudText>
+        @if (GetChangedWorkPackageItems() is { Count: > 0 } changedWorkPackages)
         {
-            <MudTable T="PortfolioComparisonItemDto" Items="_comparison.Items" Dense="true" Hover="true">
+            <MudTable T="PortfolioComparisonItemDto" Items="changedWorkPackages" Dense="true" Hover="true" Class="mb-4">
                 <HeaderContent>
                     <MudTh>Product</MudTh>
                     <MudTh>Project</MudTh>
                     <MudTh>Work Package</MudTh>
-                    <MudTh>Previous</MudTh>
-                    <MudTh>Current</MudTh>
-                    <MudTh>Δ Progress</MudTh>
-                    <MudTh>Δ Weight</MudTh>
+                    <MudTh>Progress</MudTh>
+                    <MudTh>Lifecycle</MudTh>
+                    <MudTh>Weight Δ</MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Product">@context.ProductName</MudTd>
                     <MudTd DataLabel="Project">@context.ProjectNumber</MudTd>
                     <MudTd DataLabel="Work Package">@(context.WorkPackage ?? "—")</MudTd>
-                    <MudTd DataLabel="Previous">@($"{FormatLifecycle(context.PreviousLifecycleState)} / {FormatRatio(context.PreviousProgress)}")</MudTd>
-                    <MudTd DataLabel="Current">@($"{FormatLifecycle(context.CurrentLifecycleState)} / {FormatRatio(context.CurrentProgress)}")</MudTd>
-                    <MudTd DataLabel="Δ Progress">@FormatSignedRatio(context.ProgressDelta)</MudTd>
-                    <MudTd DataLabel="Δ Weight">@FormatSignedNumber(context.WeightDelta)</MudTd>
+                    <MudTd DataLabel="Progress">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudText Typo="Typo.body2">@FormatRatio(context.CurrentProgress)</MudText>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetChangedDeltaColor(context)">
+                                @GetChangedWorkPackageDeltaText(context)
+                            </MudChip>
+                            @if (!string.IsNullOrWhiteSpace(GetChangeReasonSummary(context)))
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@GetChangeReasonSummary(context)</MudText>
+                            }
+                        </MudStack>
+                    </MudTd>
+                    <MudTd DataLabel="Lifecycle">
+                        <MudStack Spacing="1">
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@GetLifecycleBadgeColor(context.CurrentLifecycleState)">
+                                @FormatLifecycle(context.CurrentLifecycleState)
+                            </MudChip>
+                            @if (HasLifecycleDelta(context))
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@GetLifecycleTransitionText(context)</MudText>
+                            }
+                        </MudStack>
+                    </MudTd>
+                    <MudTd DataLabel="Weight Δ">
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetTrendColorFromDirection(GetTrendDirection(context.WeightDelta))">
+                            @FormatSignedNumber(context.WeightDelta)
+                        </MudChip>
+                    </MudTd>
                 </RowTemplate>
             </MudTable>
         }
         else
         {
-            <MudText Typo="Typo.body2">No comparison rows available.</MudText>
+            <MudText Typo="Typo.body2" Class="mb-4">No changed work packages detected for the selected comparison baseline.</MudText>
         }
+
+        <MudExpansionPanels MultiExpansion="true" Elevation="0" Class="mb-4">
+            <MudExpansionPanel Dense="true">
+                <TitleContent>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudText Typo="Typo.subtitle2">Stable Work Packages (@GetStableWorkPackageItems().Count unchanged)</MudText>
+                    </MudStack>
+                </TitleContent>
+                <ChildContent>
+                    @if (GetStableWorkPackageItems() is { Count: > 0 } stableWorkPackages)
+                    {
+                        <MudTable T="PortfolioSnapshotItemDto" Items="stableWorkPackages" Dense="true" Hover="true">
+                            <HeaderContent>
+                                <MudTh>Product</MudTh>
+                                <MudTh>Project</MudTh>
+                                <MudTh>Work Package</MudTh>
+                                <MudTh>Progress</MudTh>
+                                <MudTh>Lifecycle</MudTh>
+                                <MudTh>Weight</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Product">@context.ProductName</MudTd>
+                                <MudTd DataLabel="Project">@context.ProjectNumber</MudTd>
+                                <MudTd DataLabel="Work Package">@(context.WorkPackage ?? "—")</MudTd>
+                                <MudTd DataLabel="Progress">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudText Typo="Typo.body2">@FormatRatio(context.Progress)</MudText>
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Default">@GetStableIndicatorText()</MudChip>
+                                    </MudStack>
+                                </MudTd>
+                                <MudTd DataLabel="Lifecycle">
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@GetLifecycleBadgeColor(context.LifecycleState)">
+                                        @context.LifecycleState
+                                    </MudChip>
+                                </MudTd>
+                                <MudTd DataLabel="Weight">@($"{context.Weight:F1}")</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">No stable work packages are available for the selected comparison baseline.</MudText>
+                    }
+                </ChildContent>
+            </MudExpansionPanel>
+
+            <MudExpansionPanel Dense="true">
+                <TitleContent>
+                    <MudText Typo="Typo.subtitle2">Project trends</MudText>
+                </TitleContent>
+                <ChildContent>
+                    @if (GetVisibleProjectTrends() is { Count: > 0 } projectTrends)
+                    {
+                        <MudTable T="PortfolioScopedTrendDto" Items="projectTrends" Dense="true" Hover="true">
+                            <HeaderContent>
+                                <MudTh>Product</MudTh>
+                                <MudTh>Project</MudTh>
+                                <MudTh>Progress</MudTh>
+                                <MudTh>Δ</MudTh>
+                                <MudTh>Weight Δ</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Product">@context.ProductName</MudTd>
+                                <MudTd DataLabel="Project">@context.ProjectNumber</MudTd>
+                                <MudTd DataLabel="Progress">@FormatRatio(context.ProgressTrend.CurrentValue)</MudTd>
+                                <MudTd DataLabel="Δ">
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetTrendColorFromDirection(context.ProgressTrend.Direction)">
+                                        @FormatDeltaWithDirection(context.ProgressTrend.Delta)
+                                    </MudChip>
+                                </MudTd>
+                                <MudTd DataLabel="Weight Δ">@FormatSignedNumber(context.WeightTrend.Delta)</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">No project-level changes detected in selected history.</MudText>
+                    }
+                </ChildContent>
+            </MudExpansionPanel>
+
+            <MudExpansionPanel Dense="true">
+                <TitleContent>
+                    <MudText Typo="Typo.subtitle2">Current snapshot</MudText>
+                </TitleContent>
+                <ChildContent>
+                    @if (_snapshot?.HasData == true)
+                    {
+                        <MudTable T="PortfolioSnapshotItemDto" Items="_snapshot.Items" Dense="true" Hover="true">
+                            <HeaderContent>
+                                <MudTh>Product</MudTh>
+                                <MudTh>Project</MudTh>
+                                <MudTh>Work Package</MudTh>
+                                <MudTh>Progress</MudTh>
+                                <MudTh>Lifecycle</MudTh>
+                                <MudTh>Weight</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                @{
+                                    var comparisonItem = FindComparisonItem(context);
+                                }
+                                <MudTd DataLabel="Product">@context.ProductName</MudTd>
+                                <MudTd DataLabel="Project">@context.ProjectNumber</MudTd>
+                                <MudTd DataLabel="Work Package">@(context.WorkPackage ?? "—")</MudTd>
+                                <MudTd DataLabel="Progress">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudText Typo="Typo.body2">@FormatRatio(context.Progress)</MudText>
+                                        @if (comparisonItem is not null && HasProgressOrWeightChange(comparisonItem))
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetProgressChangeColor(comparisonItem)">
+                                                @GetProgressChangeText(comparisonItem)
+                                            </MudChip>
+                                        }
+                                    </MudStack>
+                                </MudTd>
+                                <MudTd DataLabel="Lifecycle">
+                                    <MudStack Spacing="1">
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@GetLifecycleBadgeColor(context.LifecycleState)">
+                                            @context.LifecycleState
+                                        </MudChip>
+                                        @if (comparisonItem is not null && HasLifecycleDelta(comparisonItem))
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@GetLifecycleTransitionText(comparisonItem)</MudText>
+                                        }
+                                    </MudStack>
+                                </MudTd>
+                                <MudTd DataLabel="Weight">@($"{context.Weight:F1}")</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">No snapshot rows available.</MudText>
+                    }
+                </ChildContent>
+            </MudExpansionPanel>
+
+            <MudExpansionPanel Dense="true">
+                <TitleContent>
+                    <MudText Typo="Typo.subtitle2">Snapshot comparison</MudText>
+                </TitleContent>
+                <ChildContent>
+                    @if (GetChangedComparisonItems() is { Count: > 0 } changedComparisonItems)
+                    {
+                        <MudTable T="PortfolioComparisonItemDto" Items="changedComparisonItems" Dense="true" Hover="true">
+                            <HeaderContent>
+                                <MudTh>Product</MudTh>
+                                <MudTh>Project</MudTh>
+                                <MudTh>Work Package</MudTh>
+                                <MudTh>Previous</MudTh>
+                                <MudTh>Current</MudTh>
+                                <MudTh>Δ Progress</MudTh>
+                                <MudTh>Δ Weight</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Product">@context.ProductName</MudTd>
+                                <MudTd DataLabel="Project">@context.ProjectNumber</MudTd>
+                                <MudTd DataLabel="Work Package">@(context.WorkPackage ?? "—")</MudTd>
+                                <MudTd DataLabel="Previous">@($"{FormatLifecycle(context.PreviousLifecycleState)} / {FormatRatio(context.PreviousProgress)}")</MudTd>
+                                <MudTd DataLabel="Current">@($"{FormatLifecycle(context.CurrentLifecycleState)} / {FormatRatio(context.CurrentProgress)}")</MudTd>
+                                <MudTd DataLabel="Δ Progress">@FormatSignedRatio(context.ProgressDelta)</MudTd>
+                                <MudTd DataLabel="Δ Weight">@FormatSignedNumber(context.WeightDelta)</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">No changed comparison rows available.</MudText>
+                    }
+                </ChildContent>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
     }
 </MudPaper>
 
@@ -395,6 +473,23 @@
     private PortfolioComparisonDto? _comparison;
     private PortfolioTrendDto? _trend;
     private IReadOnlyList<PortfolioDecisionSignalDto> _signals = Array.Empty<PortfolioDecisionSignalDto>();
+    private IReadOnlyDictionary<string, PortfolioComparisonItemDto> _comparisonItemLookup = new Dictionary<string, PortfolioComparisonItemDto>(StringComparer.Ordinal);
+    private IReadOnlyList<PortfolioComparisonItemDto> _changedWorkPackageItems = Array.Empty<PortfolioComparisonItemDto>();
+    private IReadOnlyList<PortfolioSnapshotItemDto> _stableWorkPackageItems = Array.Empty<PortfolioSnapshotItemDto>();
+    private IReadOnlyList<PortfolioComparisonItemDto> _changedComparisonItems = Array.Empty<PortfolioComparisonItemDto>();
+
+    private sealed record PrimarySignalDisplay(
+        string Title,
+        string Summary,
+        Severity Severity);
+
+    private sealed record TrendOverviewRow(
+        string SnapshotLabel,
+        DateTimeOffset Timestamp,
+        double? Progress,
+        double? Delta,
+        PortfolioTrendDirection? Direction,
+        bool IncludesArchivedSnapshot);
 
     protected override async Task OnInitializedAsync()
     {
@@ -482,6 +577,8 @@
             {
                 _compareToSnapshotId = null;
             }
+
+            RebuildComparisonViewState();
         }
         catch (Exception ex)
         {
@@ -548,22 +645,27 @@
     }
 
     private static string FormatPercent(double? value)
-        => value.HasValue ? $"{value.Value:F0}%" : "—";
+        => value.HasValue ? $"{RoundWhole(value.Value):0}%" : "—";
 
     private static string FormatRatio(double? value)
-        => value.HasValue ? $"{value.Value:P0}" : "—";
+        => value.HasValue ? $"{RoundWhole(value.Value * 100):0}%" : "—";
 
     private static string FormatNumber(double? value)
         => value.HasValue ? $"{value.Value:F1}" : "—";
 
     private static string FormatSignedRatio(double? value)
-        => value.HasValue ? $"{value.Value:+0%;-0%;0%}" : "—";
+    {
+        if (!value.HasValue)
+        {
+            return "—";
+        }
+
+        var roundedPercent = RoundWhole(value.Value * 100);
+        return $"{roundedPercent:+0;-0;0}%";
+    }
 
     private static string FormatSignedNumber(double? value)
         => value.HasValue ? $"{value.Value:+0.0;-0.0;0.0}" : "—";
-
-    private static string FormatDirection(PortfolioTrendDirection? value)
-        => value?.ToString() ?? "—";
 
     private static string FormatLifecycle(PortfolioLifecycleState? value)
         => value?.ToString() ?? "—";
@@ -571,8 +673,167 @@
     private static string FormatDate(DateTimeOffset? value)
         => value.HasValue ? value.Value.ToString("yyyy-MM-dd") : "—";
 
+    private double? GetPortfolioProgressDelta()
+    {
+        var trend = _trend;
+        if (_comparison?.PreviousTimestamp is null || trend is null || trend.Snapshots.Count < 2)
+        {
+            return null;
+        }
+
+        var currentSnapshotId = trend.Snapshots[0].SnapshotId;
+        var previousSnapshotId = trend.Snapshots[1].SnapshotId;
+        var currentProgress = FindPointValue(trend.PortfolioProgressTrend.Points, currentSnapshotId);
+        var previousProgress = FindPointValue(trend.PortfolioProgressTrend.Points, previousSnapshotId);
+
+        return CalculateDisplayedRatioDelta(currentProgress, previousProgress);
+    }
+
+    private string GetPortfolioDeltaContext()
+        => _comparison?.PreviousSnapshotLabel is null
+            ? $"Snapshot date: {_progress?.SnapshotTimestamp:yyyy-MM-dd}"
+            : $"vs {GetCompactSnapshotLabel(_comparison.PreviousSnapshotLabel)} ({FormatDate(_comparison.PreviousTimestamp)})";
+
+    private string? GetArchivedHistorySummary()
+    {
+        if (_trend?.ArchivedSnapshotsExcludedNotice == true && !_includeArchivedSnapshots)
+        {
+            return "Archived snapshots exist in the selected history window and remain excluded.";
+        }
+
+        if (_trend?.IncludesArchivedSnapshots == true)
+        {
+            return "Historical trends currently include archived persisted snapshots.";
+        }
+
+        return null;
+    }
+
+    private PrimarySignalDisplay? GetPrimarySignalDisplay()
+    {
+        var primarySignal = GetPrimarySignal();
+
+        return primarySignal is null
+            ? null
+            : new PrimarySignalDisplay(primarySignal.Title, primarySignal.Description, GetSignalSeverity(primarySignal.Tone));
+    }
+
+    private string GetSecondarySignalSummary()
+    {
+        var primarySignal = GetPrimarySignal();
+        var secondarySignals = _signals
+            .Where(signal => !ReferenceEquals(signal, primarySignal))
+            .ToArray();
+
+        var summaryParts = new List<string>();
+
+        var repeatedNoChangeSummary = BuildRepeatedNoChangeSummary(secondarySignals);
+        if (!string.IsNullOrWhiteSpace(repeatedNoChangeSummary))
+        {
+            summaryParts.Add(repeatedNoChangeSummary);
+        }
+
+        var lifecycleCount = secondarySignals.Count(signal => signal.Type is PortfolioDecisionSignalType.NewWorkPackage or PortfolioDecisionSignalType.RetiredWorkPackage);
+        if (lifecycleCount > 0)
+        {
+            summaryParts.Add($"{lifecycleCount} lifecycle update{(lifecycleCount == 1 ? string.Empty : "s")}");
+        }
+
+        var noticeCount = secondarySignals.Count(signal => signal.Type == PortfolioDecisionSignalType.ArchivedSnapshotExcludedNotice);
+        if (noticeCount > 0)
+        {
+            summaryParts.Add($"{noticeCount} history notice{(noticeCount == 1 ? string.Empty : "s")}");
+        }
+
+        return string.Join(" · ", summaryParts);
+    }
+
+    private PortfolioDecisionSignalDto? GetPrimarySignal()
+        => _signals
+            .OrderBy(GetSignalPriority)
+            .ThenBy(signal => signal.Title, StringComparer.Ordinal)
+            .FirstOrDefault();
+
+    private IReadOnlyList<TrendOverviewRow> GetTrendOverviewRows()
+    {
+        var snapshots = _trend?.Snapshots ?? Array.Empty<PortfolioHistoricalSnapshotDto>();
+        if (snapshots.Count == 0)
+        {
+            return Array.Empty<TrendOverviewRow>();
+        }
+
+        var rows = new List<TrendOverviewRow>(snapshots.Count);
+        for (var index = 0; index < snapshots.Count; index++)
+        {
+            var snapshot = snapshots[index];
+            var progress = FindPointValue(_trend!.PortfolioProgressTrend.Points, snapshot.SnapshotId);
+            var nextSnapshot = index + 1 < snapshots.Count ? snapshots[index + 1] : null;
+            var nextProgress = nextSnapshot is null
+                ? null
+                : FindPointValue(_trend.PortfolioProgressTrend.Points, nextSnapshot.SnapshotId);
+            var delta = CalculateDisplayedRatioDelta(progress, nextProgress);
+
+            rows.Add(new TrendOverviewRow(
+                GetSnapshotDisplayLabel(snapshot, snapshots),
+                snapshot.Timestamp,
+                progress,
+                delta,
+                GetTrendDirection(delta),
+                snapshot.IncludesArchivedSnapshot));
+        }
+
+        return rows;
+    }
+
+    private IReadOnlyList<PortfolioScopedTrendDto> GetVisibleProjectTrends()
+        => (_trend?.Projects ?? Array.Empty<PortfolioScopedTrendDto>())
+            .Where(HasScopedTrendData)
+            .ToArray();
+
+    private IReadOnlyList<PortfolioComparisonItemDto> GetChangedWorkPackageItems()
+        => _changedWorkPackageItems;
+
+    private IReadOnlyList<PortfolioSnapshotItemDto> GetStableWorkPackageItems()
+        => _stableWorkPackageItems;
+
+    private IReadOnlyList<PortfolioComparisonItemDto> GetChangedComparisonItems()
+        => _changedComparisonItems;
+
     private static double? FindPointValue(IReadOnlyList<PortfolioTrendPointDto> points, long snapshotId)
         => points.FirstOrDefault(point => point.SnapshotId == snapshotId)?.Value;
+
+    private PortfolioComparisonItemDto? FindComparisonItem(PortfolioSnapshotItemDto item)
+        => _comparisonItemLookup.GetValueOrDefault(GetComparisonItemKey(item.ProductId, item.ProjectNumber, item.WorkPackage));
+
+    private void RebuildComparisonViewState()
+    {
+        var comparisonItems = _comparison?.Items ?? Array.Empty<PortfolioComparisonItemDto>();
+        var snapshotItems = _snapshot?.Items ?? Array.Empty<PortfolioSnapshotItemDto>();
+
+        _comparisonItemLookup = comparisonItems.ToDictionary(
+            item => GetComparisonItemKey(item.ProductId, item.ProjectNumber, item.WorkPackage),
+            StringComparer.Ordinal);
+
+        _changedWorkPackageItems = comparisonItems
+            .Where(item => item.WorkPackage is not null && IsComparisonItemChanged(item))
+            .ToArray();
+
+        _changedComparisonItems = comparisonItems
+            .Where(IsComparisonItemChanged)
+            .ToArray();
+
+        _stableWorkPackageItems = snapshotItems
+            .Where(item => item.WorkPackage is not null)
+            .Where(item =>
+            {
+                var comparisonItem = FindComparisonItem(item);
+                return comparisonItem is not null && !IsComparisonItemChanged(comparisonItem);
+            })
+            .ToArray();
+    }
+
+    private static string GetComparisonItemKey(int productId, string? projectNumber, string? workPackage)
+        => $"{productId}|{projectNumber ?? string.Empty}|{workPackage ?? string.Empty}";
 
     private static Severity GetSignalSeverity(PortfolioDecisionSignalTone tone)
         => tone switch
@@ -581,6 +842,274 @@
             PortfolioDecisionSignalTone.Warning => Severity.Warning,
             _ => Severity.Info
         };
+
+    private static int GetSignalPriority(PortfolioDecisionSignalDto signal)
+        => signal.Type switch
+        {
+            PortfolioDecisionSignalType.ProgressDeclining => 0,
+            PortfolioDecisionSignalType.WeightIncreasing => 1,
+            PortfolioDecisionSignalType.ProgressImproving => 2,
+            PortfolioDecisionSignalType.WeightDecreasing => 3,
+            PortfolioDecisionSignalType.NewWorkPackage => 4,
+            PortfolioDecisionSignalType.RetiredWorkPackage => 5,
+            PortfolioDecisionSignalType.RepeatedNoChange => 6,
+            PortfolioDecisionSignalType.ArchivedSnapshotExcludedNotice => 7,
+            _ => 8
+        };
+
+    private static string BuildRepeatedNoChangeSummary(IEnumerable<PortfolioDecisionSignalDto> signals)
+    {
+        var repeatedSignals = signals
+            .Where(signal => signal.Type == PortfolioDecisionSignalType.RepeatedNoChange)
+            .ToArray();
+
+        if (repeatedSignals.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var workPackageCount = repeatedSignals.Count(signal => !string.IsNullOrWhiteSpace(signal.WorkPackage));
+        var projectCount = repeatedSignals.Length - workPackageCount;
+        var summaryParts = new List<string>();
+
+        if (workPackageCount > 0)
+        {
+            summaryParts.Add($"{workPackageCount} work package{(workPackageCount == 1 ? string.Empty : "s")}");
+        }
+
+        if (projectCount > 0)
+        {
+            summaryParts.Add($"{projectCount} project{(projectCount == 1 ? string.Empty : "s")}");
+        }
+
+        return $"No change ({string.Join(", ", summaryParts)})";
+    }
+
+    private static bool HasScopedTrendData(PortfolioScopedTrendDto trend)
+        => trend.CurrentLifecycleState is not null
+           || trend.PreviousLifecycleState is not null
+           || trend.ProgressTrend.CurrentValue.HasValue
+           || trend.ProgressTrend.PreviousValue.HasValue
+           || trend.ProgressTrend.Delta.HasValue
+           || trend.ProgressTrend.Direction.HasValue
+           || trend.WeightTrend.CurrentValue.HasValue
+           || trend.WeightTrend.PreviousValue.HasValue
+           || trend.WeightTrend.Delta.HasValue
+           || trend.WeightTrend.Direction.HasValue;
+
+    private static string GetTrendGlyph(PortfolioTrendDirection? direction)
+        => direction switch
+        {
+            PortfolioTrendDirection.Increasing => "↑",
+            PortfolioTrendDirection.Decreasing => "↓",
+            PortfolioTrendDirection.Stable => "→",
+            _ => "—"
+        };
+
+    private static string FormatDeltaWithDirection(double? value)
+        => value.HasValue
+            ? $"{FormatSignedRatio(value)} {GetTrendGlyph(GetTrendDirection(value))}"
+            : "—";
+
+    private static string FormatTrendOverviewDelta(double? value)
+        => value.HasValue
+            ? FormatDeltaWithDirection(value)
+            : "— →";
+
+    // Trend deltas must match the rounded percentages shown to the user, so compare display values instead of raw ratios.
+    private static double? CalculateDisplayedRatioDelta(double? currentValue, double? previousValue)
+    {
+        if (!currentValue.HasValue || !previousValue.HasValue)
+        {
+            return null;
+        }
+
+        var currentPercent = RoundWhole(currentValue.Value * 100);
+        var previousPercent = RoundWhole(previousValue.Value * 100);
+        return (currentPercent - previousPercent) / 100d;
+    }
+
+    // Use AwayFromZero so 22.5% displays as 23%, matching the visible percentage-based trend comparison.
+    private static double RoundWhole(double value)
+        => Math.Round(value, 0, MidpointRounding.AwayFromZero);
+
+    private static Color GetTrendColorFromDirection(PortfolioTrendDirection? direction)
+        => direction switch
+        {
+            PortfolioTrendDirection.Increasing => Color.Success,
+            PortfolioTrendDirection.Decreasing => Color.Warning,
+            PortfolioTrendDirection.Stable => Color.Info,
+            _ => Color.Default
+        };
+
+    private static Color GetTrendColorFromValue(double value)
+        => value switch
+        {
+            > 0 => Color.Success,
+            < 0 => Color.Warning,
+            _ => Color.Info
+        };
+
+    private static PortfolioTrendDirection? GetTrendDirection(double? value)
+        => value switch
+        {
+            > 0 => PortfolioTrendDirection.Increasing,
+            < 0 => PortfolioTrendDirection.Decreasing,
+            0 => PortfolioTrendDirection.Stable,
+            _ => null
+        };
+
+    private static bool IsComparisonItemChanged(PortfolioComparisonItemDto comparisonItem)
+        => HasProgressOrWeightChange(comparisonItem)
+           || HasLifecycleDelta(comparisonItem);
+
+    private static bool HasProgressOrWeightChange(PortfolioComparisonItemDto comparisonItem)
+        => HasNonZeroValue(comparisonItem.ProgressDelta)
+           || HasNonZeroValue(comparisonItem.WeightDelta);
+
+    private static bool HasLifecycleDelta(PortfolioComparisonItemDto comparisonItem)
+        => comparisonItem.PreviousLifecycleState != comparisonItem.CurrentLifecycleState;
+
+    private static bool HasNonZeroValue(double? value)
+        => value.HasValue && Math.Abs(value.Value) > double.Epsilon;
+
+    private static string GetLifecycleTransitionText(PortfolioComparisonItemDto comparisonItem)
+        => comparisonItem.PreviousLifecycleState is null
+            ? "Changed in latest snapshot"
+            : $"Was {FormatLifecycle(comparisonItem.PreviousLifecycleState)}";
+
+    private static Color GetLifecycleBadgeColor(PortfolioLifecycleState? lifecycleState)
+        => lifecycleState == PortfolioLifecycleState.Retired
+            ? Color.Warning
+            : Color.Success;
+
+    private static Color GetProgressChangeColor(PortfolioComparisonItemDto comparisonItem)
+    {
+        if (comparisonItem.ProgressDelta.HasValue)
+        {
+            return GetTrendColorFromDirection(GetTrendDirection(comparisonItem.ProgressDelta));
+        }
+
+        if (comparisonItem.WeightDelta.HasValue)
+        {
+            return GetTrendColorFromDirection(GetTrendDirection(comparisonItem.WeightDelta));
+        }
+
+        return HasLifecycleDelta(comparisonItem) ? Color.Warning : Color.Default;
+    }
+
+    private static string GetProgressChangeText(PortfolioComparisonItemDto comparisonItem)
+    {
+        if (comparisonItem.ProgressDelta.HasValue)
+        {
+            return FormatDeltaWithDirection(comparisonItem.ProgressDelta);
+        }
+
+        if (comparisonItem.WeightDelta.HasValue)
+        {
+            return $"{FormatSignedNumber(comparisonItem.WeightDelta)} {GetTrendGlyph(GetTrendDirection(comparisonItem.WeightDelta))}";
+        }
+
+        return "Changed";
+    }
+
+    private static string GetStableIndicatorText()
+        => "0% →";
+
+    private static string GetChangedWorkPackageDeltaText(PortfolioComparisonItemDto comparisonItem)
+    {
+        if (HasNonZeroValue(comparisonItem.ProgressDelta))
+        {
+            return FormatDeltaWithDirection(comparisonItem.ProgressDelta);
+        }
+
+        if (HasNonZeroValue(comparisonItem.WeightDelta))
+        {
+            return GetStableIndicatorText();
+        }
+
+        return "—";
+    }
+
+    private static Color GetChangedDeltaColor(PortfolioComparisonItemDto comparisonItem)
+    {
+        if (HasNonZeroValue(comparisonItem.ProgressDelta))
+        {
+            return GetTrendColorFromDirection(GetTrendDirection(comparisonItem.ProgressDelta));
+        }
+
+        if (HasNonZeroValue(comparisonItem.WeightDelta))
+        {
+            return Color.Default;
+        }
+
+        return Color.Default;
+    }
+
+    private static string GetChangeReasonSummary(PortfolioComparisonItemDto comparisonItem)
+    {
+        var reasons = new List<string>();
+
+        if (HasNonZeroValue(comparisonItem.ProgressDelta))
+        {
+            reasons.Add("Progress");
+        }
+
+        if (HasLifecycleDelta(comparisonItem))
+        {
+            reasons.Add("Lifecycle");
+        }
+
+        if (HasNonZeroValue(comparisonItem.WeightDelta))
+        {
+            reasons.Add("Weight");
+        }
+
+        return string.Join(" · ", reasons);
+    }
+
+    // When multiple persisted snapshots share the same sprint label, append a chronology hint so the trend remains unambiguous.
+    private static string GetSnapshotDisplayLabel(PortfolioHistoricalSnapshotDto snapshot, IReadOnlyList<PortfolioHistoricalSnapshotDto> snapshots)
+    {
+        var matchingSnapshots = snapshots
+            .Where(candidate => string.Equals(candidate.SnapshotLabel, snapshot.SnapshotLabel, StringComparison.Ordinal))
+            .OrderBy(candidate => candidate.Timestamp)
+            .ThenBy(candidate => candidate.SnapshotId)
+            .ToArray();
+
+        if (matchingSnapshots.Length <= 1)
+        {
+            return NormalizeSnapshotLabel(snapshot.SnapshotLabel);
+        }
+
+        var duplicateIndex = Array.FindIndex(matchingSnapshots, candidate => candidate.SnapshotId == snapshot.SnapshotId);
+        if (duplicateIndex < 0)
+        {
+            return NormalizeSnapshotLabel(snapshot.SnapshotLabel);
+        }
+
+        return $"{NormalizeSnapshotLabel(snapshot.SnapshotLabel)} ({GetSnapshotOrderingHint(duplicateIndex, matchingSnapshots.Length)})";
+    }
+
+    private static string GetSnapshotOrderingHint(int duplicateIndex, int totalCount)
+        => totalCount switch
+        {
+            <= 1 => string.Empty,
+            2 => duplicateIndex == 0 ? "earlier" : "later",
+            _ when duplicateIndex == 0 => "earliest",
+            _ when duplicateIndex == totalCount - 1 => "latest",
+            _ => $"checkpoint {duplicateIndex + 1}"
+        };
+
+    private static string GetCompactSnapshotLabel(string value)
+    {
+        var normalizedValue = NormalizeSnapshotLabel(value);
+        var separatorIndex = normalizedValue.IndexOf(" — ", StringComparison.Ordinal);
+        return separatorIndex >= 0 ? normalizedValue[..separatorIndex] : normalizedValue;
+    }
+
+    private static string NormalizeSnapshotLabel(string value)
+        => value.Replace(" - ", " — ", StringComparison.Ordinal);
 
     private static string? NullIfWhiteSpace(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
