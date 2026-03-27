@@ -30,11 +30,15 @@ public sealed class WorkItemBackfillStartProvider : IBackfillStartProvider
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
 
-        var earliest = await context.WorkItems
-            .Where(w => workItemIds.Contains(w.TfsId) && w.CreatedDate != null)
-            .Select(w => w.CreatedDate)
-            .ToListAsync(cancellationToken);
+        var earliestCreatedDateUtc = await context.WorkItems
+            .Where(w => workItemIds.Contains(w.TfsId) && w.CreatedDateUtc != null)
+            .MinAsync(w => w.CreatedDateUtc, cancellationToken);
 
-        return earliest.Count > 0 ? earliest.Min() : null;
+        if (!earliestCreatedDateUtc.HasValue)
+        {
+            return null;
+        }
+
+        return new DateTimeOffset(DateTime.SpecifyKind(earliestCreatedDateUtc.Value, DateTimeKind.Utc));
     }
 }

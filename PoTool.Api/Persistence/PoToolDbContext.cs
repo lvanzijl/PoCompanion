@@ -246,6 +246,7 @@ public class PoToolDbContext : DbContext
             entity.HasIndex(e => e.Title);
 
             entity.HasIndex(e => e.TfsChangedDateUtc);
+            entity.HasIndex(e => e.CreatedDateUtc);
         });
 
         modelBuilder.Entity<TfsConfigEntity>(entity =>

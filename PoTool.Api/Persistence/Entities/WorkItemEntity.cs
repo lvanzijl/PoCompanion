@@ -135,6 +135,11 @@ public class WorkItemEntity
     public DateTimeOffset? CreatedDate { get; set; }
 
     /// <summary>
+    /// UTC created date used in SQLite-translatable predicates/sorting.
+    /// </summary>
+    public DateTime? CreatedDateUtc { get; set; }
+
+    /// <summary>
     /// Work item closed date from TFS (Microsoft.VSTS.Common.ClosedDate).
     /// Used for tracking when bugs were fixed/completed.
     /// </summary>

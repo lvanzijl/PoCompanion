@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using PoTool.Api.Handlers.BuildQuality;
@@ -12,27 +13,31 @@ namespace PoTool.Tests.Unit.Handlers;
 [TestClass]
 public sealed class BuildQualityQueryHandlerTests
 {
+    private SqliteConnection _connection = null!;
     private PoToolDbContext _context = null!;
     private BuildQualityScopeLoader _scopeLoader = null!;
     private Mock<IBuildQualityProvider> _provider = null!;
 
     [TestInitialize]
-    public void Setup()
+    public async Task SetupAsync()
     {
+        _connection = new SqliteConnection("Data Source=:memory:");
+        await _connection.OpenAsync();
         var options = new DbContextOptionsBuilder<PoToolDbContext>()
-            .UseInMemoryDatabase($"BuildQualityQueryHandlers_{Guid.NewGuid()}")
+            .UseSqlite(_connection)
             .Options;
 
         _context = new PoToolDbContext(options);
+        await _context.Database.EnsureCreatedAsync();
         _scopeLoader = new BuildQualityScopeLoader(_context);
         _provider = new Mock<IBuildQualityProvider>(MockBehavior.Strict);
     }
 
     [TestCleanup]
-    public void Cleanup()
+    public async Task CleanupAsync()
     {
-        _context.Database.EnsureDeleted();
-        _context.Dispose();
+        await _context.DisposeAsync();
+        await _connection.DisposeAsync();
     }
 
     [TestMethod]
@@ -405,6 +410,15 @@ public sealed class BuildQualityQueryHandlerTests
         _context.Repositories.AddRange(
             new RepositoryEntity { Id = 10, ProductId = 1, Name = "Repo A", CreatedAt = DateTimeOffset.UtcNow },
             new RepositoryEntity { Id = 20, ProductId = 2, Name = "Repo B", CreatedAt = DateTimeOffset.UtcNow });
+
+        _context.Teams.Add(new TeamEntity
+        {
+            Id = 7,
+            Name = "Team 7",
+            TeamAreaPath = "\\Project\\Team 7",
+            CreatedAt = DateTimeOffset.UtcNow,
+            LastModified = DateTimeOffset.UtcNow
+        });
 
         _context.PipelineDefinitions.AddRange(
             new PipelineDefinitionEntity

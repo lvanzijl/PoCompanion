@@ -209,6 +209,25 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
     }
 
     [TestMethod]
+    public async Task GetBySourceAsync_UsesTrimmedSourceAndTimestampOnSqlite()
+    {
+        await using var context = new PoToolDbContext(_options);
+        var mapper = new PortfolioSnapshotPersistenceMapper();
+        var persistenceService = new PortfolioSnapshotPersistenceService(context, mapper, NullLogger<PortfolioSnapshotPersistenceService>.Instance);
+        var timestamp = new DateTimeOffset(2026, 3, 8, 0, 0, 0, TimeSpan.Zero);
+
+        await persistenceService.PersistAsync(1, "Sprint 1", null, CreateSnapshot(timestamp, 1, 0.4d), CancellationToken.None);
+        await persistenceService.PersistAsync(1, "Sprint 2", null, CreateSnapshot(timestamp, 1, 0.7d), CancellationToken.None);
+
+        var persisted = await persistenceService.GetBySourceAsync(1, "  Sprint 2  ", timestamp, CancellationToken.None);
+
+        Assert.IsNotNull(persisted);
+        Assert.AreEqual("Sprint 2", persisted.Source);
+        Assert.AreEqual(timestamp, persisted.Snapshot.Timestamp);
+        Assert.AreEqual(0.7d, persisted.Snapshot.Items[0].Progress, 0.0001d);
+    }
+
+    [TestMethod]
     public async Task GetLatestAsync_SurfacesCorruptedPersistedRowsInsteadOfSkippingThem()
     {
         await using var context = new PoToolDbContext(_options);
@@ -241,6 +260,32 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
         catch (InvalidOperationException)
         {
         }
+    }
+
+    [TestMethod]
+    public async Task GetPortfolioSnapshotBySourceAsync_GroupsProductsForMatchingSourceOnSqlite()
+    {
+        await using var context = new PoToolDbContext(_options);
+        await SeedProductAsync(context, 2);
+
+        var mapper = new PortfolioSnapshotPersistenceMapper();
+        var persistenceService = new PortfolioSnapshotPersistenceService(context, mapper, NullLogger<PortfolioSnapshotPersistenceService>.Instance);
+        var selectionService = new PortfolioSnapshotSelectionService(context, mapper, NullLogger<PortfolioSnapshotSelectionService>.Instance);
+        var timestamp = new DateTimeOffset(2026, 3, 8, 0, 0, 0, TimeSpan.Zero);
+
+        await persistenceService.PersistAsync(1, "Sprint 2", null, CreateSnapshot(timestamp, 1, 0.4d), CancellationToken.None);
+        await persistenceService.PersistAsync(2, "Sprint 2", null, CreateSnapshot(timestamp, 2, 0.6d), CancellationToken.None);
+        await persistenceService.PersistAsync(1, "Sprint 1", null, CreateSnapshot(timestamp.AddDays(-7), 1, 0.2d), CancellationToken.None);
+
+        var selection = await selectionService.GetPortfolioSnapshotBySourceAsync([1, 2], timestamp, " Sprint 2 ", CancellationToken.None);
+
+        Assert.IsNotNull(selection);
+        Assert.AreEqual("Sprint 2", selection.Source);
+        Assert.AreEqual(timestamp, selection.Snapshot.Timestamp);
+        Assert.IsFalse(selection.IncludesArchivedSnapshot);
+        CollectionAssert.AreEqual(
+            new[] { 1, 2 },
+            selection.Snapshot.Items.Select(item => item.ProductId).OrderBy(id => id).ToArray());
     }
 
     [TestMethod]
