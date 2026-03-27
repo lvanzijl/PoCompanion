@@ -166,7 +166,7 @@
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Delta vs previous</MudText>
                         @if (GetPortfolioProgressDelta() is double portfolioDelta)
                         {
-                            <MudText Typo="Typo.h5" Color="@GetTrendColor(portfolioDelta)">@FormatSignedRatio(portfolioDelta)</MudText>
+                            <MudText Typo="Typo.h5" Color="@GetTrendColorFromValue(portfolioDelta)">@FormatSignedRatio(portfolioDelta)</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">@GetPortfolioDeltaContext()</MudText>
                         }
                         else
@@ -292,7 +292,7 @@
                     <MudTd DataLabel="Previous progress">@FormatRatio(context.ProgressTrend.PreviousValue)</MudTd>
                     <MudTd DataLabel="Δ Progress">@FormatSignedRatio(context.ProgressTrend.Delta)</MudTd>
                     <MudTd DataLabel="Direction">
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetTrendColor(context.ProgressTrend.Direction)">
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetTrendColorFromDirection(context.ProgressTrend.Direction)">
                             @($"{GetTrendGlyph(context.ProgressTrend.Direction)} {FormatDirection(context.ProgressTrend.Direction)}")
                         </MudChip>
                     </MudTd>
@@ -344,7 +344,7 @@
                             <MudTd DataLabel="Previous progress">@FormatRatio(context.ProgressTrend.PreviousValue)</MudTd>
                             <MudTd DataLabel="Δ Progress">@FormatSignedRatio(context.ProgressTrend.Delta)</MudTd>
                             <MudTd DataLabel="Change">
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetTrendColor(context.ProgressTrend.Direction)">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetTrendColorFromDirection(context.ProgressTrend.Direction)">
                                     @($"{GetTrendGlyph(context.ProgressTrend.Direction)} {FormatDirection(context.ProgressTrend.Direction)}")
                                 </MudChip>
                             </MudTd>
@@ -787,7 +787,7 @@
         {
             if (string.IsNullOrWhiteSpace(signal.WorkPackage))
             {
-                projects.Add(signal.ProjectNumber ?? signal.ProductName ?? "Unscoped project");
+                projects.Add(signal.ProjectNumber ?? signal.ProductName ?? "Unknown project");
             }
             else
             {
@@ -853,7 +853,7 @@
             _ => "—"
         };
 
-    private static Color GetTrendColor(PortfolioTrendDirection? direction)
+    private static Color GetTrendColorFromDirection(PortfolioTrendDirection? direction)
         => direction switch
         {
             PortfolioTrendDirection.Increasing => Color.Success,
@@ -862,7 +862,7 @@
             _ => Color.Default
         };
 
-    private static Color GetTrendColor(double value)
+    private static Color GetTrendColorFromValue(double value)
         => value switch
         {
             > 0 => Color.Success,
@@ -892,7 +892,7 @@
     {
         if (comparisonItem.ProgressDelta.HasValue)
         {
-            return GetTrendColor(GetTrendDirection(comparisonItem.ProgressDelta));
+            return GetTrendColorFromDirection(GetTrendDirection(comparisonItem.ProgressDelta));
         }
 
         return comparisonItem.PreviousProgress is null ? Color.Info : Color.Default;

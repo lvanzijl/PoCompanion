@@ -7,8 +7,8 @@ public sealed class PortfolioCdcUiAuditTests
     public void PortfolioCdcReadOnlyPanel_ConsumesReadOnlyDtosWithoutUiAggregations()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var panelPath = Path.Combine(repositoryRoot, "PoTool.Client", "Pages", "Home", "Components", "PortfolioCdcReadOnlyPanel.razor");
-        var pagePath = Path.Combine(repositoryRoot, "PoTool.Client", "Pages", "Home", "PortfolioProgressPage.razor");
+        var panelPath = $"{repositoryRoot}/PoTool.Client/Pages/Home/Components/PortfolioCdcReadOnlyPanel.razor";
+        var pagePath = $"{repositoryRoot}/PoTool.Client/Pages/Home/PortfolioProgressPage.razor";
 
         var panel = File.ReadAllText(panelPath);
         var page = File.ReadAllText(pagePath);
@@ -33,7 +33,7 @@ public sealed class PortfolioCdcUiAuditTests
     public void PortfolioCdcReadOnlyPanel_RendersRefinedHistorySections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var panelPath = Path.Combine(repositoryRoot, "PoTool.Client", "Pages", "Home", "Components", "PortfolioCdcReadOnlyPanel.razor");
+        var panelPath = $"{repositoryRoot}/PoTool.Client/Pages/Home/Components/PortfolioCdcReadOnlyPanel.razor";
 
         var panel = File.ReadAllText(panelPath);
 
