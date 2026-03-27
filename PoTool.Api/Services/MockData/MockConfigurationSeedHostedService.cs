@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Settings;
 
@@ -38,6 +39,39 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
                 new MockProductSeed("Communication & Coordination", [4, 8], 21),
                 new MockProductSeed("Portfolio Reporting", [7, 9], 23)
             ])
+    ];
+
+    private static readonly MockPortfolioSnapshotSeed[] PortfolioSnapshotTimeline =
+    [
+        new("Empty portfolio", DateTime.UnixEpoch, MockPortfolioSnapshotStage.Empty),
+        new(
+            "Sprint 1 - Initial backlog",
+            new DateTime(2026, 1, 12, 0, 0, 0, DateTimeKind.Utc),
+            MockPortfolioSnapshotStage.InitialBacklog),
+        new(
+            "Sprint 2 - Work starts",
+            new DateTime(2026, 1, 26, 0, 0, 0, DateTimeKind.Utc),
+            MockPortfolioSnapshotStage.WorkStarts),
+        new(
+            "Sprint 3 - New work added",
+            new DateTime(2026, 2, 9, 0, 0, 0, DateTimeKind.Utc),
+            MockPortfolioSnapshotStage.NewWorkAdded),
+        new(
+            "Sprint 3 - Completion checkpoint",
+            new DateTime(2026, 2, 9, 0, 0, 0, DateTimeKind.Utc),
+            MockPortfolioSnapshotStage.CompletionCheckpoint),
+        new(
+            "Sprint 4 - Reprioritized backlog",
+            new DateTime(2026, 2, 23, 0, 0, 0, DateTimeKind.Utc),
+            MockPortfolioSnapshotStage.Reprioritized),
+        new(
+            "Sprint 5 - Majority completed",
+            new DateTime(2026, 3, 9, 0, 0, 0, DateTimeKind.Utc),
+            MockPortfolioSnapshotStage.MajorityCompleted),
+        new(
+            "Sprint 6 - Near completion",
+            new DateTime(2026, 3, 23, 0, 0, 0, DateTimeKind.Utc),
+            MockPortfolioSnapshotStage.NearCompletion)
     ];
 
     private readonly IServiceScopeFactory _scopeFactory;
@@ -84,13 +118,15 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
         await EnsureMockRepositoriesAsync(context, now, cancellationToken);
         await EnsureMockTfsConfigurationAsync(context, cancellationToken);
         await EnsureActiveProfileAsync(context, cancellationToken);
+        await EnsureMockPortfolioSnapshotsAsync(context, mockDataFacade.GetMockHierarchy(), cancellationToken);
 
         _logger.LogInformation(
-            "Seeded mock configuration with {ProfileCount} profiles, {ProductCount} products, {TeamCount} teams, and {RepositoryCount} repositories.",
+            "Seeded mock configuration with {ProfileCount} profiles, {ProductCount} products, {TeamCount} teams, {RepositoryCount} repositories, and {SnapshotCount} portfolio snapshots.",
             await context.Profiles.CountAsync(cancellationToken),
             await context.Products.CountAsync(cancellationToken),
             await context.Teams.CountAsync(cancellationToken),
-            await context.Repositories.CountAsync(cancellationToken));
+            await context.Repositories.CountAsync(cancellationToken),
+            await context.PortfolioSnapshots.CountAsync(cancellationToken));
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
@@ -328,6 +364,267 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
         await context.SaveChangesAsync(cancellationToken);
     }
 
+    private static async Task EnsureMockPortfolioSnapshotsAsync(
+        PoToolDbContext context,
+        IReadOnlyCollection<PoTool.Shared.WorkItems.WorkItemDto> hierarchy,
+        CancellationToken cancellationToken)
+    {
+        var targetProfileId = await context.Profiles
+            .OrderBy(profile => profile.Id)
+            .Select(profile => (int?)profile.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (!targetProfileId.HasValue)
+        {
+            return;
+        }
+
+        var targetProducts = await context.Products
+            .Include(product => product.BacklogRoots)
+            .Where(product => product.ProductOwnerId == targetProfileId.Value)
+            .OrderBy(product => product.Id)
+            .ToListAsync(cancellationToken);
+
+        if (targetProducts.Count == 0)
+        {
+            return;
+        }
+
+        var plans = targetProducts
+            .Select(product => CreateMockPortfolioPlan(product, hierarchy))
+            .Where(plan => plan is not null)
+            .Cast<MockPortfolioPlan>()
+            .ToList();
+
+        if (plans.Count == 0)
+        {
+            return;
+        }
+
+        var targetProductIds = plans.Select(plan => plan.ProductId).ToArray();
+        var existingKeys = await context.PortfolioSnapshots
+            .AsNoTracking()
+            .Where(snapshot => targetProductIds.Contains(snapshot.ProductId))
+            .Select(snapshot => new MockPortfolioSnapshotKey(snapshot.ProductId, snapshot.TimestampUtc, snapshot.Source))
+            .ToListAsync(cancellationToken);
+        var existingKeySet = existingKeys.ToHashSet();
+        var mapper = new PortfolioSnapshotPersistenceMapper();
+
+        foreach (var timelineEntry in PortfolioSnapshotTimeline)
+        {
+            var addedGroupSnapshot = false;
+
+            foreach (var plan in plans)
+            {
+                var key = new MockPortfolioSnapshotKey(plan.ProductId, timelineEntry.TimestampUtc, timelineEntry.Source);
+                if (existingKeySet.Contains(key))
+                {
+                    continue;
+                }
+
+                var snapshot = new PortfolioSnapshot(
+                    new DateTimeOffset(timelineEntry.TimestampUtc, TimeSpan.Zero),
+                    BuildPortfolioSnapshotItems(plan, timelineEntry.Stage));
+                context.PortfolioSnapshots.Add(
+                    mapper.ToEntity(
+                        plan.ProductId,
+                        timelineEntry.Source,
+                        "Mock configuration seed",
+                        isArchived: false,
+                        snapshot));
+                existingKeySet.Add(key);
+                addedGroupSnapshot = true;
+            }
+
+            if (addedGroupSnapshot)
+            {
+                await context.SaveChangesAsync(cancellationToken);
+            }
+        }
+    }
+
+    private static MockPortfolioPlan? CreateMockPortfolioPlan(
+        ProductEntity product,
+        IReadOnlyCollection<PoTool.Shared.WorkItems.WorkItemDto> hierarchy)
+    {
+        var rootIds = product.BacklogRoots
+            .Select(root => root.WorkItemTfsId)
+            .Distinct()
+            .ToList();
+
+        if (rootIds.Count == 0)
+        {
+            return null;
+        }
+
+        var productItems = WorkItemHierarchyHelper.FilterDescendants(rootIds, hierarchy)
+            .OrderBy(item => item.TfsId)
+            .ToList();
+        if (productItems.Count == 0)
+        {
+            return null;
+        }
+
+        var objectives = productItems
+            .Where(item => item.Type.Equals(WorkItemType.Objective, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(item => item.TfsId)
+            .ToList();
+        var objectiveById = objectives.ToDictionary(item => item.TfsId);
+        var templates = new List<MockPortfolioWorkPackageTemplate>();
+        var selectedEpicIds = new HashSet<int>();
+
+        foreach (var objective in objectives)
+        {
+            var epics = productItems
+                .Where(item =>
+                    item.Type.Equals(WorkItemType.Epic, StringComparison.OrdinalIgnoreCase)
+                    && item.ParentTfsId == objective.TfsId)
+                .OrderBy(item => item.TfsId)
+                .Take(2)
+                .ToList();
+
+            foreach (var epic in epics)
+            {
+                if (!selectedEpicIds.Add(epic.TfsId))
+                {
+                    continue;
+                }
+
+                templates.Add(new MockPortfolioWorkPackageTemplate(
+                    CreateBusinessKey("OBJ", objective),
+                    CreateBusinessKey("EPIC", epic),
+                    Math.Max(1d, epic.Effort ?? 8d)));
+            }
+
+            if (templates.Count >= 4)
+            {
+                break;
+            }
+        }
+
+        if (templates.Count < 4)
+        {
+            foreach (var epic in productItems
+                         .Where(item => item.Type.Equals(WorkItemType.Epic, StringComparison.OrdinalIgnoreCase))
+                         .OrderBy(item => item.TfsId))
+            {
+                if (!epic.ParentTfsId.HasValue
+                    || !selectedEpicIds.Add(epic.TfsId)
+                    || !objectiveById.TryGetValue(epic.ParentTfsId.Value, out var objective))
+                {
+                    continue;
+                }
+
+                templates.Add(new MockPortfolioWorkPackageTemplate(
+                    CreateBusinessKey("OBJ", objective),
+                    CreateBusinessKey("EPIC", epic),
+                    Math.Max(1d, epic.Effort ?? 8d)));
+
+                if (templates.Count >= 4)
+                {
+                    break;
+                }
+            }
+        }
+
+        return templates.Count == 0
+            ? null
+            : new MockPortfolioPlan(product.Id, product.Name, templates);
+    }
+
+    private static IReadOnlyList<PortfolioSnapshotItem> BuildPortfolioSnapshotItems(
+        MockPortfolioPlan plan,
+        MockPortfolioSnapshotStage stage)
+    {
+        var items = new List<PortfolioSnapshotItem>();
+
+        switch (stage)
+        {
+            case MockPortfolioSnapshotStage.Empty:
+                return items;
+
+            case MockPortfolioSnapshotStage.InitialBacklog:
+                AddSnapshotItem(items, plan, 0, 0d);
+                AddSnapshotItem(items, plan, 1, 0d);
+                AddSnapshotItem(items, plan, 2, 0d);
+                break;
+
+            case MockPortfolioSnapshotStage.WorkStarts:
+                AddSnapshotItem(items, plan, 0, 0.28d);
+                AddSnapshotItem(items, plan, 1, 0.18d);
+                AddSnapshotItem(items, plan, 2, 0.08d);
+                break;
+
+            case MockPortfolioSnapshotStage.NewWorkAdded:
+                AddSnapshotItem(items, plan, 0, 0.48d);
+                AddSnapshotItem(items, plan, 1, 0.34d);
+                AddSnapshotItem(items, plan, 2, 0.18d);
+                AddSnapshotItem(items, plan, 3, 0d);
+                break;
+
+            case MockPortfolioSnapshotStage.CompletionCheckpoint:
+                AddSnapshotItem(items, plan, 0, 0.78d);
+                AddSnapshotItem(items, plan, 1, 0.56d);
+                AddSnapshotItem(items, plan, 2, 0.36d);
+                AddSnapshotItem(items, plan, 3, 0.16d);
+                break;
+
+            case MockPortfolioSnapshotStage.Reprioritized:
+                AddSnapshotItem(items, plan, 0, 1d);
+                AddSnapshotItem(items, plan, 1, 0.74d);
+                AddSnapshotItem(items, plan, 2, 0.36d, WorkPackageLifecycleState.Retired);
+                AddSnapshotItem(items, plan, 3, 0.28d);
+                break;
+
+            case MockPortfolioSnapshotStage.MajorityCompleted:
+                AddSnapshotItem(items, plan, 0, 1d);
+                AddSnapshotItem(items, plan, 1, 1d);
+                AddSnapshotItem(items, plan, 2, 0.36d, WorkPackageLifecycleState.Retired);
+                AddSnapshotItem(items, plan, 3, 0.78d);
+                break;
+
+            case MockPortfolioSnapshotStage.NearCompletion:
+                AddSnapshotItem(items, plan, 0, 1d);
+                AddSnapshotItem(items, plan, 1, 1d);
+                AddSnapshotItem(items, plan, 2, 0.36d, WorkPackageLifecycleState.Retired);
+                AddSnapshotItem(items, plan, 3, 1d);
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(stage), stage, "Unknown mock portfolio snapshot stage.");
+        }
+
+        return items;
+    }
+
+    private static void AddSnapshotItem(
+        List<PortfolioSnapshotItem> items,
+        MockPortfolioPlan plan,
+        int index,
+        double progress,
+        WorkPackageLifecycleState lifecycleState = WorkPackageLifecycleState.Active)
+    {
+        if (index >= plan.WorkPackages.Count)
+        {
+            return;
+        }
+
+        var template = plan.WorkPackages[index];
+        items.Add(new PortfolioSnapshotItem(
+            plan.ProductId,
+            template.ProjectNumber,
+            template.WorkPackage,
+            progress,
+            template.TotalWeight,
+            lifecycleState));
+    }
+
+    private static string CreateBusinessKey(string prefix, PoTool.Shared.WorkItems.WorkItemDto workItem)
+    {
+        var value = $"{prefix}-{workItem.TfsId}: {workItem.Title}";
+        return value.Length <= 180 ? value : value[..180];
+    }
+
     private sealed record MockProfileSeed(
         string Name,
         int DefaultPictureId,
@@ -337,4 +634,36 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
         string Name,
         int[] GoalIndexes,
         int DefaultPictureId);
+
+    private sealed record MockPortfolioPlan(
+        int ProductId,
+        string ProductName,
+        IReadOnlyList<MockPortfolioWorkPackageTemplate> WorkPackages);
+
+    private sealed record MockPortfolioWorkPackageTemplate(
+        string ProjectNumber,
+        string WorkPackage,
+        double TotalWeight);
+
+    private sealed record MockPortfolioSnapshotSeed(
+        string Source,
+        DateTime TimestampUtc,
+        MockPortfolioSnapshotStage Stage);
+
+    private sealed record MockPortfolioSnapshotKey(
+        int ProductId,
+        DateTime TimestampUtc,
+        string Source);
+
+    private enum MockPortfolioSnapshotStage
+    {
+        Empty,
+        InitialBacklog,
+        WorkStarts,
+        NewWorkAdded,
+        CompletionCheckpoint,
+        Reprioritized,
+        MajorityCompleted,
+        NearCompletion
+    }
 }
