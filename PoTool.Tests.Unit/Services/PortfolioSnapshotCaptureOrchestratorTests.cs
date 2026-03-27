@@ -88,6 +88,29 @@ public sealed class PortfolioSnapshotCaptureOrchestratorTests
         Assert.AreEqual(1, await context.PortfolioSnapshots.CountAsync());
     }
 
+    [TestMethod]
+    public async Task CaptureLatestAsync_PersistsDeterministicEmptySnapshotWhenOwnerHasNoSources()
+    {
+        await using var context = new PoToolDbContext(_options);
+        var (profileId, productId) = await SeedOwnerAndProductAsync(context);
+
+        var orchestrator = CreateOrchestrator(context, new FakePortfolioSnapshotCaptureDataService());
+
+        var first = await orchestrator.CaptureLatestAsync(profileId, CancellationToken.None);
+        var second = await orchestrator.CaptureLatestAsync(profileId, CancellationToken.None);
+
+        Assert.AreEqual(1, first.SourceCount);
+        Assert.AreEqual(1, first.CreatedSnapshotCount);
+        Assert.AreEqual(0, second.CreatedSnapshotCount);
+        Assert.AreEqual(1, second.ExistingSnapshotCount);
+
+        var persisted = await context.PortfolioSnapshots.Include(snapshot => snapshot.Items).SingleAsync();
+        Assert.AreEqual(productId, persisted.ProductId);
+        Assert.AreEqual("Empty portfolio", persisted.Source);
+        Assert.AreEqual(DateTime.UnixEpoch, DateTime.SpecifyKind(persisted.TimestampUtc, DateTimeKind.Utc));
+        Assert.IsEmpty(persisted.Items);
+    }
+
     private PortfolioSnapshotCaptureOrchestrator CreateOrchestrator(
         PoToolDbContext context,
         IPortfolioSnapshotCaptureDataService captureService)

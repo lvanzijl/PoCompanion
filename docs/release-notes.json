@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-27",
+    "type": "Fixed",
+    "title": "Portfolio CDC now honors empty and single-snapshot history",
+    "impact": "Portfolio trends and signals now preserve empty-owner snapshots and honor an explicit one-snapshot history request without inventing comparison deltas.",
+    "area": "Trends",
+    "link": "/home/portfolio-progress"
+  },
+  {
     "date": "2026-03-26",
     "type": "Changed",
     "title": "Portfolio CDC now shows persisted trends and signals",

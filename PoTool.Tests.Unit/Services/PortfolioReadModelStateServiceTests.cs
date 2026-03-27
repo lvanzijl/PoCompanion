@@ -6,6 +6,7 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.DeliveryTrends.Services;
+using PoTool.Shared.Metrics;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -167,6 +168,74 @@ public sealed class PortfolioReadModelStateServiceTests
         Assert.HasCount(1, result.Items);
         Assert.AreEqual(0.3d, result.Items[0].ProgressDelta!.Value, 0.001d);
         Assert.AreEqual(2d, result.Items[0].WeightDelta!.Value, 0.001d);
+    }
+
+    [TestMethod]
+    public async Task GetHistoryStateAsync_HonorsSingleSnapshotCountExactly()
+    {
+        await using var context = new PoToolDbContext(_options);
+        var (profileId, productId) = await SeedOwnerAndProductAsync(context);
+        var persistence = CreatePersistenceService(context);
+        await persistence.PersistAsync(
+            productId,
+            "Sprint 1",
+            null,
+            new PortfolioSnapshot(
+                new DateTimeOffset(2026, 3, 7, 0, 0, 0, TimeSpan.Zero),
+                []),
+            CancellationToken.None);
+        await persistence.PersistAsync(
+            productId,
+            "Sprint 2",
+            null,
+            new PortfolioSnapshot(
+                new DateTimeOffset(2026, 3, 14, 0, 0, 0, TimeSpan.Zero),
+                []),
+            CancellationToken.None);
+
+        var state = await CreateStateService(context).GetHistoryStateAsync(
+            profileId,
+            new PortfolioReadQueryOptions(SnapshotCount: 1),
+            CancellationToken.None);
+
+        Assert.IsNotNull(state);
+        Assert.HasCount(1, state.Snapshots);
+        Assert.AreEqual("Sprint 2", state.Snapshots[0].Source);
+    }
+
+    [TestMethod]
+    public async Task GetHistoryStateAsync_ReturnsAvailableSnapshotsWhenRequestExceedsHistory()
+    {
+        await using var context = new PoToolDbContext(_options);
+        var (profileId, productId) = await SeedOwnerAndProductAsync(context);
+        var persistence = CreatePersistenceService(context);
+        await persistence.PersistAsync(
+            productId,
+            "Sprint 1",
+            null,
+            new PortfolioSnapshot(
+                new DateTimeOffset(2026, 3, 7, 0, 0, 0, TimeSpan.Zero),
+                []),
+            CancellationToken.None);
+        await persistence.PersistAsync(
+            productId,
+            "Sprint 2",
+            null,
+            new PortfolioSnapshot(
+                new DateTimeOffset(2026, 3, 14, 0, 0, 0, TimeSpan.Zero),
+                []),
+            CancellationToken.None);
+
+        var state = await CreateStateService(context).GetHistoryStateAsync(
+            profileId,
+            new PortfolioReadQueryOptions(SnapshotCount: 5),
+            CancellationToken.None);
+
+        Assert.IsNotNull(state);
+        Assert.HasCount(2, state.Snapshots);
+        CollectionAssert.AreEqual(
+            new[] { "Sprint 2", "Sprint 1" },
+            state.Snapshots.Select(snapshot => snapshot.Source).ToArray());
     }
 
     private PortfolioReadModelStateService CreateStateService(PoToolDbContext context)

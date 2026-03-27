@@ -20,6 +20,7 @@ public interface IPortfolioSnapshotCaptureOrchestrator
 
 public sealed class PortfolioSnapshotCaptureOrchestrator : IPortfolioSnapshotCaptureOrchestrator
 {
+    private const string EmptyPortfolioSource = "Empty portfolio";
     private readonly PoToolDbContext _context;
     private readonly IPortfolioSnapshotCaptureDataService _captureDataService;
     private readonly IPortfolioSnapshotFactory _portfolioSnapshotFactory;
@@ -59,7 +60,7 @@ public sealed class PortfolioSnapshotCaptureOrchestrator : IPortfolioSnapshotCap
         var sources = await _captureDataService.GetLatestSourcesAsync(productIds, cancellationToken);
         if (sources.Count == 0)
         {
-            return new PortfolioSnapshotCaptureResult(productIds.Length, 0, 0, 0);
+            sources = [await BuildEmptyCaptureSourceAsync(cancellationToken)];
         }
 
         var createdCount = 0;
@@ -116,5 +117,37 @@ public sealed class PortfolioSnapshotCaptureOrchestrator : IPortfolioSnapshotCap
             sources.Count,
             createdCount,
             existingCount);
+    }
+
+    private async Task<PortfolioSnapshotCaptureSource> BuildEmptyCaptureSourceAsync(CancellationToken cancellationToken)
+    {
+        var latestSprint = await _context.Sprints
+            .AsNoTracking()
+            .Where(sprint => sprint.StartDateUtc != null && sprint.EndDateUtc != null)
+            .OrderByDescending(sprint => sprint.EndDateUtc)
+            .ThenByDescending(sprint => sprint.Id)
+            .Select(sprint => new
+            {
+                sprint.Id,
+                sprint.Name,
+                StartDateUtc = sprint.StartDateUtc!.Value,
+                EndDateUtc = sprint.EndDateUtc!.Value
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (latestSprint is not null)
+        {
+            return new PortfolioSnapshotCaptureSource(
+                latestSprint.Id,
+                string.IsNullOrWhiteSpace(latestSprint.Name) ? $"Sprint {latestSprint.Id}" : latestSprint.Name.Trim(),
+                DateTime.SpecifyKind(latestSprint.StartDateUtc, DateTimeKind.Utc),
+                DateTime.SpecifyKind(latestSprint.EndDateUtc, DateTimeKind.Utc));
+        }
+
+        return new PortfolioSnapshotCaptureSource(
+            0,
+            EmptyPortfolioSource,
+            DateTime.UnixEpoch,
+            DateTime.UnixEpoch);
     }
 }
