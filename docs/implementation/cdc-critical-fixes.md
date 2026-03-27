@@ -80,6 +80,12 @@ Added or updated tests for:
 - API verb coverage for GET-only read endpoints and explicit POST capture endpoint
 - DI registration and report presence audits
 
+Specific behavioral coverage added in this phase:
+
+- calling the portfolio read/query services with no persisted snapshots leaves `PortfolioSnapshots` and `PortfolioSnapshotItems` unchanged
+- `PortfolioSnapshotCaptureOrchestrator` persists a header-only empty snapshot when a product has no captured items
+- duplicate concurrent insert attempts collapse to one persisted snapshot row and reload the canonical row
+
 ## Migration notes
 
 The schema now requires uniqueness on `(ProductId, TimestampUtc, Source)`.

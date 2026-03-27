@@ -87,7 +87,7 @@ public sealed class PortfolioSnapshotCaptureOrchestrator : IPortfolioSnapshotCap
                     continue;
                 }
 
-                var previousSnapshot = await _selectionService.GetLatestBeforeAsync(
+                var previousSnapshot = await _selectionService.GetLatestAtOrBeforeAsync(
                     productId,
                     source.Timestamp,
                     cancellationToken,

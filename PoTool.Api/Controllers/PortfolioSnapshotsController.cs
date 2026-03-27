@@ -27,11 +27,6 @@ public sealed class PortfolioSnapshotsController : ControllerBase
     {
         try
         {
-            if (command.ProductOwnerId <= 0)
-            {
-                return BadRequest("ProductOwnerId must be greater than zero.");
-            }
-
             var result = await _mediator.Send(command, cancellationToken);
             return Ok(result);
         }

@@ -10,6 +10,9 @@ namespace PoTool.Api.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Legacy data may already contain duplicate logical snapshots.
+            // Keep the highest SnapshotId per (ProductId, TimestampUtc, Source)
+            // so the later unique index can be created without merging rows blindly.
             migrationBuilder.Sql(
                 """
                 DELETE FROM PortfolioSnapshotItems

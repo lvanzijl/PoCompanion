@@ -23,7 +23,7 @@ public interface IPortfolioSnapshotSelectionService
         CancellationToken cancellationToken,
         bool includeArchived = false);
 
-    Task<PersistedPortfolioSnapshot?> GetLatestBeforeAsync(
+    Task<PersistedPortfolioSnapshot?> GetLatestAtOrBeforeAsync(
         int productId,
         DateTimeOffset timestamp,
         CancellationToken cancellationToken,
@@ -110,7 +110,7 @@ public sealed class PortfolioSnapshotSelectionService : IPortfolioSnapshotSelect
             : await LoadPersistedSnapshotAsync(header.SnapshotId, cancellationToken);
     }
 
-    public async Task<PersistedPortfolioSnapshot?> GetLatestBeforeAsync(
+    public async Task<PersistedPortfolioSnapshot?> GetLatestAtOrBeforeAsync(
         int productId,
         DateTimeOffset timestamp,
         CancellationToken cancellationToken,
@@ -118,9 +118,7 @@ public sealed class PortfolioSnapshotSelectionService : IPortfolioSnapshotSelect
     {
         var timestampUtc = timestamp.UtcDateTime;
         var header = (await GetCanonicalProductHeadersAsync(productId, includeArchived, cancellationToken))
-            .FirstOrDefault(snapshot =>
-                snapshot.TimestampUtc < timestampUtc
-                || snapshot.TimestampUtc == timestampUtc);
+            .FirstOrDefault(snapshot => snapshot.TimestampUtc <= timestampUtc);
 
         return header is null
             ? null

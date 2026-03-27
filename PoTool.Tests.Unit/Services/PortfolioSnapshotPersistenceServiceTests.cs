@@ -168,7 +168,7 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
     }
 
     [TestMethod]
-    public async Task GetLatestBeforeAsync_ReturnsLatestSnapshotAtOrBeforeTimestamp()
+    public async Task GetLatestAtOrBeforeAsync_ReturnsLatestSnapshotAtOrBeforeTimestamp()
     {
         await using var context = new PoToolDbContext(_options);
         var mapper = new PortfolioSnapshotPersistenceMapper();
@@ -179,7 +179,7 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
         await persistenceService.PersistAsync(1, "Sprint 2", null, CreateSnapshot(new DateTimeOffset(2026, 3, 8, 0, 0, 0, TimeSpan.Zero), 1, 0.4d), CancellationToken.None);
         var expected = await persistenceService.PersistAsync(1, "Sprint 3", null, CreateSnapshot(new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero), 1, 0.8d), CancellationToken.None);
 
-        var latestBefore = await selectionService.GetLatestBeforeAsync(
+        var latestBefore = await selectionService.GetLatestAtOrBeforeAsync(
             1,
             new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero),
             CancellationToken.None);
@@ -190,7 +190,7 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
     }
 
     [TestMethod]
-    public async Task GetLatestBeforeAsync_UsesSnapshotIdTieBreakForEqualTimestamps()
+    public async Task GetLatestAtOrBeforeAsync_UsesSnapshotIdTieBreakForEqualTimestamps()
     {
         await using var context = new PoToolDbContext(_options);
         var mapper = new PortfolioSnapshotPersistenceMapper();
@@ -201,7 +201,7 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
         var first = await persistenceService.PersistAsync(1, "Sprint 2A", null, CreateSnapshot(timestamp, 1, 0.4d), CancellationToken.None);
         var second = await persistenceService.PersistAsync(1, "Sprint 2B", null, CreateSnapshot(timestamp, 1, 0.6d), CancellationToken.None);
 
-        var latestBefore = await selectionService.GetLatestBeforeAsync(1, second.Snapshot.Timestamp, CancellationToken.None);
+        var latestBefore = await selectionService.GetLatestAtOrBeforeAsync(1, second.Snapshot.Timestamp, CancellationToken.None);
 
         Assert.IsNotNull(latestBefore);
         Assert.AreEqual(second.SnapshotId, latestBefore.SnapshotId);
