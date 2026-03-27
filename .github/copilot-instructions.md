@@ -29,8 +29,6 @@ Before producing any output, you MUST load, understand, and apply:
 6. Entity Framework rules  
    `docs/EF_RULES.md`
 
-7. Mock data rules  
-   `docs/mock-data-rules.md`
 
 8. UI Loading rules
    `docs/UI_LOADING_RULES.md`
