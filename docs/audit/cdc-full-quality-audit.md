@@ -1,6 +1,6 @@
 # CDC Full Quality Audit
 
-_Generated: 2026-03-26_
+_Generated: 2026-03-27_
 
 Reference documents:
 
@@ -16,6 +16,7 @@ Reference documents:
 - `docs/implementation/phase-f-lifecycle.md`
 - `docs/implementation/phase-g-consumption.md`
 - `docs/implementation/phase-i-finalization.md`
+- `docs/implementation/cdc-critical-fixes.md`
 
 Files analyzed:
 
@@ -24,6 +25,7 @@ Files analyzed:
 - `PoTool.Core.Domain/Domain/DeliveryTrends/Services/PortfolioSnapshotComparisonService.cs`
 - `PoTool.Core.Domain/Domain/DeliveryTrends/Services/ProductAggregationService.cs`
 - `PoTool.Api/Services/PortfolioSnapshotCaptureDataService.cs`
+- `PoTool.Api/Services/PortfolioSnapshotCaptureOrchestrator.cs`
 - `PoTool.Api/Services/PortfolioSnapshotPersistenceService.cs`
 - `PoTool.Api/Services/PortfolioSnapshotSelectionService.cs`
 - `PoTool.Api/Services/PortfolioReadModelStateService.cs`
@@ -37,284 +39,292 @@ Files analyzed:
 - `PoTool.Api/Services/PortfolioReadModelMapper.cs`
 - `PoTool.Api/Services/PortfolioReadModelFiltering.cs`
 - `PoTool.Api/Controllers/MetricsController.cs`
+- `PoTool.Api/Controllers/PortfolioSnapshotsController.cs`
 - `PoTool.Api/Persistence/Entities/PortfolioSnapshotEntity.cs`
 - `PoTool.Api/Persistence/Entities/PortfolioSnapshotItemEntity.cs`
 - `PoTool.Api/Persistence/PoToolDbContext.cs`
+- `PoTool.Api/Migrations/20260327061554_CdcCriticalFixes.cs`
 - `PoTool.Shared/Metrics/PortfolioConsumptionDtos.cs`
 - `PoTool.Client/ApiClient/ApiClient.PortfolioConsumption.cs`
 - `PoTool.Client/Pages/Home/Components/PortfolioCdcReadOnlyPanel.razor`
 - `PoTool.Tests.Unit/Services/PortfolioSnapshotFactoryTests.cs`
 - `PoTool.Tests.Unit/Services/PortfolioSnapshotPersistenceServiceTests.cs`
+- `PoTool.Tests.Unit/Services/PortfolioSnapshotCaptureOrchestratorTests.cs`
 - `PoTool.Tests.Unit/Services/PortfolioReadModelStateServiceTests.cs`
 - `PoTool.Tests.Unit/Services/PortfolioQueryServicesTests.cs`
 - `PoTool.Tests.Unit/Controllers/MetricsControllerPortfolioReadTests.cs`
 - `PoTool.Tests.Unit/Audits/PortfolioCdcUiAuditTests.cs`
-- `PoTool.Tests.Unit/Audits/PhaseIFinalizationDocumentTests.cs`
+- `PoTool.Tests.Unit/Audits/CdcCriticalFixesDocumentTests.cs`
 
 ## 1. Executive summary
 
 - overall correctness: **FAIL**
 - confidence level: **high**
 
-The CDC portfolio stack is not audit-clean. Three findings break the stated contract directly:
+The CDC stack is materially better than the earlier implementation that this audit originally targeted. The major defects around write-on-read persistence and missing logical uniqueness were fixed: portfolio GET endpoints now read persisted snapshots only, snapshot capture sits behind an explicit `POST /api/portfolio/snapshots/capture` boundary, and the database now enforces uniqueness on `(ProductId, TimestampUtc, Source)`.
 
-1. the read/query path persists snapshots on demand, so `GET` endpoints are not truly read-only and trend/comparison/signal outputs do not rely exclusively on pre-existing persisted data
-2. an empty portfolio state cannot be represented or persisted, so snapshot history is incomplete at exactly the point where a full-state audit requires fidelity
-3. persisted snapshot identity is not concurrency-safe: `SnapshotId` is assigned with `MAX + 1`, and there is no database uniqueness constraint for the logical key `(ProductId, TimestampUtc, Source)`
+The system still does not pass a full financial-grade quality audit. Two issues remain correctness defects rather than style concerns:
 
-Beyond those blockers, the implementation is generally deterministic when already-given persisted rows are fed into the comparison/trend/signal services. The domain comparison engine avoids null-to-zero coercion, the trend layer orders explicitly, and the UI consumes DTOs without recomputing metrics. The failure is at the system boundary: hidden write-side behavior, incomplete representability, and persistence semantics that are too weak for a financial-grade audit.
+1. a truly empty portfolio owner with no resolved-work-item-derived source cannot produce a persisted empty snapshot, so snapshot history is still not guaranteed to represent the complete state timeline
+2. historical selection rewrites the caller contract by forcing `snapshotCount < 2` up to `2`, so latest-`N` retrieval is not exact for `N = 1`
+
+Outside those failures, the comparison engine is mathematically careful, trend and signal logic are deterministic for fixed persisted inputs, ordering is explicit, null-to-zero coercion was not found, DTOs are projection-only, and the UI does not recompute domain math.
 
 ## 2. Critical issues (must fix)
 
-### 2.1 Hidden write-on-read breaks the persisted-only contract
+### 2.1 Truly empty portfolio owners still cannot be captured as persisted history
 
 **Exact location**
 
-- `PoTool.Api/Services/PortfolioReadModelStateService.cs:69-166`
-- `PoTool.Api/Services/PortfolioReadModelStateService.cs:210-273`
-- transitively reached by:
-  - `PoTool.Api/Services/PortfolioProgressQueryService.cs:23-24`
-  - `PoTool.Api/Services/PortfolioSnapshotQueryService.cs:23-24`
-  - `PoTool.Api/Services/PortfolioComparisonQueryService.cs:28-29`
-  - `PoTool.Api/Services/PortfolioTrendQueryService.cs:23-24`
-  - `PoTool.Api/Services/PortfolioDecisionSignalQueryService.cs:33-35`
-- exposed via `GET` endpoints in `PoTool.Api/Controllers/MetricsController.cs:250-452`
+- `PoTool.Api/Services/PortfolioSnapshotCaptureDataService.cs:42-81`
+- `PoTool.Api/Services/PortfolioSnapshotCaptureOrchestrator.cs:47-63`
+- `PoTool.Api/Services/PortfolioSnapshotCaptureOrchestrator.cs:68-118`
 
 **Why it breaks correctness**
 
-`LoadPortfolioContextAsync` always calls `EnsureLatestSourcesPersistedAsync`, and that method reads transient capture sources, builds snapshot inputs, creates snapshots, and writes them through `IPortfolioSnapshotPersistenceService` before the query returns. That means:
+The snapshot model and persistence layer now allow empty snapshots. That fix is real and verified by tests (`PortfolioSnapshotPersistenceServiceTests` and `PortfolioSnapshotCaptureOrchestratorTests`). The remaining failure is one layer earlier: capture source discovery depends on existing resolved work items with a resolved sprint.
 
-- comparison/trend/signal responses are not based only on already persisted snapshots
-- identical persisted data is not sufficient to guarantee identical API responses, because current source availability can change what becomes persisted during the request
-- the `GET /api/portfolio/comparison`, `/api/portfolio/trends`, and `/api/portfolio/signals` endpoints have hidden mutation side effects
+`GetLatestSourcesAsync` derives candidate snapshot sources only from `ResolvedWorkItems`. If a product owner is genuinely empty and has no qualifying resolved work items at all, the method returns no sources. `CaptureLatestAsync` then exits with `SourceCount = 0` and creates no snapshot header. That means the system still cannot guarantee a persisted “portfolio is empty at this point in time” record for the exact case the audit asked to challenge.
 
-This is the single largest contract violation in the implementation.
+This is not a representational detail. It means historical completeness still depends on the presence of upstream source rows, not solely on the business state being audited.
 
-### 2.2 Empty portfolio states are impossible to persist
+### 2.2 Latest-`N` history retrieval is not exact because `N = 1` is silently rewritten to `2`
 
 **Exact location**
 
-- `PoTool.Core.Domain/Domain/DeliveryTrends/Models/PortfolioSnapshotModels.cs:14-21`
-- `PoTool.Api/Services/PortfolioSnapshotCaptureDataService.cs:97-109`
+- `PoTool.Api/Services/PortfolioReadModelStateService.cs:97-133`
+- `PoTool.Api/Services/PortfolioReadModelStateService.cs:218-219`
+- indirectly exposed through:
+  - `PoTool.Api/Controllers/MetricsController.cs:361-452`
+  - `PoTool.Api/Services/PortfolioTrendQueryService.cs:18-62`
+  - `PoTool.Api/Services/PortfolioDecisionSignalQueryService.cs:28-68`
 
 **Why it breaks correctness**
 
-`PortfolioSnapshot` throws when `items.Count == 0`. Separately, the capture service returns an empty dictionary when no feature/epic progress exists, so no snapshot is created at all for an empty product scope. The result is not merely “no data”; it is loss of state fidelity:
+`NormalizeSnapshotCount` upgrades any request below `2` to `2`. That means the read side does not honor the caller’s explicit historical bound for trend and signal queries.
 
-- a portfolio that legitimately becomes empty cannot be represented as a persisted snapshot
-- a “everything removed / nothing left active” point disappears from history instead of being recorded
-- later comparison/trend logic cannot distinguish “no snapshot captured” from “snapshot captured and the portfolio was empty”
+For a system that claims deterministic historical selection, silently changing `N = 1` into `N = 2` is not benign. It changes what data is selected, can change direction and delta semantics, and makes it impossible to audit “latest persisted snapshot only” through the published read contract.
 
-Phase 1 explicitly required the empty-portfolio edge case. The current design fails it.
-
-### 2.3 Snapshot persistence is not concurrency-safe or logically unique
-
-**Exact location**
-
-- `PoTool.Api/Services/PortfolioSnapshotPersistenceService.cs:183-189`
-- `PoTool.Api/Persistence/PoToolDbContext.cs:707-733`
-- downstream consequence in `PoTool.Api/Services/PortfolioSnapshotSelectionService.cs:243-274`
-
-**Why it breaks correctness**
-
-`PersistAsync` sets `SnapshotId` as `(MAX(existing SnapshotId) + 1)` in application code. There is also no uniqueness constraint on the logical snapshot key `(ProductId, TimestampUtc, Source)`. Under concurrent reads or multi-instance execution this creates two failure modes:
-
-- two requests can race on `MAX + 1`, producing primary-key conflicts or non-repeatable failure behavior
-- two requests can both observe “snapshot does not exist yet” and persist duplicate logical snapshots for the same product/timestamp/source
-
-If duplicate logical snapshots exist, `GetPortfolioSnapshotBySourceAsync` loads all matching entities and merges all rows into one combined `PortfolioSnapshot`. That can duplicate business keys and either fail integrity validation or return a distorted grouped history.
-
-For a deterministic CDC system, identity generation and logical uniqueness must be enforced by the database, not by optimistic read-before-write code in the query path.
+The implementation is deterministic, but it is not semantically faithful to the request.
 
 ## 3. Structural weaknesses
 
-### 3.1 Snapshot groups are not fully self-contained state; aggregate rollups are recomputed later
+### 3.1 Snapshot groups are still not fully frozen analytical artifacts
 
 **Location**
 
-- `PoTool.Api/Services/PortfolioReadModelStateService.cs:85-103`
-- `PoTool.Api/Services/PortfolioTrendAnalysisService.cs:152-165`
+- `PoTool.Api/Services/PortfolioReadModelStateService.cs:76-94`
+- `PoTool.Api/Services/PortfolioTrendAnalysisService.cs:154-165`
 - `PoTool.Api/Services/PortfolioTrendAnalysisService.cs:194-208`
+- `PoTool.Core.Domain/Domain/DeliveryTrends/Services/ProductAggregationService.cs:22-59`
 
-The persisted snapshot rows contain item-level progress, weight, and lifecycle state, but portfolio-level and project-level aggregate metrics are recomputed during read queries through `ProductAggregationService`. The logic is centralized rather than duplicated, which is good, but it still means snapshots are not a fully frozen “all derived values included” artifact. If aggregation semantics ever change, historical responses can change without any snapshot rows changing.
+Persisted rows freeze item-level progress, weight, and lifecycle state, but portfolio-level and project-level rollups are recomputed at read time from those rows. The logic is centralized and deterministic, which avoids formula duplication, but the snapshot is still not a fully self-contained “all derived values frozen” artifact.
 
-### 3.2 Same-timestamp capture lineage is only partially modeled
+If aggregation semantics change later, historical portfolio/project trend responses can change without any persisted snapshot row changing. That is a structural audit risk, not a current arithmetic bug.
 
-**Location**
-
-- `PoTool.Core.Domain/Domain/DeliveryTrends/Services/PortfolioSnapshotComparisonService.cs:133-145`
-- `PoTool.Core.Domain/Domain/DeliveryTrends/Services/PortfolioSnapshotComparisonService.cs:38-41`
-- `PoTool.Api/Services/PortfolioSnapshotSelectionService.cs:116-121`
-
-Selection uses `TimestampUtc` and `SnapshotId` as an explicit ordering tie-break, which is correct for retrieval. Creation/validation does not carry the same total ordering end-to-end. `ValidateCreation` considers only snapshots with `Timestamp < candidate.Timestamp`, and `GetLatestBeforeAsync` also uses strict `< timestamp`. If same-timestamp captures are possible, retrieval is totally ordered but creation lineage is not. That is not a proven day-one bug, but it is an unresolved gap in the stated ordering contract.
-
-### 3.3 Historical selection is explicit but inefficient under long history
+### 3.2 Decision signals do not read from a single transactional historical view
 
 **Location**
 
-- `PoTool.Api/Services/PortfolioSnapshotSelectionService.cs:152-176`
+- `PoTool.Api/Services/PortfolioDecisionSignalQueryService.cs:33-48`
 
-The service first queries ordered history groups, then performs a separate full reload per group via `GetPortfolioSnapshotBySourceAsync`. This is logically explicit and deterministic, but it is an N+1 selection pattern. Under long history chains or large portfolios it raises latency and increases the window for race behavior around the hidden write-on-read pipeline.
+Signals are assembled from two separate reads: one history state load for trends and one comparison state load for current-vs-baseline comparison. With static persisted data this is deterministic. Under concurrent snapshot capture, however, a signal request can observe history and comparison from different points in time because no explicit transaction or persisted-history version ties the two reads together.
 
-### 3.4 The latest-N contract is not exact for `N = 1`
+This is not a defect for the fixed-input determinism requirement, but it is a realism gap under active capture.
 
-**Location**
-
-- `PoTool.Api/Services/PortfolioReadModelStateService.cs:118-124`
-- `PoTool.Api/Services/PortfolioReadModelStateService.cs:275-276`
-
-`NormalizeSnapshotCount` silently upgrades any requested count below 2 to 2. That means trend and signal queries do not implement a true “latest N” contract for `N = 1`; they impose a minimum instead of honoring the caller’s explicit bound.
-
-### 3.5 Capture assumes a one-row-per-business-key mapping
+### 3.3 Historical selection remains explicit but scales with an N+1 reload pattern
 
 **Location**
 
-- `PoTool.Api/Services/PortfolioSnapshotCaptureDataService.cs:143-161`
-- `PoTool.Core.Domain/Domain/DeliveryTrends/Models/PortfolioSnapshotModels.cs:23-31`
+- `PoTool.Api/Services/PortfolioSnapshotSelectionService.cs:154-179`
+- `PoTool.Api/Services/PortfolioSnapshotSelectionService.cs:226-298`
+- `PoTool.Api/Services/PortfolioSnapshotSelectionService.cs:390-420`
 
-Capture maps each epic-progress row directly to `(ProductId, ProjectNumber, WorkPackage)` and the snapshot model rejects duplicate business keys. If real data ever produces multiple epic rows that collapse onto the same business key, snapshot creation fails rather than aggregating or flagging a recoverable structural anomaly.
+The selector first retrieves ordered group headers, then reloads every selected group individually through `GetPortfolioSnapshotBySourceAsync`. That preserves explicit ordering and avoids natural-order dependence, but it creates an N+1 pattern that will become more visible under long history chains and large portfolios.
 
-## 4. Determinism violations
-
-### 4.1 Query-time persistence makes API results depend on more than persisted data
-
-Given the same already-persisted rows, API results are not guaranteed to remain identical if current capture sources change between requests. The read model can create missing snapshots during the request. This violates the stated determinism requirement even if the downstream trend and comparison services are themselves deterministic.
-
-### 4.2 Persistence identity and uniqueness are nondeterministic under concurrency
-
-`MAX + 1` identity assignment plus missing logical uniqueness means the same workload can produce either:
-
-- a successful write
-- a primary-key collision
-- a duplicate logical snapshot
-
-which outcome occurs depends on timing, not on business data.
-
-### 4.3 Equal-timestamp capture lineage does not preserve the same total ordering used for retrieval
-
-Selection is explicit about `TimestampUtc` then `SnapshotId`, but creation and “latest before” semantics stop at timestamp-only ordering. The system therefore lacks one consistent total ordering rule across capture, persistence, selection, and comparison.
-
-## 5. Duplication or leakage findings
-
-### 5.1 Major semantic leakage: read-side query orchestration owns write-side persistence
+### 3.4 Work-package key reactivation is still modeled as invalid rather than explicitly supported
 
 **Location**
 
-- `PoTool.Api/Services/PortfolioReadModelStateService.cs:44-67`
-- `PoTool.Api/Services/PortfolioReadModelStateService.cs:210-273`
+- `PoTool.Core.Domain/Domain/DeliveryTrends/Services/PortfolioSnapshotComparisonService.cs:133-181`
+- `PoTool.Core.Domain/Domain/DeliveryTrends/Services/PortfolioSnapshotValidationService.cs:77-87`
+- `PoTool.Core.Domain/Domain/DeliveryTrends/Services/PortfolioSnapshotFactory.cs` (reactivation path enforced through validation)
 
-This service is a read-model state loader by name, but it also captures source data, invokes the snapshot factory, and persists new snapshots. That is a write concern leaking into query orchestration. It is the architectural reason the API cannot truthfully claim “GET only, no mutation.”
+A previously retired work-package business key cannot return as active; validation throws instead. If the business truly treats work-package identifiers as permanently retired, that is acceptable. If add/remove/re-add cycles with key reuse are valid, the current model cannot represent them.
 
-### 5.2 No meaningful formula duplication found across comparison/trend/query/UI layers
+The implementation is deterministic, but the domain assumption is stronger than the audit brief and is not documented in the canonical domain rules.
 
-Positive result:
-
-- domain comparison logic stays in `PortfolioSnapshotComparisonService`
-- portfolio/project aggregation stays in `ProductAggregationService`
-- query services mostly orchestrate mapping and filtering
-- the UI panel consumes DTOs and formats values only
-
-This part of the implementation is cleaner than the read/write boundary.
-
-### 5.3 UI does not recompute domain values
+### 3.5 UI composition is read-only but not snapshot-consistent across calls
 
 **Location**
 
 - `PoTool.Client/Pages/Home/Components/PortfolioCdcReadOnlyPanel.razor:421-478`
-- `PoTool.Client/Pages/Home/Components/PortfolioCdcReadOnlyPanel.razor:550-586`
 
-The panel issues typed client calls, displays DTO values, formats them, and does point lookup by `SnapshotId`. It does not sum, average, regroup, or derive trend/signal logic. Filtering remains server-side. This is compliant.
+The panel loads progress, snapshot, comparison, trends, and signals through five separate GET calls. It does not recompute business logic, which is correct, but it also means the page can temporarily present mixed snapshot labels if a new persisted snapshot appears mid-refresh.
 
-## 6. Edge case failures
+That is a consumption consistency risk, not a UI-math defect.
 
-### 6.1 Empty portfolio
+## 4. Determinism violations (if any)
 
-**Result: fail**
+### 4.1 No direct determinism violation was found for fixed persisted data
 
-No empty snapshot can be created or persisted. The system drops the state entirely.
+For identical persisted snapshot rows:
 
-### 6.2 Single project / single work package
+- comparison output is deterministic because business keys are explicitly unified and ordered in `PortfolioSnapshotComparisonService`
+- trend output is deterministic because snapshots are ordered by `Timestamp` then `SnapshotId` in `PortfolioTrendAnalysisService`
+- signal output is deterministic because it is derived from deterministic trend/comparison DTOs and ordered explicitly in `PortfolioDecisionSignalService`
+- API endpoints `/api/portfolio/comparison`, `/api/portfolio/trends`, and `/api/portfolio/signals` are GET-only and now consume persisted data only
 
-**Result: pass**
+The earlier determinism break caused by write-on-read capture is fixed.
 
-The snapshot, comparison, and trend logic handle a single business key deterministically. Existing tests cover simple one-row flows.
-
-### 6.3 Zero-weight items
-
-**Result: mostly pass**
-
-`ProductAggregationService` excludes weight `<= 0` from aggregate progress and returns `null` progress when no positive-weight active baseline exists. This avoids null-to-zero coercion. The risk is representational, not arithmetic: a zero-weight-only snapshot is persisted, but overall aggregate progress becomes absent rather than numerically zero.
-
-### 6.4 All items done
-
-**Result: pass**
-
-No direct time dependence was found in snapshot progress computation or later selection/comparison/trend code. If persisted item progress is `1.0`, downstream comparison and trend logic preserve it deterministically.
-
-### 6.5 All items new
-
-**Result: pass**
-
-Comparison preserves `null` previous values and does not coerce them to zero. New work packages are detected via `PreviousLifecycleState is null && CurrentLifecycleState == Active`.
-
-### 6.6 Comparing identical snapshots
-
-**Result: pass**
-
-Comparison yields zero deltas only when both values exist and are equal. No smoothing or invented change is introduced.
-
-### 6.7 Reordered entities
-
-**Result: pass**
-
-Comparison and trend projection both apply explicit ordering by business key or snapshot order. Natural database ordering is not used.
-
-### 6.8 Partial overlap / missing entities
-
-**Result: pass with caveat**
-
-Comparison handles missing keys with null previous/current values and null deltas. That is correct. The caveat is that duplicate logical persisted snapshots would break this by merging conflicting rows into one group.
-
-### 6.9 Rapid add/remove cycles with key reuse
-
-**Result: fail**
+### 4.2 Request-level consistency can still drift under concurrent capture
 
 **Location**
 
-- `PoTool.Core.Domain/Domain/DeliveryTrends/Services/PortfolioSnapshotFactory.cs:59-66`
-- `PoTool.Core.Domain/Domain/DeliveryTrends/Services/PortfolioSnapshotComparisonService.cs:77-87`
+- `PoTool.Api/Services/PortfolioDecisionSignalQueryService.cs:33-48`
+- `PoTool.Client/Pages/Home/Components/PortfolioCdcReadOnlyPanel.razor:421-478`
 
-Once a work package business key becomes retired, reappearance of the same key throws an exception. If the business permits reintroducing a previously retired work package identifier, the system cannot represent the cycle and fails instead of producing deterministic signals.
+This is a conditional determinism risk rather than a fixed-data violation. Separate reads inside the signals query, and separate endpoint calls inside the UI, can observe different persisted histories if capture happens concurrently.
 
-### 6.10 Long stable periods
+## 5. Duplication or leakage findings
+
+### 5.1 No meaningful formula duplication found across domain, query, controller, or UI layers
+
+Positive result:
+
+- comparison math remains in `PortfolioSnapshotComparisonService`
+- aggregate portfolio/project rollups remain in `ProductAggregationService`
+- query services orchestrate persisted selection, mapping, and filtering rather than reimplementing formulas
+- `PortfolioReadModelMapper` performs projection only
+- the UI formats values and looks up precomputed points by `SnapshotId`; it does not recompute trends, deltas, or signals
+
+### 5.2 The previous write-side leakage into read orchestration is resolved
+
+**Location validated**
+
+- `PoTool.Api/Services/PortfolioReadModelStateService.cs:60-216`
+- `PoTool.Api/Controllers/PortfolioSnapshotsController.cs:23-38`
+- `PoTool.Api/Persistence/PoToolDbContext.cs:707-727`
+- `PoTool.Api/Migrations/20260327061554_CdcCriticalFixes.cs:11-72`
+
+The earlier architecture defect is no longer present. Read-model state loading no longer captures or persists snapshots. Capture now sits behind an explicit command/controller boundary, and persistence uniqueness is enforced in the schema.
+
+### 5.3 UI consumption is projection-only
+
+**Location**
+
+- `PoTool.Client/ApiClient/ApiClient.PortfolioConsumption.cs:85-231`
+- `PoTool.Client/Pages/Home/Components/PortfolioCdcReadOnlyPanel.razor:421-586`
+
+The client calls typed API abstractions, binds DTOs, formats values, and performs point lookup by `SnapshotId`. It does not aggregate, smooth, interpolate, or derive signals locally.
+
+## 6. Edge case failures
+
+### 6.1 Empty portfolio owner with no source rows
+
+**Result: fail**
+
+Empty snapshots are representable and persistable once a source exists, but a truly empty owner with no qualifying resolved-work-item source produces no snapshot at all. The state remains historically invisible.
+
+### 6.2 Empty product within an otherwise non-empty owner
 
 **Result: pass**
 
-Repeated-no-change is deterministic and based on the first three persisted points only. No smoothing or interpolation is present.
+`PortfolioSnapshotCaptureOrchestrator` persists header-only snapshots when a source exists but a product has no inputs. This is covered by `PortfolioSnapshotCaptureOrchestratorTests.CaptureLatestAsync_PersistsEmptySnapshotForProductWithoutInputs`.
+
+### 6.3 Single project / single work package
+
+**Result: pass**
+
+The snapshot, comparison, and trend logic handle single-key cases deterministically. Existing tests cover simple one-row flows.
+
+### 6.4 Zero-weight items
+
+**Result: pass with explicit null semantics**
+
+`ProductAggregationService` excludes weight `<= 0` from aggregate progress and returns `null` progress when no positive-weight active baseline exists. No null-to-zero coercion was found.
+
+### 6.5 All items done
+
+**Result: pass**
+
+No hidden current-time dependency was found in snapshot persistence, selection, comparison, or trend projection. Persisted `1.0` progress remains `1.0` downstream.
+
+### 6.6 All items new
+
+**Result: pass**
+
+Comparison preserves `null` previous values, computes no invented delta, and identifies new work packages only when the previous lifecycle is absent and the current lifecycle is active.
+
+### 6.7 Comparing identical snapshots
+
+**Result: pass**
+
+Comparison yields zero deltas only when both prior and current values exist and are equal. No smoothing or invented change is introduced.
+
+### 6.8 Comparing snapshots with missing entities / partial overlap
+
+**Result: pass**
+
+Missing keys remain represented with `null` prior or current values. Deltas remain `null` instead of being coerced to zero.
+
+### 6.9 Reordered entities
+
+**Result: pass**
+
+Comparison and trend projection both apply explicit ordering. No reliance on database natural ordering was found.
+
+### 6.10 Identical timestamps
+
+**Result: pass**
+
+Selection and trend analysis order by `TimestampUtc` and use `SnapshotId` as an explicit tie-break. The earlier tie-break gap was addressed.
+
+### 6.11 Latest `N` where `N > available`
+
+**Result: pass**
+
+The selector returns the available persisted history without fabricating missing snapshots.
+
+### 6.12 Latest `N` where `N = 1`
+
+**Result: fail**
+
+The public read path silently upgrades the request to `2`, so the bounded historical contract is not exact.
+
+### 6.13 Archived snapshots mixed into selection
+
+**Result: pass**
+
+Archived inclusion is explicit, ordering remains explicit, and the system surfaces an archived-history notice when archived snapshots exist but are excluded by default.
+
+### 6.14 Rapid add/remove cycles with key reuse
+
+**Result: unresolved domain risk**
+
+If key reuse is valid, current validation fails the scenario. If key reuse is invalid, the invariant should be documented in the canonical domain rules instead of remaining implicit in validation code.
 
 ## 7. Recommendations (prioritized)
 
-1. **Remove persistence from query execution immediately.**  
-   `PortfolioReadModelStateService` must stop calling capture/factory/persistence logic from read paths. Snapshot capture should happen in an explicit command, background sync, or scheduled pipeline. Queries must consume persisted data only.
+1. **Add a capture strategy for truly empty owners.**  
+   Snapshot capture needs a source/timestamp strategy that does not depend on existing resolved work items when the audited business state is “nothing in scope.” Without that, full-state history remains incomplete.
 
-2. **Make empty portfolio snapshots first-class.**  
-   Allow persisted zero-row snapshots or add an explicit header-level “captured empty” representation so history can record “nothing in scope” as a real state.
+2. **Honor `snapshotCount` exactly, including `N = 1`.**  
+   If trends/signals require at least two points for some outputs, return null deltas/directions explicitly instead of silently changing the caller’s requested bound.
 
-3. **Move snapshot identity and logical uniqueness into the database.**  
-   Replace `MAX + 1` with database-generated identity/sequence behavior and add a unique constraint for `(ProductId, TimestampUtc, Source)`. If grouped multi-product snapshots are intended, define that contract explicitly and enforce it with schema-level guarantees.
+3. **Decide and document whether work-package key reactivation is valid domain behavior.**  
+   Keep the current validation only if the business invariant is intentional and canonical. Otherwise model reactivation explicitly.
 
-4. **Unify total ordering semantics across capture, selection, and comparison.**  
-   Either forbid same-timestamp captures per product or model them consistently with a persisted tie-break that creation/validation also understands.
+4. **Consider freezing aggregate rollups if historical analytics must remain invariant under future formula changes.**  
+   The current centralized recomputation is clean, but it is still recomputation.
 
-5. **Decide whether work-package reactivation is valid domain behavior.**  
-   If it is valid, model it explicitly instead of throwing. If it is invalid, document the invariant and add tests proving why identical-key reintroduction must be rejected.
+5. **Reduce history selection round-trips for long histories.**  
+   Correctness is currently acceptable, but the N+1 group reload pattern will be an avoidable stress point for large portfolios.
 
-6. **If “full snapshot state” is a hard requirement, persist aggregate rollups too.**  
-   Today portfolio/project rollups are recomputed from row data at query time. That is centralized and deterministic, but it is still recomputation. Either accept that design formally or persist versioned aggregates with the snapshot.
-
-7. **Reduce history selection round-trips once correctness is fixed.**  
-   The current N+1 group reload pattern is a secondary issue, but it will become more visible after the write-on-read problem is removed and history length grows.
+6. **If request-level consistency under concurrent capture matters, introduce a shared persisted-history version or transactional read boundary for signals and UI consumption.**
 
 ## Audit conclusion
 
-The implementation contains solid localized pieces: exact-key comparison is mathematically careful, null semantics are mostly preserved, trend direction logic is deterministic, and the UI does not leak business logic. The system still fails the requested full-quality audit because the read path is not truly read-only, empty historical states cannot be represented, and persisted identity semantics are too weak to guarantee deterministic behavior under concurrent or scaled usage.
+The current CDC implementation is much closer to audit-clean than the pre-fix system: read-side mutation was removed, persisted uniqueness is enforced, selection is explicitly ordered, comparison preserves null semantics, and the UI consumes DTOs without recalculating business logic.
+
+It still fails a full-system quality audit because the system cannot guarantee a persisted snapshot for a truly empty owner state, and because the read contract for latest-`N` history is not semantically exact. Those are smaller defects than the earlier architecture failures, but they remain correctness issues rather than cosmetic risks.
