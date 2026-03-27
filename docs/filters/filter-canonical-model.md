@@ -97,6 +97,8 @@ They answer: **“How should this page be narrowed further?”**
 
 ## 2. Core filter types
 
+This section defines the canonical filters that the system recognizes, their strong types, and their dependency rules.
+
 ## 2.1 Global filters
 
 ### Product
@@ -130,13 +132,12 @@ They answer: **“How should this page be narrowed further?”**
 ### Time
 
 - **Category:** Conditional Global Filter
-- **Type:** Union filter with mutually exclusive modes
+- **Type:** Discriminated union with mutually exclusive modes
 - **Value structure:**
   - `TimeFilterValue`
-    - `Mode: TimeFilterMode`
-    - `SingleSprint: SprintRef?`
-    - `SprintRange: SprintRangeValue?`
-    - `DateRange: DateRangeValue?`
+    - `SingleSprintTimeValue`
+    - `SprintRangeTimeValue`
+    - `DateRangeTimeValue`
 - **Required or optional:** Optional
 - **Meaning of no value:** No explicit shared time constraint
 - **Dependencies:** Applicability depends on page contract; some pages may support only specific modes
@@ -144,27 +145,36 @@ They answer: **“How should this page be narrowed further?”**
 #### Time sub-types
 
 **Single Sprint**
-- `SprintRef`
-  - `SprintId: int`
-  - `SprintName: string`
-  - `TeamId: int?`
+- `SingleSprintTimeValue`
+  - `Sprint: SprintRef`
+
+Where `SprintRef` contains:
+- `SprintId: int`
+- `SprintName: string`
+- `TeamId: int?`
 
 **Sprint Range**
-- `SprintRangeValue`
+- `SprintRangeTimeValue`
   - `FromSprintId: int`
   - `ToSprintId: int`
 
 **Date Range**
-- `DateRangeValue`
+- `DateRangeTimeValue`
   - `FromUtc: DateTimeOffset`
   - `ToUtc: DateTimeOffset`
 
 **Mode rule**
 
-Exactly one time mode may be active at a time.
-If `Mode = SingleSprint`, only `SingleSprint` may contain a value.
-If `Mode = SprintRange`, only `SprintRange` may contain a value.
-If `Mode = DateRange`, only `DateRange` may contain a value.
+Exactly one time shape may be active at a time.
+The type system should make it impossible to construct a time value containing multiple active modes.
+
+If deserialization or manual construction produces multiple time shapes, the value is structurally invalid.
+In that case:
+
+- the original value remains in `SelectedFilters`
+- Time is added to `InvalidFilters`
+- Time is excluded from `EffectiveFilters`
+- the canonical invalid reason code is `InvalidTimeShape`
 
 ## 2.3 Page-level canonical examples
 
@@ -310,6 +320,8 @@ InvalidFilters answer: **“What did the user select that cannot currently be ap
 
 ## 4. Validation rules
 
+This section defines the canonical validation rules that transform selected values into valid effective filters.
+
 ## 4.1 Validation responsibilities
 
 Validation happens in two places:
@@ -432,6 +444,8 @@ If the page supports Time but not the selected mode:
 
 ## 5. Filter application model
 
+This section defines the ordered flow from user input to effective page and backend filtering.
+
 ## 5.1 Selection flow
 
 ### Step 1: UI writes SelectedFilters
@@ -511,6 +525,8 @@ Invalid filters are:
 ---
 
 ## 6. Filter scoping
+
+This section defines which filters persist across navigation, which remain remembered conditionally, and which reset with the page.
 
 ## 6.1 Global across navigation
 
@@ -623,6 +639,8 @@ No other part of the core system should require structural change.
 
 ## 8. Data contract
 
+This section defines the canonical backend-facing filter DTO and the serialization rules that keep requests consistent.
+
 ## 8.1 Canonical backend DTO
 
 Filters must be passed to the backend as a single structured DTO.
@@ -649,14 +667,27 @@ public sealed record PageFilterDto(
     IReadOnlyList<int>? PipelineIds,
     IReadOnlyList<PrStatus>? PrStatuses);
 
-public sealed record TimeFilterDto(
-    TimeFilterMode Mode,
-    int? SprintId,
-    int? FromSprintId,
-    int? ToSprintId,
-    DateTimeOffset? FromUtc,
-    DateTimeOffset? ToUtc);
+public abstract record TimeFilterDto
+{
+    public sealed record SingleSprint(int SprintId) : TimeFilterDto;
+
+    public sealed record SprintRange(int FromSprintId, int ToSprintId) : TimeFilterDto;
+
+    public sealed record DateRange(DateTimeOffset FromUtc, DateTimeOffset ToUtc) : TimeFilterDto;
+}
 ```
+
+### Wire contract note
+
+The UI state may retain rich reference values such as `TeamRef`, `ProductRef`, or `ProjectRef` so that the interface can display names and validate dependencies locally.
+
+The backend DTO carries canonical identifiers only:
+
+- `TeamRef` becomes `TeamId`
+- `ProductRef` becomes `ProductId`
+- `ProjectRef` becomes `ProjectKey`
+
+Display metadata is a UI concern and is not part of the canonical request payload.
 
 ## 8.2 Naming conventions
 
@@ -695,7 +726,9 @@ The backend request must be created from `EffectiveFilters`, never from `Selecte
 
 ## 9. Examples
 
-## Example 1 — Product selected, Team selected, Time not applicable
+This section shows how the canonical model behaves in concrete user scenarios.
+
+### Example 1 — Product selected, Team selected, Time not applicable
 
 **Scenario**
 - Global Product is selected
@@ -756,7 +789,7 @@ EffectiveFilters:
       TeamId: 7
 ```
 
-## Example 2 — Product and Time selected globally, page ignores Time
+### Example 2 — Product and Time selected globally, page ignores Time
 
 **Scenario**
 - user selected Product globally
@@ -807,7 +840,7 @@ EffectiveFilters:
     ProductId: 3
 ```
 
-## Example 3 — Invalid Team not in Product
+### Example 3 — Invalid Team not in Product
 
 **Scenario**
 - Product is selected globally
