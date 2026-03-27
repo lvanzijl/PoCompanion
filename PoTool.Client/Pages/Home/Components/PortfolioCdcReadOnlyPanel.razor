@@ -13,9 +13,6 @@
                 <MudIcon Icon="@Icons.Material.Filled.Visibility" Class="mr-2" />
                 CDC Portfolio History View
             </MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                Read-only progress, history, lifecycle, and decision signals from persisted CDC snapshots.
-            </MudText>
         </MudStack>
 
         <MudButton Variant="Variant.Outlined"
@@ -176,12 +173,7 @@
             </MudPaper>
         }
 
-        <MudStack Spacing="0" Class="mb-2">
-            <MudText Typo="Typo.subtitle1">Decision signal</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                One dominant signal first, with the rest collapsed into a single summary line.
-            </MudText>
-        </MudStack>
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Decision signal</MudText>
         @if (GetPrimarySignalDisplay() is { } primarySignal)
         {
             <MudAlert Severity="@primarySignal.Severity" Variant="Variant.Filled" Class="mb-2">
@@ -191,7 +183,7 @@
 
             @if (!string.IsNullOrWhiteSpace(GetSecondarySignalSummary()))
             {
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4 ml-1">@GetSecondarySignalSummary()</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3 mb-4 ml-1">@GetSecondarySignalSummary()</MudText>
             }
         }
         else
@@ -202,12 +194,7 @@
             </MudAlert>
         }
 
-        <MudStack Spacing="0" Class="mb-2">
-            <MudText Typo="Typo.subtitle1">Trend Overview</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                Snapshot trend, delta, and direction are aligned for quick scanning.
-            </MudText>
-        </MudStack>
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Trend Overview</MudText>
         @if (GetTrendOverviewRows() is { Count: > 0 } trendOverviewRows)
         {
             <MudTable T="TrendOverviewRow" Items="trendOverviewRows" Dense="true" Hover="true" Class="mb-4">
@@ -229,7 +216,7 @@
                     <MudTd DataLabel="Progress">@FormatRatio(context.Progress)</MudTd>
                     <MudTd DataLabel="Δ">
                         <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetTrendColorFromDirection(context.Direction)">
-                            @FormatDeltaWithDirection(context.Delta)
+                            @FormatTrendOverviewDelta(context.Delta)
                         </MudChip>
                     </MudTd>
                 </RowTemplate>
@@ -240,12 +227,7 @@
             <MudText Typo="Typo.body2" Class="mb-4">No persisted history is available for the selected scope.</MudText>
         }
 
-        <MudStack Spacing="0" Class="mb-2">
-            <MudText Typo="Typo.subtitle1">Changed Work Packages</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                Rows with progress, lifecycle, or weight changes are shown first.
-            </MudText>
-        </MudStack>
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Changed Work Packages</MudText>
         @if (GetChangedWorkPackageItems() is { Count: > 0 } changedWorkPackages)
         {
             <MudTable T="PortfolioComparisonItemDto" Items="changedWorkPackages" Dense="true" Hover="true" Class="mb-4">
@@ -267,11 +249,9 @@
                             <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetChangedDeltaColor(context)">
                                 @GetChangedWorkPackageDeltaText(context)
                             </MudChip>
-                            @foreach (var indicator in GetChangeIndicators(context))
+                            @if (!string.IsNullOrWhiteSpace(GetChangeReasonSummary(context)))
                             {
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
-                                    @indicator
-                                </MudChip>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@GetChangeReasonSummary(context)</MudText>
                             }
                         </MudStack>
                     </MudTd>
@@ -712,7 +692,7 @@
     private string GetPortfolioDeltaContext()
         => _comparison?.PreviousSnapshotLabel is null
             ? $"Snapshot date: {_progress?.SnapshotTimestamp:yyyy-MM-dd}"
-            : $"Compared to: {_comparison.PreviousSnapshotLabel} — {FormatDate(_comparison.PreviousTimestamp)}";
+            : $"vs {GetCompactSnapshotLabel(_comparison.PreviousSnapshotLabel)} ({FormatDate(_comparison.PreviousTimestamp)})";
 
     private string? GetArchivedHistorySummary()
     {
@@ -794,7 +774,7 @@
             var delta = CalculateDisplayedRatioDelta(progress, nextProgress);
 
             rows.Add(new TrendOverviewRow(
-                snapshot.SnapshotLabel,
+                GetSnapshotDisplayLabel(snapshot, snapshots),
                 snapshot.Timestamp,
                 progress,
                 delta,
@@ -931,6 +911,11 @@
             ? $"{FormatSignedRatio(value)} {GetTrendGlyph(GetTrendDirection(value))}"
             : "—";
 
+    private static string FormatTrendOverviewDelta(double? value)
+        => value.HasValue
+            ? FormatDeltaWithDirection(value)
+            : "— →";
+
     // Trend deltas must match the rounded percentages shown to the user, so compare display values instead of raw ratios.
     private static double? CalculateDisplayedRatioDelta(double? currentValue, double? previousValue)
     {
@@ -1061,27 +1046,70 @@
         return Color.Default;
     }
 
-    private static IReadOnlyList<string> GetChangeIndicators(PortfolioComparisonItemDto comparisonItem)
+    private static string GetChangeReasonSummary(PortfolioComparisonItemDto comparisonItem)
     {
-        var indicators = new List<string>();
+        var reasons = new List<string>();
 
         if (HasNonZeroValue(comparisonItem.ProgressDelta))
         {
-            indicators.Add("[P]");
+            reasons.Add("Progress");
         }
 
         if (HasLifecycleDelta(comparisonItem))
         {
-            indicators.Add("[L]");
+            reasons.Add("Lifecycle");
         }
 
         if (HasNonZeroValue(comparisonItem.WeightDelta))
         {
-            indicators.Add("[W]");
+            reasons.Add("Weight");
         }
 
-        return indicators;
+        return string.Join(" · ", reasons);
     }
+
+    // When multiple persisted snapshots share the same sprint label, append a chronology hint so the trend remains unambiguous.
+    private static string GetSnapshotDisplayLabel(PortfolioHistoricalSnapshotDto snapshot, IReadOnlyList<PortfolioHistoricalSnapshotDto> snapshots)
+    {
+        var matchingSnapshots = snapshots
+            .Where(candidate => string.Equals(candidate.SnapshotLabel, snapshot.SnapshotLabel, StringComparison.Ordinal))
+            .OrderBy(candidate => candidate.Timestamp)
+            .ThenBy(candidate => candidate.SnapshotId)
+            .ToArray();
+
+        if (matchingSnapshots.Length <= 1)
+        {
+            return NormalizeSnapshotLabel(snapshot.SnapshotLabel);
+        }
+
+        var duplicateIndex = Array.FindIndex(matchingSnapshots, candidate => candidate.SnapshotId == snapshot.SnapshotId);
+        if (duplicateIndex < 0)
+        {
+            return NormalizeSnapshotLabel(snapshot.SnapshotLabel);
+        }
+
+        return $"{NormalizeSnapshotLabel(snapshot.SnapshotLabel)} ({GetSnapshotOrderingHint(duplicateIndex, matchingSnapshots.Length)})";
+    }
+
+    private static string GetSnapshotOrderingHint(int duplicateIndex, int totalCount)
+        => totalCount switch
+        {
+            <= 1 => string.Empty,
+            2 => duplicateIndex == 0 ? "earlier" : "later",
+            _ when duplicateIndex == 0 => "earliest",
+            _ when duplicateIndex == totalCount - 1 => "latest",
+            _ => $"checkpoint {duplicateIndex + 1}"
+        };
+
+    private static string GetCompactSnapshotLabel(string value)
+    {
+        var normalizedValue = NormalizeSnapshotLabel(value);
+        var separatorIndex = normalizedValue.IndexOf(" — ", StringComparison.Ordinal);
+        return separatorIndex >= 0 ? normalizedValue[..separatorIndex] : normalizedValue;
+    }
+
+    private static string NormalizeSnapshotLabel(string value)
+        => value.Replace(" - ", " — ", StringComparison.Ordinal);
 
     private static string? NullIfWhiteSpace(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

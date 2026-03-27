@@ -62,16 +62,23 @@ public sealed class PortfolioCdcUiAuditTests
 
         var panel = File.ReadAllText(panelPath);
 
-        StringAssert.Contains(panel, "Compared to:");
+        StringAssert.Contains(panel, "vs {GetCompactSnapshotLabel(_comparison.PreviousSnapshotLabel)} ({FormatDate(_comparison.PreviousTimestamp)})");
         StringAssert.Contains(panel, "Stable Work Packages (@GetStableWorkPackageItems().Count unchanged)");
         StringAssert.Contains(panel, "GetChangedWorkPackageDeltaText");
-        StringAssert.Contains(panel, "GetChangeIndicators");
-        StringAssert.Contains(panel, "FormatDeltaWithDirection(context.Delta)");
+        StringAssert.Contains(panel, "GetChangeReasonSummary");
+        StringAssert.Contains(panel, "FormatTrendOverviewDelta(context.Delta)");
+        StringAssert.Contains(panel, "\"— →\"");
+        StringAssert.Contains(panel, "GetSnapshotDisplayLabel");
+        StringAssert.Contains(panel, "GetCompactSnapshotLabel");
         StringAssert.Contains(panel, "CalculateDisplayedRatioDelta");
         StringAssert.Contains(panel, "Math.Round(value, 0, MidpointRounding.AwayFromZero)");
-        Assert.IsFalse(panel.Contains("Secondary signals:", StringComparison.Ordinal), "Secondary signal text should be de-emphasized without a prefix label.");
+        Assert.IsFalse(panel.Contains("Secondary signals:", StringComparison.Ordinal), "Secondary signal text should be deemphasized without a prefix label.");
         Assert.IsFalse(panel.Contains("<MudTh>Direction</MudTh>", StringComparison.Ordinal), "Direction columns should be merged into delta columns.");
         Assert.IsFalse(panel.Contains("Active-only", StringComparison.Ordinal), "Trend rows should not repeat active-only noise.");
+        Assert.IsFalse(panel.Contains("One dominant signal first", StringComparison.Ordinal), "Decision helper text should be removed once the UI is self-explanatory.");
+        Assert.IsFalse(panel.Contains("Snapshot trend, delta, and direction are aligned for quick scanning.", StringComparison.Ordinal), "Trend helper text should be removed.");
+        Assert.IsFalse(panel.Contains("Rows with progress, lifecycle, or weight changes are shown first.", StringComparison.Ordinal), "Changed work package helper text should be removed.");
+        Assert.IsFalse(panel.Contains("[P]", StringComparison.Ordinal), "Unexplained shorthand should not remain in changed work package indicators.");
     }
 
     private static string GetRepositoryRoot()
