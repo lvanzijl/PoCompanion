@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
@@ -38,7 +39,7 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
     {
         await using var context = new PoToolDbContext(_options);
         var mapper = new PortfolioSnapshotPersistenceMapper();
-        var service = new PortfolioSnapshotPersistenceService(context, mapper);
+        var service = new PortfolioSnapshotPersistenceService(context, mapper, NullLogger<PortfolioSnapshotPersistenceService>.Instance);
         var timestamp = new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero);
 
         var persisted = await service.PersistAsync(
@@ -74,11 +75,35 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
     }
 
     [TestMethod]
+    public async Task PersistAsync_PersistsEmptySnapshotHeaderWithoutItems()
+    {
+        await using var context = new PoToolDbContext(_options);
+        var service = new PortfolioSnapshotPersistenceService(
+            context,
+            new PortfolioSnapshotPersistenceMapper(),
+            NullLogger<PortfolioSnapshotPersistenceService>.Instance);
+        var timestamp = new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero);
+
+        var persisted = await service.PersistAsync(
+            1,
+            "Sprint 1",
+            createdBy: null,
+            new PortfolioSnapshot(timestamp, Array.Empty<PortfolioSnapshotItem>()),
+            CancellationToken.None);
+
+        Assert.IsGreaterThan(0L, persisted.SnapshotId);
+        Assert.AreEqual(timestamp, persisted.Snapshot.Timestamp);
+        Assert.IsEmpty(persisted.Snapshot.Items);
+        Assert.AreEqual(1, await context.PortfolioSnapshots.CountAsync());
+        Assert.AreEqual(0, await context.PortfolioSnapshotItems.CountAsync());
+    }
+
+    [TestMethod]
     public async Task GetLatestAsync_ExcludesArchivedSnapshotsByDefault()
     {
         await using var context = new PoToolDbContext(_options);
         var mapper = new PortfolioSnapshotPersistenceMapper();
-        var selectionService = new PortfolioSnapshotSelectionService(context, mapper);
+        var selectionService = new PortfolioSnapshotSelectionService(context, mapper, NullLogger<PortfolioSnapshotSelectionService>.Instance);
 
         context.PortfolioSnapshots.Add(mapper.ToEntity(
             1,
@@ -108,8 +133,8 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
     {
         await using var context = new PoToolDbContext(_options);
         var mapper = new PortfolioSnapshotPersistenceMapper();
-        var persistenceService = new PortfolioSnapshotPersistenceService(context, mapper);
-        var selectionService = new PortfolioSnapshotSelectionService(context, mapper);
+        var persistenceService = new PortfolioSnapshotPersistenceService(context, mapper, NullLogger<PortfolioSnapshotPersistenceService>.Instance);
+        var selectionService = new PortfolioSnapshotSelectionService(context, mapper, NullLogger<PortfolioSnapshotSelectionService>.Instance);
         var timestamp = new DateTimeOffset(2026, 3, 8, 0, 0, 0, TimeSpan.Zero);
 
         await persistenceService.PersistAsync(1, "Sprint 2A", null, CreateSnapshot(timestamp, 1, 0.4d), CancellationToken.None);
@@ -127,8 +152,8 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
     {
         await using var context = new PoToolDbContext(_options);
         var mapper = new PortfolioSnapshotPersistenceMapper();
-        var persistenceService = new PortfolioSnapshotPersistenceService(context, mapper);
-        var selectionService = new PortfolioSnapshotSelectionService(context, mapper);
+        var persistenceService = new PortfolioSnapshotPersistenceService(context, mapper, NullLogger<PortfolioSnapshotPersistenceService>.Instance);
+        var selectionService = new PortfolioSnapshotSelectionService(context, mapper, NullLogger<PortfolioSnapshotSelectionService>.Instance);
         var timestamp = new DateTimeOffset(2026, 3, 8, 0, 0, 0, TimeSpan.Zero);
 
         await persistenceService.PersistAsync(1, "Sprint 1", null, CreateSnapshot(timestamp.AddDays(-7), 1, 0.2d), CancellationToken.None);
@@ -143,18 +168,18 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
     }
 
     [TestMethod]
-    public async Task GetLatestBeforeAsync_ReturnsLatestStrictlyBeforeTimestamp()
+    public async Task GetLatestAtOrBeforeAsync_ReturnsLatestSnapshotAtOrBeforeTimestamp()
     {
         await using var context = new PoToolDbContext(_options);
         var mapper = new PortfolioSnapshotPersistenceMapper();
-        var persistenceService = new PortfolioSnapshotPersistenceService(context, mapper);
-        var selectionService = new PortfolioSnapshotSelectionService(context, mapper);
+        var persistenceService = new PortfolioSnapshotPersistenceService(context, mapper, NullLogger<PortfolioSnapshotPersistenceService>.Instance);
+        var selectionService = new PortfolioSnapshotSelectionService(context, mapper, NullLogger<PortfolioSnapshotSelectionService>.Instance);
 
         await persistenceService.PersistAsync(1, "Sprint 1", null, CreateSnapshot(new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero), 1, 0.2d), CancellationToken.None);
-        var expected = await persistenceService.PersistAsync(1, "Sprint 2", null, CreateSnapshot(new DateTimeOffset(2026, 3, 8, 0, 0, 0, TimeSpan.Zero), 1, 0.4d), CancellationToken.None);
-        await persistenceService.PersistAsync(1, "Sprint 3", null, CreateSnapshot(new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero), 1, 0.8d), CancellationToken.None);
+        await persistenceService.PersistAsync(1, "Sprint 2", null, CreateSnapshot(new DateTimeOffset(2026, 3, 8, 0, 0, 0, TimeSpan.Zero), 1, 0.4d), CancellationToken.None);
+        var expected = await persistenceService.PersistAsync(1, "Sprint 3", null, CreateSnapshot(new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero), 1, 0.8d), CancellationToken.None);
 
-        var latestBefore = await selectionService.GetLatestBeforeAsync(
+        var latestBefore = await selectionService.GetLatestAtOrBeforeAsync(
             1,
             new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero),
             CancellationToken.None);
@@ -165,10 +190,29 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
     }
 
     [TestMethod]
+    public async Task GetLatestAtOrBeforeAsync_UsesSnapshotIdTieBreakForEqualTimestamps()
+    {
+        await using var context = new PoToolDbContext(_options);
+        var mapper = new PortfolioSnapshotPersistenceMapper();
+        var persistenceService = new PortfolioSnapshotPersistenceService(context, mapper, NullLogger<PortfolioSnapshotPersistenceService>.Instance);
+        var selectionService = new PortfolioSnapshotSelectionService(context, mapper, NullLogger<PortfolioSnapshotSelectionService>.Instance);
+        var timestamp = new DateTimeOffset(2026, 3, 8, 0, 0, 0, TimeSpan.Zero);
+
+        var first = await persistenceService.PersistAsync(1, "Sprint 2A", null, CreateSnapshot(timestamp, 1, 0.4d), CancellationToken.None);
+        var second = await persistenceService.PersistAsync(1, "Sprint 2B", null, CreateSnapshot(timestamp, 1, 0.6d), CancellationToken.None);
+
+        var latestBefore = await selectionService.GetLatestAtOrBeforeAsync(1, second.Snapshot.Timestamp, CancellationToken.None);
+
+        Assert.IsNotNull(latestBefore);
+        Assert.AreEqual(second.SnapshotId, latestBefore.SnapshotId);
+        Assert.AreEqual("Sprint 2B", latestBefore.Source);
+    }
+
+    [TestMethod]
     public async Task GetLatestAsync_SurfacesCorruptedPersistedRowsInsteadOfSkippingThem()
     {
         await using var context = new PoToolDbContext(_options);
-        var selectionService = new PortfolioSnapshotSelectionService(context, new PortfolioSnapshotPersistenceMapper());
+        var selectionService = new PortfolioSnapshotSelectionService(context, new PortfolioSnapshotPersistenceMapper(), NullLogger<PortfolioSnapshotSelectionService>.Instance);
 
         context.PortfolioSnapshots.Add(new PortfolioSnapshotEntity
         {
@@ -204,8 +248,8 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
     {
         await using var context = new PoToolDbContext(_options);
         var mapper = new PortfolioSnapshotPersistenceMapper();
-        var persistenceService = new PortfolioSnapshotPersistenceService(context, mapper);
-        var selectionService = new PortfolioSnapshotSelectionService(context, mapper);
+        var persistenceService = new PortfolioSnapshotPersistenceService(context, mapper, NullLogger<PortfolioSnapshotPersistenceService>.Instance);
+        var selectionService = new PortfolioSnapshotSelectionService(context, mapper, NullLogger<PortfolioSnapshotSelectionService>.Instance);
         var timestamp = new DateTimeOffset(2026, 3, 8, 0, 0, 0, TimeSpan.Zero);
 
         await persistenceService.PersistAsync(1, "Sprint 1", null, CreateSnapshot(timestamp.AddDays(-7), 1, 0.2d), CancellationToken.None);
@@ -230,7 +274,7 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
     {
         await using var context = new PoToolDbContext(_options);
         var mapper = new PortfolioSnapshotPersistenceMapper();
-        var selectionService = new PortfolioSnapshotSelectionService(context, mapper);
+        var selectionService = new PortfolioSnapshotSelectionService(context, mapper, NullLogger<PortfolioSnapshotSelectionService>.Instance);
 
         context.PortfolioSnapshots.Add(mapper.ToEntity(
             1,
@@ -256,6 +300,47 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
         Assert.HasCount(1, snapshots);
         Assert.AreEqual("Sprint 1", snapshots[0].Source);
         Assert.IsTrue(await selectionService.HasArchivedPortfolioSnapshotsAsync([1], null, null, CancellationToken.None));
+    }
+
+    [TestMethod]
+    public async Task PersistAsync_IsIdempotentUnderConcurrentDuplicateCreation()
+    {
+        const string connectionString = "Data Source=PortfolioSnapshotConcurrency;Mode=Memory;Cache=Shared";
+        await using var keeperConnection = new SqliteConnection(connectionString);
+        await keeperConnection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseSqlite(connectionString)
+            .Options;
+
+        await using (var setupContext = new PoToolDbContext(options))
+        {
+            await setupContext.Database.EnsureCreatedAsync();
+            await SeedProductAsync(setupContext, 1);
+        }
+
+        async Task<PersistedPortfolioSnapshot> PersistAsync()
+        {
+            await using var context = new PoToolDbContext(options);
+            var service = new PortfolioSnapshotPersistenceService(
+                context,
+                new PortfolioSnapshotPersistenceMapper(),
+                NullLogger<PortfolioSnapshotPersistenceService>.Instance);
+            return await service.PersistAsync(
+                1,
+                "Sprint 1",
+                null,
+                CreateSnapshot(new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero), 1, 0.4d),
+                CancellationToken.None);
+        }
+
+        var persisted = await Task.WhenAll(PersistAsync(), PersistAsync());
+
+        Assert.AreEqual(persisted[0].SnapshotId, persisted[1].SnapshotId);
+
+        await using var verificationContext = new PoToolDbContext(options);
+        Assert.AreEqual(1, await verificationContext.PortfolioSnapshots.CountAsync());
+        Assert.AreEqual(1, await verificationContext.PortfolioSnapshotItems.CountAsync());
     }
 
     private static PortfolioSnapshot CreateSnapshot(DateTimeOffset timestamp, int productId, double progress)

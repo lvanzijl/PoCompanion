@@ -15,11 +15,6 @@ public sealed record PortfolioSnapshot
     {
         ArgumentNullException.ThrowIfNull(items);
 
-        if (items.Count == 0)
-        {
-            throw new ArgumentException("Portfolio snapshot must contain at least one item.", nameof(items));
-        }
-
         var duplicateKey = items
             .GroupBy(item => item.BusinessKey)
             .FirstOrDefault(group => group.Count() > 1);

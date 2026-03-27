@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using PoTool.Api.Controllers;
+using PoTool.Core.Metrics.Commands;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
 
@@ -203,5 +204,48 @@ public sealed class MetricsControllerPortfolioReadTests
         var result = await controller.GetPortfolioSignals(7, snapshotCount: 6, cancellationToken: CancellationToken.None);
 
         Assert.IsInstanceOfType<OkObjectResult>(result.Result);
+    }
+
+    [TestMethod]
+    public void PortfolioReadEndpoints_RemainGetOnly_AndCaptureEndpointIsExplicitPost()
+    {
+        var metricsMethods = typeof(MetricsController)
+            .GetMethods()
+            .Where(method => method.Name is nameof(MetricsController.GetPortfolioProgress)
+                or nameof(MetricsController.GetPortfolioSnapshots)
+                or nameof(MetricsController.GetPortfolioComparison)
+                or nameof(MetricsController.GetPortfolioTrends)
+                or nameof(MetricsController.GetPortfolioSignals))
+            .ToArray();
+
+        Assert.IsTrue(metricsMethods.All(method => method.GetCustomAttributes(typeof(HttpGetAttribute), inherit: false).Length == 1));
+        Assert.IsTrue(metricsMethods.All(method => method.GetCustomAttributes(typeof(HttpPostAttribute), inherit: false).Length == 0));
+
+        var captureMethod = typeof(PortfolioSnapshotsController).GetMethod(nameof(PortfolioSnapshotsController.Capture));
+        Assert.IsNotNull(captureMethod);
+        Assert.HasCount(1, captureMethod.GetCustomAttributes(typeof(HttpPostAttribute), inherit: false));
+        Assert.IsEmpty(captureMethod.GetCustomAttributes(typeof(HttpGetAttribute), inherit: false));
+    }
+
+    [TestMethod]
+    public async Task CapturePortfolioSnapshots_PostsExplicitCommandToMediator()
+    {
+        var mediator = new Mock<IMediator>(MockBehavior.Strict);
+        mediator
+            .Setup(service => service.Send(
+                It.Is<CapturePortfolioSnapshotsCommand>(command => command.ProductOwnerId == 7),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PortfolioSnapshotCaptureResultDto(1, 2, 2, 0));
+
+        var controller = new PortfolioSnapshotsController(
+            mediator.Object,
+            NullLogger<PortfolioSnapshotsController>.Instance);
+
+        var result = await controller.Capture(
+            new CapturePortfolioSnapshotsCommand(7),
+            CancellationToken.None);
+
+        Assert.IsInstanceOfType<OkObjectResult>(result.Result);
+        mediator.VerifyAll();
     }
 }
