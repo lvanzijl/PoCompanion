@@ -1,6 +1,7 @@
 @page "/planning/plan-board"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @using PoTool.Shared.Metrics
 @inject IProfileService ProfileService
@@ -449,6 +450,7 @@
     // Capacity planning data
     private int? _activeProfileId;
     private double? _sprintCapacity;
+    private CanonicalFilterMetadata? _capacityCalibrationFilterMetadata;
     private int[] _selectedProductRootIds = [];
     private bool _isRefreshingFromTfs;
 
@@ -961,6 +963,7 @@
         if (completedSprintIds.Count == 0)
         {
             _sprintCapacity = null;
+            _capacityCalibrationFilterMetadata = null;
             return;
         }
 
@@ -971,6 +974,7 @@
                 completedSprintIds,
                 new[] { productId },
                 CancellationToken.None);
+            _capacityCalibrationFilterMetadata = CanonicalClientResponseFactory.Create(calibrationResponse).FilterMetadata;
             var calibration = calibrationResponse.Data;
 
             _sprintCapacity = calibration.MedianVelocity > 0 ? calibration.MedianVelocity : null;
@@ -978,6 +982,7 @@
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Could not load capacity calibration data");
+            _capacityCalibrationFilterMetadata = null;
             _sprintCapacity = null;
         }
     }

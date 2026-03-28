@@ -1,6 +1,7 @@
 @page "/home/delivery/execution"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Client.Services
 @using PoTool.Client.Models
 @using PoTool.Shared.Metrics
@@ -123,6 +124,8 @@
             </MudButton>
         </MudAlert>
     }
+
+    <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
 
     @if (_executionLoading)
     {
@@ -435,6 +438,7 @@
     private int? _selectedSprintId;
     private int? _selectedProductId;
     private SprintExecutionDto? _data;
+    private CanonicalFilterNoticeModel? _filterNotice;
     private bool _isLoading;
     private bool _executionLoading;
     private string? _errorMessage;
@@ -475,6 +479,7 @@
             _isLoading = true;
             _errorMessage = null;
             _data = null;
+            _filterNotice = null;
 
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             if (activeProfile == null)
@@ -561,12 +566,14 @@
                 _selectedProductId,
                 CancellationToken.None);
 
+            _filterNotice = CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(result).FilterMetadata);
             _data = result.Data.HasData ? result.Data : null;
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error loading sprint execution data: {ex.Message}", Severity.Error);
             _data = null;
+            _filterNotice = null;
         }
         finally
         {

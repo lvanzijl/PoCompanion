@@ -117,8 +117,8 @@
             
             await Task.WhenAll(prTask, pipelineTask);
             
-            _prMetrics = prTask.Result.ToList();
-            _pipelineMetrics = pipelineTask.Result.ToList();
+            _prMetrics = prTask.Result.Data.ToList();
+            _pipelineMetrics = pipelineTask.Result.Data.ToList();
         }
         catch (Exception ex)
         {

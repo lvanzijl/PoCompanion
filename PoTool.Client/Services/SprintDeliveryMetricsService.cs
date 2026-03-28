@@ -1,4 +1,6 @@
 using PoTool.Client.ApiClient;
+using PoTool.Client.Helpers;
+using PoTool.Client.Models;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Client.Services;
@@ -15,7 +17,7 @@ public class SprintDeliveryMetricsService
         _metricsClient = metricsClient;
     }
 
-    public async Task<GetSprintTrendMetricsResponse?> GetSprintTrendMetricsAsync(
+    public async Task<CanonicalClientResponse<GetSprintTrendMetricsResponse>> GetSprintTrendMetricsAsync(
         int productOwnerId,
         IEnumerable<int> sprintIds,
         IEnumerable<int>? productIds = null,
@@ -28,11 +30,12 @@ public class SprintDeliveryMetricsService
         var sprintIdList = sprintIds.ToList();
         if (sprintIdList.Count == 0)
         {
-            return new GetSprintTrendMetricsResponse
-            {
-                Success = false,
-                ErrorMessage = "At least one sprint ID is required."
-            };
+            return new CanonicalClientResponse<GetSprintTrendMetricsResponse>(
+                new GetSprintTrendMetricsResponse
+                {
+                    Success = false,
+                    ErrorMessage = "At least one sprint ID is required."
+                });
         }
 
         try
@@ -45,17 +48,18 @@ public class SprintDeliveryMetricsService
                 includeDetails,
                 cancellationToken);
 
-            return envelope.Data;
+            return CanonicalClientResponseFactory.Create(envelope);
         }
         catch (ApiException ex)
         {
-            return new GetSprintTrendMetricsResponse
-            {
-                Success = false,
-                ErrorMessage = string.IsNullOrWhiteSpace(ex.Response)
-                    ? $"Sprint metrics request failed with HTTP {ex.StatusCode}."
-                    : ex.Response
-            };
+            return new CanonicalClientResponse<GetSprintTrendMetricsResponse>(
+                new GetSprintTrendMetricsResponse
+                {
+                    Success = false,
+                    ErrorMessage = string.IsNullOrWhiteSpace(ex.Response)
+                        ? $"Sprint metrics request failed with HTTP {ex.StatusCode}."
+                        : ex.Response
+                });
         }
     }
 }

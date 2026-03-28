@@ -2,6 +2,7 @@
 @using PoTool.Client.Components.Analytical
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Client.Services
 @using PoTool.Client.Pages.Home.Components
 @using PoTool.Shared.Metrics
@@ -50,6 +51,8 @@
     }
     else
     {
+        <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
+
         @* Context row — compact chip toolbar; dropdowns hidden in popovers *@
         <MudPaper Elevation="1" Class="pa-1 mb-2">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Wrap="Wrap.NoWrap">
@@ -545,6 +548,7 @@
 
     // Trend data
     private PortfolioProgressTrendDto? _trendData;
+    private CanonicalFilterNoticeModel? _filterNotice;
 
     // Net focus toggle — default ON (show Net only in Combined Flow)
     private bool _netFocusOnly = true;
@@ -763,6 +767,7 @@
         if (sprintIds.Count == 0)
         {
             _trendData = null;
+            _filterNotice = null;
             return;
         }
 
@@ -780,6 +785,7 @@
                 sprintIds,
                 productFilter,
                 CancellationToken.None);
+            _filterNotice = CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(response).FilterMetadata);
             _trendData = response.Data;
 
             if (_trendData != null)
@@ -790,6 +796,7 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Failed to load portfolio flow: {ex.Message}", Severity.Warning);
+            _filterNotice = null;
         }
         finally
         {

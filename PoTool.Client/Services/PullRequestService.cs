@@ -1,4 +1,6 @@
 using PoTool.Client.ApiClient;
+using PoTool.Client.Helpers;
+using PoTool.Client.Models;
 using SharedPullRequestMetricsDto = PoTool.Shared.PullRequests.PullRequestMetricsDto;
 using SharedPullRequestDto = PoTool.Shared.PullRequests.PullRequestDto;
 
@@ -44,17 +46,17 @@ public class PullRequestService
     /// </summary>
     /// <param name="productIds">Optional comma-separated product IDs to filter by</param>
     /// <param name="fromDate">Optional start date filter</param>
-    public async Task<IEnumerable<SharedPullRequestMetricsDto>> GetMetricsAsync(string? productIds = null, DateTimeOffset? fromDate = null)
+    public async Task<CanonicalClientResponse<IReadOnlyList<SharedPullRequestMetricsDto>>> GetMetricsAsync(string? productIds = null, DateTimeOffset? fromDate = null)
     {
         var response = await _pullRequestsClient.GetMetricsEnvelopeAsync(productIds, fromDate, CancellationToken.None);
-        return response.Data;
+        return CanonicalClientResponseFactory.Create(response);
     }
 
     /// <summary>
     /// Gets filtered pull requests.
     /// </summary>
     /// <param name="productIds">Optional comma-separated product IDs to filter by</param>
-    public async Task<IEnumerable<SharedPullRequestDto>> GetFilteredAsync(
+    public async Task<CanonicalClientResponse<IReadOnlyList<SharedPullRequestDto>>> GetFilteredAsync(
         string? productIds = null,
         string? iterationPath = null,
         string? createdBy = null,
@@ -70,7 +72,7 @@ public class PullRequestService
             toDate,
             status,
             CancellationToken.None);
-        return response.Data;
+        return CanonicalClientResponseFactory.Create(response);
     }
 
     /// <summary>

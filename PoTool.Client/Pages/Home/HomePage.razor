@@ -1,6 +1,7 @@
 @page "/home"
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Models
 @using PoTool.Client.Services
 @using PoTool.Shared.Metrics
 @implements IDisposable
@@ -269,6 +270,7 @@
     private DateTimeOffset? _lastSyncTime;
     private List<ProductDto> _products = new();
     private HomeProductBarMetricsDto? _productBarMetrics;
+    private CanonicalFilterMetadata? _productBarFilterMetadata;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -467,6 +469,7 @@
         _isProductMetricsLoading = true;
         _productMetricsError = null;
         _productBarMetrics = null;
+        _productBarFilterMetadata = null;
         await InvokeAsync(StateHasChanged);
 
         try
@@ -476,20 +479,21 @@
                 return;
             }
 
-            var metrics = await HomeProductBarMetricsService.GetAsync(
+            var metricsResponse = await HomeProductBarMetricsService.GetAsync(
                 _profileId.Value,
                 _selectedProductId,
                 cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (metrics == null)
+            if (metricsResponse == null)
             {
                 _productMetricsError = ProductMetricsUnavailableMessage;
                 return;
             }
 
-            _productBarMetrics = metrics;
+            _productBarFilterMetadata = metricsResponse.FilterMetadata;
+            _productBarMetrics = metricsResponse.Data;
         }
         catch (OperationCanceledException)
         {
@@ -497,6 +501,7 @@
         }
         catch (Exception)
         {
+            _productBarFilterMetadata = null;
             _productMetricsError = ProductMetricsUnavailableMessage;
         }
         finally

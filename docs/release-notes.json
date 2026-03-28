@@ -2,6 +2,14 @@
   {
     "date": "2026-03-28",
     "type": "Fixed",
+    "title": "Canonical filter warnings now reach the UI",
+    "impact": "PR, pipeline, delivery, and sprint views now show when requested filters were invalid or normalized instead of silently applying backend fallback scope.",
+    "area": "Trends",
+    "link": "/home/trends"
+  },
+  {
+    "date": "2026-03-28",
+    "type": "Fixed",
     "title": "Pipeline run filters no longer hide quiet pipelines",
     "impact": "Pipeline metrics and filtered run views now keep valid runs from less-active pipelines instead of dropping them when busier pipelines have more recent cached activity.",
     "area": "Trends",

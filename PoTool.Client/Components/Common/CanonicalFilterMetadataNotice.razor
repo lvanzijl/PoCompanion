@@ -1,0 +1,65 @@
+@using PoTool.Client.Models
+
+@if (Metadata?.HasSignals == true)
+{
+    <MudPaper Elevation="1" Class="pa-3 mb-4">
+        <MudStack Spacing="1">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Color="@(Metadata.HasInvalidFields ? Color.Warning : Color.Info)" Size="Size.Small" />
+                <MudText Typo="Typo.subtitle2">Applied filter scope differs from the request</MudText>
+                @if (Metadata.HasInvalidFields)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                        @($"{Metadata.InvalidFields.Count} invalid")
+                    </MudChip>
+                }
+                @if (Metadata.HasMaterialDifferences)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                        Requested ≠ applied
+                    </MudChip>
+                }
+            </MudStack>
+
+            @if (Metadata.InvalidFields.Count > 0)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Warning">
+                    Invalid fields: @string.Join(", ", Metadata.InvalidFields)
+                </MudText>
+            }
+
+            @if (Metadata.ValidationMessages.Count > 0)
+            {
+                <MudStack Spacing="0">
+                    @foreach (var message in Metadata.ValidationMessages)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Warning">
+                            • @message.Field: @message.Message
+                        </MudText>
+                    }
+                </MudStack>
+            }
+
+            @if (Metadata.ChangedDifferences.Count > 0)
+            {
+                <MudGrid Spacing="1">
+                    @foreach (var difference in Metadata.ChangedDifferences)
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudPaper Elevation="0" Class="pa-2">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@difference.Label</MudText>
+                                <MudText Typo="Typo.caption">Requested: @difference.RequestedValue</MudText>
+                                <MudText Typo="Typo.caption">Applied: @difference.EffectiveValue</MudText>
+                            </MudPaper>
+                        </MudItem>
+                    }
+                </MudGrid>
+            }
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    [Parameter]
+    public CanonicalFilterNoticeModel? Metadata { get; set; }
+}
