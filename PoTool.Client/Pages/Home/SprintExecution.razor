@@ -555,12 +555,13 @@
             _data = null;
             StateHasChanged();
 
-            var result = await MetricsClient.GetSprintExecutionAsync(
+            var result = await MetricsClient.GetSprintExecutionEnvelopeAsync(
                 _profileId.Value,
                 _selectedSprintId.Value,
-                _selectedProductId);
+                _selectedProductId,
+                CancellationToken.None);
 
-            _data = result.HasData ? result : null;
+            _data = result.Data.HasData ? result.Data : null;
         }
         catch (Exception ex)
         {

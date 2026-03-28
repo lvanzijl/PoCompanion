@@ -423,19 +423,24 @@ public sealed class WorkspaceSignalService
         {
             try
             {
-                var sprintExecutionTask = _metricsClient.GetSprintExecutionAsync(
+                var sprintExecutionEnvelopeTask = _metricsClient.GetSprintExecutionEnvelopeAsync(
                     productOwnerId,
                     sprint.Id,
                     selectedProductId,
                     cancellationToken);
-                var backlogHealthTask = _metricsClient.GetBacklogHealthAsync(sprint.Path, cancellationToken);
+                var backlogHealthEnvelopeTask = _metricsClient.GetBacklogHealthEnvelopeAsync(
+                    sprint.Path,
+                    productOwnerId,
+                    selectedProductId.HasValue ? [selectedProductId.Value] : null,
+                    sprint.Id,
+                    cancellationToken);
 
-                await Task.WhenAll(sprintExecutionTask, backlogHealthTask);
+                await Task.WhenAll(sprintExecutionEnvelopeTask, backlogHealthEnvelopeTask);
 
                 return new DeliverySignalContext(
                     sprint,
-                    await sprintExecutionTask,
-                    await backlogHealthTask);
+                    (await sprintExecutionEnvelopeTask).Data,
+                    (await backlogHealthEnvelopeTask).Data);
             }
             catch (ApiException ex) when (ex.StatusCode == 404)
             {
@@ -459,7 +464,14 @@ public sealed class WorkspaceSignalService
             return null;
         }
 
-        return await _metricsClient.GetSprintTrendMetricsAsync(productOwnerId, sprintIds, false, cancellationToken);
+        var response = await _metricsClient.GetSprintTrendMetricsEnvelopeAsync(
+            productOwnerId,
+            sprintIds,
+            null,
+            false,
+            true,
+            cancellationToken);
+        return response.Data;
     }
 
     private async Task<GetPrSprintTrendsResponse?> LoadPrTrendsAsync(

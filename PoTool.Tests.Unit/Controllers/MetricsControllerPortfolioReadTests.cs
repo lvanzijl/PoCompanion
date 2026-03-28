@@ -24,8 +24,11 @@ public sealed class MetricsControllerPortfolioReadTests
         var deliveryFilterResolutionService = new DeliveryFilterResolutionService(
             context,
             NullLogger<DeliveryFilterResolutionService>.Instance);
+        var sprintFilterResolutionService = new SprintFilterResolutionService(
+            context,
+            NullLogger<SprintFilterResolutionService>.Instance);
 
-        return new MetricsController(mediator, deliveryFilterResolutionService, NullLogger<MetricsController>.Instance);
+        return new MetricsController(mediator, deliveryFilterResolutionService, sprintFilterResolutionService, NullLogger<MetricsController>.Instance);
     }
 
     [TestMethod]

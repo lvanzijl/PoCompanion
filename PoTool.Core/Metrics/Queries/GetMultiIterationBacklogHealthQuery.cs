@@ -1,5 +1,5 @@
 using Mediator;
-
+using PoTool.Core.Metrics.Filters;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Core.Metrics.Queries;
@@ -10,7 +10,15 @@ namespace PoTool.Core.Metrics.Queries;
 /// When multiple product IDs are provided, work items are deduplicated by TfsId to prevent double-counting.
 /// </summary>
 public sealed record GetMultiIterationBacklogHealthQuery(
-    int[]? ProductIds = null,
-    string? AreaPath = null,
+    SprintEffectiveFilter EffectiveFilter,
     int MaxIterations = 5
-) : IQuery<MultiIterationBacklogHealthDto>;
+) : IQuery<MultiIterationBacklogHealthDto>
+{
+    public GetMultiIterationBacklogHealthQuery(
+        int[]? ProductIds = null,
+        string? AreaPath = null,
+        int MaxIterations = 5)
+        : this(SprintFilterFactory.ForProductAndArea(ProductIds, AreaPath), MaxIterations)
+    {
+    }
+}

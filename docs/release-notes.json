@@ -2,6 +2,14 @@
   {
     "date": "2026-03-28",
     "type": "Changed",
+    "title": "Sprint analytics now use canonical filter scope",
+    "impact": "Sprint metrics, backlog health, multi-iteration health, capacity plan, sprint trend, sprint execution, and sprint activity endpoints now resolve requested versus effective sprint scope once at the API boundary and return that metadata in migrated responses.",
+    "area": "Trends",
+    "link": "/home/sprint-trend"
+  },
+  {
+    "date": "2026-03-28",
+    "type": "Changed",
     "title": "Delivery analytics now use canonical filter scope",
     "impact": "Delivery progress, capacity calibration, portfolio delivery, home product bar, and delivery build-quality endpoints now resolve requested versus effective product and time scope once at the API boundary and return that metadata in migrated responses.",
     "area": "Trends",

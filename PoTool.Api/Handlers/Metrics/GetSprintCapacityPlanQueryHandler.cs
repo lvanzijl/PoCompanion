@@ -1,9 +1,9 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
-using PoTool.Core.WorkItems.Queries;
 
 namespace PoTool.Api.Handlers.Metrics;
 
@@ -15,66 +15,53 @@ namespace PoTool.Api.Handlers.Metrics;
 public sealed class GetSprintCapacityPlanQueryHandler
     : IQueryHandler<GetSprintCapacityPlanQuery, SprintCapacityPlanDto?>
 {
-    private readonly IWorkItemRepository _repository;
-    private readonly IProductRepository _productRepository;
-    private readonly IMediator _mediator;
+    private readonly SprintScopedWorkItemLoader _workItemLoader;
     private readonly ILogger<GetSprintCapacityPlanQueryHandler> _logger;
 
     public GetSprintCapacityPlanQueryHandler(
-        IWorkItemRepository repository,
+        SprintScopedWorkItemLoader workItemLoader,
+        ILogger<GetSprintCapacityPlanQueryHandler> logger)
+    {
+        _workItemLoader = workItemLoader;
+        _logger = logger;
+    }
+
+    public GetSprintCapacityPlanQueryHandler(
+        IWorkItemReadProvider workItemReadProvider,
         IProductRepository productRepository,
         IMediator mediator,
         ILogger<GetSprintCapacityPlanQueryHandler> logger)
+        : this(
+            new SprintScopedWorkItemLoader(workItemReadProvider, productRepository, mediator),
+            logger)
     {
-        _repository = repository;
-        _productRepository = productRepository;
-        _mediator = mediator;
-        _logger = logger;
     }
 
     public async ValueTask<SprintCapacityPlanDto?> Handle(
         GetSprintCapacityPlanQuery query,
         CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Handling GetSprintCapacityPlanQuery for iteration: {IterationPath}", query.IterationPath);
-
-        // Load work items using product-scoped approach
-        IEnumerable<WorkItemDto> allWorkItems;
-        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
-        var productsList = allProducts.ToList();
-
-        if (productsList.Count > 0)
+        var iterationPath = query.EffectiveFilter.IterationPath;
+        if (string.IsNullOrWhiteSpace(iterationPath))
         {
-            var rootIds = productsList
-                .SelectMany(p => p.BacklogRootWorkItemIds)
-                .ToArray();
+            return null;
+        }
 
-            if (rootIds.Length > 0)
-            {
-                var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootIds);
-                allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
-            }
-            else
-            {
-                allWorkItems = await _repository.GetAllAsync(cancellationToken);
-            }
-        }
-        else
-        {
-            allWorkItems = await _repository.GetAllAsync(cancellationToken);
-        }
+        _logger.LogDebug("Handling GetSprintCapacityPlanQuery for iteration: {IterationPath}", iterationPath);
+
+        var allWorkItems = await _workItemLoader.LoadAsync(query.EffectiveFilter, cancellationToken);
 
         var iterationWorkItems = allWorkItems
-            .Where(wi => wi.IterationPath.Equals(query.IterationPath, StringComparison.OrdinalIgnoreCase))
+            .Where(wi => wi.IterationPath.Equals(iterationPath, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         if (!iterationWorkItems.Any())
         {
-            _logger.LogDebug("No work items found for iteration: {IterationPath}", query.IterationPath);
+            _logger.LogDebug("No work items found for iteration: {IterationPath}", iterationPath);
             return null;
         }
 
-        var sprintName = ExtractSprintName(query.IterationPath);
+        var sprintName = ExtractSprintName(iterationPath);
         var totalPlannedEffort = iterationWorkItems.Sum(wi => wi.Effort ?? 0);
 
         // Calculate team member capacities (simplified - using assigned to field)
@@ -89,7 +76,7 @@ public sealed class GetSprintCapacityPlanQueryHandler
         var warnings = GenerateWarnings(totalPlannedEffort, totalCapacity, teamCapacities);
 
         return new SprintCapacityPlanDto(
-            IterationPath: query.IterationPath,
+            IterationPath: iterationPath,
             SprintName: sprintName,
             StartDate: null, // Could be extracted from JSON payload
             EndDate: null,

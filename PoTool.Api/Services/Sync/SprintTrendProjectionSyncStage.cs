@@ -62,6 +62,7 @@ public class SprintTrendProjectionSyncStage : ISyncStage
             var projections = await _projectionService.ComputeProjectionsAsync(
                 context.ProductOwnerId,
                 sprintIds,
+                null,
                 cancellationToken);
 
             var cacheState = await _context.ProductOwnerCacheStates

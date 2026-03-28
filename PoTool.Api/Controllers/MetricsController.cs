@@ -17,15 +17,18 @@ public class MetricsController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly DeliveryFilterResolutionService _deliveryFilterResolutionService;
+    private readonly SprintFilterResolutionService _sprintFilterResolutionService;
     private readonly ILogger<MetricsController> _logger;
 
     public MetricsController(
         IMediator mediator,
         DeliveryFilterResolutionService deliveryFilterResolutionService,
+        SprintFilterResolutionService sprintFilterResolutionService,
         ILogger<MetricsController> logger)
     {
         _mediator = mediator;
         _deliveryFilterResolutionService = deliveryFilterResolutionService;
+        _sprintFilterResolutionService = sprintFilterResolutionService;
         _logger = logger;
     }
 
@@ -63,27 +66,39 @@ public class MetricsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Sprint metrics, or 404 when the sprint path has no dated sprint metadata</returns>
     [HttpGet("sprint")]
-    public async Task<ActionResult<SprintMetricsDto>> GetSprintMetrics(
-        [FromQuery][Required] string iterationPath,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<SprintQueryResponseDto<SprintMetricsDto>>> GetSprintMetrics(
+        [FromQuery] string? iterationPath = null,
+        [FromQuery] int? productOwnerId = null,
+        [FromQuery] int[]? productIds = null,
+        [FromQuery] int? sprintId = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(iterationPath))
+            if (string.IsNullOrWhiteSpace(iterationPath) && !sprintId.HasValue)
             {
-                return BadRequest("Iteration path is required");
+                return BadRequest("Iteration path or sprintId is required");
             }
 
+            var resolution = await _sprintFilterResolutionService.ResolveAsync(
+                new SprintFilterBoundaryRequest(
+                    ProductOwnerId: productOwnerId,
+                    ProductIds: productIds,
+                    IterationPath: iterationPath,
+                    SprintId: sprintId),
+                nameof(GetSprintMetrics),
+                cancellationToken);
+
             var metrics = await _mediator.Send(
-                new GetSprintMetricsQuery(iterationPath),
+                new GetSprintMetricsQuery(resolution.EffectiveFilter),
                 cancellationToken);
 
             if (metrics == null)
             {
-                return NotFound($"No work items found for iteration path: {iterationPath}");
+                return NotFound($"No work items found for sprint scope: {iterationPath ?? sprintId?.ToString() ?? "unknown"}");
             }
 
-            return Ok(metrics);
+            return Ok(SprintFilterResolutionService.ToResponse(metrics, resolution));
         }
         catch (Exception ex)
         {
@@ -99,27 +114,39 @@ public class MetricsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Backlog health metrics or 404 if no work items found</returns>
     [HttpGet("backlog-health")]
-    public async Task<ActionResult<BacklogHealthDto>> GetBacklogHealth(
-        [FromQuery][Required] string iterationPath,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<SprintQueryResponseDto<BacklogHealthDto>>> GetBacklogHealth(
+        [FromQuery] string? iterationPath = null,
+        [FromQuery] int? productOwnerId = null,
+        [FromQuery] int[]? productIds = null,
+        [FromQuery] int? sprintId = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(iterationPath))
+            if (string.IsNullOrWhiteSpace(iterationPath) && !sprintId.HasValue)
             {
-                return BadRequest("Iteration path is required");
+                return BadRequest("Iteration path or sprintId is required");
             }
 
+            var resolution = await _sprintFilterResolutionService.ResolveAsync(
+                new SprintFilterBoundaryRequest(
+                    ProductOwnerId: productOwnerId,
+                    ProductIds: productIds,
+                    IterationPath: iterationPath,
+                    SprintId: sprintId),
+                nameof(GetBacklogHealth),
+                cancellationToken);
+
             var health = await _mediator.Send(
-                new GetBacklogHealthQuery(iterationPath),
+                new GetBacklogHealthQuery(resolution.EffectiveFilter),
                 cancellationToken);
 
             if (health == null)
             {
-                return NotFound($"No work items found for iteration path: {iterationPath}");
+                return NotFound($"No work items found for sprint scope: {iterationPath ?? sprintId?.ToString() ?? "unknown"}");
             }
 
-            return Ok(health);
+            return Ok(SprintFilterResolutionService.ToResponse(health, resolution));
         }
         catch (Exception ex)
         {
@@ -137,7 +164,8 @@ public class MetricsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Multi-iteration backlog health with trend analysis</returns>
     [HttpGet("multi-iteration-health")]
-    public async Task<ActionResult<MultiIterationBacklogHealthDto>> GetMultiIterationBacklogHealth(
+    public async Task<ActionResult<SprintQueryResponseDto<MultiIterationBacklogHealthDto>>> GetMultiIterationBacklogHealth(
+        [FromQuery] int? productOwnerId = null,
         [FromQuery] int[]? productIds = null,
         [FromQuery] string? areaPath = null,
         [FromQuery] int maxIterations = 5,
@@ -150,11 +178,19 @@ public class MetricsController : ControllerBase
                 return BadRequest("MaxIterations must be between 1 and 20");
             }
 
-            var health = await _mediator.Send(
-                new GetMultiIterationBacklogHealthQuery(productIds, areaPath, maxIterations),
+            var resolution = await _sprintFilterResolutionService.ResolveAsync(
+                new SprintFilterBoundaryRequest(
+                    ProductOwnerId: productOwnerId,
+                    ProductIds: productIds,
+                    AreaPath: areaPath),
+                nameof(GetMultiIterationBacklogHealth),
                 cancellationToken);
 
-            return Ok(health);
+            var health = await _mediator.Send(
+                new GetMultiIterationBacklogHealthQuery(resolution.EffectiveFilter, maxIterations),
+                cancellationToken);
+
+            return Ok(SprintFilterResolutionService.ToResponse(health, resolution));
         }
         catch (Exception ex)
         {
@@ -213,16 +249,19 @@ public class MetricsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Sprint capacity plan or 404 if no work items found</returns>
     [HttpGet("capacity-plan")]
-    public async Task<ActionResult<SprintCapacityPlanDto>> GetSprintCapacityPlan(
-        [FromQuery][Required] string iterationPath,
+    public async Task<ActionResult<SprintQueryResponseDto<SprintCapacityPlanDto>>> GetSprintCapacityPlan(
+        [FromQuery] string? iterationPath = null,
+        [FromQuery] int? productOwnerId = null,
+        [FromQuery] int[]? productIds = null,
+        [FromQuery] int? sprintId = null,
         [FromQuery] int? defaultCapacity = null,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(iterationPath))
+            if (string.IsNullOrWhiteSpace(iterationPath) && !sprintId.HasValue)
             {
-                return BadRequest("Iteration path is required");
+                return BadRequest("Iteration path or sprintId is required");
             }
 
             if (defaultCapacity.HasValue && defaultCapacity.Value < 0)
@@ -230,16 +269,25 @@ public class MetricsController : ControllerBase
                 return BadRequest("DefaultCapacity must be non-negative");
             }
 
+            var resolution = await _sprintFilterResolutionService.ResolveAsync(
+                new SprintFilterBoundaryRequest(
+                    ProductOwnerId: productOwnerId,
+                    ProductIds: productIds,
+                    IterationPath: iterationPath,
+                    SprintId: sprintId),
+                nameof(GetSprintCapacityPlan),
+                cancellationToken);
+
             var plan = await _mediator.Send(
-                new GetSprintCapacityPlanQuery(iterationPath, defaultCapacity),
+                new GetSprintCapacityPlanQuery(resolution.EffectiveFilter, defaultCapacity),
                 cancellationToken);
 
             if (plan == null)
             {
-                return NotFound($"No work items found for iteration path: {iterationPath}");
+                return NotFound($"No work items found for sprint scope: {iterationPath ?? sprintId?.ToString() ?? "unknown"}");
             }
 
-            return Ok(plan);
+            return Ok(SprintFilterResolutionService.ToResponse(plan, resolution));
         }
         catch (Exception ex)
         {
@@ -693,9 +741,10 @@ public class MetricsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Sprint trend metrics</returns>
     [HttpGet("sprint-trend")]
-    public async Task<ActionResult<GetSprintTrendMetricsResponse>> GetSprintTrendMetrics(
+    public async Task<ActionResult<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>> GetSprintTrendMetrics(
         [FromQuery][Required] int productOwnerId,
         [FromQuery][Required] int[] sprintIds,
+        [FromQuery] int[]? productIds = null,
         [FromQuery] bool recompute = false,
         [FromQuery] bool includeDetails = true,
         CancellationToken cancellationToken = default)
@@ -707,8 +756,16 @@ public class MetricsController : ControllerBase
                 return BadRequest("At least one sprint ID is required");
             }
 
+            var resolution = await _sprintFilterResolutionService.ResolveAsync(
+                new SprintFilterBoundaryRequest(
+                    ProductOwnerId: productOwnerId,
+                    ProductIds: productIds,
+                    SprintIds: sprintIds),
+                nameof(GetSprintTrendMetrics),
+                cancellationToken);
+
             var response = await _mediator.Send(
-                new GetSprintTrendMetricsQuery(productOwnerId, sprintIds, recompute, includeDetails),
+                new GetSprintTrendMetricsQuery(productOwnerId, resolution.EffectiveFilter, recompute, includeDetails),
                 cancellationToken);
 
             if (!response.Success)
@@ -716,7 +773,7 @@ public class MetricsController : ControllerBase
                 return BadRequest(response.ErrorMessage);
             }
 
-            return Ok(response);
+            return Ok(SprintFilterResolutionService.ToResponse(response, resolution));
         }
         catch (Exception ex)
         {
@@ -902,7 +959,7 @@ public class MetricsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Sprint execution analysis DTO</returns>
     [HttpGet("sprint-execution")]
-    public async Task<ActionResult<SprintExecutionDto>> GetSprintExecution(
+    public async Task<ActionResult<SprintQueryResponseDto<SprintExecutionDto>>> GetSprintExecution(
         [FromQuery][Required] int productOwnerId,
         [FromQuery][Required] int sprintId,
         [FromQuery] int? productId = null,
@@ -910,11 +967,19 @@ public class MetricsController : ControllerBase
     {
         try
         {
-            var result = await _mediator.Send(
-                new GetSprintExecutionQuery(productOwnerId, sprintId, productId),
+            var resolution = await _sprintFilterResolutionService.ResolveAsync(
+                new SprintFilterBoundaryRequest(
+                    ProductOwnerId: productOwnerId,
+                    ProductIds: productId.HasValue ? [productId.Value] : null,
+                    SprintId: sprintId),
+                nameof(GetSprintExecution),
                 cancellationToken);
 
-            return Ok(result);
+            var result = await _mediator.Send(
+                new GetSprintExecutionQuery(productOwnerId, resolution.EffectiveFilter),
+                cancellationToken);
+
+            return Ok(SprintFilterResolutionService.ToResponse(result, resolution));
         }
         catch (Exception ex)
         {
@@ -927,17 +992,27 @@ public class MetricsController : ControllerBase
     /// Gets activity details for a work item and its descendants in the selected sprint period.
     /// </summary>
     [HttpGet("work-item-activity/{workItemId:int}")]
-    public async Task<ActionResult<WorkItemActivityDetailsDto>> GetWorkItemActivityDetails(
+    public async Task<ActionResult<SprintQueryResponseDto<WorkItemActivityDetailsDto>>> GetWorkItemActivityDetails(
         int workItemId,
         [FromQuery][Required] int productOwnerId,
+        [FromQuery] int? sprintId = null,
         [FromQuery] DateTimeOffset? periodStartUtc = null,
         [FromQuery] DateTimeOffset? periodEndUtc = null,
         CancellationToken cancellationToken = default)
     {
         try
         {
+            var resolution = await _sprintFilterResolutionService.ResolveAsync(
+                new SprintFilterBoundaryRequest(
+                    ProductOwnerId: productOwnerId,
+                    SprintId: sprintId,
+                    RangeStartUtc: periodStartUtc,
+                    RangeEndUtc: periodEndUtc),
+                nameof(GetWorkItemActivityDetails),
+                cancellationToken);
+
             var details = await _mediator.Send(
-                new GetWorkItemActivityDetailsQuery(productOwnerId, workItemId, periodStartUtc, periodEndUtc),
+                new GetWorkItemActivityDetailsQuery(productOwnerId, workItemId, resolution.EffectiveFilter),
                 cancellationToken);
 
             if (details == null)
@@ -945,7 +1020,7 @@ public class MetricsController : ControllerBase
                 return NotFound($"Work item with ID {workItemId} not found for ProductOwner {productOwnerId}");
             }
 
-            return Ok(details);
+            return Ok(SprintFilterResolutionService.ToResponse(details, resolution));
         }
         catch (Exception ex)
         {

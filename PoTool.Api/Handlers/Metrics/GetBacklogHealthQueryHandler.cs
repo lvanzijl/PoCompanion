@@ -3,7 +3,6 @@ using PoTool.Api.Services;
 using PoTool.Core.BacklogQuality;
 using PoTool.Core.Contracts;
 using PoTool.Core.Metrics.Queries;
-using PoTool.Core.WorkItems.Queries;
 using PoTool.Shared.Metrics;
 using PoTool.Shared.WorkItems;
 
@@ -17,11 +16,19 @@ namespace PoTool.Api.Handlers.Metrics;
 public sealed class GetBacklogHealthQueryHandler
     : IQueryHandler<GetBacklogHealthQuery, BacklogHealthDto?>
 {
-    private readonly IWorkItemReadProvider _workItemReadProvider;
-    private readonly IProductRepository _productRepository;
-    private readonly IMediator _mediator;
+    private readonly SprintScopedWorkItemLoader _workItemLoader;
     private readonly IBacklogQualityAnalysisService _backlogQualityAnalysisService;
     private readonly ILogger<GetBacklogHealthQueryHandler> _logger;
+
+    public GetBacklogHealthQueryHandler(
+        SprintScopedWorkItemLoader workItemLoader,
+        IBacklogQualityAnalysisService backlogQualityAnalysisService,
+        ILogger<GetBacklogHealthQueryHandler> logger)
+    {
+        _workItemLoader = workItemLoader;
+        _backlogQualityAnalysisService = backlogQualityAnalysisService;
+        _logger = logger;
+    }
 
     public GetBacklogHealthQueryHandler(
         IWorkItemReadProvider workItemReadProvider,
@@ -29,53 +36,34 @@ public sealed class GetBacklogHealthQueryHandler
         IMediator mediator,
         IBacklogQualityAnalysisService backlogQualityAnalysisService,
         ILogger<GetBacklogHealthQueryHandler> logger)
+        : this(
+            new SprintScopedWorkItemLoader(workItemReadProvider, productRepository, mediator),
+            backlogQualityAnalysisService,
+            logger)
     {
-        _workItemReadProvider = workItemReadProvider;
-        _productRepository = productRepository;
-        _mediator = mediator;
-        _backlogQualityAnalysisService = backlogQualityAnalysisService;
-        _logger = logger;
     }
 
     public async ValueTask<BacklogHealthDto?> Handle(
         GetBacklogHealthQuery query,
         CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Handling GetBacklogHealthQuery for iteration: {IterationPath}", query.IterationPath);
-
-        // Load work items using product-scoped approach
-        IEnumerable<WorkItemDto> allWorkItems;
-        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
-        var productsList = allProducts.ToList();
-
-        if (productsList.Count > 0)
+        var iterationPath = query.EffectiveFilter.IterationPath;
+        if (string.IsNullOrWhiteSpace(iterationPath))
         {
-            var rootIds = productsList
-                .SelectMany(p => p.BacklogRootWorkItemIds)
-                .ToArray();
+            return null;
+        }
 
-            if (rootIds.Length > 0)
-            {
-                var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootIds);
-                allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
-            }
-            else
-            {
-                allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
-            }
-        }
-        else
-        {
-            allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
-        }
+        _logger.LogDebug("Handling GetBacklogHealthQuery for iteration: {IterationPath}", iterationPath);
+
+        var allWorkItems = await _workItemLoader.LoadAsync(query.EffectiveFilter, cancellationToken);
 
         var iterationWorkItems = allWorkItems
-            .Where(wi => wi.IterationPath.Equals(query.IterationPath, StringComparison.OrdinalIgnoreCase))
+            .Where(wi => wi.IterationPath.Equals(iterationPath, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         if (!iterationWorkItems.Any())
         {
-            _logger.LogDebug("No work items found for iteration: {IterationPath}", query.IterationPath);
+            _logger.LogDebug("No work items found for iteration: {IterationPath}", iterationPath);
             return null;
         }
 
@@ -83,7 +71,7 @@ public sealed class GetBacklogHealthQueryHandler
         var (startDate, endDate) = ExtractSprintDates(iterationWorkItems);
 
         return BacklogHealthDtoFactory.Create(
-            query.IterationPath,
+            iterationPath,
             iterationWorkItems,
             analysis,
             startDate,

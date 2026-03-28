@@ -50,10 +50,13 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
     {
         _logger.LogInformation(
             "Handling GetSprintTrendMetricsQuery for ProductOwner {ProductOwnerId}, SprintCount {SprintCount}, Recompute {Recompute}",
-            query.ProductOwnerId, query.SprintIds.Count, query.Recompute);
+            query.ProductOwnerId, query.EffectiveFilter.SprintIds.Count, query.Recompute);
 
         try
         {
+            var scopedProductIds = query.EffectiveFilter.Context.ProductIds.IsAll
+                ? null
+                : query.EffectiveFilter.Context.ProductIds.Values;
             IReadOnlyList<SprintMetricsProjectionEntity> projections;
 
             if (query.Recompute)
@@ -62,10 +65,16 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                     "Recompute requested for ProductOwner {ProductOwnerId}. Computing projections for requested sprint range.",
                     query.ProductOwnerId);
 
-                projections = await _projectionService.ComputeProjectionsAsync(
-                    query.ProductOwnerId,
-                    query.SprintIds,
-                    cancellationToken);
+                projections = scopedProductIds is null
+                    ? await _projectionService.ComputeProjectionsAsync(
+                        query.ProductOwnerId,
+                        query.EffectiveFilter.SprintIds,
+                        cancellationToken)
+                    : await _projectionService.ComputeProjectionsAsync(
+                        query.ProductOwnerId,
+                        query.EffectiveFilter.SprintIds,
+                        scopedProductIds,
+                        cancellationToken);
 
                 _logger.LogInformation(
                     "Computed {ProjectionCount} sprint trend projections for ProductOwner {ProductOwnerId} during recompute request.",
@@ -73,10 +82,16 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
             }
             else
             {
-                projections = await _projectionService.GetProjectionsAsync(
-                    query.ProductOwnerId,
-                    query.SprintIds,
-                    cancellationToken);
+                projections = scopedProductIds is null
+                    ? await _projectionService.GetProjectionsAsync(
+                        query.ProductOwnerId,
+                        query.EffectiveFilter.SprintIds,
+                        cancellationToken)
+                    : await _projectionService.GetProjectionsAsync(
+                        query.ProductOwnerId,
+                        query.EffectiveFilter.SprintIds,
+                        scopedProductIds,
+                        cancellationToken);
 
                 _logger.LogInformation(
                     "Retrieved {ProjectionCount} cached sprint trend projections for ProductOwner {ProductOwnerId}.",
@@ -88,10 +103,16 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                         "No cached sprint trend projections found for ProductOwner {ProductOwnerId}. Triggering projection computation for requested sprint range.",
                         query.ProductOwnerId);
 
-                    projections = await _projectionService.ComputeProjectionsAsync(
-                        query.ProductOwnerId,
-                        query.SprintIds,
-                        cancellationToken);
+                    projections = scopedProductIds is null
+                        ? await _projectionService.ComputeProjectionsAsync(
+                            query.ProductOwnerId,
+                            query.EffectiveFilter.SprintIds,
+                            cancellationToken)
+                        : await _projectionService.ComputeProjectionsAsync(
+                            query.ProductOwnerId,
+                            query.EffectiveFilter.SprintIds,
+                            scopedProductIds,
+                            cancellationToken);
 
                     _logger.LogInformation(
                         "Computed {ProjectionCount} sprint trend projections for ProductOwner {ProductOwnerId} after cache miss.",
@@ -101,7 +122,7 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
 
             // Get sprints for additional info
             var sprints = await _context.Sprints
-                .Where(s => query.SprintIds.Contains(s.Id))
+                .Where(s => query.EffectiveFilter.SprintIds.Contains(s.Id))
                 .ToDictionaryAsync(s => s.Id, s => s, cancellationToken);
 
             IReadOnlyList<FeatureProgressDto> featureProgress = Array.Empty<FeatureProgressDto>();
@@ -114,33 +135,55 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
             IReadOnlyList<FeatureProgressDto> previousFeatureProgress = Array.Empty<FeatureProgressDto>();
             IReadOnlyList<EpicProgressDto> previousEpicProgress = Array.Empty<EpicProgressDto>();
 
-            if (query.SprintIds.Count > 0)
+            if (query.EffectiveFilter.SprintIds.Count > 0)
             {
-                // Determine the most recent sprint's date range for activity-based filtering
-                var analyticsSprints = sprints.Values
-                    .Where(s => s.StartDateUtc != null)
-                    .OrderByDescending(s => s.StartDateUtc)
+                var orderedAnalyticsSprints = sprints.Values
+                    .Where(sprint => sprint.StartDateUtc != null)
+                    .OrderBy(sprint => sprint.StartDateUtc)
+                    .ThenBy(sprint => sprint.Id)
                     .ToList();
-                var mostRecentSprint = analyticsSprints.FirstOrDefault();
-                var previousSprint = analyticsSprints.Skip(1).FirstOrDefault();
+
+                var mostRecentSprint = query.EffectiveFilter.CurrentSprintId.HasValue
+                    ? sprints.GetValueOrDefault(query.EffectiveFilter.CurrentSprintId.Value)
+                    : orderedAnalyticsSprints.LastOrDefault();
+                var previousSprint = query.EffectiveFilter.PreviousSprintId.HasValue
+                    ? sprints.GetValueOrDefault(query.EffectiveFilter.PreviousSprintId.Value)
+                    : orderedAnalyticsSprints.Count > 1
+                        ? orderedAnalyticsSprints[^2]
+                        : null;
 
                 mostRecentSprintId = mostRecentSprint?.Id;
                 var (sprintStartForFilter, sprintEndForFilter) = GetSprintWindow(mostRecentSprint);
 
                 // Compute real feature progress from resolved hierarchy, filtered to sprint activity
-                currentFeatureProgress = await _projectionService.ComputeFeatureProgressAsync(
-                    query.ProductOwnerId,
-                    FeatureProgressMode.StoryPoints,
-                    sprintStartForFilter,
-                    sprintEndForFilter,
-                    cancellationToken,
-                    mostRecentSprint?.Id);
+                currentFeatureProgress = scopedProductIds is null
+                    ? await _projectionService.ComputeFeatureProgressAsync(
+                        query.ProductOwnerId,
+                        FeatureProgressMode.StoryPoints,
+                        sprintStartForFilter,
+                        sprintEndForFilter,
+                        cancellationToken,
+                        mostRecentSprint?.Id)
+                    : await _projectionService.ComputeFeatureProgressForScopeAsync(
+                        query.ProductOwnerId,
+                        FeatureProgressMode.StoryPoints,
+                        sprintStartForFilter,
+                        sprintEndForFilter,
+                        cancellationToken,
+                        mostRecentSprint?.Id,
+                        scopedProductIds);
 
                 // Compute epic progress from feature progress
-                currentEpicProgress = await _projectionService.ComputeEpicProgressAsync(
-                    query.ProductOwnerId,
-                    currentFeatureProgress,
-                    cancellationToken);
+                currentEpicProgress = scopedProductIds is null
+                    ? await _projectionService.ComputeEpicProgressAsync(
+                        query.ProductOwnerId,
+                        currentFeatureProgress,
+                        cancellationToken)
+                    : await _projectionService.ComputeEpicProgressAsync(
+                        query.ProductOwnerId,
+                        currentFeatureProgress,
+                        cancellationToken,
+                        scopedProductIds);
 
                 deliverySummaryByProduct = currentEpicProgress.ToProductDeliveryProgressSummaries();
 
@@ -148,18 +191,33 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                 {
                     var (previousSprintStartForFilter, previousSprintEndForFilter) = GetSprintWindow(previousSprint);
 
-                    previousFeatureProgress = await _projectionService.ComputeFeatureProgressAsync(
-                        query.ProductOwnerId,
-                        FeatureProgressMode.StoryPoints,
-                        previousSprintStartForFilter,
-                        previousSprintEndForFilter,
-                        cancellationToken,
-                        previousSprint.Id);
+                    previousFeatureProgress = scopedProductIds is null
+                        ? await _projectionService.ComputeFeatureProgressAsync(
+                            query.ProductOwnerId,
+                            FeatureProgressMode.StoryPoints,
+                            previousSprintStartForFilter,
+                            previousSprintEndForFilter,
+                            cancellationToken,
+                            previousSprint.Id)
+                        : await _projectionService.ComputeFeatureProgressForScopeAsync(
+                            query.ProductOwnerId,
+                            FeatureProgressMode.StoryPoints,
+                            previousSprintStartForFilter,
+                            previousSprintEndForFilter,
+                            cancellationToken,
+                            previousSprint.Id,
+                            scopedProductIds);
 
-                    previousEpicProgress = await _projectionService.ComputeEpicProgressAsync(
-                        query.ProductOwnerId,
-                        previousFeatureProgress,
-                        cancellationToken);
+                    previousEpicProgress = scopedProductIds is null
+                        ? await _projectionService.ComputeEpicProgressAsync(
+                            query.ProductOwnerId,
+                            previousFeatureProgress,
+                            cancellationToken)
+                        : await _projectionService.ComputeEpicProgressAsync(
+                            query.ProductOwnerId,
+                            previousFeatureProgress,
+                            cancellationToken,
+                            scopedProductIds);
                 }
 
                 featureProgress = query.IncludeDetails

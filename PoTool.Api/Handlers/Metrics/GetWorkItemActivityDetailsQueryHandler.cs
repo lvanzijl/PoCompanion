@@ -24,10 +24,12 @@ public sealed class GetWorkItemActivityDetailsQueryHandler
         GetWorkItemActivityDetailsQuery query,
         CancellationToken cancellationToken)
     {
-        var productIds = await _context.Products
-            .Where(p => p.ProductOwnerId == query.ProductOwnerId)
-            .Select(p => p.Id)
-            .ToListAsync(cancellationToken);
+        var productIds = query.EffectiveFilter.Context.ProductIds.IsAll
+            ? await _context.Products
+                .Where(p => p.ProductOwnerId == query.ProductOwnerId)
+                .Select(p => p.Id)
+                .ToListAsync(cancellationToken)
+            : query.EffectiveFilter.Context.ProductIds.Values.ToList();
 
         if (productIds.Count == 0)
         {
@@ -84,8 +86,8 @@ public sealed class GetWorkItemActivityDetailsQueryHandler
             }
         }
 
-        var fromUtc = query.PeriodStartUtc?.UtcDateTime;
-        var toUtc = query.PeriodEndUtc?.UtcDateTime;
+        var fromUtc = query.EffectiveFilter.RangeStartUtc?.UtcDateTime;
+        var toUtc = query.EffectiveFilter.RangeEndUtc?.UtcDateTime;
         var eventQuery = _context.ActivityEventLedgerEntries
             .AsNoTracking()
             .Where(e => e.ProductOwnerId == query.ProductOwnerId && relevantIds.Contains(e.WorkItemId));
@@ -128,8 +130,8 @@ public sealed class GetWorkItemActivityDetailsQueryHandler
             WorkItemId = root.TfsId,
             WorkItemTitle = root.Title,
             WorkItemType = root.Type,
-            PeriodStartUtc = query.PeriodStartUtc,
-            PeriodEndUtc = query.PeriodEndUtc,
+            PeriodStartUtc = query.EffectiveFilter.RangeStartUtc,
+            PeriodEndUtc = query.EffectiveFilter.RangeEndUtc,
             Activities = activities
         };
     }

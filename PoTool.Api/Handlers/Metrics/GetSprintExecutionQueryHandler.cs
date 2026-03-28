@@ -68,40 +68,40 @@ public sealed class GetSprintExecutionQueryHandler
         CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Handling GetSprintExecutionQuery for ProductOwner {ProductOwnerId}, Sprint {SprintId}, Product {ProductId}",
-            query.ProductOwnerId, query.SprintId, query.ProductId);
+            "Handling GetSprintExecutionQuery for ProductOwner {ProductOwnerId}, Sprint {SprintId}, ProductScope {ProductScope}",
+            query.ProductOwnerId,
+            query.EffectiveFilter.SprintId,
+            query.EffectiveFilter.Context.ProductIds.IsAll ? "ALL" : string.Join(", ", query.EffectiveFilter.Context.ProductIds.Values));
+
+        var sprintId = query.EffectiveFilter.SprintId;
+        if (!sprintId.HasValue)
+        {
+            return EmptyResult(0);
+        }
 
         // ── Step 1: Load sprint metadata ──────────────────────────────────────
         var sprint = await _context.Sprints
             .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == query.SprintId, cancellationToken);
+            .FirstOrDefaultAsync(s => s.Id == sprintId.Value, cancellationToken);
 
         if (sprint == null)
         {
-            _logger.LogWarning("Sprint {SprintId} not found", query.SprintId);
-            return EmptyResult(query.SprintId);
+            _logger.LogWarning("Sprint {SprintId} not found", sprintId.Value);
+            return EmptyResult(sprintId.Value);
         }
 
-        // ── Step 2: Resolve products for the product owner ────────────────────
-        var ownerProductIds = await _context.Products
-            .Where(p => p.ProductOwnerId == query.ProductOwnerId)
-            .Select(p => p.Id)
-            .ToListAsync(cancellationToken);
-
-        if (ownerProductIds.Count == 0)
-        {
-            _logger.LogWarning("No products found for ProductOwner {ProductOwnerId}", query.ProductOwnerId);
-            return EmptyResult(query.SprintId, sprint.Name, sprint.StartUtc, sprint.EndUtc);
-        }
-
-        // Apply product filter if specified
-        var targetProductIds = query.ProductId.HasValue
-            ? ownerProductIds.Where(id => id == query.ProductId.Value).ToList()
-            : ownerProductIds;
+        // ── Step 2: Resolve products for the effective sprint scope ───────────
+        var targetProductIds = query.EffectiveFilter.Context.ProductIds.IsAll
+            ? await _context.Products
+                .Where(p => p.ProductOwnerId == query.ProductOwnerId)
+                .Select(p => p.Id)
+                .ToListAsync(cancellationToken)
+            : query.EffectiveFilter.Context.ProductIds.Values.ToList();
 
         if (targetProductIds.Count == 0)
         {
-            return EmptyResult(query.SprintId, sprint.Name, sprint.StartUtc, sprint.EndUtc);
+            _logger.LogWarning("No products found for ProductOwner {ProductOwnerId}", query.ProductOwnerId);
+            return EmptyResult(sprintId.Value, sprint.Name, sprint.StartUtc, sprint.EndUtc);
         }
 
         // ── Step 3: Get resolved PBI/Bug IDs for target products ──────────────

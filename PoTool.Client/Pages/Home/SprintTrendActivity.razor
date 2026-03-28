@@ -254,11 +254,14 @@
                 return;
             }
 
-            _details = await MetricsClient.GetWorkItemActivityDetailsAsync(
+            var envelope = await MetricsClient.GetWorkItemActivityDetailsEnvelopeAsync(
                 WorkItemId,
                 productOwnerId.Value,
+                null,
                 _periodStartUtc,
-                _periodEndUtc);
+                _periodEndUtc,
+                CancellationToken.None);
+            _details = envelope.Data;
 
             if (_details != null)
             {
