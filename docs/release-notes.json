@@ -2,6 +2,14 @@
   {
     "date": "2026-03-28",
     "type": "Changed",
+    "title": "Delivery analytics now use canonical filter scope",
+    "impact": "Delivery progress, capacity calibration, portfolio delivery, home product bar, and delivery build-quality endpoints now resolve requested versus effective product and time scope once at the API boundary and return that metadata in migrated responses.",
+    "area": "Trends",
+    "link": "/home/portfolio-delivery"
+  },
+  {
+    "date": "2026-03-28",
+    "type": "Changed",
     "title": "Pipeline analytics now use canonical filter scope",
     "impact": "Pipeline metrics, pipeline runs, and pipeline insights now resolve requested versus effective product, repository, and time scope once at the API boundary and return that metadata in each migrated response envelope.",
     "area": "Trends",

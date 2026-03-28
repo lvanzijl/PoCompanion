@@ -13,7 +13,8 @@ public sealed class GetBuildQualitySprintQueryValidator : AbstractValidator<GetB
         RuleFor(x => x.ProductOwnerId)
             .GreaterThan(0);
 
-        RuleFor(x => x.SprintId)
+        RuleFor(x => x.EffectiveFilter.SprintId)
+            .NotNull()
             .GreaterThan(0);
     }
 }

@@ -487,7 +487,8 @@ public sealed class WorkspaceSignalService
             return null;
         }
 
-        return await _metricsClient.GetCapacityCalibrationAsync(productOwnerId, sprintIds, productIds, cancellationToken);
+        var response = await _metricsClient.GetCapacityCalibrationEnvelopeAsync(productOwnerId, sprintIds, productIds, cancellationToken);
+        return response.Data;
     }
 
     private static IEnumerable<WorkspaceSignalCandidate> GetDeliveryCandidates(

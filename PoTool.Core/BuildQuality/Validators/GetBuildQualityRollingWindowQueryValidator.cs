@@ -13,16 +13,16 @@ public sealed class GetBuildQualityRollingWindowQueryValidator : AbstractValidat
         RuleFor(x => x.ProductOwnerId)
             .GreaterThan(0);
 
-        RuleFor(x => x.WindowStartUtc)
-            .Must(date => date.Kind == DateTimeKind.Utc)
-            .WithMessage("WindowStartUtc must be UTC.");
+        RuleFor(x => x.EffectiveFilter.RangeStartUtc)
+            .NotNull()
+            .WithMessage("WindowStartUtc is required.");
 
-        RuleFor(x => x.WindowEndUtc)
-            .Must(date => date.Kind == DateTimeKind.Utc)
-            .WithMessage("WindowEndUtc must be UTC.");
+        RuleFor(x => x.EffectiveFilter.RangeEndUtc)
+            .NotNull()
+            .WithMessage("WindowEndUtc is required.");
 
-        RuleFor(x => x.WindowEndUtc)
-            .GreaterThan(x => x.WindowStartUtc)
+        RuleFor(x => x.EffectiveFilter.RangeEndUtc)
+            .GreaterThan(x => x.EffectiveFilter.RangeStartUtc)
             .WithMessage("WindowEndUtc must be greater than WindowStartUtc.");
     }
 }

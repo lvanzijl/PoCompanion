@@ -7,6 +7,7 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Domain.Forecasting.Models;
 using PoTool.Core.Domain.Forecasting.Services;
 using PoTool.Core.Metrics.Queries;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Handlers;
 
@@ -41,7 +42,7 @@ public sealed class GetCapacityCalibrationQueryHandlerTests
     public async Task Handle_NoProducts_ReturnsEmpty()
     {
         var result = await _handler.Handle(
-            new GetCapacityCalibrationQuery(ProductOwnerId: 99, SprintIds: [1, 2]),
+            new GetCapacityCalibrationQuery(DeliveryFilterTestFactory.MultiSprint([1], [1, 2])),
             CancellationToken.None);
 
         Assert.IsEmpty(result.Sprints);
@@ -58,7 +59,7 @@ public sealed class GetCapacityCalibrationQueryHandlerTests
         await _context.SaveChangesAsync();
 
         var result = await _handler.Handle(
-            new GetCapacityCalibrationQuery(ProductOwnerId: 1, SprintIds: [99, 100]),
+            new GetCapacityCalibrationQuery(DeliveryFilterTestFactory.MultiSprint([1], [99, 100])),
             CancellationToken.None);
 
         Assert.IsEmpty(result.Sprints);
@@ -93,7 +94,7 @@ public sealed class GetCapacityCalibrationQueryHandlerTests
                 outlierSprintNames: Array.Empty<string>()));
 
         var result = await _handler.Handle(
-            new GetCapacityCalibrationQuery(ProductOwnerId: 1, SprintIds: [1], ProductIds: [1]),
+            new GetCapacityCalibrationQuery(DeliveryFilterTestFactory.MultiSprint([1], [1])),
             CancellationToken.None);
 
         Assert.IsNotNull(capturedSamples);
@@ -108,7 +109,7 @@ public sealed class GetCapacityCalibrationQueryHandlerTests
     }
 
     [TestMethod]
-    public async Task Handle_WithCrossOwnerProductFilter_ReturnsEmpty()
+    public async Task Handle_WithEmptyEffectiveProductScope_ReturnsEmpty()
     {
         SeedProduct(1, ownerId: 2);
         SeedSprint(1, "Sprint 1");
@@ -116,7 +117,7 @@ public sealed class GetCapacityCalibrationQueryHandlerTests
         await _context.SaveChangesAsync();
 
         var result = await _handler.Handle(
-            new GetCapacityCalibrationQuery(ProductOwnerId: 1, SprintIds: [1], ProductIds: [1]),
+            new GetCapacityCalibrationQuery(DeliveryFilterTestFactory.MultiSprint([], [1])),
             CancellationToken.None);
 
         Assert.IsEmpty(result.Sprints);
@@ -146,7 +147,7 @@ public sealed class GetCapacityCalibrationQueryHandlerTests
                 outlierSprintNames: ["Sprint 1"]));
 
         var result = await _handler.Handle(
-            new GetCapacityCalibrationQuery(ProductOwnerId: 1, SprintIds: [1]),
+            new GetCapacityCalibrationQuery(DeliveryFilterTestFactory.MultiSprint([1], [1])),
             CancellationToken.None);
 
         Assert.HasCount(1, result.Sprints);

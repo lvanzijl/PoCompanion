@@ -20,7 +20,8 @@ public sealed class BuildQualityService : IBuildQualityService
         DateTimeOffset windowEndUtc,
         CancellationToken cancellationToken = default)
     {
-        return await _buildQualityClient.GetRollingAsync(productOwnerId, windowStartUtc, windowEndUtc, cancellationToken);
+        var response = await _buildQualityClient.GetRollingEnvelopeAsync(productOwnerId, windowStartUtc, windowEndUtc, cancellationToken);
+        return response.Data;
     }
 
     public async Task<DeliveryBuildQualityDto> GetSprintAsync(
@@ -28,7 +29,8 @@ public sealed class BuildQualityService : IBuildQualityService
         int sprintId,
         CancellationToken cancellationToken = default)
     {
-        return await _buildQualityClient.GetSprintAsync(productOwnerId, sprintId, cancellationToken);
+        var response = await _buildQualityClient.GetSprintEnvelopeAsync(productOwnerId, sprintId, cancellationToken);
+        return response.Data;
     }
 
     public async Task<PipelineBuildQualityDto> GetPipelineAsync(

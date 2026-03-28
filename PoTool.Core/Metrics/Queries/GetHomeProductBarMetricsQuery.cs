@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Core.Delivery.Filters;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Core.Metrics.Queries;
@@ -8,5 +9,5 @@ namespace PoTool.Core.Metrics.Queries;
 /// </summary>
 public sealed record GetHomeProductBarMetricsQuery(
     int ProductOwnerId,
-    int? ProductId = null
+    DeliveryEffectiveFilter EffectiveFilter
 ) : IQuery<HomeProductBarMetricsDto>;

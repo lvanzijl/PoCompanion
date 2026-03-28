@@ -966,10 +966,12 @@
 
         try
         {
-            var calibration = await MetricsClient.GetCapacityCalibrationAsync(
+            var calibrationResponse = await MetricsClient.GetCapacityCalibrationEnvelopeAsync(
                 _activeProfileId.Value,
                 completedSprintIds,
-                new[] { productId });
+                new[] { productId },
+                CancellationToken.None);
+            var calibration = calibrationResponse.Data;
 
             _sprintCapacity = calibration.MedianVelocity > 0 ? calibration.MedianVelocity : null;
         }

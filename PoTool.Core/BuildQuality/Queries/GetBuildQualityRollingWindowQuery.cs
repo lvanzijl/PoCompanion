@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Core.Delivery.Filters;
 using PoTool.Shared.BuildQuality;
 
 namespace PoTool.Core.BuildQuality.Queries;
@@ -8,5 +9,4 @@ namespace PoTool.Core.BuildQuality.Queries;
 /// </summary>
 public sealed record GetBuildQualityRollingWindowQuery(
     int ProductOwnerId,
-    DateTime WindowStartUtc,
-    DateTime WindowEndUtc) : IQuery<BuildQualityPageDto>;
+    DeliveryEffectiveFilter EffectiveFilter) : IQuery<BuildQualityPageDto>;

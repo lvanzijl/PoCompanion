@@ -1,8 +1,10 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using PoTool.Api.Controllers;
+using PoTool.Api.Persistence;
 using PoTool.Api.Services;
 using PoTool.Core.Metrics.Commands;
 using PoTool.Core.Metrics.Queries;
@@ -13,6 +15,19 @@ namespace PoTool.Tests.Unit.Controllers;
 [TestClass]
 public sealed class MetricsControllerPortfolioReadTests
 {
+    private static MetricsController CreateController(IMediator mediator)
+    {
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase($"MetricsControllerPortfolioReadTests_{Guid.NewGuid()}")
+            .Options;
+        var context = new PoToolDbContext(options);
+        var deliveryFilterResolutionService = new DeliveryFilterResolutionService(
+            context,
+            NullLogger<DeliveryFilterResolutionService>.Instance);
+
+        return new MetricsController(mediator, deliveryFilterResolutionService, NullLogger<MetricsController>.Instance);
+    }
+
     [TestMethod]
     public async Task GetPortfolioProgress_MapsFilteringParametersIntoQuery()
     {
@@ -44,7 +59,7 @@ public sealed class MetricsControllerPortfolioReadTests
                 Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
-        var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
+        var controller = CreateController(mediator.Object);
 
         var result = await controller.GetPortfolioProgress(
             7,
@@ -81,7 +96,7 @@ public sealed class MetricsControllerPortfolioReadTests
                 Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
-        var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
+        var controller = CreateController(mediator.Object);
 
         var result = await controller.GetPortfolioSnapshots(7, cancellationToken: CancellationToken.None);
 
@@ -110,7 +125,7 @@ public sealed class MetricsControllerPortfolioReadTests
                 Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
-        var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
+        var controller = CreateController(mediator.Object);
 
         var result = await controller.GetPortfolioComparison(7, cancellationToken: CancellationToken.None);
 
@@ -146,7 +161,7 @@ public sealed class MetricsControllerPortfolioReadTests
                 Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
-        var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
+        var controller = CreateController(mediator.Object);
 
         var result = await controller.GetPortfolioComparison(
             7,
@@ -181,7 +196,7 @@ public sealed class MetricsControllerPortfolioReadTests
                 Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
-        var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
+        var controller = CreateController(mediator.Object);
 
         var result = await controller.GetPortfolioTrends(7, snapshotCount: 6, cancellationToken: CancellationToken.None);
 
@@ -209,7 +224,7 @@ public sealed class MetricsControllerPortfolioReadTests
                 Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
-        var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
+        var controller = CreateController(mediator.Object);
 
         var result = await controller.GetPortfolioSignals(7, snapshotCount: 6, cancellationToken: CancellationToken.None);
 

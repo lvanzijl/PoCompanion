@@ -5,6 +5,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Settings;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Handlers;
 
@@ -42,7 +43,9 @@ public class GetHomeProductBarMetricsQueryHandlerTests
 
         // Act
         var result = await _handler.Handle(
-            new GetHomeProductBarMetricsQuery(seed.ProductOwnerId),
+            new GetHomeProductBarMetricsQuery(
+                seed.ProductOwnerId,
+                DeliveryFilterTestFactory.MultiSprint([seed.ProductAId, seed.ProductBId], [])),
             CancellationToken.None);
 
         // Assert
@@ -52,23 +55,43 @@ public class GetHomeProductBarMetricsQueryHandlerTests
     }
 
     [TestMethod]
-    public async Task Handle_SelectedProductFiltersBugAndChangeMetricsOnly()
+    public async Task Handle_SelectedProductFiltersSprintProgressBugAndChangeMetrics()
     {
         // Arrange
         var seed = await SeedDashboardMetricsAsync();
 
         // Act
         var result = await _handler.Handle(
-            new GetHomeProductBarMetricsQuery(seed.ProductOwnerId, seed.ProductAId),
+            new GetHomeProductBarMetricsQuery(
+                seed.ProductOwnerId,
+                DeliveryFilterTestFactory.MultiSprint([seed.ProductAId], [])),
             CancellationToken.None);
 
         // Assert
-        Assert.AreEqual(seed.ExpectedSprintProgressPercentage, result.SprintProgressPercentage);
+        Assert.AreEqual(seed.ExpectedSelectedProductSprintProgressPercentage, result.SprintProgressPercentage);
         Assert.AreEqual(1, result.BugCount);
         Assert.AreEqual(1, result.ChangesTodayCount);
     }
 
-    private async Task<(int ProductOwnerId, int ProductAId, int ExpectedSprintProgressPercentage)> SeedDashboardMetricsAsync()
+    [TestMethod]
+    public async Task Handle_IgnoresChangesFromOtherOwnersForTheSameResolvedProductScope()
+    {
+        var seed = await SeedDashboardMetricsAsync();
+
+        _context.ResolvedWorkItems.Add(CreateResolvedWorkItem(3000, seed.ProductAId));
+        _context.ActivityEventLedgerEntries.Add(CreateActivity(99, 3000, 4, DateTimeOffset.UtcNow.AddHours(-1)));
+        await _context.SaveChangesAsync();
+
+        var result = await _handler.Handle(
+            new GetHomeProductBarMetricsQuery(
+                seed.ProductOwnerId,
+                DeliveryFilterTestFactory.MultiSprint([seed.ProductAId], [])),
+            CancellationToken.None);
+
+        Assert.AreEqual(1, result.ChangesTodayCount);
+    }
+
+    private async Task<(int ProductOwnerId, int ProductAId, int ProductBId, int ExpectedSprintProgressPercentage, int ExpectedSelectedProductSprintProgressPercentage)> SeedDashboardMetricsAsync()
     {
         const int productOwnerId = 7;
         const int productAId = 10;
@@ -138,7 +161,7 @@ public class GetHomeProductBarMetricsQueryHandlerTests
 
         await _context.SaveChangesAsync();
 
-        return (productOwnerId, productAId, 60);
+        return (productOwnerId, productAId, productBId, 60, 40);
     }
 
     private static SprintEntity CreateCurrentSprint(int id, int teamId, DateTimeOffset startUtc, DateTimeOffset endUtc)
