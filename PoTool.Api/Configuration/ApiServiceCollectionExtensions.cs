@@ -293,6 +293,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IPortfolioReadModelStateService, PortfolioReadModelStateService>();
         services.AddSingleton<FilterContextValidator>();
         services.AddScoped<PortfolioFilterResolutionService>();
+        services.AddScoped<PullRequestFilterResolutionService>();
         services.AddScoped<IPortfolioReadModelMapper, PortfolioReadModelMapper>();
         services.AddScoped<IPortfolioTrendAnalysisService, PortfolioTrendAnalysisService>();
         services.AddSingleton<IPortfolioDecisionSignalService, PortfolioDecisionSignalService>();

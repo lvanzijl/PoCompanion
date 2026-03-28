@@ -678,14 +678,14 @@
                 return;
             }
 
-            var response = await PullRequestsClient.GetSprintTrendsAsync(
+            var response = await PullRequestsClient.GetSprintTrendsEnvelopeAsync(
                 selectedSprintIds,
                 productIds: null,
                 teamId: _selectedTeamId,
                 cancellationToken);
 
             _prTrendSignal = TrendsWorkspaceTileSignalService.GetPrTrendSignal(
-                response?.Success == true ? response.Sprints : null);
+                response?.Data?.Success == true ? response.Data.Sprints : null);
         }
         catch (OperationCanceledException)
         {

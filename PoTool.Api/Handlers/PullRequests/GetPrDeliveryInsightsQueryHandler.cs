@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
+using PoTool.Api.Services;
 using PoTool.Core.PullRequests.Queries;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.PullRequests;
@@ -69,95 +70,57 @@ public sealed class GetPrDeliveryInsightsQueryHandler
         CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
+        var filter = query.EffectiveFilter;
+
+        _logger.LogInformation(
+            "Handling GetPrDeliveryInsightsQuery with repository scope {RepositoryCount}, range [{RangeStartUtc}, {RangeEndUtc}], sprintId {SprintId}",
+            filter.RepositoryScope.Count,
+            filter.RangeStartUtc,
+            filter.RangeEndUtc,
+            filter.SprintId);
 
         // ── 1. Resolve team name ───────────────────────────────────────────────
         string? teamName = null;
-        if (query.TeamId.HasValue)
+        if (!filter.Context.TeamIds.IsAll && filter.Context.TeamIds.Values.Count > 0)
         {
+            var teamId = filter.Context.TeamIds.Values[0];
             teamName = await _context.Teams
                 .AsNoTracking()
-                .Where(t => t.Id == query.TeamId.Value)
+                .Where(t => t.Id == teamId)
                 .Select(t => t.Name)
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
         // ── 2. Resolve sprint boundaries ──────────────────────────────────────
-        DateTimeOffset fromDate = query.FromDate;
-        DateTimeOffset toDate   = query.ToDate;
+        DateTimeOffset fromDate = filter.RangeStartUtc ?? DateTimeOffset.MinValue;
+        DateTimeOffset toDate   = filter.RangeEndUtc ?? DateTimeOffset.MaxValue;
         string? sprintName      = null;
 
-        if (query.SprintId.HasValue)
+        if (filter.SprintId.HasValue)
         {
             var sprint = await _context.Sprints
                 .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.Id == query.SprintId.Value, cancellationToken);
+                .FirstOrDefaultAsync(s => s.Id == filter.SprintId.Value, cancellationToken);
 
             if (sprint != null)
             {
-                fromDate   = sprint.StartDateUtc.HasValue
-                    ? new DateTimeOffset(sprint.StartDateUtc.Value, TimeSpan.Zero)
-                    : fromDate;
-                toDate     = sprint.EndDateUtc.HasValue
-                    ? new DateTimeOffset(sprint.EndDateUtc.Value, TimeSpan.Zero)
-                    : toDate;
                 sprintName = sprint.Name;
             }
         }
 
-        // ── 3. Resolve allowed repository names (team-scoped) ─────────────────
-        List<string>? allowedRepositoryNames = null;
-
-        if (query.TeamId.HasValue)
-        {
-            var linkedProductIds = await _context.ProductTeamLinks
-                .AsNoTracking()
-                .Where(l => l.TeamId == query.TeamId.Value)
-                .Select(l => l.ProductId)
-                .ToListAsync(cancellationToken);
-
-            if (linkedProductIds.Count > 0)
-            {
-                allowedRepositoryNames = await _context.Repositories
-                    .AsNoTracking()
-                    .Where(r => linkedProductIds.Contains(r.ProductId))
-                    .Select(r => r.Name)
-                    .Distinct()
-                    .ToListAsync(cancellationToken);
-            }
-            else
-            {
-                _logger.LogDebug(
-                    "PR Delivery Insights: team {TeamId} has no linked products; returning empty",
-                    query.TeamId.Value);
-                return EmptyResult(query, teamName, sprintName, fromDate, toDate);
-            }
-
-            if (allowedRepositoryNames.Count == 0)
-            {
-                _logger.LogDebug(
-                    "PR Delivery Insights: team {TeamId} has products but no repository configurations",
-                    query.TeamId.Value);
-                return EmptyResult(query, teamName, sprintName, fromDate, toDate);
-            }
-        }
-
-        // ── 4. Load PRs in date range ──────────────────────────────────────────
-        var fromUtc = fromDate.UtcDateTime;
-        var toUtc   = toDate.UtcDateTime;
-
-        var prQuery = _context.PullRequests
-            .AsNoTracking()
-            .Where(pr => pr.CreatedDateUtc >= fromUtc && pr.CreatedDateUtc <= toUtc);
-
-        if (allowedRepositoryNames != null)
-            prQuery = prQuery.Where(pr => allowedRepositoryNames.Contains(pr.RepositoryName));
+        var prQuery = PullRequestFiltering.ApplyScope(
+            _context.PullRequests.AsNoTracking(),
+            filter);
 
         var prs = await prQuery.ToListAsync(cancellationToken);
 
         if (prs.Count == 0)
         {
-            _logger.LogDebug("PR Delivery Insights: no PRs found in date range [{From}, {To}]", fromUtc, toUtc);
-            return EmptyResult(query, teamName, sprintName, fromDate, toDate);
+            _logger.LogDebug(
+                "PR Delivery Insights: no PRs found in effective range [{From}, {To}]",
+                filter.RangeStartUtc,
+                filter.RangeEndUtc);
+            return EmptyResult(filter, teamName, sprintName, fromDate, toDate);
         }
 
         var prIds = prs.Select(pr => pr.Id).ToList();
@@ -534,9 +497,9 @@ public sealed class GetPrDeliveryInsightsQueryHandler
         // ── 15. Assemble result ────────────────────────────────────────────────
         return new PrDeliveryInsightsDto
         {
-            TeamId          = query.TeamId,
+            TeamId          = filter.Context.TeamIds.IsAll ? null : filter.Context.TeamIds.Values.FirstOrDefault(),
             TeamName        = teamName,
-            SprintId        = query.SprintId,
+            SprintId        = filter.SprintId,
             SprintName      = sprintName,
             FromDate        = fromDate,
             ToDate          = toDate,
@@ -855,16 +818,16 @@ public sealed class GetPrDeliveryInsightsQueryHandler
     }
 
     private static PrDeliveryInsightsDto EmptyResult(
-        GetPrDeliveryInsightsQuery query,
+        PoTool.Core.PullRequests.Filters.PullRequestEffectiveFilter filter,
         string? teamName,
         string? sprintName,
         DateTimeOffset fromDate,
         DateTimeOffset toDate) =>
         new()
         {
-            TeamId     = query.TeamId,
+            TeamId     = filter.Context.TeamIds.IsAll ? null : filter.Context.TeamIds.Values.FirstOrDefault(),
             TeamName   = teamName,
-            SprintId   = query.SprintId,
+            SprintId   = filter.SprintId,
             SprintName = sprintName,
             FromDate   = fromDate,
             ToDate     = toDate,

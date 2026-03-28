@@ -1,4 +1,6 @@
 using PoTool.Client.ApiClient;
+using SharedPullRequestMetricsDto = PoTool.Shared.PullRequests.PullRequestMetricsDto;
+using SharedPullRequestDto = PoTool.Shared.PullRequests.PullRequestDto;
 
 namespace PoTool.Client.Services;
 
@@ -42,16 +44,17 @@ public class PullRequestService
     /// </summary>
     /// <param name="productIds">Optional comma-separated product IDs to filter by</param>
     /// <param name="fromDate">Optional start date filter</param>
-    public async Task<IEnumerable<PullRequestMetricsDto>> GetMetricsAsync(string? productIds = null, DateTimeOffset? fromDate = null)
+    public async Task<IEnumerable<SharedPullRequestMetricsDto>> GetMetricsAsync(string? productIds = null, DateTimeOffset? fromDate = null)
     {
-        return await _pullRequestsClient.GetMetricsAsync(productIds, fromDate) ?? Array.Empty<PullRequestMetricsDto>();
+        var response = await _pullRequestsClient.GetMetricsEnvelopeAsync(productIds, fromDate, CancellationToken.None);
+        return response.Data;
     }
 
     /// <summary>
     /// Gets filtered pull requests.
     /// </summary>
     /// <param name="productIds">Optional comma-separated product IDs to filter by</param>
-    public async Task<IEnumerable<PullRequestDto>> GetFilteredAsync(
+    public async Task<IEnumerable<SharedPullRequestDto>> GetFilteredAsync(
         string? productIds = null,
         string? iterationPath = null,
         string? createdBy = null,
@@ -59,8 +62,15 @@ public class PullRequestService
         DateTimeOffset? toDate = null,
         string? status = null)
     {
-        return await _pullRequestsClient.GetFilteredAsync(productIds, iterationPath, createdBy, fromDate, toDate, status)
-            ?? Array.Empty<PullRequestDto>();
+        var response = await _pullRequestsClient.GetFilteredEnvelopeAsync(
+            productIds,
+            iterationPath,
+            createdBy,
+            fromDate,
+            toDate,
+            status,
+            CancellationToken.None);
+        return response.Data;
     }
 
     /// <summary>

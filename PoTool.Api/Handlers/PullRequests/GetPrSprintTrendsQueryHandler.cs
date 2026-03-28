@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
+using PoTool.Api.Services;
 using PoTool.Core.PullRequests.Queries;
 using PoTool.Shared.PullRequests;
 using PoTool.Shared.Statistics;
@@ -30,6 +31,8 @@ namespace PoTool.Api.Handlers.PullRequests;
 public sealed class GetPrSprintTrendsQueryHandler
     : IQueryHandler<GetPrSprintTrendsQuery, GetPrSprintTrendsResponse>
 {
+    private sealed record PrSizeMetrics(int LinesChanged, int FileCount);
+
     private readonly PoToolDbContext _context;
     private readonly ILogger<GetPrSprintTrendsQueryHandler> _logger;
 
@@ -45,7 +48,7 @@ public sealed class GetPrSprintTrendsQueryHandler
         GetPrSprintTrendsQuery query,
         CancellationToken cancellationToken)
     {
-        if (query.SprintIds.Count == 0)
+        if (query.EffectiveFilter.SprintIds.Count == 0)
         {
             return new GetPrSprintTrendsResponse
             {
@@ -54,8 +57,14 @@ public sealed class GetPrSprintTrendsQueryHandler
             };
         }
 
-        // 1. Load sprints ordered by start date
-        var sprintIdList = query.SprintIds.Distinct().ToList();
+        _logger.LogInformation(
+            "Handling GetPrSprintTrendsQuery with repository scope {RepositoryCount}, sprint count {SprintCount}, range [{RangeStartUtc}, {RangeEndUtc}]",
+            query.EffectiveFilter.RepositoryScope.Count,
+            query.EffectiveFilter.SprintIds.Count,
+            query.EffectiveFilter.RangeStartUtc,
+            query.EffectiveFilter.RangeEndUtc);
+
+        var sprintIdList = query.EffectiveFilter.SprintIds.Distinct().ToList();
         var sprints = await _context.Sprints
             .Where(s => sprintIdList.Contains(s.Id) && s.StartDateUtc.HasValue && s.EndDateUtc.HasValue)
             .OrderBy(s => s.StartDateUtc)
@@ -72,54 +81,9 @@ public sealed class GetPrSprintTrendsQueryHandler
             };
         }
 
-        // 2. Determine allowed product IDs (same priority as pipeline sprint trends handler)
-        // Priority: explicit ProductIds > TeamId via ProductTeamLinks > all PRs
-        List<int>? allowedProductIds;
-        if (query.ProductIds != null && query.ProductIds.Count > 0)
-        {
-            allowedProductIds = query.ProductIds;
-        }
-        else if (query.TeamId.HasValue)
-        {
-            allowedProductIds = await _context.ProductTeamLinks
-                .Where(l => l.TeamId == query.TeamId.Value)
-                .Select(l => l.ProductId)
-                .Distinct()
-                .ToListAsync(cancellationToken);
-
-            if (allowedProductIds.Count == 0)
-            {
-                _logger.LogDebug("No products linked to team {TeamId}; returning empty sprint metrics", query.TeamId.Value);
-                return new GetPrSprintTrendsResponse
-                {
-                    Success = true,
-                    Sprints = sprints.Select(s => new PrSprintMetricsDto
-                    {
-                        SprintId = s.Id,
-                        SprintName = s.Name,
-                        StartUtc = s.StartUtc,
-                        EndUtc = s.EndUtc
-                    }).ToList()
-                };
-            }
-        }
-        else
-        {
-            // No filter: include all products
-            allowedProductIds = null;
-        }
-
-        // 3. Load PRs whose CreatedDateUtc falls within the overall sprint range
-        var rangeStart = sprints.Min(s => s.StartDateUtc!.Value);
-        var rangeEnd = sprints.Max(s => s.EndDateUtc!.Value);
-
-        var prsQuery = _context.PullRequests
-            .Where(pr => pr.CreatedDateUtc >= rangeStart && pr.CreatedDateUtc < rangeEnd);
-
-        if (allowedProductIds != null)
-        {
-            prsQuery = prsQuery.Where(pr => pr.ProductId.HasValue && allowedProductIds.Contains(pr.ProductId.Value));
-        }
+        var prsQuery = PullRequestFiltering.ApplyScope(
+            _context.PullRequests.AsNoTracking(),
+            query.EffectiveFilter);
 
         var prs = await prsQuery
             .Select(pr => new
@@ -227,10 +191,10 @@ public sealed class GetPrSprintTrendsQueryHandler
             {
                 var changes = fileChangesLookup[pr.Id].ToList();
                 if (changes.Count == 0)
-                    return (LinesChanged: 0, FileCount: 0);
+                    return new PrSizeMetrics(0, 0);
                 var lines = changes.Sum(fc => fc.LinesAdded + fc.LinesDeleted);
                 var files = changes.GroupBy(fc => fc.FilePath).Count();
-                return (LinesChanged: lines, FileCount: files);
+                return new PrSizeMetrics(lines, files);
             }).ToList();
 
             var totalLines = prSizes.Sum(s => s.LinesChanged);
@@ -308,5 +272,4 @@ public sealed class GetPrSprintTrendsQueryHandler
             ? (sorted[mid - 1] + sorted[mid]) / 2.0
             : sorted[mid];
     }
-
 }

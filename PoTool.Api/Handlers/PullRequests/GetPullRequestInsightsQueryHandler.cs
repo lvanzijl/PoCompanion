@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
+using PoTool.Api.Services;
 using PoTool.Core.PullRequests.Queries;
 using PoTool.Shared.PullRequests;
 using PoTool.Shared.Statistics;
@@ -43,6 +44,13 @@ public sealed class GetPullRequestInsightsQueryHandler
         CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
+        var filter = query.EffectiveFilter;
+
+        _logger.LogInformation(
+            "Handling GetPullRequestInsightsQuery with repository scope {RepositoryCount}, range [{RangeStartUtc}, {RangeEndUtc}]",
+            filter.RepositoryScope.Count,
+            filter.RangeStartUtc,
+            filter.RangeEndUtc);
 
         // ── 0. Load TFS config for URL construction ───────────────────────────
         var tfsConfig = await _context.TfsConfigs
@@ -51,63 +59,35 @@ public sealed class GetPullRequestInsightsQueryHandler
 
         string? tfsBaseUrl = BuildTfsBaseUrl(tfsConfig);
 
-        // ── 1. Resolve product scope ──────────────────────────────────────────
-        List<int>? allowedProductIds = null;
         string? teamName = null;
 
-        if (query.TeamId.HasValue)
+        if (!filter.Context.TeamIds.IsAll && filter.Context.TeamIds.Values.Count > 0)
         {
+            var teamId = filter.Context.TeamIds.Values[0];
             var team = await _context.Teams
                 .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.Id == query.TeamId.Value, cancellationToken);
+                .FirstOrDefaultAsync(t => t.Id == teamId, cancellationToken);
 
             teamName = team?.Name;
-
-            var linkedProductIds = await _context.ProductTeamLinks
-                .AsNoTracking()
-                .Where(l => l.TeamId == query.TeamId.Value)
-                .Select(l => l.ProductId)
-                .ToListAsync(cancellationToken);
-
-            _logger.LogDebug(
-                "PR Insights: team {TeamId} linked to {Count} products",
-                query.TeamId.Value, linkedProductIds.Count);
-
-            if (linkedProductIds.Count == 0)
-            {
-                _logger.LogDebug(
-                    "PR Insights: team {TeamId} has no linked products",
-                    query.TeamId.Value);
-                return EmptyResult(query.TeamId, teamName, query.FromDate, query.ToDate);
-            }
-
-            allowedProductIds = linkedProductIds.Distinct().ToList();
         }
 
-        // ── 2. Load PRs in date range ─────────────────────────────────────────
-        var fromUtc = query.FromDate.UtcDateTime;
-        var toUtc   = query.ToDate.UtcDateTime;
-
-        var prQuery = _context.PullRequests
-            .AsNoTracking()
-            .Where(pr => pr.CreatedDateUtc >= fromUtc && pr.CreatedDateUtc <= toUtc);
-
-        if (allowedProductIds != null)
-        {
-            prQuery = prQuery.Where(pr => pr.ProductId.HasValue && allowedProductIds.Contains(pr.ProductId.Value));
-        }
-
-        if (!string.IsNullOrWhiteSpace(query.RepositoryName))
-        {
-            prQuery = prQuery.Where(pr => pr.RepositoryName == query.RepositoryName);
-        }
+        var prQuery = PullRequestFiltering.ApplyScope(
+            _context.PullRequests.AsNoTracking(),
+            filter);
 
         var prs = await prQuery.ToListAsync(cancellationToken);
 
         if (prs.Count == 0)
         {
-            _logger.LogDebug("PR Insights: no PRs found in date range [{From}, {To}]", fromUtc, toUtc);
-            return EmptyResult(query.TeamId, teamName, query.FromDate, query.ToDate);
+            _logger.LogDebug(
+                "PR Insights: no PRs found in effective range [{From}, {To}]",
+                filter.RangeStartUtc,
+                filter.RangeEndUtc);
+            return EmptyResult(
+                filter.Context.TeamIds.IsAll ? null : filter.Context.TeamIds.Values.FirstOrDefault(),
+                teamName,
+                filter.RangeStartUtc ?? DateTimeOffset.MinValue,
+                filter.RangeEndUtc ?? DateTimeOffset.MaxValue);
         }
 
         var prIds = prs.Select(pr => pr.Id).ToList();
@@ -301,10 +281,10 @@ public sealed class GetPullRequestInsightsQueryHandler
         // ── 11. Assemble result ────────────────────────────────────────────────
         return new PullRequestInsightsDto
         {
-            TeamId              = query.TeamId,
+            TeamId              = filter.Context.TeamIds.IsAll ? null : filter.Context.TeamIds.Values.FirstOrDefault(),
             TeamName            = teamName,
-            FromDate            = query.FromDate,
-            ToDate              = query.ToDate,
+            FromDate            = filter.RangeStartUtc ?? DateTimeOffset.MinValue,
+            ToDate              = filter.RangeEndUtc ?? DateTimeOffset.MaxValue,
             Summary             = summary,
             Top3Problematic     = top3,
             ScatterPoints       = scatterPoints,

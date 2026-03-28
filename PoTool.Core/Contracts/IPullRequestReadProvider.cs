@@ -22,6 +22,15 @@ public interface IPullRequestReadProvider
     Task<IEnumerable<PullRequestDto>> GetByProductIdsAsync(List<int>? productIds, DateTimeOffset? fromDate = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves pull requests scoped to the provided repositories and optional date range.
+    /// </summary>
+    Task<IEnumerable<PullRequestDto>> GetByRepositoryNamesAsync(
+        IReadOnlyList<string> repositoryNames,
+        DateTimeOffset? fromDate = null,
+        DateTimeOffset? toDate = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves a specific pull request by ID from the configured data source.
     /// </summary>
     Task<PullRequestDto?> GetByIdAsync(int pullRequestId, CancellationToken cancellationToken = default);

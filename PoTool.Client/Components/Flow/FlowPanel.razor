@@ -3,6 +3,7 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Pages.PullRequests.SubComponents
 @using PoTool.Client.Pages.Pipelines.SubComponents
+@using SharedPullRequestMetricsDto = PoTool.Shared.PullRequests.PullRequestMetricsDto
 @inject PullRequestService PullRequestService
 @inject PipelineService PipelineService
 @inject ErrorMessageService ErrorMessageService
@@ -82,7 +83,7 @@
     public IEnumerable<int>? ProductIds { get; set; }
 
     private bool _isLoading = true;
-    private List<PullRequestMetricsDto> _prMetrics = new();
+    private List<SharedPullRequestMetricsDto> _prMetrics = new();
     private List<PipelineMetricsDto> _pipelineMetrics = new();
     private ErrorResponse? _errorResponse;
 

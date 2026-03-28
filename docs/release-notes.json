@@ -2,6 +2,14 @@
   {
     "date": "2026-03-28",
     "type": "Changed",
+    "title": "PR analytics now use canonical filter resolution",
+    "impact": "Pull Request metrics, filtered lists, sprint trends, insights, and delivery insights now resolve requested versus effective product, team, repository, and time scope once at the API boundary and return that metadata in every response envelope.",
+    "area": "Trends",
+    "link": "/home/pr-overview"
+  },
+  {
+    "date": "2026-03-28",
+    "type": "Changed",
     "title": "Portfolio reads now echo canonical filter resolution",
     "impact": "Portfolio read responses now return requested versus effective filter scope and invalid filter fields so later UI work can surface deterministic backend filtering.",
     "area": "Trends",
