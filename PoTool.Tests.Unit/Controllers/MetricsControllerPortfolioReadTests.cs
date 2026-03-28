@@ -39,7 +39,8 @@ public sealed class MetricsControllerPortfolioReadTests
                 SortBy = PortfolioReadSortBy.Progress,
                 SortDirection = PortfolioReadSortDirection.Desc,
                 Items = Array.Empty<PortfolioSnapshotItemDto>(),
-                HasData = true
+                HasData = true,
+                Filter = EmptyFilterMetadata()
             });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
@@ -75,7 +76,8 @@ public sealed class MetricsControllerPortfolioReadTests
                 SortBy = PortfolioReadSortBy.Default,
                 SortDirection = PortfolioReadSortDirection.Desc,
                 Items = Array.Empty<PortfolioSnapshotItemDto>(),
-                HasData = true
+                HasData = true,
+                Filter = EmptyFilterMetadata()
             });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
@@ -103,7 +105,8 @@ public sealed class MetricsControllerPortfolioReadTests
                 SortBy = PortfolioReadSortBy.Default,
                 SortDirection = PortfolioReadSortDirection.Desc,
                 Items = Array.Empty<PortfolioComparisonItemDto>(),
-                HasData = true
+                HasData = true,
+                Filter = EmptyFilterMetadata()
             });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
@@ -138,7 +141,8 @@ public sealed class MetricsControllerPortfolioReadTests
                 SortBy = PortfolioReadSortBy.Default,
                 SortDirection = PortfolioReadSortDirection.Desc,
                 Items = Array.Empty<PortfolioComparisonItemDto>(),
-                HasData = true
+                HasData = true,
+                Filter = EmptyFilterMetadata()
             });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
@@ -172,7 +176,8 @@ public sealed class MetricsControllerPortfolioReadTests
                 IncludesArchivedSnapshots = false,
                 ArchivedSnapshotsExcludedByDefault = true,
                 ArchivedSnapshotsExcludedNotice = false,
-                HasData = true
+                HasData = true,
+                Filter = EmptyFilterMetadata()
             });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
@@ -188,16 +193,20 @@ public sealed class MetricsControllerPortfolioReadTests
         var mediator = new Mock<IMediator>(MockBehavior.Strict);
         mediator
             .Setup(service => service.Send(It.IsAny<GetPortfolioSignalsQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(
-            [
-                new PortfolioDecisionSignalDto
-                {
-                    Type = PortfolioDecisionSignalType.ProgressImproving,
-                    Tone = PortfolioDecisionSignalTone.Positive,
-                    Title = "Portfolio progress is improving",
-                    Description = "Progress increased."
-                }
-            ]);
+            .ReturnsAsync(new PortfolioSignalsDto
+            {
+                Signals =
+                [
+                    new PortfolioDecisionSignalDto
+                    {
+                        Type = PortfolioDecisionSignalType.ProgressImproving,
+                        Tone = PortfolioDecisionSignalTone.Positive,
+                        Title = "Portfolio progress is improving",
+                        Description = "Progress increased."
+                    }
+                ],
+                Filter = EmptyFilterMetadata()
+            });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
 
@@ -248,4 +257,29 @@ public sealed class MetricsControllerPortfolioReadTests
         Assert.IsInstanceOfType<OkObjectResult>(result.Result);
         mediator.VerifyAll();
     }
+
+    private static FilterResponseMetadataDto EmptyFilterMetadata()
+        => new()
+        {
+            RequestedFilter = new FilterContextDto
+            {
+                ProductIds = new FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
+                ProjectNumbers = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
+                WorkPackages = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
+                LifecycleStates = new FilterSelectionDto<PortfolioLifecycleState> { IsAll = true, Values = Array.Empty<PortfolioLifecycleState>() },
+                TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
+                Time = new FilterTimeSelectionDto { Mode = FilterTimeSelectionModeDto.None, SprintIds = Array.Empty<int>() }
+            },
+            EffectiveFilter = new FilterContextDto
+            {
+                ProductIds = new FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
+                ProjectNumbers = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
+                WorkPackages = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
+                LifecycleStates = new FilterSelectionDto<PortfolioLifecycleState> { IsAll = true, Values = Array.Empty<PortfolioLifecycleState>() },
+                TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
+                Time = new FilterTimeSelectionDto { Mode = FilterTimeSelectionModeDto.None, SprintIds = Array.Empty<int>() }
+            },
+            InvalidFields = Array.Empty<string>(),
+            Messages = Array.Empty<FilterValidationIssueDto>()
+        };
 }

@@ -60,7 +60,7 @@ public partial interface IMetricsClient
         bool includeArchivedSnapshots,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<PortfolioDecisionSignalDto>> GetPortfolioSignalsAsync(
+    Task<PortfolioSignalsDto> GetPortfolioSignalsAsync(
         int productOwnerId,
         int? productId,
         string? projectNumber,
@@ -198,7 +198,7 @@ public partial class MetricsClient
             compareToSnapshotId: null,
             cancellationToken);
 
-    public Task<IReadOnlyList<PortfolioDecisionSignalDto>> GetPortfolioSignalsAsync(
+    public Task<PortfolioSignalsDto> GetPortfolioSignalsAsync(
         int productOwnerId,
         int? productId,
         string? projectNumber,
@@ -213,7 +213,7 @@ public partial class MetricsClient
         bool includeArchivedSnapshots,
         long? compareToSnapshotId,
         CancellationToken cancellationToken = default)
-        => GetPortfolioReadModelAsync<IReadOnlyList<PortfolioDecisionSignalDto>>(
+        => GetPortfolioReadModelAsync<PortfolioSignalsDto>(
             "api/portfolio/signals",
             productOwnerId,
             productId,

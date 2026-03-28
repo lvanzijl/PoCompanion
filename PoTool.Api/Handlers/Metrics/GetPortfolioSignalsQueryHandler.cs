@@ -6,7 +6,7 @@ using PoTool.Shared.Metrics;
 namespace PoTool.Api.Handlers.Metrics;
 
 public sealed class GetPortfolioSignalsQueryHandler
-    : IQueryHandler<GetPortfolioSignalsQuery, IReadOnlyList<PortfolioDecisionSignalDto>>
+    : IQueryHandler<GetPortfolioSignalsQuery, PortfolioSignalsDto>
 {
     private readonly PortfolioDecisionSignalQueryService _queryService;
 
@@ -15,7 +15,7 @@ public sealed class GetPortfolioSignalsQueryHandler
         _queryService = queryService;
     }
 
-    public ValueTask<IReadOnlyList<PortfolioDecisionSignalDto>> Handle(
+    public ValueTask<PortfolioSignalsDto> Handle(
         GetPortfolioSignalsQuery query,
         CancellationToken cancellationToken)
         => new(_queryService.GetAsync(query.ProductOwnerId, query.Options, cancellationToken));

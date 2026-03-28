@@ -6,13 +6,16 @@ public sealed class PortfolioProgressQueryService
 {
     private readonly IPortfolioReadModelStateService _stateService;
     private readonly IPortfolioReadModelMapper _mapper;
+    private readonly PortfolioFilterResolutionService _filterResolutionService;
 
     public PortfolioProgressQueryService(
         IPortfolioReadModelStateService stateService,
-        IPortfolioReadModelMapper mapper)
+        IPortfolioReadModelMapper mapper,
+        PortfolioFilterResolutionService filterResolutionService)
     {
         _stateService = stateService;
         _mapper = mapper;
+        _filterResolutionService = filterResolutionService;
     }
 
     public async Task<PortfolioProgressDto> GetAsync(
@@ -20,7 +23,13 @@ public sealed class PortfolioProgressQueryService
         PortfolioReadQueryOptions? options,
         CancellationToken cancellationToken)
     {
-        var state = await _stateService.GetLatestStateAsync(productOwnerId, cancellationToken);
+        var resolution = await _filterResolutionService.ResolveAsync(
+            productOwnerId,
+            options,
+            nameof(PortfolioProgressQueryService),
+            cancellationToken);
+
+        var state = await _stateService.GetLatestStateAsync(productOwnerId, resolution.EffectiveFilter, cancellationToken);
         if (state is null)
         {
             return new PortfolioProgressDto
@@ -35,13 +44,14 @@ public sealed class PortfolioProgressQueryService
                 SortBy = options?.SortBy ?? PortfolioReadSortBy.Default,
                 SortDirection = options?.SortDirection ?? PortfolioReadSortDirection.Desc,
                 Items = Array.Empty<PortfolioSnapshotItemDto>(),
-                HasData = false
+                HasData = false,
+                Filter = PortfolioFilterResolutionService.ToMetadata(resolution)
             };
         }
 
         var mappedItems = state.CurrentSnapshot.Items
             .Select(item => _mapper.ToSnapshotItemDto(item, state.ProductNames));
-        var filteredItems = PortfolioReadModelFiltering.Apply(mappedItems, options);
+        var filteredItems = PortfolioReadModelFiltering.Apply(mappedItems, resolution.EffectiveFilter, options);
 
         return new PortfolioProgressDto
         {
@@ -55,7 +65,8 @@ public sealed class PortfolioProgressQueryService
             SortBy = options?.SortBy ?? PortfolioReadSortBy.Default,
             SortDirection = options?.SortDirection ?? PortfolioReadSortDirection.Desc,
             Items = filteredItems,
-            HasData = true
+            HasData = true,
+            Filter = PortfolioFilterResolutionService.ToMetadata(resolution)
         };
     }
 }

@@ -1,4 +1,9 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using PoTool.Api.Services;
+using PoTool.Api.Persistence;
+using PoTool.Api.Persistence.Entities;
+using PoTool.Core.Filters;
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Shared.Metrics;
@@ -12,7 +17,7 @@ public sealed class PortfolioQueryServicesTests
     public async Task ProgressQueryService_AppliesFilteringAfterOverallProgressIsComputed()
     {
         var stateService = new StubPortfolioReadModelStateService(CreateState());
-        var service = new PortfolioProgressQueryService(stateService, new PortfolioReadModelMapper());
+        var service = new PortfolioProgressQueryService(stateService, new PortfolioReadModelMapper(), CreateFilterResolutionService());
 
         var result = await service.GetAsync(
             42,
@@ -35,7 +40,7 @@ public sealed class PortfolioQueryServicesTests
     public async Task SnapshotQueryService_SortsFilteredRowsByRequestedField()
     {
         var stateService = new StubPortfolioReadModelStateService(CreateState());
-        var service = new PortfolioSnapshotQueryService(stateService, new PortfolioReadModelMapper());
+        var service = new PortfolioSnapshotQueryService(stateService, new PortfolioReadModelMapper(), CreateFilterResolutionService());
 
         var result = await service.GetAsync(
             42,
@@ -64,7 +69,7 @@ public sealed class PortfolioQueryServicesTests
                 null,
                 0d,
                 new Dictionary<int, string> { [1] = "Product A" }));
-        var service = new PortfolioSnapshotQueryService(stateService, new PortfolioReadModelMapper());
+        var service = new PortfolioSnapshotQueryService(stateService, new PortfolioReadModelMapper(), CreateFilterResolutionService());
 
         var result = await service.GetAsync(42, null, CancellationToken.None);
 
@@ -116,7 +121,8 @@ public sealed class PortfolioQueryServicesTests
         var service = new PortfolioComparisonQueryService(
             stateService,
             new PortfolioReadModelMapper(),
-            new PortfolioSnapshotComparisonService());
+            new PortfolioSnapshotComparisonService(),
+            CreateFilterResolutionService());
 
         var result = await service.GetAsync(
             42,
@@ -156,7 +162,8 @@ public sealed class PortfolioQueryServicesTests
         var service = new PortfolioComparisonQueryService(
             stateService,
             new PortfolioReadModelMapper(),
-            new PortfolioSnapshotComparisonService());
+            new PortfolioSnapshotComparisonService(),
+            CreateFilterResolutionService());
 
         var result = await service.GetAsync(
             42,
@@ -186,7 +193,8 @@ public sealed class PortfolioQueryServicesTests
                 ArchivedSnapshotsExcludedNotice: false));
         var service = new PortfolioTrendQueryService(
             stateService,
-            new PortfolioTrendAnalysisService(new ProductAggregationService(), new PortfolioReadModelMapper()));
+            new PortfolioTrendAnalysisService(new ProductAggregationService(), new PortfolioReadModelMapper()),
+            CreateFilterResolutionService());
 
         var result = await service.GetAsync(42, new PortfolioReadQueryOptions(SnapshotCount: 3), CancellationToken.None);
 
@@ -213,7 +221,8 @@ public sealed class PortfolioQueryServicesTests
                 ArchivedSnapshotsExcludedNotice: false));
         var service = new PortfolioTrendQueryService(
             stateService,
-            new PortfolioTrendAnalysisService(new ProductAggregationService(), new PortfolioReadModelMapper()));
+            new PortfolioTrendAnalysisService(new ProductAggregationService(), new PortfolioReadModelMapper()),
+            CreateFilterResolutionService());
 
         var result = await service.GetAsync(42, new PortfolioReadQueryOptions(SnapshotCount: 3), CancellationToken.None);
 
@@ -240,7 +249,8 @@ public sealed class PortfolioQueryServicesTests
                 ArchivedSnapshotsExcludedNotice: false));
         var service = new PortfolioTrendQueryService(
             stateService,
-            new PortfolioTrendAnalysisService(new ProductAggregationService(), new PortfolioReadModelMapper()));
+            new PortfolioTrendAnalysisService(new ProductAggregationService(), new PortfolioReadModelMapper()),
+            CreateFilterResolutionService());
 
         var result = await service.GetAsync(42, new PortfolioReadQueryOptions(SnapshotCount: 3), CancellationToken.None);
 
@@ -263,7 +273,8 @@ public sealed class PortfolioQueryServicesTests
                 ArchivedSnapshotsExcludedNotice: false));
         var service = new PortfolioTrendQueryService(
             stateService,
-            new PortfolioTrendAnalysisService(new ProductAggregationService(), new PortfolioReadModelMapper()));
+            new PortfolioTrendAnalysisService(new ProductAggregationService(), new PortfolioReadModelMapper()),
+            CreateFilterResolutionService());
 
         var result = await service.GetAsync(42, new PortfolioReadQueryOptions(SnapshotCount: 1), CancellationToken.None);
 
@@ -320,7 +331,8 @@ public sealed class PortfolioQueryServicesTests
             new PortfolioTrendAnalysisService(new ProductAggregationService(), new PortfolioReadModelMapper()),
             new PortfolioDecisionSignalService(),
             new PortfolioSnapshotComparisonService(),
-            new PortfolioReadModelMapper());
+            new PortfolioReadModelMapper(),
+            CreateFilterResolutionService());
 
         var signals = await service.GetAsync(42, new PortfolioReadQueryOptions(SnapshotCount: 3), CancellationToken.None);
 
@@ -332,7 +344,7 @@ public sealed class PortfolioQueryServicesTests
                 PortfolioDecisionSignalType.RepeatedNoChange,
                 PortfolioDecisionSignalType.ArchivedSnapshotExcludedNotice
             },
-            signals.Select(signal => signal.Type).Distinct().ToArray());
+            signals.Signals.Select(signal => signal.Type).Distinct().ToArray());
     }
 
     [TestMethod]
@@ -359,11 +371,12 @@ public sealed class PortfolioQueryServicesTests
             new PortfolioTrendAnalysisService(new ProductAggregationService(), new PortfolioReadModelMapper()),
             new PortfolioDecisionSignalService(),
             new PortfolioSnapshotComparisonService(),
-            new PortfolioReadModelMapper());
+            new PortfolioReadModelMapper(),
+            CreateFilterResolutionService());
 
         var signals = await service.GetAsync(42, new PortfolioReadQueryOptions(SnapshotCount: 1), CancellationToken.None);
 
-        Assert.IsEmpty(signals);
+        Assert.IsEmpty(signals.Signals);
     }
 
     private static PortfolioReadModelState CreateState()
@@ -396,6 +409,61 @@ public sealed class PortfolioQueryServicesTests
                 new PortfolioSnapshotItem(1, "PRJ-100", "WP-1", progress, weight, WorkPackageLifecycleState.Active)
             ]);
 
+    private static PortfolioFilterResolutionService CreateFilterResolutionService()
+    {
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase($"PortfolioFilterResolution_{Guid.NewGuid()}")
+            .Options;
+
+        var context = new PoToolDbContext(options);
+        context.Products.AddRange(
+            new ProductEntity { Id = 1, ProductOwnerId = 42, Name = "Product A" },
+            new ProductEntity { Id = 2, ProductOwnerId = 42, Name = "Product B" });
+        context.PortfolioSnapshots.AddRange(
+            new PortfolioSnapshotEntity
+            {
+                SnapshotId = 1,
+                ProductId = 1,
+                Source = "Sprint 3",
+                TimestampUtc = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+                Items =
+                [
+                    new PortfolioSnapshotItemEntity
+                    {
+                        ProjectNumber = "PRJ-100",
+                        WorkPackage = "WP-1",
+                        Progress = 0.4d,
+                        TotalWeight = 10d,
+                        LifecycleState = WorkPackageLifecycleState.Active
+                    }
+                ]
+            },
+            new PortfolioSnapshotEntity
+            {
+                SnapshotId = 2,
+                ProductId = 2,
+                Source = "Sprint 3",
+                TimestampUtc = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+                Items =
+                [
+                    new PortfolioSnapshotItemEntity
+                    {
+                        ProjectNumber = "PRJ-200",
+                        WorkPackage = "WP-2",
+                        Progress = 0.8d,
+                        TotalWeight = 6d,
+                        LifecycleState = WorkPackageLifecycleState.Retired
+                    }
+                ]
+            });
+        context.SaveChanges();
+
+        return new PortfolioFilterResolutionService(
+            context,
+            new FilterContextValidator(),
+            NullLogger<PortfolioFilterResolutionService>.Instance);
+    }
+
     private sealed class StubPortfolioReadModelStateService : IPortfolioReadModelStateService
     {
         private readonly PortfolioReadModelState _state;
@@ -412,17 +480,22 @@ public sealed class PortfolioQueryServicesTests
             _comparisonState = comparisonState;
         }
 
-        public Task<PortfolioReadModelState?> GetLatestStateAsync(int productOwnerId, CancellationToken cancellationToken)
+        public Task<PortfolioReadModelState?> GetLatestStateAsync(
+            int productOwnerId,
+            FilterContext filter,
+            CancellationToken cancellationToken)
             => Task.FromResult<PortfolioReadModelState?>(_state);
 
         public Task<PortfolioReadModelHistoryState?> GetHistoryStateAsync(
             int productOwnerId,
+            FilterContext filter,
             PortfolioReadQueryOptions? options,
             CancellationToken cancellationToken)
             => Task.FromResult(_historyState);
 
         public Task<PortfolioReadModelComparisonState?> GetComparisonStateAsync(
             int productOwnerId,
+            FilterContext filter,
             PortfolioReadQueryOptions? options,
             CancellationToken cancellationToken)
             => Task.FromResult(_comparisonState);

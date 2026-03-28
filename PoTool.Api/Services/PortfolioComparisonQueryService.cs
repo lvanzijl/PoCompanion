@@ -9,15 +9,18 @@ public sealed class PortfolioComparisonQueryService
     private readonly IPortfolioReadModelStateService _stateService;
     private readonly IPortfolioReadModelMapper _mapper;
     private readonly IPortfolioSnapshotComparisonService _comparisonService;
+    private readonly PortfolioFilterResolutionService _filterResolutionService;
 
     public PortfolioComparisonQueryService(
         IPortfolioReadModelStateService stateService,
         IPortfolioReadModelMapper mapper,
-        IPortfolioSnapshotComparisonService comparisonService)
+        IPortfolioSnapshotComparisonService comparisonService,
+        PortfolioFilterResolutionService filterResolutionService)
     {
         _stateService = stateService;
         _mapper = mapper;
         _comparisonService = comparisonService;
+        _filterResolutionService = filterResolutionService;
     }
 
     public async Task<PortfolioComparisonDto> GetAsync(
@@ -25,7 +28,13 @@ public sealed class PortfolioComparisonQueryService
         PortfolioReadQueryOptions? options,
         CancellationToken cancellationToken)
     {
-        var state = await _stateService.GetComparisonStateAsync(productOwnerId, options, cancellationToken);
+        var resolution = await _filterResolutionService.ResolveAsync(
+            productOwnerId,
+            options,
+            nameof(PortfolioComparisonQueryService),
+            cancellationToken);
+
+        var state = await _stateService.GetComparisonStateAsync(productOwnerId, resolution.EffectiveFilter, options, cancellationToken);
         if (state is null)
         {
             return new PortfolioComparisonDto
@@ -40,7 +49,8 @@ public sealed class PortfolioComparisonQueryService
                 SortBy = options?.SortBy ?? PortfolioReadSortBy.Default,
                 SortDirection = options?.SortDirection ?? PortfolioReadSortDirection.Desc,
                 Items = Array.Empty<PortfolioComparisonItemDto>(),
-                HasData = false
+                HasData = false,
+                Filter = PortfolioFilterResolutionService.ToMetadata(resolution)
             };
         }
 
@@ -50,7 +60,7 @@ public sealed class PortfolioComparisonQueryService
 
         var mappedItems = comparison.Items
             .Select(item => _mapper.ToComparisonItemDto(item, state.ProductNames));
-        var filteredItems = PortfolioReadModelFiltering.Apply(mappedItems, options);
+        var filteredItems = PortfolioReadModelFiltering.Apply(mappedItems, resolution.EffectiveFilter, options);
 
         return new PortfolioComparisonDto
         {
@@ -64,7 +74,8 @@ public sealed class PortfolioComparisonQueryService
             SortBy = options?.SortBy ?? PortfolioReadSortBy.Default,
             SortDirection = options?.SortDirection ?? PortfolioReadSortDirection.Desc,
             Items = filteredItems,
-            HasData = true
+            HasData = true,
+            Filter = PortfolioFilterResolutionService.ToMetadata(resolution)
         };
     }
 }

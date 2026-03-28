@@ -6,13 +6,16 @@ public sealed class PortfolioTrendQueryService
 {
     private readonly IPortfolioReadModelStateService _stateService;
     private readonly IPortfolioTrendAnalysisService _trendAnalysisService;
+    private readonly PortfolioFilterResolutionService _filterResolutionService;
 
     public PortfolioTrendQueryService(
         IPortfolioReadModelStateService stateService,
-        IPortfolioTrendAnalysisService trendAnalysisService)
+        IPortfolioTrendAnalysisService trendAnalysisService,
+        PortfolioFilterResolutionService filterResolutionService)
     {
         _stateService = stateService;
         _trendAnalysisService = trendAnalysisService;
+        _filterResolutionService = filterResolutionService;
     }
 
     public async Task<PortfolioTrendDto> GetAsync(
@@ -20,7 +23,13 @@ public sealed class PortfolioTrendQueryService
         PortfolioReadQueryOptions? options,
         CancellationToken cancellationToken)
     {
-        var state = await _stateService.GetHistoryStateAsync(productOwnerId, options, cancellationToken);
+        var resolution = await _filterResolutionService.ResolveAsync(
+            productOwnerId,
+            options,
+            nameof(PortfolioTrendQueryService),
+            cancellationToken);
+
+        var state = await _stateService.GetHistoryStateAsync(productOwnerId, resolution.EffectiveFilter, options, cancellationToken);
         if (state is null)
         {
             return new PortfolioTrendDto
@@ -50,14 +59,16 @@ public sealed class PortfolioTrendQueryService
                 IncludesArchivedSnapshots = options?.IncludeArchivedSnapshots ?? false,
                 ArchivedSnapshotsExcludedByDefault = true,
                 ArchivedSnapshotsExcludedNotice = false,
-                HasData = false
+                HasData = false,
+                Filter = PortfolioFilterResolutionService.ToMetadata(resolution)
             };
         }
 
-        var trend = _trendAnalysisService.BuildTrend(state.Snapshots, state.ProductNames, options);
+        var trend = _trendAnalysisService.BuildTrend(state.Snapshots, state.ProductNames, resolution.EffectiveFilter, options);
         return trend with
         {
-            ArchivedSnapshotsExcludedNotice = state.ArchivedSnapshotsExcludedNotice
+            ArchivedSnapshotsExcludedNotice = state.ArchivedSnapshotsExcludedNotice,
+            Filter = PortfolioFilterResolutionService.ToMetadata(resolution)
         };
     }
 }

@@ -12,6 +12,7 @@ using PoTool.Integrations.Tfs.Clients;
 using PoTool.Core.BacklogQuality;
 using PoTool.Core.Contracts;
 using PoTool.Core.Configuration;
+using PoTool.Core.Filters;
 using PoTool.Core.Sync;
 using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems.Validators.Rules;
@@ -290,6 +291,8 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IPortfolioSnapshotSelectionService, PortfolioSnapshotSelectionService>();
         services.AddScoped<IPortfolioSnapshotCaptureOrchestrator, PortfolioSnapshotCaptureOrchestrator>();
         services.AddScoped<IPortfolioReadModelStateService, PortfolioReadModelStateService>();
+        services.AddSingleton<FilterContextValidator>();
+        services.AddScoped<PortfolioFilterResolutionService>();
         services.AddScoped<IPortfolioReadModelMapper, PortfolioReadModelMapper>();
         services.AddScoped<IPortfolioTrendAnalysisService, PortfolioTrendAnalysisService>();
         services.AddSingleton<IPortfolioDecisionSignalService, PortfolioDecisionSignalService>();
