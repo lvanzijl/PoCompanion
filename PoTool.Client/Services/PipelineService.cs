@@ -26,9 +26,13 @@ public class PipelineService
     /// Gets aggregated metrics for pipelines, optionally filtered by products.
     /// </summary>
     /// <param name="productIds">Optional comma-separated product IDs to filter by</param>
-    public async Task<IEnumerable<PipelineMetricsDto>> GetMetricsAsync(string? productIds = null)
+    public async Task<IEnumerable<PipelineMetricsDto>> GetMetricsAsync(
+        string? productIds = null,
+        DateTimeOffset? fromDate = null,
+        DateTimeOffset? toDate = null)
     {
-        return await _pipelinesClient.GetMetricsAsync(productIds) ?? Array.Empty<PipelineMetricsDto>();
+        var response = await _pipelinesClient.GetMetricsEnvelopeAsync(productIds, fromDate, toDate, CancellationToken.None);
+        return response.Data;
     }
 
     /// <summary>
@@ -41,17 +45,14 @@ public class PipelineService
 
     /// <summary>
     /// Gets all pipeline runs for specified products (last 6 months, main branch).
-    /// Note: This is a temporary client-side implementation that queries individual pipelines.
-    /// Once the API client is regenerated, this will use the new /api/Pipelines/runs endpoint.
-    /// Current limitations: Only queries first 10 pipelines, 100 runs each.
+    /// Uses the canonical filter envelope and returns only the payload data to the UI.
     /// </summary>
     /// <param name="productIds">Optional comma-separated product IDs to filter by (currently uses only first ID)</param>
-    public async Task<IEnumerable<PipelineRunDto>> GetRunsForProductsAsync(string? productIds = null)
+    public async Task<IEnumerable<PipelineRunDto>> GetRunsForProductsAsync(
+        string? productIds = null,
+        DateTimeOffset? fromDate = null,
+        DateTimeOffset? toDate = null)
     {
-        // TODO: Replace with direct API call once client is regenerated:
-        // return await _pipelinesClient.GetRunsForProductsAsync(productIds) ?? Array.Empty<PipelineRunDto>();
-        
-        // Return empty if no products specified (GetDefinitionsAsync requires at least productId or repositoryId)
         if (string.IsNullOrWhiteSpace(productIds))
         {
             return Array.Empty<PipelineRunDto>();
@@ -66,34 +67,9 @@ public class PipelineService
             // Invalid product ID format - return empty to avoid invalid API call
             return Array.Empty<PipelineRunDto>();
         }
-        
-        // Get pipeline definitions for the first product (temporary limitation)
-        var definitions = (await GetDefinitionsAsync(productId: firstId)).ToList();
 
-        if (definitions.Count == 0)
-        {
-            return Array.Empty<PipelineRunDto>();
-        }
-
-        // Get runs for each pipeline (limited to first 10 pipelines to avoid overwhelming the API)
-        var allRuns = new List<PipelineRunDto>();
-        var pipelinesToQuery = definitions.Take(10).ToList();
-
-        foreach (var definition in pipelinesToQuery)
-        {
-            try
-            {
-                var runs = await GetRunsAsync(definition.PipelineDefinitionId, top: 100);
-                allRuns.AddRange(runs);
-            }
-            catch (Exception)
-            {
-                // Continue if one pipeline fails - individual pipeline errors shouldn't fail entire load
-                // Once proper API endpoint is in place, error handling will be centralized
-            }
-        }
-
-        return allRuns;
+        var response = await _pipelinesClient.GetRunsForProductsEnvelopeAsync(productIds, fromDate, toDate, CancellationToken.None);
+        return response.Data;
     }
 
     /// <summary>

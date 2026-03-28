@@ -1,10 +1,10 @@
 using Mediator;
+using PoTool.Core.Pipelines.Filters;
 using PoTool.Shared.Pipelines;
 
 namespace PoTool.Core.Pipelines.Queries;
 
 /// <summary>
-/// Query to retrieve all pipeline runs for specific products.
-/// Returns runs from the last 6 months for main branch by default.
+/// Query to retrieve all pipeline runs for the resolved canonical pipeline scope.
 /// </summary>
-public sealed record GetPipelineRunsForProductsQuery(List<int>? ProductIds) : IQuery<IEnumerable<PipelineRunDto>>;
+public sealed record GetPipelineRunsForProductsQuery(PipelineEffectiveFilter EffectiveFilter) : IQuery<IEnumerable<PipelineRunDto>>;

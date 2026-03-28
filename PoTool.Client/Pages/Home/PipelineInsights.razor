@@ -727,12 +727,13 @@
 
         try
         {
-            _insightsData = await PipelinesClient.GetInsightsAsync(
+            var response = await PipelinesClient.GetInsightsEnvelopeAsync(
                 productOwnerId:              _activeProfileId.Value,
                 sprintId:                    _selectedSprintId.Value,
                 includePartiallySucceeded:   _includePartiallySucceeded,
                 includeCanceled:             _includeCanceled,
                 cancellationToken:           CancellationToken.None);
+            _insightsData = response.Data;
 
             _prevIncludePartial   = _includePartiallySucceeded;
             _prevIncludeCanceled  = _includeCanceled;

@@ -6,6 +6,8 @@ using Moq;
 using PoTool.Api.Handlers.Pipelines;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Core.Filters;
+using PoTool.Core.Pipelines.Filters;
 using PoTool.Core.Pipelines.Queries;
 using PoTool.Shared.Pipelines;
 
@@ -130,6 +132,29 @@ public class GetPipelineInsightsQueryHandlerTests
         await _context.SaveChangesAsync();
     }
 
+    private static PipelineEffectiveFilter CreateFilter(
+        IEnumerable<int>? productIds,
+        IEnumerable<string> repositories,
+        int? sprintId)
+        => new(
+            new PipelineFilterContext(
+                productIds?.Any() == true
+                    ? FilterSelection<int>.Selected(productIds)
+                    : FilterSelection<int>.All(),
+                FilterSelection<int>.All(),
+                repositories.Any()
+                    ? FilterSelection<string>.Selected(repositories)
+                    : FilterSelection<string>.Selected(Array.Empty<string>()),
+                sprintId.HasValue
+                    ? FilterTimeSelection.Sprint(sprintId.Value)
+                    : FilterTimeSelection.None()),
+            repositories.ToArray(),
+            Array.Empty<int>(),
+            Array.Empty<PipelineBranchScope>(),
+            sprintId.HasValue ? new DateTimeOffset(SprintStart) : null,
+            sprintId.HasValue ? new DateTimeOffset(SprintEnd) : null,
+            sprintId);
+
     // ── Tests ─────────────────────────────────────────────────────────────────
 
     [TestMethod]
@@ -137,7 +162,7 @@ public class GetPipelineInsightsQueryHandlerTests
     public async Task Handle_UnknownSprint_ReturnsEmptyResult()
     {
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(ProductOwnerId: 1, SprintId: 999),
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(productIds: null, repositories: Array.Empty<string>(), sprintId: null), RequestedSprintId: 999),
             CancellationToken.None);
 
         Assert.AreEqual(999, result.SprintId);
@@ -151,7 +176,7 @@ public class GetPipelineInsightsQueryHandlerTests
         var (profileId, _, _, _, sprintId, _) = await SeedFullScenarioAsync(seed: 1);
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId),
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)),
             CancellationToken.None);
 
         Assert.AreEqual(sprintId, result.SprintId);
@@ -168,7 +193,7 @@ public class GetPipelineInsightsQueryHandlerTests
         await AddRunAsync(id: 1, pipeDefId, profileId, RunInCurrent, "Succeeded");
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId),
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)),
             CancellationToken.None);
 
         Assert.AreEqual(1, result.TotalBuilds);
@@ -194,7 +219,7 @@ public class GetPipelineInsightsQueryHandlerTests
         await AddRunAsync(id: 4, pipeDefId, profileId, RunInCurrent, "Failed");
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId),
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)),
             CancellationToken.None);
 
         Assert.AreEqual(50.0, result.FailureRate, "Global failure rate must be 50%");
@@ -213,7 +238,7 @@ public class GetPipelineInsightsQueryHandlerTests
         await AddRunAsync(id: 2, pipeDefId, profileId, RunInCurrent, "PartiallySucceeded");
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId, IncludePartiallySucceeded: true),
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId), IncludePartiallySucceeded: true),
             CancellationToken.None);
 
         var product = result.Products[0];
@@ -232,7 +257,7 @@ public class GetPipelineInsightsQueryHandlerTests
         await AddRunAsync(id: 2, pipeDefId, profileId, RunInCurrent, "PartiallySucceeded");
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId, IncludePartiallySucceeded: false),
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId), IncludePartiallySucceeded: false),
             CancellationToken.None);
 
         var product = result.Products[0];
@@ -249,7 +274,7 @@ public class GetPipelineInsightsQueryHandlerTests
         await AddRunAsync(id: 2, pipeDefId, profileId, RunInCurrent, "Canceled");
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId, IncludeCanceled: false),
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId), IncludeCanceled: false),
             CancellationToken.None);
 
         Assert.AreEqual(2, result.TotalBuilds,  "TotalBuilds counts all runs");
@@ -266,7 +291,7 @@ public class GetPipelineInsightsQueryHandlerTests
         await AddRunAsync(id: 2, pipeDefId, profileId, RunInCurrent, "Canceled");
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId, IncludeCanceled: true),
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId), IncludeCanceled: true),
             CancellationToken.None);
 
         var product = result.Products[0];
@@ -282,7 +307,7 @@ public class GetPipelineInsightsQueryHandlerTests
         await AddRunAsync(id: 1, pipeDefId, profileId, outsideDate, "Failed");
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId),
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)),
             CancellationToken.None);
 
         Assert.AreEqual(0, result.TotalBuilds, "Run finished after sprint end must not be counted");
@@ -320,7 +345,8 @@ public class GetPipelineInsightsQueryHandlerTests
         await AddMixedRunsAsync(baseId: 300, pipeDefId: 12, profileId, succeeded: 2, failed: 8);
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, 20),
+            new GetPipelineInsightsQuery(
+                PipelineInsightTestFilters.Create(new[] { 10, 11, 12 }, new[] { "Repo 10", "Repo 11", "Repo 12" }, 20)),
             CancellationToken.None);
 
         var top3 = result.GlobalTop3InTrouble;
@@ -346,7 +372,7 @@ public class GetPipelineInsightsQueryHandlerTests
         await AddMixedRunsAsync(baseId: 100, pipeDefId, profileId, succeeded: 5, failed: 5, finishedUtc: RunInPrevious);
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId),
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)),
             CancellationToken.None);
 
         Assert.IsTrue(result.PreviousSprintId.HasValue, "Previous sprint must be identified");
@@ -392,7 +418,7 @@ public class GetPipelineInsightsQueryHandlerTests
         await AddMixedRunsAsync(baseId: 1, pipeDefId: 40, profileId, succeeded: 5, failed: 5, finishedUtc: RunInCurrent);
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, 40),
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { 40 }, new[] { "Repo40" }, 40)),
             CancellationToken.None);
 
         Assert.IsFalse(result.PreviousSprintId.HasValue, "No previous sprint must result in null PreviousSprintId");
@@ -414,7 +440,7 @@ public class GetPipelineInsightsQueryHandlerTests
             startedUtc: RunInCurrent.AddMinutes(-10));
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId),
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)),
             CancellationToken.None);
 
         Assert.IsNull(result.P90DurationMinutes, "P90 must be null with fewer than 3 runs");
@@ -436,7 +462,7 @@ public class GetPipelineInsightsQueryHandlerTests
             startedUtc: RunInCurrent.AddSeconds(2).AddMinutes(-15));
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId),
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)),
             CancellationToken.None);
 
         Assert.IsNotNull(result.P90DurationMinutes, "P90 must be present with 3+ runs");
@@ -585,7 +611,7 @@ public class GetPipelineInsightsScatterPointTests
             createdUtc: start.AddHours(2), finishedUtc: start.AddHours(2).AddMinutes(5));
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)), CancellationToken.None);
 
         Assert.HasCount(1, result.Products);
         var scatter = result.Products[0].ScatterPoints;
@@ -606,7 +632,7 @@ public class GetPipelineInsightsScatterPointTests
             url: "https://dev.azure.com/test/1");
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)), CancellationToken.None);
 
         var pt = result.Products[0].ScatterPoints[0];
         Assert.AreEqual("Succeeded", pt.Result);
@@ -626,7 +652,7 @@ public class GetPipelineInsightsScatterPointTests
         var (profileId, _, sprintId) = await SeedAsync(seed: 202);
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)), CancellationToken.None);
 
         Assert.IsFalse(result.Products[0].HasData);
         Assert.HasCount(0, result.Products[0].ScatterPoints);
@@ -648,12 +674,12 @@ public class GetPipelineInsightsScatterPointTests
         await AddRunAsync(id: 3, pipeDefId, profileId, "Succeeded", t3, t3.AddMinutes(12));
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)), CancellationToken.None);
 
         var scatter = result.Products[0].ScatterPoints;
         Assert.HasCount(3, scatter);
-        Assert.IsTrue(scatter[0].StartTime!.Value <= scatter[1].StartTime!.Value, "Points must be sorted by start time");
-        Assert.IsTrue(scatter[1].StartTime!.Value <= scatter[2].StartTime!.Value, "Points must be sorted by start time");
+        Assert.IsLessThanOrEqualTo(scatter[0].StartTime!.Value, scatter[1].StartTime!.Value, "Points must be sorted by start time");
+        Assert.IsLessThanOrEqualTo(scatter[1].StartTime!.Value, scatter[2].StartTime!.Value, "Points must be sorted by start time");
     }
 
     [TestMethod]
@@ -663,7 +689,7 @@ public class GetPipelineInsightsScatterPointTests
         var (profileId, _, sprintId) = await SeedAsync(seed: 204);
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)), CancellationToken.None);
 
         Assert.IsNotNull(result.SprintStart, "SprintStart must be set");
         Assert.IsNotNull(result.SprintEnd,   "SprintEnd must be set");
@@ -676,6 +702,35 @@ public class GetPipelineInsightsScatterPointTests
             result.SprintEnd!.Value,
             "SprintEnd must match the sprint entity's EndUtc");
     }
+}
+
+internal static class PipelineInsightTestFilters
+{
+    private static readonly DateTimeOffset SprintStart = new(new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc));
+    private static readonly DateTimeOffset SprintEnd = new(new DateTime(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc));
+
+    public static PipelineEffectiveFilter Create(
+        IEnumerable<int>? productIds,
+        IEnumerable<string> repositories,
+        int? sprintId)
+        => new(
+            new PipelineFilterContext(
+                productIds?.Any() == true
+                    ? FilterSelection<int>.Selected(productIds)
+                    : FilterSelection<int>.All(),
+                FilterSelection<int>.All(),
+                repositories.Any()
+                    ? FilterSelection<string>.Selected(repositories)
+                    : FilterSelection<string>.Selected(Array.Empty<string>()),
+                sprintId.HasValue
+                    ? FilterTimeSelection.Sprint(sprintId.Value)
+                    : FilterTimeSelection.None()),
+            repositories.ToArray(),
+            Array.Empty<int>(),
+            Array.Empty<PipelineBranchScope>(),
+            sprintId.HasValue ? SprintStart : null,
+            sprintId.HasValue ? SprintEnd : null,
+            sprintId);
 }
 
 // ── Phase 3: Per-pipeline breakdown + half-sprint trend tests ─────────────────
@@ -753,6 +808,29 @@ public class GetPipelineInsightsBreakdownTests
         await _context.SaveChangesAsync();
     }
 
+    private static PipelineEffectiveFilter CreateFilter(
+        IEnumerable<int>? productIds,
+        IEnumerable<string> repositories,
+        int? sprintId)
+        => new(
+            new PipelineFilterContext(
+                productIds?.Any() == true
+                    ? FilterSelection<int>.Selected(productIds)
+                    : FilterSelection<int>.All(),
+                FilterSelection<int>.All(),
+                repositories.Any()
+                    ? FilterSelection<string>.Selected(repositories)
+                    : FilterSelection<string>.Selected(Array.Empty<string>()),
+                sprintId.HasValue
+                    ? FilterTimeSelection.Sprint(sprintId.Value)
+                    : FilterTimeSelection.None()),
+            repositories.ToArray(),
+            Array.Empty<int>(),
+            Array.Empty<PipelineBranchScope>(),
+            sprintId.HasValue ? new DateTimeOffset(SprintStart) : null,
+            sprintId.HasValue ? new DateTimeOffset(SprintEnd) : null,
+            sprintId);
+
     // ── Breakdown populated ───────────────────────────────────────────────────
 
     [TestMethod]
@@ -767,7 +845,7 @@ public class GetPipelineInsightsBreakdownTests
             finishedUtc: new DateTime(2026, 2, 6, 12, 0, 0, DateTimeKind.Utc));
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)), CancellationToken.None);
 
         Assert.HasCount(1, result.Products[0].PipelineBreakdown, "Breakdown must contain one pipeline");
     }
@@ -793,7 +871,7 @@ public class GetPipelineInsightsBreakdownTests
             startedUtc:  new DateTime(2026, 2, 7,  9, 40, 0, DateTimeKind.Utc)); // 20 min
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)), CancellationToken.None);
 
         var entry = result.Products[0].PipelineBreakdown[0];
         Assert.AreEqual(4,    entry.TotalRuns,      "TotalRuns must be 4");
@@ -848,7 +926,7 @@ public class GetPipelineInsightsBreakdownTests
         await _context.SaveChangesAsync();
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(seed1, seed1), CancellationToken.None);
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { seed1 }, new[] { $"R{seed1}", $"R{seed2}" }, seed1)), CancellationToken.None);
 
         var breakdown = result.Products[0].PipelineBreakdown;
         Assert.HasCount(2, breakdown, "Two pipelines must appear in breakdown");
@@ -878,7 +956,7 @@ public class GetPipelineInsightsBreakdownTests
                 finishedUtc: sh.AddHours(i));
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)), CancellationToken.None);
 
         var entry = result.Products[0].PipelineBreakdown[0];
         Assert.AreEqual(PipelineHalfSprintTrend.Improving, entry.HalfSprintTrend,
@@ -908,7 +986,7 @@ public class GetPipelineInsightsBreakdownTests
                 finishedUtc: sh.AddHours(i));
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)), CancellationToken.None);
 
         var entry = result.Products[0].PipelineBreakdown[0];
         Assert.AreEqual(PipelineHalfSprintTrend.Degrading, entry.HalfSprintTrend,
@@ -936,7 +1014,7 @@ public class GetPipelineInsightsBreakdownTests
         await AddRunAsync(id: 8, pipeDefId, profileId, "Succeeded", finishedUtc: sh.AddHours(3));
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)), CancellationToken.None);
 
         var entry = result.Products[0].PipelineBreakdown[0];
         Assert.AreEqual(PipelineHalfSprintTrend.Stable, entry.HalfSprintTrend,
@@ -954,7 +1032,7 @@ public class GetPipelineInsightsBreakdownTests
             finishedUtc: new DateTime(2026, 2, 4, 10, 0, 0, DateTimeKind.Utc));
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)), CancellationToken.None);
 
         var entry = result.Products[0].PipelineBreakdown[0];
         Assert.AreEqual(PipelineHalfSprintTrend.Insufficient, entry.HalfSprintTrend,
@@ -970,7 +1048,7 @@ public class GetPipelineInsightsBreakdownTests
         var (profileId, _, sprintId) = await SeedAsync(seed: 504);
 
         var result = await _handler.Handle(
-            new GetPipelineInsightsQuery(profileId, sprintId), CancellationToken.None);
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)), CancellationToken.None);
 
         Assert.IsFalse(result.Products[0].HasData);
         Assert.HasCount(0, result.Products[0].PipelineBreakdown);
