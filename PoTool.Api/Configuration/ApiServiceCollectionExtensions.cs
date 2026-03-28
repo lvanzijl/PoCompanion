@@ -162,6 +162,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<ImportConfigurationService>();
         services.AddScoped<BuildQualityScopeLoader>();
         services.AddScoped<IBuildQualityProvider, BuildQualityProvider>();
+        services.AddScoped<PipelineFilterResolutionService>();
 
         // Register Classification service
         services.AddScoped<IWorkItemClassificationService, WorkItemClassificationService>();

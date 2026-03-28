@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
+using PoTool.Api.Services;
 using PoTool.Shared.Pipelines;
 using PoTool.Core.Pipelines;
 using PoTool.Core.Pipelines.Queries;
@@ -15,13 +16,16 @@ namespace PoTool.Api.Controllers;
 public class PipelinesController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly PipelineFilterResolutionService _filterResolutionService;
     private readonly ILogger<PipelinesController> _logger;
 
     public PipelinesController(
         IMediator mediator,
+        PipelineFilterResolutionService filterResolutionService,
         ILogger<PipelinesController> logger)
     {
         _mediator = mediator;
+        _filterResolutionService = filterResolutionService;
         _logger = logger;
     }
 
@@ -68,25 +72,34 @@ public class PipelinesController : ControllerBase
     /// Gets aggregated metrics for pipelines, optionally filtered by products.
     /// </summary>
     [HttpGet("metrics")]
-    public async Task<ActionResult<IEnumerable<PipelineMetricsDto>>> GetMetrics(
+    public async Task<ActionResult<PipelineQueryResponseDto<IReadOnlyList<PipelineMetricsDto>>>> GetMetrics(
         [FromQuery] string? productIds = null,
+        [FromQuery] DateTimeOffset? fromDate = null,
+        [FromQuery] DateTimeOffset? toDate = null,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            // Parse productIds string to list
-            List<int>? productIdsList = null;
-            if (!string.IsNullOrWhiteSpace(productIds))
+            var productIdsList = ParseProductIds(productIds, out var errorMessage);
+            if (errorMessage != null)
             {
-                productIdsList = productIds
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(id => int.TryParse(id.Trim(), out var parsedId) ? parsedId : 0)
-                    .Where(id => id > 0)
-                    .ToList();
+                return BadRequest(errorMessage);
             }
 
-            var metrics = await _mediator.Send(new GetPipelineMetricsQuery(productIdsList), cancellationToken);
-            return Ok(metrics);
+            var resolution = await _filterResolutionService.ResolveAsync(
+                new PipelineFilterBoundaryRequest(
+                    ProductIds: productIdsList,
+                    RangeStartUtc: fromDate,
+                    RangeEndUtc: toDate),
+                nameof(GetMetrics),
+                cancellationToken);
+
+            var metrics = (await _mediator.Send(
+                    new GetPipelineMetricsQuery(resolution.EffectiveFilter),
+                    cancellationToken))
+                .ToList();
+
+            return Ok(PipelineFilterResolutionService.ToResponse<IReadOnlyList<PipelineMetricsDto>>(metrics, resolution));
         }
         catch (Exception ex)
         {
@@ -96,28 +109,37 @@ public class PipelinesController : ControllerBase
     }
 
     /// <summary>
-    /// Gets all pipeline runs for specified products (last 6 months, main branch).
+    /// Gets all pipeline runs for specified products using canonical filter scope.
     /// </summary>
     [HttpGet("runs")]
-    public async Task<ActionResult<IEnumerable<PipelineRunDto>>> GetRunsForProducts(
+    public async Task<ActionResult<PipelineQueryResponseDto<IReadOnlyList<PipelineRunDto>>>> GetRunsForProducts(
         [FromQuery] string? productIds = null,
+        [FromQuery] DateTimeOffset? fromDate = null,
+        [FromQuery] DateTimeOffset? toDate = null,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            // Parse productIds string to list
-            List<int>? productIdsList = null;
-            if (!string.IsNullOrWhiteSpace(productIds))
+            var productIdsList = ParseProductIds(productIds, out var errorMessage);
+            if (errorMessage != null)
             {
-                productIdsList = productIds
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(id => int.TryParse(id.Trim(), out var parsedId) ? parsedId : 0)
-                    .Where(id => id > 0)
-                    .ToList();
+                return BadRequest(errorMessage);
             }
 
-            var runs = await _mediator.Send(new GetPipelineRunsForProductsQuery(productIdsList), cancellationToken);
-            return Ok(runs);
+            var resolution = await _filterResolutionService.ResolveAsync(
+                new PipelineFilterBoundaryRequest(
+                    ProductIds: productIdsList,
+                    RangeStartUtc: fromDate,
+                    RangeEndUtc: toDate),
+                nameof(GetRunsForProducts),
+                cancellationToken);
+
+            var runs = (await _mediator.Send(
+                    new GetPipelineRunsForProductsQuery(resolution.EffectiveFilter),
+                    cancellationToken))
+                .ToList();
+
+            return Ok(PipelineFilterResolutionService.ToResponse<IReadOnlyList<PipelineRunDto>>(runs, resolution));
         }
         catch (Exception ex)
         {
@@ -154,7 +176,7 @@ public class PipelinesController : ControllerBase
     /// Phase 1: aggregation, top-3 in trouble per product and globally.
     /// </summary>
     [HttpGet("insights")]
-    public async Task<ActionResult<PipelineInsightsDto>> GetInsights(
+    public async Task<ActionResult<PipelineQueryResponseDto<PipelineInsightsDto>>> GetInsights(
         [FromQuery] int productOwnerId,
         [FromQuery] int sprintId,
         [FromQuery] bool includePartiallySucceeded = true,
@@ -163,15 +185,52 @@ public class PipelinesController : ControllerBase
     {
         try
         {
-            var result = await _mediator.Send(
-                new GetPipelineInsightsQuery(productOwnerId, sprintId, includePartiallySucceeded, includeCanceled),
+            var resolution = await _filterResolutionService.ResolveAsync(
+                new PipelineFilterBoundaryRequest(
+                    ProductOwnerId: productOwnerId,
+                    SprintId: sprintId),
+                nameof(GetInsights),
                 cancellationToken);
-            return Ok(result);
+
+            var result = await _mediator.Send(
+                new GetPipelineInsightsQuery(
+                    resolution.EffectiveFilter,
+                    includePartiallySucceeded,
+                    includeCanceled,
+                    sprintId),
+                cancellationToken);
+            return Ok(PipelineFilterResolutionService.ToResponse(result, resolution));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving pipeline insights for sprint {SprintId}", sprintId);
             return StatusCode(500, "Error retrieving pipeline insights");
         }
+    }
+
+    private static List<int>? ParseProductIds(string? productIds, out string? errorMessage)
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(productIds))
+        {
+            return null;
+        }
+
+        var result = new List<int>();
+        var parts = productIds.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var part in parts)
+        {
+            if (!int.TryParse(part.Trim(), out var id))
+            {
+                errorMessage = $"Invalid product ID format: '{part}'. Expected comma-separated integers.";
+                return null;
+            }
+
+            result.Add(id);
+        }
+
+        return result;
     }
 }

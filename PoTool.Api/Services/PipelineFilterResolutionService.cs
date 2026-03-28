@@ -1,0 +1,391 @@
+using Microsoft.EntityFrameworkCore;
+using PoTool.Api.Persistence;
+using PoTool.Core.Filters;
+using PoTool.Core.Pipelines.Filters;
+using PoTool.Shared.Metrics;
+using PoTool.Shared.Pipelines;
+
+namespace PoTool.Api.Services;
+
+public sealed record PipelineFilterResolution(
+    PipelineFilterContext RequestedFilter,
+    PipelineEffectiveFilter EffectiveFilter,
+    FilterValidationResult Validation);
+
+public sealed record PipelineFilterBoundaryRequest(
+    int? ProductOwnerId = null,
+    IReadOnlyList<int>? ProductIds = null,
+    int? SprintId = null,
+    DateTimeOffset? RangeStartUtc = null,
+    DateTimeOffset? RangeEndUtc = null);
+
+public sealed class PipelineFilterResolutionService
+{
+    private readonly PoToolDbContext _context;
+    private readonly ILogger<PipelineFilterResolutionService> _logger;
+
+    public PipelineFilterResolutionService(
+        PoToolDbContext context,
+        ILogger<PipelineFilterResolutionService> logger)
+    {
+        _context = context;
+        _logger = logger;
+    }
+
+    public async Task<PipelineFilterResolution> ResolveAsync(
+        PipelineFilterBoundaryRequest request,
+        string boundaryName,
+        CancellationToken cancellationToken)
+    {
+        var requestedFilter = MapRequestedFilter(request);
+        var issues = new List<FilterValidationIssue>();
+        ValidateRequestedFilter(requestedFilter, issues);
+
+        var effectiveProductIds = await ResolveProductIdsAsync(
+            request.ProductOwnerId,
+            requestedFilter.ProductIds,
+            cancellationToken);
+
+        var repositoryUniverse = await LoadRepositoryUniverseAsync(effectiveProductIds, cancellationToken);
+        var repositoryScope = requestedFilter.RepositoryNames.IsAll
+            ? repositoryUniverse
+            : ResolveRepositoryScope(requestedFilter.RepositoryNames, repositoryUniverse, issues);
+
+        var pipelineDefinitions = await LoadPipelineDefinitionsAsync(
+            effectiveProductIds,
+            repositoryScope,
+            cancellationToken);
+
+        var (effectiveTime, rangeStartUtc, rangeEndUtc, sprintId) = await ResolveTimeAsync(
+            requestedFilter.Time,
+            cancellationToken,
+            issues);
+
+        var effectiveFilter = new PipelineEffectiveFilter(
+            new PipelineFilterContext(
+                effectiveProductIds,
+                requestedFilter.TeamIds,
+                requestedFilter.RepositoryNames.IsAll
+                    ? FilterSelection<string>.Selected(repositoryScope)
+                    : FilterSelection<string>.Selected(requestedFilter.RepositoryNames.Values),
+                effectiveTime),
+            repositoryScope,
+            pipelineDefinitions
+                .Select(definition => definition.PipelineDefinitionId)
+                .Distinct()
+                .OrderBy(id => id)
+                .ToArray(),
+            pipelineDefinitions
+                .Select(definition => new PipelineBranchScope(definition.PipelineDefinitionId, definition.DefaultBranch))
+                .DistinctBy(scope => scope.PipelineId)
+                .OrderBy(scope => scope.PipelineId)
+                .ToArray(),
+            rangeStartUtc,
+            rangeEndUtc,
+            sprintId);
+
+        var validation = FilterValidationResult.FromIssues(issues);
+
+        _logger.LogInformation(
+            "Resolved pipeline filter for {Boundary}. RequestedFilter: {@RequestedFilter}; EffectiveFilter: {@EffectiveFilter}; InvalidFields: {@InvalidFields}; ProductScope: {@ProductScope}; RepositoryScope: {@RepositoryScope}; TimeRange: {RangeStartUtc} - {RangeEndUtc}; BranchScope: {@BranchScope}",
+            boundaryName,
+            requestedFilter,
+            effectiveFilter,
+            validation.InvalidFields,
+            effectiveFilter.Context.ProductIds.IsAll ? "ALL" : effectiveFilter.Context.ProductIds.Values,
+            effectiveFilter.RepositoryScope,
+            effectiveFilter.RangeStartUtc,
+            effectiveFilter.RangeEndUtc,
+            effectiveFilter.BranchScope);
+
+        return new PipelineFilterResolution(requestedFilter, effectiveFilter, validation);
+    }
+
+    public static PipelineQueryResponseDto<T> ToResponse<T>(T data, PipelineFilterResolution resolution)
+    {
+        ArgumentNullException.ThrowIfNull(resolution);
+
+        return new PipelineQueryResponseDto<T>
+        {
+            Data = data,
+            RequestedFilter = ToDto(resolution.RequestedFilter),
+            EffectiveFilter = ToDto(resolution.EffectiveFilter.Context),
+            InvalidFields = resolution.Validation.InvalidFields,
+            ValidationMessages = resolution.Validation.Messages
+                .Select(issue => new FilterValidationIssueDto
+                {
+                    Field = issue.Field,
+                    Message = issue.Message
+                })
+                .ToArray()
+        };
+    }
+
+    private static PipelineFilterContext MapRequestedFilter(PipelineFilterBoundaryRequest request)
+        => new(
+            ToIntSelection(request.ProductIds),
+            FilterSelection<int>.All(),
+            FilterSelection<string>.All(),
+            MapTime(request));
+
+    private static FilterTimeSelection MapTime(PipelineFilterBoundaryRequest request)
+    {
+        if (request.SprintId.HasValue)
+        {
+            return FilterTimeSelection.Sprint(request.SprintId.Value);
+        }
+
+        if (request.RangeStartUtc.HasValue || request.RangeEndUtc.HasValue)
+        {
+            return FilterTimeSelection.DateRange(request.RangeStartUtc, request.RangeEndUtc);
+        }
+
+        return FilterTimeSelection.None();
+    }
+
+    private static void ValidateRequestedFilter(
+        PipelineFilterContext filter,
+        ICollection<FilterValidationIssue> issues)
+    {
+        ValidateIntSelection(filter.ProductIds, nameof(PipelineFilterContext.ProductIds), issues);
+
+        switch (filter.Time.Mode)
+        {
+            case FilterTimeSelectionMode.None:
+                break;
+            case FilterTimeSelectionMode.Sprint:
+                if (!filter.Time.SprintId.HasValue || filter.Time.SprintId.Value <= 0)
+                {
+                    issues.Add(new FilterValidationIssue(nameof(PipelineFilterContext.Time), "Single-sprint time selection requires a valid sprint identifier."));
+                }
+                break;
+            case FilterTimeSelectionMode.DateRange:
+                if (filter.Time.RangeStartUtc.HasValue
+                    && filter.Time.RangeEndUtc.HasValue
+                    && filter.Time.RangeStartUtc.Value > filter.Time.RangeEndUtc.Value)
+                {
+                    issues.Add(new FilterValidationIssue(nameof(PipelineFilterContext.Time), "Date-range time selection requires the start to be earlier than or equal to the end."));
+                }
+                break;
+            default:
+                issues.Add(new FilterValidationIssue(nameof(PipelineFilterContext.Time), "Unsupported pipeline time filter."));
+                break;
+        }
+    }
+
+    private async Task<FilterSelection<int>> ResolveProductIdsAsync(
+        int? productOwnerId,
+        FilterSelection<int> requestedProductIds,
+        CancellationToken cancellationToken)
+    {
+        if (!requestedProductIds.IsAll)
+        {
+            return FilterSelection<int>.Selected(requestedProductIds.Values.Where(value => value > 0).Distinct());
+        }
+
+        if (!productOwnerId.HasValue)
+        {
+            return FilterSelection<int>.All();
+        }
+
+        var productIds = await _context.Products
+            .AsNoTracking()
+            .Where(product => product.ProductOwnerId == productOwnerId.Value)
+            .Select(product => product.Id)
+            .OrderBy(id => id)
+            .ToArrayAsync(cancellationToken);
+
+        return FilterSelection<int>.Selected(productIds);
+    }
+
+    private async Task<IReadOnlyList<string>> LoadRepositoryUniverseAsync(
+        FilterSelection<int> productIds,
+        CancellationToken cancellationToken)
+    {
+        var repositoryQuery = _context.Repositories
+            .AsNoTracking()
+            .Select(repository => new { repository.ProductId, repository.Name });
+
+        var definitionQuery = _context.PipelineDefinitions
+            .AsNoTracking()
+            .Select(definition => new { definition.ProductId, Name = definition.RepoName });
+
+        if (!productIds.IsAll)
+        {
+            var scopedProductIds = productIds.Values.ToArray();
+            repositoryQuery = repositoryQuery.Where(repository => scopedProductIds.Contains(repository.ProductId));
+            definitionQuery = definitionQuery.Where(definition => scopedProductIds.Contains(definition.ProductId));
+        }
+
+        var repositories = await repositoryQuery.Select(repository => repository.Name).ToListAsync(cancellationToken);
+        var definitions = await definitionQuery.Select(definition => definition.Name).ToListAsync(cancellationToken);
+
+        return repositories
+            .Concat(definitions)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> ResolveRepositoryScope(
+        FilterSelection<string> requestedRepositories,
+        IReadOnlyList<string> repositoryUniverse,
+        ICollection<FilterValidationIssue> issues)
+    {
+        var requestedValues = requestedRepositories.Values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (requestedValues.Length == 0)
+        {
+            issues.Add(new FilterValidationIssue(nameof(PipelineFilterContext.RepositoryNames), "Repository selection cannot be empty when not using ALL."));
+            return Array.Empty<string>();
+        }
+
+        var universeLookup = repositoryUniverse.ToDictionary(value => value, value => value, StringComparer.OrdinalIgnoreCase);
+        return requestedValues
+            .Where(universeLookup.ContainsKey)
+            .Select(value => universeLookup[value])
+            .ToArray();
+    }
+
+    private async Task<List<PipelineDefinitionScope>> LoadPipelineDefinitionsAsync(
+        FilterSelection<int> productIds,
+        IReadOnlyList<string> repositoryScope,
+        CancellationToken cancellationToken)
+    {
+        var query = _context.PipelineDefinitions
+            .AsNoTracking()
+            .Select(definition => new PipelineDefinitionScope(
+                definition.PipelineDefinitionId,
+                definition.ProductId,
+                definition.RepositoryId,
+                definition.RepoName,
+                definition.DefaultBranch));
+
+        if (!productIds.IsAll)
+        {
+            var scopedProductIds = productIds.Values.ToArray();
+            query = query.Where(definition => scopedProductIds.Contains(definition.ProductId));
+        }
+
+        if (repositoryScope.Count > 0)
+        {
+            query = query.Where(definition => repositoryScope.Contains(definition.RepositoryName));
+        }
+
+        return await query
+            .Distinct()
+            .OrderBy(definition => definition.PipelineDefinitionId)
+            .ToListAsync(cancellationToken);
+    }
+
+    private async Task<(FilterTimeSelection Time, DateTimeOffset? RangeStartUtc, DateTimeOffset? RangeEndUtc, int? SprintId)> ResolveTimeAsync(
+        FilterTimeSelection requestedTime,
+        CancellationToken cancellationToken,
+        ICollection<FilterValidationIssue> issues)
+    {
+        switch (requestedTime.Mode)
+        {
+            case FilterTimeSelectionMode.None:
+                return (FilterTimeSelection.None(), null, null, null);
+
+            case FilterTimeSelectionMode.DateRange:
+                if (requestedTime.RangeStartUtc.HasValue
+                    && requestedTime.RangeEndUtc.HasValue
+                    && requestedTime.RangeStartUtc.Value > requestedTime.RangeEndUtc.Value)
+                {
+                    issues.Add(new FilterValidationIssue(nameof(PipelineFilterContext.Time), "Invalid date range was replaced with no time constraint."));
+                    return (FilterTimeSelection.None(), null, null, null);
+                }
+
+                return (
+                    FilterTimeSelection.DateRange(requestedTime.RangeStartUtc, requestedTime.RangeEndUtc),
+                    requestedTime.RangeStartUtc,
+                    requestedTime.RangeEndUtc,
+                    null);
+
+            case FilterTimeSelectionMode.Sprint:
+            {
+                var sprint = await _context.Sprints
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        value => value.Id == requestedTime.SprintId
+                            && value.StartDateUtc.HasValue
+                            && value.EndDateUtc.HasValue,
+                        cancellationToken);
+
+                if (sprint is null)
+                {
+                    issues.Add(new FilterValidationIssue(nameof(PipelineFilterContext.Time), "Requested sprint was not found or has no valid date boundaries."));
+                    return (FilterTimeSelection.None(), null, null, null);
+                }
+
+                return (
+                    FilterTimeSelection.Sprint(sprint.Id),
+                    new DateTimeOffset(sprint.StartDateUtc!.Value, TimeSpan.Zero),
+                    new DateTimeOffset(sprint.EndDateUtc!.Value, TimeSpan.Zero),
+                    sprint.Id);
+            }
+
+            default:
+                issues.Add(new FilterValidationIssue(nameof(PipelineFilterContext.Time), "Unsupported pipeline time filter."));
+                return (FilterTimeSelection.None(), null, null, null);
+        }
+    }
+
+    private static PipelineFilterContextDto ToDto(PipelineFilterContext filter)
+        => new()
+        {
+            ProductIds = ToDto(filter.ProductIds),
+            TeamIds = ToDto(filter.TeamIds),
+            RepositoryNames = ToDto(filter.RepositoryNames),
+            Time = new FilterTimeSelectionDto
+            {
+                Mode = (FilterTimeSelectionModeDto)filter.Time.Mode,
+                SprintId = filter.Time.SprintId,
+                SprintIds = filter.Time.SprintIds.ToArray(),
+                RangeStartUtc = filter.Time.RangeStartUtc,
+                RangeEndUtc = filter.Time.RangeEndUtc
+            }
+        };
+
+    private static FilterSelectionDto<T> ToDto<T>(FilterSelection<T> selection)
+        => new()
+        {
+            IsAll = selection.IsAll,
+            Values = selection.Values.ToArray()
+        };
+
+    private static void ValidateIntSelection(
+        FilterSelection<int> selection,
+        string field,
+        ICollection<FilterValidationIssue> issues)
+    {
+        if (selection.IsAll)
+        {
+            return;
+        }
+
+        if (selection.Values.Count == 0 || selection.Values.Any(value => value <= 0))
+        {
+            issues.Add(new FilterValidationIssue(field, $"{field} must contain one or more valid positive identifiers when not using ALL."));
+        }
+    }
+
+    private static FilterSelection<int> ToIntSelection(IReadOnlyList<int>? values)
+        => values is { Count: > 0 }
+            ? FilterSelection<int>.Selected(values)
+            : FilterSelection<int>.All();
+
+    private sealed record PipelineDefinitionScope(
+        int PipelineDefinitionId,
+        int ProductId,
+        int RepositoryId,
+        string RepositoryName,
+        string? DefaultBranch);
+}

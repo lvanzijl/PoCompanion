@@ -2,6 +2,14 @@
   {
     "date": "2026-03-28",
     "type": "Changed",
+    "title": "Pipeline analytics now use canonical filter scope",
+    "impact": "Pipeline metrics, pipeline runs, and pipeline insights now resolve requested versus effective product, repository, and time scope once at the API boundary and return that metadata in each migrated response envelope.",
+    "area": "Trends",
+    "link": "/home/pipeline-insights"
+  },
+  {
+    "date": "2026-03-28",
+    "type": "Changed",
     "title": "PR analytics now use canonical filter resolution",
     "impact": "Pull Request metrics, filtered lists, sprint trends, insights, and delivery insights now resolve requested versus effective product, team, repository, and time scope once at the API boundary and return that metadata in every response envelope.",
     "area": "Trends",

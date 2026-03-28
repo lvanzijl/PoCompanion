@@ -1,6 +1,7 @@
 using Mediator;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Pipelines.Filters;
 using PoTool.Shared.Pipelines;
 using PoTool.Core.Pipelines.Queries;
 
@@ -24,48 +25,22 @@ public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMe
         GetPipelineMetricsQuery query,
         CancellationToken cancellationToken)
     {
-        // OPTIMIZATION: Filter by product IDs first to limit the dataset
-        IEnumerable<int> allowedPipelineIds;
-        
-        if (query.ProductIds != null && query.ProductIds.Count > 0)
+        var filter = query.EffectiveFilter;
+        if (filter.PipelineIds.Count == 0 || filter.RepositoryScope.Count == 0)
         {
-            // Get pipeline definitions for the specified products from database
-            var allowedPipelineIdSet = new HashSet<int>();
-            foreach (var productId in query.ProductIds)
-            {
-                var definitions = await _pipelineReadProvider.GetDefinitionsByProductIdAsync(productId, cancellationToken);
-                foreach (var def in definitions)
-                {
-                    allowedPipelineIdSet.Add(def.PipelineDefinitionId);
-                }
-            }
-            
-            allowedPipelineIds = allowedPipelineIdSet;
-            
-            // If no pipelines found for these products, return empty
-            if (!allowedPipelineIds.Any())
-            {
-                return Enumerable.Empty<PipelineMetricsDto>();
-            }
-        }
-        else
-        {
-            // No product filter - get all pipelines
-            var allPipelines = await _pipelineReadProvider.GetAllAsync(cancellationToken);
-            allowedPipelineIds = allPipelines.Select(p => p.Id).ToList();
+            return Enumerable.Empty<PipelineMetricsDto>();
         }
 
-        // OPTIMIZATION: Fetch runs only for the filtered pipeline IDs, with branch and time filters at query level
-        var sixMonthsAgo = DateTimeOffset.UtcNow.AddMonths(-6);
         var allRuns = await _pipelineReadProvider.GetRunsForPipelinesAsync(
-            allowedPipelineIds,
-            branchName: "refs/heads/main",  // Filter for Main branch in the query
-            minStartTime: sixMonthsAgo,
+            filter.PipelineIds,
+            branchName: null,
+            minStartTime: filter.RangeStartUtc,
             top: 100,
             cancellationToken);
-        
+        var scopedRuns = PipelineFiltering.ApplyRunScope(allRuns, filter);
+
         // Group runs by pipeline
-        var runsByPipeline = allRuns.GroupBy(r => r.PipelineId).ToDictionary(g => g.Key, g => g.ToList());
+        var runsByPipeline = scopedRuns.GroupBy(r => r.PipelineId).ToDictionary(g => g.Key, g => g.ToList());
 
         // Get pipeline information for those that have runs
         var pipelinesWithRuns = await _pipelineReadProvider.GetAllAsync(cancellationToken);

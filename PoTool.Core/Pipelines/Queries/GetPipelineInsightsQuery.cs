@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Core.Pipelines.Filters;
 using PoTool.Shared.Pipelines;
 
 namespace PoTool.Core.Pipelines.Queries;
@@ -14,8 +15,6 @@ namespace PoTool.Core.Pipelines.Queries;
 /// the same team's sprint list (ordered by StartDateUtc ascending).
 /// Delta values are null (n/a) when no previous sprint data exists.
 /// </summary>
-/// <param name="ProductOwnerId">Profile ID of the active Product Owner.</param>
-/// <param name="SprintId">Sprint to analyse (selected sprint).</param>
 /// <param name="IncludePartiallySucceeded">
 ///   When true (default), partiallySucceeded runs are included in completed count
 ///   and reported as warning builds.
@@ -26,8 +25,8 @@ namespace PoTool.Core.Pipelines.Queries;
 ///   When false (default), canceled runs are excluded.
 /// </param>
 public sealed record GetPipelineInsightsQuery(
-    int ProductOwnerId,
-    int SprintId,
+    PipelineEffectiveFilter EffectiveFilter,
     bool IncludePartiallySucceeded = true,
-    bool IncludeCanceled = false
+    bool IncludeCanceled = false,
+    int? RequestedSprintId = null
 ) : IQuery<PipelineInsightsDto>;

@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
+using PoTool.Core.Pipelines.Filters;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Pipelines.Queries;
 using PoTool.Shared.Pipelines;
@@ -37,15 +38,22 @@ public sealed class GetPipelineInsightsQueryHandler
         GetPipelineInsightsQuery query,
         CancellationToken cancellationToken)
     {
+        var filter = query.EffectiveFilter;
+
+        if (!filter.SprintId.HasValue)
+        {
+            return EmptyResult(query.RequestedSprintId ?? 0, "Unknown sprint");
+        }
+
         // ── 1. Load the selected sprint ───────────────────────────────────────
         var sprint = await _context.Sprints
             .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == query.SprintId, cancellationToken);
+            .FirstOrDefaultAsync(s => s.Id == filter.SprintId.Value, cancellationToken);
 
         if (sprint is null || !sprint.StartDateUtc.HasValue || !sprint.EndDateUtc.HasValue)
         {
-            _logger.LogWarning("Sprint {SprintId} not found or has no date boundaries", query.SprintId);
-            return EmptyResult(query.SprintId, "Unknown sprint");
+            _logger.LogWarning("Sprint {SprintId} not found or has no date boundaries", filter.SprintId.Value);
+            return EmptyResult(query.RequestedSprintId ?? filter.SprintId.Value, "Unknown sprint");
         }
 
         // ── 2. Find the previous sprint (same team, immediately preceding) ────
@@ -58,15 +66,22 @@ public sealed class GetPipelineInsightsQueryHandler
             .FirstOrDefaultAsync(cancellationToken);
 
         // ── 3. Load all products belonging to the active PO ───────────────────
-        var products = await _context.Products
-            .AsNoTracking()
-            .Where(p => p.ProductOwnerId == query.ProductOwnerId)
+        IQueryable<ProductEntity> productsQuery = _context.Products
+            .AsNoTracking();
+
+        if (!filter.Context.ProductIds.IsAll)
+        {
+            var productIds = filter.Context.ProductIds.Values.ToArray();
+            productsQuery = productsQuery.Where(product => productIds.Contains(product.Id));
+        }
+
+        var products = await productsQuery
             .OrderBy(p => p.Name)
             .ToListAsync(cancellationToken);
 
         if (products.Count == 0)
         {
-            _logger.LogDebug("No products found for ProductOwner {ProductOwnerId}", query.ProductOwnerId);
+            _logger.LogDebug("No products found for effective pipeline product scope");
             return new PipelineInsightsDto
             {
                 SprintId = sprint.Id,
@@ -76,19 +91,21 @@ public sealed class GetPipelineInsightsQueryHandler
             };
         }
 
-        var productIds = products.Select(p => p.Id).ToList();
+        var scopedProductIds = products.Select(p => p.Id).ToList();
+        var repositoryScope = filter.RepositoryScope.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         // ── 4. Load pipeline definitions per product ──────────────────────────
         // Key: PipelineDefinitionEntity.Id (DB PK) → (ProductId, Name, DefaultBranch)
         var pipelineDefs = await _context.PipelineDefinitions
             .AsNoTracking()
-            .Where(d => productIds.Contains(d.ProductId))
+            .Where(d => scopedProductIds.Contains(d.ProductId)
+                && repositoryScope.Contains(d.RepoName))
             .Select(d => new PipelineDefRecord(d.Id, d.ProductId, d.Name, d.DefaultBranch))
             .ToListAsync(cancellationToken);
 
         if (pipelineDefs.Count == 0)
         {
-            _logger.LogDebug("No pipeline definitions found for PO {ProductOwnerId}", query.ProductOwnerId);
+            _logger.LogDebug("No pipeline definitions found for effective pipeline scope");
             return BuildResultWithEmptyProducts(sprint, previousSprint, products);
         }
 
@@ -100,8 +117,8 @@ public sealed class GetPipelineInsightsQueryHandler
             .ToDictionary(d => d.Id, d => d.DefaultBranch);
 
         // ── 5. Load runs in the selected sprint window ────────────────────────
-        var sprintStart = sprint.StartDateUtc!.Value;
-        var sprintEnd   = sprint.EndDateUtc!.Value;
+        var sprintStart = filter.RangeStartUtc?.UtcDateTime ?? sprint.StartDateUtc!.Value;
+        var sprintEnd   = filter.RangeEndUtc?.UtcDateTime ?? sprint.EndDateUtc!.Value;
 
         var currentRuns = await LoadRunsAsync(allDefIds, sprintStart, sprintEnd, cancellationToken, defaultBranchByDefId);
 

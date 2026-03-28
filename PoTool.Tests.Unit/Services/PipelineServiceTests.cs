@@ -117,32 +117,15 @@ public class PipelineServiceTests
     }
 
     [TestMethod]
-    public async Task GetRunsForProductsAsync_WithValidProductId_CallsGetDefinitionsAsync()
+    public async Task GetRunsForProductsAsync_WithValidProductId_CallsEnvelopeEndpoint()
     {
         // Arrange
         var productId = 123;
         var productIdsStr = productId.ToString();
-        
-        var mockDefinitions = new List<PipelineDefinitionDto>
+
+        var response = new PoTool.Shared.Pipelines.PipelineQueryResponseDto<IReadOnlyList<PipelineRunDto>>
         {
-            new PipelineDefinitionDto
-            {
-                PipelineDefinitionId = 1,
-                ProductId = productId,
-                RepoId = "repo-guid",
-                RepoName = "TestRepo",
-                Name = "TestPipeline",
-                LastSyncedUtc = DateTimeOffset.UtcNow
-            }
-        };
-
-        _mockClient
-            .Setup(c => c.GetDefinitionsAsync(productId, null))
-            .ReturnsAsync((ICollection<PipelineDefinitionDto>)mockDefinitions);
-
-        _mockClient
-            .Setup(c => c.GetRunsAsync(1, 100))
-            .ReturnsAsync((ICollection<PipelineRunDto>)new List<PipelineRunDto>
+            Data = new List<PipelineRunDto>
             {
                 new PipelineRunDto
                 {
@@ -154,7 +137,36 @@ public class PipelineServiceTests
                     FinishTime = DateTimeOffset.UtcNow,
                     RetrievedAt = DateTimeOffset.UtcNow
                 }
-            });
+            },
+            RequestedFilter = new PoTool.Shared.Pipelines.PipelineFilterContextDto
+            {
+                ProductIds = new PoTool.Shared.Metrics.FilterSelectionDto<int> { IsAll = false, Values = new[] { productId } },
+                TeamIds = new PoTool.Shared.Metrics.FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
+                RepositoryNames = new PoTool.Shared.Metrics.FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
+                Time = new PoTool.Shared.Metrics.FilterTimeSelectionDto
+                {
+                    Mode = PoTool.Shared.Metrics.FilterTimeSelectionModeDto.None,
+                    SprintIds = Array.Empty<int>()
+                }
+            },
+            EffectiveFilter = new PoTool.Shared.Pipelines.PipelineFilterContextDto
+            {
+                ProductIds = new PoTool.Shared.Metrics.FilterSelectionDto<int> { IsAll = false, Values = new[] { productId } },
+                TeamIds = new PoTool.Shared.Metrics.FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
+                RepositoryNames = new PoTool.Shared.Metrics.FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
+                Time = new PoTool.Shared.Metrics.FilterTimeSelectionDto
+                {
+                    Mode = PoTool.Shared.Metrics.FilterTimeSelectionModeDto.None,
+                    SprintIds = Array.Empty<int>()
+                }
+            },
+            InvalidFields = Array.Empty<string>(),
+            ValidationMessages = Array.Empty<PoTool.Shared.Metrics.FilterValidationIssueDto>()
+        };
+
+        _mockClient
+            .Setup(c => c.GetRunsForProductsEnvelopeAsync(productIdsStr, null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(response);
 
         // Act
         var result = await _service.GetRunsForProductsAsync(productIdsStr);
@@ -162,9 +174,9 @@ public class PipelineServiceTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(1, result.Count());
-        
-        // Verify GetDefinitionsAsync was called with correct productId
-        _mockClient.Verify(c => c.GetDefinitionsAsync(productId, null), Times.Once);
-        _mockClient.Verify(c => c.GetRunsAsync(1, 100), Times.Once);
+
+        _mockClient.Verify(c => c.GetRunsForProductsEnvelopeAsync(productIdsStr, null, null, It.IsAny<CancellationToken>()), Times.Once);
+        _mockClient.Verify(c => c.GetDefinitionsAsync(It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
+        _mockClient.Verify(c => c.GetRunsAsync(It.IsAny<int>(), It.IsAny<int?>()), Times.Never);
     }
 }

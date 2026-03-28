@@ -1,11 +1,11 @@
 using Mediator;
+using PoTool.Core.Pipelines.Filters;
 
 using PoTool.Shared.Pipelines;
 
 namespace PoTool.Core.Pipelines.Queries;
 
 /// <summary>
-/// Query to retrieve aggregated metrics for pipelines, optionally filtered by products.
+/// Query to retrieve aggregated metrics for pipelines using the resolved canonical filter.
 /// </summary>
-/// <param name="ProductIds">Optional list of product IDs to filter by</param>
-public sealed record GetPipelineMetricsQuery(List<int>? ProductIds = null) : IQuery<IEnumerable<PipelineMetricsDto>>;
+public sealed record GetPipelineMetricsQuery(PipelineEffectiveFilter EffectiveFilter) : IQuery<IEnumerable<PipelineMetricsDto>>;
