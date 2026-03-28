@@ -15,6 +15,18 @@ The model must:
 This document defines the target design.
 It does not describe the current implementation.
 
+## Final implementation alignment (2026-03-28)
+
+The canonical model in this document remains the authoritative design reference, but the shipped filtering implementation settled on a narrower final shape:
+
+- active canonical filter execution is owned by API-side boundary resolution services for the sprint, delivery, pipeline, pull-request, and portfolio slices
+- those API slices now emit requested/effective/invalid metadata through family-specific response envelopes
+- the client preserves and displays that metadata through `CanonicalClientResponseFactory` and `CanonicalFilterMetadataNotice`
+- a shared client-side `FilterState` / `FilterService` / `FilterUrlParser` runtime was **not** introduced as a standalone system
+- home/workspace URL context still uses `WorkspaceBase` and `NavigationContextService` to carry coarse `productId` / `teamId` navigation state
+
+Read this document as the canonical semantics that the implemented API-side filter system now enforces, not as a guarantee that every suggested client runtime type was shipped exactly as named below.
+
 ---
 
 ## 1. Filter categories
