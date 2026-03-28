@@ -2,6 +2,7 @@
 @page "/home/delivery/sprint"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Models
 @using PoTool.Client.Services
 @using PoTool.Client.Pages.Home.Components
 @using PoTool.Shared.Metrics
@@ -952,10 +953,13 @@
     private string? _contextErrorMessage;
     private bool _isSummaryLoading = true;
     private string? _summaryErrorMessage;
+    private CanonicalFilterMetadata? _summaryFilterMetadata;
     private bool _isBuildQualityLoading = true;
     private string? _buildQualityErrorMessage;
+    private CanonicalFilterMetadata? _buildQualityFilterMetadata;
     private bool _isDetailsLoading;
     private string? _detailsErrorMessage;
+    private CanonicalFilterMetadata? _detailsFilterMetadata;
     private bool _detailsLoaded;
     private int? _profileId;
     private List<BreadcrumbItem> _breadcrumbs = new();
@@ -1238,14 +1242,15 @@
                 recompute: false,
                 includeDetails: false,
                 cancellationToken: cancellationTokenSource.Token);
+            _summaryFilterMetadata = response.FilterMetadata;
 
-            if (response is null || !response.Success || response.Metrics is null)
+            if (!response.Data.Success || response.Data.Metrics is null)
             {
-                _summaryErrorMessage = response?.ErrorMessage ?? "Sprint summary unavailable right now.";
+                _summaryErrorMessage = response.Data.ErrorMessage ?? "Sprint summary unavailable right now.";
                 return;
             }
 
-            ApplySummaryMetrics(response);
+            ApplySummaryMetrics(response.Data);
         }
         catch (OperationCanceledException)
         {
@@ -1253,6 +1258,7 @@
         }
         catch (Exception ex)
         {
+            _summaryFilterMetadata = null;
             _summaryErrorMessage = $"Sprint summary unavailable right now: {ex.Message}";
         }
         finally
@@ -1283,10 +1289,12 @@
 
         try
         {
-            _sprintBuildQuality = await BuildQualityService.GetSprintAsync(
+            var buildQualityResponse = await BuildQualityService.GetSprintAsync(
                 _profileId.Value,
                 _currentSprint.Id,
                 cancellationTokenSource.Token);
+            _buildQualityFilterMetadata = buildQualityResponse.FilterMetadata;
+            _sprintBuildQuality = buildQualityResponse.Data;
         }
         catch (OperationCanceledException)
         {
@@ -1294,6 +1302,7 @@
         }
         catch (Exception ex)
         {
+            _buildQualityFilterMetadata = null;
             _buildQualityErrorMessage = $"Build Quality unavailable right now: {ex.Message}";
         }
         finally
@@ -1376,14 +1385,15 @@
                 recompute: false,
                 includeDetails: true,
                 cancellationToken: cancellationTokenSource.Token);
+            _detailsFilterMetadata = response.FilterMetadata;
 
-            if (response is null || !response.Success)
+            if (!response.Data.Success)
             {
-                _detailsErrorMessage = response?.ErrorMessage ?? "Sprint drilldown unavailable right now.";
+                _detailsErrorMessage = response.Data.ErrorMessage ?? "Sprint drilldown unavailable right now.";
                 return;
             }
 
-            BuildFeatureProgress(response);
+            BuildFeatureProgress(response.Data);
             _detailsLoaded = true;
         }
         catch (OperationCanceledException)
@@ -1392,6 +1402,7 @@
         }
         catch (Exception ex)
         {
+            _detailsFilterMetadata = null;
             _detailsErrorMessage = $"Sprint drilldown unavailable right now: {ex.Message}";
         }
         finally

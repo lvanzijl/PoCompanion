@@ -1,5 +1,5 @@
 using Mediator;
-
+using PoTool.Core.Metrics.Filters;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Core.Metrics.Queries;
@@ -8,5 +8,11 @@ namespace PoTool.Core.Metrics.Queries;
 /// Query to get backlog health metrics for a specific iteration.
 /// </summary>
 public sealed record GetBacklogHealthQuery(
-    string IterationPath
-) : IQuery<BacklogHealthDto?>;
+    SprintEffectiveFilter EffectiveFilter
+) : IQuery<BacklogHealthDto?>
+{
+    public GetBacklogHealthQuery(string iterationPath)
+        : this(SprintFilterFactory.ForIterationPath(iterationPath))
+    {
+    }
+}

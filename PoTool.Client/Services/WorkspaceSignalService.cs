@@ -1,4 +1,6 @@
 using PoTool.Client.ApiClient;
+using PoTool.Client.Helpers;
+using PoTool.Client.Models;
 using PoTool.Shared.Health;
 using PoTool.Shared.Metrics;
 using PoTool.Shared.PullRequests;
@@ -25,6 +27,12 @@ public sealed class WorkspaceSignalService
     private readonly IWorkItemsClient _workItemsClient;
     private readonly SprintService _sprintService;
     private readonly WorkItemService _workItemService;
+
+    public IReadOnlyList<CanonicalFilterMetadata> LatestDeliveryFilterMetadata { get; private set; } = Array.Empty<CanonicalFilterMetadata>();
+
+    public IReadOnlyList<CanonicalFilterMetadata> LatestTrendFilterMetadata { get; private set; } = Array.Empty<CanonicalFilterMetadata>();
+
+    public IReadOnlyList<CanonicalFilterMetadata> LatestPlanningFilterMetadata { get; private set; } = Array.Empty<CanonicalFilterMetadata>();
 
     public WorkspaceSignalService(
         IMetricsClient metricsClient,
@@ -91,6 +99,7 @@ public sealed class WorkspaceSignalService
         var scopedProducts = GetScopedProducts(products, selectedProductId);
         if (scopedProducts.Count == 0)
         {
+            LatestDeliveryFilterMetadata = Array.Empty<CanonicalFilterMetadata>();
             return NeutralSignals.Delivery;
         }
 
@@ -105,6 +114,9 @@ public sealed class WorkspaceSignalService
             selectedProductId,
             currentSprints,
             cancellationToken);
+        LatestDeliveryFilterMetadata = deliveryContexts
+            .SelectMany(context => context.FilterMetadata)
+            .ToList();
 
         cancellationToken.ThrowIfCancellationRequested();
         return SelectDeliverySignal(deliveryContexts, DateTimeOffset.UtcNow);
@@ -121,6 +133,7 @@ public sealed class WorkspaceSignalService
         var scopedProducts = GetScopedProducts(products, selectedProductId);
         if (scopedProducts.Count == 0)
         {
+            LatestTrendFilterMetadata = Array.Empty<CanonicalFilterMetadata>();
             return NeutralSignals.Trends;
         }
 
@@ -142,8 +155,19 @@ public sealed class WorkspaceSignalService
 
         await Task.WhenAll(sprintTrendTask, prTrendTask);
 
+        var sprintTrendResponse = await sprintTrendTask;
+        var prTrendResponse = await prTrendTask;
+        LatestTrendFilterMetadata = new[]
+            {
+                sprintTrendResponse?.FilterMetadata,
+                prTrendResponse?.FilterMetadata
+            }
+            .Where(metadata => metadata is not null)
+            .Cast<CanonicalFilterMetadata>()
+            .ToList();
+
         cancellationToken.ThrowIfCancellationRequested();
-        return SelectTrendsSignal(await sprintTrendTask, await prTrendTask);
+        return SelectTrendsSignal(sprintTrendResponse?.Data, prTrendResponse?.Data);
     }
 
     public async Task<string> GetPlanningSignalAsync(
@@ -157,6 +181,7 @@ public sealed class WorkspaceSignalService
         var scopedProducts = GetScopedProducts(products, selectedProductId);
         if (scopedProducts.Count == 0)
         {
+            LatestPlanningFilterMetadata = Array.Empty<CanonicalFilterMetadata>();
             return NeutralSignals.Planning;
         }
 
@@ -176,14 +201,17 @@ public sealed class WorkspaceSignalService
             .Select(sprint => sprint.Id)
             .ToArray();
 
-        var capacityCalibration = await LoadCapacityCalibrationAsync(
+        var capacityCalibrationResponse = await LoadCapacityCalibrationAsync(
             productOwnerId,
             capacitySprintIds,
             productIds,
             cancellationToken);
+        LatestPlanningFilterMetadata = capacityCalibrationResponse?.FilterMetadata is null
+            ? Array.Empty<CanonicalFilterMetadata>()
+            : [capacityCalibrationResponse.FilterMetadata];
 
         cancellationToken.ThrowIfCancellationRequested();
-        return SelectPlanningSignal(await backlogStatesTask, capacityCalibration);
+        return SelectPlanningSignal(await backlogStatesTask, capacityCalibrationResponse?.Data);
     }
 
     public static string SelectHealthSignal(ValidationTriageSummaryDto? summary)
@@ -423,19 +451,35 @@ public sealed class WorkspaceSignalService
         {
             try
             {
-                var sprintExecutionTask = _metricsClient.GetSprintExecutionAsync(
+                var sprintExecutionEnvelopeTask = _metricsClient.GetSprintExecutionEnvelopeAsync(
                     productOwnerId,
                     sprint.Id,
                     selectedProductId,
                     cancellationToken);
-                var backlogHealthTask = _metricsClient.GetBacklogHealthAsync(sprint.Path, cancellationToken);
+                var backlogHealthEnvelopeTask = _metricsClient.GetBacklogHealthEnvelopeAsync(
+                    sprint.Path,
+                    productOwnerId,
+                    selectedProductId.HasValue ? [selectedProductId.Value] : null,
+                    sprint.Id,
+                    cancellationToken);
 
-                await Task.WhenAll(sprintExecutionTask, backlogHealthTask);
+                await Task.WhenAll(sprintExecutionEnvelopeTask, backlogHealthEnvelopeTask);
+
+                var sprintExecutionResponse = CanonicalClientResponseFactory.Create(await sprintExecutionEnvelopeTask);
+                var backlogHealthResponse = CanonicalClientResponseFactory.Create(await backlogHealthEnvelopeTask);
 
                 return new DeliverySignalContext(
                     sprint,
-                    await sprintExecutionTask,
-                    await backlogHealthTask);
+                    sprintExecutionResponse.Data,
+                    backlogHealthResponse.Data,
+                    new[]
+                        {
+                            sprintExecutionResponse.FilterMetadata,
+                            backlogHealthResponse.FilterMetadata
+                        }
+                        .Where(metadata => metadata is not null)
+                        .Cast<CanonicalFilterMetadata>()
+                        .ToList());
             }
             catch (ApiException ex) when (ex.StatusCode == 404)
             {
@@ -449,7 +493,7 @@ public sealed class WorkspaceSignalService
             .ToList();
     }
 
-    private async Task<GetSprintTrendMetricsResponse?> LoadSprintTrendsAsync(
+    private async Task<CanonicalClientResponse<GetSprintTrendMetricsResponse>?> LoadSprintTrendsAsync(
         int productOwnerId,
         IReadOnlyCollection<int> sprintIds,
         CancellationToken cancellationToken)
@@ -459,10 +503,17 @@ public sealed class WorkspaceSignalService
             return null;
         }
 
-        return await _metricsClient.GetSprintTrendMetricsAsync(productOwnerId, sprintIds, false, cancellationToken);
+        var response = await _metricsClient.GetSprintTrendMetricsEnvelopeAsync(
+            productOwnerId,
+            sprintIds,
+            null,
+            false,
+            true,
+            cancellationToken);
+        return CanonicalClientResponseFactory.Create(response);
     }
 
-    private async Task<GetPrSprintTrendsResponse?> LoadPrTrendsAsync(
+    private async Task<CanonicalClientResponse<GetPrSprintTrendsResponse>?> LoadPrTrendsAsync(
         IReadOnlyCollection<int> sprintIds,
         string productIdsCsv,
         CancellationToken cancellationToken)
@@ -473,10 +524,10 @@ public sealed class WorkspaceSignalService
         }
 
         var response = await _pullRequestsClient.GetSprintTrendsEnvelopeAsync(sprintIds, productIdsCsv, null, cancellationToken);
-        return response.Data;
+        return CanonicalClientResponseFactory.Create(response);
     }
 
-    private async Task<CapacityCalibrationDto?> LoadCapacityCalibrationAsync(
+    private async Task<CanonicalClientResponse<CapacityCalibrationDto>?> LoadCapacityCalibrationAsync(
         int productOwnerId,
         IReadOnlyCollection<int> sprintIds,
         IReadOnlyCollection<int> productIds,
@@ -488,7 +539,7 @@ public sealed class WorkspaceSignalService
         }
 
         var response = await _metricsClient.GetCapacityCalibrationEnvelopeAsync(productOwnerId, sprintIds, productIds, cancellationToken);
-        return response.Data;
+        return CanonicalClientResponseFactory.Create(response);
     }
 
     private static IEnumerable<WorkspaceSignalCandidate> GetDeliveryCandidates(
@@ -711,4 +762,5 @@ public sealed record WorkspaceSignalSet(
 public sealed record DeliverySignalContext(
     SprintDto Sprint,
     SprintExecutionDto? SprintExecution,
-    BacklogHealthDto? BacklogHealth);
+    BacklogHealthDto? BacklogHealth,
+    IReadOnlyList<CanonicalFilterMetadata> FilterMetadata);

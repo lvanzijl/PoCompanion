@@ -1,6 +1,7 @@
 @page "/home/delivery/portfolio"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Client.Services
 @using PoTool.Client.Models
 @using PoTool.Shared.Metrics
@@ -165,6 +166,8 @@
                 </MudPopover>
             </MudStack>
         </MudPaper>
+
+        <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
 
         @if (_deliveryLoading)
         {
@@ -458,6 +461,7 @@
 
     // Delivery data
     private PortfolioDeliveryDto? _data;
+    private CanonicalFilterNoticeModel? _filterNotice;
     private List<int> _selectedSprintIds = new();
 
     // ── Computed labels ──────────────────────────────────────────────────────────
@@ -577,6 +581,7 @@
         if (_selectedSprintIds.Count == 0)
         {
             _data = null;
+            _filterNotice = null;
             return;
         }
 
@@ -587,12 +592,14 @@
             StateHasChanged();
 
             var response = await MetricsClient.GetPortfolioDeliveryEnvelopeAsync(_profileId.Value, _selectedSprintIds, productIds: null, CancellationToken.None);
+            _filterNotice = CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(response).FilterMetadata);
             _data = response.Data.HasData ? response.Data : null;
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error loading portfolio delivery data: {ex.Message}", Severity.Error);
             _data = null;
+            _filterNotice = null;
         }
         finally
         {

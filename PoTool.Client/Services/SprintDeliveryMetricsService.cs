@@ -1,6 +1,6 @@
-using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
+using PoTool.Client.ApiClient;
+using PoTool.Client.Helpers;
+using PoTool.Client.Models;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Client.Services;
@@ -10,21 +10,17 @@ namespace PoTool.Client.Services;
 /// </summary>
 public class SprintDeliveryMetricsService
 {
-    private readonly HttpClient _httpClient;
+    private readonly IMetricsClient _metricsClient;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    public SprintDeliveryMetricsService(IMetricsClient metricsClient)
     {
-        PropertyNameCaseInsensitive = true
-    };
-
-    public SprintDeliveryMetricsService(HttpClient httpClient)
-    {
-        _httpClient = httpClient;
+        _metricsClient = metricsClient;
     }
 
-    public async Task<GetSprintTrendMetricsResponse?> GetSprintTrendMetricsAsync(
+    public async Task<CanonicalClientResponse<GetSprintTrendMetricsResponse>> GetSprintTrendMetricsAsync(
         int productOwnerId,
         IEnumerable<int> sprintIds,
+        IEnumerable<int>? productIds = null,
         bool recompute = false,
         bool includeDetails = true,
         CancellationToken cancellationToken = default)
@@ -34,37 +30,36 @@ public class SprintDeliveryMetricsService
         var sprintIdList = sprintIds.ToList();
         if (sprintIdList.Count == 0)
         {
-            return new GetSprintTrendMetricsResponse
-            {
-                Success = false,
-                ErrorMessage = "At least one sprint ID is required."
-            };
+            return new CanonicalClientResponse<GetSprintTrendMetricsResponse>(
+                new GetSprintTrendMetricsResponse
+                {
+                    Success = false,
+                    ErrorMessage = "At least one sprint ID is required."
+                });
         }
 
-        var urlBuilder = new StringBuilder("/api/Metrics/sprint-trend?");
-        urlBuilder.Append("productOwnerId=").Append(Uri.EscapeDataString(productOwnerId.ToString()));
-
-        foreach (var sprintId in sprintIdList)
+        try
         {
-            urlBuilder.Append("&sprintIds=").Append(Uri.EscapeDataString(sprintId.ToString()));
+            var envelope = await _metricsClient.GetSprintTrendMetricsEnvelopeAsync(
+                productOwnerId,
+                sprintIdList,
+                productIds,
+                recompute,
+                includeDetails,
+                cancellationToken);
+
+            return CanonicalClientResponseFactory.Create(envelope);
         }
-
-        urlBuilder.Append("&recompute=").Append(Uri.EscapeDataString(recompute.ToString().ToLowerInvariant()));
-        urlBuilder.Append("&includeDetails=").Append(Uri.EscapeDataString(includeDetails.ToString().ToLowerInvariant()));
-
-        using var response = await _httpClient.GetAsync(urlBuilder.ToString(), cancellationToken);
-        if (!response.IsSuccessStatusCode)
+        catch (ApiException ex)
         {
-            var error = await response.Content.ReadAsStringAsync(cancellationToken);
-            return new GetSprintTrendMetricsResponse
-            {
-                Success = false,
-                ErrorMessage = string.IsNullOrWhiteSpace(error)
-                    ? $"Sprint metrics request failed with HTTP {(int)response.StatusCode}."
-                    : error
-            };
+            return new CanonicalClientResponse<GetSprintTrendMetricsResponse>(
+                new GetSprintTrendMetricsResponse
+                {
+                    Success = false,
+                    ErrorMessage = string.IsNullOrWhiteSpace(ex.Response)
+                        ? $"Sprint metrics request failed with HTTP {ex.StatusCode}."
+                        : ex.Response
+                });
         }
-
-        return await response.Content.ReadFromJsonAsync<GetSprintTrendMetricsResponse>(JsonOptions, cancellationToken);
     }
 }

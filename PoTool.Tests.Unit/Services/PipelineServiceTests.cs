@@ -26,7 +26,7 @@ public class PipelineServiceTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(0, result.Count());
+        Assert.HasCount(0, result.Data);
         
         // Verify GetDefinitionsAsync was not called (which would throw if both params are null)
         _mockClient.Verify(c => c.GetDefinitionsAsync(It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
@@ -40,7 +40,7 @@ public class PipelineServiceTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(0, result.Count());
+        Assert.HasCount(0, result.Data);
         
         // Verify GetDefinitionsAsync was not called
         _mockClient.Verify(c => c.GetDefinitionsAsync(It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
@@ -54,7 +54,7 @@ public class PipelineServiceTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(0, result.Count());
+        Assert.HasCount(0, result.Data);
         
         // Verify GetDefinitionsAsync was not called
         _mockClient.Verify(c => c.GetDefinitionsAsync(It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
@@ -68,7 +68,7 @@ public class PipelineServiceTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(0, result.Count());
+        Assert.HasCount(0, result.Data);
         
         // Verify GetDefinitionsAsync was not called (would throw if called with null)
         _mockClient.Verify(c => c.GetDefinitionsAsync(It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
@@ -82,7 +82,7 @@ public class PipelineServiceTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(0, result.Count());
+        Assert.HasCount(0, result.Data);
         
         // Verify GetDefinitionsAsync was not called
         _mockClient.Verify(c => c.GetDefinitionsAsync(It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
@@ -96,7 +96,7 @@ public class PipelineServiceTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(0, result.Count());
+        Assert.HasCount(0, result.Data);
         
         // Verify GetDefinitionsAsync was not called
         _mockClient.Verify(c => c.GetDefinitionsAsync(It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
@@ -110,7 +110,7 @@ public class PipelineServiceTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(0, result.Count());
+        Assert.HasCount(0, result.Data);
         
         // Verify GetDefinitionsAsync was not called
         _mockClient.Verify(c => c.GetDefinitionsAsync(It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
@@ -173,7 +173,13 @@ public class PipelineServiceTests
 
         // Assert
         Assert.IsNotNull(result);
-        Assert.AreEqual(1, result.Count());
+        Assert.HasCount(1, result.Data);
+        Assert.IsNotNull(result.FilterMetadata);
+        Assert.AreEqual("123", result.FilterMetadata!.RequestedFilter switch
+        {
+            PoTool.Shared.Pipelines.PipelineFilterContextDto filter => string.Join(",", filter.ProductIds.Values),
+            _ => string.Empty
+        });
 
         _mockClient.Verify(c => c.GetRunsForProductsEnvelopeAsync(productIdsStr, null, null, It.IsAny<CancellationToken>()), Times.Once);
         _mockClient.Verify(c => c.GetDefinitionsAsync(It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);

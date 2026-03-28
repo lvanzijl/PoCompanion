@@ -75,6 +75,13 @@ public class SprintTrendProjectionService
         int productOwnerId,
         IEnumerable<int> sprintIds,
         CancellationToken cancellationToken = default)
+        => await ComputeProjectionsAsync(productOwnerId, sprintIds, null, cancellationToken);
+
+    public virtual async Task<IReadOnlyList<SprintMetricsProjectionEntity>> ComputeProjectionsAsync(
+        int productOwnerId,
+        IEnumerable<int> sprintIds,
+        IReadOnlyList<int>? effectiveProductIds,
+        CancellationToken cancellationToken)
     {
         var sprintIdList = sprintIds.Distinct().ToList();
         if (sprintIdList.Count == 0)
@@ -85,10 +92,12 @@ public class SprintTrendProjectionService
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
 
-        var productIds = await context.Products
-            .Where(p => p.ProductOwnerId == productOwnerId)
-            .Select(p => p.Id)
-            .ToListAsync(cancellationToken);
+        var productIds = effectiveProductIds?.Count > 0
+            ? effectiveProductIds.Distinct().ToList()
+            : await context.Products
+                .Where(p => p.ProductOwnerId == productOwnerId)
+                .Select(p => p.Id)
+                .ToListAsync(cancellationToken);
 
         if (productIds.Count == 0)
         {
@@ -447,14 +456,23 @@ public class SprintTrendProjectionService
         int productOwnerId,
         IEnumerable<int> sprintIds,
         CancellationToken cancellationToken = default)
+        => await GetProjectionsAsync(productOwnerId, sprintIds, null, cancellationToken);
+
+    public virtual async Task<IReadOnlyList<SprintMetricsProjectionEntity>> GetProjectionsAsync(
+        int productOwnerId,
+        IEnumerable<int> sprintIds,
+        IReadOnlyList<int>? effectiveProductIds,
+        CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
 
-        var productIds = await context.Products
-            .Where(p => p.ProductOwnerId == productOwnerId)
-            .Select(p => p.Id)
-            .ToListAsync(cancellationToken);
+        var productIds = effectiveProductIds?.Count > 0
+            ? effectiveProductIds.Distinct().ToList()
+            : await context.Products
+                .Where(p => p.ProductOwnerId == productOwnerId)
+                .Select(p => p.Id)
+                .ToListAsync(cancellationToken);
 
         var sprintIdList = sprintIds.Distinct().ToList();
         var projections = await context.SprintMetricsProjections
@@ -484,12 +502,30 @@ public class SprintTrendProjectionService
         DateTime? sprintEndUtc = null,
         CancellationToken cancellationToken = default,
         int? sprintId = null)
+        => await ComputeFeatureProgressForScopeAsync(
+            productOwnerId,
+            progressMode,
+            sprintStartUtc,
+            sprintEndUtc,
+            cancellationToken,
+            sprintId,
+            null);
+
+    public virtual async Task<IReadOnlyList<FeatureProgressDto>> ComputeFeatureProgressForScopeAsync(
+        int productOwnerId,
+        FeatureProgressMode progressMode,
+        DateTime? sprintStartUtc,
+        DateTime? sprintEndUtc,
+        CancellationToken cancellationToken,
+        int? sprintId,
+        IReadOnlyList<int>? effectiveProductIds)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
 
         var productSettings = await context.Products
-            .Where(p => p.ProductOwnerId == productOwnerId)
+            .Where(p => p.ProductOwnerId == productOwnerId
+                && (effectiveProductIds == null || effectiveProductIds.Contains(p.Id)))
             .Select(p => new ProductEstimationSetting(p.Id, p.EstimationMode))
             .ToListAsync(cancellationToken);
         var productIds = productSettings.Select(product => product.Id).ToList();
@@ -857,12 +893,20 @@ public class SprintTrendProjectionService
         int productOwnerId,
         IReadOnlyList<FeatureProgressDto> featureProgress,
         CancellationToken cancellationToken = default)
+        => await ComputeEpicProgressAsync(productOwnerId, featureProgress, cancellationToken, null);
+
+    public virtual async Task<IReadOnlyList<EpicProgressDto>> ComputeEpicProgressAsync(
+        int productOwnerId,
+        IReadOnlyList<FeatureProgressDto> featureProgress,
+        CancellationToken cancellationToken,
+        IReadOnlyList<int>? effectiveProductIds)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
 
         var productIds = await context.Products
-            .Where(p => p.ProductOwnerId == productOwnerId)
+            .Where(p => p.ProductOwnerId == productOwnerId
+                && (effectiveProductIds == null || effectiveProductIds.Contains(p.Id)))
             .Select(p => p.Id)
             .ToListAsync(cancellationToken);
 

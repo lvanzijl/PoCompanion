@@ -1,4 +1,7 @@
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Helpers
+@using PoTool.Client.Models
 @using PoTool.Shared.Metrics
 @inject IMetricsClient MetricsClient
 @inject ISnackbar Snackbar
@@ -13,6 +16,8 @@
 }
 else if (_calibration != null && _calibration.Sprints.Count > 0)
 {
+    <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
+
     <MudPaper Elevation="1" Class="pa-3">
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-2">
             <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Info" Size="Size.Small" />
@@ -88,6 +93,7 @@ else if (_calibration != null && _calibration.Sprints.Count > 0)
 
     private bool _isLoading;
     private CapacityCalibrationDto? _calibration;
+    private CanonicalFilterNoticeModel? _filterNotice;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -108,10 +114,12 @@ else if (_calibration != null && _calibration.Sprints.Count > 0)
                 SprintIds,
                 ProductIds,
                 CancellationToken.None);
+            _filterNotice = CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(response).FilterMetadata);
             _calibration = response.Data;
         }
         catch (Exception ex)
         {
+            _filterNotice = null;
             Snackbar.Add($"Error loading calibration data: {ex.Message}", Severity.Warning);
         }
         finally

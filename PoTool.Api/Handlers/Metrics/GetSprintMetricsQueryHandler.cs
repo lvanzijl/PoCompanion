@@ -9,10 +9,10 @@ using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Sprints;
-using PoTool.Core.WorkItems;
-using PoTool.Shared.Metrics;
-using PoTool.Shared.WorkItems;
 using PoTool.Core.Metrics.Queries;
+using PoTool.Core.WorkItems;
+using PoTool.Shared.WorkItems;
+using PoTool.Shared.Metrics;
 using PoTool.Core.WorkItems.Queries;
 
 namespace PoTool.Api.Handlers.Metrics;
@@ -31,17 +31,37 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
     private const string IterationPathFieldRefName = "System.IterationPath";
     private const string StateFieldRefName = "System.State";
 
-    private readonly IWorkItemRepository _repository;
-    private readonly IProductRepository _productRepository;
     private readonly ISprintRepository _sprintRepository;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ISprintCommitmentService _sprintCommitmentService;
     private readonly ISprintScopeChangeService _sprintScopeChangeService;
     private readonly ISprintCompletionService _sprintCompletionService;
     private readonly ISprintFactService _sprintFactService;
-    private readonly IMediator _mediator;
+    private readonly SprintScopedWorkItemLoader _workItemLoader;
     private readonly PoToolDbContext _context;
     private readonly ILogger<GetSprintMetricsQueryHandler> _logger;
+
+    public GetSprintMetricsQueryHandler(
+        ISprintRepository sprintRepository,
+        IWorkItemStateClassificationService stateClassificationService,
+        ISprintCommitmentService sprintCommitmentService,
+        ISprintScopeChangeService sprintScopeChangeService,
+        ISprintCompletionService sprintCompletionService,
+        ISprintFactService sprintFactService,
+        SprintScopedWorkItemLoader workItemLoader,
+        PoToolDbContext context,
+        ILogger<GetSprintMetricsQueryHandler> logger)
+    {
+        _sprintRepository = sprintRepository;
+        _stateClassificationService = stateClassificationService;
+        _sprintCommitmentService = sprintCommitmentService;
+        _sprintScopeChangeService = sprintScopeChangeService;
+        _sprintCompletionService = sprintCompletionService;
+        _sprintFactService = sprintFactService;
+        _workItemLoader = workItemLoader;
+        _context = context;
+        _logger = logger;
+    }
 
     public GetSprintMetricsQueryHandler(
         IWorkItemRepository repository,
@@ -55,66 +75,44 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         IMediator mediator,
         PoToolDbContext context,
         ILogger<GetSprintMetricsQueryHandler> logger)
+        : this(
+            sprintRepository,
+            stateClassificationService,
+            sprintCommitmentService,
+            sprintScopeChangeService,
+            sprintCompletionService,
+            sprintFactService,
+            new SprintScopedWorkItemLoader(new RepositoryBackedWorkItemReadProvider(repository), productRepository, mediator),
+            context,
+            logger)
     {
-        _repository = repository;
-        _productRepository = productRepository;
-        _sprintRepository = sprintRepository;
-        _stateClassificationService = stateClassificationService;
-        _sprintCommitmentService = sprintCommitmentService;
-        _sprintScopeChangeService = sprintScopeChangeService;
-        _sprintCompletionService = sprintCompletionService;
-        _sprintFactService = sprintFactService;
-        _mediator = mediator;
-        _context = context;
-        _logger = logger;
     }
 
     public async ValueTask<SprintMetricsDto?> Handle(
         GetSprintMetricsQuery query,
         CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Handling GetSprintMetricsQuery for iteration: {IterationPath}", query.IterationPath);
+        var iterationPath = query.EffectiveFilter.IterationPath;
+        if (string.IsNullOrWhiteSpace(iterationPath))
+        {
+            return null;
+        }
+
+        _logger.LogDebug("Handling GetSprintMetricsQuery for iteration: {IterationPath}", iterationPath);
 
         var allSprints = await _sprintRepository.GetAllSprintsAsync(cancellationToken);
         var matchingSprint = allSprints.FirstOrDefault(s =>
-            s.Path.Equals(query.IterationPath, StringComparison.OrdinalIgnoreCase));
+            s.Path.Equals(iterationPath, StringComparison.OrdinalIgnoreCase));
 
         if (matchingSprint?.StartUtc == null || matchingSprint.EndUtc == null)
         {
             _logger.LogDebug(
                 "Sprint metrics require a dated sprint window; no sprint metadata was found for {IterationPath}",
-                query.IterationPath);
+                iterationPath);
             return null;
         }
 
-        // Load work items using product-scoped approach
-        IEnumerable<WorkItemDto> allWorkItems;
-        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
-        var productsList = allProducts.ToList();
-
-        if (productsList.Count > 0)
-        {
-            var rootIds = productsList
-                .SelectMany(p => p.BacklogRootWorkItemIds)
-                .ToArray();
-
-            if (rootIds.Length > 0)
-            {
-                var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootIds);
-                allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
-            }
-            else
-            {
-                allWorkItems = await _repository.GetAllAsync(cancellationToken);
-            }
-        }
-        else
-        {
-            allWorkItems = await _repository.GetAllAsync(cancellationToken);
-        }
-
-        var relevantWorkItems = allWorkItems
-            .ToList();
+        var relevantWorkItems = await _workItemLoader.LoadAsync(query.EffectiveFilter, cancellationToken);
 
         var workItemIds = relevantWorkItems.Select(wi => wi.TfsId).ToArray();
         var sprintStart = matchingSprint.StartUtc.Value;
@@ -201,13 +199,13 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
             wi.Type.Equals(WorkItemType.Task, StringComparison.OrdinalIgnoreCase));
 
         var sprintName = string.IsNullOrWhiteSpace(matchingSprint.Name)
-            ? query.IterationPath
+            ? iterationPath
             : matchingSprint.Name;
         var completedStoryPoints = (int)Math.Round(sprintFact.DeliveredStoryPoints, MidpointRounding.AwayFromZero);
         var plannedStoryPoints = (int)Math.Round(sprintFact.CommittedStoryPoints, MidpointRounding.AwayFromZero);
 
         var metrics = new SprintMetricsDto(
-            IterationPath: query.IterationPath,
+            IterationPath: iterationPath,
             SprintName: sprintName,
             StartDate: sprintStart,
             EndDate: sprintEnd,
@@ -222,7 +220,7 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
 
         _logger.LogInformation(
             "Sprint metrics calculated for {IterationPath}: delivered {CompletedPoints} story points from {CompletedCount} scope items against {PlannedPoints} committed story points",
-            query.IterationPath,
+            iterationPath,
             sprintFact.DeliveredStoryPoints,
             completedItems.Count,
             sprintFact.CommittedStoryPoints);

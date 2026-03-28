@@ -1,4 +1,6 @@
 using PoTool.Client.ApiClient;
+using PoTool.Client.Helpers;
+using PoTool.Client.Models;
 
 namespace PoTool.Client.Services;
 
@@ -26,13 +28,13 @@ public class PipelineService
     /// Gets aggregated metrics for pipelines, optionally filtered by products.
     /// </summary>
     /// <param name="productIds">Optional comma-separated product IDs to filter by</param>
-    public async Task<IEnumerable<PipelineMetricsDto>> GetMetricsAsync(
+    public async Task<CanonicalClientResponse<IReadOnlyList<PipelineMetricsDto>>> GetMetricsAsync(
         string? productIds = null,
         DateTimeOffset? fromDate = null,
         DateTimeOffset? toDate = null)
     {
         var response = await _pipelinesClient.GetMetricsEnvelopeAsync(productIds, fromDate, toDate, CancellationToken.None);
-        return response.Data;
+        return CanonicalClientResponseFactory.Create(response);
     }
 
     /// <summary>
@@ -48,14 +50,14 @@ public class PipelineService
     /// Uses the canonical filter envelope and returns only the payload data to the UI.
     /// </summary>
     /// <param name="productIds">Optional comma-separated product IDs to filter by (currently uses only first ID)</param>
-    public async Task<IEnumerable<PipelineRunDto>> GetRunsForProductsAsync(
+    public async Task<CanonicalClientResponse<IReadOnlyList<PipelineRunDto>>> GetRunsForProductsAsync(
         string? productIds = null,
         DateTimeOffset? fromDate = null,
         DateTimeOffset? toDate = null)
     {
         if (string.IsNullOrWhiteSpace(productIds))
         {
-            return Array.Empty<PipelineRunDto>();
+            return new CanonicalClientResponse<IReadOnlyList<PipelineRunDto>>(Array.Empty<PipelineRunDto>());
         }
         
         // Parse and validate the first product ID
@@ -64,12 +66,11 @@ public class PipelineService
             !int.TryParse(firstProductIdStr, out var firstId) || 
             firstId <= 0)
         {
-            // Invalid product ID format - return empty to avoid invalid API call
-            return Array.Empty<PipelineRunDto>();
+            return new CanonicalClientResponse<IReadOnlyList<PipelineRunDto>>(Array.Empty<PipelineRunDto>());
         }
 
         var response = await _pipelinesClient.GetRunsForProductsEnvelopeAsync(productIds, fromDate, toDate, CancellationToken.None);
-        return response.Data;
+        return CanonicalClientResponseFactory.Create(response);
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using PoTool.Client.ApiClient;
+using PoTool.Client.Models;
 
 namespace PoTool.Client.Services;
 
@@ -7,13 +8,13 @@ namespace PoTool.Client.Services;
 /// </summary>
 public interface IBuildQualityService
 {
-    Task<BuildQualityPageDto> GetRollingWindowAsync(
+    Task<CanonicalClientResponse<BuildQualityPageDto>> GetRollingWindowAsync(
         int productOwnerId,
         DateTimeOffset windowStartUtc,
         DateTimeOffset windowEndUtc,
         CancellationToken cancellationToken = default);
 
-    Task<DeliveryBuildQualityDto> GetSprintAsync(
+    Task<CanonicalClientResponse<DeliveryBuildQualityDto>> GetSprintAsync(
         int productOwnerId,
         int sprintId,
         CancellationToken cancellationToken = default);

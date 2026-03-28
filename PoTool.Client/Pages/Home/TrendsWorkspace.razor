@@ -1,6 +1,8 @@
 @page "/home/trends"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Pages.Home.Components
+@using PoTool.Client.Helpers
+@using PoTool.Client.Models
 @using PoTool.Shared.Settings
 @using System.Web
 @using PoTool.Client.ApiClient
@@ -332,6 +334,8 @@
     private TrendTileSignal? _bugTrendSignal;
     private TrendTileSignal? _prTrendSignal;
     private StatusTileSignal? _pipelineSignal;
+    private CanonicalFilterMetadata? _prTrendFilterMetadata;
+    private CanonicalFilterMetadata? _pipelineSignalFilterMetadata;
     private CancellationTokenSource? _tileSignalLoadCts;
     
     protected override async Task OnInitializedAsync()
@@ -683,6 +687,7 @@
                 productIds: null,
                 teamId: _selectedTeamId,
                 cancellationToken);
+            _prTrendFilterMetadata = CanonicalClientResponseFactory.Create(response).FilterMetadata;
 
             _prTrendSignal = TrendsWorkspaceTileSignalService.GetPrTrendSignal(
                 response?.Data?.Success == true ? response.Data.Sprints : null);
@@ -693,6 +698,7 @@
         catch (Exception ex)
         {
             Console.WriteLine($"PR slope badge load failed: {ex.Message}");
+            _prTrendFilterMetadata = null;
             _prTrendSignal = TrendTileSignal.WithFallback(
                 StatusTileSignal.NoData("PR trend data is unavailable right now."));
         }
@@ -708,13 +714,14 @@
 
         try
         {
-            var buildQualityPage = await BuildQualityService.GetRollingWindowAsync(
+            var buildQualityResponse = await BuildQualityService.GetRollingWindowAsync(
                 _profileId.Value,
                 _fromDate,
                 _toDate,
                 cancellationToken);
+            _pipelineSignalFilterMetadata = buildQualityResponse.FilterMetadata;
 
-            _pipelineSignal = TrendsWorkspaceTileSignalService.GetPipelineSignal(buildQualityPage, ProductId);
+            _pipelineSignal = TrendsWorkspaceTileSignalService.GetPipelineSignal(buildQualityResponse.Data, ProductId);
         }
         catch (OperationCanceledException)
         {
@@ -722,6 +729,7 @@
         catch (Exception ex)
         {
             Console.WriteLine($"Pipeline signal load failed: {ex.Message}");
+            _pipelineSignalFilterMetadata = null;
             _pipelineSignal = StatusTileSignal.NoData("Pipeline signal is unavailable right now.");
         }
     }

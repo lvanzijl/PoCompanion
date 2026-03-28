@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using PoTool.Client.Models;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
 using PoTool.Shared.Health;
@@ -238,6 +239,107 @@ public sealed class WorkspaceSignalServiceTests
         Assert.AreEqual(WorkspaceSignalSet.Neutral.Planning, result);
     }
 
+    [TestMethod]
+    public async Task GetTrendsSignalAsync_PreservesFilterMetadataForDiagnostics()
+    {
+        var metricsClient = new Mock<IMetricsClient>();
+        var pullRequestsClient = new Mock<IPullRequestsClient>();
+        var workItemsClient = new Mock<IWorkItemsClient>();
+        var sprintsClient = new Mock<ISprintsClient>();
+
+        sprintsClient
+            .Setup(client => client.GetSprintsForTeamAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new SprintDto
+                {
+                    Id = 2,
+                    TeamId = 10,
+                    Name = "Sprint 2",
+                    Path = "Team\\Sprint 2",
+                    StartUtc = new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
+                    EndUtc = new DateTimeOffset(2026, 3, 14, 0, 0, 0, TimeSpan.Zero)
+                },
+                new SprintDto
+                {
+                    Id = 1,
+                    TeamId = 10,
+                    Name = "Sprint 1",
+                    Path = "Team\\Sprint 1",
+                    StartUtc = new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero),
+                    EndUtc = new DateTimeOffset(2026, 2, 14, 0, 0, 0, TimeSpan.Zero)
+                }
+            ]);
+
+        metricsClient
+            .Setup(client => client.GetSprintTrendMetricsEnvelopeAsync(
+                42,
+                It.IsAny<IEnumerable<int>>(),
+                null,
+                false,
+                true,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SprintQueryResponseDto<GetSprintTrendMetricsResponse>
+            {
+                Data = new GetSprintTrendMetricsResponse { Success = true, Metrics = [], ProductAnalytics = [] },
+                RequestedFilter = CreateSprintFilter([100], [10]),
+                EffectiveFilter = CreateSprintFilter([], [10], isAllProducts: true),
+                InvalidFields = ["productIds"],
+                ValidationMessages = [new FilterValidationIssueDto { Field = "productIds", Message = "Product scope was normalized." }]
+            });
+
+        pullRequestsClient
+            .Setup(client => client.GetSprintTrendsEnvelopeAsync(
+                It.IsAny<IEnumerable<int>>(),
+                It.IsAny<string>(),
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PoTool.Shared.PullRequests.PullRequestQueryResponseDto<GetPrSprintTrendsResponse>
+            {
+                Data = new GetPrSprintTrendsResponse { Success = true, Sprints = [] },
+                RequestedFilter = new PoTool.Shared.PullRequests.PullRequestFilterContextDto
+                {
+                    ProductIds = new FilterSelectionDto<int> { IsAll = false, Values = [100] },
+                    TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = [] },
+                    RepositoryNames = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+                    IterationPaths = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+                    CreatedBys = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+                    Statuses = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+                    Time = new FilterTimeSelectionDto { Mode = FilterTimeSelectionModeDto.MultiSprint, SprintIds = [1, 2] }
+                },
+                EffectiveFilter = new PoTool.Shared.PullRequests.PullRequestFilterContextDto
+                {
+                    ProductIds = new FilterSelectionDto<int> { IsAll = true, Values = [] },
+                    TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = [] },
+                    RepositoryNames = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+                    IterationPaths = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+                    CreatedBys = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+                    Statuses = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+                    Time = new FilterTimeSelectionDto { Mode = FilterTimeSelectionModeDto.MultiSprint, SprintIds = [1, 2] }
+                },
+                InvalidFields = [],
+                ValidationMessages = []
+            });
+
+        var sprintService = new SprintService(sprintsClient.Object);
+        var workItemService = new WorkItemService(
+            workItemsClient.Object,
+            TestHttpClient,
+            new WorkItemLoadCoordinatorService(NullLogger<WorkItemLoadCoordinatorService>.Instance));
+        var service = new WorkspaceSignalService(
+            metricsClient.Object,
+            pullRequestsClient.Object,
+            workItemsClient.Object,
+            sprintService,
+            workItemService);
+
+        await service.GetTrendsSignalAsync(42, CreateProducts(), selectedProductId: null);
+
+        Assert.HasCount(2, service.LatestTrendFilterMetadata);
+        Assert.IsTrue(service.LatestTrendFilterMetadata.Any(metadata => metadata.Kind == CanonicalFilterKind.Sprint));
+        Assert.IsTrue(service.LatestTrendFilterMetadata.Any(metadata => metadata.Kind == CanonicalFilterKind.PullRequest));
+    }
+
     private static WorkspaceSignalService CreateService()
     {
         var metricsClient = new Mock<IMetricsClient>();
@@ -325,8 +427,19 @@ public sealed class WorkspaceSignalServiceTests
                 IterationStart = sprintEndUtc.AddDays(-14),
                 IterationEnd = sprintEndUtc,
                 ValidationIssues = []
-            });
+            },
+            []);
     }
+
+    private static SprintFilterContextDto CreateSprintFilter(IReadOnlyList<int> productIds, IReadOnlyList<int> teamIds, bool isAllProducts = false)
+        => new()
+        {
+            ProductIds = new FilterSelectionDto<int> { IsAll = isAllProducts, Values = productIds },
+            TeamIds = new FilterSelectionDto<int> { IsAll = false, Values = teamIds },
+            AreaPaths = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+            IterationPaths = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+            Time = new FilterTimeSelectionDto { Mode = FilterTimeSelectionModeDto.MultiSprint, SprintIds = [1, 2] }
+        };
 
     private static SprintTrendMetricsDto CreateSprintTrendMetric(
         int sprintId,

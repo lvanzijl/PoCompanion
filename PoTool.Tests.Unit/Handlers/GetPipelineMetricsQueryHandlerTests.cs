@@ -203,6 +203,51 @@ public class GetPipelineMetricsQueryHandlerTests
         Assert.AreEqual(1, result.FailedRuns);
     }
 
+    [TestMethod]
+    public async Task Handle_WithUnevenPipelineActivity_IncludesQuietPipelineMetrics()
+    {
+        var query = new GetPipelineMetricsQuery(CreateFilter(
+            productIds: [1, 2],
+            repositories: ["Repo-A", "Repo-B"],
+            pipelineIds: [101, 202],
+            branchScope:
+            [
+                new PipelineBranchScope(101, "refs/heads/main"),
+                new PipelineBranchScope(202, "refs/heads/release")
+            ]));
+
+        _mockProvider.Setup(p => p.GetRunsForPipelinesAsync(
+                It.Is<IEnumerable<int>>(ids => ids.Contains(101) && ids.Contains(202)),
+                null,
+                It.IsAny<DateTimeOffset?>(),
+                100,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new PipelineRunDto(1, 101, "Busy", DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(-1).AddHours(1), TimeSpan.FromHours(1), PipelineRunResult.Succeeded, PipelineRunTrigger.ContinuousIntegration, null, "refs/heads/main", "user1", DateTimeOffset.UtcNow),
+                new PipelineRunDto(2, 101, "Busy", DateTimeOffset.UtcNow.AddDays(-2), DateTimeOffset.UtcNow.AddDays(-2).AddHours(1), TimeSpan.FromHours(1), PipelineRunResult.Failed, PipelineRunTrigger.ContinuousIntegration, null, "refs/heads/main", "user2", DateTimeOffset.UtcNow),
+                new PipelineRunDto(3, 202, "Quiet", DateTimeOffset.UtcNow.AddDays(-10), DateTimeOffset.UtcNow.AddDays(-10).AddHours(1), TimeSpan.FromHours(1), PipelineRunResult.Succeeded, PipelineRunTrigger.ContinuousIntegration, null, "refs/heads/release", "user3", DateTimeOffset.UtcNow)
+            ]);
+
+        _mockProvider.Setup(p => p.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new PipelineDto(101, "Busy", PipelineType.Build, null, DateTimeOffset.UtcNow),
+                new PipelineDto(202, "Quiet", PipelineType.Build, null, DateTimeOffset.UtcNow)
+            ]);
+
+        var metrics = (await _handler.Handle(query, CancellationToken.None))
+            .OrderBy(metric => metric.PipelineId)
+            .ToList();
+
+        Assert.HasCount(2, metrics);
+        Assert.AreEqual(101, metrics[0].PipelineId);
+        Assert.AreEqual(2, metrics[0].TotalRuns);
+        Assert.AreEqual(202, metrics[1].PipelineId);
+        Assert.AreEqual(1, metrics[1].TotalRuns);
+        Assert.AreEqual(1, metrics[1].SuccessfulRuns);
+    }
+
     private static PipelineEffectiveFilter CreateFilter(
         IReadOnlyList<int>? productIds,
         IReadOnlyList<string> repositories,

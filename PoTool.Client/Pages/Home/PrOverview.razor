@@ -2,6 +2,7 @@
 @using PoTool.Client.Components.Charts
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @using PoTool.Client.Services
 @using PoTool.Shared.PullRequests
@@ -127,6 +128,8 @@
 
         </MudCollapse>
     </MudPaper>
+
+    <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
 
     @if (_isLoading)
     {
@@ -618,6 +621,7 @@
 
     // Data
     private PullRequestInsightsDto? _data;
+    private CanonicalFilterNoticeModel? _filterNotice;
 
     // Interaction
     private int? _highlightedPrId;
@@ -705,6 +709,7 @@
                 repositoryName: _selectedRepository,
                 CancellationToken.None);
 
+            _filterNotice = CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(response).FilterMetadata);
             _data = response.Data;
 
             // Populate repository filter list from scatter data
@@ -723,6 +728,7 @@
         catch (ApiException ex) when (ex.StatusCode == 404)
         {
             _data = null;
+            _filterNotice = null;
         }
         catch (Exception ex)
         {

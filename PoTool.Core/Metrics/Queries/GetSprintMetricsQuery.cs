@@ -1,5 +1,5 @@
 using Mediator;
-
+using PoTool.Core.Metrics.Filters;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Core.Metrics.Queries;
@@ -9,5 +9,13 @@ namespace PoTool.Core.Metrics.Queries;
 /// The sprint path selects the sprint window and the commitment reconstruction target.
 /// </summary>
 public sealed record GetSprintMetricsQuery(
-    string IterationPath
-) : IQuery<SprintMetricsDto?>;
+    SprintEffectiveFilter EffectiveFilter
+) : IQuery<SprintMetricsDto?>
+{
+    public string? IterationPath => EffectiveFilter.IterationPath;
+
+    public GetSprintMetricsQuery(string iterationPath)
+        : this(SprintFilterFactory.ForIterationPath(iterationPath))
+    {
+    }
+}

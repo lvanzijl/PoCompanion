@@ -2,6 +2,7 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.Charts
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Client.Services
 @using PoTool.Client.Models
 @using PoTool.Client.Pages.Home.Components
@@ -152,6 +153,8 @@
             }
         </MudCollapse>
     </MudPaper>
+
+    <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
 
     @if (_isLoading)
     {
@@ -581,6 +584,7 @@
     private List<SprintDto> _sprints = new();
 
     private PipelineInsightsDto? _insightsData;
+    private CanonicalFilterNoticeModel? _filterNotice;
     private string? _pipelineQualityErrorMessage;
     private bool _isDrawerBuildQualityLoading;
     private string? _drawerBuildQualityErrorMessage;
@@ -696,6 +700,7 @@
     {
         _selectedSprintId = sprintId;
         _insightsData = null;
+        _filterNotice = null;
 
         if (sprintId.HasValue)
         {
@@ -733,6 +738,7 @@
                 includePartiallySucceeded:   _includePartiallySucceeded,
                 includeCanceled:             _includeCanceled,
                 cancellationToken:           CancellationToken.None);
+            _filterNotice = CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(response).FilterMetadata);
             _insightsData = response.Data;
 
             _prevIncludePartial   = _includePartiallySucceeded;

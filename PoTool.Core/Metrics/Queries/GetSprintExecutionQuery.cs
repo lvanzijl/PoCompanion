@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Core.Metrics.Filters;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Core.Metrics.Queries;
@@ -9,6 +10,14 @@ namespace PoTool.Core.Metrics.Queries;
 /// </summary>
 public record GetSprintExecutionQuery(
     int ProductOwnerId,
-    int SprintId,
-    int? ProductId = null
-) : IQuery<SprintExecutionDto>;
+    SprintEffectiveFilter EffectiveFilter
+) : IQuery<SprintExecutionDto>
+{
+    public GetSprintExecutionQuery(
+        int ProductOwnerId,
+        int SprintId,
+        int? ProductId = null)
+        : this(ProductOwnerId, SprintFilterFactory.ForSprintId(SprintId, ProductId.HasValue ? [ProductId.Value] : null))
+    {
+    }
+}

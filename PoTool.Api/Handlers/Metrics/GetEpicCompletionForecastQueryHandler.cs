@@ -2,9 +2,11 @@ using Mediator;
 using PoTool.Api.Adapters;
 using PoTool.Api.Services;
 using PoTool.Core.Contracts;
+using PoTool.Core.Filters;
 using PoTool.Core.Domain.Forecasting.Models;
 using PoTool.Core.Domain.Forecasting.Services;
 using PoTool.Core.Domain.Hierarchy;
+using PoTool.Core.Metrics.Filters;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
@@ -206,7 +208,23 @@ public sealed class GetEpicCompletionForecastQueryHandler
         {
             if (results.Count >= maxSprints) break;
 
-            var metrics = await _mediator.Send(new GetSprintMetricsQuery(path), cancellationToken);
+            var metrics = await _mediator.Send(
+                new GetSprintMetricsQuery(
+                    new SprintEffectiveFilter(
+                        new SprintFilterContext(
+                            FilterSelection<int>.All(),
+                            FilterSelection<int>.All(),
+                            FilterSelection<string>.All(),
+                            FilterSelection<string>.Selected([path]),
+                            FilterTimeSelection.None()),
+                        null,
+                        null,
+                        null,
+                        Array.Empty<int>(),
+                        [path],
+                        null,
+                        null)),
+                cancellationToken);
             if (metrics == null) continue;
 
             // Skip sprints outside the 6-month window

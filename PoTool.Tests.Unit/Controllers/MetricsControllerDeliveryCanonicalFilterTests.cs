@@ -51,9 +51,13 @@ public sealed class MetricsControllerDeliveryCanonicalFilterTests
         var filterService = new DeliveryFilterResolutionService(
             context,
             NullLogger<DeliveryFilterResolutionService>.Instance);
+        var sprintFilterService = new SprintFilterResolutionService(
+            context,
+            NullLogger<SprintFilterResolutionService>.Instance);
         var controller = new MetricsController(
             mediator.Object,
             filterService,
+            sprintFilterService,
             NullLogger<MetricsController>.Instance);
 
         var result = await controller.GetPortfolioProgressTrend(7, [42], null, CancellationToken.None);

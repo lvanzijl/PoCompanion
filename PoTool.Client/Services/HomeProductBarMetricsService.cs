@@ -1,4 +1,6 @@
 using PoTool.Client.ApiClient;
+using PoTool.Client.Helpers;
+using PoTool.Client.Models;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Client.Services;
@@ -15,7 +17,7 @@ public class HomeProductBarMetricsService
         _metricsClient = metricsClient;
     }
 
-    public async Task<HomeProductBarMetricsDto?> GetAsync(
+    public async Task<CanonicalClientResponse<HomeProductBarMetricsDto>?> GetAsync(
         int productOwnerId,
         int? productId,
         CancellationToken cancellationToken = default)
@@ -23,7 +25,7 @@ public class HomeProductBarMetricsService
         try
         {
             var response = await _metricsClient.GetHomeProductBarMetricsEnvelopeAsync(productOwnerId, productId, cancellationToken);
-            return response.Data;
+            return CanonicalClientResponseFactory.Create(response);
         }
         catch (Exception ex) when (ex is HttpRequestException or ApiException)
         {

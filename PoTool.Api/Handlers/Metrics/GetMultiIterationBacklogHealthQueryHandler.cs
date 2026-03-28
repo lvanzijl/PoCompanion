@@ -8,7 +8,6 @@ using PoTool.Shared.Metrics;
 using PoTool.Shared.Settings;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.WorkItems;
-using PoTool.Core.WorkItems.Queries;
 
 namespace PoTool.Api.Handlers.Metrics;
 
@@ -21,12 +20,22 @@ namespace PoTool.Api.Handlers.Metrics;
 public sealed class GetMultiIterationBacklogHealthQueryHandler
     : IQueryHandler<GetMultiIterationBacklogHealthQuery, MultiIterationBacklogHealthDto>
 {
-    private readonly IWorkItemReadProvider _workItemReadProvider;
-    private readonly IProductRepository _productRepository;
+    private readonly SprintScopedWorkItemLoader _workItemLoader;
     private readonly ISprintRepository _sprintRepository;
-    private readonly IMediator _mediator;
     private readonly IBacklogQualityAnalysisService _backlogQualityAnalysisService;
     private readonly ILogger<GetMultiIterationBacklogHealthQueryHandler> _logger;
+
+    public GetMultiIterationBacklogHealthQueryHandler(
+        SprintScopedWorkItemLoader workItemLoader,
+        ISprintRepository sprintRepository,
+        IBacklogQualityAnalysisService backlogQualityAnalysisService,
+        ILogger<GetMultiIterationBacklogHealthQueryHandler> logger)
+    {
+        _workItemLoader = workItemLoader;
+        _sprintRepository = sprintRepository;
+        _backlogQualityAnalysisService = backlogQualityAnalysisService;
+        _logger = logger;
+    }
 
     public GetMultiIterationBacklogHealthQueryHandler(
         IWorkItemReadProvider workItemReadProvider,
@@ -35,13 +44,12 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
         IMediator mediator,
         IBacklogQualityAnalysisService backlogQualityAnalysisService,
         ILogger<GetMultiIterationBacklogHealthQueryHandler> logger)
+        : this(
+            new SprintScopedWorkItemLoader(workItemReadProvider, productRepository, mediator),
+            sprintRepository,
+            backlogQualityAnalysisService,
+            logger)
     {
-        _workItemReadProvider = workItemReadProvider;
-        _productRepository = productRepository;
-        _sprintRepository = sprintRepository;
-        _mediator = mediator;
-        _backlogQualityAnalysisService = backlogQualityAnalysisService;
-        _logger = logger;
     }
 
     public async ValueTask<MultiIterationBacklogHealthDto> Handle(
@@ -49,94 +57,12 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
         CancellationToken cancellationToken)
     {
         _logger.LogDebug(
-            "Handling GetMultiIterationBacklogHealthQuery with ProductIds: {ProductIds}, AreaPath: {AreaPath}, MaxIterations: {MaxIterations}",
-            query.ProductIds != null ? string.Join(", ", query.ProductIds) : "None",
-            query.AreaPath ?? "All",
+            "Handling GetMultiIterationBacklogHealthQuery with ProductIds: {ProductIds}, AreaPaths: {AreaPaths}, MaxIterations: {MaxIterations}",
+            query.EffectiveFilter.Context.ProductIds.IsAll ? "ALL" : string.Join(", ", query.EffectiveFilter.Context.ProductIds.Values),
+            query.EffectiveFilter.Context.AreaPaths.IsAll ? "ALL" : string.Join(", ", query.EffectiveFilter.Context.AreaPaths.Values),
             query.MaxIterations);
 
-        // Load work items using product-scoped approach
-        IEnumerable<WorkItemDto> allWorkItems;
-
-        // Filter by product hierarchy if ProductIds are specified
-        if (query.ProductIds != null && query.ProductIds.Length > 0)
-        {
-            var rootWorkItemIds = new List<int>();
-            
-            // Collect root work item IDs from all specified products
-            foreach (var productId in query.ProductIds)
-            {
-                var product = await _productRepository.GetProductByIdAsync(productId, cancellationToken);
-                if (product == null)
-                {
-                    _logger.LogWarning("Product with ID {ProductId} not found, skipping", productId);
-                    continue;
-                }
-                rootWorkItemIds.AddRange(product.BacklogRootWorkItemIds);
-            }
-
-            if (rootWorkItemIds.Count == 0)
-            {
-                _logger.LogWarning("No valid products found for IDs: {ProductIds}", string.Join(", ", query.ProductIds));
-                // Return empty result if no valid products found
-                return new MultiIterationBacklogHealthDto(
-                    IterationHealth: new List<BacklogHealthDto>(),
-                    Trend: new BacklogHealthTrend(
-                        EffortTrend: TrendDirection.Unknown,
-                        ValidationTrend: TrendDirection.Unknown,
-                        BlockerTrend: TrendDirection.Unknown,
-                        Summary: "No valid products found"
-                    ),
-                    TotalWorkItems: 0,
-                    TotalIssues: 0,
-                    AnalysisTimestamp: DateTimeOffset.UtcNow
-                );
-            }
-
-            // Use product-scoped loading
-            var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootWorkItemIds.ToArray());
-            allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
-
-            _logger.LogDebug(
-                "Filtered to {Count} work items in product hierarchies (roots: {RootIds}), deduplicated by TfsId",
-                allWorkItems.Count(),
-                string.Join(", ", rootWorkItemIds));
-        }
-        // Otherwise, use product-scoped approach or fallback
-        else
-        {
-            var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
-            var productsList = allProducts.ToList();
-
-            if (productsList.Count > 0)
-            {
-                var rootIds = productsList
-                    .SelectMany(p => p.BacklogRootWorkItemIds)
-                    .Distinct()
-                    .ToArray();
-
-                if (rootIds.Length > 0)
-                {
-                    var workItemsQuery = new GetWorkItemsByRootIdsQuery(rootIds);
-                    allWorkItems = await _mediator.Send(workItemsQuery, cancellationToken);
-                }
-                else
-                {
-                    allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
-                }
-            }
-            else
-            {
-                allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
-            }
-
-            // Filter by area path if specified (legacy behavior)
-            if (!string.IsNullOrWhiteSpace(query.AreaPath))
-            {
-                allWorkItems = allWorkItems
-                    .Where(wi => wi.AreaPath.StartsWith(query.AreaPath, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-            }
-        }
+        var allWorkItems = await _workItemLoader.LoadAsync(query.EffectiveFilter, cancellationToken);
 
         // Get distinct iteration paths from work items
         var distinctIterationPaths = allWorkItems
