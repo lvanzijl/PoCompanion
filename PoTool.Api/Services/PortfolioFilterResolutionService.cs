@@ -89,6 +89,15 @@ public sealed class PortfolioFilterResolutionService
         };
     }
 
+    public static FilterResponseMetadataDto EmptyMetadata()
+        => new()
+        {
+            RequestedFilter = EmptyContext(),
+            EffectiveFilter = EmptyContext(),
+            InvalidFields = Array.Empty<string>(),
+            Messages = Array.Empty<FilterValidationIssueDto>()
+        };
+
     private static FilterContext MapRequestedFilter(PortfolioReadQueryOptions options)
         => new(
             options.ProductId.HasValue
@@ -126,6 +135,17 @@ public sealed class PortfolioFilterResolutionService
             }
         };
 
+    private static FilterContextDto EmptyContext()
+        => new()
+        {
+            ProductIds = new FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
+            ProjectNumbers = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
+            WorkPackages = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
+            LifecycleStates = new FilterSelectionDto<PortfolioLifecycleState> { IsAll = true, Values = Array.Empty<PortfolioLifecycleState>() },
+            TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
+            Time = new FilterTimeSelectionDto { Mode = FilterTimeSelectionModeDto.None, SprintIds = Array.Empty<int>() }
+        };
+
     private static FilterSelectionDto<T> ToDto<T>(FilterSelection<T> selection)
         => new()
         {
@@ -148,8 +168,9 @@ public sealed class PortfolioFilterResolutionService
             return FilterSelection<int>.All();
         }
 
+        var ownerProductIdSet = ownerProductIds.ToHashSet();
         var validIds = requested.Values
-            .Where(ownerProductIds.Contains)
+            .Where(ownerProductIdSet.Contains)
             .Distinct()
             .ToArray();
 
@@ -180,15 +201,14 @@ public sealed class PortfolioFilterResolutionService
             return FilterSelection<string>.All();
         }
 
-        var requestedValues = requestedProjects.Values
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var requestedValues = NormalizeSelectedStrings(
+            requestedProjects,
+            nameof(FilterContext.ProjectNumbers),
+            "Project selection cannot be empty when not using ALL. The filter was replaced with ALL.",
+            issues);
 
-        if (requestedValues.Length == 0)
+        if (requestedValues.Count == 0)
         {
-            issues.Add(new FilterValidationIssue(nameof(FilterContext.ProjectNumbers), "Project selection cannot be empty when not using ALL. The filter was replaced with ALL."));
             return FilterSelection<string>.All();
         }
 
@@ -200,7 +220,7 @@ public sealed class PortfolioFilterResolutionService
             .Distinct()
             .ToArrayAsync(cancellationToken);
 
-        if (validProjects.Length != requestedValues.Length)
+        if (validProjects.Length != requestedValues.Count)
         {
             issues.Add(new FilterValidationIssue(nameof(FilterContext.ProjectNumbers), "One or more selected projects do not belong to the selected product scope and were replaced with ALL."));
             return FilterSelection<string>.All();
@@ -228,15 +248,14 @@ public sealed class PortfolioFilterResolutionService
             return FilterSelection<string>.All();
         }
 
-        var requestedValues = requestedWorkPackages.Values
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var requestedValues = NormalizeSelectedStrings(
+            requestedWorkPackages,
+            nameof(FilterContext.WorkPackages),
+            "Work-package selection cannot be empty when not using ALL. The filter was replaced with ALL.",
+            issues);
 
-        if (requestedValues.Length == 0)
+        if (requestedValues.Count == 0)
         {
-            issues.Add(new FilterValidationIssue(nameof(FilterContext.WorkPackages), "Work-package selection cannot be empty when not using ALL. The filter was replaced with ALL."));
             return FilterSelection<string>.All();
         }
 
@@ -256,7 +275,7 @@ public sealed class PortfolioFilterResolutionService
             .Distinct()
             .ToArrayAsync(cancellationToken);
 
-        if (validWorkPackages.Length != requestedValues.Length)
+        if (validWorkPackages.Length != requestedValues.Count)
         {
             issues.Add(new FilterValidationIssue(nameof(FilterContext.WorkPackages), "One or more selected work packages do not belong to the effective product/project scope and were replaced with ALL."));
             return FilterSelection<string>.All();
@@ -307,7 +326,32 @@ public sealed class PortfolioFilterResolutionService
     }
 
     private static IReadOnlyList<int> GetScopedProductIds(IReadOnlyList<int> ownerProductIds, FilterSelection<int> selection)
-        => selection.IsAll
-            ? ownerProductIds
-            : selection.Values.Where(ownerProductIds.Contains).Distinct().ToArray();
+    {
+        if (selection.IsAll)
+        {
+            return ownerProductIds;
+        }
+
+        var ownerProductIdSet = ownerProductIds.ToHashSet();
+        return selection.Values.Where(ownerProductIdSet.Contains).Distinct().ToArray();
+    }
+
+    private static HashSet<string> NormalizeSelectedStrings(
+        FilterSelection<string> selection,
+        string field,
+        string emptyMessage,
+        ICollection<FilterValidationIssue> issues)
+    {
+        var values = selection.Values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (values.Count == 0)
+        {
+            issues.Add(new FilterValidationIssue(field, emptyMessage));
+        }
+
+        return values;
+    }
 }

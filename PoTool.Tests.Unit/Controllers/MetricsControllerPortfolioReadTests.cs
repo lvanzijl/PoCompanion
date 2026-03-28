@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using PoTool.Api.Controllers;
+using PoTool.Api.Services;
 using PoTool.Core.Metrics.Commands;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
@@ -40,7 +41,7 @@ public sealed class MetricsControllerPortfolioReadTests
                 SortDirection = PortfolioReadSortDirection.Desc,
                 Items = Array.Empty<PortfolioSnapshotItemDto>(),
                 HasData = true,
-                Filter = EmptyFilterMetadata()
+                Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
@@ -77,7 +78,7 @@ public sealed class MetricsControllerPortfolioReadTests
                 SortDirection = PortfolioReadSortDirection.Desc,
                 Items = Array.Empty<PortfolioSnapshotItemDto>(),
                 HasData = true,
-                Filter = EmptyFilterMetadata()
+                Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
@@ -106,7 +107,7 @@ public sealed class MetricsControllerPortfolioReadTests
                 SortDirection = PortfolioReadSortDirection.Desc,
                 Items = Array.Empty<PortfolioComparisonItemDto>(),
                 HasData = true,
-                Filter = EmptyFilterMetadata()
+                Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
@@ -142,7 +143,7 @@ public sealed class MetricsControllerPortfolioReadTests
                 SortDirection = PortfolioReadSortDirection.Desc,
                 Items = Array.Empty<PortfolioComparisonItemDto>(),
                 HasData = true,
-                Filter = EmptyFilterMetadata()
+                Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
@@ -177,7 +178,7 @@ public sealed class MetricsControllerPortfolioReadTests
                 ArchivedSnapshotsExcludedByDefault = true,
                 ArchivedSnapshotsExcludedNotice = false,
                 HasData = true,
-                Filter = EmptyFilterMetadata()
+                Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
@@ -205,7 +206,7 @@ public sealed class MetricsControllerPortfolioReadTests
                         Description = "Progress increased."
                     }
                 ],
-                Filter = EmptyFilterMetadata()
+                Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
@@ -258,28 +259,4 @@ public sealed class MetricsControllerPortfolioReadTests
         mediator.VerifyAll();
     }
 
-    private static FilterResponseMetadataDto EmptyFilterMetadata()
-        => new()
-        {
-            RequestedFilter = new FilterContextDto
-            {
-                ProductIds = new FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
-                ProjectNumbers = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
-                WorkPackages = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
-                LifecycleStates = new FilterSelectionDto<PortfolioLifecycleState> { IsAll = true, Values = Array.Empty<PortfolioLifecycleState>() },
-                TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
-                Time = new FilterTimeSelectionDto { Mode = FilterTimeSelectionModeDto.None, SprintIds = Array.Empty<int>() }
-            },
-            EffectiveFilter = new FilterContextDto
-            {
-                ProductIds = new FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
-                ProjectNumbers = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
-                WorkPackages = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
-                LifecycleStates = new FilterSelectionDto<PortfolioLifecycleState> { IsAll = true, Values = Array.Empty<PortfolioLifecycleState>() },
-                TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
-                Time = new FilterTimeSelectionDto { Mode = FilterTimeSelectionModeDto.None, SprintIds = Array.Empty<int>() }
-            },
-            InvalidFields = Array.Empty<string>(),
-            Messages = Array.Empty<FilterValidationIssueDto>()
-        };
 }

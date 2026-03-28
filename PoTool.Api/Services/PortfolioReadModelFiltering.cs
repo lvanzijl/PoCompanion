@@ -111,11 +111,12 @@ internal static class PortfolioReadModelFiltering
             return true;
         }
 
+        var selectedValues = selection.Values.ToHashSet(StringComparer.OrdinalIgnoreCase);
         return !string.IsNullOrWhiteSpace(value)
-            && selection.Values.Contains(value.Trim(), StringComparer.OrdinalIgnoreCase);
+            && selectedValues.Contains(value.Trim());
     }
 
-    private static bool MatchesAny<T>(FilterSelection<T> selection, params T?[] candidates)
+    private static bool MatchesAny<T>(FilterSelection<T> selection, params T?[] candidateValues)
         where T : struct
     {
         if (selection.IsAll)
@@ -123,9 +124,9 @@ internal static class PortfolioReadModelFiltering
             return true;
         }
 
-        return candidates
-            .Where(candidate => candidate.HasValue)
-            .Select(candidate => candidate!.Value)
+        return candidateValues
+            .Where(candidateValue => candidateValue.HasValue)
+            .Select(candidateValue => candidateValue!.Value)
             .Any(candidate => selection.Values.Contains(candidate));
     }
 

@@ -54,7 +54,7 @@ public sealed class PortfolioTrendAnalysisService : IPortfolioTrendAnalysisServi
                 ArchivedSnapshotsExcludedByDefault = true,
                 ArchivedSnapshotsExcludedNotice = false,
                 HasData = false,
-                Filter = EmptyFilterMetadata()
+                Filter = PortfolioFilterResolutionService.EmptyMetadata()
             };
         }
 
@@ -100,7 +100,7 @@ public sealed class PortfolioTrendAnalysisService : IPortfolioTrendAnalysisServi
             ArchivedSnapshotsExcludedByDefault = true,
             ArchivedSnapshotsExcludedNotice = false,
             HasData = true,
-            Filter = EmptyFilterMetadata()
+            Filter = PortfolioFilterResolutionService.EmptyMetadata()
         };
     }
 
@@ -278,31 +278,6 @@ public sealed class PortfolioTrendAnalysisService : IPortfolioTrendAnalysisServi
             > 0d => PortfolioTrendDirection.Increasing,
             < 0d => PortfolioTrendDirection.Decreasing,
             _ => PortfolioTrendDirection.Stable
-        };
-
-    private static FilterResponseMetadataDto EmptyFilterMetadata()
-        => new()
-        {
-            RequestedFilter = new FilterContextDto
-            {
-                ProductIds = new FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
-                ProjectNumbers = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
-                WorkPackages = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
-                LifecycleStates = new FilterSelectionDto<PortfolioLifecycleState> { IsAll = true, Values = Array.Empty<PortfolioLifecycleState>() },
-                TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
-                Time = new FilterTimeSelectionDto { Mode = FilterTimeSelectionModeDto.None, SprintIds = Array.Empty<int>() }
-            },
-            EffectiveFilter = new FilterContextDto
-            {
-                ProductIds = new FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
-                ProjectNumbers = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
-                WorkPackages = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
-                LifecycleStates = new FilterSelectionDto<PortfolioLifecycleState> { IsAll = true, Values = Array.Empty<PortfolioLifecycleState>() },
-                TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
-                Time = new FilterTimeSelectionDto { Mode = FilterTimeSelectionModeDto.None, SprintIds = Array.Empty<int>() }
-            },
-            InvalidFields = Array.Empty<string>(),
-            Messages = Array.Empty<FilterValidationIssueDto>()
         };
 
     private sealed record PortfolioScopeKey(
