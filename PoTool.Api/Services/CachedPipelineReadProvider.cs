@@ -143,36 +143,54 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
             return Enumerable.Empty<PipelineRunDto>();
         }
 
-        var definitionIds = definitions.Keys.ToList();
+        var minStartTimeUtc = minStartTime?.UtcDateTime;
+        var runs = new List<PipelineRunDto>();
 
-        var query = _dbContext.CachedPipelineRuns
-            .AsNoTracking()
-            .Where(r => definitionIds.Contains(r.PipelineDefinitionId));
+        _logger.LogDebug(
+            "CachedPipelineReadProvider: Selecting up to {Top} cached runs per pipeline for {DefinitionCount} pipeline definitions before combining results",
+            top,
+            definitions.Count);
 
-        // Apply branch filter
-        if (!string.IsNullOrEmpty(branchName))
+        foreach (var (definitionId, definition) in definitions.OrderBy(entry => entry.Value.PipelineDefinitionId))
         {
-            query = query.Where(r => r.SourceBranch == branchName);
+            var query = _dbContext.CachedPipelineRuns
+                .AsNoTracking()
+                .Where(r => r.PipelineDefinitionId == definitionId);
+
+            if (!string.IsNullOrEmpty(branchName))
+            {
+                query = query.Where(r => r.SourceBranch == branchName);
+            }
+
+            if (minStartTimeUtc.HasValue)
+            {
+                query = query.Where(r => r.CreatedDateUtc >= minStartTimeUtc.Value);
+            }
+
+            var pipelineRuns = await query
+                .OrderByDescending(r => r.CreatedDateUtc)
+                .Take(top)
+                .ToListAsync(cancellationToken);
+
+            runs.AddRange(pipelineRuns.Select(r => MapRunToDto(r, definition.Name)));
         }
 
-        // Apply time filter
-        if (minStartTime.HasValue)
-        {
-            var minStartTimeUtc = minStartTime.Value.UtcDateTime;
-            query = query.Where(r => r.CreatedDateUtc >= minStartTimeUtc);
-        }
-
-        var runs = await query
-            .OrderByDescending(r => r.CreatedDateUtc)
-            .Take(top)
-            .ToListAsync(cancellationToken);
+        runs = runs
+            .OrderByDescending(run => run.StartTime)
+            .ThenByDescending(run => run.RunId)
+            .ToList();
 
         if (runs.Count == 0)
         {
             await LogEmptyRunsDiagnosticsAsync(pipelineIdList, branchName, minStartTime, cancellationToken);
         }
 
-        return runs.Select(r => MapRunToDto(r, definitions[r.PipelineDefinitionId].Name));
+        _logger.LogDebug(
+            "CachedPipelineReadProvider: Returning {RunCount} cached runs after per-pipeline selection for {PipelineCount} pipelines",
+            runs.Count,
+            definitions.Count);
+
+        return runs;
     }
 
     /// <summary>

@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-03-28",
+    "type": "Fixed",
+    "title": "Pipeline run filters no longer hide quiet pipelines",
+    "impact": "Pipeline metrics and filtered run views now keep valid runs from less-active pipelines instead of dropping them when busier pipelines have more recent cached activity.",
+    "area": "Trends",
+    "link": "/home/pipeline-insights"
+  },
+  {
+    "date": "2026-03-28",
     "type": "Changed",
     "title": "Sprint analytics now use canonical filter scope",
     "impact": "Sprint metrics, backlog health, multi-iteration health, capacity plan, sprint trend, sprint execution, and sprint activity endpoints now resolve requested versus effective sprint scope once at the API boundary and return that metadata in migrated responses.",
