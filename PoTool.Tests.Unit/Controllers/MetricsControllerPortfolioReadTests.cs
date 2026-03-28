@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using PoTool.Api.Controllers;
+using PoTool.Api.Services;
 using PoTool.Core.Metrics.Commands;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
@@ -39,7 +40,8 @@ public sealed class MetricsControllerPortfolioReadTests
                 SortBy = PortfolioReadSortBy.Progress,
                 SortDirection = PortfolioReadSortDirection.Desc,
                 Items = Array.Empty<PortfolioSnapshotItemDto>(),
-                HasData = true
+                HasData = true,
+                Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
@@ -75,7 +77,8 @@ public sealed class MetricsControllerPortfolioReadTests
                 SortBy = PortfolioReadSortBy.Default,
                 SortDirection = PortfolioReadSortDirection.Desc,
                 Items = Array.Empty<PortfolioSnapshotItemDto>(),
-                HasData = true
+                HasData = true,
+                Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
@@ -103,7 +106,8 @@ public sealed class MetricsControllerPortfolioReadTests
                 SortBy = PortfolioReadSortBy.Default,
                 SortDirection = PortfolioReadSortDirection.Desc,
                 Items = Array.Empty<PortfolioComparisonItemDto>(),
-                HasData = true
+                HasData = true,
+                Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
@@ -138,7 +142,8 @@ public sealed class MetricsControllerPortfolioReadTests
                 SortBy = PortfolioReadSortBy.Default,
                 SortDirection = PortfolioReadSortDirection.Desc,
                 Items = Array.Empty<PortfolioComparisonItemDto>(),
-                HasData = true
+                HasData = true,
+                Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
@@ -172,7 +177,8 @@ public sealed class MetricsControllerPortfolioReadTests
                 IncludesArchivedSnapshots = false,
                 ArchivedSnapshotsExcludedByDefault = true,
                 ArchivedSnapshotsExcludedNotice = false,
-                HasData = true
+                HasData = true,
+                Filter = PortfolioFilterResolutionService.EmptyMetadata()
             });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
@@ -188,16 +194,20 @@ public sealed class MetricsControllerPortfolioReadTests
         var mediator = new Mock<IMediator>(MockBehavior.Strict);
         mediator
             .Setup(service => service.Send(It.IsAny<GetPortfolioSignalsQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(
-            [
-                new PortfolioDecisionSignalDto
-                {
-                    Type = PortfolioDecisionSignalType.ProgressImproving,
-                    Tone = PortfolioDecisionSignalTone.Positive,
-                    Title = "Portfolio progress is improving",
-                    Description = "Progress increased."
-                }
-            ]);
+            .ReturnsAsync(new PortfolioSignalsDto
+            {
+                Signals =
+                [
+                    new PortfolioDecisionSignalDto
+                    {
+                        Type = PortfolioDecisionSignalType.ProgressImproving,
+                        Tone = PortfolioDecisionSignalTone.Positive,
+                        Title = "Portfolio progress is improving",
+                        Description = "Progress increased."
+                    }
+                ],
+                Filter = PortfolioFilterResolutionService.EmptyMetadata()
+            });
 
         var controller = new MetricsController(mediator.Object, NullLogger<MetricsController>.Instance);
 
@@ -248,4 +258,5 @@ public sealed class MetricsControllerPortfolioReadTests
         Assert.IsInstanceOfType<OkObjectResult>(result.Result);
         mediator.VerifyAll();
     }
+
 }

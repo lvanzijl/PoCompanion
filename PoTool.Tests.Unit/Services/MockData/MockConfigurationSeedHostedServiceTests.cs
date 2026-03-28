@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services;
+using PoTool.Core.Filters;
 using PoTool.Api.Services.MockData;
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.DeliveryTrends.Services;
@@ -124,14 +125,17 @@ public sealed class MockConfigurationSeedHostedServiceTests
 
         var latestOnly = await stateService.GetHistoryStateAsync(
             activeProfileId.Value,
+            FilterContext.Empty(),
             new PortfolioReadQueryOptions(SnapshotCount: 1),
             CancellationToken.None);
         var latestTwo = await stateService.GetHistoryStateAsync(
             activeProfileId.Value,
+            FilterContext.Empty(),
             new PortfolioReadQueryOptions(SnapshotCount: 2),
             CancellationToken.None);
         var fullHistory = await stateService.GetHistoryStateAsync(
             activeProfileId.Value,
+            FilterContext.Empty(),
             new PortfolioReadQueryOptions(SnapshotCount: 20),
             CancellationToken.None);
 

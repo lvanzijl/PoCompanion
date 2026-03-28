@@ -1,5 +1,6 @@
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.DeliveryTrends.Services;
+using PoTool.Core.Filters;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Api.Services;
@@ -9,6 +10,7 @@ public interface IPortfolioTrendAnalysisService
     PortfolioTrendDto BuildTrend(
         IReadOnlyList<PortfolioSnapshotGroupSelection> snapshots,
         IReadOnlyDictionary<int, string> productNames,
+        FilterContext filter,
         PortfolioReadQueryOptions? options);
 }
 
@@ -28,10 +30,12 @@ public sealed class PortfolioTrendAnalysisService : IPortfolioTrendAnalysisServi
     public PortfolioTrendDto BuildTrend(
         IReadOnlyList<PortfolioSnapshotGroupSelection> snapshots,
         IReadOnlyDictionary<int, string> productNames,
+        FilterContext filter,
         PortfolioReadQueryOptions? options)
     {
         ArgumentNullException.ThrowIfNull(snapshots);
         ArgumentNullException.ThrowIfNull(productNames);
+        ArgumentNullException.ThrowIfNull(filter);
 
         var effectiveOptions = options ?? new PortfolioReadQueryOptions();
         if (snapshots.Count == 0)
@@ -49,7 +53,8 @@ public sealed class PortfolioTrendAnalysisService : IPortfolioTrendAnalysisServi
                 IncludesArchivedSnapshots = effectiveOptions.IncludeArchivedSnapshots,
                 ArchivedSnapshotsExcludedByDefault = true,
                 ArchivedSnapshotsExcludedNotice = false,
-                HasData = false
+                HasData = false,
+                Filter = PortfolioFilterResolutionService.EmptyMetadata()
             };
         }
 
@@ -86,15 +91,16 @@ public sealed class PortfolioTrendAnalysisService : IPortfolioTrendAnalysisServi
             Snapshots = snapshotDtos,
             PortfolioProgressTrend = BuildPortfolioMetric(orderedSnapshots, useProgress: true),
             TotalWeightTrend = BuildPortfolioMetric(orderedSnapshots, useProgress: false),
-            Projects = PortfolioReadModelFiltering.Apply(projectSeries, effectiveOptions),
-            WorkPackages = PortfolioReadModelFiltering.Apply(workPackageSeries, effectiveOptions),
+            Projects = PortfolioReadModelFiltering.Apply(projectSeries, filter, effectiveOptions),
+            WorkPackages = PortfolioReadModelFiltering.Apply(workPackageSeries, filter, effectiveOptions),
             SnapshotCount = effectiveOptions.SnapshotCount,
             RangeStartUtc = effectiveOptions.RangeStartUtc,
             RangeEndUtc = effectiveOptions.RangeEndUtc,
             IncludesArchivedSnapshots = effectiveOptions.IncludeArchivedSnapshots,
             ArchivedSnapshotsExcludedByDefault = true,
             ArchivedSnapshotsExcludedNotice = false,
-            HasData = true
+            HasData = true,
+            Filter = PortfolioFilterResolutionService.EmptyMetadata()
         };
     }
 

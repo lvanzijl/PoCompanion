@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
+using PoTool.Core.Filters;
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Shared.Metrics;
@@ -42,7 +43,7 @@ public sealed class PortfolioReadModelStateServiceTests
         var (profileId, _) = await SeedOwnerAndProductAsync(context);
         var service = CreateStateService(context);
 
-        var state = await service.GetLatestStateAsync(profileId, CancellationToken.None);
+        var state = await service.GetLatestStateAsync(profileId, FilterContext.Empty(), CancellationToken.None);
 
         Assert.IsNull(state);
         Assert.AreEqual(0, await context.PortfolioSnapshots.CountAsync());
@@ -78,7 +79,7 @@ public sealed class PortfolioReadModelStateServiceTests
 
         var service = CreateStateService(context);
 
-        var state = await service.GetLatestStateAsync(profileId, CancellationToken.None);
+        var state = await service.GetLatestStateAsync(profileId, FilterContext.Empty(), CancellationToken.None);
 
         Assert.IsNotNull(state);
         Assert.AreEqual("Sprint 2", state.CurrentSnapshotLabel);
@@ -97,21 +98,25 @@ public sealed class PortfolioReadModelStateServiceTests
         var stateService = CreateStateService(context);
         var mapper = new PortfolioReadModelMapper();
 
-        var progressService = new PortfolioProgressQueryService(stateService, mapper);
-        var snapshotService = new PortfolioSnapshotQueryService(stateService, mapper);
+        var resolutionService = CreateFilterResolutionService(context);
+        var progressService = new PortfolioProgressQueryService(stateService, mapper, resolutionService);
+        var snapshotService = new PortfolioSnapshotQueryService(stateService, mapper, resolutionService);
         var comparisonService = new PortfolioComparisonQueryService(
             stateService,
             mapper,
-            new PortfolioSnapshotComparisonService());
+            new PortfolioSnapshotComparisonService(),
+            resolutionService);
         var trendService = new PortfolioTrendQueryService(
             stateService,
-            new PortfolioTrendAnalysisService(new ProductAggregationService(), mapper));
+            new PortfolioTrendAnalysisService(new ProductAggregationService(), mapper),
+            resolutionService);
         var signalService = new PortfolioDecisionSignalQueryService(
             stateService,
             new PortfolioTrendAnalysisService(new ProductAggregationService(), mapper),
             new PortfolioDecisionSignalService(),
             new PortfolioSnapshotComparisonService(),
-            mapper);
+            mapper,
+            resolutionService);
 
         var progress = await progressService.GetAsync(profileId, null, CancellationToken.None);
         var snapshot = await snapshotService.GetAsync(profileId, null, CancellationToken.None);
@@ -123,7 +128,7 @@ public sealed class PortfolioReadModelStateServiceTests
         Assert.IsFalse(snapshot.HasData);
         Assert.IsFalse(comparison.HasData);
         Assert.IsFalse(trend.HasData);
-        Assert.IsEmpty(signals);
+        Assert.IsEmpty(signals.Signals);
         Assert.AreEqual(0, await context.PortfolioSnapshots.CountAsync());
         Assert.AreEqual(0, await context.PortfolioSnapshotItems.CountAsync());
     }
@@ -158,7 +163,8 @@ public sealed class PortfolioReadModelStateServiceTests
         var comparisonService = new PortfolioComparisonQueryService(
             CreateStateService(context),
             new PortfolioReadModelMapper(),
-            new PortfolioSnapshotComparisonService());
+            new PortfolioSnapshotComparisonService(),
+            CreateFilterResolutionService(context));
 
         var result = await comparisonService.GetAsync(profileId, options: null, CancellationToken.None);
 
@@ -195,6 +201,7 @@ public sealed class PortfolioReadModelStateServiceTests
 
         var state = await CreateStateService(context).GetHistoryStateAsync(
             profileId,
+            FilterContext.Empty(),
             new PortfolioReadQueryOptions(SnapshotCount: 1),
             CancellationToken.None);
 
@@ -228,6 +235,7 @@ public sealed class PortfolioReadModelStateServiceTests
 
         var state = await CreateStateService(context).GetHistoryStateAsync(
             profileId,
+            FilterContext.Empty(),
             new PortfolioReadQueryOptions(SnapshotCount: 5),
             CancellationToken.None);
 
@@ -255,10 +263,12 @@ public sealed class PortfolioReadModelStateServiceTests
 
         var zeroState = await CreateStateService(context).GetHistoryStateAsync(
             profileId,
+            FilterContext.Empty(),
             new PortfolioReadQueryOptions(SnapshotCount: 0),
             CancellationToken.None);
         var negativeState = await CreateStateService(context).GetHistoryStateAsync(
             profileId,
+            FilterContext.Empty(),
             new PortfolioReadQueryOptions(SnapshotCount: -1),
             CancellationToken.None);
 
@@ -274,6 +284,12 @@ public sealed class PortfolioReadModelStateServiceTests
                 new PortfolioSnapshotPersistenceMapper(),
                 NullLogger<PortfolioSnapshotSelectionService>.Instance),
             new ProductAggregationService());
+
+    private static PortfolioFilterResolutionService CreateFilterResolutionService(PoToolDbContext context)
+        => new(
+            context,
+            new FilterContextValidator(),
+            NullLogger<PortfolioFilterResolutionService>.Instance);
 
     private static PortfolioSnapshotPersistenceService CreatePersistenceService(PoToolDbContext context)
         => new(

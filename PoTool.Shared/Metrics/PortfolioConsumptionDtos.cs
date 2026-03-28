@@ -101,6 +101,105 @@ public enum PortfolioDecisionSignalTone
 }
 
 /// <summary>
+/// Explicit filter value selection with deterministic ALL semantics.
+/// </summary>
+public sealed record FilterSelectionDto<T>
+{
+    /// <summary>True when the filter represents ALL values.</summary>
+    public required bool IsAll { get; init; }
+
+    /// <summary>Explicit selected values when <see cref="IsAll"/> is false.</summary>
+    public required IReadOnlyList<T> Values { get; init; }
+}
+
+/// <summary>
+/// Canonical time selection modes exposed in portfolio filter metadata.
+/// </summary>
+public enum FilterTimeSelectionModeDto
+{
+    None = 0,
+    CurrentSprint = 1,
+    Sprint = 2,
+    MultiSprint = 3,
+    DateRange = 4
+}
+
+/// <summary>
+/// Explicit time selection metadata for backend filter resolution.
+/// </summary>
+public sealed record FilterTimeSelectionDto
+{
+    /// <summary>Selected time mode.</summary>
+    public required FilterTimeSelectionModeDto Mode { get; init; }
+
+    /// <summary>Single selected sprint identifier when applicable.</summary>
+    public int? SprintId { get; init; }
+
+    /// <summary>Selected sprint identifiers for multi-sprint mode.</summary>
+    public required IReadOnlyList<int> SprintIds { get; init; }
+
+    /// <summary>Optional lower time bound when using date-range mode.</summary>
+    public DateTimeOffset? RangeStartUtc { get; init; }
+
+    /// <summary>Optional upper time bound when using date-range mode.</summary>
+    public DateTimeOffset? RangeEndUtc { get; init; }
+}
+
+/// <summary>
+/// Canonical filter metadata echoed by portfolio responses.
+/// </summary>
+public sealed record FilterContextDto
+{
+    /// <summary>Explicit product filter selection.</summary>
+    public required FilterSelectionDto<int> ProductIds { get; init; }
+
+    /// <summary>Explicit project filter selection.</summary>
+    public required FilterSelectionDto<string> ProjectNumbers { get; init; }
+
+    /// <summary>Explicit work-package filter selection.</summary>
+    public required FilterSelectionDto<string> WorkPackages { get; init; }
+
+    /// <summary>Explicit lifecycle-state filter selection.</summary>
+    public required FilterSelectionDto<PortfolioLifecycleState> LifecycleStates { get; init; }
+
+    /// <summary>Explicit team filter selection.</summary>
+    public required FilterSelectionDto<int> TeamIds { get; init; }
+
+    /// <summary>Explicit time filter selection.</summary>
+    public required FilterTimeSelectionDto Time { get; init; }
+}
+
+/// <summary>
+/// Invalid field detail returned with portfolio filter metadata.
+/// </summary>
+public sealed record FilterValidationIssueDto
+{
+    /// <summary>Canonical field name.</summary>
+    public required string Field { get; init; }
+
+    /// <summary>Human-readable validation message.</summary>
+    public required string Message { get; init; }
+}
+
+/// <summary>
+/// Requested/effective filter metadata returned with portfolio responses.
+/// </summary>
+public sealed record FilterResponseMetadataDto
+{
+    /// <summary>The exact filter requested by the caller.</summary>
+    public required FilterContextDto RequestedFilter { get; init; }
+
+    /// <summary>The deterministic effective filter used by the backend.</summary>
+    public required FilterContextDto EffectiveFilter { get; init; }
+
+    /// <summary>Invalid filter fields that were replaced during resolution.</summary>
+    public required IReadOnlyList<string> InvalidFields { get; init; }
+
+    /// <summary>Optional validation details describing invalid fields.</summary>
+    public required IReadOnlyList<FilterValidationIssueDto> Messages { get; init; }
+}
+
+/// <summary>
 /// Read-only filter and presentational options for portfolio queries.
 /// Filtering is applied after domain computation.
 /// </summary>
@@ -155,6 +254,9 @@ public sealed record PortfolioProgressDto
 
     /// <summary>Whether the response contains snapshot data.</summary>
     public required bool HasData { get; init; }
+
+    /// <summary>Requested/effective filter metadata used to build the response.</summary>
+    public required FilterResponseMetadataDto Filter { get; init; }
 }
 
 /// <summary>
@@ -188,6 +290,9 @@ public sealed record PortfolioSnapshotDto
 
     /// <summary>Whether the response contains snapshot data.</summary>
     public required bool HasData { get; init; }
+
+    /// <summary>Requested/effective filter metadata used to build the response.</summary>
+    public required FilterResponseMetadataDto Filter { get; init; }
 }
 
 /// <summary>
@@ -254,6 +359,9 @@ public sealed record PortfolioComparisonDto
 
     /// <summary>Whether the response contains comparison data.</summary>
     public required bool HasData { get; init; }
+
+    /// <summary>Requested/effective filter metadata used to build the response.</summary>
+    public required FilterResponseMetadataDto Filter { get; init; }
 }
 
 /// <summary>
@@ -428,6 +536,9 @@ public sealed record PortfolioTrendDto
 
     /// <summary>Whether the response contains historical data.</summary>
     public required bool HasData { get; init; }
+
+    /// <summary>Requested/effective filter metadata used to build the response.</summary>
+    public required FilterResponseMetadataDto Filter { get; init; }
 }
 
 /// <summary>
@@ -470,4 +581,16 @@ public sealed record PortfolioDecisionSignalDto
 
     /// <summary>Optional snapshot timestamp associated with the signal.</summary>
     public DateTimeOffset? SnapshotTimestamp { get; init; }
+}
+
+/// <summary>
+/// Portfolio decision-signal response envelope with canonical filter metadata.
+/// </summary>
+public sealed record PortfolioSignalsDto
+{
+    /// <summary>Signals produced for the effective filter.</summary>
+    public required IReadOnlyList<PortfolioDecisionSignalDto> Signals { get; init; }
+
+    /// <summary>Requested/effective filter metadata used to build the response.</summary>
+    public required FilterResponseMetadataDto Filter { get; init; }
 }

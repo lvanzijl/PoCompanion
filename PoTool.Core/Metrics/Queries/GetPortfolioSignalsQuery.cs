@@ -8,4 +8,4 @@ namespace PoTool.Core.Metrics.Queries;
 /// </summary>
 public sealed record GetPortfolioSignalsQuery(
     int ProductOwnerId,
-    PortfolioReadQueryOptions? Options = null) : IQuery<IReadOnlyList<PortfolioDecisionSignalDto>>;
+    PortfolioReadQueryOptions? Options = null) : IQuery<PortfolioSignalsDto>;

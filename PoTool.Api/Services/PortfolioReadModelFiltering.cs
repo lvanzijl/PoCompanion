@@ -1,3 +1,4 @@
+using PoTool.Core.Filters;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Api.Services;
@@ -6,18 +7,18 @@ internal static class PortfolioReadModelFiltering
 {
     public static IReadOnlyList<PortfolioSnapshotItemDto> Apply(
         IEnumerable<PortfolioSnapshotItemDto> items,
+        FilterContext filter,
         PortfolioReadQueryOptions? options)
     {
         ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(filter);
 
         var effectiveOptions = options ?? new PortfolioReadQueryOptions();
         var filtered = items.Where(item =>
-                (!effectiveOptions.ProductId.HasValue || item.ProductId == effectiveOptions.ProductId.Value)
-                && (string.IsNullOrWhiteSpace(effectiveOptions.ProjectNumber)
-                    || string.Equals(item.ProjectNumber, effectiveOptions.ProjectNumber.Trim(), StringComparison.OrdinalIgnoreCase))
-                && (string.IsNullOrWhiteSpace(effectiveOptions.WorkPackage)
-                    || string.Equals(item.WorkPackage, effectiveOptions.WorkPackage.Trim(), StringComparison.OrdinalIgnoreCase))
-                && (!effectiveOptions.LifecycleState.HasValue || item.LifecycleState == effectiveOptions.LifecycleState.Value))
+                MatchesValue(filter.ProductIds, item.ProductId)
+                && MatchesString(filter.ProjectNumbers, item.ProjectNumber)
+                && MatchesString(filter.WorkPackages, item.WorkPackage)
+                && MatchesValue(filter.LifecycleStates, item.LifecycleState))
             .ToList();
 
         return Order(filtered, effectiveOptions).ToList();
@@ -25,20 +26,18 @@ internal static class PortfolioReadModelFiltering
 
     public static IReadOnlyList<PortfolioComparisonItemDto> Apply(
         IEnumerable<PortfolioComparisonItemDto> items,
+        FilterContext filter,
         PortfolioReadQueryOptions? options)
     {
         ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(filter);
 
         var effectiveOptions = options ?? new PortfolioReadQueryOptions();
         var filtered = items.Where(item =>
-                (!effectiveOptions.ProductId.HasValue || item.ProductId == effectiveOptions.ProductId.Value)
-                && (string.IsNullOrWhiteSpace(effectiveOptions.ProjectNumber)
-                    || string.Equals(item.ProjectNumber, effectiveOptions.ProjectNumber.Trim(), StringComparison.OrdinalIgnoreCase))
-                && (string.IsNullOrWhiteSpace(effectiveOptions.WorkPackage)
-                    || string.Equals(item.WorkPackage, effectiveOptions.WorkPackage.Trim(), StringComparison.OrdinalIgnoreCase))
-                && (!effectiveOptions.LifecycleState.HasValue
-                    || item.CurrentLifecycleState == effectiveOptions.LifecycleState.Value
-                    || item.PreviousLifecycleState == effectiveOptions.LifecycleState.Value))
+                MatchesValue(filter.ProductIds, item.ProductId)
+                && MatchesString(filter.ProjectNumbers, item.ProjectNumber)
+                && MatchesString(filter.WorkPackages, item.WorkPackage)
+                && MatchesAny(filter.LifecycleStates, item.CurrentLifecycleState, item.PreviousLifecycleState))
             .ToList();
 
         return Order(filtered, effectiveOptions).ToList();
@@ -46,20 +45,18 @@ internal static class PortfolioReadModelFiltering
 
     public static IReadOnlyList<PortfolioScopedTrendDto> Apply(
         IEnumerable<PortfolioScopedTrendDto> items,
+        FilterContext filter,
         PortfolioReadQueryOptions? options)
     {
         ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(filter);
 
         var effectiveOptions = options ?? new PortfolioReadQueryOptions();
         var filtered = items.Where(item =>
-                (!effectiveOptions.ProductId.HasValue || item.ProductId == effectiveOptions.ProductId.Value)
-                && (string.IsNullOrWhiteSpace(effectiveOptions.ProjectNumber)
-                    || string.Equals(item.ProjectNumber, effectiveOptions.ProjectNumber.Trim(), StringComparison.OrdinalIgnoreCase))
-                && (string.IsNullOrWhiteSpace(effectiveOptions.WorkPackage)
-                    || string.Equals(item.WorkPackage, effectiveOptions.WorkPackage.Trim(), StringComparison.OrdinalIgnoreCase))
-                && (!effectiveOptions.LifecycleState.HasValue
-                    || item.CurrentLifecycleState == effectiveOptions.LifecycleState.Value
-                    || item.PreviousLifecycleState == effectiveOptions.LifecycleState.Value))
+                MatchesValue(filter.ProductIds, item.ProductId)
+                && MatchesString(filter.ProjectNumbers, item.ProjectNumber)
+                && MatchesString(filter.WorkPackages, item.WorkPackage)
+                && MatchesAny(filter.LifecycleStates, item.CurrentLifecycleState, item.PreviousLifecycleState))
             .ToList();
 
         return Order(filtered, effectiveOptions).ToList();
@@ -67,24 +64,70 @@ internal static class PortfolioReadModelFiltering
 
     public static IReadOnlyList<PortfolioDecisionSignalDto> Apply(
         IEnumerable<PortfolioDecisionSignalDto> items,
+        FilterContext filter,
         PortfolioReadQueryOptions? options)
     {
         ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(filter);
 
-        var effectiveOptions = options ?? new PortfolioReadQueryOptions();
         return items.Where(item =>
-                (!effectiveOptions.ProductId.HasValue || item.ProductId == effectiveOptions.ProductId.Value)
-                && (string.IsNullOrWhiteSpace(effectiveOptions.ProjectNumber)
-                    || string.Equals(item.ProjectNumber, effectiveOptions.ProjectNumber.Trim(), StringComparison.OrdinalIgnoreCase))
-                && (string.IsNullOrWhiteSpace(effectiveOptions.WorkPackage)
-                    || string.Equals(item.WorkPackage, effectiveOptions.WorkPackage.Trim(), StringComparison.OrdinalIgnoreCase))
-                && (!effectiveOptions.LifecycleState.HasValue || item.LifecycleState == effectiveOptions.LifecycleState.Value))
+                MatchesNullableValue(filter.ProductIds, item.ProductId)
+                && MatchesString(filter.ProjectNumbers, item.ProjectNumber)
+                && MatchesString(filter.WorkPackages, item.WorkPackage)
+                && MatchesNullableValue(filter.LifecycleStates, item.LifecycleState))
             .OrderBy(item => item.Type)
             .ThenBy(item => item.ProductId ?? int.MinValue)
             .ThenBy(item => item.ProjectNumber ?? string.Empty, StringComparer.OrdinalIgnoreCase)
             .ThenBy(item => item.WorkPackage ?? string.Empty, StringComparer.OrdinalIgnoreCase)
             .ThenByDescending(item => item.SnapshotTimestamp ?? DateTimeOffset.MinValue)
             .ToList();
+    }
+
+    private static bool MatchesValue<T>(FilterSelection<T> selection, T value)
+    {
+        if (selection.IsAll)
+        {
+            return true;
+        }
+
+        return selection.Values.Contains(value);
+    }
+
+    private static bool MatchesNullableValue<T>(FilterSelection<T> selection, T? value)
+        where T : struct
+    {
+        if (selection.IsAll)
+        {
+            return true;
+        }
+
+        return value.HasValue && selection.Values.Contains(value.Value);
+    }
+
+    private static bool MatchesString(FilterSelection<string> selection, string? value)
+    {
+        if (selection.IsAll)
+        {
+            return true;
+        }
+
+        var selectedValues = selection.Values.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return !string.IsNullOrWhiteSpace(value)
+            && selectedValues.Contains(value.Trim());
+    }
+
+    private static bool MatchesAny<T>(FilterSelection<T> selection, params T?[] candidateValues)
+        where T : struct
+    {
+        if (selection.IsAll)
+        {
+            return true;
+        }
+
+        return candidateValues
+            .Where(candidateValue => candidateValue.HasValue)
+            .Select(candidateValue => candidateValue!.Value)
+            .Any(candidate => selection.Values.Contains(candidate));
     }
 
     private static IOrderedEnumerable<PortfolioSnapshotItemDto> Order(

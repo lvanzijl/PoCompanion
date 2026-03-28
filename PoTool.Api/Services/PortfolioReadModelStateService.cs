@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence;
+using PoTool.Core.Filters;
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Shared.Metrics;
@@ -8,15 +9,20 @@ namespace PoTool.Api.Services;
 
 public interface IPortfolioReadModelStateService
 {
-    Task<PortfolioReadModelState?> GetLatestStateAsync(int productOwnerId, CancellationToken cancellationToken);
+    Task<PortfolioReadModelState?> GetLatestStateAsync(
+        int productOwnerId,
+        FilterContext filter,
+        CancellationToken cancellationToken);
 
     Task<PortfolioReadModelHistoryState?> GetHistoryStateAsync(
         int productOwnerId,
+        FilterContext filter,
         PortfolioReadQueryOptions? options,
         CancellationToken cancellationToken);
 
     Task<PortfolioReadModelComparisonState?> GetComparisonStateAsync(
         int productOwnerId,
+        FilterContext filter,
         PortfolioReadQueryOptions? options,
         CancellationToken cancellationToken);
 }
@@ -57,7 +63,10 @@ public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateSer
         _productAggregationService = productAggregationService;
     }
 
-    public async Task<PortfolioReadModelState?> GetLatestStateAsync(int productOwnerId, CancellationToken cancellationToken)
+    public async Task<PortfolioReadModelState?> GetLatestStateAsync(
+        int productOwnerId,
+        FilterContext filter,
+        CancellationToken cancellationToken)
     {
         var portfolioContext = await LoadPortfolioContextAsync(productOwnerId, cancellationToken);
         if (portfolioContext is null)
@@ -65,13 +74,19 @@ public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateSer
             return null;
         }
 
-        var current = await _selectionService.GetLatestPortfolioSnapshotAsync(portfolioContext.ProductIds, cancellationToken);
+        var scopedProductIds = GetScopedProductIds(portfolioContext.ProductIds, filter.ProductIds);
+        if (scopedProductIds.Count == 0)
+        {
+            return null;
+        }
+
+        var current = await _selectionService.GetLatestPortfolioSnapshotAsync(scopedProductIds, cancellationToken);
         if (current is null)
         {
             return null;
         }
 
-        var previous = await _selectionService.GetPreviousPortfolioSnapshotAsync(portfolioContext.ProductIds, cancellationToken);
+        var previous = await _selectionService.GetPreviousPortfolioSnapshotAsync(scopedProductIds, cancellationToken);
 
         var portfolioAggregation = _productAggregationService.Compute(new ProductAggregationRequest(
             current.Snapshot.Items
@@ -96,6 +111,7 @@ public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateSer
 
     public async Task<PortfolioReadModelHistoryState?> GetHistoryStateAsync(
         int productOwnerId,
+        FilterContext filter,
         PortfolioReadQueryOptions? options,
         CancellationToken cancellationToken)
     {
@@ -106,11 +122,19 @@ public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateSer
             return null;
         }
 
+        var scopedProductIds = GetScopedProductIds(portfolioContext.ProductIds, filter.ProductIds);
+        if (scopedProductIds.Count == 0)
+        {
+            return null;
+        }
+
+        var (rangeStartUtc, rangeEndUtc) = ResolveDateRange(filter.Time, effectiveOptions);
+
         var snapshots = await _selectionService.GetPortfolioSnapshotsAsync(
-            portfolioContext.ProductIds,
+            scopedProductIds,
             effectiveOptions.SnapshotCount,
-            effectiveOptions.RangeStartUtc,
-            effectiveOptions.RangeEndUtc,
+            rangeStartUtc,
+            rangeEndUtc,
             cancellationToken,
             effectiveOptions.IncludeArchivedSnapshots);
 
@@ -121,9 +145,9 @@ public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateSer
 
         var archivedExcludedNotice = !effectiveOptions.IncludeArchivedSnapshots
             && await _selectionService.HasArchivedPortfolioSnapshotsAsync(
-                portfolioContext.ProductIds,
-                effectiveOptions.RangeStartUtc,
-                effectiveOptions.RangeEndUtc,
+                scopedProductIds,
+                rangeStartUtc,
+                rangeEndUtc,
                 cancellationToken);
 
         return new PortfolioReadModelHistoryState(
@@ -134,6 +158,7 @@ public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateSer
 
     public async Task<PortfolioReadModelComparisonState?> GetComparisonStateAsync(
         int productOwnerId,
+        FilterContext filter,
         PortfolioReadQueryOptions? options,
         CancellationToken cancellationToken)
     {
@@ -144,11 +169,19 @@ public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateSer
             return null;
         }
 
+        var scopedProductIds = GetScopedProductIds(portfolioContext.ProductIds, filter.ProductIds);
+        if (scopedProductIds.Count == 0)
+        {
+            return null;
+        }
+
+        var (rangeStartUtc, rangeEndUtc) = ResolveDateRange(filter.Time, effectiveOptions);
+
         var current = (await _selectionService.GetPortfolioSnapshotsAsync(
-                portfolioContext.ProductIds,
+                scopedProductIds,
                 count: 1,
-                effectiveOptions.RangeStartUtc,
-                effectiveOptions.RangeEndUtc,
+                rangeStartUtc,
+                rangeEndUtc,
                 cancellationToken,
                 effectiveOptions.IncludeArchivedSnapshots))
             .FirstOrDefault();
@@ -161,12 +194,12 @@ public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateSer
         if (effectiveOptions.CompareToSnapshotId.HasValue)
         {
             comparison = await _selectionService.GetPortfolioSnapshotByIdAsync(
-                portfolioContext.ProductIds,
+                scopedProductIds,
                 effectiveOptions.CompareToSnapshotId.Value,
                 cancellationToken,
                 effectiveOptions.IncludeArchivedSnapshots);
 
-            if (comparison is not null && !IsWithinRange(comparison.Snapshot.Timestamp, effectiveOptions.RangeStartUtc, effectiveOptions.RangeEndUtc))
+            if (comparison is not null && !IsWithinRange(comparison.Snapshot.Timestamp, rangeStartUtc, rangeEndUtc))
             {
                 comparison = null;
             }
@@ -174,10 +207,10 @@ public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateSer
         else
         {
             comparison = (await _selectionService.GetPortfolioSnapshotsAsync(
-                    portfolioContext.ProductIds,
+                    scopedProductIds,
                     count: 2,
-                    effectiveOptions.RangeStartUtc,
-                    effectiveOptions.RangeEndUtc,
+                    rangeStartUtc,
+                    rangeEndUtc,
                     cancellationToken,
                     effectiveOptions.IncludeArchivedSnapshots))
                 .Skip(1)
@@ -186,9 +219,9 @@ public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateSer
 
         var archivedExcludedNotice = !effectiveOptions.IncludeArchivedSnapshots
             && await _selectionService.HasArchivedPortfolioSnapshotsAsync(
-                portfolioContext.ProductIds,
-                effectiveOptions.RangeStartUtc,
-                effectiveOptions.RangeEndUtc,
+                scopedProductIds,
+                rangeStartUtc,
+                rangeEndUtc,
                 cancellationToken);
 
         return new PortfolioReadModelComparisonState(
@@ -221,6 +254,20 @@ public sealed class PortfolioReadModelStateService : IPortfolioReadModelStateSer
         DateTimeOffset? rangeEndUtc)
         => (!rangeStartUtc.HasValue || timestamp >= rangeStartUtc.Value)
            && (!rangeEndUtc.HasValue || timestamp <= rangeEndUtc.Value);
+
+    private static IReadOnlyList<int> GetScopedProductIds(
+        IReadOnlyList<int> ownerProductIds,
+        FilterSelection<int> productSelection)
+        => productSelection.IsAll
+            ? ownerProductIds
+            : ownerProductIds.Where(productSelection.Values.Contains).ToArray();
+
+    private static (DateTimeOffset? RangeStartUtc, DateTimeOffset? RangeEndUtc) ResolveDateRange(
+        FilterTimeSelection time,
+        PortfolioReadQueryOptions options)
+        => time.Mode == FilterTimeSelectionMode.DateRange
+            ? (time.RangeStartUtc, time.RangeEndUtc)
+            : (options.RangeStartUtc, options.RangeEndUtc);
 
     private sealed record PortfolioOwnerContext(
         IReadOnlyList<int> ProductIds,

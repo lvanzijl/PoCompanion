@@ -406,7 +406,7 @@ public class MetricsController : ControllerBase
     /// Gets deterministic decision-support signals derived from persisted portfolio history.
     /// </summary>
     [HttpGet("/api/portfolio/signals")]
-    public async Task<ActionResult<IReadOnlyList<PortfolioDecisionSignalDto>>> GetPortfolioSignals(
+    public async Task<ActionResult<PortfolioSignalsDto>> GetPortfolioSignals(
         [FromQuery][Required] int productOwnerId,
         [FromQuery] int? productId = null,
         [FromQuery] string? projectNumber = null,

@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-28",
+    "type": "Changed",
+    "title": "Portfolio reads now echo canonical filter resolution",
+    "impact": "Portfolio read responses now return requested versus effective filter scope and invalid filter fields so later UI work can surface deterministic backend filtering.",
+    "area": "Trends",
+    "link": "/home/portfolio-progress"
+  },
+  {
     "date": "2026-03-27",
     "type": "Changed",
     "title": "Portfolio CDC history labels are now easier to scan",

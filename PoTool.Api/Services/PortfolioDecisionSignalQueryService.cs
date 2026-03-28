@@ -10,39 +10,56 @@ public sealed class PortfolioDecisionSignalQueryService
     private readonly IPortfolioDecisionSignalService _decisionSignalService;
     private readonly IPortfolioSnapshotComparisonService _comparisonService;
     private readonly IPortfolioReadModelMapper _mapper;
+    private readonly PortfolioFilterResolutionService _filterResolutionService;
 
     public PortfolioDecisionSignalQueryService(
         IPortfolioReadModelStateService stateService,
         IPortfolioTrendAnalysisService trendAnalysisService,
         IPortfolioDecisionSignalService decisionSignalService,
         IPortfolioSnapshotComparisonService comparisonService,
-        IPortfolioReadModelMapper mapper)
+        IPortfolioReadModelMapper mapper,
+        PortfolioFilterResolutionService filterResolutionService)
     {
         _stateService = stateService;
         _trendAnalysisService = trendAnalysisService;
         _decisionSignalService = decisionSignalService;
         _comparisonService = comparisonService;
         _mapper = mapper;
+        _filterResolutionService = filterResolutionService;
     }
 
-    public async Task<IReadOnlyList<PortfolioDecisionSignalDto>> GetAsync(
+    public async Task<PortfolioSignalsDto> GetAsync(
         int productOwnerId,
         PortfolioReadQueryOptions? options,
         CancellationToken cancellationToken)
     {
-        var historyState = await _stateService.GetHistoryStateAsync(productOwnerId, options, cancellationToken);
-        var comparisonState = await _stateService.GetComparisonStateAsync(productOwnerId, options, cancellationToken);
+        var resolution = await _filterResolutionService.ResolveAsync(
+            productOwnerId,
+            options,
+            nameof(PortfolioDecisionSignalQueryService),
+            cancellationToken);
+
+        var historyState = await _stateService.GetHistoryStateAsync(productOwnerId, resolution.EffectiveFilter, options, cancellationToken);
+        var comparisonState = await _stateService.GetComparisonStateAsync(productOwnerId, resolution.EffectiveFilter, options, cancellationToken);
         if (historyState is null || comparisonState is null)
         {
-            return Array.Empty<PortfolioDecisionSignalDto>();
+            return new PortfolioSignalsDto
+            {
+                Signals = Array.Empty<PortfolioDecisionSignalDto>(),
+                Filter = PortfolioFilterResolutionService.ToMetadata(resolution)
+            };
         }
 
         if (historyState.Snapshots.Count < 2 || comparisonState.ComparisonSnapshot is null)
         {
-            return Array.Empty<PortfolioDecisionSignalDto>();
+            return new PortfolioSignalsDto
+            {
+                Signals = Array.Empty<PortfolioDecisionSignalDto>(),
+                Filter = PortfolioFilterResolutionService.ToMetadata(resolution)
+            };
         }
 
-        var trend = _trendAnalysisService.BuildTrend(historyState.Snapshots, historyState.ProductNames, options) with
+        var trend = _trendAnalysisService.BuildTrend(historyState.Snapshots, historyState.ProductNames, resolution.EffectiveFilter, options) with
         {
             ArchivedSnapshotsExcludedNotice = historyState.ArchivedSnapshotsExcludedNotice
         };
@@ -64,11 +81,17 @@ public sealed class PortfolioDecisionSignalQueryService
             Items = comparisonResult.Items
                 .Select(item => _mapper.ToComparisonItemDto(item, comparisonState.ProductNames))
                 .ToArray(),
-            HasData = true
+            HasData = true,
+            Filter = PortfolioFilterResolutionService.ToMetadata(resolution)
         };
 
-        return PortfolioReadModelFiltering.Apply(
-            _decisionSignalService.BuildSignals(trend, comparisonDto),
-            options);
+        return new PortfolioSignalsDto
+        {
+            Signals = PortfolioReadModelFiltering.Apply(
+                _decisionSignalService.BuildSignals(trend, comparisonDto),
+                resolution.EffectiveFilter,
+                options),
+            Filter = PortfolioFilterResolutionService.ToMetadata(resolution)
+        };
     }
 }

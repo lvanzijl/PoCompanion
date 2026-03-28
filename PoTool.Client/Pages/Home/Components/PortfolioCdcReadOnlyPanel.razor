@@ -557,7 +557,7 @@
                 rangeStartUtc: null,
                 rangeEndUtc: null,
                 _includeArchivedSnapshots);
-            _signals = await MetricsClient.GetPortfolioSignalsAsync(
+            var signalResponse = await MetricsClient.GetPortfolioSignalsAsync(
                 activeProfile.Id,
                 _productId,
                 NullIfWhiteSpace(_projectNumber),
@@ -571,6 +571,7 @@
                 rangeEndUtc: null,
                 _includeArchivedSnapshots,
                 _compareToSnapshotId);
+            _signals = signalResponse.Signals;
 
             if (_compareToSnapshotId.HasValue
                 && _trend?.Snapshots.All(snapshot => snapshot.SnapshotId != _compareToSnapshotId.Value) == true)
