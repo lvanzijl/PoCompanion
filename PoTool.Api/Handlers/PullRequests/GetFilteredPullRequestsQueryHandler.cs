@@ -27,34 +27,18 @@ public sealed class GetFilteredPullRequestsQueryHandler : IQueryHandler<GetFilte
         GetFilteredPullRequestsQuery query,
         CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Handling GetFilteredPullRequestsQuery");
+        _logger.LogInformation(
+            "Handling GetFilteredPullRequestsQuery with repository scope {RepositoryCount}, range [{RangeStartUtc}, {RangeEndUtc}]",
+            query.EffectiveFilter.RepositoryScope.Count,
+            query.EffectiveFilter.RangeStartUtc,
+            query.EffectiveFilter.RangeEndUtc);
 
-        // Live-only mode: use injected provider directly
-        var allPrs = await _pullRequestReadProvider.GetByProductIdsAsync(query.ProductIds, query.FromDate, cancellationToken);
+        var allPrs = await _pullRequestReadProvider.GetByRepositoryNamesAsync(
+            query.EffectiveFilter.RepositoryScope,
+            query.EffectiveFilter.RangeStartUtc,
+            query.EffectiveFilter.RangeEndUtc,
+            cancellationToken);
 
-        // Apply filters
-        var filtered = allPrs.AsEnumerable();
-
-        if (!string.IsNullOrWhiteSpace(query.IterationPath))
-        {
-            filtered = filtered.Where(pr => pr.IterationPath.Contains(query.IterationPath, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (!string.IsNullOrWhiteSpace(query.CreatedBy))
-        {
-            filtered = filtered.Where(pr => pr.CreatedBy.Equals(query.CreatedBy, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (query.ToDate.HasValue)
-        {
-            filtered = filtered.Where(pr => pr.CreatedDate <= query.ToDate.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(query.Status))
-        {
-            filtered = filtered.Where(pr => pr.Status.Equals(query.Status, StringComparison.OrdinalIgnoreCase));
-        }
-
-        return filtered.ToList();
+        return PullRequestFiltering.ApplyLocalSelections(allPrs, query.EffectiveFilter);
     }
 }

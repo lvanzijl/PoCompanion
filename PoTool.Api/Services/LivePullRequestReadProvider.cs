@@ -110,6 +110,45 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         return allPullRequests;
     }
 
+    public async Task<IEnumerable<PullRequestDto>> GetByRepositoryNamesAsync(
+        IReadOnlyList<string> repositoryNames,
+        DateTimeOffset? fromDate = null,
+        DateTimeOffset? toDate = null,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogWarning("LivePullRequestReadProvider.{Method} called — may indicate cache bypass", nameof(GetByRepositoryNamesAsync));
+        _logger.LogDebug(
+            "LivePullRequestReadProvider: Fetching pull requests for repositories {RepositoryNames} (fromDate: {FromDate}, toDate: {ToDate})",
+            string.Join(", ", repositoryNames),
+            fromDate,
+            toDate);
+
+        if (repositoryNames.Count == 0)
+        {
+            return Array.Empty<PullRequestDto>();
+        }
+
+        var allPullRequests = new List<PullRequestDto>();
+        foreach (var repositoryName in repositoryNames)
+        {
+            try
+            {
+                var repositoryPullRequests = await _tfsClient.GetPullRequestsAsync(
+                    repositoryName,
+                    fromDate,
+                    toDate,
+                    cancellationToken);
+                allPullRequests.AddRange(repositoryPullRequests);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to fetch PRs from repository {RepositoryName}", repositoryName);
+            }
+        }
+
+        return allPullRequests;
+    }
+
     public async Task<PullRequestDto?> GetByIdAsync(int pullRequestId, CancellationToken cancellationToken = default)
     {
         _logger.LogWarning("LivePullRequestReadProvider.{Method} called — may indicate cache bypass", nameof(GetByIdAsync));

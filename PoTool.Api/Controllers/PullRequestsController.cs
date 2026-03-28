@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
+using PoTool.Api.Services;
 using PoTool.Shared.PullRequests;
 using PoTool.Core.PullRequests.Queries;
 namespace PoTool.Api.Controllers;
@@ -13,13 +14,16 @@ namespace PoTool.Api.Controllers;
 public class PullRequestsController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly PullRequestFilterResolutionService _filterResolutionService;
     private readonly ILogger<PullRequestsController> _logger;
 
     public PullRequestsController(
         IMediator mediator,
+        PullRequestFilterResolutionService filterResolutionService,
         ILogger<PullRequestsController> logger)
     {
         _mediator = mediator;
+        _filterResolutionService = filterResolutionService;
         _logger = logger;
     }
 
@@ -91,10 +95,10 @@ public class PullRequestsController : ControllerBase
     /// Gets aggregated metrics for pull requests.
     /// </summary>
     /// <param name="productIds">Optional comma-separated list of product IDs to filter by</param>
-    /// <param name="fromDate">Optional start date filter (ISO 8601 format). Defaults to 6 months ago if not specified.</param>
+    /// <param name="fromDate">Optional start date filter (ISO 8601 format). When omitted, no implicit time constraint is applied.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     [HttpGet("metrics")]
-    public async Task<ActionResult<IEnumerable<PullRequestMetricsDto>>> GetMetrics(
+    public async Task<ActionResult<PullRequestQueryResponseDto<IReadOnlyList<PullRequestMetricsDto>>>> GetMetrics(
         [FromQuery] string? productIds = null,
         [FromQuery] DateTimeOffset? fromDate = null,
         CancellationToken cancellationToken = default)
@@ -107,8 +111,19 @@ public class PullRequestsController : ControllerBase
                 return BadRequest(errorMessage);
             }
 
-            var metrics = await _mediator.Send(new GetPullRequestMetricsQuery(productIdsList, fromDate), cancellationToken);
-            return Ok(metrics);
+            var resolution = await _filterResolutionService.ResolveAsync(
+                new PullRequestFilterBoundaryRequest(
+                    ProductIds: productIdsList,
+                    RangeStartUtc: fromDate),
+                nameof(GetMetrics),
+                cancellationToken);
+
+            var metrics = (await _mediator.Send(
+                    new GetPullRequestMetricsQuery(resolution.EffectiveFilter),
+                    cancellationToken))
+                .ToList();
+
+            return Ok(PullRequestFilterResolutionService.ToResponse<IReadOnlyList<PullRequestMetricsDto>>(metrics, resolution));
         }
         catch (Exception ex)
         {
@@ -128,7 +143,7 @@ public class PullRequestsController : ControllerBase
     /// <param name="status">Optional status filter</param>
     /// <param name="cancellationToken">Cancellation token</param>
     [HttpGet("filter")]
-    public async Task<ActionResult<IEnumerable<PullRequestDto>>> GetFiltered(
+    public async Task<ActionResult<PullRequestQueryResponseDto<IReadOnlyList<PullRequestDto>>>> GetFiltered(
         [FromQuery] string? productIds = null,
         [FromQuery] string? iterationPath = null,
         [FromQuery] string? createdBy = null,
@@ -145,9 +160,23 @@ public class PullRequestsController : ControllerBase
                 return BadRequest(errorMessage);
             }
 
-            var query = new GetFilteredPullRequestsQuery(productIdsList, iterationPath, createdBy, fromDate, toDate, status);
-            var pullRequests = await _mediator.Send(query, cancellationToken);
-            return Ok(pullRequests);
+            var resolution = await _filterResolutionService.ResolveAsync(
+                new PullRequestFilterBoundaryRequest(
+                    ProductIds: productIdsList,
+                    IterationPath: iterationPath,
+                    CreatedBy: createdBy,
+                    Status: status,
+                    RangeStartUtc: fromDate,
+                    RangeEndUtc: toDate),
+                nameof(GetFiltered),
+                cancellationToken);
+
+            var pullRequests = (await _mediator.Send(
+                    new GetFilteredPullRequestsQuery(resolution.EffectiveFilter),
+                    cancellationToken))
+                .ToList();
+
+            return Ok(PullRequestFilterResolutionService.ToResponse<IReadOnlyList<PullRequestDto>>(pullRequests, resolution));
         }
         catch (Exception ex)
         {
@@ -225,7 +254,7 @@ public class PullRequestsController : ControllerBase
     /// <param name="teamId">Optional team ID; resolved to linked products when productIds is null.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpGet("sprint-trends")]
-    public async Task<ActionResult<GetPrSprintTrendsResponse>> GetSprintTrends(
+    public async Task<ActionResult<PullRequestQueryResponseDto<GetPrSprintTrendsResponse>>> GetSprintTrends(
         [FromQuery] List<int> sprintIds,
         [FromQuery] string? productIds = null,
         [FromQuery] int? teamId = null,
@@ -244,11 +273,19 @@ public class PullRequestsController : ControllerBase
                 return BadRequest(errorMessage);
             }
 
-            var result = await _mediator.Send(
-                new GetPrSprintTrendsQuery(sprintIds, productIdsList, teamId),
+            var resolution = await _filterResolutionService.ResolveAsync(
+                new PullRequestFilterBoundaryRequest(
+                    ProductIds: productIdsList,
+                    TeamId: teamId,
+                    SprintIds: sprintIds),
+                nameof(GetSprintTrends),
                 cancellationToken);
 
-            return Ok(result);
+            var result = await _mediator.Send(
+                new GetPrSprintTrendsQuery(resolution.EffectiveFilter),
+                cancellationToken);
+
+            return Ok(PullRequestFilterResolutionService.ToResponse(result, resolution));
         }
         catch (Exception ex)
         {
@@ -300,12 +337,12 @@ public class PullRequestsController : ControllerBase
     /// All data comes from the local cache — no live TFS calls.
     /// </summary>
     /// <param name="teamId">Optional team ID. When omitted, all PRs in range are returned.</param>
-    /// <param name="fromDate">Start of the date range. Defaults to 6 months ago.</param>
-    /// <param name="toDate">End of the date range. Defaults to now.</param>
+    /// <param name="fromDate">Optional start of the date range. When omitted, no implicit time constraint is applied.</param>
+    /// <param name="toDate">Optional end of the date range. When omitted, no implicit time constraint is applied.</param>
     /// <param name="repositoryName">Optional repository filter.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpGet("insights")]
-    public async Task<ActionResult<PullRequestInsightsDto>> GetInsights(
+    public async Task<ActionResult<PullRequestQueryResponseDto<PullRequestInsightsDto>>> GetInsights(
         [FromQuery] int? teamId = null,
         [FromQuery] DateTimeOffset? fromDate = null,
         [FromQuery] DateTimeOffset? toDate = null,
@@ -314,14 +351,20 @@ public class PullRequestsController : ControllerBase
     {
         try
         {
-            var from = fromDate ?? DateTimeOffset.UtcNow.AddMonths(-6);
-            var to   = toDate   ?? DateTimeOffset.UtcNow;
-
-            var result = await _mediator.Send(
-                new GetPullRequestInsightsQuery(teamId, from, to, repositoryName),
+            var resolution = await _filterResolutionService.ResolveAsync(
+                new PullRequestFilterBoundaryRequest(
+                    TeamId: teamId,
+                    RepositoryName: repositoryName,
+                    RangeStartUtc: fromDate,
+                    RangeEndUtc: toDate),
+                nameof(GetInsights),
                 cancellationToken);
 
-            return Ok(result);
+            var result = await _mediator.Send(
+                new GetPullRequestInsightsQuery(resolution.EffectiveFilter),
+                cancellationToken);
+
+            return Ok(PullRequestFilterResolutionService.ToResponse(result, resolution));
         }
         catch (Exception ex)
         {
@@ -336,12 +379,12 @@ public class PullRequestsController : ControllerBase
     /// All data comes from the local cache — no live TFS calls.
     /// </summary>
     /// <param name="teamId">Optional team ID. When omitted, PRs across all teams are included.</param>
-    /// <param name="sprintId">Optional sprint ID. When provided, date range is derived from sprint boundaries.</param>
-    /// <param name="fromDate">Start of the date range. Defaults to 6 months ago unless sprintId is supplied.</param>
-    /// <param name="toDate">End of the date range. Defaults to now unless sprintId is supplied.</param>
+    /// <param name="sprintId">Optional sprint ID. When provided, the effective time range is derived from sprint boundaries.</param>
+    /// <param name="fromDate">Optional start of the date range. When omitted, no implicit time constraint is applied unless sprintId is supplied.</param>
+    /// <param name="toDate">Optional end of the date range. When omitted, no implicit time constraint is applied unless sprintId is supplied.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpGet("delivery-insights")]
-    public async Task<ActionResult<PrDeliveryInsightsDto>> GetDeliveryInsights(
+    public async Task<ActionResult<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>> GetDeliveryInsights(
         [FromQuery] int? teamId = null,
         [FromQuery] int? sprintId = null,
         [FromQuery] DateTimeOffset? fromDate = null,
@@ -350,14 +393,20 @@ public class PullRequestsController : ControllerBase
     {
         try
         {
-            var from = fromDate ?? DateTimeOffset.UtcNow.AddMonths(-6);
-            var to   = toDate   ?? DateTimeOffset.UtcNow;
-
-            var result = await _mediator.Send(
-                new GetPrDeliveryInsightsQuery(teamId, sprintId, from, to),
+            var resolution = await _filterResolutionService.ResolveAsync(
+                new PullRequestFilterBoundaryRequest(
+                    TeamId: teamId,
+                    SprintId: sprintId,
+                    RangeStartUtc: fromDate,
+                    RangeEndUtc: toDate),
+                nameof(GetDeliveryInsights),
                 cancellationToken);
 
-            return Ok(result);
+            var result = await _mediator.Send(
+                new GetPrDeliveryInsightsQuery(resolution.EffectiveFilter),
+                cancellationToken);
+
+            return Ok(PullRequestFilterResolutionService.ToResponse(result, resolution));
         }
         catch (Exception ex)
         {

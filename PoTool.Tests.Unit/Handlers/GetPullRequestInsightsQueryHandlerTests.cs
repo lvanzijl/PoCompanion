@@ -5,6 +5,8 @@ using Moq;
 using PoTool.Api.Handlers.PullRequests;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Core.Filters;
+using PoTool.Core.PullRequests.Filters;
 using PoTool.Core.PullRequests.Queries;
 
 namespace PoTool.Tests.Unit.Handlers;
@@ -178,13 +180,23 @@ public class GetPullRequestInsightsQueryHandlerTests
     private GetPullRequestInsightsQuery MakeQuery(
         int? teamId = null,
         string? repository = null,
+        IReadOnlyList<int>? productIds = null,
         DateTimeOffset? from = null,
         DateTimeOffset? to   = null) =>
-        new(
-            TeamId:         teamId,
-            FromDate:       from ?? RangeFrom,
-            ToDate:         to   ?? RangeTo,
-            RepositoryName: repository);
+        new(new PullRequestEffectiveFilter(
+            new PullRequestFilterContext(
+                productIds is { Count: > 0 } ? FilterSelection<int>.Selected(productIds) : FilterSelection<int>.All(),
+                teamId.HasValue ? FilterSelection<int>.Selected([teamId.Value]) : FilterSelection<int>.All(),
+                string.IsNullOrWhiteSpace(repository) ? FilterSelection<string>.All() : FilterSelection<string>.Selected([repository]),
+                FilterSelection<string>.All(),
+                FilterSelection<string>.All(),
+                FilterSelection<string>.All(),
+                FilterTimeSelection.DateRange(from ?? RangeFrom, to ?? RangeTo)),
+            string.IsNullOrWhiteSpace(repository) ? ["Repo-A", "Repo-B", "Repo-Team10", "Backend", "Frontend"] : [repository],
+            from ?? RangeFrom,
+            to ?? RangeTo,
+            null,
+            Array.Empty<int>()));
 
     // ── Tests ─────────────────────────────────────────────────────────────────
 
@@ -226,7 +238,7 @@ public class GetPullRequestInsightsQueryHandlerTests
         await AddPrAsync(2, "completed", inRange, inRange.AddDays(3), repository: "Repo-Team10", productId: 200); // different product
         await AddPrAsync(3, "completed", inRange, inRange.AddDays(3), repository: "Repo-Unknown");                // unscoped PR
 
-        var result = await _handler.Handle(MakeQuery(teamId: 10), CancellationToken.None);
+        var result = await _handler.Handle(MakeQuery(teamId: 10, productIds: [100]), CancellationToken.None);
 
         Assert.AreEqual(1, result.Summary.TotalPrs);
         Assert.HasCount(1, result.ScatterPoints);
@@ -243,7 +255,7 @@ public class GetPullRequestInsightsQueryHandlerTests
         await AddPrAsync(1, "completed", inRange, inRange.AddDays(3), productId: 100);
         await AddPrAsync(2, "completed", inRange, inRange.AddDays(2), productId: 999);
 
-        var result = await _handler.Handle(MakeQuery(teamId: 10), CancellationToken.None);
+        var result = await _handler.Handle(MakeQuery(teamId: 10, productIds: [100]), CancellationToken.None);
 
         Assert.AreEqual(1, result.Summary.TotalPrs);
         Assert.AreEqual(1, result.ScatterPoints[0].Id);
@@ -502,7 +514,7 @@ public class GetPullRequestInsightsQueryHandlerTests
         var d = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
         await AddPrAsync(42, "completed", d, d.AddDays(2), repository: "MyRepo");
 
-        var result = await _handler.Handle(MakeQuery(), CancellationToken.None);
+        var result = await _handler.Handle(MakeQuery(repository: "MyRepo"), CancellationToken.None);
 
         var point = result.ScatterPoints.Single();
         Assert.AreEqual(
@@ -569,7 +581,7 @@ public class GetPullRequestInsightsQueryHandlerTests
         var d = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
         await AddPrAsync(5, "abandoned", d, d.AddDays(1), repository: "Svc");
 
-        var result = await _handler.Handle(MakeQuery(), CancellationToken.None);
+        var result = await _handler.Handle(MakeQuery(repository: "Svc"), CancellationToken.None);
 
         Assert.AreEqual(
             "http://tfs/Collection/Proj/_git/Svc/pullrequest/5",

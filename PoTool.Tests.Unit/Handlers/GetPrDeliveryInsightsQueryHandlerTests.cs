@@ -5,6 +5,8 @@ using Moq;
 using PoTool.Api.Handlers.PullRequests;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Core.Filters;
+using PoTool.Core.PullRequests.Filters;
 using PoTool.Core.PullRequests.Queries;
 using PoTool.Core.WorkItems;
 
@@ -63,7 +65,8 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         string status = "completed",
         DateTimeOffset? createdDate = null,
         DateTimeOffset? completedDate = null,
-        string repository = "Repo-A")
+        string repository = "Repo-A",
+        int? productId = null)
     {
         var created = createdDate ?? RangeFrom.AddDays(1);
         _context.PullRequests.Add(new PullRequestEntity
@@ -80,6 +83,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
             IterationPath  = @"\Team\Sprint 1",
             SourceBranch   = "refs/heads/feature",
             TargetBranch   = "refs/heads/main",
+            ProductId      = productId,
             RetrievedAt    = DateTimeOffset.UtcNow
         });
         await _context.SaveChangesAsync();
@@ -136,12 +140,42 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         await _context.SaveChangesAsync();
     }
 
+    private static GetPrDeliveryInsightsQuery MakeQuery(
+        int? teamId = null,
+        int? sprintId = null,
+        IReadOnlyList<int>? productIds = null,
+        IReadOnlyList<string>? repositoryScope = null,
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null)
+    {
+        var effectiveFrom = from ?? RangeFrom;
+        var effectiveTo = to ?? RangeTo;
+        var time = sprintId.HasValue
+            ? FilterTimeSelection.Sprint(sprintId.Value)
+            : FilterTimeSelection.DateRange(effectiveFrom, effectiveTo);
+
+        return new GetPrDeliveryInsightsQuery(new PullRequestEffectiveFilter(
+            new PullRequestFilterContext(
+                productIds is { Count: > 0 } ? FilterSelection<int>.Selected(productIds) : FilterSelection<int>.All(),
+                teamId.HasValue ? FilterSelection<int>.Selected([teamId.Value]) : FilterSelection<int>.All(),
+                FilterSelection<string>.All(),
+                FilterSelection<string>.All(),
+                FilterSelection<string>.All(),
+                FilterSelection<string>.All(),
+                time),
+            repositoryScope ?? ["Repo-A", "Repo-B"],
+            effectiveFrom,
+            effectiveTo,
+            sprintId,
+            Array.Empty<int>()));
+    }
+
     // ── Tests ─────────────────────────────────────────────────────────────────
 
     [TestMethod]
     public async Task Handle_NoPrs_ReturnsEmptyResult()
     {
-        var query = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.AreEqual(0, result.CategorySummary.TotalPrs);
@@ -157,7 +191,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         // PR created well before the range
         await AddPrAsync(1, createdDate: RangeFrom.AddDays(-30));
 
-        var query = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.AreEqual(0, result.CategorySummary.TotalPrs);
@@ -168,7 +202,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
     {
         await AddPrAsync(1, createdDate: RangeFrom.AddDays(1));
 
-        var query = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.AreEqual(1, result.CategorySummary.TotalPrs);
@@ -186,7 +220,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         await AddPrAsync(1, createdDate: RangeFrom.AddDays(1));
         await AddWorkItemLinkAsync(1, 999);
 
-        var query = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.AreEqual(1, result.CategorySummary.TotalPrs);
@@ -210,7 +244,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         await AddPrAsync(1, createdDate: RangeFrom.AddDays(1));
         await AddWorkItemLinkAsync(1, 300);
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.AreEqual(1, result.CategorySummary.TotalPrs);
@@ -253,7 +287,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         await AddPrAsync(1, createdDate: RangeFrom.AddDays(1));
         await AddWorkItemLinkAsync(1, 200);
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.AreEqual("DeliveryMapped", result.CategorySummary.DeliveryMappedCount == 1 ? "DeliveryMapped" : "Other");
@@ -269,7 +303,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         await AddPrAsync(1, createdDate: RangeFrom.AddDays(1));
         await AddWorkItemLinkAsync(1, 500);
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.AreEqual(1, result.CategorySummary.BugCount);
@@ -286,7 +320,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         await AddPrAsync(1, createdDate: RangeFrom.AddDays(1));
         await AddWorkItemLinkAsync(1, 300);
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.AreEqual(1, result.CategorySummary.DisturbanceCount);
@@ -308,7 +342,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         await AddWorkItemLinkAsync(1, 300);
         await AddWorkItemLinkAsync(1, 500);
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // DeliveryMapped takes priority
@@ -343,7 +377,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         await AddPrAsync(5, createdDate: RangeFrom.AddDays(1));
         // No link — Unmapped
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.AreEqual(5, result.CategorySummary.TotalPrs);
@@ -374,7 +408,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
             createdDate: created, completedDate: created.AddHours(20));
         await AddWorkItemLinkAsync(2, 301);
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.HasCount(1, result.EpicBreakdown);
@@ -404,7 +438,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         await AddWorkItemLinkAsync(3, 302);
 
         var result = await _handler.Handle(
-            new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo),
+            MakeQuery(),
             CancellationToken.None);
 
         var epic = result.EpicBreakdown.Single();
@@ -431,7 +465,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
             await AddWorkItemLinkAsync(i, i <= 2 ? 300 : 301);
         }
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.HasCount(1, result.FeatureBreakdown);
@@ -449,10 +483,10 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         await AddTeamWithRepoAsync(1, "Team Alpha", 1, "Repo-A");
 
         var created = RangeFrom.AddDays(1);
-        await AddPrAsync(1, repository: "Repo-A", createdDate: created);
+        await AddPrAsync(1, repository: "Repo-A", createdDate: created, productId: 1);
         await AddPrAsync(2, repository: "Repo-B", createdDate: created); // not in scope
 
-        var query  = new GetPrDeliveryInsightsQuery(TeamId: 1, null, RangeFrom, RangeTo);
+        var query  = MakeQuery(teamId: 1, productIds: [1], repositoryScope: ["Repo-A"]);
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.AreEqual(1, result.CategorySummary.TotalPrs);
@@ -469,7 +503,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
 
         await AddPrAsync(1, createdDate: RangeFrom.AddDays(1));
 
-        var query  = new GetPrDeliveryInsightsQuery(TeamId: 1, null, RangeFrom, RangeTo);
+        var query  = MakeQuery(teamId: 1, productIds: [1], repositoryScope: ["Repo-A"]);
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.AreEqual(0, result.CategorySummary.TotalPrs);
@@ -489,7 +523,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         await AddPrAsync(2, createdDate: sprintStart.AddDays(-5));
 
         // Pass a wide custom date range — sprint boundaries should override
-        var query  = new GetPrDeliveryInsightsQuery(null, SprintId: 10, RangeFrom, RangeTo);
+        var query  = MakeQuery(sprintId: 10, from: new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero), to: new DateTimeOffset(2026, 1, 31, 0, 0, 0, TimeSpan.Zero));
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.AreEqual(1, result.CategorySummary.TotalPrs, "Only the PR within the sprint window should be included");
@@ -504,7 +538,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         for (var i = 1; i <= 5; i++)
             await AddPrAsync(i, createdDate: created);
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.HasCount(5, result.ScatterPoints);
@@ -524,7 +558,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
                 completedDate: created.AddHours(i * 10));
         }
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.HasCount(20, result.Outliers, "Outlier list should be capped at 20");
@@ -544,7 +578,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
     [TestMethod]
     public async Task Handle_NoPrs_ImprovementTipsEmpty()
     {
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.HasCount(0, result.ImprovementTips, "No tips should be generated when there are no PRs");
@@ -564,7 +598,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
                 completedDate: created.AddHours(48));
         }
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.IsTrue(
@@ -586,7 +620,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
                 completedDate: created.AddHours(8));
         }
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.IsFalse(
@@ -621,7 +655,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         }
         await _context.SaveChangesAsync();
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.IsTrue(
@@ -643,7 +677,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         await AddWorkItemLinkAsync(1, 101);
         await AddWorkItemLinkAsync(2, 102);
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.IsTrue(
@@ -665,7 +699,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         await AddWorkItemLinkAsync(1, 201);
         await AddWorkItemLinkAsync(2, 202);
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.IsTrue(
@@ -700,7 +734,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
         await AddWorkItemLinkAsync(5, 202);
         await AddWorkItemLinkAsync(6, 203);
 
-        var query  = new GetPrDeliveryInsightsQuery(null, null, RangeFrom, RangeTo);
+        var query  = MakeQuery();
         var result = await _handler.Handle(query, CancellationToken.None);
 
         Assert.IsLessThanOrEqualTo(result.ImprovementTips.Count, 3,

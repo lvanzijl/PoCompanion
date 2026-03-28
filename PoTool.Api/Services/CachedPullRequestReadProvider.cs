@@ -80,6 +80,43 @@ public sealed class CachedPullRequestReadProvider : IPullRequestReadProvider
         return entities.Select(MapToDto);
     }
 
+    public async Task<IEnumerable<PullRequestDto>> GetByRepositoryNamesAsync(
+        IReadOnlyList<string> repositoryNames,
+        DateTimeOffset? fromDate = null,
+        DateTimeOffset? toDate = null,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug(
+            "CachedPullRequestReadProvider: Fetching PRs by repositories: {RepositoryCount}, fromDate: {FromDate}, toDate: {ToDate}",
+            repositoryNames.Count,
+            fromDate,
+            toDate);
+
+        if (repositoryNames.Count == 0)
+        {
+            return Array.Empty<PullRequestDto>();
+        }
+
+        var query = _dbContext.PullRequests
+            .AsNoTracking()
+            .Where(pr => repositoryNames.Contains(pr.RepositoryName));
+
+        if (fromDate.HasValue)
+        {
+            var fromDateUtc = fromDate.Value.UtcDateTime;
+            query = query.Where(pr => pr.CreatedDateUtc >= fromDateUtc);
+        }
+
+        if (toDate.HasValue)
+        {
+            var toDateUtc = toDate.Value.UtcDateTime;
+            query = query.Where(pr => pr.CreatedDateUtc <= toDateUtc);
+        }
+
+        var entities = await query.ToListAsync(cancellationToken);
+        return entities.Select(MapToDto);
+    }
+
     /// <summary>
     /// Retrieves a specific pull request by ID from the cache.
     /// </summary>

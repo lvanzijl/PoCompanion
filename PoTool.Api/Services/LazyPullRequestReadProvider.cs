@@ -26,6 +26,15 @@ public sealed class LazyPullRequestReadProvider : IPullRequestReadProvider
         return _factory.GetPullRequestReadProvider().GetByProductIdsAsync(productIds, fromDate, cancellationToken);
     }
 
+    public Task<IEnumerable<PullRequestDto>> GetByRepositoryNamesAsync(
+        IReadOnlyList<string> repositoryNames,
+        DateTimeOffset? fromDate = null,
+        DateTimeOffset? toDate = null,
+        CancellationToken cancellationToken = default)
+    {
+        return _factory.GetPullRequestReadProvider().GetByRepositoryNamesAsync(repositoryNames, fromDate, toDate, cancellationToken);
+    }
+
     public Task<PullRequestDto?> GetByIdAsync(int pullRequestId, CancellationToken cancellationToken = default)
     {
         return _factory.GetPullRequestReadProvider().GetByIdAsync(pullRequestId, cancellationToken);

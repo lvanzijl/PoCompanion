@@ -820,12 +820,14 @@
                 ? new DateTimeOffset(_toDate.Value.AddDays(1).AddSeconds(-1), TimeSpan.Zero)
                 : DateTimeOffset.UtcNow;
 
-            _data = await PullRequestsClient.GetDeliveryInsightsAsync(
+            var response = await PullRequestsClient.GetDeliveryInsightsEnvelopeAsync(
                 teamId:   _selectedTeamId,
                 sprintId: _selectedSprintId,
                 fromDate: from,
                 toDate:   to,
                 System.Threading.CancellationToken.None);
+
+            _data = response.Data;
 
             if (_data != null)
             {

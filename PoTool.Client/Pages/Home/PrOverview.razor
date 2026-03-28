@@ -698,12 +698,14 @@
                 ? new DateTimeOffset(_toDate.Value.AddDays(1).AddSeconds(-1), TimeSpan.Zero)
                 : DateTimeOffset.UtcNow;
 
-            _data = await PullRequestsClient.GetInsightsAsync(
+            var response = await PullRequestsClient.GetInsightsEnvelopeAsync(
                 teamId:         _selectedTeamId,
                 fromDate:       from,
                 toDate:         to,
                 repositoryName: _selectedRepository,
                 CancellationToken.None);
+
+            _data = response.Data;
 
             // Populate repository filter list from scatter data
             _availableRepositories = _data?.ScatterPoints

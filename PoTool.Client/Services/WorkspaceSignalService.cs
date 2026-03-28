@@ -472,7 +472,8 @@ public sealed class WorkspaceSignalService
             return null;
         }
 
-        return await _pullRequestsClient.GetSprintTrendsAsync(sprintIds, productIdsCsv, null, cancellationToken);
+        var response = await _pullRequestsClient.GetSprintTrendsEnvelopeAsync(sprintIds, productIdsCsv, null, cancellationToken);
+        return response.Data;
     }
 
     private async Task<CapacityCalibrationDto?> LoadCapacityCalibrationAsync(
