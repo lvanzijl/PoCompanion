@@ -15,10 +15,10 @@ internal static class PortfolioReadModelFiltering
 
         var effectiveOptions = options ?? new PortfolioReadQueryOptions();
         var filtered = items.Where(item =>
-                Matches(filter.ProductIds, item.ProductId)
-                && Matches(filter.ProjectNumbers, item.ProjectNumber)
-                && Matches(filter.WorkPackages, item.WorkPackage)
-                && Matches(filter.LifecycleStates, item.LifecycleState))
+                MatchesValue(filter.ProductIds, item.ProductId)
+                && MatchesString(filter.ProjectNumbers, item.ProjectNumber)
+                && MatchesString(filter.WorkPackages, item.WorkPackage)
+                && MatchesValue(filter.LifecycleStates, item.LifecycleState))
             .ToList();
 
         return Order(filtered, effectiveOptions).ToList();
@@ -34,10 +34,10 @@ internal static class PortfolioReadModelFiltering
 
         var effectiveOptions = options ?? new PortfolioReadQueryOptions();
         var filtered = items.Where(item =>
-                Matches(filter.ProductIds, item.ProductId)
-                && Matches(filter.ProjectNumbers, item.ProjectNumber)
-                && Matches(filter.WorkPackages, item.WorkPackage)
-                && Matches(filter.LifecycleStates, item.CurrentLifecycleState, item.PreviousLifecycleState))
+                MatchesValue(filter.ProductIds, item.ProductId)
+                && MatchesString(filter.ProjectNumbers, item.ProjectNumber)
+                && MatchesString(filter.WorkPackages, item.WorkPackage)
+                && MatchesAny(filter.LifecycleStates, item.CurrentLifecycleState, item.PreviousLifecycleState))
             .ToList();
 
         return Order(filtered, effectiveOptions).ToList();
@@ -53,10 +53,10 @@ internal static class PortfolioReadModelFiltering
 
         var effectiveOptions = options ?? new PortfolioReadQueryOptions();
         var filtered = items.Where(item =>
-                Matches(filter.ProductIds, item.ProductId)
-                && Matches(filter.ProjectNumbers, item.ProjectNumber)
-                && Matches(filter.WorkPackages, item.WorkPackage)
-                && Matches(filter.LifecycleStates, item.CurrentLifecycleState, item.PreviousLifecycleState))
+                MatchesValue(filter.ProductIds, item.ProductId)
+                && MatchesString(filter.ProjectNumbers, item.ProjectNumber)
+                && MatchesString(filter.WorkPackages, item.WorkPackage)
+                && MatchesAny(filter.LifecycleStates, item.CurrentLifecycleState, item.PreviousLifecycleState))
             .ToList();
 
         return Order(filtered, effectiveOptions).ToList();
@@ -71,10 +71,10 @@ internal static class PortfolioReadModelFiltering
         ArgumentNullException.ThrowIfNull(filter);
 
         return items.Where(item =>
-                Matches(filter.ProductIds, item.ProductId)
-                && Matches(filter.ProjectNumbers, item.ProjectNumber)
-                && Matches(filter.WorkPackages, item.WorkPackage)
-                && Matches(filter.LifecycleStates, item.LifecycleState))
+                MatchesNullableValue(filter.ProductIds, item.ProductId)
+                && MatchesString(filter.ProjectNumbers, item.ProjectNumber)
+                && MatchesString(filter.WorkPackages, item.WorkPackage)
+                && MatchesNullableValue(filter.LifecycleStates, item.LifecycleState))
             .OrderBy(item => item.Type)
             .ThenBy(item => item.ProductId ?? int.MinValue)
             .ThenBy(item => item.ProjectNumber ?? string.Empty, StringComparer.OrdinalIgnoreCase)
@@ -83,17 +83,28 @@ internal static class PortfolioReadModelFiltering
             .ToList();
     }
 
-    private static bool Matches<T>(FilterSelection<T> selection, T? value)
+    private static bool MatchesValue<T>(FilterSelection<T> selection, T value)
     {
         if (selection.IsAll)
         {
             return true;
         }
 
-        return value is not null && selection.Values.Contains(value);
+        return selection.Values.Contains(value);
     }
 
-    private static bool Matches(FilterSelection<string> selection, string? value)
+    private static bool MatchesNullableValue<T>(FilterSelection<T> selection, T? value)
+        where T : struct
+    {
+        if (selection.IsAll)
+        {
+            return true;
+        }
+
+        return value.HasValue && selection.Values.Contains(value.Value);
+    }
+
+    private static bool MatchesString(FilterSelection<string> selection, string? value)
     {
         if (selection.IsAll)
         {
@@ -104,7 +115,8 @@ internal static class PortfolioReadModelFiltering
             && selection.Values.Contains(value.Trim(), StringComparer.OrdinalIgnoreCase);
     }
 
-    private static bool Matches<T>(FilterSelection<T> selection, params T?[] candidates)
+    private static bool MatchesAny<T>(FilterSelection<T> selection, params T?[] candidates)
+        where T : struct
     {
         if (selection.IsAll)
         {
@@ -112,8 +124,8 @@ internal static class PortfolioReadModelFiltering
         }
 
         return candidates
-            .Where(candidate => candidate is not null)
-            .Select(candidate => candidate!)
+            .Where(candidate => candidate.HasValue)
+            .Select(candidate => candidate!.Value)
             .Any(candidate => selection.Values.Contains(candidate));
     }
 
