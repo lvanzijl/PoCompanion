@@ -485,6 +485,17 @@ Delete all duplicated filter logic once canonical execution paths are stable.
 - hidden page flows may still reference deleted helpers
 - incomplete log coverage may mask remaining legacy execution paths
 
+### Final closeout status (2026-03-28)
+
+Phase 6 closed with a narrower cleanup result than originally planned:
+
+- no dead canonical-filter code paths were found in the migrated API slices; active filter execution is consolidated in the boundary resolution services and their downstream effective-filter consumers
+- no dead envelope-collapse branches were found in migrated slices; canonical metadata envelopes remain the active client contract
+- `WorkspaceBase`, `NavigationContextService`, and page-local selection helpers remain active and were **not** removed because the shared client URL/filter runtime described earlier in this plan was not shipped as a standalone replacement
+- endpoint-family client transport adapters that still pass parameters such as `productIds`, sprint collections, or date ranges remain intentional compatibility paths until those API contracts are redesigned
+
+This means the canonical filtering workstream completed with one active backend execution model plus retained client-side navigation/transport compatibility layers, rather than with full deletion of every originally identified page helper.
+
 ---
 
 ## Phase 7 — Response Contract Expansion

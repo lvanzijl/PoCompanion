@@ -23,6 +23,26 @@ The design goal is one filter system with:
 - explicit selected vs effective vs applicable vs invalid semantics
 - temporary compatibility with legacy page wiring and legacy endpoints
 
+## Final implementation status (2026-03-28)
+
+The final shipped implementation completed the canonical filtering workstream at the API boundary and in the migrated client response flow, but it did not materialize every planned client-side design type in this document.
+
+Implemented final state:
+
+- `PoTool.Api` owns active canonical filter execution through family-specific resolution services (`SprintFilterResolutionService`, `DeliveryFilterResolutionService`, `PipelineFilterResolutionService`, `PullRequestFilterResolutionService`, `PortfolioFilterResolutionService`)
+- handlers and downstream services consume effective filter data produced by those boundary services
+- migrated endpoints return requested/effective/invalid metadata in family-specific envelopes
+- `PoTool.Client` preserves that metadata through `CanonicalClientResponseFactory` and surfaces it in migrated pages/components
+
+Intentionally retained differences from the original design target:
+
+- no standalone shared client `FilterState` / `FilterService` runtime was introduced
+- no standalone shared `FilterUrlParser` / `FilterUrlSerializer` / `FilterNavigationAdapter` was introduced
+- home/workspace navigation still uses `WorkspaceBase` and `NavigationContextService` for coarse context propagation (`productId`, `teamId`)
+- client service methods still adapt to endpoint-family transport contracts such as `productIds`, sprint collections, and date-range parameters
+
+The remainder of this document should therefore be read as the design rationale and target shape that informed the implementation, with the bullets above describing the actual final shipped architecture.
+
 ### 1.1 Layer responsibilities
 
 | Layer | Responsibility | Filter-related contents | Must NOT contain |
