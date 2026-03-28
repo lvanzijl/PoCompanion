@@ -878,7 +878,7 @@ public class MetricsController : ControllerBase
                 cancellationToken);
 
             var result = await _mediator.Send(
-                new GetHomeProductBarMetricsQuery(resolution.EffectiveFilter),
+                new GetHomeProductBarMetricsQuery(productOwnerId, resolution.EffectiveFilter),
                 cancellationToken);
 
             return Ok(DeliveryFilterResolutionService.ToResponse(result, resolution));

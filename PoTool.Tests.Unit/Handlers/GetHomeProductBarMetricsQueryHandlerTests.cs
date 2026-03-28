@@ -44,6 +44,7 @@ public class GetHomeProductBarMetricsQueryHandlerTests
         // Act
         var result = await _handler.Handle(
             new GetHomeProductBarMetricsQuery(
+                seed.ProductOwnerId,
                 DeliveryFilterTestFactory.MultiSprint([seed.ProductAId, seed.ProductBId], [])),
             CancellationToken.None);
 
@@ -62,12 +63,31 @@ public class GetHomeProductBarMetricsQueryHandlerTests
         // Act
         var result = await _handler.Handle(
             new GetHomeProductBarMetricsQuery(
+                seed.ProductOwnerId,
                 DeliveryFilterTestFactory.MultiSprint([seed.ProductAId], [])),
             CancellationToken.None);
 
         // Assert
         Assert.AreEqual(seed.ExpectedSelectedProductSprintProgressPercentage, result.SprintProgressPercentage);
         Assert.AreEqual(1, result.BugCount);
+        Assert.AreEqual(1, result.ChangesTodayCount);
+    }
+
+    [TestMethod]
+    public async Task Handle_IgnoresChangesFromOtherOwnersForTheSameResolvedProductScope()
+    {
+        var seed = await SeedDashboardMetricsAsync();
+
+        _context.ResolvedWorkItems.Add(CreateResolvedWorkItem(3000, seed.ProductAId));
+        _context.ActivityEventLedgerEntries.Add(CreateActivity(99, 3000, 4, DateTimeOffset.UtcNow.AddHours(-1)));
+        await _context.SaveChangesAsync();
+
+        var result = await _handler.Handle(
+            new GetHomeProductBarMetricsQuery(
+                seed.ProductOwnerId,
+                DeliveryFilterTestFactory.MultiSprint([seed.ProductAId], [])),
+            CancellationToken.None);
+
         Assert.AreEqual(1, result.ChangesTodayCount);
     }
 

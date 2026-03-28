@@ -8,5 +8,6 @@ namespace PoTool.Core.Metrics.Queries;
 /// Query for compact Home product bar metrics.
 /// </summary>
 public sealed record GetHomeProductBarMetricsQuery(
+    int ProductOwnerId,
     DeliveryEffectiveFilter EffectiveFilter
 ) : IQuery<HomeProductBarMetricsDto>;

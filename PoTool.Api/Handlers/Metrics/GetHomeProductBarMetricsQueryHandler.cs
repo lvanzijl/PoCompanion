@@ -86,6 +86,7 @@ public sealed class GetHomeProductBarMetricsQueryHandler
         var changesTodayCount = await _context.ActivityEventLedgerEntries
             .AsNoTracking()
             .Where(entry =>
+                entry.ProductOwnerId == query.ProductOwnerId &&
                 entry.EventTimestampUtc >= startOfTodayUtc &&
                 entry.EventTimestampUtc < startOfTomorrowUtc &&
                 resolvedWorkItemIdsQuery.Contains(entry.WorkItemId))
