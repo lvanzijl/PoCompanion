@@ -15,6 +15,7 @@ using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -397,7 +398,12 @@ public class SprintTrendProjectionServiceSqliteTests
                 NullLogger<GetPortfolioProgressTrendQueryHandler>.Instance);
 
             trend = await handler.Handle(
-                new GetPortfolioProgressTrendQuery(productOwnerId, new[] { sprint1Id, sprint2Id }),
+                new GetPortfolioProgressTrendQuery(
+                    DeliveryFilterTestFactory.MultiSprint(
+                        [productId],
+                        [sprint1Id, sprint2Id],
+                        new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
+                        new DateTimeOffset(new DateTime(2026, 2, 14, 23, 59, 59, DateTimeKind.Utc)))),
                 CancellationToken.None);
         }
 

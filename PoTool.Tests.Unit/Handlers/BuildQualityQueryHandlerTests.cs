@@ -7,6 +7,7 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services.BuildQuality;
 using PoTool.Core.BuildQuality.Queries;
 using PoTool.Shared.BuildQuality;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Handlers;
 
@@ -52,8 +53,10 @@ public sealed class BuildQualityQueryHandlerTests
         var result = await handler.Handle(
             new GetBuildQualityRollingWindowQuery(
                 ProductOwnerId: 1,
-                WindowStartUtc: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
-                WindowEndUtc: new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc)),
+                EffectiveFilter: DeliveryFilterTestFactory.DateRange(
+                    [1, 2],
+                    new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
+                    new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero))),
             CancellationToken.None);
 
         Assert.AreSame(expectedResult, result.Summary);
@@ -75,7 +78,13 @@ public sealed class BuildQualityQueryHandlerTests
         var handler = new GetBuildQualitySprintQueryHandler(_context, _scopeLoader, _provider.Object);
 
         var result = await handler.Handle(
-            new GetBuildQualitySprintQuery(ProductOwnerId: 1, SprintId: 77),
+            new GetBuildQualitySprintQuery(
+                ProductOwnerId: 1,
+                EffectiveFilter: DeliveryFilterTestFactory.SingleSprint(
+                    [1, 2],
+                    77,
+                    new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
+                    new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero))),
             CancellationToken.None);
 
         Assert.AreEqual(77, result.SprintId);
@@ -120,8 +129,10 @@ public sealed class BuildQualityQueryHandlerTests
         var result = await handler.Handle(
             new GetBuildQualityRollingWindowQuery(
                 ProductOwnerId: 1,
-                WindowStartUtc: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
-                WindowEndUtc: new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc)),
+                EffectiveFilter: DeliveryFilterTestFactory.DateRange(
+                    [1, 2],
+                    new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
+                    new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero))),
             CancellationToken.None);
 
         CollectionAssert.AreEqual(new[] { 1, 2 }, result.ProductIds.ToArray());
@@ -198,7 +209,13 @@ public sealed class BuildQualityQueryHandlerTests
         var handler = new GetBuildQualitySprintQueryHandler(_context, _scopeLoader, new BuildQualityProvider());
 
         var result = await handler.Handle(
-            new GetBuildQualitySprintQuery(ProductOwnerId: 1, SprintId: 77),
+            new GetBuildQualitySprintQuery(
+                ProductOwnerId: 1,
+                EffectiveFilter: DeliveryFilterTestFactory.SingleSprint(
+                    [1, 2],
+                    77,
+                    new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
+                    new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero))),
             CancellationToken.None);
 
         Assert.AreEqual(1, result.ProductOwnerId);
@@ -287,11 +304,19 @@ public sealed class BuildQualityQueryHandlerTests
         var rolling = await rollingHandler.Handle(
             new GetBuildQualityRollingWindowQuery(
                 ProductOwnerId: 1,
-                WindowStartUtc: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
-                WindowEndUtc: new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc)),
+                EffectiveFilter: DeliveryFilterTestFactory.DateRange(
+                    [1, 2],
+                    new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
+                    new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero))),
             CancellationToken.None);
         var sprint = await sprintHandler.Handle(
-            new GetBuildQualitySprintQuery(ProductOwnerId: 1, SprintId: 77),
+            new GetBuildQualitySprintQuery(
+                ProductOwnerId: 1,
+                EffectiveFilter: DeliveryFilterTestFactory.SingleSprint(
+                    [1, 2],
+                    77,
+                    new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
+                    new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero))),
             CancellationToken.None);
         var pipeline = await pipelineHandler.Handle(
             new GetBuildQualityPipelineDetailQuery(ProductOwnerId: 1, SprintId: 77, PipelineDefinitionId: 2001),
@@ -313,7 +338,13 @@ public sealed class BuildQualityQueryHandlerTests
         var handler = new GetBuildQualitySprintQueryHandler(_context, _scopeLoader, new BuildQualityProvider());
 
         var result = await handler.Handle(
-            new GetBuildQualitySprintQuery(ProductOwnerId: 1, SprintId: 77),
+            new GetBuildQualitySprintQuery(
+                ProductOwnerId: 1,
+                EffectiveFilter: DeliveryFilterTestFactory.SingleSprint(
+                    [1, 2],
+                    77,
+                    new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
+                    new DateTimeOffset(2026, 3, 15, 0, 0, 0, TimeSpan.Zero))),
             CancellationToken.None);
 
         var productA = result.Products.Single(product => product.ProductId == 1);

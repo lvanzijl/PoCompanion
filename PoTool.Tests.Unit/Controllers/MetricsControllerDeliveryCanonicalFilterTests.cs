@@ -1,0 +1,80 @@
+using Mediator;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using PoTool.Api.Controllers;
+using PoTool.Api.Persistence;
+using PoTool.Api.Persistence.Entities;
+using PoTool.Api.Services;
+using PoTool.Core.Metrics.Queries;
+using PoTool.Shared.Metrics;
+
+namespace PoTool.Tests.Unit.Controllers;
+
+[TestClass]
+public sealed class MetricsControllerDeliveryCanonicalFilterTests
+{
+    [TestMethod]
+    public async Task GetPortfolioProgressTrend_WrapsResponseWithCanonicalFilterMetadata()
+    {
+        await using var context = CreateContext();
+        context.Products.Add(new ProductEntity { Id = 100, ProductOwnerId = 7, Name = "Product 100" });
+        context.Sprints.Add(new SprintEntity
+        {
+            Id = 42,
+            Name = "Sprint 42",
+            TeamId = 3,
+            StartDateUtc = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc),
+            EndDateUtc = new DateTime(2026, 2, 14, 0, 0, 0, DateTimeKind.Utc)
+        });
+        await context.SaveChangesAsync();
+
+        var mediator = new Mock<IMediator>(MockBehavior.Strict);
+        mediator
+            .Setup(service => service.Send(
+                It.Is<GetPortfolioProgressTrendQuery>(query =>
+                    query.EffectiveFilter.Context.ProductIds.Values.SequenceEqual(new[] { 100 })
+                    && query.EffectiveFilter.SprintIds.SequenceEqual(new[] { 42 })
+                    && query.EffectiveFilter.RangeStartUtc == new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero)
+                    && query.EffectiveFilter.RangeEndUtc == new DateTimeOffset(2026, 2, 14, 0, 0, 0, TimeSpan.Zero)),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PortfolioProgressTrendDto
+            {
+                Sprints = Array.Empty<PortfolioSprintProgressDto>(),
+                Summary = new PortfolioProgressSummaryDto
+                {
+                    Trajectory = PortfolioTrajectory.Stable
+                }
+            });
+
+        var filterService = new DeliveryFilterResolutionService(
+            context,
+            NullLogger<DeliveryFilterResolutionService>.Instance);
+        var controller = new MetricsController(
+            mediator.Object,
+            filterService,
+            NullLogger<MetricsController>.Instance);
+
+        var result = await controller.GetPortfolioProgressTrend(7, [42], null, CancellationToken.None);
+
+        var ok = result.Result as OkObjectResult;
+        Assert.IsNotNull(ok);
+
+        var envelope = ok.Value as DeliveryQueryResponseDto<PortfolioProgressTrendDto>;
+        Assert.IsNotNull(envelope);
+        CollectionAssert.AreEqual(Array.Empty<int>(), envelope.RequestedFilter.ProductIds.Values.ToArray());
+        CollectionAssert.AreEqual(new[] { 100 }, envelope.EffectiveFilter.ProductIds.Values.ToArray());
+        CollectionAssert.AreEqual(Array.Empty<string>(), envelope.InvalidFields.ToArray());
+        mediator.VerifyAll();
+    }
+
+    private static PoToolDbContext CreateContext()
+    {
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase($"MetricsControllerDeliveryCanonicalFilterTests_{Guid.NewGuid()}")
+            .Options;
+
+        return new PoToolDbContext(options);
+    }
+}

@@ -14,6 +14,7 @@ using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Handlers;
 
@@ -134,7 +135,12 @@ public sealed class GetPortfolioDeliveryQueryHandlerTests
             NullLogger<GetPortfolioDeliveryQueryHandler>.Instance);
 
         var result = await handler.Handle(
-            new GetPortfolioDeliveryQuery(owner.Id, [sprint.Id]),
+            new GetPortfolioDeliveryQuery(
+                DeliveryFilterTestFactory.MultiSprint(
+                    [productA.Id, productB.Id],
+                    [sprint.Id],
+                    sprint.StartUtc,
+                    sprint.EndUtc)),
             CancellationToken.None);
 
         Assert.IsTrue(result.HasData);
@@ -207,8 +213,8 @@ public sealed class GetPortfolioDeliveryQueryHandlerTests
             _featureProgress = featureProgress;
         }
 
-        public override Task<IReadOnlyList<FeatureProgressDto>> ComputeFeatureProgressAsync(
-            int productOwnerId,
+        public override Task<IReadOnlyList<FeatureProgressDto>> ComputeFeatureProgressForProductsAsync(
+            IReadOnlyList<int> productIds,
             FeatureProgressMode progressMode,
             DateTime? sprintStartUtc = null,
             DateTime? sprintEndUtc = null,

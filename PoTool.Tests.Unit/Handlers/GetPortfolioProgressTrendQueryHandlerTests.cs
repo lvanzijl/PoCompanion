@@ -7,6 +7,7 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Domain.Portfolio;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Handlers;
 
@@ -94,7 +95,12 @@ public sealed class GetPortfolioProgressTrendQueryHandlerTests
             NullLogger<GetPortfolioProgressTrendQueryHandler>.Instance);
 
         var result = await handler.Handle(
-            new GetPortfolioProgressTrendQuery(owner.Id, [sprint.Id]),
+            new GetPortfolioProgressTrendQuery(
+                DeliveryFilterTestFactory.MultiSprint(
+                    [productA.Id, productB.Id],
+                    [sprint.Id],
+                    sprint.StartUtc,
+                    sprint.EndUtc)),
             CancellationToken.None);
 
         Assert.HasCount(1, result.Sprints);
@@ -212,7 +218,12 @@ public sealed class GetPortfolioProgressTrendQueryHandlerTests
             NullLogger<GetPortfolioProgressTrendQueryHandler>.Instance);
 
         var result = await handler.Handle(
-            new GetPortfolioProgressTrendQuery(owner.Id, [sprint1.Id, sprint2.Id], [productA.Id]),
+            new GetPortfolioProgressTrendQuery(
+                DeliveryFilterTestFactory.MultiSprint(
+                    [productA.Id],
+                    [sprint1.Id, sprint2.Id],
+                    sprint1.StartUtc,
+                    sprint2.EndUtc)),
             CancellationToken.None);
 
         Assert.HasCount(2, result.Sprints);
