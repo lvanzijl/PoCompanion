@@ -49,44 +49,24 @@ public sealed class GetCapacityCalibrationQueryHandler
         GetCapacityCalibrationQuery query,
         CancellationToken cancellationToken)
     {
+        var effectiveProductIds = query.EffectiveFilter.Context.ProductIds.Values
+            .Distinct()
+            .ToList();
+        var effectiveSprintIds = query.EffectiveFilter.SprintIds
+            .Distinct()
+            .ToList();
+
         _logger.LogInformation(
-            "Handling GetCapacityCalibrationQuery for ProductOwner {ProductOwnerId}, {SprintCount} sprints",
-            query.ProductOwnerId, query.SprintIds.Count);
+            "Handling GetCapacityCalibrationQuery for {ProductCount} products across {SprintCount} sprints",
+            effectiveProductIds.Count,
+            effectiveSprintIds.Count);
 
-        // Resolve product IDs for this product owner
-        var allOwnerProductIds = await _context.Products
-            .Where(p => p.ProductOwnerId == query.ProductOwnerId)
-            .Select(p => p.Id)
-            .ToListAsync(cancellationToken);
-
-        if (allOwnerProductIds.Count == 0)
+        if (effectiveProductIds.Count == 0 || effectiveSprintIds.Count == 0)
         {
-            _logger.LogWarning("No products found for ProductOwner {ProductOwnerId}", query.ProductOwnerId);
             return Empty();
         }
-
-        // Intersect with optional product filter to prevent cross-owner data leakage
-        List<int> productIds;
-        if (query.ProductIds is { Length: > 0 })
-        {
-            productIds = allOwnerProductIds.Intersect(query.ProductIds).ToList();
-            if (productIds.Count == 0)
-            {
-                _logger.LogWarning(
-                    "Requested product IDs {RequestedIds} do not belong to ProductOwner {ProductOwnerId}",
-                    string.Join(", ", query.ProductIds), query.ProductOwnerId);
-                return Empty();
-            }
-        }
-        else
-        {
-            productIds = allOwnerProductIds;
-        }
-
-        // Load sprints for the requested IDs, ordered chronologically
-        var sprintIdList = query.SprintIds.Distinct().ToList();
         var sprints = await _context.Sprints
-            .Where(s => sprintIdList.Contains(s.Id))
+            .Where(s => effectiveSprintIds.Contains(s.Id))
             .OrderBy(s => s.StartDateUtc)
             .ToListAsync(cancellationToken);
 
@@ -95,9 +75,8 @@ public sealed class GetCapacityCalibrationQueryHandler
             return Empty();
         }
 
-        // Load sprint–product projections for all requested sprints and owner products
         var projections = await _context.SprintMetricsProjections
-            .Where(p => sprintIdList.Contains(p.SprintId) && productIds.Contains(p.ProductId))
+            .Where(p => effectiveSprintIds.Contains(p.SprintId) && effectiveProductIds.Contains(p.ProductId))
             .ToListAsync(cancellationToken);
 
         var projectionsBySprintId = projections

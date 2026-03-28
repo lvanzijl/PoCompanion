@@ -31,19 +31,24 @@ public sealed class GetBuildQualitySprintQueryHandler
         GetBuildQualitySprintQuery query,
         CancellationToken cancellationToken)
     {
+        if (!query.EffectiveFilter.SprintId.HasValue)
+        {
+            return BuildEmptyResult(query.ProductOwnerId, 0);
+        }
+
         var sprint = await _context.Sprints
             .AsNoTracking()
-            .FirstOrDefaultAsync(sprint => sprint.Id == query.SprintId, cancellationToken);
+            .FirstOrDefaultAsync(sprint => sprint.Id == query.EffectiveFilter.SprintId.Value, cancellationToken);
 
         if (sprint is null || !sprint.StartDateUtc.HasValue || !sprint.EndDateUtc.HasValue)
         {
-            return BuildEmptyResult(query.ProductOwnerId, query.SprintId);
+            return BuildEmptyResult(query.ProductOwnerId, query.EffectiveFilter.SprintId.Value);
         }
 
         var selection = await _scopeLoader.LoadAsync(
-            query.ProductOwnerId,
-            sprint.StartDateUtc.Value,
-            sprint.EndDateUtc.Value,
+            query.EffectiveFilter.Context.ProductIds.Values,
+            query.EffectiveFilter.RangeStartUtc?.UtcDateTime,
+            query.EffectiveFilter.RangeEndUtc?.UtcDateTime,
             repositoryId: null,
             pipelineDefinitionId: null,
             cancellationToken);

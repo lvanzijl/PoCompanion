@@ -775,11 +775,12 @@
                 ? new[] { _selectedProductId.Value }
                 : null;
 
-            _trendData = await MetricsClient.GetPortfolioProgressTrendAsync(
+            var response = await MetricsClient.GetPortfolioProgressTrendEnvelopeAsync(
                 _profileId.Value,
                 sprintIds,
                 productFilter,
                 CancellationToken.None);
+            _trendData = response.Data;
 
             if (_trendData != null)
             {

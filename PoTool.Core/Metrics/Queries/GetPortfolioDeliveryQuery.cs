@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Core.Delivery.Filters;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Core.Metrics.Queries;
@@ -8,6 +9,5 @@ namespace PoTool.Core.Metrics.Queries;
 /// Returns composition and distribution data — no time-series information.
 /// </summary>
 public record GetPortfolioDeliveryQuery(
-    int ProductOwnerId,
-    IReadOnlyList<int> SprintIds
+    DeliveryEffectiveFilter EffectiveFilter
 ) : IQuery<PortfolioDeliveryDto>;

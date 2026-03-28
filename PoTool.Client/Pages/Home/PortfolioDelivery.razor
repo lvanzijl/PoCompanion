@@ -586,8 +586,8 @@
             _data = null;
             StateHasChanged();
 
-            var result = await MetricsClient.GetPortfolioDeliveryAsync(_profileId.Value, _selectedSprintIds);
-            _data = result.HasData ? result : null;
+            var response = await MetricsClient.GetPortfolioDeliveryEnvelopeAsync(_profileId.Value, _selectedSprintIds, productIds: null, CancellationToken.None);
+            _data = response.Data.HasData ? response.Data : null;
         }
         catch (Exception ex)
         {

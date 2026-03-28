@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Core.Delivery.Filters;
 using PoTool.Shared.BuildQuality;
 
 namespace PoTool.Core.BuildQuality.Queries;
@@ -8,4 +9,4 @@ namespace PoTool.Core.BuildQuality.Queries;
 /// </summary>
 public sealed record GetBuildQualitySprintQuery(
     int ProductOwnerId,
-    int SprintId) : IQuery<DeliveryBuildQualityDto>;
+    DeliveryEffectiveFilter EffectiveFilter) : IQuery<DeliveryBuildQualityDto>;

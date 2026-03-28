@@ -103,11 +103,12 @@ else if (_calibration != null && _calibration.Sprints.Count > 0)
         StateHasChanged();
         try
         {
-            _calibration = await MetricsClient.GetCapacityCalibrationAsync(
+            var response = await MetricsClient.GetCapacityCalibrationEnvelopeAsync(
                 ProfileId,
                 SprintIds,
                 ProductIds,
                 CancellationToken.None);
+            _calibration = response.Data;
         }
         catch (Exception ex)
         {

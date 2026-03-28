@@ -27,30 +27,16 @@ public sealed class GetHomeProductBarMetricsQueryHandler
         GetHomeProductBarMetricsQuery query,
         CancellationToken cancellationToken)
     {
-        var ownerProductIds = await _context.Products
-            .AsNoTracking()
-            .Where(product => product.ProductOwnerId == query.ProductOwnerId)
-            .Select(product => product.Id)
-            .ToListAsync(cancellationToken);
+        var targetProductIds = query.EffectiveFilter.Context.ProductIds.Values
+            .Distinct()
+            .ToList();
 
-        if (ownerProductIds.Count == 0)
+        if (targetProductIds.Count == 0)
         {
             return new HomeProductBarMetricsDto();
         }
 
-        var targetProductIds = query.ProductId.HasValue
-            ? ownerProductIds.Where(productId => productId == query.ProductId.Value).ToList()
-            : ownerProductIds;
-
-        var sprintProgressPercentage = await LoadSprintProgressPercentageAsync(ownerProductIds, cancellationToken);
-
-        if (targetProductIds.Count == 0)
-        {
-            return new HomeProductBarMetricsDto
-            {
-                SprintProgressPercentage = sprintProgressPercentage
-            };
-        }
+        var sprintProgressPercentage = await LoadSprintProgressPercentageAsync(targetProductIds, cancellationToken);
 
         var doneStates = await _context.WorkItemStateClassifications
             .AsNoTracking()
@@ -100,7 +86,6 @@ public sealed class GetHomeProductBarMetricsQueryHandler
         var changesTodayCount = await _context.ActivityEventLedgerEntries
             .AsNoTracking()
             .Where(entry =>
-                entry.ProductOwnerId == query.ProductOwnerId &&
                 entry.EventTimestampUtc >= startOfTodayUtc &&
                 entry.EventTimestampUtc < startOfTomorrowUtc &&
                 resolvedWorkItemIdsQuery.Contains(entry.WorkItemId))

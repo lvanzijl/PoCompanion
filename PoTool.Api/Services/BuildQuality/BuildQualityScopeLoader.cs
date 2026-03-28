@@ -23,9 +23,57 @@ public sealed class BuildQualityScopeLoader
         int? pipelineDefinitionId,
         CancellationToken cancellationToken)
     {
+        var productIds = await _context.Products
+            .AsNoTracking()
+            .Where(product => product.ProductOwnerId == productOwnerId)
+            .Select(product => product.Id)
+            .ToListAsync(cancellationToken);
+
+        return await LoadCoreAsync(
+            productIds,
+            windowStartUtc,
+            windowEndUtc,
+            repositoryId,
+            pipelineDefinitionId,
+            cancellationToken,
+            productOwnerId);
+    }
+
+    public async Task<BuildQualityScopeSelection> LoadAsync(
+        IReadOnlyList<int> productIds,
+        DateTime? windowStartUtc,
+        DateTime? windowEndUtc,
+        int? repositoryId,
+        int? pipelineDefinitionId,
+        CancellationToken cancellationToken)
+    {
+        return await LoadCoreAsync(
+            productIds,
+            windowStartUtc ?? default,
+            windowEndUtc ?? default,
+            repositoryId,
+            pipelineDefinitionId,
+            cancellationToken,
+            productOwnerId: null);
+    }
+
+    private async Task<BuildQualityScopeSelection> LoadCoreAsync(
+        IReadOnlyList<int> requestedProductIds,
+        DateTime windowStartUtc,
+        DateTime windowEndUtc,
+        int? repositoryId,
+        int? pipelineDefinitionId,
+        CancellationToken cancellationToken,
+        int? productOwnerId)
+    {
+        var normalizedProductIds = requestedProductIds
+            .Distinct()
+            .OrderBy(id => id)
+            .ToArray();
+
         var productQuery = _context.Products
             .AsNoTracking()
-            .Where(product => product.ProductOwnerId == productOwnerId);
+            .Where(product => normalizedProductIds.Contains(product.Id));
 
         if (repositoryId.HasValue)
         {
@@ -69,8 +117,8 @@ public sealed class BuildQualityScopeLoader
             ? new List<BuildRecord>()
             : (await _context.CachedPipelineRuns
                 .AsNoTracking()
-                .Where(build => build.ProductOwnerId == productOwnerId)
                 .Where(build => pipelineDefinitionDbIds.Contains(build.PipelineDefinitionId))
+                .Where(build => !productOwnerId.HasValue || build.ProductOwnerId == productOwnerId.Value)
                 .Where(build => build.FinishedDateUtc.HasValue
                     && build.FinishedDateUtc.Value >= windowStartUtc
                     && build.FinishedDateUtc.Value < windowEndUtc)
@@ -133,7 +181,7 @@ public sealed class BuildQualityScopeLoader
             .ToArray();
 
         return new BuildQualityScopeSelection(
-            productOwnerId,
+            productOwnerId ?? 0,
             windowStartUtc,
             windowEndUtc,
             productsInScope.Select(product => product.Id).OrderBy(id => id).ToArray(),

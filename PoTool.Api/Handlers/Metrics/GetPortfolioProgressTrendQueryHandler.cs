@@ -45,44 +45,24 @@ public sealed class GetPortfolioProgressTrendQueryHandler
         GetPortfolioProgressTrendQuery query,
         CancellationToken cancellationToken)
     {
+        var effectiveProductIds = query.EffectiveFilter.Context.ProductIds.Values
+            .Distinct()
+            .ToList();
+        var effectiveSprintIds = query.EffectiveFilter.SprintIds
+            .Distinct()
+            .ToList();
+
         _logger.LogInformation(
-            "Handling GetPortfolioProgressTrendQuery for ProductOwner {ProductOwnerId}, {SprintCount} sprints",
-            query.ProductOwnerId, query.SprintIds.Count);
+            "Handling GetPortfolioProgressTrendQuery for {ProductCount} products across {SprintCount} sprints",
+            effectiveProductIds.Count,
+            effectiveSprintIds.Count);
 
-        var allOwnerProductIds = await _context.Products
-            .Where(p => p.ProductOwnerId == query.ProductOwnerId)
-            .Select(p => p.Id)
-            .ToListAsync(cancellationToken);
-
-        if (allOwnerProductIds.Count == 0)
+        if (effectiveProductIds.Count == 0 || effectiveSprintIds.Count == 0)
         {
-            _logger.LogWarning("No products found for ProductOwner {ProductOwnerId}", query.ProductOwnerId);
             return EmptyResult();
         }
-
-        List<int> productIds;
-        if (query.ProductIds is { Length: > 0 })
-        {
-            productIds = allOwnerProductIds
-                .Intersect(query.ProductIds)
-                .ToList();
-
-            if (productIds.Count == 0)
-            {
-                _logger.LogWarning(
-                    "Requested product IDs {RequestedIds} do not belong to ProductOwner {ProductOwnerId}",
-                    string.Join(", ", query.ProductIds), query.ProductOwnerId);
-                return EmptyResult();
-            }
-        }
-        else
-        {
-            productIds = allOwnerProductIds;
-        }
-
-        var sprintIdList = query.SprintIds.Distinct().ToList();
         var sprints = await _context.Sprints
-            .Where(s => sprintIdList.Contains(s.Id))
+            .Where(s => effectiveSprintIds.Contains(s.Id))
             .OrderBy(s => s.StartDateUtc)
             .ToListAsync(cancellationToken);
 
@@ -93,7 +73,7 @@ public sealed class GetPortfolioProgressTrendQueryHandler
 
         var projections = await _context.PortfolioFlowProjections
             .AsNoTracking()
-            .Where(p => sprintIdList.Contains(p.SprintId) && productIds.Contains(p.ProductId))
+            .Where(p => effectiveSprintIds.Contains(p.SprintId) && effectiveProductIds.Contains(p.ProductId))
             .Select(p => new PortfolioFlowProjectionInput(
                 p.SprintId,
                 p.ProductId,
@@ -114,8 +94,10 @@ public sealed class GetPortfolioProgressTrendQueryHandler
                 projections));
 
         _logger.LogInformation(
-            "Portfolio progress trend computed for ProductOwner {ProductOwnerId}: {SprintCount} sprints, trajectory={Trajectory}",
-            query.ProductOwnerId, trend.Sprints.Count, trend.Summary.Trajectory);
+            "Portfolio progress trend computed for {ProductCount} products: {SprintCount} sprints, trajectory={Trajectory}",
+            effectiveProductIds.Count,
+            trend.Sprints.Count,
+            trend.Summary.Trajectory);
 
         return new PortfolioProgressTrendDto
         {

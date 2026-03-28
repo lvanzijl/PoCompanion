@@ -607,6 +607,139 @@ public class SprintTrendProjectionService
             stateLookup);
     }
 
+    public virtual async Task<IReadOnlyList<FeatureProgressDto>> ComputeFeatureProgressForProductsAsync(
+        IReadOnlyList<int> productIds,
+        FeatureProgressMode progressMode,
+        DateTime? sprintStartUtc = null,
+        DateTime? sprintEndUtc = null,
+        CancellationToken cancellationToken = default,
+        int? sprintId = null)
+    {
+        var effectiveProductIds = productIds
+            .Distinct()
+            .ToList();
+
+        if (effectiveProductIds.Count == 0)
+        {
+            return Array.Empty<FeatureProgressDto>();
+        }
+
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+
+        var productSettings = await context.Products
+            .Where(p => effectiveProductIds.Contains(p.Id))
+            .Select(p => new ProductEstimationSetting(p.Id, p.EstimationMode))
+            .ToListAsync(cancellationToken);
+
+        if (productSettings.Count == 0)
+        {
+            return Array.Empty<FeatureProgressDto>();
+        }
+
+        LogNonDefaultEstimationModes(productSettings);
+
+        var resolvedItems = await context.ResolvedWorkItems
+            .Where(r => r.ResolvedProductId != null && effectiveProductIds.Contains(r.ResolvedProductId.Value))
+            .ToListAsync(cancellationToken);
+
+        var resolvedWorkItemIds = resolvedItems.Select(r => r.WorkItemId).ToHashSet();
+        var workItems = await context.WorkItems
+            .AsNoTracking()
+            .Where(w => resolvedWorkItemIds.Contains(w.TfsId))
+            .ToListAsync(cancellationToken);
+
+        var workItemsByTfsId = workItems.ToDictionary(w => w.TfsId, w => w);
+        LogInvalidTimeCriticalityOverrides(workItems);
+
+        HashSet<int>? activeWorkItemIds = null;
+        HashSet<int>? sprintCompletedPbiIds = null;
+        IReadOnlyDictionary<int, int>? sprintEffortDeltaByWorkItem = null;
+        HashSet<int>? sprintAssignedPbiIds = null;
+        var stateLookup = await GetStateLookupAsync(cancellationToken);
+        if (sprintStartUtc.HasValue && sprintEndUtc.HasValue)
+        {
+            var sprintStart = DateTime.SpecifyKind(sprintStartUtc.Value, DateTimeKind.Utc);
+            var sprintEnd = DateTime.SpecifyKind(sprintEndUtc.Value, DateTimeKind.Utc);
+
+            var sprintActivity = await context.ActivityEventLedgerEntries
+                .AsNoTracking()
+                .Where(e => resolvedWorkItemIds.Contains(e.WorkItemId)
+                    && e.EventTimestampUtc >= sprintStart
+                    && e.EventTimestampUtc <= sprintEnd
+                    && !string.IsNullOrEmpty(e.FieldRefName)
+                    && e.FieldRefName != "System.ChangedBy"
+                    && e.FieldRefName != "System.ChangedDate")
+                .Select(e => e.WorkItemId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            activeWorkItemIds = sprintActivity.ToHashSet();
+
+            var donePbiStates = StateClassificationLookup.GetStatesForClassification(
+                stateLookup,
+                CanonicalWorkItemTypes.Pbi,
+                StateClassification.Done);
+
+            var closedInSprint = await context.ActivityEventLedgerEntries
+                .AsNoTracking()
+                .Where(e => resolvedWorkItemIds.Contains(e.WorkItemId)
+                    && e.EventTimestampUtc >= sprintStart
+                    && e.EventTimestampUtc <= sprintEnd
+                    && e.FieldRefName == "System.State"
+                    && donePbiStates.Contains(e.NewValue!))
+                .Select(e => e.WorkItemId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            sprintCompletedPbiIds = closedInSprint.ToHashSet();
+
+            var effortEvents = await context.ActivityEventLedgerEntries
+                .AsNoTracking()
+                .Where(e => resolvedWorkItemIds.Contains(e.WorkItemId)
+                    && e.EventTimestampUtc >= sprintStart
+                    && e.EventTimestampUtc <= sprintEnd
+                    && e.FieldRefName == EffortFieldRef)
+                .Select(e => new { e.WorkItemId, e.OldValue, e.NewValue })
+                .ToListAsync(cancellationToken);
+
+            sprintEffortDeltaByWorkItem = effortEvents
+                .GroupBy(e => e.WorkItemId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Sum(e =>
+                    {
+                        var newVal = int.TryParse(e.NewValue, out var n) ? n : 0;
+                        var oldVal = int.TryParse(e.OldValue, out var o) ? o : 0;
+                        return newVal - oldVal;
+                    }));
+
+            if (sprintId.HasValue)
+            {
+                sprintAssignedPbiIds = resolvedItems
+                    .Where(r => r.WorkItemType.ToCanonicalWorkItemType() == CanonicalWorkItemTypes.Pbi
+                        && r.ResolvedSprintId == sprintId.Value
+                        && r.ResolvedProductId != null
+                        && effectiveProductIds.Contains(r.ResolvedProductId.Value))
+                    .Select(r => r.WorkItemId)
+                    .ToHashSet();
+            }
+        }
+
+        return ComputeFeatureProgress(
+            resolvedItems,
+            workItemsByTfsId,
+            effectiveProductIds,
+            progressMode,
+            _deliveryProgressRollupService,
+            _storyPointResolutionService,
+            activeWorkItemIds,
+            sprintCompletedPbiIds,
+            sprintEffortDeltaByWorkItem,
+            sprintAssignedPbiIds,
+            stateLookup);
+    }
+
     private void LogNonDefaultEstimationModes(IEnumerable<ProductEstimationSetting> productSettings)
     {
         foreach (var product in productSettings)

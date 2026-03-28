@@ -1,5 +1,4 @@
-using System.Net.Http.Json;
-using System.Text.Json;
+using PoTool.Client.ApiClient;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Client.Services;
@@ -9,11 +8,11 @@ namespace PoTool.Client.Services;
 /// </summary>
 public class HomeProductBarMetricsService
 {
-    private readonly HttpClient _httpClient;
+    private readonly IMetricsClient _metricsClient;
 
-    public HomeProductBarMetricsService(HttpClient httpClient)
+    public HomeProductBarMetricsService(IMetricsClient metricsClient)
     {
-        _httpClient = httpClient;
+        _metricsClient = metricsClient;
     }
 
     public async Task<HomeProductBarMetricsDto?> GetAsync(
@@ -21,17 +20,12 @@ public class HomeProductBarMetricsService
         int? productId,
         CancellationToken cancellationToken = default)
     {
-        var query = productId.HasValue
-            ? $"?productOwnerId={productOwnerId}&productId={productId.Value}"
-            : $"?productOwnerId={productOwnerId}";
-
         try
         {
-            return await _httpClient.GetFromJsonAsync<HomeProductBarMetricsDto>(
-                $"api/Metrics/home-product-bar{query}",
-                cancellationToken);
+            var response = await _metricsClient.GetHomeProductBarMetricsEnvelopeAsync(productOwnerId, productId, cancellationToken);
+            return response.Data;
         }
-        catch (Exception ex) when (ex is HttpRequestException or JsonException)
+        catch (Exception ex) when (ex is HttpRequestException or ApiException)
         {
             return null;
         }

@@ -46,32 +46,31 @@ public sealed class GetPortfolioDeliveryQueryHandler
         GetPortfolioDeliveryQuery query,
         CancellationToken cancellationToken)
     {
+        var effectiveProductIds = query.EffectiveFilter.Context.ProductIds.Values
+            .Distinct()
+            .ToList();
+        var effectiveSprintIds = query.EffectiveFilter.SprintIds
+            .Distinct()
+            .ToList();
+
         _logger.LogInformation(
-            "Handling GetPortfolioDeliveryQuery for ProductOwner {ProductOwnerId}, {SprintCount} sprints",
-            query.ProductOwnerId, query.SprintIds.Count);
+            "Handling GetPortfolioDeliveryQuery for {ProductCount} products across {SprintCount} sprints",
+            effectiveProductIds.Count,
+            effectiveSprintIds.Count);
 
-        // Resolve products for this product owner
-        var ownerProductIds = await _context.Products
-            .Where(p => p.ProductOwnerId == query.ProductOwnerId)
-            .Select(p => p.Id)
-            .ToListAsync(cancellationToken);
-
-        if (ownerProductIds.Count == 0)
+        if (effectiveProductIds.Count == 0 || effectiveSprintIds.Count == 0)
         {
-            _logger.LogWarning("No products found for ProductOwner {ProductOwnerId}", query.ProductOwnerId);
-            return EmptyResult(query.SprintIds.Count);
+            return EmptyResult(effectiveSprintIds.Count);
         }
 
-        // Load projections for all requested sprints, scoped to this product owner's products
-        var sprintIdList = query.SprintIds.Distinct().ToList();
         var projections = await _context.SprintMetricsProjections
             .AsNoTracking()
-            .Where(p => sprintIdList.Contains(p.SprintId) && ownerProductIds.Contains(p.ProductId))
+            .Where(p => effectiveSprintIds.Contains(p.SprintId) && effectiveProductIds.Contains(p.ProductId))
             .ToListAsync(cancellationToken);
 
         if (projections.Count == 0)
         {
-            return EmptyResult(query.SprintIds.Count);
+            return EmptyResult(effectiveSprintIds.Count);
         }
 
         // Load product names
@@ -84,22 +83,15 @@ public sealed class GetPortfolioDeliveryQueryHandler
         // Load feature progress for the full sprint range (start of earliest sprint → end of latest)
         var sprints = await _context.Sprints
             .AsNoTracking()
-            .Where(s => sprintIdList.Contains(s.Id) && s.StartDateUtc != null)
+            .Where(s => effectiveSprintIds.Contains(s.Id) && s.StartDateUtc != null)
             .OrderBy(s => s.StartDateUtc)
             .ToListAsync(cancellationToken);
 
-        var sprintRangeStart = sprints.FirstOrDefault()?.StartDateUtc is { } sd
-            ? DateTime.SpecifyKind(sd, DateTimeKind.Utc)
-            : (DateTime?)null;
-        var sprintRangeEnd = sprints.LastOrDefault()?.EndDateUtc is { } ed
-            ? DateTime.SpecifyKind(ed, DateTimeKind.Utc)
-            : (DateTime?)null;
-
-        var featureProgress = await _projectionService.ComputeFeatureProgressAsync(
-            query.ProductOwnerId,
+        var featureProgress = await _projectionService.ComputeFeatureProgressForProductsAsync(
+            effectiveProductIds,
             FeatureProgressMode.StoryPoints,
-            sprintRangeStart,
-            sprintRangeEnd,
+            query.EffectiveFilter.RangeStartUtc?.UtcDateTime,
+            query.EffectiveFilter.RangeEndUtc?.UtcDateTime,
             cancellationToken);
 
         var deliverySummary = _portfolioDeliverySummaryService.BuildSummary(
@@ -127,8 +119,7 @@ public sealed class GetPortfolioDeliveryQueryHandler
                 TopFeatureLimit));
 
         _logger.LogInformation(
-            "Portfolio delivery snapshot for ProductOwner {ProductOwnerId}: {ProductCount} products, {FeatureCount} top features, delivered story points {DeliveredStoryPoints}",
-            query.ProductOwnerId,
+            "Portfolio delivery snapshot for {ProductCount} products, {FeatureCount} top features, delivered story points {DeliveredStoryPoints}",
             deliverySummary.ProductSummaries.Count,
             deliverySummary.FeatureContributionSummaries.Count,
             deliverySummary.TotalDeliveredStoryPoints);
@@ -172,7 +163,7 @@ public sealed class GetPortfolioDeliveryQueryHandler
                     ProgressPercent = summary.ProgressPercent
                 })
                 .ToList(),
-            SprintCount = query.SprintIds.Distinct().Count(),
+            SprintCount = effectiveSprintIds.Count,
             HasData = true
         };
     }

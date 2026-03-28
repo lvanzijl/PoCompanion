@@ -27,9 +27,9 @@ public sealed class GetBuildQualityRollingWindowQueryHandler
         CancellationToken cancellationToken)
     {
         var selection = await _scopeLoader.LoadAsync(
-            query.ProductOwnerId,
-            query.WindowStartUtc,
-            query.WindowEndUtc,
+            query.EffectiveFilter.Context.ProductIds.Values,
+            query.EffectiveFilter.RangeStartUtc?.UtcDateTime,
+            query.EffectiveFilter.RangeEndUtc?.UtcDateTime,
             repositoryId: null,
             pipelineDefinitionId: null,
             cancellationToken);
@@ -37,8 +37,8 @@ public sealed class GetBuildQualityRollingWindowQueryHandler
         return new BuildQualityPageDto
         {
             ProductOwnerId = query.ProductOwnerId,
-            WindowStartUtc = query.WindowStartUtc,
-            WindowEndUtc = query.WindowEndUtc,
+            WindowStartUtc = query.EffectiveFilter.RangeStartUtc?.UtcDateTime ?? default,
+            WindowEndUtc = query.EffectiveFilter.RangeEndUtc?.UtcDateTime ?? default,
             ProductIds = selection.ProductIds,
             DefaultBranches = selection.DefaultBranches,
             Summary = _buildQualityProvider.Compute(selection.Builds, selection.TestRuns, selection.Coverages),

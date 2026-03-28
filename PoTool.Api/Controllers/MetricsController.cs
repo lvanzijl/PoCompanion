@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
+using PoTool.Api.Services;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 
@@ -15,15 +16,18 @@ namespace PoTool.Api.Controllers;
 public class MetricsController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly DeliveryFilterResolutionService _deliveryFilterResolutionService;
     private readonly ILogger<MetricsController> _logger;
 
     public MetricsController(
         IMediator mediator,
+        DeliveryFilterResolutionService deliveryFilterResolutionService,
         ILogger<MetricsController> logger)
     {
         _mediator = mediator;
+        _deliveryFilterResolutionService = deliveryFilterResolutionService;
         _logger = logger;
-}
+    }
 
     private static PortfolioReadQueryOptions BuildPortfolioReadOptions(
         int? productId,
@@ -733,7 +737,7 @@ public class MetricsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Portfolio progress trend with per-sprint data and summary</returns>
     [HttpGet("portfolio-progress-trend")]
-    public async Task<ActionResult<PortfolioProgressTrendDto>> GetPortfolioProgressTrend(
+    public async Task<ActionResult<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>> GetPortfolioProgressTrend(
         [FromQuery][Required] int productOwnerId,
         [FromQuery][Required] int[] sprintIds,
         [FromQuery] int[]? productIds = null,
@@ -746,11 +750,19 @@ public class MetricsController : ControllerBase
                 return BadRequest("At least one sprint ID is required");
             }
 
-            var result = await _mediator.Send(
-                new GetPortfolioProgressTrendQuery(productOwnerId, sprintIds, productIds),
+            var resolution = await _deliveryFilterResolutionService.ResolveAsync(
+                new DeliveryFilterBoundaryRequest(
+                    ProductOwnerId: productOwnerId,
+                    ProductIds: productIds,
+                    SprintIds: sprintIds),
+                nameof(GetPortfolioProgressTrend),
                 cancellationToken);
 
-            return Ok(result);
+            var result = await _mediator.Send(
+                new GetPortfolioProgressTrendQuery(resolution.EffectiveFilter),
+                cancellationToken);
+
+            return Ok(DeliveryFilterResolutionService.ToResponse(result, resolution));
         }
         catch (Exception ex)
         {
@@ -769,7 +781,7 @@ public class MetricsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Capacity calibration DTO</returns>
     [HttpGet("capacity-calibration")]
-    public async Task<ActionResult<CapacityCalibrationDto>> GetCapacityCalibration(
+    public async Task<ActionResult<DeliveryQueryResponseDto<CapacityCalibrationDto>>> GetCapacityCalibration(
         [FromQuery][Required] int productOwnerId,
         [FromQuery][Required] int[] sprintIds,
         [FromQuery] int[]? productIds = null,
@@ -782,11 +794,19 @@ public class MetricsController : ControllerBase
                 return BadRequest("At least one sprint ID is required");
             }
 
-            var result = await _mediator.Send(
-                new GetCapacityCalibrationQuery(productOwnerId, sprintIds, productIds),
+            var resolution = await _deliveryFilterResolutionService.ResolveAsync(
+                new DeliveryFilterBoundaryRequest(
+                    ProductOwnerId: productOwnerId,
+                    ProductIds: productIds,
+                    SprintIds: sprintIds),
+                nameof(GetCapacityCalibration),
                 cancellationToken);
 
-            return Ok(result);
+            var result = await _mediator.Send(
+                new GetCapacityCalibrationQuery(resolution.EffectiveFilter),
+                cancellationToken);
+
+            return Ok(DeliveryFilterResolutionService.ToResponse(result, resolution));
         }
         catch (Exception ex)
         {
@@ -805,9 +825,10 @@ public class MetricsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Portfolio delivery snapshot DTO</returns>
     [HttpGet("portfolio-delivery")]
-    public async Task<ActionResult<PortfolioDeliveryDto>> GetPortfolioDelivery(
+    public async Task<ActionResult<DeliveryQueryResponseDto<PortfolioDeliveryDto>>> GetPortfolioDelivery(
         [FromQuery][Required] int productOwnerId,
         [FromQuery][Required] int[] sprintIds,
+        [FromQuery] int[]? productIds = null,
         CancellationToken cancellationToken = default)
     {
         try
@@ -817,11 +838,19 @@ public class MetricsController : ControllerBase
                 return BadRequest("At least one sprint ID is required");
             }
 
-            var result = await _mediator.Send(
-                new GetPortfolioDeliveryQuery(productOwnerId, sprintIds),
+            var resolution = await _deliveryFilterResolutionService.ResolveAsync(
+                new DeliveryFilterBoundaryRequest(
+                    ProductOwnerId: productOwnerId,
+                    ProductIds: productIds,
+                    SprintIds: sprintIds),
+                nameof(GetPortfolioDelivery),
                 cancellationToken);
 
-            return Ok(result);
+            var result = await _mediator.Send(
+                new GetPortfolioDeliveryQuery(resolution.EffectiveFilter),
+                cancellationToken);
+
+            return Ok(DeliveryFilterResolutionService.ToResponse(result, resolution));
         }
         catch (Exception ex)
         {
@@ -834,18 +863,25 @@ public class MetricsController : ControllerBase
     /// Gets compact contextual metrics for the Home product bar.
     /// </summary>
     [HttpGet("home-product-bar")]
-    public async Task<ActionResult<HomeProductBarMetricsDto>> GetHomeProductBarMetrics(
+    public async Task<ActionResult<DeliveryQueryResponseDto<HomeProductBarMetricsDto>>> GetHomeProductBarMetrics(
         [FromQuery][Required] int productOwnerId,
         [FromQuery] int? productId = null,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var result = await _mediator.Send(
-                new GetHomeProductBarMetricsQuery(productOwnerId, productId),
+            var resolution = await _deliveryFilterResolutionService.ResolveAsync(
+                new DeliveryFilterBoundaryRequest(
+                    ProductOwnerId: productOwnerId,
+                    ProductIds: productId.HasValue ? [productId.Value] : null),
+                nameof(GetHomeProductBarMetrics),
                 cancellationToken);
 
-            return Ok(result);
+            var result = await _mediator.Send(
+                new GetHomeProductBarMetricsQuery(resolution.EffectiveFilter),
+                cancellationToken);
+
+            return Ok(DeliveryFilterResolutionService.ToResponse(result, resolution));
         }
         catch (Exception ex)
         {
