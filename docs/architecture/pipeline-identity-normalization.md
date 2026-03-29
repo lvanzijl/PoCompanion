@@ -207,6 +207,14 @@ Updated tests verify that:
 
 The identity normalization preserves behavior while changing the public meaning of the affected Pipeline Insights fields from internal DB IDs to external TFS IDs.
 
+## Security Summary
+
+- No new dependencies were added.
+- No secrets or credentials were introduced.
+- `code_review` reported no issues.
+- `codeql_checker` reported no alerts, but noted that C# analysis was skipped because the database size was too large.
+- The implemented change is limited to DTO identity mapping, comments, and tests; it does not alter persistence schema, sync behavior, or authorization boundaries.
+
 ## Remaining Semantic Gaps
 
 This prompt resolves only the highest-priority public pipeline identity contradiction.
