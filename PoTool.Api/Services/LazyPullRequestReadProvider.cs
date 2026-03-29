@@ -45,6 +45,15 @@ public sealed class LazyPullRequestReadProvider : IPullRequestReadProvider
         return _factory.GetPullRequestReadProvider().GetIterationsAsync(pullRequestId, cancellationToken);
     }
 
+    public Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestIterationDto>>> GetIterationsForPullRequestsAsync(
+        IReadOnlyList<int> pullRequestIds,
+        IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
+        CancellationToken cancellationToken = default)
+    {
+        return _factory.GetPullRequestReadProvider()
+            .GetIterationsForPullRequestsAsync(pullRequestIds, repositoryNamesByPullRequestId, cancellationToken);
+    }
+
     public Task<IEnumerable<PullRequestIterationDto>> GetIterationsAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default)
     {
         return _factory.GetPullRequestReadProvider().GetIterationsAsync(pullRequestId, repositoryName, cancellationToken);
@@ -55,6 +64,15 @@ public sealed class LazyPullRequestReadProvider : IPullRequestReadProvider
         return _factory.GetPullRequestReadProvider().GetCommentsAsync(pullRequestId, cancellationToken);
     }
 
+    public Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestCommentDto>>> GetCommentsForPullRequestsAsync(
+        IReadOnlyList<int> pullRequestIds,
+        IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
+        CancellationToken cancellationToken = default)
+    {
+        return _factory.GetPullRequestReadProvider()
+            .GetCommentsForPullRequestsAsync(pullRequestIds, repositoryNamesByPullRequestId, cancellationToken);
+    }
+
     public Task<IEnumerable<PullRequestCommentDto>> GetCommentsAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default)
     {
         return _factory.GetPullRequestReadProvider().GetCommentsAsync(pullRequestId, repositoryName, cancellationToken);
@@ -63,6 +81,15 @@ public sealed class LazyPullRequestReadProvider : IPullRequestReadProvider
     public Task<IEnumerable<PullRequestFileChangeDto>> GetFileChangesAsync(int pullRequestId, CancellationToken cancellationToken = default)
     {
         return _factory.GetPullRequestReadProvider().GetFileChangesAsync(pullRequestId, cancellationToken);
+    }
+
+    public Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestFileChangeDto>>> GetFileChangesForPullRequestsAsync(
+        IReadOnlyList<int> pullRequestIds,
+        IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
+        CancellationToken cancellationToken = default)
+    {
+        return _factory.GetPullRequestReadProvider()
+            .GetFileChangesForPullRequestsAsync(pullRequestIds, repositoryNamesByPullRequestId, cancellationToken);
     }
 
     public Task<IEnumerable<PullRequestFileChangeDto>> GetFileChangesAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default)

@@ -34,21 +34,52 @@ public sealed class GetPullRequestMetricsQueryHandler : IQueryHandler<GetPullReq
             query.EffectiveFilter.RangeStartUtc,
             query.EffectiveFilter.RangeEndUtc);
 
-        var allPrs = await _pullRequestReadProvider.GetByRepositoryNamesAsync(
+        var allPrs = (await _pullRequestReadProvider.GetByRepositoryNamesAsync(
             query.EffectiveFilter.RepositoryScope,
             query.EffectiveFilter.RangeStartUtc,
             query.EffectiveFilter.RangeEndUtc,
+            cancellationToken)).ToList();
+
+        if (allPrs.Count == 0)
+        {
+            return Array.Empty<PullRequestMetricsDto>();
+        }
+
+        var pullRequestIds = allPrs
+            .Select(pr => pr.Id)
+            .Distinct()
+            .ToArray();
+        var repositoryNamesByPullRequestId = allPrs
+            .GroupBy(pr => pr.Id)
+            .ToDictionary(group => group.Key, group => group.Last().RepositoryName);
+        var iterationsByPullRequestId = await _pullRequestReadProvider.GetIterationsForPullRequestsAsync(
+            pullRequestIds,
+            repositoryNamesByPullRequestId,
+            cancellationToken);
+        var commentsByPullRequestId = await _pullRequestReadProvider.GetCommentsForPullRequestsAsync(
+            pullRequestIds,
+            repositoryNamesByPullRequestId,
+            cancellationToken);
+        var fileChangesByPullRequestId = await _pullRequestReadProvider.GetFileChangesForPullRequestsAsync(
+            pullRequestIds,
+            repositoryNamesByPullRequestId,
             cancellationToken);
         var metrics = new List<PullRequestMetricsDto>();
 
         foreach (var pr in allPrs)
         {
-            var iterations = await _pullRequestReadProvider.GetIterationsAsync(pr.Id, pr.RepositoryName, cancellationToken);
-            var comments = await _pullRequestReadProvider.GetCommentsAsync(pr.Id, pr.RepositoryName, cancellationToken);
-            var fileChanges = await _pullRequestReadProvider.GetFileChangesAsync(pr.Id, pr.RepositoryName, cancellationToken);
+            var iterations = iterationsByPullRequestId.TryGetValue(pr.Id, out var pullRequestIterations)
+                ? pullRequestIterations
+                : Array.Empty<PullRequestIterationDto>();
+            var comments = commentsByPullRequestId.TryGetValue(pr.Id, out var pullRequestComments)
+                ? pullRequestComments
+                : Array.Empty<PullRequestCommentDto>();
+            var fileChanges = fileChangesByPullRequestId.TryGetValue(pr.Id, out var pullRequestFileChanges)
+                ? pullRequestFileChanges
+                : Array.Empty<PullRequestFileChangeDto>();
 
             var totalTimeOpen = CalculateTotalTimeOpen(pr);
-            var effectiveWorkTime = CalculateEffectiveWorkTime(pr, iterations.ToList());
+            var effectiveWorkTime = CalculateEffectiveWorkTime(pr, iterations);
             var totalFileCount = fileChanges.GroupBy(fc => fc.FilePath).Count();
             var totalLinesAdded = fileChanges.Sum(fc => fc.LinesAdded);
             var totalLinesDeleted = fileChanges.Sum(fc => fc.LinesDeleted);
@@ -83,7 +114,7 @@ public sealed class GetPullRequestMetricsQueryHandler : IQueryHandler<GetPullReq
         return endDate - pr.CreatedDate;
     }
 
-    private static TimeSpan? CalculateEffectiveWorkTime(PullRequestDto pr, List<PullRequestIterationDto> iterations)
+    private static TimeSpan? CalculateEffectiveWorkTime(PullRequestDto pr, IReadOnlyList<PullRequestIterationDto> iterations)
     {
         if (iterations.Count == 0)
         {

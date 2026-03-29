@@ -97,4 +97,94 @@ public sealed class CachedPullRequestReadProviderSqliteTests
 
         CollectionAssert.AreEqual(new[] { 101, 103, 102 }, comments.Select(comment => comment.Id).ToArray());
     }
+
+    [TestMethod]
+    public async Task BatchMethods_WithSqlite_GroupByPullRequestAndPreserveOrdering()
+    {
+        _context.PullRequests.AddRange(
+            new PullRequestEntity
+            {
+                Id = 1,
+                RepositoryName = "Repo",
+                Title = "PR 1",
+                CreatedBy = "User",
+                CreatedDate = new DateTimeOffset(2026, 3, 1, 8, 0, 0, TimeSpan.Zero),
+                CreatedDateUtc = new DateTime(2026, 3, 1, 8, 0, 0, DateTimeKind.Utc),
+                Status = "Active",
+                IterationPath = "Sprint 1",
+                SourceBranch = "feature/test",
+                TargetBranch = "main",
+                RetrievedAt = DateTimeOffset.UtcNow
+            },
+            new PullRequestEntity
+            {
+                Id = 2,
+                RepositoryName = "Repo",
+                Title = "PR 2",
+                CreatedBy = "User",
+                CreatedDate = new DateTimeOffset(2026, 3, 2, 8, 0, 0, TimeSpan.Zero),
+                CreatedDateUtc = new DateTime(2026, 3, 2, 8, 0, 0, DateTimeKind.Utc),
+                Status = "Completed",
+                IterationPath = "Sprint 1",
+                SourceBranch = "feature/test-2",
+                TargetBranch = "main",
+                RetrievedAt = DateTimeOffset.UtcNow
+            });
+        _context.PullRequestIterations.AddRange(
+            new PullRequestIterationEntity { PullRequestId = 1, IterationNumber = 2, CreatedDate = DateTimeOffset.UtcNow, UpdatedDate = DateTimeOffset.UtcNow },
+            new PullRequestIterationEntity { PullRequestId = 1, IterationNumber = 1, CreatedDate = DateTimeOffset.UtcNow.AddHours(-1), UpdatedDate = DateTimeOffset.UtcNow.AddHours(-1) },
+            new PullRequestIterationEntity { PullRequestId = 2, IterationNumber = 1, CreatedDate = DateTimeOffset.UtcNow, UpdatedDate = DateTimeOffset.UtcNow });
+        _context.PullRequestComments.AddRange(
+            new PullRequestCommentEntity
+            {
+                InternalId = 3,
+                Id = 201,
+                PullRequestId = 1,
+                ThreadId = 10,
+                Author = "Reviewer",
+                Content = "Later",
+                CreatedDate = new DateTimeOffset(2026, 3, 2, 8, 0, 0, TimeSpan.Zero),
+                CreatedDateUtc = new DateTime(2026, 3, 2, 8, 0, 0, DateTimeKind.Utc),
+                IsResolved = false
+            },
+            new PullRequestCommentEntity
+            {
+                InternalId = 2,
+                Id = 200,
+                PullRequestId = 1,
+                ThreadId = 10,
+                Author = "Reviewer",
+                Content = "Earlier",
+                CreatedDate = new DateTimeOffset(2026, 3, 1, 8, 0, 0, TimeSpan.Zero),
+                CreatedDateUtc = new DateTime(2026, 3, 1, 8, 0, 0, DateTimeKind.Utc),
+                IsResolved = false
+            },
+            new PullRequestCommentEntity
+            {
+                InternalId = 1,
+                Id = 300,
+                PullRequestId = 2,
+                ThreadId = 20,
+                Author = "Reviewer",
+                Content = "Only",
+                CreatedDate = new DateTimeOffset(2026, 3, 3, 8, 0, 0, TimeSpan.Zero),
+                CreatedDateUtc = new DateTime(2026, 3, 3, 8, 0, 0, DateTimeKind.Utc),
+                IsResolved = true
+            });
+        _context.PullRequestFileChanges.AddRange(
+            new PullRequestFileChangeEntity { PullRequestId = 1, IterationId = 2, FilePath = "/b.cs", ChangeType = "edit", LinesAdded = 1, LinesDeleted = 0, LinesModified = 0 },
+            new PullRequestFileChangeEntity { PullRequestId = 1, IterationId = 1, FilePath = "/a.cs", ChangeType = "add", LinesAdded = 2, LinesDeleted = 0, LinesModified = 0 },
+            new PullRequestFileChangeEntity { PullRequestId = 2, IterationId = 1, FilePath = "/c.cs", ChangeType = "edit", LinesAdded = 3, LinesDeleted = 1, LinesModified = 0 });
+        await _context.SaveChangesAsync();
+
+        var iterations = await _provider.GetIterationsForPullRequestsAsync([1, 2], cancellationToken: CancellationToken.None);
+        var comments = await _provider.GetCommentsForPullRequestsAsync([1, 2], cancellationToken: CancellationToken.None);
+        var fileChanges = await _provider.GetFileChangesForPullRequestsAsync([1, 2], cancellationToken: CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { 1, 2 }, iterations[1].Select(iteration => iteration.IterationNumber).ToArray());
+        CollectionAssert.AreEqual(new[] { 200, 201 }, comments[1].Select(comment => comment.Id).ToArray());
+        CollectionAssert.AreEqual(new[] { "/a.cs", "/b.cs" }, fileChanges[1].Select(fileChange => fileChange.FilePath).ToArray());
+        CollectionAssert.AreEqual(new[] { 300 }, comments[2].Select(comment => comment.Id).ToArray());
+        CollectionAssert.AreEqual(new[] { "/c.cs" }, fileChanges[2].Select(fileChange => fileChange.FilePath).ToArray());
+    }
 }
