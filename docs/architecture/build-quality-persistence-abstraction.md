@@ -160,6 +160,13 @@ The next logical candidates for the same pattern are:
 2. additional cache-backed analytical slices that still compose EF queries in handlers
 3. larger hierarchy- or event-driven analytics only after their fact contracts are narrowed enough to avoid over-generalization
 
+## Security Summary
+
+- `code_review` was run and one encapsulation issue was reported; it was fixed by replacing the leaked nested pipeline-definition type with the slice-level `BuildQualityPipelineDefinitionSelection` read model.
+- `codeql_checker` reported `0` alerts, but the C# analysis database was skipped because the database size was too large in this environment.
+- No new dependencies were introduced.
+- No security-sensitive behavior or persistence write paths were changed.
+
 ## Final Status
 
 The Build Quality persistence abstraction slice is **complete and stable** for the requested scope.
