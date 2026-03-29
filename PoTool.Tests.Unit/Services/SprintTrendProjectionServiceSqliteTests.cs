@@ -12,6 +12,7 @@ using PoTool.Core.Domain.Portfolio;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Hierarchy;
+using PoTool.Core.Domain.WorkItems;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
@@ -103,7 +104,7 @@ public class SprintTrendProjectionServiceSqliteTests
             var workItem = new WorkItemEntity
             {
                 TfsId = 1001,
-                Type = "Product Backlog Item",
+                Type = CanonicalWorkItemTypes.Pbi,
                 Title = "PBI 1",
                 AreaPath = "Area",
                 IterationPath = sprint.Path,
@@ -117,7 +118,7 @@ public class SprintTrendProjectionServiceSqliteTests
             context.ResolvedWorkItems.Add(new ResolvedWorkItemEntity
             {
                 WorkItemId = 1001,
-                WorkItemType = WorkItemType.Pbi,
+                WorkItemType = CanonicalWorkItemTypes.Pbi,
                 ResolvedProductId = product.Id,
                 ResolvedSprintId = sprint.Id,
                 ResolutionStatus = ResolutionStatus.Resolved,
@@ -157,7 +158,7 @@ public class SprintTrendProjectionServiceSqliteTests
     }
 
     [TestMethod]
-    public async Task ComputeProjectionsAsync_RebuildsPortfolioFlowProjectionInTheSprintPipeline()
+    public async Task ComputeProjectionsAsync_RebuildsPortfolioFlowProjectionInTheSprintPipeline_WithRawProductBacklogItemType()
     {
         int productOwnerId;
         int sprintId;
@@ -203,7 +204,7 @@ public class SprintTrendProjectionServiceSqliteTests
             context.WorkItems.Add(new WorkItemEntity
             {
                 TfsId = 2001,
-                Type = WorkItemType.Pbi,
+                Type = "Product Backlog Item",
                 Title = "Portfolio flow PBI",
                 AreaPath = "Area",
                 IterationPath = sprint.Path,
@@ -217,7 +218,7 @@ public class SprintTrendProjectionServiceSqliteTests
             context.ResolvedWorkItems.Add(new ResolvedWorkItemEntity
             {
                 WorkItemId = 2001,
-                WorkItemType = WorkItemType.Pbi,
+                WorkItemType = CanonicalWorkItemTypes.Pbi,
                 ResolvedProductId = product.Id,
                 ResolvedSprintId = sprint.Id,
                 ResolutionStatus = ResolutionStatus.Resolved,
@@ -341,10 +342,10 @@ public class SprintTrendProjectionServiceSqliteTests
             sprint2Id = sprint2.Id;
 
             context.WorkItems.AddRange(
-                CreateWorkItem(3001, WorkItemType.Pbi, "Done", storyPoints: 8, effort: 20, createdDate: new DateTimeOffset(new DateTime(2025, 12, 10, 0, 0, 0, DateTimeKind.Utc))),
-                CreateWorkItem(3002, WorkItemType.Pbi, "Active", storyPoints: 5, effort: 13, createdDate: new DateTimeOffset(new DateTime(2025, 12, 12, 0, 0, 0, DateTimeKind.Utc))),
-                CreateWorkItem(3003, WorkItemType.Pbi, "Done", storyPoints: 3, effort: 8, createdDate: new DateTimeOffset(new DateTime(2026, 2, 3, 0, 0, 0, DateTimeKind.Utc))),
-                CreateWorkItem(3004, WorkItemType.Pbi, "Active", storyPoints: 12, effort: 21, createdDate: new DateTimeOffset(new DateTime(2026, 2, 4, 0, 0, 0, DateTimeKind.Utc))));
+                CreateWorkItem(3001, CanonicalWorkItemTypes.Pbi, "Done", storyPoints: 8, effort: 20, createdDate: new DateTimeOffset(new DateTime(2025, 12, 10, 0, 0, 0, DateTimeKind.Utc))),
+                CreateWorkItem(3002, CanonicalWorkItemTypes.Pbi, "Active", storyPoints: 5, effort: 13, createdDate: new DateTimeOffset(new DateTime(2025, 12, 12, 0, 0, 0, DateTimeKind.Utc))),
+                CreateWorkItem(3003, CanonicalWorkItemTypes.Pbi, "Done", storyPoints: 3, effort: 8, createdDate: new DateTimeOffset(new DateTime(2026, 2, 3, 0, 0, 0, DateTimeKind.Utc))),
+                CreateWorkItem(3004, CanonicalWorkItemTypes.Pbi, "Active", storyPoints: 12, effort: 21, createdDate: new DateTimeOffset(new DateTime(2026, 2, 4, 0, 0, 0, DateTimeKind.Utc))));
 
             context.ResolvedWorkItems.AddRange(
                 CreateResolvedWorkItem(3001, product.Id),
@@ -497,7 +498,7 @@ public class SprintTrendProjectionServiceSqliteTests
 
             context.WorkItems.Add(CreateWorkItem(
                 4001,
-                WorkItemType.Pbi,
+                CanonicalWorkItemTypes.Pbi,
                 "Done",
                 storyPoints: 8,
                 effort: 13,
@@ -602,7 +603,7 @@ public class SprintTrendProjectionServiceSqliteTests
         return new ResolvedWorkItemEntity
         {
             WorkItemId = workItemId,
-            WorkItemType = WorkItemType.Pbi,
+            WorkItemType = CanonicalWorkItemTypes.Pbi,
             ResolvedProductId = productId,
             ResolutionStatus = ResolutionStatus.Resolved,
             ResolvedAtRevision = 1

@@ -2,6 +2,7 @@ using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Sprints;
+using PoTool.Core.Domain.WorkItems;
 using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
@@ -145,10 +146,10 @@ public sealed class SprintCommitmentCdcServicesTests
     {
         var stateLookup = StateClassificationLookup.Create(
         [
-            new(WorkItemType.Pbi, "Resolved", StateClassification.Done)
+            new(CanonicalWorkItemTypes.Pbi, "Resolved", StateClassification.Done)
         ]);
 
-        var classification = StateClassificationLookup.GetClassification(stateLookup, WorkItemType.Pbi, "resolved");
+        var classification = StateClassificationLookup.GetClassification(stateLookup, CanonicalWorkItemTypes.Pbi, "resolved");
 
         Assert.AreEqual(StateClassification.Done, classification);
     }
@@ -160,12 +161,12 @@ public sealed class SprintCommitmentCdcServicesTests
         var firstDoneTimestamp = new DateTimeOffset(2026, 1, 3, 0, 0, 0, TimeSpan.Zero);
         IReadOnlyDictionary<int, WorkItemSnapshot> workItemsById = new Dictionary<int, WorkItemSnapshot>
         {
-            [101] = new(101, WorkItemType.Pbi, "Resolved", "\\Project\\Sprint 1")
+            [101] = new(101, CanonicalWorkItemTypes.Pbi, "Resolved", "\\Project\\Sprint 1")
         };
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification> stateLookup =
             new Dictionary<(string WorkItemType, string StateName), StateClassification>
             {
-                [(WorkItemType.Pbi, "Resolved")] = StateClassification.Done
+                [(CanonicalWorkItemTypes.Pbi, "Resolved")] = StateClassification.Done
             };
         IReadOnlyList<FieldChangeEvent> stateEvents =
         [
@@ -226,18 +227,18 @@ public sealed class SprintCommitmentCdcServicesTests
 
         IReadOnlyDictionary<int, CanonicalWorkItem> canonicalWorkItemsById = new Dictionary<int, CanonicalWorkItem>
         {
-            [101] = new(101, WorkItemType.Pbi, 900, null, 5),
-            [102] = new(102, WorkItemType.Pbi, 901, null, 3),
-            [103] = new(103, WorkItemType.Pbi, 902, null, 2),
-            [104] = new(104, WorkItemType.Pbi, 903, null, 8),
+            [101] = new(101, CanonicalWorkItemTypes.Pbi, 900, null, 5),
+            [102] = new(102, CanonicalWorkItemTypes.Pbi, 901, null, 3),
+            [103] = new(103, CanonicalWorkItemTypes.Pbi, 902, null, 2),
+            [104] = new(104, CanonicalWorkItemTypes.Pbi, 903, null, 8),
             [105] = new(105, WorkItemType.Bug, 904, null, 13)
         };
         IReadOnlyDictionary<int, WorkItemSnapshot> workItemsById = new Dictionary<int, WorkItemSnapshot>
         {
-            [101] = new(101, WorkItemType.Pbi, "Resolved", sprint.Path),
-            [102] = new(102, WorkItemType.Pbi, "Resolved", sprint.Path),
-            [103] = new(103, WorkItemType.Pbi, "Active", "\\Project\\Backlog"),
-            [104] = new(104, WorkItemType.Pbi, "Active", nextSprintPath),
+            [101] = new(101, CanonicalWorkItemTypes.Pbi, "Resolved", sprint.Path),
+            [102] = new(102, CanonicalWorkItemTypes.Pbi, "Resolved", sprint.Path),
+            [103] = new(103, CanonicalWorkItemTypes.Pbi, "Active", "\\Project\\Backlog"),
+            [104] = new(104, CanonicalWorkItemTypes.Pbi, "Active", nextSprintPath),
             [105] = new(105, WorkItemType.Bug, "Resolved", sprint.Path)
         };
         IReadOnlyDictionary<int, IReadOnlyList<FieldChangeEvent>> iterationEventsByWorkItem = new Dictionary<int, IReadOnlyList<FieldChangeEvent>>
@@ -273,7 +274,7 @@ public sealed class SprintCommitmentCdcServicesTests
         IReadOnlyDictionary<(string WorkItemType, string StateName), StateClassification> stateLookup =
             new Dictionary<(string WorkItemType, string StateName), StateClassification>
             {
-                [(WorkItemType.Pbi, "Resolved")] = StateClassification.Done,
+                [(CanonicalWorkItemTypes.Pbi, "Resolved")] = StateClassification.Done,
                 [(WorkItemType.Bug, "Resolved")] = StateClassification.Done
             };
 

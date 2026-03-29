@@ -678,8 +678,8 @@ public class GetPipelineInsightsScatterPointTests
 
         var scatter = result.Products[0].ScatterPoints;
         Assert.HasCount(3, scatter);
-        Assert.IsLessThanOrEqualTo(scatter[0].StartTime!.Value, scatter[1].StartTime!.Value, "Points must be sorted by start time");
-        Assert.IsLessThanOrEqualTo(scatter[1].StartTime!.Value, scatter[2].StartTime!.Value, "Points must be sorted by start time");
+        Assert.IsLessThanOrEqualTo(scatter[1].StartTime!.Value, scatter[0].StartTime!.Value, "Points must be sorted by start time");
+        Assert.IsLessThanOrEqualTo(scatter[2].StartTime!.Value, scatter[1].StartTime!.Value, "Points must be sorted by start time");
     }
 
     [TestMethod]

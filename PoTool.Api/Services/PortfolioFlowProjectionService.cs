@@ -260,7 +260,7 @@ public class PortfolioFlowProjectionService
         var sprintEnd = new DateTimeOffset(DateTime.SpecifyKind(sprint.EndDateUtc.Value, DateTimeKind.Utc), TimeSpan.Zero);
         var candidatePbiIds = candidateWorkItemIds
             .Where(workItemsByTfsId.ContainsKey)
-            .Where(workItemId => CanonicalWorkItemTypes.IsAuthoritativePbi(workItemsByTfsId[workItemId].Type))
+            .Where(workItemId => CanonicalWorkItemTypes.IsAuthoritativePbi(workItemsByTfsId[workItemId].Type.ToCanonicalWorkItemType()))
             .ToList();
 
         var stockStoryPoints = 0d;
@@ -271,6 +271,7 @@ public class PortfolioFlowProjectionService
         foreach (var workItemId in candidatePbiIds)
         {
             var workItem = workItemsByTfsId[workItemId];
+            var canonicalWorkItemType = workItem.Type.ToCanonicalWorkItemType();
             resolvedItemsByWorkItemId.TryGetValue(workItemId, out var resolvedItem);
             var membershipEvents = membershipEventsByWorkItem?.GetValueOrDefault(workItemId);
             var stateEvents = stateEventsByWorkItem?.GetValueOrDefault(workItemId);
@@ -279,7 +280,10 @@ public class PortfolioFlowProjectionService
             if (GetResolvedProductIdAtTimestamp(currentResolvedProductId, membershipEvents, sprintEnd) == productId)
             {
                 var stateAtSprintEnd = StateReconstructionLookup.GetStateAtTimestamp(workItem.State, stateEvents, sprintEnd);
-                var stateAtSprintEndClassification = StateClassificationLookup.GetClassification(stateLookup, workItem.Type, stateAtSprintEnd);
+                var stateAtSprintEndClassification = StateClassificationLookup.GetClassification(
+                    stateLookup,
+                    canonicalWorkItemType,
+                    stateAtSprintEnd);
 
                 if (stateAtSprintEndClassification != StateClassification.Removed)
                 {
@@ -344,7 +348,7 @@ public class PortfolioFlowProjectionService
                     workItemsByTfsId,
                     resolvedItemsByWorkItemId,
                     stateLookup,
-                    StateClassificationLookup.IsDone(stateLookup, workItem.Type.ToCanonicalWorkItemType(), stateAtEntry),
+                    StateClassificationLookup.IsDone(stateLookup, canonicalWorkItemType, stateAtEntry),
                     stateEventsByWorkItem,
                     storyPointEventsByWorkItem,
                     businessValueEventsByWorkItem);

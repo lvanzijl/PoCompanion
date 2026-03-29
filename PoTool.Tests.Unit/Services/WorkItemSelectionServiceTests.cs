@@ -36,7 +36,8 @@ public class WorkItemSelectionServiceTests
             Title = title,
             Type = "Feature",
             State = "New",
-            Children = new List<TreeNode>()
+            Children = new List<TreeNode>(),
+            JsonPayload = JsonSerializer.Serialize(workItem)
         };
 
         if (hasChildren)

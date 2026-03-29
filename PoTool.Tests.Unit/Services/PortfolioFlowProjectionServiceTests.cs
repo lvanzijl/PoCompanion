@@ -8,6 +8,7 @@ using PoTool.Core.WorkItems;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Portfolio;
+using PoTool.Core.Domain.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -254,7 +255,7 @@ public sealed class PortfolioFlowProjectionServiceTests
         return new WorkItemEntity
         {
             TfsId = workItemId,
-            Type = WorkItemType.Pbi,
+            Type = CanonicalWorkItemTypes.Pbi,
             Title = $"PBI {workItemId}",
             AreaPath = "Area",
             IterationPath = "\\Project\\Sprint 1",
@@ -271,7 +272,7 @@ public sealed class PortfolioFlowProjectionServiceTests
         return new ResolvedWorkItemEntity
         {
             WorkItemId = workItemId,
-            WorkItemType = WorkItemType.Pbi,
+            WorkItemType = CanonicalWorkItemTypes.Pbi,
             ResolvedProductId = resolvedProductId,
             ResolvedFeatureId = resolvedFeatureId,
             ResolutionStatus = ResolutionStatus.Resolved,

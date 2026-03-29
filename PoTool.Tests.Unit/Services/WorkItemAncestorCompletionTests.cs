@@ -103,7 +103,7 @@ public class WorkItemAncestorCompletionTests
 
         var responses = new Queue<(HttpStatusCode status, string content)>();
 
-        // Response 1: WIQL query for descendants of Epic 300
+        // Response 1: single recursive WIQL query for descendants of Epic 300
         // Returns Feature 400 as child
         responses.Enqueue((HttpStatusCode.OK, JsonSerializer.Serialize(new
         {
@@ -111,19 +111,16 @@ public class WorkItemAncestorCompletionTests
             queryResultType = "workItemLink",
             workItemRelations = new[]
             {
-                new { source = new { id = 300 }, target = new { id = 400 } }
+                new
+                {
+                    rel = "System.LinkTypes.Hierarchy-Forward",
+                    source = new { id = 300 },
+                    target = new { id = 400 }
+                }
             }
         })));
 
-        // Response 2: WIQL query for descendants of Feature 400 (has no children)
-        responses.Enqueue((HttpStatusCode.OK, JsonSerializer.Serialize(new
-        {
-            queryType = "WorkItemLink",
-            queryResultType = "workItemLink",
-            workItemRelations = Array.Empty<object>()
-        })));
-
-        // Response 3: Phase 1 - Fetch relations for Epic 300 and Feature 400
+        // Response 2: Phase 1 - Fetch relations for Epic 300 and Feature 400
         // Epic 300 has parent Objective 200
         // Feature 400 has parent Epic 300
         responses.Enqueue((HttpStatusCode.OK, JsonSerializer.Serialize(new
@@ -158,7 +155,7 @@ public class WorkItemAncestorCompletionTests
             }
         })));
 
-        // Response 4: Phase 1.5 - Fetch relations for missing parent Objective 200
+        // Response 3: Phase 1.5 - Fetch relations for missing parent Objective 200
         // Objective 200 has parent Goal 100
         responses.Enqueue((HttpStatusCode.OK, JsonSerializer.Serialize(new
         {
@@ -180,7 +177,7 @@ public class WorkItemAncestorCompletionTests
             }
         })));
 
-        // Response 5: Phase 1.5 - Fetch relations for missing parent Goal 100
+        // Response 4: Phase 1.5 - Fetch relations for missing parent Goal 100
         // Goal 100 has no parent (top of hierarchy)
         responses.Enqueue((HttpStatusCode.OK, JsonSerializer.Serialize(new
         {
@@ -195,7 +192,7 @@ public class WorkItemAncestorCompletionTests
             }
         })));
 
-        // Response 6: Phase 2 - Fetch fields for all items (100, 200, 300, 400)
+        // Response 5: Phase 2 - Fetch fields for all items (100, 200, 300, 400)
         responses.Enqueue((HttpStatusCode.OK, JsonSerializer.Serialize(new
         {
             count = 4,

@@ -83,6 +83,31 @@ public sealed class WorkItemHierarchyBacklogPriorityTests
             count = 2,
             value = new object[]
             {
+                new Dictionary<string, object>
+                {
+                    ["id"] = 200,
+                    ["relations"] = Array.Empty<object>()
+                },
+                new Dictionary<string, object>
+                {
+                    ["id"] = 300,
+                    ["relations"] = new object[]
+                    {
+                        new Dictionary<string, object>
+                        {
+                            ["rel"] = "System.LinkTypes.Hierarchy-Reverse",
+                            ["url"] = "https://dev.azure.com/testorg/_apis/wit/workItems/200"
+                        }
+                    }
+                }
+            }
+        }));
+
+        responses.Enqueue(CreateJsonResponse(new
+        {
+            count = 2,
+            value = new object[]
+            {
                 CreateHierarchyWorkItem(200, "Objective", "Objective 1", 12345d),
                 CreateHierarchyWorkItem(300, "Epic", "Epic 1", 23456d)
             }

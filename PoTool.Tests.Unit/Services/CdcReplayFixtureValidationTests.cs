@@ -19,6 +19,7 @@ using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Portfolio;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.WorkItems;
+using PoTool.Core.Domain.WorkItems;
 using PoTool.Shared.Settings;
 using DomainStateClassification = PoTool.Core.Domain.Models.StateClassification;
 
@@ -585,12 +586,7 @@ public sealed class CdcReplayFixtureValidationTests
                 sprints.ToDictionary(sprint => sprint.Name, sprint => sprint.ToDefinition()),
                 workItems.ToDictionary(
                     workItem => workItem.TfsId,
-                    workItem => new CanonicalWorkItem(
-                        workItem.TfsId,
-                        workItem.Type,
-                        workItem.ParentTfsId,
-                        workItem.BusinessValue,
-                        workItem.StoryPoints)),
+                    workItem => workItem.ToCanonicalWorkItem()),
                 workItems.ToSnapshotDictionary(),
                 fieldChanges
                     .Where(change => string.Equals(change.FieldRefName, "System.State", StringComparison.OrdinalIgnoreCase))
@@ -600,8 +596,8 @@ public sealed class CdcReplayFixtureValidationTests
                     .GroupByWorkItemId(),
                 new Dictionary<(string WorkItemType, string StateName), DomainStateClassification>
                 {
-                    [(WorkItemType.Pbi, "Active")] = DomainStateClassification.InProgress,
-                    [(WorkItemType.Pbi, "Done")] = DomainStateClassification.Done,
+                    [(CanonicalWorkItemTypes.Pbi, "Active")] = DomainStateClassification.InProgress,
+                    [(CanonicalWorkItemTypes.Pbi, "Done")] = DomainStateClassification.Done,
                     [(WorkItemType.Bug, "Done")] = DomainStateClassification.Done
                 });
         }
