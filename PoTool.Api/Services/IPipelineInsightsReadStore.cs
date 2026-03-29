@@ -48,6 +48,7 @@ public sealed record PipelineInsightsProductSelection(
 
 public sealed record PipelineInsightsDefinitionSelection(
     int Id,
+    int ExternalPipelineDefinitionId,
     int ProductId,
     string Name,
     string? DefaultBranch);

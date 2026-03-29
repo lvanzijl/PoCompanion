@@ -143,7 +143,7 @@ public sealed class ProductPipelineInsightsDto
 /// </summary>
 public sealed class PipelineTroubleEntryDto
 {
-    /// <summary>Database PK of the PipelineDefinitionEntity.</summary>
+    /// <summary>External TFS pipeline definition ID.</summary>
     public int PipelineDefinitionId { get; set; }
 
     /// <summary>Pipeline display name.</summary>
@@ -203,7 +203,7 @@ public sealed class PipelineScatterPointDto
     /// <summary>TFS run ID (used in Azure DevOps URL).</summary>
     public int TfsRunId { get; set; }
 
-    /// <summary>Pipeline definition database PK (for highlight filtering).</summary>
+    /// <summary>External TFS pipeline definition ID (for highlight filtering and drilldown).</summary>
     public int PipelineDefinitionId { get; set; }
 
     /// <summary>Pipeline display name.</summary>
@@ -260,7 +260,7 @@ public enum PipelineHalfSprintTrend
 /// </summary>
 public sealed class PipelineBreakdownEntryDto
 {
-    /// <summary>Database PK of the PipelineDefinitionEntity.</summary>
+    /// <summary>External TFS pipeline definition ID.</summary>
     public int PipelineDefinitionId { get; set; }
 
     /// <summary>Pipeline display name.</summary>

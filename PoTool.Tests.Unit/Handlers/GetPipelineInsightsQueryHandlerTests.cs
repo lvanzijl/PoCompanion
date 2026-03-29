@@ -357,6 +357,9 @@ public class GetPipelineInsightsQueryHandlerTests
         Assert.AreEqual("PipeC", top3[0].PipelineName, "PipeC (80%) must be rank 1");
         Assert.AreEqual("PipeB", top3[1].PipelineName, "PipeB (50%) must be rank 2");
         Assert.AreEqual("PipeA", top3[2].PipelineName, "PipeA (10%) must be rank 3");
+        Assert.AreEqual(120, top3[0].PipelineDefinitionId, "Public pipeline identity must use the external TFS pipeline definition ID");
+        Assert.AreEqual(110, top3[1].PipelineDefinitionId, "Public pipeline identity must use the external TFS pipeline definition ID");
+        Assert.AreEqual(100, top3[2].PipelineDefinitionId, "Public pipeline identity must use the external TFS pipeline definition ID");
         Assert.AreEqual(1, top3[0].Rank);
         Assert.AreEqual(2, top3[1].Rank);
         Assert.AreEqual(3, top3[2].Rank);
@@ -643,6 +646,7 @@ public class GetPipelineInsightsScatterPointTests
         Assert.AreEqual("Succeeded", pt.Result);
         Assert.AreEqual("20260206.1", pt.BuildNumber);
         Assert.AreEqual("Pipe 201", pt.PipelineName);
+        Assert.AreEqual(2010, pt.PipelineDefinitionId, "Scatter points must expose the external TFS pipeline definition ID");
         Assert.IsNotNull(pt.StartTime, "StartTime must be set");
         Assert.IsTrue(pt.DurationMinutes.HasValue, "DurationMinutes must be set");
         Assert.AreEqual(20.0, pt.DurationMinutes!.Value, delta: 0.05);
@@ -881,6 +885,7 @@ public class GetPipelineInsightsBreakdownTests
             new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)), CancellationToken.None);
 
         var entry = result.Products[0].PipelineBreakdown[0];
+        Assert.AreEqual(3010, entry.PipelineDefinitionId, "Breakdown entries must expose the external TFS pipeline definition ID");
         Assert.AreEqual(4,    entry.TotalRuns,      "TotalRuns must be 4");
         Assert.AreEqual(4,    entry.CompletedRuns,  "CompletedRuns must be 4");
         Assert.AreEqual(3,    entry.SucceededRuns,  "SucceededRuns must be 3");

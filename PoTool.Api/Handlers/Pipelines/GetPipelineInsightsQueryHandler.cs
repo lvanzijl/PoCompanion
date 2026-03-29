@@ -360,7 +360,7 @@ public sealed class GetPipelineInsightsQueryHandler
             return new PipelineTroubleEntryDto
             {
                 Rank                  = idx + 1,
-                PipelineDefinitionId  = c.DefId,
+                PipelineDefinitionId  = GetPublicPipelineDefinitionId(def),
                 PipelineName          = pipeName,
                 ProductId             = productId,
                 ProductName           = productName ?? string.Empty,
@@ -404,7 +404,7 @@ public sealed class GetPipelineInsightsQueryHandler
                 {
                     Id                   = r.DbId,
                     TfsRunId             = r.TfsRunId,
-                    PipelineDefinitionId = r.DefId,
+                    PipelineDefinitionId = GetPublicPipelineDefinitionId(def),
                     PipelineName         = def?.Name ?? $"Pipeline {r.DefId}",
                     BuildNumber          = r.RunName,
                     Result               = r.Result,
@@ -490,7 +490,7 @@ public sealed class GetPipelineInsightsQueryHandler
 
             entries.Add(new PipelineBreakdownEntryDto
             {
-                PipelineDefinitionId  = defId,
+                PipelineDefinitionId  = GetPublicPipelineDefinitionId(def),
                 PipelineName          = def?.Name ?? $"Pipeline {defId}",
                 TotalRuns             = runs.Count,
                 CompletedRuns         = completed,
@@ -567,6 +567,11 @@ public sealed class GetPipelineInsightsQueryHandler
         }
 
         return (completed, failed, warning, succeeded);
+    }
+
+    private static int GetPublicPipelineDefinitionId(PipelineInsightsDefinitionSelection? definition)
+    {
+        return definition?.ExternalPipelineDefinitionId ?? 0;
     }
 
     private static List<double> GetDurationsMinutes(IEnumerable<PipelineInsightsRun> runs)

@@ -94,6 +94,7 @@ public sealed class EfPipelineInsightsReadStore : IPipelineInsightsReadStore
                 && repositories.Contains(definition.RepoName))
             .Select(definition => new PipelineInsightsDefinitionSelection(
                 definition.Id,
+                definition.PipelineDefinitionId,
                 definition.ProductId,
                 definition.Name,
                 definition.DefaultBranch))
