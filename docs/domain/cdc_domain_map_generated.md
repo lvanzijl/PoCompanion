@@ -17,7 +17,7 @@ Reference documents:
   - `DeliveryTrends`
   - `Forecasting`
   - `EffortPlanning`
-- Service count: 17 public service interfaces across the detected slices
+- Service count: 27 public service interfaces across the detected slices
 - Scan note: `PoTool.Core.Domain/Domain/Cdc/` currently exposes only the sprint slice; the remaining canonical slices live in sibling domain namespaces and are included here so the generated map matches the real architecture rather than only the `Domain/Cdc` folder.
 
 ## Mermaid Diagram
@@ -155,10 +155,20 @@ Repository-shared math helpers used where the contract is slice-independent:
 - Source root:
   - `PoTool.Core.Domain/Domain/DeliveryTrends`
 - Service interfaces:
-  - `IFeatureProgressService`
   - `IDeliveryProgressRollupService`
+  - `IEpicAggregationService`
+  - `IEpicProgressService`
+  - `IFeatureForecastService`
+  - `IFeatureProgressService`
+  - `IInsightService`
+  - `IPlanningQualityService`
   - `ISprintDeliveryProjectionService`
   - `IPortfolioDeliverySummaryService`
+  - `IPortfolioSnapshotComparisonService`
+  - `IPortfolioSnapshotFactory`
+  - `IPortfolioSnapshotValidationService`
+  - `IProductAggregationService`
+  - `ISnapshotComparisonService`
 - Domain models:
   - `DeliveryTrendWorkItem`
   - `DeliveryTrendResolvedWorkItem`
