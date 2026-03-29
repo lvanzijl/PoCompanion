@@ -276,6 +276,11 @@ public class WorkItemResolutionService
         return (epicId, featureId);
     }
 
+    /// <summary>
+    /// Walks up the parent chain from a pull-request analytical work item node to find its Epic and Feature ancestors.
+    /// Uses the same hierarchy traversal rules as the entity-based overload while avoiding persistence-entity leakage
+    /// back into the pull-request analytical query store boundary.
+    /// </summary>
     internal static (int? EpicId, int? FeatureId) ResolveAncestry(
         int tfsId,
         IReadOnlyDictionary<int, PullRequestWorkItemNode> workItemsByTfsId)
