@@ -66,6 +66,7 @@ public sealed class GetCapacityCalibrationQueryHandler
             return Empty();
         }
         var sprints = await _context.Sprints
+            .AsNoTracking()
             .Where(s => effectiveSprintIds.Contains(s.Id))
             .OrderBy(s => s.StartDateUtc)
             .ToListAsync(cancellationToken);
@@ -76,6 +77,7 @@ public sealed class GetCapacityCalibrationQueryHandler
         }
 
         var projections = await _context.SprintMetricsProjections
+            .AsNoTracking()
             .Where(p => effectiveSprintIds.Contains(p.SprintId) && effectiveProductIds.Contains(p.ProductId))
             .ToListAsync(cancellationToken);
 

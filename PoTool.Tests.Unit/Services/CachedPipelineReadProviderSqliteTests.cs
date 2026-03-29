@@ -92,6 +92,8 @@ public sealed class CachedPipelineReadProviderSqliteTests
                 [101, 202],
                 branchName: "refs/heads/release",
                 minStartTime: null,
+                maxStartTime: null,
+                branchScope: null,
                 top: 1,
                 cancellationToken: CancellationToken.None))
             .ToList();
@@ -99,6 +101,32 @@ public sealed class CachedPipelineReadProviderSqliteTests
         Assert.HasCount(2, runs);
         Assert.IsTrue(runs.All(run => run.Branch == "refs/heads/release"));
         CollectionAssert.AreEquivalent(new[] { 101, 202 }, runs.Select(run => run.PipelineId).ToArray());
+    }
+
+    [TestMethod]
+    public async Task GetRunsForPipelinesAsync_AppliesRangeEndBeforePerPipelineLimit()
+    {
+        await SeedDefinitionAsync(101, "Range Pipeline");
+
+        await SeedRunAsync(1, 101, 1, new DateTime(2026, 3, 22, 9, 0, 0, DateTimeKind.Utc), "refs/heads/main");
+        await SeedRunAsync(2, 101, 2, new DateTime(2026, 3, 21, 9, 0, 0, DateTimeKind.Utc), "refs/heads/main");
+        await SeedRunAsync(3, 101, 3, new DateTime(2026, 3, 20, 9, 0, 0, DateTimeKind.Utc), "refs/heads/main");
+
+        var runs = (await _provider.GetRunsForPipelinesAsync(
+                [101],
+                branchName: null,
+                minStartTime: null,
+                maxStartTime: new DateTimeOffset(2026, 3, 20, 23, 59, 59, TimeSpan.Zero),
+                branchScope:
+                [
+                    new PoTool.Core.Pipelines.Filters.PipelineBranchScope(101, "refs/heads/main")
+                ],
+                top: 1,
+                cancellationToken: CancellationToken.None))
+            .ToList();
+
+        Assert.HasCount(1, runs);
+        Assert.AreEqual(3, runs[0].RunId);
     }
 
     private async Task SeedDefinitionAsync(int pipelineDefinitionId, string name)

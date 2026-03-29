@@ -148,6 +148,31 @@ public sealed class CachedPullRequestReadProvider : IPullRequestReadProvider
         return entities.Select(MapIterationToDto);
     }
 
+    public async Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestIterationDto>>> GetIterationsForPullRequestsAsync(
+        IReadOnlyList<int> pullRequestIds,
+        IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedPullRequestIds = NormalizePullRequestIds(pullRequestIds);
+        if (normalizedPullRequestIds.Length == 0)
+        {
+            return EmptyLookup<PullRequestIterationDto>();
+        }
+
+        _logger.LogDebug(
+            "CachedPullRequestReadProvider: Fetching iterations for {PullRequestCount} pull requests",
+            normalizedPullRequestIds.Length);
+
+        var entities = await _dbContext.PullRequestIterations
+            .AsNoTracking()
+            .Where(iteration => normalizedPullRequestIds.Contains(iteration.PullRequestId))
+            .OrderBy(iteration => iteration.PullRequestId)
+            .ThenBy(iteration => iteration.IterationNumber)
+            .ToListAsync(cancellationToken);
+
+        return GroupByPullRequestId(entities, static entity => entity.PullRequestId, MapIterationToDto);
+    }
+
     /// <summary>
     /// Retrieves iterations for a pull request from the cache (repository name ignored for cached provider).
     /// </summary>
@@ -174,6 +199,32 @@ public sealed class CachedPullRequestReadProvider : IPullRequestReadProvider
         return entities.Select(MapCommentToDto);
     }
 
+    public async Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestCommentDto>>> GetCommentsForPullRequestsAsync(
+        IReadOnlyList<int> pullRequestIds,
+        IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedPullRequestIds = NormalizePullRequestIds(pullRequestIds);
+        if (normalizedPullRequestIds.Length == 0)
+        {
+            return EmptyLookup<PullRequestCommentDto>();
+        }
+
+        _logger.LogDebug(
+            "CachedPullRequestReadProvider: Fetching comments for {PullRequestCount} pull requests",
+            normalizedPullRequestIds.Length);
+
+        var entities = await _dbContext.PullRequestComments
+            .AsNoTracking()
+            .Where(comment => normalizedPullRequestIds.Contains(comment.PullRequestId))
+            .OrderBy(comment => comment.PullRequestId)
+            .ThenBy(comment => comment.CreatedDateUtc)
+            .ThenBy(comment => comment.InternalId)
+            .ToListAsync(cancellationToken);
+
+        return GroupByPullRequestId(entities, static entity => entity.PullRequestId, MapCommentToDto);
+    }
+
     /// <summary>
     /// Retrieves comments for a pull request from the cache (repository name ignored for cached provider).
     /// </summary>
@@ -196,6 +247,32 @@ public sealed class CachedPullRequestReadProvider : IPullRequestReadProvider
             .ToListAsync(cancellationToken);
 
         return entities.Select(MapFileChangeToDto);
+    }
+
+    public async Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestFileChangeDto>>> GetFileChangesForPullRequestsAsync(
+        IReadOnlyList<int> pullRequestIds,
+        IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedPullRequestIds = NormalizePullRequestIds(pullRequestIds);
+        if (normalizedPullRequestIds.Length == 0)
+        {
+            return EmptyLookup<PullRequestFileChangeDto>();
+        }
+
+        _logger.LogDebug(
+            "CachedPullRequestReadProvider: Fetching file changes for {PullRequestCount} pull requests",
+            normalizedPullRequestIds.Length);
+
+        var entities = await _dbContext.PullRequestFileChanges
+            .AsNoTracking()
+            .Where(fileChange => normalizedPullRequestIds.Contains(fileChange.PullRequestId))
+            .OrderBy(fileChange => fileChange.PullRequestId)
+            .ThenBy(fileChange => fileChange.IterationId)
+            .ThenBy(fileChange => fileChange.FilePath)
+            .ToListAsync(cancellationToken);
+
+        return GroupByPullRequestId(entities, static entity => entity.PullRequestId, MapFileChangeToDto);
     }
 
     /// <summary>
@@ -264,6 +341,29 @@ public sealed class CachedPullRequestReadProvider : IPullRequestReadProvider
             LinesDeleted: entity.LinesDeleted,
             LinesModified: entity.LinesModified
         );
+    }
+
+    private static int[] NormalizePullRequestIds(IReadOnlyList<int> pullRequestIds)
+    {
+        return pullRequestIds
+            .Distinct()
+            .OrderBy(id => id)
+            .ToArray();
+    }
+
+    private static IReadOnlyDictionary<int, IReadOnlyList<TDto>> EmptyLookup<TDto>()
+        => new Dictionary<int, IReadOnlyList<TDto>>();
+
+    private static IReadOnlyDictionary<int, IReadOnlyList<TDto>> GroupByPullRequestId<TEntity, TDto>(
+        IEnumerable<TEntity> entities,
+        Func<TEntity, int> getPullRequestId,
+        Func<TEntity, TDto> map)
+    {
+        return entities
+            .GroupBy(getPullRequestId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<TDto>)group.Select(map).ToList());
     }
 
     /// <summary>

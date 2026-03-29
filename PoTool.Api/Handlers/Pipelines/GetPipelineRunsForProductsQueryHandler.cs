@@ -34,6 +34,8 @@ public sealed class GetPipelineRunsForProductsQueryHandler : IQueryHandler<GetPi
             filter.PipelineIds,
             branchName: null,
             minStartTime: filter.RangeStartUtc,
+            maxStartTime: filter.RangeEndUtc,
+            branchScope: filter.BranchScope,
             top: 100,
             cancellationToken);
 

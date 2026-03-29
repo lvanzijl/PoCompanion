@@ -35,6 +35,8 @@ public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMe
             filter.PipelineIds,
             branchName: null,
             minStartTime: filter.RangeStartUtc,
+            maxStartTime: filter.RangeEndUtc,
+            branchScope: filter.BranchScope,
             top: 100,
             cancellationToken);
         var scopedRuns = PipelineFiltering.ApplyRunScope(allRuns, filter);
@@ -43,7 +45,7 @@ public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMe
         var runsByPipeline = scopedRuns.GroupBy(r => r.PipelineId).ToDictionary(g => g.Key, g => g.ToList());
 
         // Get pipeline information for those that have runs
-        var pipelinesWithRuns = await _pipelineReadProvider.GetAllAsync(cancellationToken);
+        var pipelinesWithRuns = await _pipelineReadProvider.GetByIdsAsync(runsByPipeline.Keys, cancellationToken);
         var pipelineDict = pipelinesWithRuns.ToDictionary(p => p.Id);
 
         var metrics = new List<PipelineMetricsDto>();

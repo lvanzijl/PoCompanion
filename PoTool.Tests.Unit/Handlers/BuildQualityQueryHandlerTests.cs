@@ -120,6 +120,28 @@ public sealed class BuildQualityQueryHandlerTests
     }
 
     [TestMethod]
+    public async Task ScopeLoader_WithMissingDefaultBranch_IncludesAllBuildsForThatPipeline()
+    {
+        await SeedProductOwnerScopeAsync();
+
+        var definition = await _context.PipelineDefinitions.SingleAsync(pipeline => pipeline.Id == 201);
+        definition.DefaultBranch = null;
+        _context.CachedPipelineRuns.Add(
+            CreateBuild(id: 2002, pipelineDefinitionDbId: 201, result: "Succeeded", branch: "refs/heads/feature/demo", finishedUtc: new DateTime(2026, 3, 8, 0, 0, 0, DateTimeKind.Utc)));
+        await _context.SaveChangesAsync();
+
+        var selection = await _scopeLoader.LoadAsync(
+            productOwnerId: 1,
+            windowStartUtc: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+            windowEndUtc: new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc),
+            repositoryId: null,
+            pipelineDefinitionId: null,
+            cancellationToken: CancellationToken.None);
+
+        CollectionAssert.AreEquivalent(new[] { 1001, 2001, 2002 }, selection.Builds.Select(build => build.BuildId).OrderBy(id => id).ToArray());
+    }
+
+    [TestMethod]
     public async Task RollingWindowHandler_WithRealProvider_ComputesExpectedSummaryAndProductResults()
     {
         await SeedProductOwnerScopeAsync();

@@ -41,6 +41,14 @@ public interface IPullRequestReadProvider
     Task<IEnumerable<PullRequestIterationDto>> GetIterationsAsync(int pullRequestId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves iterations for multiple pull requests from the configured data source.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestIterationDto>>> GetIterationsForPullRequestsAsync(
+        IReadOnlyList<int> pullRequestIds,
+        IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves iterations for a pull request from the configured data source.
     /// Optimized version that accepts repository name to avoid redundant lookups.
     /// </summary>
@@ -52,6 +60,14 @@ public interface IPullRequestReadProvider
     Task<IEnumerable<PullRequestCommentDto>> GetCommentsAsync(int pullRequestId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves comments for multiple pull requests from the configured data source.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestCommentDto>>> GetCommentsForPullRequestsAsync(
+        IReadOnlyList<int> pullRequestIds,
+        IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves comments for a pull request from the configured data source.
     /// Optimized version that accepts repository name to avoid redundant lookups.
     /// </summary>
@@ -61,6 +77,14 @@ public interface IPullRequestReadProvider
     /// Retrieves file changes for a pull request from the configured data source.
     /// </summary>
     Task<IEnumerable<PullRequestFileChangeDto>> GetFileChangesAsync(int pullRequestId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves file changes for multiple pull requests from the configured data source.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestFileChangeDto>>> GetFileChangesForPullRequestsAsync(
+        IReadOnlyList<int> pullRequestIds,
+        IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves file changes for a pull request from the configured data source.

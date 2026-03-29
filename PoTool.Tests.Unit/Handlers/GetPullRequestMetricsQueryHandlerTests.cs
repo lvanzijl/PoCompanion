@@ -52,6 +52,28 @@ public class GetPullRequestMetricsQueryHandlerTests
             null,
             Array.Empty<int>()));
 
+    private void SetupBatchedEnrichment(
+        IEnumerable<PullRequestIterationDto>? iterations = null,
+        IEnumerable<PullRequestCommentDto>? comments = null,
+        IEnumerable<PullRequestFileChangeDto>? fileChanges = null)
+    {
+        _mockProvider.Setup(r => r.GetIterationsForPullRequestsAsync(
+                It.IsAny<IReadOnlyList<int>>(),
+                It.IsAny<IReadOnlyDictionary<int, string>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GroupByPullRequestId(iterations ?? Array.Empty<PullRequestIterationDto>(), iteration => iteration.PullRequestId));
+        _mockProvider.Setup(r => r.GetCommentsForPullRequestsAsync(
+                It.IsAny<IReadOnlyList<int>>(),
+                It.IsAny<IReadOnlyDictionary<int, string>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GroupByPullRequestId(comments ?? Array.Empty<PullRequestCommentDto>(), comment => comment.PullRequestId));
+        _mockProvider.Setup(r => r.GetFileChangesForPullRequestsAsync(
+                It.IsAny<IReadOnlyList<int>>(),
+                It.IsAny<IReadOnlyDictionary<int, string>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GroupByPullRequestId(fileChanges ?? Array.Empty<PullRequestFileChangeDto>(), fileChange => fileChange.PullRequestId));
+    }
+
     [TestMethod]
     public async Task Handle_WithNoPullRequests_ReturnsEmptyList()
     {
@@ -96,12 +118,7 @@ public class GetPullRequestMetricsQueryHandlerTests
 
         _mockProvider.Setup(r => r.GetByRepositoryNamesAsync(It.IsAny<IReadOnlyList<string>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
-        _mockProvider.Setup(r => r.GetIterationsAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(iterations);
-        _mockProvider.Setup(r => r.GetCommentsAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(comments);
-        _mockProvider.Setup(r => r.GetFileChangesAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(fileChanges);
+        SetupBatchedEnrichment(iterations, comments, fileChanges);
 
         var query = CreateQuery();
 
@@ -130,12 +147,7 @@ public class GetPullRequestMetricsQueryHandlerTests
 
         _mockProvider.Setup(r => r.GetByRepositoryNamesAsync(It.IsAny<IReadOnlyList<string>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
-        _mockProvider.Setup(r => r.GetIterationsAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestIterationDto>());
-        _mockProvider.Setup(r => r.GetCommentsAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestCommentDto>());
-        _mockProvider.Setup(r => r.GetFileChangesAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestFileChangeDto>());
+        SetupBatchedEnrichment();
 
         var query = CreateQuery();
 
@@ -163,12 +175,7 @@ public class GetPullRequestMetricsQueryHandlerTests
 
         _mockProvider.Setup(r => r.GetByRepositoryNamesAsync(It.IsAny<IReadOnlyList<string>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
-        _mockProvider.Setup(r => r.GetIterationsAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestIterationDto>());
-        _mockProvider.Setup(r => r.GetCommentsAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestCommentDto>());
-        _mockProvider.Setup(r => r.GetFileChangesAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestFileChangeDto>());
+        SetupBatchedEnrichment();
 
         var query = CreateQuery();
 
@@ -191,12 +198,7 @@ public class GetPullRequestMetricsQueryHandlerTests
 
         _mockProvider.Setup(r => r.GetByRepositoryNamesAsync(It.IsAny<IReadOnlyList<string>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
-        _mockProvider.Setup(r => r.GetIterationsAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestIterationDto>());
-        _mockProvider.Setup(r => r.GetCommentsAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestCommentDto>());
-        _mockProvider.Setup(r => r.GetFileChangesAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestFileChangeDto>());
+        SetupBatchedEnrichment();
 
         var query = CreateQuery();
 
@@ -229,12 +231,7 @@ public class GetPullRequestMetricsQueryHandlerTests
 
         _mockProvider.Setup(r => r.GetByRepositoryNamesAsync(It.IsAny<IReadOnlyList<string>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
-        _mockProvider.Setup(r => r.GetIterationsAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestIterationDto>());
-        _mockProvider.Setup(r => r.GetCommentsAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestCommentDto>());
-        _mockProvider.Setup(r => r.GetFileChangesAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(fileChanges);
+        SetupBatchedEnrichment(fileChanges: fileChanges);
 
         var query = CreateQuery();
 
@@ -266,12 +263,7 @@ public class GetPullRequestMetricsQueryHandlerTests
 
         _mockProvider.Setup(r => r.GetByRepositoryNamesAsync(It.IsAny<IReadOnlyList<string>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
-        _mockProvider.Setup(r => r.GetIterationsAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestIterationDto>());
-        _mockProvider.Setup(r => r.GetCommentsAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(comments);
-        _mockProvider.Setup(r => r.GetFileChangesAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestFileChangeDto>());
+        SetupBatchedEnrichment(comments: comments);
 
         var query = CreateQuery();
 
@@ -296,12 +288,7 @@ public class GetPullRequestMetricsQueryHandlerTests
 
         _mockProvider.Setup(r => r.GetByRepositoryNamesAsync(It.IsAny<IReadOnlyList<string>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr1, pr2 });
-        _mockProvider.Setup(r => r.GetIterationsAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestIterationDto>());
-        _mockProvider.Setup(r => r.GetCommentsAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestCommentDto>());
-        _mockProvider.Setup(r => r.GetFileChangesAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestFileChangeDto>());
+        SetupBatchedEnrichment();
 
         var query = CreateQuery();
 
@@ -332,12 +319,7 @@ public class GetPullRequestMetricsQueryHandlerTests
 
         _mockProvider.Setup(r => r.GetByRepositoryNamesAsync(It.IsAny<IReadOnlyList<string>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PullRequestDto> { pr });
-        _mockProvider.Setup(r => r.GetIterationsAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestIterationDto>());
-        _mockProvider.Setup(r => r.GetCommentsAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<PullRequestCommentDto>());
-        _mockProvider.Setup(r => r.GetFileChangesAsync(1, "TestRepo", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(fileChanges);
+        SetupBatchedEnrichment(fileChanges: fileChanges);
 
         var query = CreateQuery();
 
@@ -352,6 +334,52 @@ public class GetPullRequestMetricsQueryHandlerTests
         Assert.AreEqual(75, metrics.TotalLinesDeleted);
         // Average lines changed per file = (150 + 75 + 25) / 3 = 83.33
         Assert.AreEqual(83.33, metrics.AverageLinesPerFile, 0.01);
+    }
+
+    [TestMethod]
+    public async Task Handle_UsesBatchedEnrichmentCalls_AndDoesNotFanOutPerPullRequest()
+    {
+        var createdDate = DateTimeOffset.UtcNow.AddDays(-5);
+        var pr1 = CreatePullRequest(1, "PR 1", "User1", createdDate, DateTimeOffset.UtcNow, "Completed");
+        var pr2 = CreatePullRequest(2, "PR 2", "User2", createdDate.AddDays(1), null, "Active");
+
+        _mockProvider.Setup(r => r.GetByRepositoryNamesAsync(It.IsAny<IReadOnlyList<string>>(), It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PullRequestDto> { pr1, pr2 });
+        SetupBatchedEnrichment(
+            iterations:
+            [
+                CreateIteration(1, 1, createdDate, createdDate.AddHours(2)),
+                CreateIteration(2, 1, createdDate.AddDays(1), createdDate.AddDays(1).AddHours(1))
+            ],
+            comments:
+            [
+                CreateComment(1, 1, "Author1", createdDate.AddHours(1), false),
+                CreateComment(2, 2, "Author2", createdDate.AddDays(1).AddHours(1), true)
+            ],
+            fileChanges:
+            [
+                CreateFileChange(1, 1, "File1.cs", 10, 2, 0),
+                CreateFileChange(2, 1, "File2.cs", 20, 4, 0)
+            ]);
+
+        var result = (await _handler.Handle(CreateQuery(), CancellationToken.None)).ToList();
+
+        Assert.HasCount(2, result);
+        _mockProvider.Verify(
+            r => r.GetIterationsForPullRequestsAsync(
+                It.Is<IReadOnlyList<int>>(ids => ids.OrderBy(id => id).SequenceEqual(new[] { 1, 2 })),
+                It.Is<IReadOnlyDictionary<int, string>?>(map => map != null && map.Count == 2 && map[1] == "TestRepo" && map[2] == "TestRepo"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _mockProvider.Verify(
+            r => r.GetCommentsForPullRequestsAsync(It.IsAny<IReadOnlyList<int>>(), It.IsAny<IReadOnlyDictionary<int, string>?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _mockProvider.Verify(
+            r => r.GetFileChangesForPullRequestsAsync(It.IsAny<IReadOnlyList<int>>(), It.IsAny<IReadOnlyDictionary<int, string>?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _mockProvider.Verify(r => r.GetIterationsAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _mockProvider.Verify(r => r.GetCommentsAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _mockProvider.Verify(r => r.GetFileChangesAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static PullRequestDto CreatePullRequest(
@@ -431,6 +459,15 @@ public class GetPullRequestMetricsQueryHandlerTests
             LinesDeleted: linesDeleted,
             LinesModified: linesModified
         );
+    }
+
+    private static IReadOnlyDictionary<int, IReadOnlyList<TItem>> GroupByPullRequestId<TItem>(
+        IEnumerable<TItem> items,
+        Func<TItem, int> getPullRequestId)
+    {
+        return items
+            .GroupBy(getPullRequestId)
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<TItem>)group.ToList());
     }
 
     [TestMethod]

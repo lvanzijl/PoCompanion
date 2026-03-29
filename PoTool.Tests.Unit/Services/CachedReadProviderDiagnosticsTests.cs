@@ -56,7 +56,9 @@ public class CachedReadProviderDiagnosticsTests
         var result = await provider.GetRunsForPipelinesAsync(
             new[] { 1, 2 },
             branchName: "refs/heads/main",
-            minStartTime: DateTimeOffset.UtcNow.AddMonths(-6));
+            minStartTime: DateTimeOffset.UtcNow.AddMonths(-6),
+            maxStartTime: null,
+            branchScope: null);
 
         Assert.IsNotNull(result);
         Assert.IsFalse(result.Any());

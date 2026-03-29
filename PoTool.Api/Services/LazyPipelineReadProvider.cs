@@ -27,6 +27,11 @@ public sealed class LazyPipelineReadProvider : IPipelineReadProvider
         return _factory.GetPipelineReadProvider().GetByIdAsync(pipelineId, cancellationToken);
     }
 
+    public Task<IEnumerable<PipelineDto>> GetByIdsAsync(IEnumerable<int> pipelineIds, CancellationToken cancellationToken = default)
+    {
+        return _factory.GetPipelineReadProvider().GetByIdsAsync(pipelineIds, cancellationToken);
+    }
+
     public Task<IEnumerable<PipelineRunDto>> GetRunsAsync(int pipelineId, int top = 100, CancellationToken cancellationToken = default)
     {
         return _factory.GetPipelineReadProvider().GetRunsAsync(pipelineId, top, cancellationToken);
@@ -41,11 +46,13 @@ public sealed class LazyPipelineReadProvider : IPipelineReadProvider
         IEnumerable<int> pipelineIds,
         string? branchName = null,
         DateTimeOffset? minStartTime = null,
+        DateTimeOffset? maxStartTime = null,
+        IReadOnlyList<PoTool.Core.Pipelines.Filters.PipelineBranchScope>? branchScope = null,
         int top = 100,
         CancellationToken cancellationToken = default)
     {
         return _factory.GetPipelineReadProvider().GetRunsForPipelinesAsync(
-            pipelineIds, branchName, minStartTime, top, cancellationToken);
+            pipelineIds, branchName, minStartTime, maxStartTime, branchScope, top, cancellationToken);
     }
 
     public Task<IEnumerable<PipelineDefinitionDto>> GetDefinitionsByProductIdAsync(int productId, CancellationToken cancellationToken = default)

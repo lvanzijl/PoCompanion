@@ -36,6 +36,7 @@ public class ProductRepository : IProductRepository
     public async Task<ProductDto?> GetProductByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var entity = await _context.Products
+            .AsNoTracking()
             .Include(p => p.ProductTeamLinks)
             .Include(p => p.Repositories)
             .Include(p => p.BacklogRoots)
@@ -43,6 +44,30 @@ public class ProductRepository : IProductRepository
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
         return entity == null ? null : MapToDto(entity);
+    }
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<ProductDto>> GetProductsByIdsAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default)
+    {
+        var normalizedIds = ids
+            .Distinct()
+            .ToArray();
+
+        if (normalizedIds.Length == 0)
+        {
+            return [];
+        }
+
+        var entities = await _context.Products
+            .AsNoTracking()
+            .Include(p => p.ProductTeamLinks)
+            .Include(p => p.Repositories)
+            .Include(p => p.BacklogRoots)
+            .Where(p => normalizedIds.Contains(p.Id))
+            .OrderBy(p => p.Id)
+            .ToListAsync(cancellationToken);
+
+        return entities.Select(MapToDto);
     }
 
     /// <inheritdoc />
