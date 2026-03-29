@@ -11,14 +11,14 @@ namespace PoTool.Api.Handlers.BuildQuality;
 public sealed class GetBuildQualityRollingWindowQueryHandler
     : IQueryHandler<GetBuildQualityRollingWindowQuery, BuildQualityPageDto>
 {
-    private readonly BuildQualityScopeLoader _scopeLoader;
+    private readonly IBuildQualityReadStore _readStore;
     private readonly IBuildQualityProvider _buildQualityProvider;
 
     public GetBuildQualityRollingWindowQueryHandler(
-        BuildQualityScopeLoader scopeLoader,
+        IBuildQualityReadStore readStore,
         IBuildQualityProvider buildQualityProvider)
     {
-        _scopeLoader = scopeLoader;
+        _readStore = readStore;
         _buildQualityProvider = buildQualityProvider;
     }
 
@@ -26,7 +26,7 @@ public sealed class GetBuildQualityRollingWindowQueryHandler
         GetBuildQualityRollingWindowQuery query,
         CancellationToken cancellationToken)
     {
-        var selection = await _scopeLoader.LoadAsync(
+        var selection = await _readStore.GetScopeSelectionAsync(
             query.EffectiveFilter.Context.ProductIds.Values,
             query.EffectiveFilter.RangeStartUtc?.UtcDateTime,
             query.EffectiveFilter.RangeEndUtc?.UtcDateTime,

@@ -160,7 +160,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<SyncChangesSummaryService>();
         services.AddScoped<ExportConfigurationService>();
         services.AddScoped<ImportConfigurationService>();
-        services.AddScoped<BuildQualityScopeLoader>();
+        services.AddScoped<IBuildQualityReadStore, EfBuildQualityReadStore>();
         services.AddScoped<IBuildQualityProvider, BuildQualityProvider>();
         services.AddScoped<DeliveryFilterResolutionService>();
         services.AddScoped<PipelineFilterResolutionService>();

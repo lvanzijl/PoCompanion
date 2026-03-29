@@ -1,6 +1,4 @@
 using Mediator;
-using Microsoft.EntityFrameworkCore;
-using PoTool.Api.Persistence;
 using PoTool.Api.Services.BuildQuality;
 using PoTool.Core.BuildQuality.Queries;
 using PoTool.Shared.BuildQuality;
@@ -13,17 +11,14 @@ namespace PoTool.Api.Handlers.BuildQuality;
 public sealed class GetBuildQualitySprintQueryHandler
     : IQueryHandler<GetBuildQualitySprintQuery, DeliveryBuildQualityDto>
 {
-    private readonly PoToolDbContext _context;
-    private readonly BuildQualityScopeLoader _scopeLoader;
+    private readonly IBuildQualityReadStore _readStore;
     private readonly IBuildQualityProvider _buildQualityProvider;
 
     public GetBuildQualitySprintQueryHandler(
-        PoToolDbContext context,
-        BuildQualityScopeLoader scopeLoader,
+        IBuildQualityReadStore readStore,
         IBuildQualityProvider buildQualityProvider)
     {
-        _context = context;
-        _scopeLoader = scopeLoader;
+        _readStore = readStore;
         _buildQualityProvider = buildQualityProvider;
     }
 
@@ -36,16 +31,14 @@ public sealed class GetBuildQualitySprintQueryHandler
             return BuildEmptyResult(query.ProductOwnerId, 0);
         }
 
-        var sprint = await _context.Sprints
-            .AsNoTracking()
-            .FirstOrDefaultAsync(sprint => sprint.Id == query.EffectiveFilter.SprintId.Value, cancellationToken);
+        var sprint = await _readStore.GetSprintWindowAsync(query.EffectiveFilter.SprintId.Value, cancellationToken);
 
         if (sprint is null || !sprint.StartDateUtc.HasValue || !sprint.EndDateUtc.HasValue)
         {
             return BuildEmptyResult(query.ProductOwnerId, query.EffectiveFilter.SprintId.Value);
         }
 
-        var selection = await _scopeLoader.LoadAsync(
+        var selection = await _readStore.GetScopeSelectionAsync(
             query.EffectiveFilter.Context.ProductIds.Values,
             query.EffectiveFilter.RangeStartUtc?.UtcDateTime,
             query.EffectiveFilter.RangeEndUtc?.UtcDateTime,
