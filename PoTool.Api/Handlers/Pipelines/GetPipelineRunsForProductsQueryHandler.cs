@@ -9,7 +9,7 @@ namespace PoTool.Api.Handlers.Pipelines;
 
 /// <summary>
 /// Handler for GetPipelineRunsForProductsQuery.
-/// Returns all pipeline runs for specified products from the last 6 months.
+/// Returns cached pipeline runs for the requested analytical filter scope.
 /// </summary>
 public sealed class GetPipelineRunsForProductsQueryHandler : IQueryHandler<GetPipelineRunsForProductsQuery, IEnumerable<PipelineRunDto>>
 {

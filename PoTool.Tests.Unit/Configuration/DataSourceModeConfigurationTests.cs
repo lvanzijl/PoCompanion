@@ -35,4 +35,14 @@ public class DataSourceModeConfigurationTests
             DataSourceModeConfiguration.RouteIntent.LiveAllowed,
             intent);
     }
+
+    [TestMethod]
+    public void GetRouteIntent_PipelineDefinitionsDiscoveryRoute_WinsOverPipelinesCachePrefix()
+    {
+        var intent = DataSourceModeConfiguration.GetRouteIntent("/api/pipelines/definitions");
+
+        Assert.AreEqual(
+            DataSourceModeConfiguration.RouteIntent.LiveAllowed,
+            intent);
+    }
 }

@@ -281,6 +281,37 @@ public class ServiceCollectionTests
             "Explicit cached pull request resolution should remain available.");
     }
 
+    [TestMethod]
+    public void AddPoToolApiServices_RegistersCachedPipelineProviderAsDefault_AndPreservesExplicitLiveProvider()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+
+        services.AddLogging();
+        RegisterHostEnvironment(services);
+        services.AddDbContext<PoToolDbContext>(options =>
+            options.UseInMemoryDatabase("TestDb7"));
+
+        services.AddPoToolApiServices(configuration, isDevelopment: true);
+
+        using var serviceProvider = services.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+
+        var defaultProvider = scope.ServiceProvider.GetRequiredService<IPipelineReadProvider>();
+        var liveProvider = scope.ServiceProvider.GetRequiredKeyedService<IPipelineReadProvider>("Live");
+        var cachedProvider = scope.ServiceProvider.GetRequiredKeyedService<IPipelineReadProvider>("Cached");
+
+        Assert.IsInstanceOfType<CachedPipelineReadProvider>(
+            defaultProvider,
+            "Analytical pipeline reads should resolve the cached provider by default.");
+        Assert.IsInstanceOfType<LivePipelineReadProvider>(
+            liveProvider,
+            "Explicit live pipeline discovery flows must still be able to resolve the live provider.");
+        Assert.IsInstanceOfType<CachedPipelineReadProvider>(
+            cachedProvider,
+            "Explicit cached pipeline resolution should remain available.");
+    }
+
     private static void RegisterHostEnvironment(IServiceCollection services)
     {
         var hostEnvironment = new Mock<IHostEnvironment>();

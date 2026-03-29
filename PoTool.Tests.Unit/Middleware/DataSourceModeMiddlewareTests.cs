@@ -18,6 +18,7 @@ public class DataSourceModeMiddlewareTests
     private Mock<IDataSourceModeProvider> _mockModeProvider = null!;
     private Mock<ICurrentProfileProvider> _mockProfileProvider = null!;
     private Mock<ILogger<DataSourceModeMiddleware>> _mockLogger = null!;
+    private readonly List<MemoryStream> _responseBodies = [];
     private bool _nextCalled;
 
     [TestInitialize]
@@ -27,6 +28,17 @@ public class DataSourceModeMiddlewareTests
         _mockProfileProvider = new Mock<ICurrentProfileProvider>();
         _mockLogger = new Mock<ILogger<DataSourceModeMiddleware>>();
         _nextCalled = false;
+    }
+
+    [TestCleanup]
+    public void Cleanup()
+    {
+        foreach (var responseBody in _responseBodies)
+        {
+            responseBody.Dispose();
+        }
+
+        _responseBodies.Clear();
     }
 
     [TestMethod]
@@ -161,6 +173,24 @@ public class DataSourceModeMiddlewareTests
     }
 
     [TestMethod]
+    public async Task InvokeAsync_PipelineDefinitionsDiscoveryRoute_SetsLiveMode()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/pipelines/definitions");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+
+        // Assert
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Live), Times.Once);
+        _mockProfileProvider.Verify(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()), Times.Never);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
     public async Task InvokeAsync_ReleasePlanningRoute_WithCache_SetsCacheMode()
     {
         // Arrange
@@ -210,11 +240,13 @@ public class DataSourceModeMiddlewareTests
         Assert.IsTrue(_nextCalled);
     }
 
-    private static DefaultHttpContext CreateHttpContext(string path)
+    private DefaultHttpContext CreateHttpContext(string path)
     {
         var context = new DefaultHttpContext();
         context.Request.Path = path;
-        context.Response.Body = new MemoryStream();
+        var responseBody = new MemoryStream();
+        _responseBodies.Add(responseBody);
+        context.Response.Body = responseBody;
         return context;
     }
 

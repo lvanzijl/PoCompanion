@@ -7,7 +7,7 @@ namespace PoTool.Api.Services;
 
 /// <summary>
 /// Factory for resolving read providers that still switch between Live and Cache at runtime.
-/// Pull request analytical reads are now bound directly to the cached provider.
+/// Pull request and pipeline analytical reads are now bound directly to cached providers.
 /// </summary>
 public sealed class DataSourceAwareReadProviderFactory
 {
@@ -40,18 +40,4 @@ public sealed class DataSourceAwareReadProviderFactory
         };
     }
 
-    /// <summary>
-    /// Gets the pipeline read provider based on current data source mode.
-    /// </summary>
-    public IPipelineReadProvider GetPipelineReadProvider()
-    {
-        var mode = _modeProvider.Mode;
-        _logger.LogDebug("Resolving IPipelineReadProvider for mode: {Mode}", mode);
-
-        return mode switch
-        {
-            DataSourceMode.Cache => _serviceProvider.GetRequiredKeyedService<IPipelineReadProvider>("Cached"),
-            _ => _serviceProvider.GetRequiredKeyedService<IPipelineReadProvider>("Live")
-        };
-    }
 }

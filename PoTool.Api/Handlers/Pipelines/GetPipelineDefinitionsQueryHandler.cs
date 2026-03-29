@@ -1,5 +1,5 @@
 using Mediator;
-using PoTool.Api.Services;
+using Microsoft.Extensions.DependencyInjection;
 using PoTool.Core.Contracts;
 using PoTool.Core.Pipelines.Queries;
 using PoTool.Shared.Pipelines;
@@ -8,19 +8,20 @@ namespace PoTool.Api.Handlers.Pipelines;
 
 /// <summary>
 /// Handler for GetPipelineDefinitionsQuery.
-/// Retrieves pipeline definitions from the configured data source with optional filtering.
-/// Uses read provider to support both Live and Cached modes.
+/// Retrieves pipeline definitions for configuration and discovery.
+/// This handler resolves the explicit live provider and does not use the default
+/// cache-backed analytical pipeline provider.
 /// </summary>
 public sealed class GetPipelineDefinitionsQueryHandler : IQueryHandler<GetPipelineDefinitionsQuery, IEnumerable<PipelineDefinitionDto>>
 {
-    private readonly IPipelineReadProvider _pipelineReadProvider;
+    private readonly IPipelineReadProvider _livePipelineReadProvider;
     private readonly ILogger<GetPipelineDefinitionsQueryHandler> _logger;
 
     public GetPipelineDefinitionsQueryHandler(
-        IPipelineReadProvider pipelineReadProvider,
+        IServiceProvider serviceProvider,
         ILogger<GetPipelineDefinitionsQueryHandler> logger)
     {
-        _pipelineReadProvider = pipelineReadProvider;
+        _livePipelineReadProvider = serviceProvider.GetRequiredKeyedService<IPipelineReadProvider>("Live");
         _logger = logger;
     }
 
@@ -39,16 +40,15 @@ public sealed class GetPipelineDefinitionsQueryHandler : IQueryHandler<GetPipeli
                 "Either ProductId or RepositoryId must be provided when retrieving pipeline definitions.");
         }
 
-        // Live-only mode: use injected provider directly
         IEnumerable<PipelineDefinitionDto> definitions;
 
         if (query.ProductId.HasValue)
         {
-            definitions = await _pipelineReadProvider.GetDefinitionsByProductIdAsync(query.ProductId.Value, cancellationToken);
+            definitions = await _livePipelineReadProvider.GetDefinitionsByProductIdAsync(query.ProductId.Value, cancellationToken);
         }
         else if (query.RepositoryId.HasValue)
         {
-            definitions = await _pipelineReadProvider.GetDefinitionsByRepositoryIdAsync(query.RepositoryId.Value, cancellationToken);
+            definitions = await _livePipelineReadProvider.GetDefinitionsByRepositoryIdAsync(query.RepositoryId.Value, cancellationToken);
         }
         else
         {

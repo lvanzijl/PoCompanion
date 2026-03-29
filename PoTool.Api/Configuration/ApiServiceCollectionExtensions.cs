@@ -216,9 +216,12 @@ public static class ApiServiceCollectionExtensions
         // between cache and live at runtime.
         services.AddScoped<DataSourceAwareReadProviderFactory>();
 
-        // Work item and pipeline reads still resolve from the request mode at call time.
+        // Work item reads still resolve from the request mode at call time.
         services.AddScoped<IWorkItemReadProvider, LazyWorkItemReadProvider>();
-        services.AddScoped<IPipelineReadProvider, LazyPipelineReadProvider>();
+
+        // Analytical pipeline reads are cache-only after middleware guardrails.
+        // Definitions discovery resolves the live provider explicitly in its handler.
+        services.AddScoped<IPipelineReadProvider, CachedPipelineReadProvider>();
 
         // Pull request analytical reads are cache-only after middleware guardrails,
         // so the default injected provider is deterministic and cache-backed.

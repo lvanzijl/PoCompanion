@@ -32,6 +32,9 @@ public static class DataSourceModeConfiguration
         "/api/teams",
         "/api/products",
         "/api/repositories",
+
+        // Pipeline configuration/discovery
+        "/api/pipelines/definitions",
         
         // TFS discovery and validation (Settings use cases)
         "/api/workitems/area-paths-from-tfs",

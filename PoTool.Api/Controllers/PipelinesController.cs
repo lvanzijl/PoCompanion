@@ -149,7 +149,8 @@ public class PipelinesController : ControllerBase
     }
 
     /// <summary>
-    /// Gets all pipeline definitions.
+    /// Gets pipeline definitions for configuration/discovery.
+    /// This endpoint remains live-allowed and is intentionally separate from cache-only analytical reads.
     /// </summary>
     [HttpGet("definitions")]
     public async Task<ActionResult<IEnumerable<PipelineDefinitionDto>>> GetDefinitions(

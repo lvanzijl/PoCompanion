@@ -1,5 +1,4 @@
 using Mediator;
-using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Pipelines;
 using PoTool.Core.Pipelines.Queries;
@@ -8,8 +7,7 @@ namespace PoTool.Api.Handlers.Pipelines;
 
 /// <summary>
 /// Handler for GetAllPipelinesQuery.
-/// Returns all pipelines from the configured data source.
-/// Uses read provider to support both Live and Cached modes.
+/// Returns all pipelines from the cached analytical read model.
 /// </summary>
 public sealed class GetAllPipelinesQueryHandler : IQueryHandler<GetAllPipelinesQuery, IEnumerable<PipelineDto>>
 {
@@ -24,7 +22,6 @@ public sealed class GetAllPipelinesQueryHandler : IQueryHandler<GetAllPipelinesQ
         GetAllPipelinesQuery query,
         CancellationToken cancellationToken)
     {
-        // Live-only mode: use injected provider directly
         return await _pipelineReadProvider.GetAllAsync(cancellationToken);
     }
 }
