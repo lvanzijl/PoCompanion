@@ -32,7 +32,7 @@ public sealed class WorkspaceGuardMiddleware
 
         if (requiresCache && modeProvider.Mode == DataSourceMode.Live)
         {
-            // This is a development-time error - workspace routes should use Cache mode when available
+            // This is a runtime architecture violation - analytical routes must remain cache-backed
             _logger.LogError(
                 "WORKSPACE GUARD VIOLATION: Cache-only analytical route {Path} used Live mode. " +
                 "This indicates cache is not available or mode selection failed. " +
