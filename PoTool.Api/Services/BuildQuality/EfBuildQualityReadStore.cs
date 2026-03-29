@@ -104,13 +104,13 @@ public sealed class EfBuildQualityReadStore : IBuildQualityReadStore
         var candidateProductIds = products.Select(product => product.Id).ToList();
 
         var pipelineDefinitions = candidateProductIds.Count == 0
-            ? new List<PipelineDefinitionRecord>()
+            ? new List<BuildQualityPipelineDefinitionSelection>()
             : await _context.PipelineDefinitions
                 .AsNoTracking()
                 .Where(definition => candidateProductIds.Contains(definition.ProductId))
                 .Where(definition => !repositoryId.HasValue || definition.RepositoryId == repositoryId.Value)
                 .Where(definition => !pipelineDefinitionId.HasValue || definition.PipelineDefinitionId == pipelineDefinitionId.Value)
-                .Select(definition => new PipelineDefinitionRecord(
+                .Select(definition => new BuildQualityPipelineDefinitionSelection(
                     definition.Id,
                     definition.PipelineDefinitionId,
                     definition.ProductId,
@@ -204,19 +204,10 @@ public sealed class EfBuildQualityReadStore : IBuildQualityReadStore
 
     private sealed record ProductRecord(int Id, string Name);
 
-    public sealed record PipelineDefinitionRecord(
-        int Id,
-        int ExternalPipelineDefinitionId,
-        int ProductId,
-        int RepositoryId,
-        string PipelineName,
-        string RepositoryName,
-        string? DefaultBranch);
-
     private sealed record BuildRecord(int Id, int PipelineDefinitionId, string? SourceBranch, string? Result);
 
     private async Task<List<BuildRecord>> LoadBuildsAsync(
-        IReadOnlyList<PipelineDefinitionRecord> pipelineDefinitions,
+        IReadOnlyList<BuildQualityPipelineDefinitionSelection> pipelineDefinitions,
         DateTime windowStartUtc,
         DateTime windowEndUtc,
         int? productOwnerId,
@@ -268,6 +259,18 @@ public sealed record BuildQualityProductSelection(
     IReadOnlyList<BuildQualityCoverageFact> Coverages);
 
 /// <summary>
+/// Scoped BuildQuality pipeline-definition selection metadata.
+/// </summary>
+public sealed record BuildQualityPipelineDefinitionSelection(
+    int Id,
+    int ExternalPipelineDefinitionId,
+    int ProductId,
+    int RepositoryId,
+    string PipelineName,
+    string RepositoryName,
+    string? DefaultBranch);
+
+/// <summary>
 /// Selected BuildQuality raw facts for a requested scope.
 /// </summary>
 public sealed record BuildQualityScopeSelection(
@@ -276,7 +279,7 @@ public sealed record BuildQualityScopeSelection(
     DateTime WindowEndUtc,
     IReadOnlyList<int> ProductIds,
     IReadOnlyList<string> DefaultBranches,
-    IReadOnlyList<EfBuildQualityReadStore.PipelineDefinitionRecord> PipelineDefinitions,
+    IReadOnlyList<BuildQualityPipelineDefinitionSelection> PipelineDefinitions,
     IReadOnlyList<BuildQualityProductSelection> Products,
     IReadOnlyList<BuildQualityBuildFact> Builds,
     IReadOnlyList<BuildQualityTestRunFact> TestRuns,

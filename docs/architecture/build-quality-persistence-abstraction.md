@@ -21,6 +21,8 @@ It exposes three fully materialized read operations:
 2. `GetScopeSelectionAsync(IReadOnlyList<int> productIds, DateTime? windowStartUtc, DateTime? windowEndUtc, int? repositoryId, int? pipelineDefinitionId, CancellationToken cancellationToken)`
 3. `GetSprintWindowAsync(int sprintId, CancellationToken cancellationToken)`
 
+The store returns slice-level read models such as `BuildQualityScopeSelection`, `BuildQualityProductSelection`, and `BuildQualityPipelineDefinitionSelection`. It does not expose implementation-specific nested types.
+
 ### Responsibilities
 
 The interface owns:
