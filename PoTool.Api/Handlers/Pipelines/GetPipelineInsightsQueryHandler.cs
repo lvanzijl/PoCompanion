@@ -1,9 +1,7 @@
 using Mediator;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using PoTool.Api.Persistence;
+using PoTool.Api.Services;
 using PoTool.Core.Pipelines.Filters;
-using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Pipelines.Queries;
 using PoTool.Shared.Pipelines;
 using PoTool.Shared.Statistics;
@@ -23,14 +21,14 @@ namespace PoTool.Api.Handlers.Pipelines;
 public sealed class GetPipelineInsightsQueryHandler
     : IQueryHandler<GetPipelineInsightsQuery, PipelineInsightsDto>
 {
-    private readonly PoToolDbContext _context;
+    private readonly IPipelineInsightsReadStore _readStore;
     private readonly ILogger<GetPipelineInsightsQueryHandler> _logger;
 
     public GetPipelineInsightsQueryHandler(
-        PoToolDbContext context,
+        IPipelineInsightsReadStore readStore,
         ILogger<GetPipelineInsightsQueryHandler> logger)
     {
-        _context = context;
+        _readStore = readStore;
         _logger = logger;
     }
 
@@ -46,9 +44,9 @@ public sealed class GetPipelineInsightsQueryHandler
         }
 
         // ── 1. Load the selected sprint ───────────────────────────────────────
-        var sprint = await _context.Sprints
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == filter.SprintId.Value, cancellationToken);
+        var sprint = await _readStore.GetSprintWindowAsync(
+            filter.SprintId.Value,
+            cancellationToken);
 
         if (sprint is null || !sprint.StartDateUtc.HasValue || !sprint.EndDateUtc.HasValue)
         {
@@ -57,27 +55,13 @@ public sealed class GetPipelineInsightsQueryHandler
         }
 
         // ── 2. Find the previous sprint (same team, immediately preceding) ────
-        var previousSprint = await _context.Sprints
-            .AsNoTracking()
-            .Where(s => s.TeamId == sprint.TeamId
-                        && s.StartDateUtc.HasValue
-                        && s.StartDateUtc.Value < sprint.StartDateUtc.Value)
-            .OrderByDescending(s => s.StartDateUtc)
-            .FirstOrDefaultAsync(cancellationToken);
+        var previousSprint = await _readStore.GetPreviousSprintWindowAsync(
+            sprint.TeamId,
+            sprint.StartDateUtc.Value,
+            cancellationToken);
 
         // ── 3. Load all products belonging to the active PO ───────────────────
-        IQueryable<ProductEntity> productsQuery = _context.Products
-            .AsNoTracking();
-
-        if (!filter.Context.ProductIds.IsAll)
-        {
-            var productIds = filter.Context.ProductIds.Values.ToArray();
-            productsQuery = productsQuery.Where(product => productIds.Contains(product.Id));
-        }
-
-        var products = await productsQuery
-            .OrderBy(p => p.Name)
-            .ToListAsync(cancellationToken);
+        var products = await _readStore.GetProductsAsync(filter, cancellationToken);
 
         if (products.Count == 0)
         {
@@ -96,12 +80,10 @@ public sealed class GetPipelineInsightsQueryHandler
 
         // ── 4. Load pipeline definitions per product ──────────────────────────
         // Key: PipelineDefinitionEntity.Id (DB PK) → (ProductId, Name, DefaultBranch)
-        var pipelineDefs = await _context.PipelineDefinitions
-            .AsNoTracking()
-            .Where(d => scopedProductIds.Contains(d.ProductId)
-                && repositoryScope.Contains(d.RepoName))
-            .Select(d => new PipelineDefRecord(d.Id, d.ProductId, d.Name, d.DefaultBranch))
-            .ToListAsync(cancellationToken);
+        var pipelineDefs = await _readStore.GetPipelineDefinitionsAsync(
+            scopedProductIds,
+            repositoryScope,
+            cancellationToken);
 
         if (pipelineDefs.Count == 0)
         {
@@ -109,29 +91,25 @@ public sealed class GetPipelineInsightsQueryHandler
             return BuildResultWithEmptyProducts(sprint, previousSprint, products);
         }
 
-        var allDefIds = pipelineDefs.Select(d => d.Id).ToList();
-
-        // Build default-branch lookup: DB PK → DefaultBranch (for run filtering)
-        var defaultBranchByDefId = pipelineDefs
-            .Where(d => !string.IsNullOrEmpty(d.DefaultBranch))
-            .ToDictionary(d => d.Id, d => d.DefaultBranch);
-
         // ── 5. Load runs in the selected sprint window ────────────────────────
         var sprintStart = filter.RangeStartUtc?.UtcDateTime ?? sprint.StartDateUtc!.Value;
         var sprintEnd   = filter.RangeEndUtc?.UtcDateTime ?? sprint.EndDateUtc!.Value;
 
-        var currentRuns = await LoadRunsAsync(allDefIds, sprintStart, sprintEnd, cancellationToken, defaultBranchByDefId);
+        var currentRuns = await _readStore.GetRunsAsync(
+            pipelineDefs,
+            sprintStart,
+            sprintEnd,
+            cancellationToken);
 
         // ── 6. Load runs in the previous sprint window (for delta) ────────────
-        List<RunRecord> previousRuns = new();
+        IReadOnlyList<PipelineInsightsRun> previousRuns = Array.Empty<PipelineInsightsRun>();
         if (previousSprint?.StartDateUtc.HasValue == true && previousSprint.EndDateUtc.HasValue)
         {
-            previousRuns = await LoadRunsAsync(
-                allDefIds,
+            previousRuns = await _readStore.GetRunsAsync(
+                pipelineDefs,
                 previousSprint.StartDateUtc!.Value,
                 previousSprint.EndDateUtc!.Value,
-                cancellationToken,
-                defaultBranchByDefId);
+                cancellationToken);
         }
 
         _logger.LogDebug(
@@ -144,8 +122,8 @@ public sealed class GetPipelineInsightsQueryHandler
 
         // ── 8. Compute per-product sections ──────────────────────────────────
         var productSections = new List<ProductPipelineInsightsDto>(products.Count);
-        var globalCurrentRunsByPipeline  = new Dictionary<int, List<RunRecord>>();
-        var globalPreviousRunsByPipeline = new Dictionary<int, List<RunRecord>>();
+        var globalCurrentRunsByPipeline  = new Dictionary<int, List<PipelineInsightsRun>>();
+        var globalPreviousRunsByPipeline = new Dictionary<int, List<PipelineInsightsRun>>();
 
         foreach (var product in products)
         {
@@ -240,63 +218,13 @@ public sealed class GetPipelineInsightsQueryHandler
     // Private helpers
     // ─────────────────────────────────────────────────────────────────────────
 
-    private async Task<List<RunRecord>> LoadRunsAsync(
-        List<int> defIds,
-        DateTime rangeStart,
-        DateTime rangeEnd,
-        CancellationToken cancellationToken,
-        IReadOnlyDictionary<int, string?>? defaultBranchByDefId = null)
-    {
-        var query = _context.CachedPipelineRuns
-            .AsNoTracking()
-            .Where(r => defIds.Contains(r.PipelineDefinitionId)
-                        && r.FinishedDateUtc.HasValue
-                        && r.FinishedDateUtc.Value >= rangeStart
-                        && r.FinishedDateUtc.Value < rangeEnd);
-
-        var runs = await query
-            .Select(r => new RunRecord(
-                r.Id,
-                r.TfsRunId,
-                r.PipelineDefinitionId,
-                r.Result,
-                r.RunName,
-                r.CreatedDateUtc,
-                r.FinishedDateUtc,
-                r.CreatedDate,
-                r.FinishedDate,
-                r.SourceBranch,
-                r.Url))
-            .ToListAsync(cancellationToken);
-
-        // Filter to default branch only, per pipeline definition.
-        // Backward compatibility: definitions synced before the DefaultBranch field was added will have
-        // null/empty values and are therefore excluded from the lookup map (defaultBranchByDefId only
-        // contains entries with a non-empty branch). For those definitions all runs are included,
-        // preserving existing behaviour. Newly synced definitions will only count runs on their
-        // repository's default branch, excluding feature-branch and PR builds.
-        if (defaultBranchByDefId is not null && defaultBranchByDefId.Count > 0)
-        {
-            runs = runs.Where(r =>
-            {
-                if (!defaultBranchByDefId.TryGetValue(r.DefId, out var branch)
-                    || string.IsNullOrEmpty(branch))
-                    return true; // no default branch stored → include all runs
-
-                return string.Equals(r.SourceBranch, branch, StringComparison.OrdinalIgnoreCase);
-            }).ToList();
-        }
-
-        return runs;
-    }
-
     private static ProductPipelineInsightsDto BuildProductSection(
         int productId,
         string productName,
-        List<RunRecord> currentRuns,
-        List<RunRecord> previousRuns,
+        List<PipelineInsightsRun> currentRuns,
+        List<PipelineInsightsRun> previousRuns,
         HashSet<int> productDefIds,
-        Dictionary<int, PipelineDefRecord> defByDbId,
+        Dictionary<int, PipelineInsightsDefinitionSelection> defByDbId,
         Dictionary<int, string> productByDbId,
         bool includePartial,
         bool includeCanceled,
@@ -380,9 +308,9 @@ public sealed class GetPipelineInsightsQueryHandler
     }
 
     private static IReadOnlyList<PipelineTroubleEntryDto> BuildTop3(
-        Dictionary<int, List<RunRecord>> currentByDef,
-        Dictionary<int, List<RunRecord>> previousByDef,
-        Dictionary<int, PipelineDefRecord> defByDbId,
+        Dictionary<int, List<PipelineInsightsRun>> currentByDef,
+        Dictionary<int, List<PipelineInsightsRun>> previousByDef,
+        Dictionary<int, PipelineInsightsDefinitionSelection> defByDbId,
         Dictionary<int, string> productByDbId,
         bool includePartial,
         bool includeCanceled,
@@ -452,8 +380,8 @@ public sealed class GetPipelineInsightsQueryHandler
     }
 
     private static IReadOnlyList<PipelineScatterPointDto> BuildScatterPoints(
-        IEnumerable<RunRecord> runs,
-        Dictionary<int, PipelineDefRecord> defByDbId)
+        IEnumerable<PipelineInsightsRun> runs,
+        Dictionary<int, PipelineInsightsDefinitionSelection> defByDbId)
     {
         // Filter: only runs that have a start time (CreatedDateOffset) for X-axis positioning.
         // DurationMinutes is computed from the UTC fields and is nullable:
@@ -495,9 +423,9 @@ public sealed class GetPipelineInsightsQueryHandler
     /// Ordered by failure rate descending (worst pipeline first).
     /// </summary>
     private static IReadOnlyList<PipelineBreakdownEntryDto> BuildPipelineBreakdown(
-        Dictionary<int, List<RunRecord>> currentByDef,
-        Dictionary<int, List<RunRecord>> previousByDef,
-        Dictionary<int, PipelineDefRecord> defByDbId,
+        Dictionary<int, List<PipelineInsightsRun>> currentByDef,
+        Dictionary<int, List<PipelineInsightsRun>> previousByDef,
+        Dictionary<int, PipelineInsightsDefinitionSelection> defByDbId,
         bool includePartial,
         bool includeCanceled,
         bool hasPreviousSprint,
@@ -593,7 +521,7 @@ public sealed class GetPipelineInsightsQueryHandler
     /// Returns (completed, failed, warning, succeeded) counts.
     /// </summary>
     private static (int Completed, int Failed, int Warning, int Succeeded) ClassifyRuns(
-        IEnumerable<RunRecord> runs,
+        IEnumerable<PipelineInsightsRun> runs,
         bool includePartial,
         bool includeCanceled)
     {
@@ -641,7 +569,7 @@ public sealed class GetPipelineInsightsQueryHandler
         return (completed, failed, warning, succeeded);
     }
 
-    private static List<double> GetDurationsMinutes(IEnumerable<RunRecord> runs)
+    private static List<double> GetDurationsMinutes(IEnumerable<PipelineInsightsRun> runs)
     {
         return runs
             .Where(r => r.CreatedDateUtc.HasValue
@@ -668,9 +596,9 @@ public sealed class GetPipelineInsightsQueryHandler
         };
 
     private static PipelineInsightsDto BuildResultWithEmptyProducts(
-        SprintEntity sprint,
-        SprintEntity? previousSprint,
-        IReadOnlyList<ProductEntity> products)
+        PipelineInsightsSprintWindow sprint,
+        PipelineInsightsSprintWindow? previousSprint,
+        IReadOnlyList<PipelineInsightsProductSelection> products)
         => new()
         {
             SprintId           = sprint.Id,
@@ -684,20 +612,4 @@ public sealed class GetPipelineInsightsQueryHandler
                 HasData     = false
             }).ToList()
         };
-
-    // ── Projection record (avoids materialising full entity) ─────────────
-    private sealed record RunRecord(
-        int       DbId,
-        int       TfsRunId,
-        int       DefId,
-        string?   Result,
-        string?   RunName,
-        DateTime? CreatedDateUtc,
-        DateTime? FinishedDateUtc,
-        DateTimeOffset? CreatedDateOffset,
-        DateTimeOffset? FinishedDateOffset,
-        string?   SourceBranch,
-        string?   Url);
-
-    private sealed record PipelineDefRecord(int Id, int ProductId, string Name, string? DefaultBranch = null);
 }

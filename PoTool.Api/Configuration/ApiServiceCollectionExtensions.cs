@@ -164,6 +164,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IBuildQualityProvider, BuildQualityProvider>();
         services.AddScoped<DeliveryFilterResolutionService>();
         services.AddScoped<PipelineFilterResolutionService>();
+        services.AddScoped<IPipelineInsightsReadStore, EfPipelineInsightsReadStore>();
         services.AddScoped<SprintFilterResolutionService>();
         services.AddScoped<SprintScopedWorkItemLoader>();
 

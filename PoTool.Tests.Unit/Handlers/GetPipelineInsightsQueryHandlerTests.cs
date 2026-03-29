@@ -6,6 +6,7 @@ using Moq;
 using PoTool.Api.Handlers.Pipelines;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Api.Services;
 using PoTool.Core.Filters;
 using PoTool.Core.Pipelines.Filters;
 using PoTool.Core.Pipelines.Queries;
@@ -22,6 +23,7 @@ public class GetPipelineInsightsQueryHandlerTests
 {
     private SqliteConnection _connection = null!;
     private PoToolDbContext _context = null!;
+    private IPipelineInsightsReadStore _readStore = null!;
     private Mock<ILogger<GetPipelineInsightsQueryHandler>> _mockLogger = null!;
     private GetPipelineInsightsQueryHandler _handler = null!;
 
@@ -45,8 +47,9 @@ public class GetPipelineInsightsQueryHandlerTests
             .Options;
         _context    = new PoToolDbContext(options);
         await _context.Database.EnsureCreatedAsync();
+        _readStore  = new EfPipelineInsightsReadStore(_context);
         _mockLogger = new Mock<ILogger<GetPipelineInsightsQueryHandler>>();
-        _handler    = new GetPipelineInsightsQueryHandler(_context, _mockLogger.Object);
+        _handler    = new GetPipelineInsightsQueryHandler(_readStore, _mockLogger.Object);
     }
 
     [TestCleanup]
@@ -528,6 +531,7 @@ public class GetPipelineInsightsQueryHandlerTests
 public class GetPipelineInsightsScatterPointTests
 {
     private PoToolDbContext _context = null!;
+    private IPipelineInsightsReadStore _readStore = null!;
     private Mock<ILogger<GetPipelineInsightsQueryHandler>> _mockLogger = null!;
     private GetPipelineInsightsQueryHandler _handler = null!;
 
@@ -541,8 +545,9 @@ public class GetPipelineInsightsScatterPointTests
             .UseInMemoryDatabase($"ScatterTests_{Guid.NewGuid()}")
             .Options;
         _context    = new PoToolDbContext(options);
+        _readStore  = new EfPipelineInsightsReadStore(_context);
         _mockLogger = new Mock<ILogger<GetPipelineInsightsQueryHandler>>();
-        _handler    = new GetPipelineInsightsQueryHandler(_context, _mockLogger.Object);
+        _handler    = new GetPipelineInsightsQueryHandler(_readStore, _mockLogger.Object);
     }
 
     [TestCleanup]
@@ -739,6 +744,7 @@ internal static class PipelineInsightTestFilters
 public class GetPipelineInsightsBreakdownTests
 {
     private PoToolDbContext _context = null!;
+    private IPipelineInsightsReadStore _readStore = null!;
     private Mock<ILogger<GetPipelineInsightsQueryHandler>> _mockLogger = null!;
     private GetPipelineInsightsQueryHandler _handler = null!;
 
@@ -754,8 +760,9 @@ public class GetPipelineInsightsBreakdownTests
             .UseInMemoryDatabase($"BreakdownTests_{Guid.NewGuid()}")
             .Options;
         _context    = new PoToolDbContext(opts);
+        _readStore  = new EfPipelineInsightsReadStore(_context);
         _mockLogger = new Mock<ILogger<GetPipelineInsightsQueryHandler>>();
-        _handler    = new GetPipelineInsightsQueryHandler(_context, _mockLogger.Object);
+        _handler    = new GetPipelineInsightsQueryHandler(_readStore, _mockLogger.Object);
     }
 
     [TestCleanup]
