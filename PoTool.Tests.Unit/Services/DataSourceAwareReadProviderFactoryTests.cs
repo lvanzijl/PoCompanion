@@ -35,4 +35,30 @@ public class DataSourceAwareReadProviderFactoryTests
 
         Assert.AreSame(mockCachedProvider.Object, provider);
     }
+
+    [TestMethod]
+    public void GetWorkItemReadProvider_ReturnsLiveProvider_WhenModeIsLive()
+    {
+        var services = new ServiceCollection();
+
+        var mockLiveProvider = new Mock<IWorkItemReadProvider>();
+        var mockCachedProvider = new Mock<IWorkItemReadProvider>();
+
+        services.AddKeyedScoped<IWorkItemReadProvider>("Live", (sp, key) => mockLiveProvider.Object);
+        services.AddKeyedScoped<IWorkItemReadProvider>("Cached", (sp, key) => mockCachedProvider.Object);
+
+        var mockModeProvider = new Mock<IDataSourceModeProvider>();
+        mockModeProvider.SetupGet(m => m.Mode).Returns(DataSourceMode.Live);
+        services.AddScoped<IDataSourceModeProvider>(_ => mockModeProvider.Object);
+
+        services.AddLogging();
+        services.AddScoped<DataSourceAwareReadProviderFactory>();
+
+        using var serviceProvider = services.BuildServiceProvider();
+        var factory = serviceProvider.GetRequiredService<DataSourceAwareReadProviderFactory>();
+
+        var provider = factory.GetWorkItemReadProvider();
+
+        Assert.AreSame(mockLiveProvider.Object, provider);
+    }
 }

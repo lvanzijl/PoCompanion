@@ -1,4 +1,5 @@
 using PoTool.Api.Configuration;
+using PoTool.Api.Exceptions;
 using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
 using Microsoft.AspNetCore.Mvc;
@@ -29,11 +30,37 @@ public sealed class DataSourceModeMiddleware
         IDataSourceModeProvider modeProvider,
         ICurrentProfileProvider profileProvider)
     {
-        var path = context.Request.Path.Value;
-        var routeIntent = DataSourceModeConfiguration.GetRouteIntent(path);
+        var path = context.Request.Path.Value ?? string.Empty;
+        DataSourceModeConfiguration.RouteIntent routeIntent;
+
+        try
+        {
+            routeIntent = DataSourceModeConfiguration.ResolveRouteIntentOrThrow(path);
+        }
+        catch (RouteNotClassifiedException)
+        {
+            _logger.LogError(
+                "[Violation] Route={Route} Mode=Unknown AttemptedProvider=None Action=Blocked",
+                path);
+            throw;
+        }
+
+        context.Items[DataSourceModeConfiguration.RouteIntentContextItemKey] = routeIntent;
+
+        if (routeIntent == DataSourceModeConfiguration.RouteIntent.BlockedAmbiguous)
+        {
+            var reason = DataSourceModeConfiguration.GetBlockedRouteReason(path) ?? "Requires endpoint split; see docs/filters/datasource-enforcement.md#deferred-work.";
+            _logger.LogError(
+                "[Violation] Route={Route} Mode=BlockedAmbiguous AttemptedProvider=Live Action=Blocked Reason={Reason}",
+                path,
+                reason);
+            throw new NotSupportedException(
+                $"Route {path} is blocked because it mixes cached and live behavior. {reason}");
+        }
 
         if (routeIntent == DataSourceModeConfiguration.RouteIntent.CacheOnlyAnalyticalRead)
         {
+            context.Items[DataSourceModeConfiguration.ResolvedModeContextItemKey] = DataSourceMode.Cache;
             _logger.LogDebug("Cache-only analytical route detected: {Path}", path);
 
             var productOwnerId = await profileProvider.GetCurrentProductOwnerIdAsync(context.RequestAborted);
@@ -46,7 +73,7 @@ public sealed class DataSourceModeMiddleware
                     modeProvider.SetCurrentMode(DataSourceMode.Cache);
 
                     _logger.LogInformation(
-                        "DataSourceMode set to Cache for analytical route {Path} (ProductOwner: {ProductOwnerId})",
+                        "[DataSourceMode] Route={Route} Mode=CacheOnly Provider=Cache ProductOwnerId={ProductOwnerId}",
                         path,
                         productOwnerId.Value);
 
@@ -55,7 +82,7 @@ public sealed class DataSourceModeMiddleware
                 }
 
                 _logger.LogWarning(
-                    "Blocking analytical route {Path} for ProductOwner {ProductOwnerId} because no successful cache sync is available",
+                    "[Violation] Route={Route} Mode=CacheOnly AttemptedProvider=Live Action=Blocked ProductOwnerId={ProductOwnerId}",
                     path,
                     productOwnerId.Value);
 
@@ -66,7 +93,7 @@ public sealed class DataSourceModeMiddleware
             }
 
             _logger.LogWarning(
-                "Blocking analytical route {Path} because no active profile is selected",
+                "[Violation] Route={Route} Mode=CacheOnly AttemptedProvider=Live Action=Blocked",
                 path);
 
             await WriteCacheNotReadyResponseAsync(
@@ -75,16 +102,11 @@ public sealed class DataSourceModeMiddleware
             return;
         }
 
-        if (routeIntent == DataSourceModeConfiguration.RouteIntent.LiveAllowed)
-        {
-            _logger.LogDebug("Live-allowed route detected: {Path}, using Live mode", path);
-        }
-        else
-        {
-            _logger.LogDebug("Unclassified route detected: {Path}, defaulting to Live mode", path);
-        }
-
+        context.Items[DataSourceModeConfiguration.ResolvedModeContextItemKey] = DataSourceMode.Live;
         modeProvider.SetCurrentMode(DataSourceMode.Live);
+        _logger.LogInformation(
+            "[DataSourceMode] Route={Route} Mode=LiveAllowed Provider=Live",
+            path);
         await _next(context);
     }
 

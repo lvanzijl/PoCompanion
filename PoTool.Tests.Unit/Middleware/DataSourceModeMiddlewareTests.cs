@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using PoTool.Api.Exceptions;
 using PoTool.Api.Middleware;
 using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
@@ -191,7 +192,7 @@ public class DataSourceModeMiddlewareTests
     }
 
     [TestMethod]
-    public async Task InvokeAsync_WorkItemStateTimelineRoute_SetsLiveMode()
+    public async Task InvokeAsync_WorkItemStateTimelineRoute_ThrowsNotSupported()
     {
         // Arrange
         var context = CreateHttpContext("/api/workitems/123/state-timeline");
@@ -199,13 +200,18 @@ public class DataSourceModeMiddlewareTests
             next: _ => { _nextCalled = true; return Task.CompletedTask; },
             logger: _mockLogger.Object);
 
-        // Act
-        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
-
         // Assert
-        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Live), Times.Once);
-        _mockProfileProvider.Verify(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()), Times.Never);
-        Assert.IsTrue(_nextCalled);
+        try
+        {
+            await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+            Assert.Fail("Expected NotSupportedException was not thrown.");
+        }
+        catch (NotSupportedException)
+        {
+            // Expected path
+        }
+        _mockModeProvider.Verify(p => p.SetCurrentMode(It.IsAny<DataSourceMode>()), Times.Never);
+        Assert.IsFalse(_nextCalled);
     }
 
     [TestMethod]
@@ -299,6 +305,30 @@ public class DataSourceModeMiddlewareTests
         // Assert
         _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Cache), Times.Once);
         Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_UnknownRoute_ThrowsRouteNotClassifiedException()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/unclassified-route");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        // Act / Assert
+        try
+        {
+            await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+            Assert.Fail("Expected RouteNotClassifiedException was not thrown.");
+        }
+        catch (RouteNotClassifiedException)
+        {
+            // Expected path
+        }
+
+        _mockModeProvider.Verify(p => p.SetCurrentMode(It.IsAny<DataSourceMode>()), Times.Never);
+        Assert.IsFalse(_nextCalled);
     }
 
     private DefaultHttpContext CreateHttpContext(string path)

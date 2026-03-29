@@ -8,12 +8,15 @@ namespace PoTool.Api.Configuration;
 public static class DataSourceModeConfiguration
 {
     private const string WorkItemsRoutePrefix = "/api/workitems/";
+    public const string RouteIntentContextItemKey = "DataSourceMode.RouteIntent";
+    public const string ResolvedModeContextItemKey = "DataSourceMode.ResolvedMode";
 
     public enum RouteIntent
     {
         Unknown = 0,
         LiveAllowed = 1,
-        CacheOnlyAnalyticalRead = 2
+        CacheOnlyAnalyticalRead = 2,
+        BlockedAmbiguous = 3
     }
 
     /// <summary>
@@ -97,6 +100,11 @@ public static class DataSourceModeConfiguration
             return RouteIntent.Unknown;
         }
 
+        if (IsBlockedAmbiguousRoute(path))
+        {
+            return RouteIntent.BlockedAmbiguous;
+        }
+
         if (LiveModeAllowedExactRoutes.Contains(path) ||
             LiveModeAllowedRoutePrefixes.Any(route =>
                 path.StartsWith(route, StringComparison.OrdinalIgnoreCase)))
@@ -116,6 +124,17 @@ public static class DataSourceModeConfiguration
         }
 
         return RouteIntent.Unknown;
+    }
+
+    /// <summary>
+    /// Resolves the route intent and throws when the route is not explicitly classified.
+    /// </summary>
+    public static RouteIntent ResolveRouteIntentOrThrow(string? path)
+    {
+        var intent = GetRouteIntent(path);
+        return intent == RouteIntent.Unknown
+            ? throw new PoTool.Api.Exceptions.RouteNotClassifiedException(path)
+            : intent;
     }
 
     /// <summary>
@@ -142,6 +161,29 @@ public static class DataSourceModeConfiguration
         return RequiresCache(path);
     }
 
+    /// <summary>
+    /// Returns whether the route is intentionally blocked because it mixes cache-only and live behavior.
+    /// </summary>
+    public static bool IsBlockedAmbiguousRoute(string? path)
+    {
+        // TODO: Requires endpoint split; see "Deferred Work" in
+        // docs/filters/datasource-enforcement.md.
+        // State timeline currently mixes cached work item reads with live revision retrieval and
+        // is intentionally blocked at runtime.
+        return !string.IsNullOrEmpty(path) &&
+               IsWorkItemDetailRoute(path, "/state-timeline");
+    }
+
+    /// <summary>
+    /// Gets the current block reason for an ambiguous route.
+    /// </summary>
+    public static string? GetBlockedRouteReason(string? path)
+    {
+        return IsBlockedAmbiguousRoute(path)
+            ? "Requires endpoint split; see Deferred Work in docs/filters/datasource-enforcement.md."
+            : null;
+    }
+
     private static bool IsLiveAllowedWorkItemDetailRoute(string path)
     {
         return IsWorkItemDetailRoute(path, "/refresh-from-tfs")
@@ -149,8 +191,7 @@ public static class DataSourceModeConfiguration
             || IsWorkItemDetailRoute(path, "/title-description")
             || IsWorkItemDetailRoute(path, "/backlog-priority")
             || IsWorkItemDetailRoute(path, "/iteration-path")
-            || IsWorkItemDetailRoute(path, "/revisions")
-            || IsWorkItemDetailRoute(path, "/state-timeline");
+            || IsWorkItemDetailRoute(path, "/revisions");
     }
 
     private static bool IsWorkItemDetailRoute(string path, string suffix)

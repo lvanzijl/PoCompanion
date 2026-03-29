@@ -1,4 +1,7 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http;
+using PoTool.Api.Exceptions;
+using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
 using PoTool.Shared.WorkItems;
 
@@ -14,15 +17,29 @@ public sealed class LiveWorkItemReadProvider : IWorkItemReadProvider
     private readonly ITfsClient _tfsClient;
     private readonly TfsConfigurationService _configService;
     private readonly ILogger<LiveWorkItemReadProvider> _logger;
+    private readonly IDataSourceModeProvider? _modeProvider;
+    private readonly IHttpContextAccessor? _httpContextAccessor;
 
     public LiveWorkItemReadProvider(
         ITfsClient tfsClient,
         TfsConfigurationService configService,
         ILogger<LiveWorkItemReadProvider> logger)
+        : this(tfsClient, configService, logger, null, null)
+    {
+    }
+
+    public LiveWorkItemReadProvider(
+        ITfsClient tfsClient,
+        TfsConfigurationService configService,
+        ILogger<LiveWorkItemReadProvider> logger,
+        IDataSourceModeProvider? modeProvider,
+        IHttpContextAccessor? httpContextAccessor)
     {
         _tfsClient = tfsClient;
         _configService = configService;
         _logger = logger;
+        _modeProvider = modeProvider;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     /// <summary>
@@ -36,6 +53,7 @@ public sealed class LiveWorkItemReadProvider : IWorkItemReadProvider
     /// </summary>
     public async Task<IEnumerable<WorkItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetAllAsync));
         _logger.LogWarning("LiveWorkItemReadProvider.{Method} called — may indicate cache bypass", nameof(GetAllAsync));
         _logger.LogDebug("LiveWorkItemReadProvider: Fetching all work items from TFS");
 
@@ -57,6 +75,7 @@ public sealed class LiveWorkItemReadProvider : IWorkItemReadProvider
 
     public async Task<IEnumerable<WorkItemDto>> GetFilteredAsync(string filter, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetFilteredAsync));
         _logger.LogWarning("LiveWorkItemReadProvider.{Method} called — may indicate cache bypass", nameof(GetFilteredAsync));
         _logger.LogDebug("LiveWorkItemReadProvider: Fetching filtered work items from TFS with filter: {Filter}", filter);
 
@@ -76,6 +95,7 @@ public sealed class LiveWorkItemReadProvider : IWorkItemReadProvider
 
     public async Task<IEnumerable<WorkItemDto>> GetByAreaPathsAsync(List<string> areaPaths, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetByAreaPathsAsync));
         _logger.LogWarning("LiveWorkItemReadProvider.{Method} called — may indicate cache bypass", nameof(GetByAreaPathsAsync));
         _logger.LogDebug("LiveWorkItemReadProvider: Fetching work items by area paths from TFS: {AreaPaths}", 
             string.Join(", ", areaPaths));
@@ -97,6 +117,7 @@ public sealed class LiveWorkItemReadProvider : IWorkItemReadProvider
 
     public async Task<WorkItemDto?> GetByTfsIdAsync(int tfsId, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetByTfsIdAsync));
         _logger.LogWarning("LiveWorkItemReadProvider.{Method} called — may indicate cache bypass", nameof(GetByTfsIdAsync));
         _logger.LogDebug("LiveWorkItemReadProvider: Fetching work item by ID from TFS: {TfsId}", tfsId);
 
@@ -106,6 +127,7 @@ public sealed class LiveWorkItemReadProvider : IWorkItemReadProvider
 
     public async Task<IEnumerable<WorkItemDto>> GetByRootIdsAsync(int[] rootWorkItemIds, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetByRootIdsAsync));
         _logger.LogWarning("LiveWorkItemReadProvider.{Method} called — may indicate cache bypass", nameof(GetByRootIdsAsync));
         _logger.LogDebug("LiveWorkItemReadProvider: Fetching work items by root IDs from TFS: {RootIds}", 
             string.Join(", ", rootWorkItemIds));
@@ -120,5 +142,24 @@ public sealed class LiveWorkItemReadProvider : IWorkItemReadProvider
         // This fetches the complete tree starting from the specified roots
         var workItems = await _tfsClient.GetWorkItemsByRootIdsAsync(rootWorkItemIds, null, null, cancellationToken);
         return workItems;
+    }
+
+    private void EnsureLiveUsageAllowed(string method)
+    {
+        if (_modeProvider?.Mode == DataSourceMode.Cache)
+        {
+            var blockedRoute = _httpContextAccessor?.HttpContext?.Request.Path.Value ?? "<unknown>";
+            _logger.LogError(
+                "[Violation] Route={Route} Mode=CacheOnly AttemptedProvider=Live Action=Blocked Method={Method}",
+                blockedRoute,
+                method);
+            throw new InvalidDataSourceUsageException(blockedRoute, "CacheOnly", "Live");
+        }
+
+        var route = _httpContextAccessor?.HttpContext?.Request.Path.Value ?? "<unknown>";
+        _logger.LogInformation(
+            "[DataSourceMode] Route={Route} Mode=LiveAllowed Provider=Live Method={Method}",
+            route,
+            method);
     }
 }

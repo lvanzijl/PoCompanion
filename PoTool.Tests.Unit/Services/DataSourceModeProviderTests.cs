@@ -186,4 +186,26 @@ public class DataSourceModeProviderTests
         Assert.AreEqual(DataSourceMode.Cache, mode,
             "Should use Cache mode when idle with a previous successful sync");
     }
+
+    [TestMethod]
+    public void Mode_WhenNotSet_Throws()
+    {
+        try
+        {
+            _ = _provider.Mode;
+            Assert.Fail("Expected InvalidOperationException was not thrown.");
+        }
+        catch (InvalidOperationException)
+        {
+            // Expected path
+        }
+    }
+
+    [TestMethod]
+    public void SetCurrentMode_SetsReadableMode()
+    {
+        _provider.SetCurrentMode(DataSourceMode.Live);
+
+        Assert.AreEqual(DataSourceMode.Live, _provider.Mode);
+    }
 }

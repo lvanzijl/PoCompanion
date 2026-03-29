@@ -62,7 +62,7 @@ public class DataSourceModeConfigurationTests
         var intent = DataSourceModeConfiguration.GetRouteIntent("/api/workitems/123/state-timeline");
 
         Assert.AreEqual(
-            DataSourceModeConfiguration.RouteIntent.LiveAllowed,
+            DataSourceModeConfiguration.RouteIntent.BlockedAmbiguous,
             intent);
     }
 
@@ -104,5 +104,19 @@ public class DataSourceModeConfigurationTests
         Assert.AreEqual(
             DataSourceModeConfiguration.RouteIntent.LiveAllowed,
             intent);
+    }
+
+    [TestMethod]
+    public void ResolveRouteIntentOrThrow_UnknownRoute_Throws()
+    {
+        try
+        {
+            DataSourceModeConfiguration.ResolveRouteIntentOrThrow("/api/unclassified-route");
+            Assert.Fail("Expected RouteNotClassifiedException was not thrown.");
+        }
+        catch (PoTool.Api.Exceptions.RouteNotClassifiedException)
+        {
+            // Expected path
+        }
     }
 }
