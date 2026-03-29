@@ -83,7 +83,8 @@ public sealed class CdcUsageCoverageDocumentTests
         StringAssert.Contains(sprintTrend, "ComputeFeatureProgressAsync");
         StringAssert.Contains(sprintTrend, "ComputeEpicProgressAsync");
         StringAssert.Contains(epicForecast, "_completionForecastService.Forecast");
-        StringAssert.Contains(epicForecast, "new GetSprintMetricsQuery(path)");
+        StringAssert.Contains(epicForecast, "new GetSprintMetricsQuery(");
+        StringAssert.Contains(epicForecast, "new SprintEffectiveFilter(");
         StringAssert.Contains(capacityCalibration, "_context.SprintMetricsProjections");
         StringAssert.Contains(capacityCalibration, "_velocityCalibrationService.Calibrate");
 

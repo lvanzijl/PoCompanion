@@ -89,8 +89,7 @@ public class InputValidatorTests
 
 #pragma warning disable MSTEST0037
         Assert.IsFalse(result.Contains(';'));
-        Assert.Contains(result, "test");
-        Assert.Contains(result, "DROP");
+        Assert.AreEqual("test DROP TABLE WorkItems --", result);
     }
 
     [TestMethod]

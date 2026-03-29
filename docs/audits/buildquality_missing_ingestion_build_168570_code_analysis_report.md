@@ -248,7 +248,7 @@ Only partially, and the most important parser-level drops are **not** logged.
 - `ParseCoverageDtos(...)` does **not** log when:
   - `coverageData` is absent
   - `coverageStats` is absent
-  - labels do not match `"Line"` / `"Lines"`
+- labels do not match `"Line" or "Lines"`
   - `covered` / `total` is missing
 
 ### Can the code silently produce zero persisted rows while sync appears successful?

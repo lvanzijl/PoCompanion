@@ -532,31 +532,17 @@ internal partial class RealTfsClient
         CancellationToken cancellationToken)
     {
         var ancestorsAdded = 0;
-        var visitedAncestors = new HashSet<int>();
-        var missingParentIds = new HashSet<int>();
-        
-        // Step 1: Find all parent IDs that are not in our current set
-        foreach (var (childId, parentId) in relationsMap)
-        {
-            if (parentId.HasValue && !allWorkItemIds.Contains(parentId.Value))
-            {
-                missingParentIds.Add(parentId.Value);
-            }
-        }
+        var inspectedRelationIds = new HashSet<int>();
+        var initialIdsToInspect = allWorkItemIds.Count;
 
-        if (missingParentIds.Count == 0)
-        {
-            _logger.LogInformation("No missing parent IDs found - hierarchy is complete");
-            return 0;
-        }
+        _logger.LogInformation(
+            "Inspecting relations for {Count} discovered work items before ancestor completion",
+            initialIdsToInspect);
 
-        _logger.LogInformation("Found {Count} missing parent IDs, walking up hierarchy to fetch ancestors", 
-            missingParentIds.Count);
-
-        progressCallback?.Invoke(2, 3, $"Completing ancestors ({missingParentIds.Count} missing parents)...");
+        progressCallback?.Invoke(2, 3, $"Completing ancestors ({initialIdsToInspect} items to inspect)...");
 
         var currentDepth = 0;
-        var parentsToFetch = new Queue<int>(missingParentIds);
+        var parentsToFetch = new Queue<int>(allWorkItemIds);
         var hasMoreParents = parentsToFetch.Count > 0;
 
         // Step 2: Walk up the hierarchy iteratively
@@ -569,10 +555,9 @@ internal partial class RealTfsClient
             while (parentsToFetch.Count > 0 && batchToFetch.Count < WorkItemBatchSize)
             {
                 var parentId = parentsToFetch.Dequeue();
-                if (!visitedAncestors.Contains(parentId) && !allWorkItemIds.Contains(parentId))
+                if (inspectedRelationIds.Add(parentId))
                 {
                     batchToFetch.Add(parentId);
-                    visitedAncestors.Add(parentId);
                 }
             }
 
@@ -612,28 +597,36 @@ internal partial class RealTfsClient
                 foreach (var item in relationsDoc.RootElement.GetProperty("value").EnumerateArray())
                 {
                     var id = item.GetProperty("id").GetInt32();
-                    
-                    // Add to our set of IDs
-                    if (allWorkItemIds.Add(id))
+
+                    if (!item.TryGetProperty("relations", out var relationsProperty) ||
+                        relationsProperty.ValueKind != JsonValueKind.Array)
+                    {
+                        _logger.LogDebug(
+                            "Work item {WorkItemId} is missing 'relations' property during ancestor completion.",
+                            id);
+                    }
+
+                    // Extract parent ID from this item and update known hierarchy.
+                    var parentId = ExtractParentIdFromRelations(item);
+                    relationsMap[id] = parentId;
+
+                    var isNewAncestor = allWorkItemIds.Add(id);
+                    if (isNewAncestor)
                     {
                         ancestorsAdded++;
-                        
-                        // Extract parent ID from this ancestor
-                        var parentId = ExtractParentIdFromRelations(item);
-                        relationsMap[id] = parentId;
-                        
-                        // If this ancestor has a parent that we don't have yet, queue it
-                        if (parentId.HasValue && 
-                            !allWorkItemIds.Contains(parentId.Value) && 
-                            !visitedAncestors.Contains(parentId.Value))
-                        {
-                            parentsToFetch.Enqueue(parentId.Value);
-                        }
+                    }
+
+                    // If this item has a parent that we don't have yet, queue it.
+                    if (parentId.HasValue &&
+                        !allWorkItemIds.Contains(parentId.Value) &&
+                        !inspectedRelationIds.Contains(parentId.Value))
+                    {
+                        parentsToFetch.Enqueue(parentId.Value);
                     }
                 }
 
                 _logger.LogDebug("Ancestor completion depth {Depth}: Added {Count} ancestors, {Remaining} parents queued", 
-                    currentDepth, batchToFetch.Count, parentsToFetch.Count);
+                    currentDepth, ancestorsAdded, parentsToFetch.Count);
                 
                 // Update loop condition tracker
                 hasMoreParents = parentsToFetch.Count > 0;
