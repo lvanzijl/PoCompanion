@@ -8,6 +8,7 @@ using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Queries;
+using System.Text.Json;
 
 using PoTool.Core.WorkItems;
 
@@ -343,8 +344,56 @@ public class GetDependencyGraphQueryHandlerTests
             State: state,
             RetrievedAt: DateTimeOffset.UtcNow,
             Effort: effort,
-                    Description: null,
-                    Tags: null
+            Description: null,
+            Tags: null,
+            Relations: ParseRelations(jsonPayload)
         );
+    }
+
+    private static List<WorkItemRelation>? ParseRelations(string jsonPayload)
+    {
+        if (string.IsNullOrWhiteSpace(jsonPayload))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(jsonPayload);
+            if (!document.RootElement.TryGetProperty("relations", out var relationsElement)
+                || relationsElement.ValueKind != JsonValueKind.Array)
+            {
+                return null;
+            }
+
+            return relationsElement
+                .EnumerateArray()
+                .Select(relation =>
+                {
+                    var linkType = relation.TryGetProperty("rel", out var relElement)
+                        ? relElement.GetString() ?? string.Empty
+                        : string.Empty;
+                    var url = relation.TryGetProperty("url", out var urlElement)
+                        ? urlElement.GetString()
+                        : null;
+
+                    int? targetWorkItemId = null;
+                    if (!string.IsNullOrWhiteSpace(url))
+                    {
+                        var lastSegment = url.Split('/', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+                        if (int.TryParse(lastSegment, out var parsedId))
+                        {
+                            targetWorkItemId = parsedId;
+                        }
+                    }
+
+                    return new WorkItemRelation(linkType, targetWorkItemId, url);
+                })
+                .ToList();
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 }
