@@ -31,7 +31,26 @@ public class TfsAccessBoundaryArchitectureTests
         "GetRequiredService<RealTfsClient>",
         "GetRequiredService<MockTfsClient>",
         "GetService<RealTfsClient>",
-        "GetService<MockTfsClient>"
+        "GetService<MockTfsClient>",
+        "new RealTfsClient(",
+        "new MockTfsClient("
+    ];
+
+    private static readonly (string Pattern, string[] AllowedFiles)[] RestrictedFactoryPatterns =
+    [
+        (
+            "RealTfsClientFactory.Create(",
+            [
+                "PoTool.Api/Configuration/ApiServiceCollectionExtensions.cs",
+                "PoTool.Tools.TfsRetrievalValidator/Program.cs"
+            ]
+        ),
+        (
+            "ActivatorUtilities.CreateInstance<MockTfsClient>",
+            [
+                "PoTool.Api/Configuration/ApiServiceCollectionExtensions.cs"
+            ]
+        )
     ];
 
     private static readonly HashSet<string> RawClientTypeNames =
@@ -112,6 +131,16 @@ public class TfsAccessBoundaryArchitectureTests
                     if (content.Contains(pattern, StringComparison.Ordinal))
                     {
                         violations.Add($"{Path.GetRelativePath(repoRoot, file)} contains forbidden TFS boundary pattern `{pattern}`.");
+                    }
+                }
+
+                var relativePath = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+                foreach (var (pattern, allowedFiles) in RestrictedFactoryPatterns)
+                {
+                    if (content.Contains(pattern, StringComparison.Ordinal) &&
+                        !allowedFiles.Contains(relativePath, StringComparer.Ordinal))
+                    {
+                        violations.Add($"{relativePath} contains restricted TFS boundary pattern `{pattern}` outside the approved gateway registration files.");
                     }
                 }
             }
