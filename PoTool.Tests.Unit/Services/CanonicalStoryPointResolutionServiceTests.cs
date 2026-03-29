@@ -1,5 +1,6 @@
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Estimation;
+using PoTool.Core.Domain.WorkItems;
 using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
@@ -152,7 +153,7 @@ public sealed class CanonicalStoryPointResolutionServiceTests
 
     private static CanonicalWorkItem CreateWorkItem(
         int tfsId,
-        string type = WorkItemType.Pbi,
+        string type = CanonicalWorkItemTypes.Pbi,
         int? parentTfsId = null,
         int? storyPoints = null,
         int? businessValue = null)
