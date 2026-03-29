@@ -302,6 +302,30 @@ public class GetPipelineInsightsQueryHandlerTests
     }
 
     [TestMethod]
+    [Description("Unknown, None, missing, and unrecognized results normalize predictably and do not affect completed metrics")]
+    public async Task Handle_UnknownAndMissingResults_AreIgnoredAfterNormalization()
+    {
+        var (profileId, _, _, pipeDefId, sprintId, _) = await SeedFullScenarioAsync(seed: 71);
+        await AddRunAsync(id: 1, pipeDefId, profileId, RunInCurrent, "Succeeded");
+        await AddRunAsync(id: 2, pipeDefId, profileId, RunInCurrent.AddMinutes(1), null!);
+        await AddRunAsync(id: 3, pipeDefId, profileId, RunInCurrent.AddMinutes(2), "Unknown");
+        await AddRunAsync(id: 4, pipeDefId, profileId, RunInCurrent.AddMinutes(3), "None");
+        await AddRunAsync(id: 5, pipeDefId, profileId, RunInCurrent.AddMinutes(4), "Deferred");
+
+        var result = await _handler.Handle(
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { $"Repo {profileId}" }, sprintId)),
+            CancellationToken.None);
+
+        Assert.AreEqual(5, result.TotalBuilds, "TotalBuilds still reflects all raw runs");
+        var product = result.Products[0];
+        Assert.AreEqual(1, product.CompletedBuilds, "Only the succeeded run should contribute to completed metrics");
+        Assert.AreEqual(0, product.FailedBuilds);
+        Assert.AreEqual(0, product.WarningBuilds);
+        Assert.AreEqual(0.0, product.FailureRate);
+        Assert.AreEqual(0.0, product.WarningRate);
+    }
+
+    [TestMethod]
     [Description("Runs outside the sprint window are not counted")]
     public async Task Handle_RunOutsideWindow_NotCounted()
     {

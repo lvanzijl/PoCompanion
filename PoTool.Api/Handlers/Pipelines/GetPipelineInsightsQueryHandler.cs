@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Services;
+using PoTool.Core.Pipelines.Analytics;
 using PoTool.Core.Pipelines.Filters;
 using PoTool.Core.Pipelines.Queries;
 using PoTool.Shared.Pipelines;
@@ -517,7 +518,8 @@ public sealed class GetPipelineInsightsQueryHandler
     }
 
     /// <summary>
-    /// Classifies runs according to the include-partial and include-canceled toggles.
+    /// Classifies runs using canonical analytical outcomes, then applies the
+    /// include-partial and include-canceled toggles as post-normalization metric choices.
     /// Returns (completed, failed, warning, succeeded) counts.
     /// </summary>
     private static (int Completed, int Failed, int Warning, int Succeeded) ClassifyRuns(
@@ -529,40 +531,32 @@ public sealed class GetPipelineInsightsQueryHandler
 
         foreach (var run in runs)
         {
-            var result = run.Result;
+            var outcome = PipelineAnalyticalOutcomeClassifier.ApplyMetricInclusion(
+                PipelineAnalyticalOutcomeClassifier.Normalize(run.Result),
+                includeWarnings: includePartial,
+                includeCanceled: includeCanceled);
 
-            if (string.IsNullOrEmpty(result)
-                || string.Equals(result, "Unknown", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(result, "None",    StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            if (string.Equals(result, "Canceled", StringComparison.OrdinalIgnoreCase))
+            switch (outcome)
             {
-                if (includeCanceled) completed++;
-                continue;
-            }
-
-            if (string.Equals(result, "PartiallySucceeded", StringComparison.OrdinalIgnoreCase))
-            {
-                if (includePartial)
-                {
+                case PipelineAnalyticalOutcome.Canceled:
+                    completed++;
+                    break;
+                case PipelineAnalyticalOutcome.Warning:
                     completed++;
                     warning++;
-                }
-                continue;
-            }
-
-            if (string.Equals(result, "Failed", StringComparison.OrdinalIgnoreCase))
-            {
-                completed++;
-                failed++;
-                continue;
-            }
-
-            if (string.Equals(result, "Succeeded", StringComparison.OrdinalIgnoreCase))
-            {
-                completed++;
-                succeeded++;
+                    break;
+                case PipelineAnalyticalOutcome.Failed:
+                    completed++;
+                    failed++;
+                    break;
+                case PipelineAnalyticalOutcome.Succeeded:
+                    completed++;
+                    succeeded++;
+                    break;
+                case PipelineAnalyticalOutcome.Unknown:
+                case PipelineAnalyticalOutcome.Ignored:
+                default:
+                    break;
             }
         }
 
