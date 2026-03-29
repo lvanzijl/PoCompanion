@@ -158,7 +158,7 @@ public class SprintTrendProjectionServiceSqliteTests
     }
 
     [TestMethod]
-    public async Task ComputeProjectionsAsync_RebuildsPortfolioFlowProjectionInTheSprintPipeline_ForRawProductBacklogItemType()
+    public async Task ComputeProjectionsAsync_RebuildsPortfolioFlowProjectionInTheSprintPipeline_WithRawProductBacklogItemType()
     {
         int productOwnerId;
         int sprintId;
