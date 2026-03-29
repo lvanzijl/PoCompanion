@@ -13,7 +13,7 @@ namespace PoTool.Integrations.Tfs.Clients;
 /// Real Azure DevOps/TFS REST client implementation - Work Items operations.
 /// Contains methods for validating connections, fetching area paths, and retrieving work items.
 /// </summary>
-public partial class RealTfsClient
+internal partial class RealTfsClient
 {
     public async Task<bool> ValidateConnectionAsync(CancellationToken cancellationToken = default)
     {

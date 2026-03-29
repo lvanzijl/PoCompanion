@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Api.Handlers.Pipelines;
@@ -11,19 +12,30 @@ namespace PoTool.Tests.Unit.Handlers;
 [TestClass]
 public class GetPipelineDefinitionsQueryHandlerTests
 {
-    private Mock<IPipelineReadProvider> _mockProvider = null!;
+    private ServiceProvider _serviceProvider = null!;
+    private Mock<IPipelineReadProvider> _mockLiveProvider = null!;
     private Mock<ILogger<GetPipelineDefinitionsQueryHandler>> _mockLogger = null!;
     private GetPipelineDefinitionsQueryHandler _handler = null!;
 
     [TestInitialize]
     public void Setup()
     {
-        _mockProvider = new Mock<IPipelineReadProvider>();
+        var services = new ServiceCollection();
+        _mockLiveProvider = new Mock<IPipelineReadProvider>();
         _mockLogger = new Mock<ILogger<GetPipelineDefinitionsQueryHandler>>();
 
+        services.AddKeyedScoped<IPipelineReadProvider>("Live", (_, _) => _mockLiveProvider.Object);
+        _serviceProvider = services.BuildServiceProvider();
+
         _handler = new GetPipelineDefinitionsQueryHandler(
-            _mockProvider.Object,
+            _serviceProvider,
             _mockLogger.Object);
+    }
+
+    [TestCleanup]
+    public void Cleanup()
+    {
+        _serviceProvider.Dispose();
     }
 
     [TestMethod]
@@ -72,7 +84,7 @@ public class GetPipelineDefinitionsQueryHandlerTests
             }
         };
 
-        _mockProvider
+        _mockLiveProvider
             .Setup(p => p.GetDefinitionsByProductIdAsync(productId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedDefinitions);
 
@@ -82,7 +94,7 @@ public class GetPipelineDefinitionsQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(1, result.Count());
-        _mockProvider.Verify(p => p.GetDefinitionsByProductIdAsync(productId, It.IsAny<CancellationToken>()), Times.Once);
+        _mockLiveProvider.Verify(p => p.GetDefinitionsByProductIdAsync(productId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [TestMethod]
@@ -109,7 +121,7 @@ public class GetPipelineDefinitionsQueryHandlerTests
             }
         };
 
-        _mockProvider
+        _mockLiveProvider
             .Setup(p => p.GetDefinitionsByRepositoryIdAsync(repositoryId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedDefinitions);
 
@@ -119,7 +131,7 @@ public class GetPipelineDefinitionsQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(1, result.Count());
-        _mockProvider.Verify(p => p.GetDefinitionsByRepositoryIdAsync(repositoryId, It.IsAny<CancellationToken>()), Times.Once);
+        _mockLiveProvider.Verify(p => p.GetDefinitionsByRepositoryIdAsync(repositoryId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [TestMethod]
@@ -136,7 +148,7 @@ public class GetPipelineDefinitionsQueryHandlerTests
 
         var expectedDefinitions = new List<PipelineDefinitionDto>();
 
-        _mockProvider
+        _mockLiveProvider
             .Setup(p => p.GetDefinitionsByProductIdAsync(productId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedDefinitions);
 
@@ -144,7 +156,7 @@ public class GetPipelineDefinitionsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        _mockProvider.Verify(p => p.GetDefinitionsByProductIdAsync(productId, It.IsAny<CancellationToken>()), Times.Once);
-        _mockProvider.Verify(p => p.GetDefinitionsByRepositoryIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        _mockLiveProvider.Verify(p => p.GetDefinitionsByProductIdAsync(productId, It.IsAny<CancellationToken>()), Times.Once);
+        _mockLiveProvider.Verify(p => p.GetDefinitionsByRepositoryIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

@@ -4,33 +4,34 @@ using PoTool.Core.Pipelines;
 namespace PoTool.Core.Contracts;
 
 /// <summary>
-/// Provider for reading pipeline data from the configured data source.
-/// Implementations select between Live (TFS direct) or Cached (repository) based on mode.
+/// Provider for reading pipeline data from an underlying data source.
+/// Analytical HTTP paths resolve a cached implementation by default, while explicit discovery
+/// flows may resolve the live implementation directly.
 /// </summary>
 public interface IPipelineReadProvider
 {
     /// <summary>
-    /// Retrieves all pipelines from the configured data source.
+    /// Retrieves all pipelines from the underlying data source.
     /// </summary>
     Task<IEnumerable<PipelineDto>> GetAllAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves a specific pipeline by ID from the configured data source.
+    /// Retrieves a specific pipeline by ID from the underlying data source.
     /// </summary>
     Task<PipelineDto?> GetByIdAsync(int pipelineId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves specific pipelines by ID from the configured data source.
+    /// Retrieves specific pipelines by ID from the underlying data source.
     /// </summary>
     Task<IEnumerable<PipelineDto>> GetByIdsAsync(IEnumerable<int> pipelineIds, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves pipeline runs for a specific pipeline from the configured data source.
+    /// Retrieves pipeline runs for a specific pipeline from the underlying data source.
     /// </summary>
     Task<IEnumerable<PipelineRunDto>> GetRunsAsync(int pipelineId, int top = 100, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves all pipeline runs from the configured data source.
+    /// Retrieves all pipeline runs from the underlying data source.
     /// </summary>
     Task<IEnumerable<PipelineRunDto>> GetAllRunsAsync(CancellationToken cancellationToken = default);
 
@@ -53,12 +54,12 @@ public interface IPipelineReadProvider
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves pipeline definitions for a specific product from the configured data source.
+    /// Retrieves pipeline definitions for a specific product from the underlying data source.
     /// </summary>
     Task<IEnumerable<PipelineDefinitionDto>> GetDefinitionsByProductIdAsync(int productId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves pipeline definitions for a specific repository from the configured data source.
+    /// Retrieves pipeline definitions for a specific repository from the underlying data source.
     /// </summary>
     Task<IEnumerable<PipelineDefinitionDto>> GetDefinitionsByRepositoryIdAsync(int repositoryId, CancellationToken cancellationToken = default);
 }

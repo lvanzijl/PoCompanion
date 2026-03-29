@@ -8,7 +8,7 @@ namespace PoTool.Api.Handlers.PullRequests;
 
 /// <summary>
 /// Handler for GetFilteredPullRequestsQuery.
-/// Uses read provider to support both Live and Cached modes.
+/// Uses the cache-backed pull request read provider registered for analytical reads.
 /// </summary>
 public sealed class GetFilteredPullRequestsQueryHandler : IQueryHandler<GetFilteredPullRequestsQuery, IEnumerable<PullRequestDto>>
 {

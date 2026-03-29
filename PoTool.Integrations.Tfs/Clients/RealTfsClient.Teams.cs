@@ -11,7 +11,7 @@ namespace PoTool.Integrations.Tfs.Clients;
 /// <summary>
 /// Real Azure DevOps/TFS REST client implementation - Projects, Teams, and Repositories
 /// </summary>
-public partial class RealTfsClient
+internal partial class RealTfsClient
 {
     public async Task<IEnumerable<TfsProjectDto>> GetTfsProjectsAsync(string organizationUrl, CancellationToken cancellationToken = default)
     {

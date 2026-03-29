@@ -198,6 +198,7 @@ public static class ApiServiceCollectionExtensions
 
         // Register Data Source Mode Provider (for switching between Live and Cache)
         services.AddScoped<IDataSourceModeProvider, DataSourceModeProvider>();
+        services.AddHttpContextAccessor();
 
         // Register Current Profile Provider (for getting active ProductOwner ID)
         services.AddScoped<ICurrentProfileProvider, CurrentProfileProvider>();
@@ -212,15 +213,20 @@ public static class ApiServiceCollectionExtensions
         services.AddKeyedScoped<IPullRequestReadProvider, CachedPullRequestReadProvider>("Cached");
         services.AddKeyedScoped<IPipelineReadProvider, CachedPipelineReadProvider>("Cached");
 
-        // Register the factory for data-source-aware provider resolution
+        // Register the factory for data-source-aware provider resolution where requests still switch
+        // between cache and live at runtime.
         services.AddScoped<DataSourceAwareReadProviderFactory>();
 
-        // Register lazy wrappers that delay provider resolution until method calls
-        // This ensures DataSourceModeMiddleware has set the correct mode before resolving
-        // the actual Live or Cached provider from the factory
+        // Work item reads still resolve from the request mode at call time.
         services.AddScoped<IWorkItemReadProvider, LazyWorkItemReadProvider>();
-        services.AddScoped<IPullRequestReadProvider, LazyPullRequestReadProvider>();
-        services.AddScoped<IPipelineReadProvider, LazyPipelineReadProvider>();
+
+        // Analytical pipeline reads are cache-only after middleware guardrails.
+        // Definitions discovery resolves the live provider explicitly in its handler.
+        services.AddScoped<IPipelineReadProvider, CachedPipelineReadProvider>();
+
+        // Pull request analytical reads are cache-only after middleware guardrails,
+        // so the default injected provider is deterministic and cache-backed.
+        services.AddScoped<IPullRequestReadProvider, CachedPullRequestReadProvider>();
 
         // Register Release Planning services
         services.AddScoped<ConnectorDerivationService>();
@@ -339,13 +345,8 @@ public static class ApiServiceCollectionExtensions
         // Always register HttpClientFactory for handlers that need it
         services.AddHttpClient();
 
-        // Register TFS client based on configuration (useMockClient already read above)
-        if (useMockClient)
-        {
-            // Use mock TFS client with predefined test data
-            services.AddScoped<MockTfsClient>();
-        }
-        else
+        // Register TFS transport based on configuration (useMockClient already read above)
+        if (!useMockClient)
         {
             // Use real TFS client that connects to Azure DevOps/TFS
             // Register named HttpClient for NTLM authentication
@@ -360,23 +361,21 @@ public static class ApiServiceCollectionExtensions
                     MaxAutomaticRedirections = 5
                 });
 
-            // Register RealTfsClient as a regular scoped service
-            // RealTfsClient uses IHttpClientFactory internally (via GetAuthenticatedHttpClient)
-            // and has multiple constructor dependencies, so it doesn't follow the typed HttpClient pattern
-            services.AddScoped<RealTfsClient>();
-
         }
-        services.AddScoped<ITfsClient>(provider =>
+        services.AddScoped<ITfsAccessGateway>(provider =>
         {
             var runtimeMode = provider.GetRequiredService<TfsRuntimeMode>();
             var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("TfsRuntime");
-            ITfsClient client = runtimeMode.UseMockClient
-                ? provider.GetRequiredService<MockTfsClient>()
-                : provider.GetRequiredService<RealTfsClient>();
 
-            TfsRuntimeModeGuard.EnsureExpectedClient(runtimeMode, client, logger, "ITfsClient registration");
-            return client;
+            // Do not inject RealTfsClient directly. All production TFS access must flow through the gateway.
+            ITfsClient client = runtimeMode.UseMockClient
+                ? ActivatorUtilities.CreateInstance<MockTfsClient>(provider)
+                : RealTfsClientFactory.Create(provider);
+
+            TfsRuntimeModeGuard.EnsureExpectedClient(runtimeMode, client, logger, "ITfsAccessGateway registration");
+            return ActivatorUtilities.CreateInstance<TfsAccessGateway>(provider, client);
         });
+        services.AddScoped<ITfsClient>(provider => provider.GetRequiredService<ITfsAccessGateway>());
         services.AddScoped<ActivityEventIngestionService>();
         services.AddScoped<IActivityEventSource, LedgerActivityEventSource>();
 

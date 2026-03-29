@@ -8,7 +8,7 @@ using PoTool.Shared.Exceptions;
 
 namespace PoTool.Integrations.Tfs.Clients;
 
-public partial class RealTfsClient
+internal partial class RealTfsClient
 {
     private async Task<List<(string Name, string Id)>> GetRepositoriesInternalAsync(
         TfsConfigEntity config,

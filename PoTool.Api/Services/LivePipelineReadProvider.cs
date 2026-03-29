@@ -1,4 +1,7 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http;
+using PoTool.Api.Exceptions;
+using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
 using PoTool.Core.Pipelines;
 using PoTool.Shared.Pipelines;
@@ -18,21 +21,37 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
     private readonly IProductRepository _productRepository;
     private readonly IRepositoryConfigRepository _repositoryConfigRepository;
     private readonly ILogger<LivePipelineReadProvider> _logger;
+    private readonly IDataSourceModeProvider? _modeProvider;
+    private readonly IHttpContextAccessor? _httpContextAccessor;
 
     public LivePipelineReadProvider(
         ITfsClient tfsClient,
         IProductRepository productRepository,
         IRepositoryConfigRepository repositoryConfigRepository,
         ILogger<LivePipelineReadProvider> logger)
+        : this(tfsClient, productRepository, repositoryConfigRepository, logger, null, null)
+    {
+    }
+
+    public LivePipelineReadProvider(
+        ITfsClient tfsClient,
+        IProductRepository productRepository,
+        IRepositoryConfigRepository repositoryConfigRepository,
+        ILogger<LivePipelineReadProvider> logger,
+        IDataSourceModeProvider? modeProvider,
+        IHttpContextAccessor? httpContextAccessor)
     {
         _tfsClient = tfsClient;
         _productRepository = productRepository;
         _repositoryConfigRepository = repositoryConfigRepository;
         _logger = logger;
+        _modeProvider = modeProvider;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<IEnumerable<PipelineDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetAllAsync));
         _logger.LogWarning("LivePipelineReadProvider.{Method} called — may indicate cache bypass", nameof(GetAllAsync));
         _logger.LogDebug("LivePipelineReadProvider: Fetching all pipelines from TFS");
         
@@ -43,6 +62,7 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
 
     public async Task<PipelineDto?> GetByIdAsync(int pipelineId, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetByIdAsync));
         _logger.LogWarning("LivePipelineReadProvider.{Method} called — may indicate cache bypass", nameof(GetByIdAsync));
         _logger.LogDebug("LivePipelineReadProvider: Fetching pipeline by ID from TFS: {PipelineId}", pipelineId);
         
@@ -52,6 +72,7 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
 
     public async Task<IEnumerable<PipelineDto>> GetByIdsAsync(IEnumerable<int> pipelineIds, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetByIdsAsync));
         var normalizedIds = pipelineIds
             .Distinct()
             .ToList();
@@ -76,6 +97,7 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
 
     public async Task<IEnumerable<PipelineRunDto>> GetRunsAsync(int pipelineId, int top = 100, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetRunsAsync));
         _logger.LogWarning("LivePipelineReadProvider.{Method} called — may indicate cache bypass", nameof(GetRunsAsync));
         _logger.LogDebug("LivePipelineReadProvider: Fetching pipeline runs for pipeline {PipelineId} from TFS", pipelineId);
         
@@ -93,6 +115,7 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
 
     public async Task<IEnumerable<PipelineRunDto>> GetAllRunsAsync(CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetAllRunsAsync));
         _logger.LogWarning("LivePipelineReadProvider.{Method} called — may indicate cache bypass", nameof(GetAllRunsAsync));
         _logger.LogDebug("LivePipelineReadProvider: Fetching all pipeline runs from TFS");
         
@@ -120,6 +143,7 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
         int top = 100,
         CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetRunsForPipelinesAsync));
         _logger.LogWarning("LivePipelineReadProvider.{Method} called — may indicate cache bypass", nameof(GetRunsForPipelinesAsync));
         _logger.LogDebug(
             "LivePipelineReadProvider: Fetching pipeline runs for {Count} pipelines with filters (branch: {Branch}, minTime: {MinTime})",
@@ -131,6 +155,7 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
 
     public async Task<IEnumerable<PipelineDefinitionDto>> GetDefinitionsByProductIdAsync(int productId, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetDefinitionsByProductIdAsync));
         _logger.LogWarning("LivePipelineReadProvider.{Method} called — may indicate cache bypass", nameof(GetDefinitionsByProductIdAsync));
         _logger.LogDebug("LivePipelineReadProvider: Fetching pipeline definitions for product {ProductId} from TFS", productId);
         
@@ -171,6 +196,7 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
 
     public async Task<IEnumerable<PipelineDefinitionDto>> GetDefinitionsByRepositoryIdAsync(int repositoryId, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetDefinitionsByRepositoryIdAsync));
         _logger.LogWarning("LivePipelineReadProvider.{Method} called — may indicate cache bypass", nameof(GetDefinitionsByRepositoryIdAsync));
         _logger.LogDebug("LivePipelineReadProvider: Fetching pipeline definitions for repository {RepositoryId} from TFS", repositoryId);
         
@@ -200,5 +226,24 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
             definitionsList.Count, repositoryId, repository.Name);
         
         return definitionsList;
+    }
+
+    private void EnsureLiveUsageAllowed(string method)
+    {
+        if (_modeProvider?.Mode == DataSourceMode.Cache)
+        {
+            var blockedRoute = _httpContextAccessor?.HttpContext?.Request.Path.Value ?? "<unknown>";
+            _logger.LogError(
+                "[Violation] Route={Route} Mode=CacheOnly AttemptedProvider=Live Action=Blocked Method={Method}",
+                blockedRoute,
+                method);
+            throw new InvalidDataSourceUsageException(blockedRoute, "CacheOnly", "Live");
+        }
+
+        var route = _httpContextAccessor?.HttpContext?.Request.Path.Value ?? "<unknown>";
+        _logger.LogInformation(
+            "[DataSourceMode] Route={Route} Mode=LiveAllowed Provider=Live Method={Method}",
+            route,
+            method);
     }
 }

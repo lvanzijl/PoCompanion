@@ -217,9 +217,13 @@ public class ServiceCollectionTests
 
         var runtimeMode = scope.ServiceProvider.GetRequiredService<TfsRuntimeMode>();
         var tfsClient = scope.ServiceProvider.GetRequiredService<ITfsClient>();
+        var gateway = scope.ServiceProvider.GetRequiredService<ITfsAccessGateway>();
 
         Assert.IsTrue(runtimeMode.UseMockClient, "Mock mode should be captured once during startup.");
-        Assert.IsInstanceOfType<MockTfsClient>(tfsClient, "Mock mode should resolve MockTfsClient.");
+        Assert.AreSame(gateway, tfsClient, "ITfsClient should resolve through the TFS access gateway.");
+        Assert.IsInstanceOfType<TfsAccessGateway>(gateway, "Mock mode should resolve the guarded TFS gateway.");
+        Assert.IsTrue(((TfsAccessGateway)gateway).UsesMockClient, "Gateway should wrap the mock TFS client in mock mode.");
+        Assert.IsNull(scope.ServiceProvider.GetService<MockTfsClient>(), "MockTfsClient must not be directly resolvable from DI.");
     }
 
     [TestMethod]
@@ -245,9 +249,76 @@ public class ServiceCollectionTests
 
         var runtimeMode = scope.ServiceProvider.GetRequiredService<TfsRuntimeMode>();
         var tfsClient = scope.ServiceProvider.GetRequiredService<ITfsClient>();
+        var gateway = scope.ServiceProvider.GetRequiredService<ITfsAccessGateway>();
 
         Assert.IsFalse(runtimeMode.UseMockClient, "Real mode should be captured once during startup.");
-        Assert.IsInstanceOfType<RealTfsClient>(tfsClient, "Real mode should resolve RealTfsClient.");
+        Assert.AreSame(gateway, tfsClient, "ITfsClient should resolve through the TFS access gateway.");
+        Assert.IsInstanceOfType<TfsAccessGateway>(gateway, "Real mode should resolve the guarded TFS gateway.");
+        Assert.IsFalse(((TfsAccessGateway)gateway).UsesMockClient, "Gateway should wrap the real TFS client in real mode.");
+        Assert.AreEqual(typeof(RealTfsClient).FullName, ((TfsAccessGateway)gateway).InnerClientTypeName);
+        Assert.IsNull(scope.ServiceProvider.GetService<RealTfsClient>(), "RealTfsClient must not be directly resolvable from DI.");
+    }
+
+    [TestMethod]
+    public void AddPoToolApiServices_RegistersCachedPullRequestProviderAsDefault_AndPreservesExplicitLiveProvider()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+
+        services.AddLogging();
+        RegisterHostEnvironment(services);
+        services.AddDbContext<PoToolDbContext>(options =>
+            options.UseInMemoryDatabase("TestDb6"));
+
+        services.AddPoToolApiServices(configuration, isDevelopment: true);
+
+        using var serviceProvider = services.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+
+        var defaultProvider = scope.ServiceProvider.GetRequiredService<IPullRequestReadProvider>();
+        var liveProvider = scope.ServiceProvider.GetRequiredKeyedService<IPullRequestReadProvider>("Live");
+        var cachedProvider = scope.ServiceProvider.GetRequiredKeyedService<IPullRequestReadProvider>("Cached");
+
+        Assert.IsInstanceOfType<CachedPullRequestReadProvider>(
+            defaultProvider,
+            "Analytical pull request reads should resolve the cached provider by default.");
+        Assert.IsInstanceOfType<LivePullRequestReadProvider>(
+            liveProvider,
+            "Explicit live pull request flows must still be able to resolve the live provider.");
+        Assert.IsInstanceOfType<CachedPullRequestReadProvider>(
+            cachedProvider,
+            "Explicit cached pull request resolution should remain available.");
+    }
+
+    [TestMethod]
+    public void AddPoToolApiServices_RegistersCachedPipelineProviderAsDefault_AndPreservesExplicitLiveProvider()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+
+        services.AddLogging();
+        RegisterHostEnvironment(services);
+        services.AddDbContext<PoToolDbContext>(options =>
+            options.UseInMemoryDatabase("TestDb7"));
+
+        services.AddPoToolApiServices(configuration, isDevelopment: true);
+
+        using var serviceProvider = services.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+
+        var defaultProvider = scope.ServiceProvider.GetRequiredService<IPipelineReadProvider>();
+        var liveProvider = scope.ServiceProvider.GetRequiredKeyedService<IPipelineReadProvider>("Live");
+        var cachedProvider = scope.ServiceProvider.GetRequiredKeyedService<IPipelineReadProvider>("Cached");
+
+        Assert.IsInstanceOfType<CachedPipelineReadProvider>(
+            defaultProvider,
+            "Analytical pipeline reads should resolve the cached provider by default.");
+        Assert.IsInstanceOfType<LivePipelineReadProvider>(
+            liveProvider,
+            "Explicit live pipeline discovery flows must still be able to resolve the live provider.");
+        Assert.IsInstanceOfType<CachedPipelineReadProvider>(
+            cachedProvider,
+            "Explicit cached pipeline resolution should remain available.");
     }
 
     private static void RegisterHostEnvironment(IServiceCollection services)

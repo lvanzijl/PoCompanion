@@ -10,7 +10,7 @@ namespace PoTool.Integrations.Tfs.Clients;
 /// Real Azure DevOps/TFS REST client implementation - Core infrastructure.
 /// Contains constructor, fields, constants, and basic HTTP client configuration.
 /// </summary>
-public partial class RealTfsClient
+internal partial class RealTfsClient
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ITfsConfigurationService _configService;

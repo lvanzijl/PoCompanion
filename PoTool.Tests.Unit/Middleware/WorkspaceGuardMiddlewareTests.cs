@@ -9,7 +9,7 @@ namespace PoTool.Tests.Unit.Middleware;
 
 /// <summary>
 /// Unit tests for WorkspaceGuardMiddleware.
-/// Verifies that the guard throws exceptions when workspace routes use Live mode (development-time enforcement).
+/// Verifies that the guard throws exceptions when cache-only analytical routes use Live mode.
 /// </summary>
 [TestClass]
 public class WorkspaceGuardMiddlewareTests
@@ -45,10 +45,10 @@ public class WorkspaceGuardMiddlewareTests
         }
         catch (InvalidOperationException ex)
         {
-            // Expected exception - verify it mentions workspace
-            if (!ex.Message.Contains("workspace", StringComparison.OrdinalIgnoreCase))
+            // Expected exception - verify it mentions cache-only analytical enforcement
+            if (!ex.Message.Contains("cache", StringComparison.OrdinalIgnoreCase))
             {
-                Assert.Fail("Exception should mention workspace");
+                Assert.Fail("Exception should mention cache enforcement");
             }
         }
     }
@@ -87,6 +87,42 @@ public class WorkspaceGuardMiddlewareTests
 
         // Assert
         Assert.IsTrue(_nextCalled, "Next middleware should be called for settings routes");
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_LiveAllowedDiscoveryRoute_UnderWorkspacePrefix_LiveMode_DoesNotThrow()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/workitems/area-paths/from-tfs");
+        var middleware = new WorkspaceGuardMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        _mockModeProvider.Setup(p => p.Mode).Returns(DataSourceMode.Live);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object);
+
+        // Assert
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_ExplicitLiveWorkItemDetailRoute_LiveMode_DoesNotThrow()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/workitems/123/revisions");
+        var middleware = new WorkspaceGuardMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        _mockModeProvider.Setup(p => p.Mode).Returns(DataSourceMode.Live);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object);
+
+        // Assert
+        Assert.IsTrue(_nextCalled);
     }
 
     [TestMethod]

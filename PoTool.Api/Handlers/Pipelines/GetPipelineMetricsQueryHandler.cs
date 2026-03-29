@@ -10,7 +10,7 @@ namespace PoTool.Api.Handlers.Pipelines;
 /// <summary>
 /// Handler for GetPipelineMetricsQuery.
 /// Calculates and returns aggregated metrics for pipelines, optionally filtered by products.
-/// Uses read provider to support both Live and Cached modes.
+/// Uses the cached analytical pipeline read provider.
 /// </summary>
 public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMetricsQuery, IEnumerable<PipelineMetricsDto>>
 {

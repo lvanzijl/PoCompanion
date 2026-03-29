@@ -11,7 +11,7 @@ namespace PoTool.Integrations.Tfs.Clients;
 /// <summary>
 /// Real Azure DevOps/TFS REST client implementation - Verification Methods
 /// </summary>
-public partial class RealTfsClient
+internal partial class RealTfsClient
 {
     private const int VerificationSampleWorkItemCount = 5;
     private const string VerificationWorkItemTypeField = "System.WorkItemType";

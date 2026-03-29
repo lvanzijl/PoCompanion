@@ -1,16 +1,31 @@
 namespace PoTool.Api.Configuration;
 
 /// <summary>
-/// Centralized configuration for DataSourceMode route rules.
-/// Defines which routes are allowed to use Live mode and which must use Cache mode.
+/// Centralized configuration for DataSourceMode route intent rules.
+/// Separates cache-only analytical/workspace reads from live-allowed onboarding,
+/// configuration, discovery, and sync/write routes.
 /// </summary>
 public static class DataSourceModeConfiguration
 {
+    private const string WorkItemsRoutePrefix = "/api/workitems/";
+    public const string RouteIntentContextItemKey = "DataSourceMode.RouteIntent";
+    public const string ResolvedModeContextItemKey = "DataSourceMode.ResolvedMode";
+
+    public enum RouteIntent
+    {
+        Unknown = 0,
+        LiveAllowed = 1,
+        CacheOnlyAnalyticalRead = 2,
+        BlockedAmbiguous = 3
+    }
+
     /// <summary>
     /// Routes that are explicitly allowed to use Live mode.
-    /// These are typically Settings, configuration, and administrative endpoints.
+    /// These are onboarding, configuration, discovery, sync, and administrative endpoints.
+    /// Explicit live routes are matched before cache-only prefixes so discovery endpoints under
+    /// broader controller prefixes (for example /api/workitems/area-paths/from-tfs) stay live.
     /// </summary>
-    public static readonly HashSet<string> LiveModeAllowedRoutes = new(StringComparer.OrdinalIgnoreCase)
+    public static readonly HashSet<string> LiveModeAllowedRoutePrefixes = new(StringComparer.OrdinalIgnoreCase)
     {
         // Settings and configuration
         "/api/settings",
@@ -22,17 +37,7 @@ public static class DataSourceModeConfiguration
         "/api/teams",
         "/api/products",
         "/api/repositories",
-        
-        // TFS discovery and validation (Settings use cases)
-        "/api/workitems/area-paths-from-tfs",
-        "/api/workitems/goals-from-tfs",
-        "/api/workitems/validate",
-        "/api/workitems/revisions",
-        
-        // TFS verification endpoints
-        "/api/tfs/verify",
-        "/api/tfs/validate",
-        
+
         // Data source mode management
         "/api/datasource",
         
@@ -44,10 +49,38 @@ public static class DataSourceModeConfiguration
     };
 
     /// <summary>
-    /// Routes that MUST use Cache mode when cache is available.
-    /// These are workspace-facing endpoints that should never hit TFS live during normal operation.
+    /// Exact routes that are explicitly allowed to use Live mode.
+    /// Work item routes are listed here when they are discovery, validation, static configuration,
+    /// or write/sync endpoints that must not be forced through cache-only guardrails.
     /// </summary>
-    public static readonly HashSet<string> CacheModeRequiredRoutes = new(StringComparer.OrdinalIgnoreCase)
+    public static readonly HashSet<string> LiveModeAllowedExactRoutes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // Pipeline configuration/discovery
+        "/api/pipelines/definitions",
+
+        // TFS discovery and validation (Settings/Product setup use cases)
+        "/api/workitems/area-paths/from-tfs",
+        "/api/workitems/goals/from-tfs",
+        "/api/workitems/validate",
+
+        // Work item sync/write routes
+        "/api/workitems/by-root-ids/refresh-from-tfs",
+        "/api/workitems/fix-validation-violations",
+        "/api/workitems/bulk-assign-effort",
+
+        // Work item static configuration/supporting routes that should not require cache
+        "/api/workitems/bug-severity-options",
+
+        // TFS verification endpoints
+        "/api/tfs/verify",
+        "/api/tfs/validate"
+    };
+
+    /// <summary>
+    /// Routes that represent analytical/workspace reads and therefore require cached data.
+    /// These routes must never silently fall back to Live mode.
+    /// </summary>
+    public static readonly HashSet<string> CacheModeRequiredRoutePrefixes = new(StringComparer.OrdinalIgnoreCase)
     {
         "/api/workitems",
         "/api/pullrequests",
@@ -58,34 +91,120 @@ public static class DataSourceModeConfiguration
     };
 
     /// <summary>
-    /// Checks if a route is a workspace route that must use Cache mode.
+    /// Resolves the route intent for the current request path.
     /// </summary>
-    /// <param name="path">The request path to check</param>
-    /// <returns>True if the route is a workspace route, false otherwise</returns>
-    public static bool IsWorkspaceRoute(string? path)
+    public static RouteIntent GetRouteIntent(string? path)
     {
         if (string.IsNullOrEmpty(path))
         {
-            return false;
+            return RouteIntent.Unknown;
         }
 
-        return CacheModeRequiredRoutes.Any(route => 
-            path.StartsWith(route, StringComparison.OrdinalIgnoreCase));
+        if (IsBlockedAmbiguousRoute(path))
+        {
+            return RouteIntent.BlockedAmbiguous;
+        }
+
+        if (LiveModeAllowedExactRoutes.Contains(path) ||
+            LiveModeAllowedRoutePrefixes.Any(route =>
+                path.StartsWith(route, StringComparison.OrdinalIgnoreCase)))
+        {
+            return RouteIntent.LiveAllowed;
+        }
+
+        if (IsLiveAllowedWorkItemDetailRoute(path))
+        {
+            return RouteIntent.LiveAllowed;
+        }
+
+        if (CacheModeRequiredRoutePrefixes.Any(route =>
+                path.StartsWith(route, StringComparison.OrdinalIgnoreCase)))
+        {
+            return RouteIntent.CacheOnlyAnalyticalRead;
+        }
+
+        return RouteIntent.Unknown;
+    }
+
+    /// <summary>
+    /// Resolves the route intent and throws when the route is not explicitly classified.
+    /// </summary>
+    public static RouteIntent ResolveRouteIntentOrThrow(string? path)
+    {
+        var intent = GetRouteIntent(path);
+        return intent == RouteIntent.Unknown
+            ? throw new PoTool.Api.Exceptions.RouteNotClassifiedException(path)
+            : intent;
+    }
+
+    /// <summary>
+    /// Checks if a route is an analytical/workspace read that requires cached data.
+    /// </summary>
+    public static bool RequiresCache(string? path)
+    {
+        return GetRouteIntent(path) == RouteIntent.CacheOnlyAnalyticalRead;
     }
 
     /// <summary>
     /// Checks if a route is explicitly allowed to use Live mode.
     /// </summary>
-    /// <param name="path">The request path to check</param>
-    /// <returns>True if the route is allowed to use Live mode, false otherwise</returns>
     public static bool IsLiveModeAllowed(string? path)
     {
-        if (string.IsNullOrEmpty(path))
+        return GetRouteIntent(path) == RouteIntent.LiveAllowed;
+    }
+
+    /// <summary>
+    /// Backward-compatible alias for older workspace-route checks.
+    /// </summary>
+    public static bool IsWorkspaceRoute(string? path)
+    {
+        return RequiresCache(path);
+    }
+
+    /// <summary>
+    /// Returns whether the route is intentionally blocked because it mixes cache-only and live behavior.
+    /// </summary>
+    public static bool IsBlockedAmbiguousRoute(string? path)
+    {
+        // TODO: Requires endpoint split; see "Deferred Work" in
+        // docs/filters/datasource-enforcement.md.
+        // State timeline currently mixes cached work item reads with live revision retrieval and
+        // is intentionally blocked at runtime.
+        return !string.IsNullOrEmpty(path) &&
+               IsWorkItemDetailRoute(path, "/state-timeline");
+    }
+
+    /// <summary>
+    /// Gets the current block reason for an ambiguous route.
+    /// </summary>
+    public static string? GetBlockedRouteReason(string? path)
+    {
+        return IsBlockedAmbiguousRoute(path)
+            ? "Requires endpoint split; see Deferred Work in docs/filters/datasource-enforcement.md."
+            : null;
+    }
+
+    private static bool IsLiveAllowedWorkItemDetailRoute(string path)
+    {
+        return IsWorkItemDetailRoute(path, "/refresh-from-tfs")
+            || IsWorkItemDetailRoute(path, "/tags")
+            || IsWorkItemDetailRoute(path, "/title-description")
+            || IsWorkItemDetailRoute(path, "/backlog-priority")
+            || IsWorkItemDetailRoute(path, "/iteration-path")
+            || IsWorkItemDetailRoute(path, "/revisions");
+    }
+
+    private static bool IsWorkItemDetailRoute(string path, string suffix)
+    {
+        if (!path.StartsWith(WorkItemsRoutePrefix, StringComparison.OrdinalIgnoreCase) ||
+            !path.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) ||
+            path.Length <= WorkItemsRoutePrefix.Length + suffix.Length)
         {
             return false;
         }
 
-        return LiveModeAllowedRoutes.Any(route => 
-            path.StartsWith(route, StringComparison.OrdinalIgnoreCase));
+        var idSegmentLength = path.Length - WorkItemsRoutePrefix.Length - suffix.Length;
+        var idSegment = path.AsSpan(WorkItemsRoutePrefix.Length, idSegmentLength);
+        return int.TryParse(idSegment, out _);
     }
 }

@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using PoTool.Api.Exceptions;
+using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
 using PoTool.Shared.PullRequests;
 
@@ -14,19 +17,34 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
     private readonly ITfsClient _tfsClient;
     private readonly IRepositoryConfigRepository _repositoryConfigRepository;
     private readonly ILogger<LivePullRequestReadProvider> _logger;
+    private readonly IDataSourceModeProvider? _modeProvider;
+    private readonly IHttpContextAccessor? _httpContextAccessor;
 
     public LivePullRequestReadProvider(
         ITfsClient tfsClient,
         IRepositoryConfigRepository repositoryConfigRepository,
         ILogger<LivePullRequestReadProvider> logger)
+        : this(tfsClient, repositoryConfigRepository, logger, null, null)
+    {
+    }
+
+    public LivePullRequestReadProvider(
+        ITfsClient tfsClient,
+        IRepositoryConfigRepository repositoryConfigRepository,
+        ILogger<LivePullRequestReadProvider> logger,
+        IDataSourceModeProvider? modeProvider,
+        IHttpContextAccessor? httpContextAccessor)
     {
         _tfsClient = tfsClient;
         _repositoryConfigRepository = repositoryConfigRepository;
         _logger = logger;
+        _modeProvider = modeProvider;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<IEnumerable<PullRequestDto>> GetAllAsync(DateTimeOffset? fromDate = null, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetAllAsync));
         _logger.LogWarning("LivePullRequestReadProvider.{Method} called — may indicate cache bypass", nameof(GetAllAsync));
         _logger.LogDebug("LivePullRequestReadProvider: Fetching all pull requests from TFS (fromDate: {FromDate})", fromDate);
         
@@ -42,6 +60,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
 
     public async Task<IEnumerable<PullRequestDto>> GetByProductIdsAsync(List<int>? productIds, DateTimeOffset? fromDate = null, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetByProductIdsAsync));
         _logger.LogWarning("LivePullRequestReadProvider.{Method} called — may indicate cache bypass", nameof(GetByProductIdsAsync));
         _logger.LogDebug("LivePullRequestReadProvider: Fetching pull requests by product IDs from TFS (fromDate: {FromDate})", fromDate);
         
@@ -116,6 +135,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         DateTimeOffset? toDate = null,
         CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetByRepositoryNamesAsync));
         _logger.LogWarning("LivePullRequestReadProvider.{Method} called — may indicate cache bypass", nameof(GetByRepositoryNamesAsync));
         _logger.LogDebug(
             "LivePullRequestReadProvider: Fetching pull requests for repositories {RepositoryNames} (fromDate: {FromDate}, toDate: {ToDate})",
@@ -151,6 +171,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
 
     public async Task<PullRequestDto?> GetByIdAsync(int pullRequestId, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetByIdAsync));
         _logger.LogWarning("LivePullRequestReadProvider.{Method} called — may indicate cache bypass", nameof(GetByIdAsync));
         _logger.LogDebug("LivePullRequestReadProvider: Fetching pull request by ID from TFS: {PullRequestId}", pullRequestId);
         
@@ -200,6 +221,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
 
     public async Task<IEnumerable<PullRequestIterationDto>> GetIterationsAsync(int pullRequestId, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetIterationsAsync));
         _logger.LogWarning("LivePullRequestReadProvider.{Method} called — may indicate cache bypass", nameof(GetIterationsAsync));
         _logger.LogDebug("LivePullRequestReadProvider: Fetching iterations for PR {PullRequestId} from TFS", pullRequestId);
         
@@ -220,6 +242,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
         CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetIterationsForPullRequestsAsync));
         var repositoryNames = await ResolveRepositoryNamesAsync(pullRequestIds, repositoryNamesByPullRequestId, cancellationToken);
         if (repositoryNames.Count == 0)
         {
@@ -244,6 +267,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
 
     public async Task<IEnumerable<PullRequestIterationDto>> GetIterationsAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetIterationsAsync));
         _logger.LogDebug("LivePullRequestReadProvider: Fetching iterations for PR {PullRequestId} from TFS (repository: {RepositoryName})", pullRequestId, repositoryName);
         
         // Fetch iterations from TFS directly using provided repository name
@@ -252,6 +276,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
 
     public async Task<IEnumerable<PullRequestCommentDto>> GetCommentsAsync(int pullRequestId, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetCommentsAsync));
         _logger.LogWarning("LivePullRequestReadProvider.{Method} called — may indicate cache bypass", nameof(GetCommentsAsync));
         _logger.LogDebug("LivePullRequestReadProvider: Fetching comments for PR {PullRequestId} from TFS", pullRequestId);
         
@@ -272,6 +297,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
         CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetCommentsForPullRequestsAsync));
         var repositoryNames = await ResolveRepositoryNamesAsync(pullRequestIds, repositoryNamesByPullRequestId, cancellationToken);
         if (repositoryNames.Count == 0)
         {
@@ -297,6 +323,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
 
     public async Task<IEnumerable<PullRequestCommentDto>> GetCommentsAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetCommentsAsync));
         _logger.LogDebug("LivePullRequestReadProvider: Fetching comments for PR {PullRequestId} from TFS (repository: {RepositoryName})", pullRequestId, repositoryName);
         
         // Fetch comments from TFS directly using provided repository name
@@ -305,6 +332,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
 
     public async Task<IEnumerable<PullRequestFileChangeDto>> GetFileChangesAsync(int pullRequestId, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetFileChangesAsync));
         _logger.LogWarning("LivePullRequestReadProvider.{Method} called — may indicate cache bypass", nameof(GetFileChangesAsync));
         _logger.LogDebug("LivePullRequestReadProvider: Fetching file changes for PR {PullRequestId} from TFS", pullRequestId);
         
@@ -335,6 +363,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
         CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetFileChangesForPullRequestsAsync));
         var repositoryNames = await ResolveRepositoryNamesAsync(pullRequestIds, repositoryNamesByPullRequestId, cancellationToken);
         if (repositoryNames.Count == 0)
         {
@@ -375,6 +404,7 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
 
     public async Task<IEnumerable<PullRequestFileChangeDto>> GetFileChangesAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default)
     {
+        EnsureLiveUsageAllowed(nameof(GetFileChangesAsync));
         _logger.LogDebug("LivePullRequestReadProvider: Fetching file changes for PR {PullRequestId} from TFS (repository: {RepositoryName})", pullRequestId, repositoryName);
         
         // Get iterations to find the latest one - use optimized overload
@@ -429,4 +459,23 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
 
     private static IReadOnlyDictionary<int, IReadOnlyList<TDto>> EmptyLookup<TDto>()
         => new Dictionary<int, IReadOnlyList<TDto>>();
+
+    private void EnsureLiveUsageAllowed(string method)
+    {
+        if (_modeProvider?.Mode == DataSourceMode.Cache)
+        {
+            var blockedRoute = _httpContextAccessor?.HttpContext?.Request.Path.Value ?? "<unknown>";
+            _logger.LogError(
+                "[Violation] Route={Route} Mode=CacheOnly AttemptedProvider=Live Action=Blocked Method={Method}",
+                blockedRoute,
+                method);
+            throw new InvalidDataSourceUsageException(blockedRoute, "CacheOnly", "Live");
+        }
+
+        var route = _httpContextAccessor?.HttpContext?.Request.Path.Value ?? "<unknown>";
+        _logger.LogInformation(
+            "[DataSourceMode] Route={Route} Mode=LiveAllowed Provider=Live Method={Method}",
+            route,
+            method);
+    }
 }

@@ -3,7 +3,7 @@ using PoTool.Shared.WorkItems;
 
 namespace PoTool.Integrations.Tfs.Clients;
 
-public partial class RealTfsClient
+internal partial class RealTfsClient
 {
     /// <summary>
     /// Gets revision history for multiple work items in a batch.

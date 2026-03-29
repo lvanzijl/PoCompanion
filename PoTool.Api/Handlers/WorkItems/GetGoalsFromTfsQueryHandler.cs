@@ -48,13 +48,6 @@ namespace PoTool.Api.Handlers.WorkItems;
             return Enumerable.Empty<WorkItemDto>();
         }
 
-        if (_runtimeMode.UseMockClient && _tfsClient is not MockTfsClient)
-        {
-            throw new InvalidOperationException(
-                "Mock mode is enabled but the resolved TFS client is not the mock implementation. " +
-                "Goal bootstrap requires MockTfsClient when TfsIntegration:UseMockClient=true.");
-        }
-
         try
         {
             var goals = (await _tfsClient.GetWorkItemsByTypeAsync(
