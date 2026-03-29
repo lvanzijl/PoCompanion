@@ -345,13 +345,8 @@ public static class ApiServiceCollectionExtensions
         // Always register HttpClientFactory for handlers that need it
         services.AddHttpClient();
 
-        // Register TFS client based on configuration (useMockClient already read above)
-        if (useMockClient)
-        {
-            // Use mock TFS client with predefined test data
-            services.AddScoped<MockTfsClient>();
-        }
-        else
+        // Register TFS transport based on configuration (useMockClient already read above)
+        if (!useMockClient)
         {
             // Use real TFS client that connects to Azure DevOps/TFS
             // Register named HttpClient for NTLM authentication
@@ -366,19 +361,16 @@ public static class ApiServiceCollectionExtensions
                     MaxAutomaticRedirections = 5
                 });
 
-            // Register RealTfsClient as a regular scoped service
-            // RealTfsClient uses IHttpClientFactory internally (via GetAuthenticatedHttpClient)
-            // and has multiple constructor dependencies, so it doesn't follow the typed HttpClient pattern
-            services.AddScoped<RealTfsClient>();
-
         }
         services.AddScoped<ITfsAccessGateway>(provider =>
         {
             var runtimeMode = provider.GetRequiredService<TfsRuntimeMode>();
             var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("TfsRuntime");
+
+            // Do not inject RealTfsClient directly. All production TFS access must flow through the gateway.
             ITfsClient client = runtimeMode.UseMockClient
-                ? provider.GetRequiredService<MockTfsClient>()
-                : provider.GetRequiredService<RealTfsClient>();
+                ? ActivatorUtilities.CreateInstance<MockTfsClient>(provider)
+                : RealTfsClientFactory.Create(provider);
 
             TfsRuntimeModeGuard.EnsureExpectedClient(runtimeMode, client, logger, "ITfsAccessGateway registration");
             return ActivatorUtilities.CreateInstance<TfsAccessGateway>(provider, client);

@@ -3,7 +3,7 @@ using PoTool.Core.Contracts;
 
 namespace PoTool.Integrations.Tfs.Clients;
 
-public partial class RealTfsClient
+internal partial class RealTfsClient
 {
     public async Task<IReadOnlyList<WorkItemUpdate>> GetWorkItemUpdatesAsync(
         int workItemId,

@@ -11,6 +11,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Http;
+using PoTool.Api.Configuration;
+using PoTool.Api.Services;
 using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
 using PoTool.Integrations.Tfs.Clients;
@@ -67,6 +70,9 @@ try
     services.AddTransient<TfsCaptureHandler>();
     services.AddSingleton<TfsRequestThrottler>();
     services.AddScoped<TfsRequestSender>();
+    services.AddHttpContextAccessor();
+    services.AddScoped<IDataSourceModeProvider, BackgroundDataSourceModeProvider>();
+    services.AddSingleton(new TfsRuntimeMode(useMockClient: false));
 
     services.AddHttpClient("TfsClient.NTLM")
         .AddHttpMessageHandler<TfsCaptureHandler>()
@@ -78,7 +84,17 @@ try
             MaxAutomaticRedirections = 5
         });
 
-    services.AddScoped<ITfsClient, RealTfsClient>();
+    services.AddScoped<ITfsAccessGateway>(provider =>
+    {
+        var runtimeMode = provider.GetRequiredService<TfsRuntimeMode>();
+        var runtimeLogger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("TfsRuntime");
+
+        ITfsClient client = RealTfsClientFactory.Create(provider);
+        TfsRuntimeModeGuard.EnsureExpectedClient(runtimeMode, client, runtimeLogger, "PoTool.Tools.TfsRetrievalValidator");
+
+        return ActivatorUtilities.CreateInstance<TfsAccessGateway>(provider, client);
+    });
+    services.AddScoped<ITfsClient>(provider => provider.GetRequiredService<ITfsAccessGateway>());
 
     await using var provider = services.BuildServiceProvider().CreateAsyncScope();
     var scopedProvider = provider.ServiceProvider;
@@ -204,6 +220,25 @@ static List<HierarchyRelationSnapshot> ReconstructHierarchy(IEnumerable<WorkItem
 internal sealed record ValidatorOptions
 {
     public int RootWorkItemId { get; init; }
+}
+
+internal sealed class BackgroundDataSourceModeProvider : IDataSourceModeProvider
+{
+    public DataSourceMode Mode => DataSourceMode.Live;
+
+    public Task<DataSourceMode> GetModeAsync(int productOwnerId, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(DataSourceMode.Live);
+    }
+
+    public Task SetModeAsync(int productOwnerId, DataSourceMode mode, CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
+    public void SetCurrentMode(DataSourceMode mode)
+    {
+    }
 }
 
 internal sealed record HierarchyRelationSnapshot(int SourceWorkItemId, int TargetWorkItemId, string RelationType);

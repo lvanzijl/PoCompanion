@@ -19,7 +19,7 @@ namespace PoTool.Api.Services;
 /// Mock TFS client for development and testing purposes.
 /// Returns predefined mock data instead of connecting to a real TFS/Azure DevOps instance.
 /// </summary>
-public class MockTfsClient : ITfsClient
+internal class MockTfsClient : ITfsClient
 {
     private readonly BattleshipMockDataFacade _mockDataFacade;
     private readonly ILogger<MockTfsClient> _logger;

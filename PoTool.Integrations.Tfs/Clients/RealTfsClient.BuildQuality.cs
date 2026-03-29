@@ -6,7 +6,7 @@ using PoTool.Shared.Settings;
 
 namespace PoTool.Integrations.Tfs.Clients;
 
-public partial class RealTfsClient
+internal partial class RealTfsClient
 {
     private const string BuildQualityTestRunsEndpointPath = "_apis/test/runs";
     private const string BuildQualityCoverageEndpointPath = "_apis/testresults/codecoverage";

@@ -5,7 +5,7 @@ using PoTool.Shared.PullRequests;
 
 namespace PoTool.Integrations.Tfs.Clients;
 
-public partial class RealTfsClient
+internal partial class RealTfsClient
 {
     private const long UnknownContentLength = -1L;
 

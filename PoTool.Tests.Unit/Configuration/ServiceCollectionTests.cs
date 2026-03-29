@@ -223,6 +223,7 @@ public class ServiceCollectionTests
         Assert.AreSame(gateway, tfsClient, "ITfsClient should resolve through the TFS access gateway.");
         Assert.IsInstanceOfType<TfsAccessGateway>(gateway, "Mock mode should resolve the guarded TFS gateway.");
         Assert.IsTrue(((TfsAccessGateway)gateway).UsesMockClient, "Gateway should wrap the mock TFS client in mock mode.");
+        Assert.IsNull(scope.ServiceProvider.GetService<MockTfsClient>(), "MockTfsClient must not be directly resolvable from DI.");
     }
 
     [TestMethod]
@@ -255,6 +256,7 @@ public class ServiceCollectionTests
         Assert.IsInstanceOfType<TfsAccessGateway>(gateway, "Real mode should resolve the guarded TFS gateway.");
         Assert.IsFalse(((TfsAccessGateway)gateway).UsesMockClient, "Gateway should wrap the real TFS client in real mode.");
         Assert.AreEqual(typeof(RealTfsClient).FullName, ((TfsAccessGateway)gateway).InnerClientTypeName);
+        Assert.IsNull(scope.ServiceProvider.GetService<RealTfsClient>(), "RealTfsClient must not be directly resolvable from DI.");
     }
 
     [TestMethod]

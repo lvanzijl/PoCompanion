@@ -12,7 +12,7 @@ namespace PoTool.Integrations.Tfs.Clients;
 /// Real Azure DevOps/TFS REST client implementation - Work Items Hierarchy operations.
 /// Contains methods for retrieving work items by root IDs with hierarchy traversal and ancestor completion.
 /// </summary>
-public partial class RealTfsClient
+internal partial class RealTfsClient
 {
    /// <summary>
    /// Retrieves work items starting from specified root work item IDs and traverses the hierarchy
