@@ -288,6 +288,11 @@ public class ServiceCollectionTests
         Assert.IsInstanceOfType<CachedPullRequestReadProvider>(
             cachedProvider,
             "Explicit cached pull request resolution should remain available.");
+
+        var queryStore = scope.ServiceProvider.GetRequiredService<IPullRequestQueryStore>();
+        Assert.IsInstanceOfType<EfPullRequestQueryStore>(
+            queryStore,
+            "Pull request analytical handlers should resolve the EF-backed PR query store.");
     }
 
     [TestMethod]

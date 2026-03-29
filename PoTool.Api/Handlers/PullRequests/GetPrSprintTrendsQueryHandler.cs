@@ -1,7 +1,5 @@
 using Mediator;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using PoTool.Api.Persistence;
 using PoTool.Api.Services;
 using PoTool.Core.PullRequests.Queries;
 using PoTool.Shared.PullRequests;
@@ -33,14 +31,14 @@ public sealed class GetPrSprintTrendsQueryHandler
 {
     private sealed record PrSizeMetrics(int LinesChanged, int FileCount);
 
-    private readonly PoToolDbContext _context;
+    private readonly IPullRequestQueryStore _queryStore;
     private readonly ILogger<GetPrSprintTrendsQueryHandler> _logger;
 
     public GetPrSprintTrendsQueryHandler(
-        PoToolDbContext context,
+        IPullRequestQueryStore queryStore,
         ILogger<GetPrSprintTrendsQueryHandler> logger)
     {
-        _context = context;
+        _queryStore = queryStore;
         _logger = logger;
     }
 
@@ -65,11 +63,8 @@ public sealed class GetPrSprintTrendsQueryHandler
             query.EffectiveFilter.RangeEndUtc);
 
         var sprintIdList = query.EffectiveFilter.SprintIds.Distinct().ToList();
-        var sprints = await _context.Sprints
-            .Where(s => sprintIdList.Contains(s.Id) && s.StartDateUtc.HasValue && s.EndDateUtc.HasValue)
-            .OrderBy(s => s.StartDateUtc)
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
+        var queryData = await _queryStore.GetSprintTrendDataAsync(query.EffectiveFilter, cancellationToken);
+        var sprints = queryData.Sprints;
 
         if (sprints.Count == 0)
         {
@@ -81,22 +76,7 @@ public sealed class GetPrSprintTrendsQueryHandler
             };
         }
 
-        var prsQuery = PullRequestFiltering.ApplyScope(
-            _context.PullRequests.AsNoTracking(),
-            query.EffectiveFilter);
-
-        var prs = await prsQuery
-            .Select(pr => new
-            {
-                pr.Id,
-                pr.CreatedBy,
-                pr.CreatedDateUtc,
-                pr.CreatedDate,
-                pr.CompletedDate,
-                pr.Status
-            })
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
+        var prs = queryData.PullRequests;
 
         _logger.LogDebug("PR sprint trends: loaded {PrCount} PRs for {SprintCount} sprints", prs.Count, sprints.Count);
 
@@ -115,32 +95,8 @@ public sealed class GetPrSprintTrendsQueryHandler
             };
         }
 
-        var prIds = prs.Select(pr => pr.Id).ToList();
-
-        // 4. Batch-load file changes for all PRs in range
-        var fileChanges = await _context.PullRequestFileChanges
-            .Where(fc => prIds.Contains(fc.PullRequestId))
-            .Select(fc => new
-            {
-                fc.PullRequestId,
-                fc.FilePath,
-                fc.LinesAdded,
-                fc.LinesDeleted
-            })
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
-
-        // 5. Batch-load comments for all PRs in range
-        var comments = await _context.PullRequestComments
-            .Where(c => prIds.Contains(c.PullRequestId))
-            .Select(c => new
-            {
-                c.PullRequestId,
-                c.Author,
-                c.CreatedDateUtc
-            })
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
+        var fileChanges = queryData.FileChanges;
+        var comments = queryData.Comments;
 
         // 6. Build lookups (kept as anonymous-type collections to avoid EF projection overhead)
         var fileChangesLookup = fileChanges.ToLookup(fc => fc.PullRequestId);
@@ -148,17 +104,17 @@ public sealed class GetPrSprintTrendsQueryHandler
 
         // 7. Assign each PR to a sprint
         var sprintSlots = sprints
-            .Select(s => (Sprint: s, PrItems: new List<(int Id, string CreatedBy, DateTime CreatedDateUtc, DateTimeOffset? CompletedDate, string Status)>()))
+            .Select(s => (Sprint: s, PrItems: new List<PrSprintTrendPullRequest>()))
             .ToList();
 
         foreach (var pr in prs)
         {
             foreach (var slot in sprintSlots)
             {
-                if (pr.CreatedDateUtc >= slot.Sprint.StartDateUtc!.Value &&
-                    pr.CreatedDateUtc < slot.Sprint.EndDateUtc!.Value)
+                if (pr.CreatedDateUtc >= slot.Sprint.StartDateUtc &&
+                    pr.CreatedDateUtc < slot.Sprint.EndDateUtc)
                 {
-                    slot.PrItems.Add((pr.Id, pr.CreatedBy, pr.CreatedDateUtc, pr.CompletedDate, pr.Status));
+                    slot.PrItems.Add(pr);
                     break;
                 }
             }

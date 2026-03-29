@@ -5,6 +5,7 @@ using Moq;
 using PoTool.Api.Handlers.PullRequests;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Api.Services;
 using PoTool.Core.Filters;
 using PoTool.Core.PullRequests.Filters;
 using PoTool.Core.PullRequests.Queries;
@@ -35,6 +36,7 @@ public class GetPrDeliveryInsightsQueryHandlerTests
 {
     private PoToolDbContext _context = null!;
     private Mock<ILogger<GetPrDeliveryInsightsQueryHandler>> _mockLogger = null!;
+    private IPullRequestQueryStore _queryStore = null!;
     private GetPrDeliveryInsightsQueryHandler _handler = null!;
 
     private static readonly DateTimeOffset RangeFrom = new(2026, 1, 1,  0, 0, 0, TimeSpan.Zero);
@@ -48,7 +50,8 @@ public class GetPrDeliveryInsightsQueryHandlerTests
             .Options;
         _context    = new PoToolDbContext(options);
         _mockLogger = new Mock<ILogger<GetPrDeliveryInsightsQueryHandler>>();
-        _handler    = new GetPrDeliveryInsightsQueryHandler(_context, _mockLogger.Object);
+        _queryStore = new EfPullRequestQueryStore(_context);
+        _handler    = new GetPrDeliveryInsightsQueryHandler(_queryStore, _mockLogger.Object);
     }
 
     [TestCleanup]

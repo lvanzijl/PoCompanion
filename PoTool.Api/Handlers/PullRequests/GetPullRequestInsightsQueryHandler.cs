@@ -1,7 +1,5 @@
 using Mediator;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using PoTool.Api.Persistence;
 using PoTool.Api.Services;
 using PoTool.Core.PullRequests.Queries;
 using PoTool.Shared.PullRequests;
@@ -28,14 +26,14 @@ namespace PoTool.Api.Handlers.PullRequests;
 public sealed class GetPullRequestInsightsQueryHandler
     : IQueryHandler<GetPullRequestInsightsQuery, PullRequestInsightsDto>
 {
-    private readonly PoToolDbContext _context;
+    private readonly IPullRequestQueryStore _queryStore;
     private readonly ILogger<GetPullRequestInsightsQueryHandler> _logger;
 
     public GetPullRequestInsightsQueryHandler(
-        PoToolDbContext context,
+        IPullRequestQueryStore queryStore,
         ILogger<GetPullRequestInsightsQueryHandler> logger)
     {
-        _context = context;
+        _queryStore = queryStore;
         _logger = logger;
     }
 
@@ -52,30 +50,10 @@ public sealed class GetPullRequestInsightsQueryHandler
             filter.RangeStartUtc,
             filter.RangeEndUtc);
 
-        // ── 0. Load TFS config for URL construction ───────────────────────────
-        var tfsConfig = await _context.TfsConfigs
-            .AsNoTracking()
-            .FirstOrDefaultAsync(cancellationToken);
-
-        string? tfsBaseUrl = BuildTfsBaseUrl(tfsConfig);
-
-        string? teamName = null;
-
-        if (!filter.Context.TeamIds.IsAll && filter.Context.TeamIds.Values.Count > 0)
-        {
-            var teamId = filter.Context.TeamIds.Values[0];
-            var team = await _context.Teams
-                .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.Id == teamId, cancellationToken);
-
-            teamName = team?.Name;
-        }
-
-        var prQuery = PullRequestFiltering.ApplyScope(
-            _context.PullRequests.AsNoTracking(),
-            filter);
-
-        var prs = await prQuery.ToListAsync(cancellationToken);
+        var queryData = await _queryStore.GetInsightsDataAsync(filter, cancellationToken);
+        string? tfsBaseUrl = BuildTfsBaseUrl(queryData.Configuration);
+        var teamName = queryData.TeamName;
+        var prs = queryData.PullRequests;
 
         if (prs.Count == 0)
         {
@@ -90,40 +68,9 @@ public sealed class GetPullRequestInsightsQueryHandler
                 filter.RangeEndUtc ?? DateTimeOffset.MaxValue);
         }
 
-        var prIds = prs.Select(pr => pr.Id).ToList();
-
-        // ── 3. Batch-load related data ─────────────────────────────────────────
-        // Fetch to memory first, then group — required for EF InMemory compatibility
-        // and avoids GroupBy translation limitations in EF Core.
-        var iterationRows = await _context.PullRequestIterations
-            .AsNoTracking()
-            .Where(i => prIds.Contains(i.PullRequestId))
-            .Select(i => i.PullRequestId)
-            .ToListAsync(cancellationToken);
-
-        var iterationsByPr = iterationRows
-            .GroupBy(id => id)
-            .ToDictionary(g => g.Key, g => g.Count());
-
-        var commentRows = await _context.PullRequestComments
-            .AsNoTracking()
-            .Where(c => prIds.Contains(c.PullRequestId))
-            .Select(c => c.PullRequestId)
-            .ToListAsync(cancellationToken);
-
-        var commentsByPr = commentRows
-            .GroupBy(id => id)
-            .ToDictionary(g => g.Key, g => g.Count());
-
-        var fileRows = await _context.PullRequestFileChanges
-            .AsNoTracking()
-            .Where(f => prIds.Contains(f.PullRequestId))
-            .Select(f => new { f.PullRequestId, f.FilePath })
-            .ToListAsync(cancellationToken);
-
-        var filesByPr = fileRows
-            .GroupBy(f => f.PullRequestId)
-            .ToDictionary(g => g.Key, g => g.Select(f => f.FilePath).Distinct().Count());
+        var iterationsByPr = queryData.IterationsByPullRequestId;
+        var commentsByPr = queryData.CommentsByPullRequestId;
+        var filesByPr = queryData.DistinctFilesByPullRequestId;
 
         // ── 4. Build enriched records ──────────────────────────────────────────
         var enriched = prs.Select(pr =>
@@ -184,7 +131,7 @@ public sealed class GetPullRequestInsightsQueryHandler
                 FilesChanged  = r.FilesChanged,
                 CommentCount  = r.CommentCount,
                 ColorCategory = r.ColorCategory,
-                Url           = BuildPrUrl(tfsBaseUrl, tfsConfig?.Project, r.Repository, r.Id)
+                 Url           = BuildPrUrl(tfsBaseUrl, queryData.Configuration?.Project, r.Repository, r.Id)
             })
             .ToList();
 
@@ -196,7 +143,7 @@ public sealed class GetPullRequestInsightsQueryHandler
 
         var top3 = enriched
             .Select(r => BuildProblematicEntry(r, maxLifetime, maxCycles, maxFiles, maxComments,
-                BuildPrUrl(tfsBaseUrl, tfsConfig?.Project, r.Repository, r.Id)))
+                BuildPrUrl(tfsBaseUrl, queryData.Configuration?.Project, r.Repository, r.Id)))
             .OrderByDescending(e => e.RankingScore)
             .Take(3)
             .ToList();
@@ -204,7 +151,7 @@ public sealed class GetPullRequestInsightsQueryHandler
         // ── 8. Longest PRs table (top 20) ─────────────────────────────────────
         var longestPrs = enriched
             .Select(r => BuildProblematicEntry(r, maxLifetime, maxCycles, maxFiles, maxComments,
-                BuildPrUrl(tfsBaseUrl, tfsConfig?.Project, r.Repository, r.Id)))
+                BuildPrUrl(tfsBaseUrl, queryData.Configuration?.Project, r.Repository, r.Id)))
             .OrderByDescending(e => e.LifetimeHours)
             .Take(20)
             .ToList();
@@ -297,7 +244,7 @@ public sealed class GetPullRequestInsightsQueryHandler
     // ── Private helpers ──────────────────────────────────────────────────────
 
     private static double ComputeLifetimeHours(
-        PoTool.Api.Persistence.Entities.PullRequestEntity pr,
+        PullRequestDto pr,
         DateTimeOffset now)
     {
         var end = pr.CompletedDate ?? now;
@@ -382,7 +329,7 @@ public sealed class GetPullRequestInsightsQueryHandler
     /// Returns the base URL used to construct PR deep links, or null if config is unavailable.
     /// Strips trailing slashes so the URL is ready for concatenation.
     /// </summary>
-    private static string? BuildTfsBaseUrl(PoTool.Shared.Settings.TfsConfigEntity? config)
+    private static string? BuildTfsBaseUrl(PullRequestConfigurationInfo? config)
     {
         if (config == null || string.IsNullOrWhiteSpace(config.Url))
             return null;

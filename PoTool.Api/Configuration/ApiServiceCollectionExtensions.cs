@@ -227,6 +227,7 @@ public static class ApiServiceCollectionExtensions
         // Pull request analytical reads are cache-only after middleware guardrails,
         // so the default injected provider is deterministic and cache-backed.
         services.AddScoped<IPullRequestReadProvider, CachedPullRequestReadProvider>();
+        services.AddScoped<IPullRequestQueryStore, EfPullRequestQueryStore>();
 
         // Register Release Planning services
         services.AddScoped<ConnectorDerivationService>();
