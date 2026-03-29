@@ -8,7 +8,7 @@ namespace PoTool.Api.Handlers.PullRequests;
 
 /// <summary>
 /// Handler for GetPullRequestCommentsQuery.
-/// Uses read provider to support both Live and Cached modes.
+/// Uses the cache-backed pull request read provider registered for analytical reads.
 /// </summary>
 public sealed class GetPullRequestCommentsQueryHandler : IQueryHandler<GetPullRequestCommentsQuery, IEnumerable<PullRequestCommentDto>>
 {
@@ -28,7 +28,6 @@ public sealed class GetPullRequestCommentsQueryHandler : IQueryHandler<GetPullRe
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Handling GetPullRequestCommentsQuery for PR ID: {PullRequestId}", query.PullRequestId);
-        // Live-only mode: use injected provider directly
         return await _pullRequestReadProvider.GetCommentsAsync(query.PullRequestId, cancellationToken);
     }
 }

@@ -6,8 +6,8 @@ using PoTool.Core.Contracts;
 namespace PoTool.Api.Services;
 
 /// <summary>
-/// Factory for resolving the correct read provider based on the current data source mode.
-/// This factory is registered for each provider interface and returns either the Live or Cached implementation.
+/// Factory for resolving read providers that still switch between Live and Cache at runtime.
+/// Pull request analytical reads are now bound directly to the cached provider.
 /// </summary>
 public sealed class DataSourceAwareReadProviderFactory
 {
@@ -37,21 +37,6 @@ public sealed class DataSourceAwareReadProviderFactory
         {
             DataSourceMode.Cache => _serviceProvider.GetRequiredKeyedService<IWorkItemReadProvider>("Cached"),
             _ => _serviceProvider.GetRequiredKeyedService<IWorkItemReadProvider>("Live")
-        };
-    }
-
-    /// <summary>
-    /// Gets the pull request read provider based on current data source mode.
-    /// </summary>
-    public IPullRequestReadProvider GetPullRequestReadProvider()
-    {
-        var mode = _modeProvider.Mode;
-        _logger.LogDebug("Resolving IPullRequestReadProvider for mode: {Mode}", mode);
-
-        return mode switch
-        {
-            DataSourceMode.Cache => _serviceProvider.GetRequiredKeyedService<IPullRequestReadProvider>("Cached"),
-            _ => _serviceProvider.GetRequiredKeyedService<IPullRequestReadProvider>("Live")
         };
     }
 

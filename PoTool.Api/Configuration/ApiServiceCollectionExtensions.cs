@@ -212,15 +212,17 @@ public static class ApiServiceCollectionExtensions
         services.AddKeyedScoped<IPullRequestReadProvider, CachedPullRequestReadProvider>("Cached");
         services.AddKeyedScoped<IPipelineReadProvider, CachedPipelineReadProvider>("Cached");
 
-        // Register the factory for data-source-aware provider resolution
+        // Register the factory for data-source-aware provider resolution where requests still switch
+        // between cache and live at runtime.
         services.AddScoped<DataSourceAwareReadProviderFactory>();
 
-        // Register lazy wrappers that delay provider resolution until method calls
-        // This ensures DataSourceModeMiddleware has set the correct mode before resolving
-        // the actual Live or Cached provider from the factory
+        // Work item and pipeline reads still resolve from the request mode at call time.
         services.AddScoped<IWorkItemReadProvider, LazyWorkItemReadProvider>();
-        services.AddScoped<IPullRequestReadProvider, LazyPullRequestReadProvider>();
         services.AddScoped<IPipelineReadProvider, LazyPipelineReadProvider>();
+
+        // Pull request analytical reads are cache-only after middleware guardrails,
+        // so the default injected provider is deterministic and cache-backed.
+        services.AddScoped<IPullRequestReadProvider, CachedPullRequestReadProvider>();
 
         // Register Release Planning services
         services.AddScoped<ConnectorDerivationService>();

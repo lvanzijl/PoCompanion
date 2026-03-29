@@ -250,6 +250,37 @@ public class ServiceCollectionTests
         Assert.IsInstanceOfType<RealTfsClient>(tfsClient, "Real mode should resolve RealTfsClient.");
     }
 
+    [TestMethod]
+    public void AddPoToolApiServices_RegistersCachedPullRequestProviderAsDefault_AndPreservesExplicitLiveProvider()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+
+        services.AddLogging();
+        RegisterHostEnvironment(services);
+        services.AddDbContext<PoToolDbContext>(options =>
+            options.UseInMemoryDatabase("TestDb6"));
+
+        services.AddPoToolApiServices(configuration, isDevelopment: true);
+
+        using var serviceProvider = services.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+
+        var defaultProvider = scope.ServiceProvider.GetRequiredService<IPullRequestReadProvider>();
+        var liveProvider = scope.ServiceProvider.GetRequiredKeyedService<IPullRequestReadProvider>("Live");
+        var cachedProvider = scope.ServiceProvider.GetRequiredKeyedService<IPullRequestReadProvider>("Cached");
+
+        Assert.IsInstanceOfType<CachedPullRequestReadProvider>(
+            defaultProvider,
+            "Analytical pull request reads should resolve the cached provider by default.");
+        Assert.IsInstanceOfType<LivePullRequestReadProvider>(
+            liveProvider,
+            "Explicit live pull request flows must still be able to resolve the live provider.");
+        Assert.IsInstanceOfType<CachedPullRequestReadProvider>(
+            cachedProvider,
+            "Explicit cached pull request resolution should remain available.");
+    }
+
     private static void RegisterHostEnvironment(IServiceCollection services)
     {
         var hostEnvironment = new Mock<IHostEnvironment>();

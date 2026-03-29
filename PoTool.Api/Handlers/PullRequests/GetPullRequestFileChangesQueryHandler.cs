@@ -8,7 +8,7 @@ namespace PoTool.Api.Handlers.PullRequests;
 
 /// <summary>
 /// Handler for GetPullRequestFileChangesQuery.
-/// Uses read provider to support both Live and Cached modes.
+/// Uses the cache-backed pull request read provider registered for analytical reads.
 /// </summary>
 public sealed class GetPullRequestFileChangesQueryHandler : IQueryHandler<GetPullRequestFileChangesQuery, IEnumerable<PullRequestFileChangeDto>>
 {
@@ -28,7 +28,6 @@ public sealed class GetPullRequestFileChangesQueryHandler : IQueryHandler<GetPul
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Handling GetPullRequestFileChangesQuery for PR ID: {PullRequestId}", query.PullRequestId);
-        // Live-only mode: use injected provider directly
         return await _pullRequestReadProvider.GetFileChangesAsync(query.PullRequestId, cancellationToken);
     }
 }

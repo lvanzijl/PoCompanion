@@ -3,8 +3,8 @@ using PoTool.Shared.PullRequests;
 namespace PoTool.Core.Contracts;
 
 /// <summary>
-/// Provider for reading pull request data from the configured data source.
-/// Implementations select between Live (TFS direct) or Cached (repository) based on mode.
+/// Provider for reading pull request data.
+/// The application default for analytical reads is cache-backed; live pull request access must be resolved explicitly.
 /// </summary>
 public interface IPullRequestReadProvider
 {

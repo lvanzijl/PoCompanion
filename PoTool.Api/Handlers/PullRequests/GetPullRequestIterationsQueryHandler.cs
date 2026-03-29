@@ -8,7 +8,7 @@ namespace PoTool.Api.Handlers.PullRequests;
 
 /// <summary>
 /// Handler for GetPullRequestIterationsQuery.
-/// Uses read provider to support both Live and Cached modes.
+/// Uses the cache-backed pull request read provider registered for analytical reads.
 /// </summary>
 public sealed class GetPullRequestIterationsQueryHandler : IQueryHandler<GetPullRequestIterationsQuery, IEnumerable<PullRequestIterationDto>>
 {
@@ -28,7 +28,6 @@ public sealed class GetPullRequestIterationsQueryHandler : IQueryHandler<GetPull
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Handling GetPullRequestIterationsQuery for PR ID: {PullRequestId}", query.PullRequestId);
-        // Live-only mode: use injected provider directly
         return await _pullRequestReadProvider.GetIterationsAsync(query.PullRequestId, cancellationToken);
     }
 }
