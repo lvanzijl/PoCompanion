@@ -158,7 +158,43 @@ public class DataSourceModeMiddlewareTests
     public async Task InvokeAsync_LiveAllowedDiscoveryRoute_UnderWorkspacePrefix_SetsLiveMode()
     {
         // Arrange
-        var context = CreateHttpContext("/api/workitems/area-paths-from-tfs");
+        var context = CreateHttpContext("/api/workitems/area-paths/from-tfs");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+
+        // Assert
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Live), Times.Once);
+        _mockProfileProvider.Verify(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()), Times.Never);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_WorkItemParameterizedLiveRoute_SetsLiveMode()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/workitems/123/revisions");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+
+        // Assert
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Live), Times.Once);
+        _mockProfileProvider.Verify(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()), Times.Never);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_WorkItemStateTimelineRoute_SetsLiveMode()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/workitems/123/state-timeline");
         var middleware = new DataSourceModeMiddleware(
             next: _ => { _nextCalled = true; return Task.CompletedTask; },
             logger: _mockLogger.Object);
@@ -187,6 +223,31 @@ public class DataSourceModeMiddlewareTests
         // Assert
         _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Live), Times.Once);
         _mockProfileProvider.Verify(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()), Times.Never);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_WorkItemAnalyticalChildRoute_WithCache_SetsCacheMode()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/workitems/validation-triage");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        _mockProfileProvider
+            .Setup(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        _mockModeProvider
+            .Setup(p => p.GetModeAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DataSourceMode.Cache);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+
+        // Assert
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Cache), Times.Once);
         Assert.IsTrue(_nextCalled);
     }
 

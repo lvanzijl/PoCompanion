@@ -93,7 +93,25 @@ public class WorkspaceGuardMiddlewareTests
     public async Task InvokeAsync_LiveAllowedDiscoveryRoute_UnderWorkspacePrefix_LiveMode_DoesNotThrow()
     {
         // Arrange
-        var context = CreateHttpContext("/api/workitems/area-paths-from-tfs");
+        var context = CreateHttpContext("/api/workitems/area-paths/from-tfs");
+        var middleware = new WorkspaceGuardMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        _mockModeProvider.Setup(p => p.Mode).Returns(DataSourceMode.Live);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object);
+
+        // Assert
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_ExplicitLiveWorkItemDetailRoute_LiveMode_DoesNotThrow()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/workitems/123/revisions");
         var middleware = new WorkspaceGuardMiddleware(
             next: _ => { _nextCalled = true; return Task.CompletedTask; },
             logger: _mockLogger.Object);
