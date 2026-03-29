@@ -71,6 +71,32 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
         );
     }
 
+    public async Task<IEnumerable<PipelineDto>> GetByIdsAsync(IEnumerable<int> pipelineIds, CancellationToken cancellationToken = default)
+    {
+        var normalizedIds = pipelineIds
+            .Distinct()
+            .ToArray();
+
+        if (normalizedIds.Length == 0)
+        {
+            return [];
+        }
+
+        var definitions = await _dbContext.PipelineDefinitions
+            .AsNoTracking()
+            .Where(d => normalizedIds.Contains(d.PipelineDefinitionId))
+            .ToListAsync(cancellationToken);
+
+        return definitions
+            .Select(d => new PipelineDto(
+                Id: d.PipelineDefinitionId,
+                Name: d.Name,
+                Type: PipelineType.Build,
+                Path: d.Folder,
+                RetrievedAt: d.LastSyncedUtc))
+            .ToList();
+    }
+
     /// <summary>
     /// Retrieves pipeline runs for a specific pipeline from the cache.
     /// </summary>
@@ -123,6 +149,8 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
         IEnumerable<int> pipelineIds,
         string? branchName = null,
         DateTimeOffset? minStartTime = null,
+        DateTimeOffset? maxStartTime = null,
+        IReadOnlyList<PoTool.Core.Pipelines.Filters.PipelineBranchScope>? branchScope = null,
         int top = 100,
         CancellationToken cancellationToken = default)
     {
@@ -144,6 +172,10 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
         }
 
         var minStartTimeUtc = minStartTime?.UtcDateTime;
+        var maxStartTimeUtc = maxStartTime?.UtcDateTime;
+        var branchScopeByPipelineId = branchScope?
+            .GroupBy(scope => scope.PipelineId)
+            .ToDictionary(group => group.Key, group => group.Last().DefaultBranch);
         var runs = new List<PipelineRunDto>();
 
         _logger.LogDebug(
@@ -162,9 +194,21 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
                 query = query.Where(r => r.SourceBranch == branchName);
             }
 
+            if (branchScopeByPipelineId?.TryGetValue(definition.PipelineDefinitionId, out var defaultBranch) == true
+                && !string.IsNullOrWhiteSpace(defaultBranch))
+            {
+                var normalizedDefaultBranch = defaultBranch.ToLowerInvariant();
+                query = query.Where(r => r.SourceBranch != null && r.SourceBranch.ToLower() == normalizedDefaultBranch);
+            }
+
             if (minStartTimeUtc.HasValue)
             {
                 query = query.Where(r => r.CreatedDateUtc >= minStartTimeUtc.Value);
+            }
+
+            if (maxStartTimeUtc.HasValue)
+            {
+                query = query.Where(r => r.CreatedDateUtc <= maxStartTimeUtc.Value);
             }
 
             var pipelineRuns = await query

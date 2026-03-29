@@ -57,11 +57,15 @@ public class GetPipelineMetricsQueryHandlerTests
             It.Is<IEnumerable<int>>(ids => ids.Contains(101) && ids.Contains(102)),
             null,
             It.IsAny<DateTimeOffset?>(),
+            It.IsAny<DateTimeOffset?>(),
+            It.IsAny<IReadOnlyList<PipelineBranchScope>>(),
             100,
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(runs);
 
-        _mockProvider.Setup(p => p.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(p => p.GetByIdsAsync(
+                It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 101 })),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(pipelines);
 
         // Act
@@ -78,7 +82,12 @@ public class GetPipelineMetricsQueryHandlerTests
             It.IsAny<IEnumerable<int>>(),
             null,
             It.IsAny<DateTimeOffset?>(),
+            It.IsAny<DateTimeOffset?>(),
+            It.IsAny<IReadOnlyList<PipelineBranchScope>>(),
             100,
+            It.IsAny<CancellationToken>()), Times.Once);
+        _mockProvider.Verify(p => p.GetByIdsAsync(
+            It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 101 })),
             It.IsAny<CancellationToken>()), Times.Once);
 
         // Verify we did NOT call the old inefficient GetAllRunsAsync
@@ -108,13 +117,15 @@ public class GetPipelineMetricsQueryHandlerTests
         };
 
         // Setup mocks
-        _mockProvider.Setup(p => p.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(p => p.GetByIdsAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pipelines);
 
         _mockProvider.Setup(p => p.GetRunsForPipelinesAsync(
             It.Is<IEnumerable<int>>(ids => ids.Contains(101)),
             null,
             It.IsAny<DateTimeOffset?>(),
+            It.IsAny<DateTimeOffset?>(),
+            It.IsAny<IReadOnlyList<PipelineBranchScope>>(),
             100,
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(runs);
@@ -132,6 +143,8 @@ public class GetPipelineMetricsQueryHandlerTests
             It.IsAny<IEnumerable<int>>(),
             null,
             It.IsAny<DateTimeOffset?>(),
+            It.IsAny<DateTimeOffset?>(),
+            It.IsAny<IReadOnlyList<PipelineBranchScope>>(),
             100,
             It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -159,6 +172,8 @@ public class GetPipelineMetricsQueryHandlerTests
             It.IsAny<IEnumerable<int>>(),
             It.IsAny<string>(),
             It.IsAny<DateTimeOffset?>(),
+            It.IsAny<DateTimeOffset?>(),
+            It.IsAny<IReadOnlyList<PipelineBranchScope>>(),
             It.IsAny<int>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -191,10 +206,12 @@ public class GetPipelineMetricsQueryHandlerTests
                 It.IsAny<IEnumerable<int>>(),
                 null,
                 It.IsAny<DateTimeOffset?>(),
+                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<IReadOnlyList<PipelineBranchScope>>(),
                 100,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(runs);
-        _mockProvider.Setup(p => p.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(p => p.GetByIdsAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pipelines);
 
         var result = (await _handler.Handle(query, CancellationToken.None)).Single();
@@ -220,6 +237,8 @@ public class GetPipelineMetricsQueryHandlerTests
                 It.Is<IEnumerable<int>>(ids => ids.Contains(101) && ids.Contains(202)),
                 null,
                 It.IsAny<DateTimeOffset?>(),
+                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<IReadOnlyList<PipelineBranchScope>>(),
                 100,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(
@@ -229,7 +248,7 @@ public class GetPipelineMetricsQueryHandlerTests
                 new PipelineRunDto(3, 202, "Quiet", DateTimeOffset.UtcNow.AddDays(-10), DateTimeOffset.UtcNow.AddDays(-10).AddHours(1), TimeSpan.FromHours(1), PipelineRunResult.Succeeded, PipelineRunTrigger.ContinuousIntegration, null, "refs/heads/release", "user3", DateTimeOffset.UtcNow)
             ]);
 
-        _mockProvider.Setup(p => p.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockProvider.Setup(p => p.GetByIdsAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
                 new PipelineDto(101, "Busy", PipelineType.Build, null, DateTimeOffset.UtcNow),

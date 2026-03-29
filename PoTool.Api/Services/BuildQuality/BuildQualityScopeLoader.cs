@@ -108,30 +108,18 @@ public sealed class BuildQualityScopeLoader
             ? products.Where(product => pipelineDefinitions.Any(definition => definition.ProductId == product.Id)).ToList()
             : products;
 
-        var defaultBranchByDbPipelineId = pipelineDefinitions
-            .Where(definition => !string.IsNullOrWhiteSpace(definition.DefaultBranch))
-            .ToDictionary(definition => definition.Id, definition => definition.DefaultBranch!, EqualityComparer<int>.Default);
-
-        var pipelineDefinitionDbIds = defaultBranchByDbPipelineId.Keys.ToList();
+        var pipelineDefinitionDbIds = pipelineDefinitions
+            .Select(definition => definition.Id)
+            .Distinct()
+            .ToList();
         var builds = pipelineDefinitionDbIds.Count == 0
             ? new List<BuildRecord>()
-            : (await _context.CachedPipelineRuns
-                .AsNoTracking()
-                .Where(build => pipelineDefinitionDbIds.Contains(build.PipelineDefinitionId))
-                .Where(build => !productOwnerId.HasValue || build.ProductOwnerId == productOwnerId.Value)
-                .Where(build => build.FinishedDateUtc.HasValue
-                    && build.FinishedDateUtc.Value >= windowStartUtc
-                    && build.FinishedDateUtc.Value < windowEndUtc)
-                .Select(build => new BuildRecord(
-                    build.Id,
-                    build.PipelineDefinitionId,
-                    build.SourceBranch,
-                    build.Result))
-                .ToListAsync(cancellationToken))
-                .Where(build => defaultBranchByDbPipelineId.TryGetValue(build.PipelineDefinitionId, out var defaultBranch)
-                    && !string.IsNullOrWhiteSpace(build.SourceBranch)
-                    && string.Equals(build.SourceBranch, defaultBranch, StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            : await LoadBuildsAsync(
+                pipelineDefinitions,
+                windowStartUtc,
+                windowEndUtc,
+                productOwnerId,
+                cancellationToken);
 
         var buildIds = builds.Select(build => build.Id).ToList();
         var testRuns = buildIds.Count == 0
@@ -210,6 +198,45 @@ public sealed class BuildQualityScopeLoader
         string? DefaultBranch);
 
     private sealed record BuildRecord(int Id, int PipelineDefinitionId, string? SourceBranch, string? Result);
+
+    private async Task<List<BuildRecord>> LoadBuildsAsync(
+        IReadOnlyList<PipelineDefinitionRecord> pipelineDefinitions,
+        DateTime windowStartUtc,
+        DateTime windowEndUtc,
+        int? productOwnerId,
+        CancellationToken cancellationToken)
+    {
+        var builds = new List<BuildRecord>();
+
+        foreach (var definition in pipelineDefinitions)
+        {
+            var query = _context.CachedPipelineRuns
+                .AsNoTracking()
+                .Where(build => build.PipelineDefinitionId == definition.Id)
+                .Where(build => !productOwnerId.HasValue || build.ProductOwnerId == productOwnerId.Value)
+                .Where(build => build.FinishedDateUtc.HasValue
+                    && build.FinishedDateUtc.Value >= windowStartUtc
+                    && build.FinishedDateUtc.Value < windowEndUtc);
+
+            if (!string.IsNullOrWhiteSpace(definition.DefaultBranch))
+            {
+                var normalizedDefaultBranch = definition.DefaultBranch.ToLowerInvariant();
+                query = query.Where(build => build.SourceBranch != null && build.SourceBranch.ToLower() == normalizedDefaultBranch);
+            }
+
+            var definitionBuilds = await query
+                .Select(build => new BuildRecord(
+                    build.Id,
+                    build.PipelineDefinitionId,
+                    build.SourceBranch,
+                    build.Result))
+                .ToListAsync(cancellationToken);
+
+            builds.AddRange(definitionBuilds);
+        }
+
+        return builds;
+    }
 }
 
 /// <summary>

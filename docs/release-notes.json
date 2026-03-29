@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-29",
+    "type": "Fixed",
+    "title": "Pipeline filters now keep the correct latest runs",
+    "impact": "Pipeline metrics, pipeline run views, and build-quality calculations now apply branch and time filters before truncating cached results so scoped runs are no longer displaced by unrelated activity.",
+    "area": "Trends",
+    "link": "/home/pipeline-insights"
+  },
+  {
     "date": "2026-03-28",
     "type": "Fixed",
     "title": "Canonical filter warnings now reach the UI",

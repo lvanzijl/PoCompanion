@@ -31,15 +31,15 @@ public sealed class SprintScopedWorkItemLoader
 
         if (!effectiveFilter.Context.ProductIds.IsAll)
         {
-            var products = new List<ProductDto>();
-            foreach (var productId in effectiveFilter.Context.ProductIds.Values.Distinct())
-            {
-                var product = await _productRepository.GetProductByIdAsync(productId, cancellationToken);
-                if (product != null)
-                {
-                    products.Add(product);
-                }
-            }
+            var selectedProductIds = effectiveFilter.Context.ProductIds.Values
+                .Distinct()
+                .ToArray();
+            var productsById = (await _productRepository.GetProductsByIdsAsync(selectedProductIds, cancellationToken))
+                .ToDictionary(product => product.Id);
+            var products = selectedProductIds
+                .Where(productsById.ContainsKey)
+                .Select(productId => productsById[productId])
+                .ToList();
 
             var rootIds = products
                 .SelectMany(product => product.BacklogRootWorkItemIds)

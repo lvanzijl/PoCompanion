@@ -18,6 +18,11 @@ public interface IProductRepository
     Task<ProductDto?> GetProductByIdAsync(int id, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets products by IDs.
+    /// </summary>
+    Task<IEnumerable<ProductDto>> GetProductsByIdsAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Creates a new product.
     /// </summary>
     Task<ProductDto> CreateProductAsync(

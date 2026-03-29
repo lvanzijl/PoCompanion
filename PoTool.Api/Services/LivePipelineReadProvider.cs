@@ -50,6 +50,30 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
         return await _tfsClient.GetPipelineByIdAsync(pipelineId, cancellationToken);
     }
 
+    public async Task<IEnumerable<PipelineDto>> GetByIdsAsync(IEnumerable<int> pipelineIds, CancellationToken cancellationToken = default)
+    {
+        var normalizedIds = pipelineIds
+            .Distinct()
+            .ToList();
+
+        if (normalizedIds.Count == 0)
+        {
+            return [];
+        }
+
+        var pipelines = new List<PipelineDto>(normalizedIds.Count);
+        foreach (var pipelineId in normalizedIds)
+        {
+            var pipeline = await GetByIdAsync(pipelineId, cancellationToken);
+            if (pipeline is not null)
+            {
+                pipelines.Add(pipeline);
+            }
+        }
+
+        return pipelines;
+    }
+
     public async Task<IEnumerable<PipelineRunDto>> GetRunsAsync(int pipelineId, int top = 100, CancellationToken cancellationToken = default)
     {
         _logger.LogWarning("LivePipelineReadProvider.{Method} called — may indicate cache bypass", nameof(GetRunsAsync));
@@ -91,6 +115,8 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
         IEnumerable<int> pipelineIds,
         string? branchName = null,
         DateTimeOffset? minStartTime = null,
+        DateTimeOffset? maxStartTime = null,
+        IReadOnlyList<PoTool.Core.Pipelines.Filters.PipelineBranchScope>? branchScope = null,
         int top = 100,
         CancellationToken cancellationToken = default)
     {

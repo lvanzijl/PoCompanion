@@ -20,6 +20,11 @@ public interface IPipelineReadProvider
     Task<PipelineDto?> GetByIdAsync(int pipelineId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves specific pipelines by ID from the configured data source.
+    /// </summary>
+    Task<IEnumerable<PipelineDto>> GetByIdsAsync(IEnumerable<int> pipelineIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves pipeline runs for a specific pipeline from the configured data source.
     /// </summary>
     Task<IEnumerable<PipelineRunDto>> GetRunsAsync(int pipelineId, int top = 100, CancellationToken cancellationToken = default);
@@ -42,6 +47,8 @@ public interface IPipelineReadProvider
         IEnumerable<int> pipelineIds,
         string? branchName = null,
         DateTimeOffset? minStartTime = null,
+        DateTimeOffset? maxStartTime = null,
+        IReadOnlyList<PoTool.Core.Pipelines.Filters.PipelineBranchScope>? branchScope = null,
         int top = 100,
         CancellationToken cancellationToken = default);
 

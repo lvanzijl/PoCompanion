@@ -95,6 +95,7 @@ public class SprintTrendProjectionService
         var productIds = effectiveProductIds?.Count > 0
             ? effectiveProductIds.Distinct().ToList()
             : await context.Products
+                .AsNoTracking()
                 .Where(p => p.ProductOwnerId == productOwnerId)
                 .Select(p => p.Id)
                 .ToListAsync(cancellationToken);
@@ -106,6 +107,7 @@ public class SprintTrendProjectionService
         }
 
         var sprints = await context.Sprints
+            .AsNoTracking()
             .Where(s => sprintIdList.Contains(s.Id))
             .ToListAsync(cancellationToken);
 
@@ -115,6 +117,7 @@ public class SprintTrendProjectionService
         }
 
         var resolvedItems = await context.ResolvedWorkItems
+            .AsNoTracking()
             .Where(r => r.ResolvedProductId != null && productIds.Contains(r.ResolvedProductId.Value))
             .ToListAsync(cancellationToken);
 

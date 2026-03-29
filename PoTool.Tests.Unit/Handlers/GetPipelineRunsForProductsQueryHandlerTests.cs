@@ -41,6 +41,11 @@ public sealed class GetPipelineRunsForProductsQueryHandlerTests
                 It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 101, 202 })),
                 null,
                 filter.RangeStartUtc,
+                filter.RangeEndUtc,
+                It.Is<IReadOnlyList<PipelineBranchScope>>(scopes =>
+                    scopes.Count == 2
+                    && scopes.Any(scope => scope.PipelineId == 101 && scope.DefaultBranch == "refs/heads/main")
+                    && scopes.Any(scope => scope.PipelineId == 202 && scope.DefaultBranch == "refs/heads/release")),
                 100,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(
