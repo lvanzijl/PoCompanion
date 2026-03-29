@@ -372,7 +372,7 @@ public static class ApiServiceCollectionExtensions
             services.AddScoped<RealTfsClient>();
 
         }
-        services.AddScoped<ITfsClient>(provider =>
+        services.AddScoped<ITfsAccessGateway>(provider =>
         {
             var runtimeMode = provider.GetRequiredService<TfsRuntimeMode>();
             var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("TfsRuntime");
@@ -380,9 +380,10 @@ public static class ApiServiceCollectionExtensions
                 ? provider.GetRequiredService<MockTfsClient>()
                 : provider.GetRequiredService<RealTfsClient>();
 
-            TfsRuntimeModeGuard.EnsureExpectedClient(runtimeMode, client, logger, "ITfsClient registration");
-            return client;
+            TfsRuntimeModeGuard.EnsureExpectedClient(runtimeMode, client, logger, "ITfsAccessGateway registration");
+            return ActivatorUtilities.CreateInstance<TfsAccessGateway>(provider, client);
         });
+        services.AddScoped<ITfsClient>(provider => provider.GetRequiredService<ITfsAccessGateway>());
         services.AddScoped<ActivityEventIngestionService>();
         services.AddScoped<IActivityEventSource, LedgerActivityEventSource>();
 

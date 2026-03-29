@@ -33,30 +33,42 @@ public static class TfsRuntimeModeGuard
         ILogger logger,
         string callSite)
     {
-        var isMockClient = tfsClient is MockTfsClient or BattleshipMockDataFacade;
+        var (clientTypeName, isMockClient) = DescribeClient(tfsClient);
         if (runtimeMode.IsRealDataMode && isMockClient)
         {
             logger.LogCritical(
                 "Mixed runtime detected at {CallSite}: real-data mode selected but {Implementation} was resolved for {Abstraction}",
                 callSite,
-                tfsClient.GetType().FullName,
+                clientTypeName,
                 nameof(ITfsClient));
 
             throw new InvalidOperationException(
-                $"Real-data mode is active but {tfsClient.GetType().FullName} was resolved for {nameof(ITfsClient)}.");
+                $"Real-data mode is active but {clientTypeName} was resolved for {nameof(ITfsClient)}.");
         }
 
-        if (runtimeMode.UseMockClient && tfsClient is not MockTfsClient)
+        if (runtimeMode.UseMockClient && !isMockClient)
         {
             logger.LogCritical(
                 "Mixed runtime detected at {CallSite}: mock mode selected but {Implementation} was resolved for {Abstraction}",
                 callSite,
-                tfsClient.GetType().FullName,
+                clientTypeName,
                 nameof(ITfsClient));
 
             throw new InvalidOperationException(
-                $"Mock mode is active but {tfsClient.GetType().FullName} was resolved for {nameof(ITfsClient)}.");
+                $"Mock mode is active but {clientTypeName} was resolved for {nameof(ITfsClient)}.");
         }
+    }
+
+    private static (string ClientTypeName, bool IsMockClient) DescribeClient(ITfsClient tfsClient)
+    {
+        if (tfsClient is TfsAccessGateway gateway)
+        {
+            return (gateway.InnerClientTypeName, gateway.UsesMockClient);
+        }
+
+        var clientTypeName = tfsClient.GetType().FullName ?? tfsClient.GetType().Name;
+        var isMockClient = tfsClient is MockTfsClient or BattleshipMockDataFacade;
+        return (clientTypeName, isMockClient);
     }
 
     public static void EnsureExpectedMockFacade(

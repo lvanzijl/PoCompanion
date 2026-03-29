@@ -217,9 +217,12 @@ public class ServiceCollectionTests
 
         var runtimeMode = scope.ServiceProvider.GetRequiredService<TfsRuntimeMode>();
         var tfsClient = scope.ServiceProvider.GetRequiredService<ITfsClient>();
+        var gateway = scope.ServiceProvider.GetRequiredService<ITfsAccessGateway>();
 
         Assert.IsTrue(runtimeMode.UseMockClient, "Mock mode should be captured once during startup.");
-        Assert.IsInstanceOfType<MockTfsClient>(tfsClient, "Mock mode should resolve MockTfsClient.");
+        Assert.AreSame(gateway, tfsClient, "ITfsClient should resolve through the TFS access gateway.");
+        Assert.IsInstanceOfType<TfsAccessGateway>(gateway, "Mock mode should resolve the guarded TFS gateway.");
+        Assert.IsTrue(((TfsAccessGateway)gateway).UsesMockClient, "Gateway should wrap the mock TFS client in mock mode.");
     }
 
     [TestMethod]
@@ -245,9 +248,13 @@ public class ServiceCollectionTests
 
         var runtimeMode = scope.ServiceProvider.GetRequiredService<TfsRuntimeMode>();
         var tfsClient = scope.ServiceProvider.GetRequiredService<ITfsClient>();
+        var gateway = scope.ServiceProvider.GetRequiredService<ITfsAccessGateway>();
 
         Assert.IsFalse(runtimeMode.UseMockClient, "Real mode should be captured once during startup.");
-        Assert.IsInstanceOfType<RealTfsClient>(tfsClient, "Real mode should resolve RealTfsClient.");
+        Assert.AreSame(gateway, tfsClient, "ITfsClient should resolve through the TFS access gateway.");
+        Assert.IsInstanceOfType<TfsAccessGateway>(gateway, "Real mode should resolve the guarded TFS gateway.");
+        Assert.IsFalse(((TfsAccessGateway)gateway).UsesMockClient, "Gateway should wrap the real TFS client in real mode.");
+        Assert.AreEqual(typeof(RealTfsClient).FullName, ((TfsAccessGateway)gateway).InnerClientTypeName);
     }
 
     [TestMethod]
