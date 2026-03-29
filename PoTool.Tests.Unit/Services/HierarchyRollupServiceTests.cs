@@ -1,6 +1,7 @@
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Hierarchy;
+using PoTool.Core.Domain.WorkItems;
 using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
@@ -14,8 +15,8 @@ public sealed class HierarchyRollupServiceTests
     public void RollupCanonicalScope_FeatureScope_UsesDirectPbiEstimates()
     {
         var feature = CreateWorkItem(100, WorkItemType.Feature, "Active", parentTfsId: null, effort: null);
-        var donePbi = CreateWorkItem(201, WorkItemType.Pbi, "Done", 100, 5);
-        var activePbi = CreateWorkItem(202, WorkItemType.Pbi, "Active", 100, 8);
+        var donePbi = CreateWorkItem(201, CanonicalWorkItemTypes.Pbi, "Done", 100, 5);
+        var activePbi = CreateWorkItem(202, CanonicalWorkItemTypes.Pbi, "Active", 100, 8);
         var workItems = new[] { feature, donePbi, activePbi };
 
         var result = _service.RollupCanonicalScope(feature.WorkItem, workItems.Select(item => item.WorkItem).ToList(), BuildDoneLookup(workItems));
@@ -30,9 +31,9 @@ public sealed class HierarchyRollupServiceTests
         var epic = CreateWorkItem(1, WorkItemType.Epic, "Active", parentTfsId: null, effort: null);
         var featureA = CreateWorkItem(10, WorkItemType.Feature, "Active", 1, null);
         var featureB = CreateWorkItem(11, WorkItemType.Feature, "Done", 1, null);
-        var pbiA = CreateWorkItem(101, WorkItemType.Pbi, "Done", 10, 5);
-        var pbiB = CreateWorkItem(102, WorkItemType.Pbi, "Active", 10, 3);
-        var pbiC = CreateWorkItem(103, WorkItemType.Pbi, "Done", 11, 8);
+        var pbiA = CreateWorkItem(101, CanonicalWorkItemTypes.Pbi, "Done", 10, 5);
+        var pbiB = CreateWorkItem(102, CanonicalWorkItemTypes.Pbi, "Active", 10, 3);
+        var pbiC = CreateWorkItem(103, CanonicalWorkItemTypes.Pbi, "Done", 11, 8);
         var workItems = new[] { epic, featureA, featureB, pbiA, pbiB, pbiC };
 
         var result = _service.RollupCanonicalScope(epic.WorkItem, workItems.Select(item => item.WorkItem).ToList(), BuildDoneLookup(workItems));
@@ -45,7 +46,7 @@ public sealed class HierarchyRollupServiceTests
     public void RollupCanonicalScope_ParentFallback_OnlyAppliesWhenChildPbisLackEstimates()
     {
         var feature = CreateWorkItem(100, WorkItemType.Feature, "Done", parentTfsId: null, effort: null, storyPoints: null, businessValue: 8);
-        var missingPbi = CreateWorkItem(201, WorkItemType.Pbi, "Done", 100, null, storyPoints: null, businessValue: null);
+        var missingPbi = CreateWorkItem(201, CanonicalWorkItemTypes.Pbi, "Done", 100, null, storyPoints: null, businessValue: null);
         var workItems = new[] { feature, missingPbi };
 
         var result = _service.RollupCanonicalScope(feature.WorkItem, workItems.Select(item => item.WorkItem).ToList(), BuildDoneLookup(workItems));
@@ -58,7 +59,7 @@ public sealed class HierarchyRollupServiceTests
     public void RollupCanonicalScope_ExcludesBugAndTaskStoryPoints()
     {
         var feature = CreateWorkItem(100, WorkItemType.Feature, "Active", parentTfsId: null, effort: null);
-        var pbi = CreateWorkItem(201, WorkItemType.Pbi, "Done", 100, 5);
+        var pbi = CreateWorkItem(201, CanonicalWorkItemTypes.Pbi, "Done", 100, 5);
         var bug = CreateWorkItem(202, WorkItemType.Bug, "Done", 100, 13);
         var task = CreateWorkItem(203, WorkItemType.Task, "Done", 100, 8);
         var workItems = new[] { feature, pbi, bug, task };
@@ -73,9 +74,9 @@ public sealed class HierarchyRollupServiceTests
     public void RollupCanonicalScope_UsesFractionalDerivedEstimates()
     {
         var feature = CreateWorkItem(100, WorkItemType.Feature, "Active", parentTfsId: null, effort: null);
-        var estimatedPbiA = CreateWorkItem(201, WorkItemType.Pbi, "Done", 100, 3);
-        var estimatedPbiB = CreateWorkItem(202, WorkItemType.Pbi, "Active", 100, 4);
-        var missingPbi = CreateWorkItem(203, WorkItemType.Pbi, "Active", 100, null, storyPoints: null, businessValue: null);
+        var estimatedPbiA = CreateWorkItem(201, CanonicalWorkItemTypes.Pbi, "Done", 100, 3);
+        var estimatedPbiB = CreateWorkItem(202, CanonicalWorkItemTypes.Pbi, "Active", 100, 4);
+        var missingPbi = CreateWorkItem(203, CanonicalWorkItemTypes.Pbi, "Active", 100, null, storyPoints: null, businessValue: null);
         var workItems = new[] { feature, estimatedPbiA, estimatedPbiB, missingPbi };
 
         var result = _service.RollupCanonicalScope(feature.WorkItem, workItems.Select(item => item.WorkItem).ToList(), BuildDoneLookup(workItems));

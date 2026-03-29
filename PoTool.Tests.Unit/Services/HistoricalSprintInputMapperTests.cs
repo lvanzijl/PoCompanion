@@ -2,6 +2,7 @@ using PoTool.Api.Adapters;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Domain.Models;
+using PoTool.Core.Domain.WorkItems;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
@@ -25,7 +26,7 @@ public sealed class HistoricalSprintInputMapperTests
         var snapshot = entity.ToSnapshot();
 
         Assert.AreEqual(101, snapshot.WorkItemId);
-        Assert.AreEqual(WorkItemType.Pbi, snapshot.WorkItemType);
+        Assert.AreEqual(CanonicalWorkItemTypes.Pbi, snapshot.WorkItemType);
         Assert.AreEqual("Active", snapshot.CurrentState);
         Assert.AreEqual("\\Project\\Sprint 1", snapshot.CurrentIterationPath);
     }
