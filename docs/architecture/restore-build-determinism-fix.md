@@ -143,3 +143,10 @@ Restore/build determinism is now **fully deterministic for the repository’s in
 - locked restore is validated and available for CI enforcement
 
 Within those constraints, restore and build are no longer only partially deterministic.
+
+## Security Summary
+
+- Reviewed with automated code review: no review comments were raised
+- CodeQL analysis did not run because the change is configuration/documentation plus generated lock files, not analyzable source-code changes
+- No new package sources, secrets, or executable behavior were introduced
+- No security vulnerabilities were identified in the scope of this determinism fix
