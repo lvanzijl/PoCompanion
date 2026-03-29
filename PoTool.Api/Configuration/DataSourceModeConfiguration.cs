@@ -1,14 +1,24 @@
 namespace PoTool.Api.Configuration;
 
 /// <summary>
-/// Centralized configuration for DataSourceMode route rules.
-/// Defines which routes are allowed to use Live mode and which must use Cache mode.
+/// Centralized configuration for DataSourceMode route intent rules.
+/// Separates cache-only analytical/workspace reads from live-allowed onboarding,
+/// configuration, discovery, and sync/write routes.
 /// </summary>
 public static class DataSourceModeConfiguration
 {
+    public enum RouteIntent
+    {
+        Unknown = 0,
+        LiveAllowed = 1,
+        CacheOnlyAnalyticalRead = 2
+    }
+
     /// <summary>
     /// Routes that are explicitly allowed to use Live mode.
-    /// These are typically Settings, configuration, and administrative endpoints.
+    /// These are onboarding, configuration, discovery, sync, and administrative endpoints.
+    /// Explicit live routes are matched before cache-only prefixes so discovery endpoints under
+    /// broader controller prefixes (for example /api/workitems/area-paths-from-tfs) stay live.
     /// </summary>
     public static readonly HashSet<string> LiveModeAllowedRoutes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -44,8 +54,8 @@ public static class DataSourceModeConfiguration
     };
 
     /// <summary>
-    /// Routes that MUST use Cache mode when cache is available.
-    /// These are workspace-facing endpoints that should never hit TFS live during normal operation.
+    /// Routes that represent analytical/workspace reads and therefore require cached data.
+    /// These routes must never silently fall back to Live mode.
     /// </summary>
     public static readonly HashSet<string> CacheModeRequiredRoutes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -58,34 +68,51 @@ public static class DataSourceModeConfiguration
     };
 
     /// <summary>
-    /// Checks if a route is a workspace route that must use Cache mode.
+    /// Resolves the route intent for the current request path.
     /// </summary>
-    /// <param name="path">The request path to check</param>
-    /// <returns>True if the route is a workspace route, false otherwise</returns>
-    public static bool IsWorkspaceRoute(string? path)
+    public static RouteIntent GetRouteIntent(string? path)
     {
         if (string.IsNullOrEmpty(path))
         {
-            return false;
+            return RouteIntent.Unknown;
         }
 
-        return CacheModeRequiredRoutes.Any(route => 
-            path.StartsWith(route, StringComparison.OrdinalIgnoreCase));
+        if (LiveModeAllowedRoutes.Any(route =>
+                path.StartsWith(route, StringComparison.OrdinalIgnoreCase)))
+        {
+            return RouteIntent.LiveAllowed;
+        }
+
+        if (CacheModeRequiredRoutes.Any(route =>
+                path.StartsWith(route, StringComparison.OrdinalIgnoreCase)))
+        {
+            return RouteIntent.CacheOnlyAnalyticalRead;
+        }
+
+        return RouteIntent.Unknown;
+    }
+
+    /// <summary>
+    /// Checks if a route is an analytical/workspace read that requires cached data.
+    /// </summary>
+    public static bool RequiresCache(string? path)
+    {
+        return GetRouteIntent(path) == RouteIntent.CacheOnlyAnalyticalRead;
     }
 
     /// <summary>
     /// Checks if a route is explicitly allowed to use Live mode.
     /// </summary>
-    /// <param name="path">The request path to check</param>
-    /// <returns>True if the route is allowed to use Live mode, false otherwise</returns>
     public static bool IsLiveModeAllowed(string? path)
     {
-        if (string.IsNullOrEmpty(path))
-        {
-            return false;
-        }
+        return GetRouteIntent(path) == RouteIntent.LiveAllowed;
+    }
 
-        return LiveModeAllowedRoutes.Any(route => 
-            path.StartsWith(route, StringComparison.OrdinalIgnoreCase));
+    /// <summary>
+    /// Backward-compatible alias for older workspace-route checks.
+    /// </summary>
+    public static bool IsWorkspaceRoute(string? path)
+    {
+        return RequiresCache(path);
     }
 }
