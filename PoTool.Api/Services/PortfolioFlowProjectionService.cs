@@ -260,7 +260,7 @@ public class PortfolioFlowProjectionService
         var sprintEnd = new DateTimeOffset(DateTime.SpecifyKind(sprint.EndDateUtc.Value, DateTimeKind.Utc), TimeSpan.Zero);
         var candidatePbiIds = candidateWorkItemIds
             .Where(workItemsByTfsId.ContainsKey)
-            .Where(workItemId => CanonicalWorkItemTypes.IsAuthoritativePbi(workItemsByTfsId[workItemId].Type))
+            .Where(workItemId => CanonicalWorkItemTypes.IsAuthoritativePbi(workItemsByTfsId[workItemId].Type.ToCanonicalWorkItemType()))
             .ToList();
 
         var stockStoryPoints = 0d;

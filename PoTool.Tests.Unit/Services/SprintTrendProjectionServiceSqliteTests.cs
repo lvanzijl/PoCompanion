@@ -158,7 +158,7 @@ public class SprintTrendProjectionServiceSqliteTests
     }
 
     [TestMethod]
-    public async Task ComputeProjectionsAsync_RebuildsPortfolioFlowProjectionInTheSprintPipeline()
+    public async Task ComputeProjectionsAsync_RebuildsPortfolioFlowProjectionInTheSprintPipeline_ForRawProductBacklogItemType()
     {
         int productOwnerId;
         int sprintId;
@@ -204,7 +204,7 @@ public class SprintTrendProjectionServiceSqliteTests
             context.WorkItems.Add(new WorkItemEntity
             {
                 TfsId = 2001,
-                Type = CanonicalWorkItemTypes.Pbi,
+                Type = WorkItemType.Pbi,
                 Title = "Portfolio flow PBI",
                 AreaPath = "Area",
                 IterationPath = sprint.Path,
