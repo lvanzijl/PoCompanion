@@ -1,6 +1,5 @@
 using Mediator;
 using PoTool.Api.Services;
-using PoTool.Core.Contracts;
 using PoTool.Shared.PullRequests;
 using PoTool.Core.PullRequests.Queries;
 
@@ -8,18 +7,18 @@ namespace PoTool.Api.Handlers.PullRequests;
 
 /// <summary>
 /// Handler for GetFilteredPullRequestsQuery.
-/// Uses the cache-backed pull request read provider registered for analytical reads.
+/// Uses the analytical pull request query store for repository-scoped cached reads.
 /// </summary>
 public sealed class GetFilteredPullRequestsQueryHandler : IQueryHandler<GetFilteredPullRequestsQuery, IEnumerable<PullRequestDto>>
 {
-    private readonly IPullRequestReadProvider _pullRequestReadProvider;
+    private readonly IPullRequestQueryStore _queryStore;
     private readonly ILogger<GetFilteredPullRequestsQueryHandler> _logger;
 
     public GetFilteredPullRequestsQueryHandler(
-        IPullRequestReadProvider pullRequestReadProvider,
+        IPullRequestQueryStore queryStore,
         ILogger<GetFilteredPullRequestsQueryHandler> logger)
     {
-        _pullRequestReadProvider = pullRequestReadProvider;
+        _queryStore = queryStore;
         _logger = logger;
     }
 
@@ -33,10 +32,8 @@ public sealed class GetFilteredPullRequestsQueryHandler : IQueryHandler<GetFilte
             query.EffectiveFilter.RangeStartUtc,
             query.EffectiveFilter.RangeEndUtc);
 
-        var allPrs = await _pullRequestReadProvider.GetByRepositoryNamesAsync(
-            query.EffectiveFilter.RepositoryScope,
-            query.EffectiveFilter.RangeStartUtc,
-            query.EffectiveFilter.RangeEndUtc,
+        var allPrs = await _queryStore.GetScopedPullRequestsAsync(
+            query.EffectiveFilter,
             cancellationToken);
 
         return PullRequestFiltering.ApplyLocalSelections(allPrs, query.EffectiveFilter);

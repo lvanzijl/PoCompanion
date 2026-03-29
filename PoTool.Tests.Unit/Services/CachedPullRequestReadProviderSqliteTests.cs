@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
+using PoTool.Core.Filters;
+using PoTool.Core.PullRequests.Filters;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -13,6 +15,7 @@ public sealed class CachedPullRequestReadProviderSqliteTests
     private SqliteConnection _connection = null!;
     private PoToolDbContext _context = null!;
     private CachedPullRequestReadProvider _provider = null!;
+    private EfPullRequestQueryStore _queryStore = null!;
 
     [TestInitialize]
     public async Task SetupAsync()
@@ -26,6 +29,7 @@ public sealed class CachedPullRequestReadProviderSqliteTests
         _context = new PoToolDbContext(options);
         await _context.Database.EnsureCreatedAsync();
         _provider = new CachedPullRequestReadProvider(_context, NullLogger<CachedPullRequestReadProvider>.Instance);
+        _queryStore = new EfPullRequestQueryStore(_context);
     }
 
     [TestCleanup]
@@ -99,7 +103,7 @@ public sealed class CachedPullRequestReadProviderSqliteTests
     }
 
     [TestMethod]
-    public async Task BatchMethods_WithSqlite_GroupByPullRequestAndPreserveOrdering()
+    public async Task GetMetricsDataAsync_WithSqlite_GroupsByPullRequestAndPreservesOrdering()
     {
         _context.PullRequests.AddRange(
             new PullRequestEntity
@@ -177,14 +181,26 @@ public sealed class CachedPullRequestReadProviderSqliteTests
             new PullRequestFileChangeEntity { PullRequestId = 2, IterationId = 1, FilePath = "/c.cs", ChangeType = "edit", LinesAdded = 3, LinesDeleted = 1, LinesModified = 0 });
         await _context.SaveChangesAsync();
 
-        var iterations = await _provider.GetIterationsForPullRequestsAsync([1, 2], cancellationToken: CancellationToken.None);
-        var comments = await _provider.GetCommentsForPullRequestsAsync([1, 2], cancellationToken: CancellationToken.None);
-        var fileChanges = await _provider.GetFileChangesForPullRequestsAsync([1, 2], cancellationToken: CancellationToken.None);
+        var filter = new PullRequestEffectiveFilter(
+            new PullRequestFilterContext(
+                FilterSelection<int>.All(),
+                FilterSelection<int>.All(),
+                FilterSelection<string>.All(),
+                FilterSelection<string>.All(),
+                FilterSelection<string>.All(),
+                FilterSelection<string>.All(),
+                FilterTimeSelection.None()),
+            ["Repo"],
+            null,
+            null,
+            null,
+            Array.Empty<int>());
+        var result = await _queryStore.GetMetricsDataAsync(filter, CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { 1, 2 }, iterations[1].Select(iteration => iteration.IterationNumber).ToArray());
-        CollectionAssert.AreEqual(new[] { 200, 201 }, comments[1].Select(comment => comment.Id).ToArray());
-        CollectionAssert.AreEqual(new[] { "/a.cs", "/b.cs" }, fileChanges[1].Select(fileChange => fileChange.FilePath).ToArray());
-        CollectionAssert.AreEqual(new[] { 300 }, comments[2].Select(comment => comment.Id).ToArray());
-        CollectionAssert.AreEqual(new[] { "/c.cs" }, fileChanges[2].Select(fileChange => fileChange.FilePath).ToArray());
+        CollectionAssert.AreEqual(new[] { 1, 2 }, result.IterationsByPullRequestId[1].Select(iteration => iteration.IterationNumber).ToArray());
+        CollectionAssert.AreEqual(new[] { 200, 201 }, result.CommentsByPullRequestId[1].Select(comment => comment.Id).ToArray());
+        CollectionAssert.AreEqual(new[] { "/a.cs", "/b.cs" }, result.FileChangesByPullRequestId[1].Select(fileChange => fileChange.FilePath).ToArray());
+        CollectionAssert.AreEqual(new[] { 300 }, result.CommentsByPullRequestId[2].Select(comment => comment.Id).ToArray());
+        CollectionAssert.AreEqual(new[] { "/c.cs" }, result.FileChangesByPullRequestId[2].Select(fileChange => fileChange.FilePath).ToArray());
     }
 }

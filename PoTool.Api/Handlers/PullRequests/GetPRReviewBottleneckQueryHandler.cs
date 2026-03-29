@@ -1,6 +1,5 @@
 using Mediator;
 using PoTool.Api.Services;
-using PoTool.Core.Contracts;
 using PoTool.Shared.PullRequests;
 using PoTool.Core.PullRequests.Queries;
 
@@ -9,19 +8,19 @@ namespace PoTool.Api.Handlers.PullRequests;
 /// <summary>
 /// Handler for GetPRReviewBottleneckQuery.
 /// Analyzes PR review performance and identifies bottlenecks.
-/// Uses the cache-backed pull request read provider registered for analytical reads.
+/// Uses the analytical pull request query store for cached analytical composition.
 /// </summary>
 public sealed class GetPRReviewBottleneckQueryHandler
     : IQueryHandler<GetPRReviewBottleneckQuery, PRReviewBottleneckDto>
 {
-    private readonly IPullRequestReadProvider _pullRequestReadProvider;
+    private readonly IPullRequestQueryStore _queryStore;
     private readonly ILogger<GetPRReviewBottleneckQueryHandler> _logger;
 
     public GetPRReviewBottleneckQueryHandler(
-        IPullRequestReadProvider pullRequestReadProvider,
+        IPullRequestQueryStore queryStore,
         ILogger<GetPRReviewBottleneckQueryHandler> logger)
     {
-        _pullRequestReadProvider = pullRequestReadProvider;
+        _queryStore = queryStore;
         _logger = logger;
     }
 
@@ -34,14 +33,11 @@ public sealed class GetPRReviewBottleneckQueryHandler
             query.MaxPRsToAnalyze,
             query.DaysBack);
 
-        var allPRs = await _pullRequestReadProvider.GetAllAsync(null, cancellationToken);
-
-        // Filter to recent PRs
         var cutoffDate = DateTimeOffset.UtcNow.AddDays(-query.DaysBack);
-        var recentPRs = allPRs
-            .Where(pr => pr.CreatedDate >= cutoffDate)
-            .OrderByDescending(pr => pr.CreatedDate)
-            .Take(query.MaxPRsToAnalyze)
+        var recentPRs = (await _queryStore.GetReviewBottleneckPullRequestsAsync(
+                cutoffDate.UtcDateTime,
+                query.MaxPRsToAnalyze,
+                cancellationToken))
             .ToList();
 
         _logger.LogDebug("Analyzing {Count} pull requests", recentPRs.Count);

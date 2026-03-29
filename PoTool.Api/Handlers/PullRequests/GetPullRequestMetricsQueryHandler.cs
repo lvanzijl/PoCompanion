@@ -1,6 +1,5 @@
 using Mediator;
 using PoTool.Api.Services;
-using PoTool.Core.Contracts;
 using PoTool.Shared.PullRequests;
 using PoTool.Core.PullRequests.Queries;
 
@@ -9,18 +8,18 @@ namespace PoTool.Api.Handlers.PullRequests;
 /// <summary>
 /// Handler for GetPullRequestMetricsQuery.
 /// Calculates aggregated metrics for all pull requests.
-/// Uses the cache-backed pull request read provider registered for analytical reads.
+/// Uses the analytical pull request query store for cached analytical composition.
 /// </summary>
 public sealed class GetPullRequestMetricsQueryHandler : IQueryHandler<GetPullRequestMetricsQuery, IEnumerable<PullRequestMetricsDto>>
 {
-    private readonly IPullRequestReadProvider _pullRequestReadProvider;
+    private readonly IPullRequestQueryStore _queryStore;
     private readonly ILogger<GetPullRequestMetricsQueryHandler> _logger;
 
     public GetPullRequestMetricsQueryHandler(
-        IPullRequestReadProvider pullRequestReadProvider,
+        IPullRequestQueryStore queryStore,
         ILogger<GetPullRequestMetricsQueryHandler> logger)
     {
-        _pullRequestReadProvider = pullRequestReadProvider;
+        _queryStore = queryStore;
         _logger = logger;
     }
 
@@ -34,36 +33,17 @@ public sealed class GetPullRequestMetricsQueryHandler : IQueryHandler<GetPullReq
             query.EffectiveFilter.RangeStartUtc,
             query.EffectiveFilter.RangeEndUtc);
 
-        var allPrs = (await _pullRequestReadProvider.GetByRepositoryNamesAsync(
-            query.EffectiveFilter.RepositoryScope,
-            query.EffectiveFilter.RangeStartUtc,
-            query.EffectiveFilter.RangeEndUtc,
-            cancellationToken)).ToList();
+        var queryData = await _queryStore.GetMetricsDataAsync(query.EffectiveFilter, cancellationToken);
+        var allPrs = queryData.PullRequests.ToList();
 
         if (allPrs.Count == 0)
         {
             return Array.Empty<PullRequestMetricsDto>();
         }
 
-        var pullRequestIds = allPrs
-            .Select(pr => pr.Id)
-            .Distinct()
-            .ToArray();
-        var repositoryNamesByPullRequestId = allPrs
-            .GroupBy(pr => pr.Id)
-            .ToDictionary(group => group.Key, group => group.Last().RepositoryName);
-        var iterationsByPullRequestId = await _pullRequestReadProvider.GetIterationsForPullRequestsAsync(
-            pullRequestIds,
-            repositoryNamesByPullRequestId,
-            cancellationToken);
-        var commentsByPullRequestId = await _pullRequestReadProvider.GetCommentsForPullRequestsAsync(
-            pullRequestIds,
-            repositoryNamesByPullRequestId,
-            cancellationToken);
-        var fileChangesByPullRequestId = await _pullRequestReadProvider.GetFileChangesForPullRequestsAsync(
-            pullRequestIds,
-            repositoryNamesByPullRequestId,
-            cancellationToken);
+        var iterationsByPullRequestId = queryData.IterationsByPullRequestId;
+        var commentsByPullRequestId = queryData.CommentsByPullRequestId;
+        var fileChangesByPullRequestId = queryData.FileChangesByPullRequestId;
         var metrics = new List<PullRequestMetricsDto>();
 
         foreach (var pr in allPrs)

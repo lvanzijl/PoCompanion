@@ -276,6 +276,61 @@ public class WorkItemResolutionService
         return (epicId, featureId);
     }
 
+    /// <summary>
+    /// Walks up the parent chain from a pull-request analytical work item node to find its Epic and Feature ancestors.
+    /// Uses the same hierarchy traversal rules as the entity-based overload while avoiding persistence-entity leakage
+    /// back into the pull-request analytical query store boundary.
+    /// </summary>
+    internal static (int? EpicId, int? FeatureId) ResolveAncestry(
+        int tfsId,
+        IReadOnlyDictionary<int, PullRequestWorkItemNode> workItemsByTfsId)
+    {
+        int? epicId = null;
+        int? featureId = null;
+
+        if (!workItemsByTfsId.TryGetValue(tfsId, out var current))
+            return (epicId, featureId);
+
+        if (string.Equals(current.Type, WorkItemType.Epic, StringComparison.OrdinalIgnoreCase))
+        {
+            epicId = tfsId;
+        }
+        else if (string.Equals(current.Type, WorkItemType.Feature, StringComparison.OrdinalIgnoreCase))
+        {
+            featureId = tfsId;
+        }
+
+        var visited = new HashSet<int> { tfsId };
+        var currentId = current.ParentTfsId;
+        var depth = 0;
+
+        while (currentId.HasValue && depth < 50)
+        {
+            if (!visited.Add(currentId.Value))
+                break;
+
+            if (!workItemsByTfsId.TryGetValue(currentId.Value, out var ancestor))
+                break;
+
+            if (string.Equals(ancestor.Type, WorkItemType.Feature, StringComparison.OrdinalIgnoreCase) && featureId == null)
+            {
+                featureId = currentId.Value;
+            }
+            else if (string.Equals(ancestor.Type, WorkItemType.Epic, StringComparison.OrdinalIgnoreCase) && epicId == null)
+            {
+                epicId = currentId.Value;
+            }
+
+            if (epicId.HasValue && featureId.HasValue)
+                break;
+
+            currentId = ancestor.ParentTfsId;
+            depth++;
+        }
+
+        return (epicId, featureId);
+    }
+
     private static async Task<Dictionary<int, List<int>>> BuildChildrenLookupAsync(
         PoToolDbContext context,
         int productOwnerId,

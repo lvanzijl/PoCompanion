@@ -1,7 +1,5 @@
 using Mediator;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using PoTool.Api.Persistence;
 using PoTool.Api.Services;
 using PoTool.Core.PullRequests.Queries;
 using PoTool.Core.WorkItems;
@@ -36,7 +34,7 @@ namespace PoTool.Api.Handlers.PullRequests;
 public sealed class GetPrDeliveryInsightsQueryHandler
     : IQueryHandler<GetPrDeliveryInsightsQuery, PrDeliveryInsightsDto>
 {
-    private readonly PoToolDbContext _context;
+    private readonly IPullRequestQueryStore _queryStore;
     private readonly ILogger<GetPrDeliveryInsightsQueryHandler> _logger;
 
     private const string CategoryDeliveryMapped = "DeliveryMapped";
@@ -58,10 +56,10 @@ public sealed class GetPrDeliveryInsightsQueryHandler
         "unresolvedReasons={UnresolvedReasons}";
 
     public GetPrDeliveryInsightsQueryHandler(
-        PoToolDbContext context,
+        IPullRequestQueryStore queryStore,
         ILogger<GetPrDeliveryInsightsQueryHandler> logger)
     {
-        _context = context;
+        _queryStore = queryStore;
         _logger  = logger;
     }
 
@@ -79,40 +77,14 @@ public sealed class GetPrDeliveryInsightsQueryHandler
             filter.RangeEndUtc,
             filter.SprintId);
 
-        // ── 1. Resolve team name ───────────────────────────────────────────────
-        string? teamName = null;
-        if (!filter.Context.TeamIds.IsAll && filter.Context.TeamIds.Values.Count > 0)
-        {
-            var teamId = filter.Context.TeamIds.Values[0];
-            teamName = await _context.Teams
-                .AsNoTracking()
-                .Where(t => t.Id == teamId)
-                .Select(t => t.Name)
-                .FirstOrDefaultAsync(cancellationToken);
-        }
+        var queryData = await _queryStore.GetDeliveryInsightsDataAsync(filter, cancellationToken);
+        var teamName = queryData.TeamName;
 
         // ── 2. Resolve sprint boundaries ──────────────────────────────────────
         DateTimeOffset fromDate = filter.RangeStartUtc ?? DateTimeOffset.MinValue;
         DateTimeOffset toDate   = filter.RangeEndUtc ?? DateTimeOffset.MaxValue;
-        string? sprintName      = null;
-
-        if (filter.SprintId.HasValue)
-        {
-            var sprint = await _context.Sprints
-                .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.Id == filter.SprintId.Value, cancellationToken);
-
-            if (sprint != null)
-            {
-                sprintName = sprint.Name;
-            }
-        }
-
-        var prQuery = PullRequestFiltering.ApplyScope(
-            _context.PullRequests.AsNoTracking(),
-            filter);
-
-        var prs = await prQuery.ToListAsync(cancellationToken);
+        var sprintName = queryData.SprintName;
+        var prs = queryData.PullRequests;
 
         if (prs.Count == 0)
         {
@@ -123,49 +95,11 @@ public sealed class GetPrDeliveryInsightsQueryHandler
             return EmptyResult(filter, teamName, sprintName, fromDate, toDate);
         }
 
-        var prIds = prs.Select(pr => pr.Id).ToList();
-
-        // ── 5. Batch-load enrichment data ──────────────────────────────────────
-        var iterationRows = await _context.PullRequestIterations
-            .AsNoTracking()
-            .Where(i => prIds.Contains(i.PullRequestId))
-            .Select(i => i.PullRequestId)
-            .ToListAsync(cancellationToken);
-
-        var iterationsByPr = iterationRows
-            .GroupBy(id => id)
-            .ToDictionary(g => g.Key, g => g.Count());
-
-        var fileRows = await _context.PullRequestFileChanges
-            .AsNoTracking()
-            .Where(f => prIds.Contains(f.PullRequestId))
-            .Select(f => new { f.PullRequestId, f.FilePath })
-            .ToListAsync(cancellationToken);
-
-        var filesByPr = fileRows
-            .GroupBy(f => f.PullRequestId)
-            .ToDictionary(g => g.Key, g => g.Select(f => f.FilePath).Distinct().Count());
-
-        // ── 6. Load work item links ────────────────────────────────────────────
-        var wiLinkRows = await _context.PullRequestWorkItemLinks
-            .AsNoTracking()
-            .Where(l => prIds.Contains(l.PullRequestId))
-            .Select(l => new { l.PullRequestId, l.WorkItemId })
-            .ToListAsync(cancellationToken);
-
-        var linkedWorkItemIdsByPr = wiLinkRows
-            .GroupBy(l => l.PullRequestId)
-            .ToDictionary(g => g.Key, g => g.Select(l => l.WorkItemId).ToList());
-
-        // ── 7. Load all work items needed for hierarchy traversal ──────────────
-        var allLinkedWorkItemIds = wiLinkRows.Select(l => l.WorkItemId).Distinct().ToList();
-
-        // Load the directly linked work items and their ancestors (up to 50 levels)
-        // We build the full map by loading all work items; we rely on the cache being
-        // populated already (the work item sync stage populates WorkItems).
-        var workItemMap = await _context.WorkItems
-            .AsNoTracking()
-            .ToDictionaryAsync(wi => wi.TfsId, cancellationToken);
+        var iterationsByPr = queryData.IterationsByPullRequestId;
+        var filesByPr = queryData.DistinctFilesByPullRequestId;
+        var linkedWorkItemIdsByPr = queryData.LinkedWorkItemIdsByPullRequestId;
+        var allLinkedWorkItemIds = linkedWorkItemIdsByPr.Values.SelectMany(ids => ids).Distinct().ToList();
+        var workItemMap = queryData.WorkItemsById;
 
         if (allLinkedWorkItemIds.Count > 0 && workItemMap.Count == 0)
         {
@@ -410,16 +344,7 @@ public sealed class GetPrDeliveryInsightsQueryHandler
         }
 
         // Build PBI count per Feature for the ratio
-        var pbiCountByFeatureId = await _context.WorkItems
-            .AsNoTracking()
-            .Where(wi => wi.Type == WorkItemType.Pbi)
-            .Select(wi => new { wi.ParentTfsId })
-            .ToListAsync(cancellationToken);
-
-        var pbisByFeature = pbiCountByFeatureId
-            .Where(r => r.ParentTfsId.HasValue)
-            .GroupBy(r => r.ParentTfsId!.Value)
-            .ToDictionary(g => g.Key, g => g.Count());
+        var pbisByFeature = queryData.PbiCountByFeatureId;
 
         var featureBreakdown = featureEntries
             .GroupBy(f => f.FeatureId)
@@ -648,7 +573,7 @@ public sealed class GetPrDeliveryInsightsQueryHandler
     }
 
     private static double ComputeLifetimeHours(
-        PoTool.Api.Persistence.Entities.PullRequestEntity pr,
+        PullRequestDto pr,
         DateTimeOffset now)
     {
         var end   = pr.CompletedDate ?? now;
@@ -672,7 +597,7 @@ public sealed class GetPrDeliveryInsightsQueryHandler
     }
 
     private UnresolvedPrWorkItemDiagnostic CreateNoRelationsDiagnostic(
-        PoTool.Api.Persistence.Entities.PullRequestEntity pr) =>
+        PullRequestDto pr) =>
         new(
             pr.Id,
             pr.RepositoryName,
@@ -689,7 +614,7 @@ public sealed class GetPrDeliveryInsightsQueryHandler
             Notes: "Only explicit PR → work item links cached in PullRequestWorkItemLinks are considered. Azure DevOps UI links may also be inferred from non-cached associations.");
 
     private UnresolvedPrWorkItemDiagnostic CreateUnresolvedDiagnostic(
-        PoTool.Api.Persistence.Entities.PullRequestEntity pr,
+        PullRequestDto pr,
         IReadOnlyCollection<int> linkedIds,
         IReadOnlyCollection<LinkedWorkItemEvaluation> linkEvaluations)
     {
@@ -735,7 +660,7 @@ public sealed class GetPrDeliveryInsightsQueryHandler
 
     private static string BuildResolutionPath(
         int workItemId,
-        IReadOnlyDictionary<int, PoTool.Api.Persistence.Entities.WorkItemEntity> workItemsByTfsId)
+        IReadOnlyDictionary<int, PullRequestWorkItemNode> workItemsByTfsId)
     {
         if (!workItemsByTfsId.TryGetValue(workItemId, out var current))
             return $"{workItemId}:missing";

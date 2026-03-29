@@ -5,6 +5,7 @@ using Moq;
 using PoTool.Api.Handlers.PullRequests;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Api.Services;
 using PoTool.Core.Filters;
 using PoTool.Core.PullRequests.Filters;
 using PoTool.Core.PullRequests.Queries;
@@ -32,6 +33,7 @@ public class GetPullRequestInsightsQueryHandlerTests
 {
     private PoToolDbContext _context = null!;
     private Mock<ILogger<GetPullRequestInsightsQueryHandler>> _mockLogger = null!;
+    private IPullRequestQueryStore _queryStore = null!;
     private GetPullRequestInsightsQueryHandler _handler = null!;
 
     // Common date window used by most tests
@@ -46,7 +48,8 @@ public class GetPullRequestInsightsQueryHandlerTests
             .Options;
         _context    = new PoToolDbContext(options);
         _mockLogger = new Mock<ILogger<GetPullRequestInsightsQueryHandler>>();
-        _handler    = new GetPullRequestInsightsQueryHandler(_context, _mockLogger.Object);
+        _queryStore = new EfPullRequestQueryStore(_context);
+        _handler    = new GetPullRequestInsightsQueryHandler(_queryStore, _mockLogger.Object);
     }
 
     [TestCleanup]

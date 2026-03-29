@@ -224,9 +224,11 @@ public static class ApiServiceCollectionExtensions
         // Definitions discovery resolves the live provider explicitly in its handler.
         services.AddScoped<IPipelineReadProvider, CachedPipelineReadProvider>();
 
-        // Pull request analytical reads are cache-only after middleware guardrails,
-        // so the default injected provider is deterministic and cache-backed.
+        // Pull request analytical reads are cache-only after middleware guardrails.
+        // Generic PR read-provider operations remain provider-shaped, while multi-PR analytical
+        // composition lives behind IPullRequestQueryStore.
         services.AddScoped<IPullRequestReadProvider, CachedPullRequestReadProvider>();
+        services.AddScoped<IPullRequestQueryStore, EfPullRequestQueryStore>();
 
         // Register Release Planning services
         services.AddScoped<ConnectorDerivationService>();

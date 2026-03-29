@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Handlers.PullRequests;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Api.Services;
 using PoTool.Core.PullRequests.Queries;
 
 namespace PoTool.Tests.Unit.Handlers;
@@ -51,7 +52,7 @@ public sealed class GetPullRequestsByWorkItemIdQueryHandlerTests
 
         await context.SaveChangesAsync();
 
-        var handler = new GetPullRequestsByWorkItemIdQueryHandler(context);
+        var handler = new GetPullRequestsByWorkItemIdQueryHandler(new EfPullRequestQueryStore(context));
 
         var result = (await handler.Handle(new GetPullRequestsByWorkItemIdQuery(5001), CancellationToken.None)).ToList();
 
