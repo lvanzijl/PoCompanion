@@ -9,6 +9,7 @@ using PoTool.Core.Contracts;
 using PoTool.Core.Domain.BacklogQuality.Models;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems.Queries;
+using PoTool.Shared.Metrics;
 using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 
@@ -135,10 +136,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
             CreateWorkItem(202, "Story", "New", "Sprint 1", null, null, 200)
         };
 
-        _mockProductRepository.Setup(r => r.GetProductByIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(product1);
-        _mockProductRepository.Setup(r => r.GetProductByIdAsync(2, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(product2);
+        SetupProductsByIds(product1, product2);
         _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
 
@@ -147,7 +145,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
         Assert.IsNotNull(result);
         Assert.IsTrue(result.IterationHealth.Any());
 
-        var healthForSprint1 = result.IterationHealth.First();
+        var healthForSprint1 = GetIterationHealth(result, "Sprint 1");
         Assert.AreEqual(6, healthForSprint1.TotalWorkItems);
         Assert.AreEqual(4, healthForSprint1.WorkItemsWithoutEffort);
         Assert.AreEqual(1, healthForSprint1.WorkItemsInProgressWithoutEffort);
@@ -168,10 +166,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
             CreateWorkItem(103, "Task", "New", "Sprint 1", 2, null, 101)
         };
 
-        _mockProductRepository.Setup(r => r.GetProductByIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(product1);
-        _mockProductRepository.Setup(r => r.GetProductByIdAsync(2, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(product2);
+        SetupProductsByIds(product1, product2);
         _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
 
@@ -180,7 +175,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
         Assert.IsNotNull(result);
         Assert.IsTrue(result.IterationHealth.Any());
 
-        var healthForSprint1 = result.IterationHealth.First();
+        var healthForSprint1 = GetIterationHealth(result, "Sprint 1");
         Assert.AreEqual(4, healthForSprint1.TotalWorkItems);
         Assert.AreEqual(2, healthForSprint1.WorkItemsWithoutEffort);
     }
@@ -196,8 +191,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
             CreateWorkItem(102, "Story", "In Progress", "Sprint 1", null, null, 100)
         };
 
-        _mockProductRepository.Setup(r => r.GetProductByIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(product);
+        SetupProductsByIds(product);
         _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
 
@@ -206,7 +200,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
         Assert.IsNotNull(result);
         Assert.IsTrue(result.IterationHealth.Any());
 
-        var healthForSprint1 = result.IterationHealth.First();
+        var healthForSprint1 = GetIterationHealth(result, "Sprint 1");
         Assert.AreEqual(3, healthForSprint1.TotalWorkItems);
         Assert.AreEqual(2, healthForSprint1.WorkItemsWithoutEffort);
     }
@@ -221,10 +215,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
             CreateWorkItem(101, "Story", "Done", "Sprint 1", 5, null, 100)
         };
 
-        _mockProductRepository.Setup(r => r.GetProductByIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(product1);
-        _mockProductRepository.Setup(r => r.GetProductByIdAsync(999, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((ProductDto?)null);
+        SetupProductsByIds(product1);
         _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
 
@@ -232,7 +223,7 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
 
         Assert.IsNotNull(result);
         Assert.IsTrue(result.IterationHealth.Any());
-        Assert.AreEqual(2, result.IterationHealth.First().TotalWorkItems);
+        Assert.AreEqual(2, GetIterationHealth(result, "Sprint 1").TotalWorkItems);
     }
 
     [TestMethod]
@@ -245,18 +236,39 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
             CreateWorkItem(101, "Story", "Done", "Sprint 1", 5, null, 100)
         };
 
-        _mockProductRepository.Setup(r => r.GetProductByIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(product);
+        SetupProductsByIds(product);
         _mockMediator.Setup(m => m.Send(It.IsAny<GetWorkItemsByRootIdsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
 
         await _handler.Handle(new GetMultiIterationBacklogHealthQuery(ProductIds: new[] { 1 }, MaxIterations: 5), CancellationToken.None);
 
+        _mockMediator.Verify(
+            mediator => mediator.Send(
+                It.Is<GetWorkItemsByRootIdsQuery>(query => query.RootIds.OrderBy(id => id).SequenceEqual(new[] { 100 })),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
         _mockBacklogQualityAnalysisService.Verify(
             service => service.AnalyzeAsync(
                 It.Is<IEnumerable<WorkItemDto>>(items => items.Select(item => item.TfsId).OrderBy(id => id).SequenceEqual(new[] { 100, 101 })),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    private void SetupProductsByIds(params ProductDto[] products)
+    {
+        _mockProductRepository.Setup(repository => repository.GetProductsByIdsAsync(
+                It.IsAny<IEnumerable<int>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IEnumerable<int> ids, CancellationToken _) =>
+            {
+                var requestedIds = ids.ToHashSet();
+                return products.Where(product => requestedIds.Contains(product.Id));
+            });
+    }
+
+    private static BacklogHealthDto GetIterationHealth(MultiIterationBacklogHealthDto result, string iterationPath)
+    {
+        return result.IterationHealth.Single(health => health.IterationPath == iterationPath);
     }
 
     private static ProductDto CreateProduct(int id, int ownerId, string name, int rootWorkItemId)
