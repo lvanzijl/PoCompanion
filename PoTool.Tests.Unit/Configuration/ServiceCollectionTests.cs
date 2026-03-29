@@ -9,6 +9,7 @@ using Moq;
 using PoTool.Api.Configuration;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services;
+using PoTool.Api.Services.BuildQuality;
 using PoTool.Core.BacklogQuality;
 using PoTool.Core.Contracts;
 using PoTool.Core.Domain.Cdc.Sprints;
@@ -293,6 +294,28 @@ public class ServiceCollectionTests
         Assert.IsInstanceOfType<EfPullRequestQueryStore>(
             queryStore,
             "Pull request analytical handlers should resolve the EF-backed PR query store.");
+    }
+
+    [TestMethod]
+    public void AddPoToolApiServices_RegistersBuildQualityReadStore()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+
+        services.AddLogging();
+        RegisterHostEnvironment(services);
+        services.AddDbContext<PoToolDbContext>(options =>
+            options.UseInMemoryDatabase("TestDbBuildQuality"));
+
+        services.AddPoToolApiServices(configuration, isDevelopment: true);
+
+        using var serviceProvider = services.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+
+        var readStore = scope.ServiceProvider.GetRequiredService<IBuildQualityReadStore>();
+        Assert.IsInstanceOfType<EfBuildQualityReadStore>(
+            readStore,
+            "Build Quality handlers should resolve the EF-backed Build Quality read store.");
     }
 
     [TestMethod]

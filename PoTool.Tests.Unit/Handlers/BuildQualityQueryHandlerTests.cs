@@ -16,7 +16,7 @@ public sealed class BuildQualityQueryHandlerTests
 {
     private SqliteConnection _connection = null!;
     private PoToolDbContext _context = null!;
-    private BuildQualityScopeLoader _scopeLoader = null!;
+    private IBuildQualityReadStore _readStore = null!;
     private Mock<IBuildQualityProvider> _provider = null!;
 
     [TestInitialize]
@@ -30,7 +30,7 @@ public sealed class BuildQualityQueryHandlerTests
 
         _context = new PoToolDbContext(options);
         await _context.Database.EnsureCreatedAsync();
-        _scopeLoader = new BuildQualityScopeLoader(_context);
+        _readStore = new EfBuildQualityReadStore(_context);
         _provider = new Mock<IBuildQualityProvider>(MockBehavior.Strict);
     }
 
@@ -48,7 +48,7 @@ public sealed class BuildQualityQueryHandlerTests
 
         var expectedResult = CreateExpectedResult();
         var capturedCalls = CaptureProviderCalls(expectedResult);
-        var handler = new GetBuildQualityRollingWindowQueryHandler(_scopeLoader, _provider.Object);
+        var handler = new GetBuildQualityRollingWindowQueryHandler(_readStore, _provider.Object);
 
         var result = await handler.Handle(
             new GetBuildQualityRollingWindowQuery(
@@ -75,7 +75,7 @@ public sealed class BuildQualityQueryHandlerTests
 
         var expectedResult = CreateExpectedResult();
         var capturedCalls = CaptureProviderCalls(expectedResult);
-        var handler = new GetBuildQualitySprintQueryHandler(_context, _scopeLoader, _provider.Object);
+        var handler = new GetBuildQualitySprintQueryHandler(_readStore, _provider.Object);
 
         var result = await handler.Handle(
             new GetBuildQualitySprintQuery(
@@ -103,7 +103,7 @@ public sealed class BuildQualityQueryHandlerTests
 
         var expectedResult = CreateExpectedResult();
         var capturedCalls = CaptureProviderCalls(expectedResult);
-        var handler = new GetBuildQualityPipelineDetailQueryHandler(_context, _scopeLoader, _provider.Object);
+        var handler = new GetBuildQualityPipelineDetailQueryHandler(_readStore, _provider.Object);
 
         var result = await handler.Handle(
             new GetBuildQualityPipelineDetailQuery(ProductOwnerId: 1, SprintId: 77, RepositoryId: 20),
@@ -130,7 +130,7 @@ public sealed class BuildQualityQueryHandlerTests
             CreateBuild(id: 2002, pipelineDefinitionDbId: 201, result: "Succeeded", branch: "refs/heads/feature/demo", finishedUtc: new DateTime(2026, 3, 8, 0, 0, 0, DateTimeKind.Utc)));
         await _context.SaveChangesAsync();
 
-        var selection = await _scopeLoader.LoadAsync(
+        var selection = await _readStore.GetScopeSelectionAsync(
             productOwnerId: 1,
             windowStartUtc: new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
             windowEndUtc: new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc),
@@ -146,7 +146,7 @@ public sealed class BuildQualityQueryHandlerTests
     {
         await SeedProductOwnerScopeAsync();
 
-        var handler = new GetBuildQualityRollingWindowQueryHandler(_scopeLoader, new BuildQualityProvider());
+        var handler = new GetBuildQualityRollingWindowQueryHandler(_readStore, new BuildQualityProvider());
 
         var result = await handler.Handle(
             new GetBuildQualityRollingWindowQuery(
@@ -228,7 +228,7 @@ public sealed class BuildQualityQueryHandlerTests
     {
         await SeedProductOwnerScopeAsync();
 
-        var handler = new GetBuildQualitySprintQueryHandler(_context, _scopeLoader, new BuildQualityProvider());
+        var handler = new GetBuildQualitySprintQueryHandler(_readStore, new BuildQualityProvider());
 
         var result = await handler.Handle(
             new GetBuildQualitySprintQuery(
@@ -275,7 +275,7 @@ public sealed class BuildQualityQueryHandlerTests
     {
         await SeedProductOwnerScopeAsync();
 
-        var handler = new GetBuildQualityPipelineDetailQueryHandler(_context, _scopeLoader, new BuildQualityProvider());
+        var handler = new GetBuildQualityPipelineDetailQueryHandler(_readStore, new BuildQualityProvider());
 
         var result = await handler.Handle(
             new GetBuildQualityPipelineDetailQuery(ProductOwnerId: 1, SprintId: 77, PipelineDefinitionId: 2001),
@@ -319,9 +319,9 @@ public sealed class BuildQualityQueryHandlerTests
     {
         await SeedProductOwnerScopeAsync();
 
-        var rollingHandler = new GetBuildQualityRollingWindowQueryHandler(_scopeLoader, new BuildQualityProvider());
-        var sprintHandler = new GetBuildQualitySprintQueryHandler(_context, _scopeLoader, new BuildQualityProvider());
-        var pipelineHandler = new GetBuildQualityPipelineDetailQueryHandler(_context, _scopeLoader, new BuildQualityProvider());
+        var rollingHandler = new GetBuildQualityRollingWindowQueryHandler(_readStore, new BuildQualityProvider());
+        var sprintHandler = new GetBuildQualitySprintQueryHandler(_readStore, new BuildQualityProvider());
+        var pipelineHandler = new GetBuildQualityPipelineDetailQueryHandler(_readStore, new BuildQualityProvider());
 
         var rolling = await rollingHandler.Handle(
             new GetBuildQualityRollingWindowQuery(
@@ -357,7 +357,7 @@ public sealed class BuildQualityQueryHandlerTests
     {
         await SeedProductOwnerScopeAsync(includeBuildQualityEdgeCases: true);
 
-        var handler = new GetBuildQualitySprintQueryHandler(_context, _scopeLoader, new BuildQualityProvider());
+        var handler = new GetBuildQualitySprintQueryHandler(_readStore, new BuildQualityProvider());
 
         var result = await handler.Handle(
             new GetBuildQualitySprintQuery(

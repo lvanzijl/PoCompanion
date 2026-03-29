@@ -4,18 +4,18 @@ using PoTool.Api.Persistence;
 namespace PoTool.Api.Services.BuildQuality;
 
 /// <summary>
-/// Loads already-scoped cached BuildQuality facts for handlers.
+/// EF-backed BuildQuality read store.
 /// </summary>
-public sealed class BuildQualityScopeLoader
+public sealed class EfBuildQualityReadStore : IBuildQualityReadStore
 {
     private readonly PoToolDbContext _context;
 
-    public BuildQualityScopeLoader(PoToolDbContext context)
+    public EfBuildQualityReadStore(PoToolDbContext context)
     {
         _context = context;
     }
 
-    public async Task<BuildQualityScopeSelection> LoadAsync(
+    public async Task<BuildQualityScopeSelection> GetScopeSelectionAsync(
         int productOwnerId,
         DateTime windowStartUtc,
         DateTime windowEndUtc,
@@ -29,7 +29,7 @@ public sealed class BuildQualityScopeLoader
             .Select(product => product.Id)
             .ToListAsync(cancellationToken);
 
-        return await LoadCoreAsync(
+        return await LoadScopeSelectionCoreAsync(
             productIds,
             windowStartUtc,
             windowEndUtc,
@@ -39,7 +39,7 @@ public sealed class BuildQualityScopeLoader
             productOwnerId);
     }
 
-    public async Task<BuildQualityScopeSelection> LoadAsync(
+    public async Task<BuildQualityScopeSelection> GetScopeSelectionAsync(
         IReadOnlyList<int> productIds,
         DateTime? windowStartUtc,
         DateTime? windowEndUtc,
@@ -47,7 +47,7 @@ public sealed class BuildQualityScopeLoader
         int? pipelineDefinitionId,
         CancellationToken cancellationToken)
     {
-        return await LoadCoreAsync(
+        return await LoadScopeSelectionCoreAsync(
             productIds,
             windowStartUtc ?? default,
             windowEndUtc ?? default,
@@ -57,7 +57,23 @@ public sealed class BuildQualityScopeLoader
             productOwnerId: null);
     }
 
-    private async Task<BuildQualityScopeSelection> LoadCoreAsync(
+    public async Task<BuildQualitySprintWindow?> GetSprintWindowAsync(
+        int sprintId,
+        CancellationToken cancellationToken)
+    {
+        return await _context.Sprints
+            .AsNoTracking()
+            .Where(sprint => sprint.Id == sprintId)
+            .Select(sprint => new BuildQualitySprintWindow(
+                sprint.Id,
+                sprint.Name,
+                sprint.TeamId,
+                sprint.StartDateUtc,
+                sprint.EndDateUtc))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private async Task<BuildQualityScopeSelection> LoadScopeSelectionCoreAsync(
         IReadOnlyList<int> requestedProductIds,
         DateTime windowStartUtc,
         DateTime windowEndUtc,
@@ -260,7 +276,7 @@ public sealed record BuildQualityScopeSelection(
     DateTime WindowEndUtc,
     IReadOnlyList<int> ProductIds,
     IReadOnlyList<string> DefaultBranches,
-    IReadOnlyList<BuildQualityScopeLoader.PipelineDefinitionRecord> PipelineDefinitions,
+    IReadOnlyList<EfBuildQualityReadStore.PipelineDefinitionRecord> PipelineDefinitions,
     IReadOnlyList<BuildQualityProductSelection> Products,
     IReadOnlyList<BuildQualityBuildFact> Builds,
     IReadOnlyList<BuildQualityTestRunFact> TestRuns,

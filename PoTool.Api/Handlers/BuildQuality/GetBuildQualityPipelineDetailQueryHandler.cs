@@ -1,6 +1,4 @@
 using Mediator;
-using Microsoft.EntityFrameworkCore;
-using PoTool.Api.Persistence;
 using PoTool.Api.Services.BuildQuality;
 using PoTool.Core.BuildQuality.Queries;
 using PoTool.Shared.BuildQuality;
@@ -13,17 +11,14 @@ namespace PoTool.Api.Handlers.BuildQuality;
 public sealed class GetBuildQualityPipelineDetailQueryHandler
     : IQueryHandler<GetBuildQualityPipelineDetailQuery, PipelineBuildQualityDto>
 {
-    private readonly PoToolDbContext _context;
-    private readonly BuildQualityScopeLoader _scopeLoader;
+    private readonly IBuildQualityReadStore _readStore;
     private readonly IBuildQualityProvider _buildQualityProvider;
 
     public GetBuildQualityPipelineDetailQueryHandler(
-        PoToolDbContext context,
-        BuildQualityScopeLoader scopeLoader,
+        IBuildQualityReadStore readStore,
         IBuildQualityProvider buildQualityProvider)
     {
-        _context = context;
-        _scopeLoader = scopeLoader;
+        _readStore = readStore;
         _buildQualityProvider = buildQualityProvider;
     }
 
@@ -31,16 +26,14 @@ public sealed class GetBuildQualityPipelineDetailQueryHandler
         GetBuildQualityPipelineDetailQuery query,
         CancellationToken cancellationToken)
     {
-        var sprint = await _context.Sprints
-            .AsNoTracking()
-            .FirstOrDefaultAsync(sprint => sprint.Id == query.SprintId, cancellationToken);
+        var sprint = await _readStore.GetSprintWindowAsync(query.SprintId, cancellationToken);
 
         if (sprint is null || !sprint.StartDateUtc.HasValue || !sprint.EndDateUtc.HasValue)
         {
             return BuildEmptyResult(query);
         }
 
-        var selection = await _scopeLoader.LoadAsync(
+        var selection = await _readStore.GetScopeSelectionAsync(
             query.ProductOwnerId,
             sprint.StartDateUtc.Value,
             sprint.EndDateUtc.Value,
