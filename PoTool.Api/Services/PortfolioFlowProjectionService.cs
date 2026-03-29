@@ -279,7 +279,10 @@ public class PortfolioFlowProjectionService
             if (GetResolvedProductIdAtTimestamp(currentResolvedProductId, membershipEvents, sprintEnd) == productId)
             {
                 var stateAtSprintEnd = StateReconstructionLookup.GetStateAtTimestamp(workItem.State, stateEvents, sprintEnd);
-                var stateAtSprintEndClassification = StateClassificationLookup.GetClassification(stateLookup, workItem.Type, stateAtSprintEnd);
+                var stateAtSprintEndClassification = StateClassificationLookup.GetClassification(
+                    stateLookup,
+                    workItem.Type.ToCanonicalWorkItemType(),
+                    stateAtSprintEnd);
 
                 if (stateAtSprintEndClassification != StateClassification.Removed)
                 {

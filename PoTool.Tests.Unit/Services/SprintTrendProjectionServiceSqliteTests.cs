@@ -204,7 +204,7 @@ public class SprintTrendProjectionServiceSqliteTests
             context.WorkItems.Add(new WorkItemEntity
             {
                 TfsId = 2001,
-                Type = WorkItemType.Pbi,
+                Type = "Product Backlog Item",
                 Title = "Portfolio flow PBI",
                 AreaPath = "Area",
                 IterationPath = sprint.Path,
