@@ -3,8 +3,20 @@ using PoTool.Shared.PullRequests;
 
 namespace PoTool.Api.Services;
 
+/// <summary>
+/// Cache-backed analytical pull request query store.
+/// Owns multi-PR analytical composition and filtering over the persisted PR cache.
+/// </summary>
 public interface IPullRequestQueryStore
 {
+    Task<IReadOnlyList<PullRequestDto>> GetScopedPullRequestsAsync(
+        PullRequestEffectiveFilter filter,
+        CancellationToken cancellationToken);
+
+    Task<PullRequestMetricsQueryData> GetMetricsDataAsync(
+        PullRequestEffectiveFilter filter,
+        CancellationToken cancellationToken);
+
     Task<PullRequestInsightsQueryData> GetInsightsDataAsync(
         PullRequestEffectiveFilter filter,
         CancellationToken cancellationToken);
@@ -20,6 +32,11 @@ public interface IPullRequestQueryStore
     Task<IReadOnlyList<PullRequestDto>> GetByWorkItemIdAsync(
         int workItemId,
         CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<PullRequestDto>> GetReviewBottleneckPullRequestsAsync(
+        DateTime cutoffDateUtc,
+        int maxPullRequests,
+        CancellationToken cancellationToken);
 }
 
 public sealed record PullRequestConfigurationInfo(
@@ -33,6 +50,12 @@ public sealed record PullRequestInsightsQueryData(
     IReadOnlyDictionary<int, int> IterationsByPullRequestId,
     IReadOnlyDictionary<int, int> CommentsByPullRequestId,
     IReadOnlyDictionary<int, int> DistinctFilesByPullRequestId);
+
+public sealed record PullRequestMetricsQueryData(
+    IReadOnlyList<PullRequestDto> PullRequests,
+    IReadOnlyDictionary<int, IReadOnlyList<PullRequestIterationDto>> IterationsByPullRequestId,
+    IReadOnlyDictionary<int, IReadOnlyList<PullRequestCommentDto>> CommentsByPullRequestId,
+    IReadOnlyDictionary<int, IReadOnlyList<PullRequestFileChangeDto>> FileChangesByPullRequestId);
 
 public sealed record PullRequestWorkItemNode(
     int TfsId,

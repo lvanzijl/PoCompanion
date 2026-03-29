@@ -22,15 +22,6 @@ public interface IPullRequestReadProvider
     Task<IEnumerable<PullRequestDto>> GetByProductIdsAsync(List<int>? productIds, DateTimeOffset? fromDate = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves pull requests scoped to the provided repositories and optional date range.
-    /// </summary>
-    Task<IEnumerable<PullRequestDto>> GetByRepositoryNamesAsync(
-        IReadOnlyList<string> repositoryNames,
-        DateTimeOffset? fromDate = null,
-        DateTimeOffset? toDate = null,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Retrieves a specific pull request by ID from the configured data source.
     /// </summary>
     Task<PullRequestDto?> GetByIdAsync(int pullRequestId, CancellationToken cancellationToken = default);
@@ -39,14 +30,6 @@ public interface IPullRequestReadProvider
     /// Retrieves iterations for a pull request from the configured data source.
     /// </summary>
     Task<IEnumerable<PullRequestIterationDto>> GetIterationsAsync(int pullRequestId, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Retrieves iterations for multiple pull requests from the configured data source.
-    /// </summary>
-    Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestIterationDto>>> GetIterationsForPullRequestsAsync(
-        IReadOnlyList<int> pullRequestIds,
-        IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
-        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves iterations for a pull request from the configured data source.
@@ -60,14 +43,6 @@ public interface IPullRequestReadProvider
     Task<IEnumerable<PullRequestCommentDto>> GetCommentsAsync(int pullRequestId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves comments for multiple pull requests from the configured data source.
-    /// </summary>
-    Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestCommentDto>>> GetCommentsForPullRequestsAsync(
-        IReadOnlyList<int> pullRequestIds,
-        IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Retrieves comments for a pull request from the configured data source.
     /// Optimized version that accepts repository name to avoid redundant lookups.
     /// </summary>
@@ -77,14 +52,6 @@ public interface IPullRequestReadProvider
     /// Retrieves file changes for a pull request from the configured data source.
     /// </summary>
     Task<IEnumerable<PullRequestFileChangeDto>> GetFileChangesAsync(int pullRequestId, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Retrieves file changes for multiple pull requests from the configured data source.
-    /// </summary>
-    Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestFileChangeDto>>> GetFileChangesForPullRequestsAsync(
-        IReadOnlyList<int> pullRequestIds,
-        IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
-        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves file changes for a pull request from the configured data source.

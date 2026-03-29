@@ -129,46 +129,6 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         return allPullRequests;
     }
 
-    public async Task<IEnumerable<PullRequestDto>> GetByRepositoryNamesAsync(
-        IReadOnlyList<string> repositoryNames,
-        DateTimeOffset? fromDate = null,
-        DateTimeOffset? toDate = null,
-        CancellationToken cancellationToken = default)
-    {
-        EnsureLiveUsageAllowed(nameof(GetByRepositoryNamesAsync));
-        _logger.LogWarning("LivePullRequestReadProvider.{Method} called — may indicate cache bypass", nameof(GetByRepositoryNamesAsync));
-        _logger.LogDebug(
-            "LivePullRequestReadProvider: Fetching pull requests for repositories {RepositoryNames} (fromDate: {FromDate}, toDate: {ToDate})",
-            string.Join(", ", repositoryNames),
-            fromDate,
-            toDate);
-
-        if (repositoryNames.Count == 0)
-        {
-            return Array.Empty<PullRequestDto>();
-        }
-
-        var allPullRequests = new List<PullRequestDto>();
-        foreach (var repositoryName in repositoryNames)
-        {
-            try
-            {
-                var repositoryPullRequests = await _tfsClient.GetPullRequestsAsync(
-                    repositoryName,
-                    fromDate,
-                    toDate,
-                    cancellationToken);
-                allPullRequests.AddRange(repositoryPullRequests);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to fetch PRs from repository {RepositoryName}", repositoryName);
-            }
-        }
-
-        return allPullRequests;
-    }
-
     public async Task<PullRequestDto?> GetByIdAsync(int pullRequestId, CancellationToken cancellationToken = default)
     {
         EnsureLiveUsageAllowed(nameof(GetByIdAsync));
@@ -237,34 +197,6 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         return await _tfsClient.GetPullRequestIterationsAsync(pullRequestId, pr.RepositoryName, cancellationToken);
     }
 
-    public async Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestIterationDto>>> GetIterationsForPullRequestsAsync(
-        IReadOnlyList<int> pullRequestIds,
-        IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
-        CancellationToken cancellationToken = default)
-    {
-        EnsureLiveUsageAllowed(nameof(GetIterationsForPullRequestsAsync));
-        var repositoryNames = await ResolveRepositoryNamesAsync(pullRequestIds, repositoryNamesByPullRequestId, cancellationToken);
-        if (repositoryNames.Count == 0)
-        {
-            return EmptyLookup<PullRequestIterationDto>();
-        }
-
-        _logger.LogDebug(
-            "LivePullRequestReadProvider: Fetching iterations for {PullRequestCount} pull requests from TFS using batch facade",
-            repositoryNames.Count);
-
-        var tasks = repositoryNames.Select(async entry =>
-        {
-            var iterations = (await _tfsClient.GetPullRequestIterationsAsync(entry.Key, entry.Value, cancellationToken))
-                .OrderBy(iteration => iteration.IterationNumber)
-                .ToList();
-            return new KeyValuePair<int, IReadOnlyList<PullRequestIterationDto>>(entry.Key, iterations);
-        });
-
-        var results = await Task.WhenAll(tasks);
-        return results.ToDictionary(result => result.Key, result => result.Value);
-    }
-
     public async Task<IEnumerable<PullRequestIterationDto>> GetIterationsAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default)
     {
         EnsureLiveUsageAllowed(nameof(GetIterationsAsync));
@@ -290,35 +222,6 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         
         // Fetch comments from TFS
         return await _tfsClient.GetPullRequestCommentsAsync(pullRequestId, pr.RepositoryName, cancellationToken);
-    }
-
-    public async Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestCommentDto>>> GetCommentsForPullRequestsAsync(
-        IReadOnlyList<int> pullRequestIds,
-        IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
-        CancellationToken cancellationToken = default)
-    {
-        EnsureLiveUsageAllowed(nameof(GetCommentsForPullRequestsAsync));
-        var repositoryNames = await ResolveRepositoryNamesAsync(pullRequestIds, repositoryNamesByPullRequestId, cancellationToken);
-        if (repositoryNames.Count == 0)
-        {
-            return EmptyLookup<PullRequestCommentDto>();
-        }
-
-        _logger.LogDebug(
-            "LivePullRequestReadProvider: Fetching comments for {PullRequestCount} pull requests from TFS using batch facade",
-            repositoryNames.Count);
-
-        var tasks = repositoryNames.Select(async entry =>
-        {
-            var comments = (await _tfsClient.GetPullRequestCommentsAsync(entry.Key, entry.Value, cancellationToken))
-                .OrderBy(comment => comment.CreatedDate)
-                .ThenBy(comment => comment.Id)
-                .ToList();
-            return new KeyValuePair<int, IReadOnlyList<PullRequestCommentDto>>(entry.Key, comments);
-        });
-
-        var results = await Task.WhenAll(tasks);
-        return results.ToDictionary(result => result.Key, result => result.Value);
     }
 
     public async Task<IEnumerable<PullRequestCommentDto>> GetCommentsAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default)
@@ -358,50 +261,6 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         return await _tfsClient.GetPullRequestFileChangesAsync(pullRequestId, pr.RepositoryName, latestIteration.IterationNumber, cancellationToken);
     }
 
-    public async Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestFileChangeDto>>> GetFileChangesForPullRequestsAsync(
-        IReadOnlyList<int> pullRequestIds,
-        IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId = null,
-        CancellationToken cancellationToken = default)
-    {
-        EnsureLiveUsageAllowed(nameof(GetFileChangesForPullRequestsAsync));
-        var repositoryNames = await ResolveRepositoryNamesAsync(pullRequestIds, repositoryNamesByPullRequestId, cancellationToken);
-        if (repositoryNames.Count == 0)
-        {
-            return EmptyLookup<PullRequestFileChangeDto>();
-        }
-
-        _logger.LogDebug(
-            "LivePullRequestReadProvider: Fetching file changes for {PullRequestCount} pull requests from TFS using batch facade",
-            repositoryNames.Count);
-
-        var iterationsByPullRequestId = await GetIterationsForPullRequestsAsync(
-            repositoryNames.Keys.ToArray(),
-            repositoryNames,
-            cancellationToken);
-        var tasks = repositoryNames.Select(async entry =>
-        {
-            if (!iterationsByPullRequestId.TryGetValue(entry.Key, out var iterations) || iterations.Count == 0)
-            {
-                return new KeyValuePair<int, IReadOnlyList<PullRequestFileChangeDto>>(entry.Key, Array.Empty<PullRequestFileChangeDto>());
-            }
-
-            var latestIteration = iterations.OrderByDescending(iteration => iteration.IterationNumber).First();
-            var fileChanges = (await _tfsClient.GetPullRequestFileChangesAsync(
-                    entry.Key,
-                    entry.Value,
-                    latestIteration.IterationNumber,
-                    cancellationToken))
-                .OrderBy(fileChange => fileChange.IterationId)
-                .ThenBy(fileChange => fileChange.FilePath)
-                .ToList();
-
-            return new KeyValuePair<int, IReadOnlyList<PullRequestFileChangeDto>>(entry.Key, fileChanges);
-        });
-
-        var results = await Task.WhenAll(tasks);
-        return results.ToDictionary(result => result.Key, result => result.Value);
-    }
-
     public async Task<IEnumerable<PullRequestFileChangeDto>> GetFileChangesAsync(int pullRequestId, string repositoryName, CancellationToken cancellationToken = default)
     {
         EnsureLiveUsageAllowed(nameof(GetFileChangesAsync));
@@ -420,45 +279,6 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
         // Fetch file changes from TFS directly using provided repository name
         return await _tfsClient.GetPullRequestFileChangesAsync(pullRequestId, repositoryName, latestIteration.IterationNumber, cancellationToken);
     }
-
-    private async Task<IReadOnlyDictionary<int, string>> ResolveRepositoryNamesAsync(
-        IReadOnlyList<int> pullRequestIds,
-        IReadOnlyDictionary<int, string>? repositoryNamesByPullRequestId,
-        CancellationToken cancellationToken)
-    {
-        var normalizedPullRequestIds = pullRequestIds
-            .Distinct()
-            .OrderBy(id => id)
-            .ToArray();
-
-        if (normalizedPullRequestIds.Length == 0)
-        {
-            return new Dictionary<int, string>();
-        }
-
-        if (repositoryNamesByPullRequestId != null
-            && normalizedPullRequestIds.All(repositoryNamesByPullRequestId.ContainsKey))
-        {
-            return normalizedPullRequestIds.ToDictionary(
-                pullRequestId => pullRequestId,
-                pullRequestId => repositoryNamesByPullRequestId[pullRequestId]);
-        }
-
-        var resolved = new Dictionary<int, string>();
-        foreach (var pullRequestId in normalizedPullRequestIds)
-        {
-            var pullRequest = await GetByIdAsync(pullRequestId, cancellationToken);
-            if (!string.IsNullOrWhiteSpace(pullRequest?.RepositoryName))
-            {
-                resolved[pullRequestId] = pullRequest.RepositoryName;
-            }
-        }
-
-        return resolved;
-    }
-
-    private static IReadOnlyDictionary<int, IReadOnlyList<TDto>> EmptyLookup<TDto>()
-        => new Dictionary<int, IReadOnlyList<TDto>>();
 
     private void EnsureLiveUsageAllowed(string method)
     {

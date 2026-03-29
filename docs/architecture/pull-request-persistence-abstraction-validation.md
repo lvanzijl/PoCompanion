@@ -1,5 +1,7 @@
 # Pull Request Persistence Abstraction Validation
 
+> **Historical note:** This document reflects the architecture state **before** the analytical read-path consolidation implemented afterward. For the current steady-state architecture, see `/home/runner/work/PoCompanion/PoCompanion/docs/architecture/pull-request-analytical-read-consolidation.md`.
+
 ## Summary
 
 **Overall validation result: Partially correct**

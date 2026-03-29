@@ -43,6 +43,34 @@ public sealed class EfPullRequestQueryStore : IPullRequestQueryStore
             distinctFilesByPullRequestId);
     }
 
+    public async Task<IReadOnlyList<PullRequestDto>> GetScopedPullRequestsAsync(
+        PullRequestEffectiveFilter filter,
+        CancellationToken cancellationToken)
+    {
+        return await LoadScopedPullRequestsAsync(filter, cancellationToken);
+    }
+
+    public async Task<PullRequestMetricsQueryData> GetMetricsDataAsync(
+        PullRequestEffectiveFilter filter,
+        CancellationToken cancellationToken)
+    {
+        var pullRequests = await LoadScopedPullRequestsAsync(filter, cancellationToken);
+        var pullRequestIds = pullRequests
+            .Select(pullRequest => pullRequest.Id)
+            .Distinct()
+            .ToArray();
+
+        var iterationsByPullRequestId = await LoadIterationsByPullRequestIdAsync(pullRequestIds, cancellationToken);
+        var commentsByPullRequestId = await LoadCommentsByPullRequestIdAsync(pullRequestIds, cancellationToken);
+        var fileChangesByPullRequestId = await LoadFileChangesByPullRequestIdAsync(pullRequestIds, cancellationToken);
+
+        return new PullRequestMetricsQueryData(
+            pullRequests,
+            iterationsByPullRequestId,
+            commentsByPullRequestId,
+            fileChangesByPullRequestId);
+    }
+
     public async Task<PrDeliveryInsightsQueryData> GetDeliveryInsightsDataAsync(
         PullRequestEffectiveFilter filter,
         CancellationToken cancellationToken)
@@ -176,6 +204,26 @@ public sealed class EfPullRequestQueryStore : IPullRequestQueryStore
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<PullRequestDto>> GetReviewBottleneckPullRequestsAsync(
+        DateTime cutoffDateUtc,
+        int maxPullRequests,
+        CancellationToken cancellationToken)
+    {
+        if (maxPullRequests <= 0)
+        {
+            return Array.Empty<PullRequestDto>();
+        }
+
+        return await _context.PullRequests
+            .AsNoTracking()
+            .Where(pullRequest => pullRequest.CreatedDateUtc >= cutoffDateUtc)
+            .OrderByDescending(pullRequest => pullRequest.CreatedDateUtc)
+            .ThenByDescending(pullRequest => pullRequest.Id)
+            .Take(maxPullRequests)
+            .Select(MapPullRequestProjection())
+            .ToListAsync(cancellationToken);
+    }
+
     private async Task<string?> LoadTeamNameAsync(
         PullRequestEffectiveFilter filter,
         CancellationToken cancellationToken)
@@ -282,6 +330,112 @@ public sealed class EfPullRequestQueryStore : IPullRequestQueryStore
                 group => group.Key,
                 group => group.Select(fileChange => fileChange.FilePath).Distinct().Count());
     }
+
+    private async Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestIterationDto>>> LoadIterationsByPullRequestIdAsync(
+        IReadOnlyList<int> pullRequestIds,
+        CancellationToken cancellationToken)
+    {
+        if (pullRequestIds.Count == 0)
+        {
+            return EmptyLookup<PullRequestIterationDto>();
+        }
+
+        var entities = await _context.PullRequestIterations
+            .AsNoTracking()
+            .Where(iteration => pullRequestIds.Contains(iteration.PullRequestId))
+            .OrderBy(iteration => iteration.PullRequestId)
+            .ThenBy(iteration => iteration.IterationNumber)
+            .ToListAsync(cancellationToken);
+
+        return GroupByPullRequestId(
+            entities,
+            static iteration => iteration.PullRequestId,
+            static iteration => new PullRequestIterationDto(
+                iteration.PullRequestId,
+                iteration.IterationNumber,
+                iteration.CreatedDate,
+                iteration.UpdatedDate,
+                iteration.CommitCount,
+                iteration.ChangeCount));
+    }
+
+    private async Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestCommentDto>>> LoadCommentsByPullRequestIdAsync(
+        IReadOnlyList<int> pullRequestIds,
+        CancellationToken cancellationToken)
+    {
+        if (pullRequestIds.Count == 0)
+        {
+            return EmptyLookup<PullRequestCommentDto>();
+        }
+
+        var entities = await _context.PullRequestComments
+            .AsNoTracking()
+            .Where(comment => pullRequestIds.Contains(comment.PullRequestId))
+            .OrderBy(comment => comment.PullRequestId)
+            .ThenBy(comment => comment.CreatedDateUtc)
+            .ThenBy(comment => comment.InternalId)
+            .ToListAsync(cancellationToken);
+
+        return GroupByPullRequestId(
+            entities,
+            static comment => comment.PullRequestId,
+            static comment => new PullRequestCommentDto(
+                comment.Id,
+                comment.PullRequestId,
+                comment.ThreadId,
+                comment.Author,
+                comment.Content,
+                comment.CreatedDate,
+                comment.UpdatedDate,
+                comment.IsResolved,
+                comment.ResolvedDate,
+                comment.ResolvedBy));
+    }
+
+    private async Task<IReadOnlyDictionary<int, IReadOnlyList<PullRequestFileChangeDto>>> LoadFileChangesByPullRequestIdAsync(
+        IReadOnlyList<int> pullRequestIds,
+        CancellationToken cancellationToken)
+    {
+        if (pullRequestIds.Count == 0)
+        {
+            return EmptyLookup<PullRequestFileChangeDto>();
+        }
+
+        var entities = await _context.PullRequestFileChanges
+            .AsNoTracking()
+            .Where(fileChange => pullRequestIds.Contains(fileChange.PullRequestId))
+            .OrderBy(fileChange => fileChange.PullRequestId)
+            .ThenBy(fileChange => fileChange.IterationId)
+            .ThenBy(fileChange => fileChange.FilePath)
+            .ToListAsync(cancellationToken);
+
+        return GroupByPullRequestId(
+            entities,
+            static fileChange => fileChange.PullRequestId,
+            static fileChange => new PullRequestFileChangeDto(
+                fileChange.PullRequestId,
+                fileChange.IterationId,
+                fileChange.FilePath,
+                fileChange.ChangeType,
+                fileChange.LinesAdded,
+                fileChange.LinesDeleted,
+                fileChange.LinesModified));
+    }
+
+    private static IReadOnlyDictionary<int, IReadOnlyList<TDto>> GroupByPullRequestId<TEntity, TDto>(
+        IEnumerable<TEntity> entities,
+        Func<TEntity, int> getPullRequestId,
+        Func<TEntity, TDto> map)
+    {
+        return entities
+            .GroupBy(getPullRequestId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<TDto>)group.Select(map).ToList());
+    }
+
+    private static IReadOnlyDictionary<int, IReadOnlyList<TDto>> EmptyLookup<TDto>()
+        => new Dictionary<int, IReadOnlyList<TDto>>();
 
     private static Expression<Func<PullRequestEntity, PullRequestDto>> MapPullRequestProjection()
     {
