@@ -2,35 +2,30 @@ using Mediator;
 using PoTool.Api.Configuration;
 using PoTool.Api.Services;
 using PoTool.Api.Services.MockData;
-using PoTool.Core.Contracts;
 using PoTool.Shared.WorkItems;
-using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Queries;
 
 namespace PoTool.Api.Handlers.WorkItems;
 
 /// <summary>
 /// Handler for retrieving work items based on configured Goals.
-/// Uses product-scoped hierarchical loading or loads directly by goal IDs.
-/// Uses read provider to support both Live and Cached modes.
+/// Uses the cache-backed analytical query boundary for cached goal hierarchy reads,
+/// while keeping mock/runtime behavior explicit in the handler.
 /// </summary>
 public class GetGoalHierarchyQueryHandler : IQueryHandler<GetGoalHierarchyQuery, IEnumerable<WorkItemDto>>
 {
-    private readonly IWorkItemReadProvider _workItemReadProvider;
-    private readonly IProductRepository _productRepository;
+    private readonly IWorkItemQuery _workItemQuery;
     private readonly BattleshipMockDataFacade? _mockDataFacade;
     private readonly TfsRuntimeMode _runtimeMode;
     private readonly ILogger<GetGoalHierarchyQueryHandler> _logger;
 
     public GetGoalHierarchyQueryHandler(
-        IWorkItemReadProvider workItemReadProvider,
-        IProductRepository productRepository,
+        IWorkItemQuery workItemQuery,
         TfsRuntimeMode runtimeMode,
         ILogger<GetGoalHierarchyQueryHandler> logger,
         BattleshipMockDataFacade? mockDataFacade = null)
     {
-        _workItemReadProvider = workItemReadProvider;
-        _productRepository = productRepository;
+        _workItemQuery = workItemQuery;
         _mockDataFacade = mockDataFacade;
         _runtimeMode = runtimeMode;
         _logger = logger;
@@ -46,11 +41,9 @@ public class GetGoalHierarchyQueryHandler : IQueryHandler<GetGoalHierarchyQuery,
             return _mockDataFacade!.GetMockHierarchyForGoals(query.GoalIds);
         }
 
-        // For TFS mode, use hierarchical loading by goal IDs (goals are product roots)
-        _logger.LogDebug("Loading hierarchy for {Count} goals: {GoalIds}", 
+        _logger.LogDebug("Loading cached analytical goal hierarchy for {Count} goals: {GoalIds}",
             query.GoalIds.Count, string.Join(", ", query.GoalIds));
-        
-        // Load hierarchically using the goal IDs as roots
-        return await _workItemReadProvider.GetByRootIdsAsync(query.GoalIds.ToArray(), cancellationToken);
+
+        return await _workItemQuery.GetGoalHierarchyAsync(query.GoalIds, cancellationToken);
     }
 }
