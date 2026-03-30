@@ -42,10 +42,12 @@ public sealed class PipelineFilterResolutionService
         var issues = new List<FilterValidationIssue>();
         ValidateRequestedFilter(requestedFilter, issues);
 
-        var effectiveProductIds = await ResolveProductIdsAsync(
-            request.ProductOwnerId,
+        var ownerProductIds = await LoadOwnerProductIdsAsync(request.ProductOwnerId, cancellationToken);
+        var effectiveProductIds = ResolveProductIds(
             requestedFilter.ProductIds,
-            cancellationToken);
+            ownerProductIds,
+            request.ProductOwnerId.HasValue,
+            issues);
 
         var repositoryUniverse = await LoadRepositoryUniverseAsync(effectiveProductIds, cancellationToken);
         var repositoryScope = requestedFilter.RepositoryIds.IsAll
@@ -175,29 +177,68 @@ public sealed class PipelineFilterResolutionService
         }
     }
 
-    private async Task<FilterSelection<int>> ResolveProductIdsAsync(
+    private async Task<IReadOnlyList<int>> LoadOwnerProductIdsAsync(
         int? productOwnerId,
-        FilterSelection<int> requestedProductIds,
         CancellationToken cancellationToken)
     {
-        if (!requestedProductIds.IsAll)
-        {
-            return FilterSelection<int>.Selected(requestedProductIds.Values.Where(value => value > 0).Distinct());
-        }
-
         if (!productOwnerId.HasValue)
         {
-            return FilterSelection<int>.All();
+            return Array.Empty<int>();
         }
 
-        var productIds = await _context.Products
+        return await _context.Products
             .AsNoTracking()
             .Where(product => product.ProductOwnerId == productOwnerId.Value)
             .Select(product => product.Id)
             .OrderBy(id => id)
             .ToArrayAsync(cancellationToken);
+    }
 
-        return FilterSelection<int>.Selected(productIds);
+    private static FilterSelection<int> ResolveProductIds(
+        FilterSelection<int> requestedProductIds,
+        IReadOnlyList<int> ownerProductIds,
+        bool hasOwnerScope,
+        ICollection<FilterValidationIssue> issues)
+    {
+        if (hasOwnerScope && ownerProductIds.Count == 0)
+        {
+            return FilterSelection<int>.Selected(Array.Empty<int>());
+        }
+
+        if (requestedProductIds.IsAll)
+        {
+            return hasOwnerScope
+                ? FilterSelection<int>.Selected(ownerProductIds)
+                : FilterSelection<int>.All();
+        }
+
+        var normalizedRequestedIds = requestedProductIds.Values
+            .Where(value => value > 0)
+            .Distinct()
+            .OrderBy(id => id)
+            .ToArray();
+
+        if (normalizedRequestedIds.Length == 0)
+        {
+            issues.Add(new FilterValidationIssue(nameof(PipelineFilterContext.ProductIds), "Product selection cannot be empty when not using ALL."));
+            return hasOwnerScope
+                ? FilterSelection<int>.Selected(ownerProductIds)
+                : FilterSelection<int>.All();
+        }
+
+        if (!hasOwnerScope)
+        {
+            return FilterSelection<int>.Selected(normalizedRequestedIds);
+        }
+
+        var ownerProductSet = ownerProductIds.ToHashSet();
+        if (normalizedRequestedIds.Any(id => !ownerProductSet.Contains(id)))
+        {
+            issues.Add(new FilterValidationIssue(nameof(PipelineFilterContext.ProductIds), "One or more selected products are outside the product owner's scope and were replaced with all owner products."));
+            return FilterSelection<int>.Selected(ownerProductIds);
+        }
+
+        return FilterSelection<int>.Selected(normalizedRequestedIds);
     }
 
     private async Task<IReadOnlyList<int>> LoadRepositoryUniverseAsync(
@@ -376,9 +417,9 @@ public sealed class PipelineFilterResolutionService
     }
 
     private static FilterSelection<int> ToIntSelection(IReadOnlyList<int>? values)
-        => values is { Count: > 0 }
-            ? FilterSelection<int>.Selected(values)
-            : FilterSelection<int>.All();
+        => values is null
+            ? FilterSelection<int>.All()
+            : FilterSelection<int>.Selected(values);
 
     private sealed record PipelineDefinitionScope(
         int PipelineDefinitionId,
