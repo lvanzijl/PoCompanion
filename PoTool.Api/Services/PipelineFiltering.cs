@@ -24,12 +24,12 @@ internal static class PipelineFiltering
 
         if (filter.RangeStartUtc.HasValue)
         {
-            filtered = filtered.Where(run => run.StartTime.HasValue && run.StartTime.Value >= filter.RangeStartUtc.Value);
+            filtered = filtered.Where(run => run.FinishTime.HasValue && run.FinishTime.Value >= filter.RangeStartUtc.Value);
         }
 
         if (filter.RangeEndUtc.HasValue)
         {
-            filtered = filtered.Where(run => run.StartTime.HasValue && run.StartTime.Value <= filter.RangeEndUtc.Value);
+            filtered = filtered.Where(run => run.FinishTime.HasValue && run.FinishTime.Value <= filter.RangeEndUtc.Value);
         }
 
         filtered = filtered.Where(run =>

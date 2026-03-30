@@ -48,7 +48,8 @@ public interface ICacheStateRepository
     /// <param name="pipelineCount">Count of pipeline runs in cache.</param>
     /// <param name="workItemWatermark">New work item watermark.</param>
     /// <param name="pullRequestWatermark">New pull request watermark.</param>
-    /// <param name="pipelineWatermark">New pipeline watermark.</param>
+    /// <param name="pipelineWatermark">Compatibility pipeline watermark anchored on start time.</param>
+    /// <param name="pipelineFinishWatermark">Canonical pipeline watermark anchored on finish time.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task MarkSyncSuccessAsync(
         int productOwnerId,
@@ -58,6 +59,7 @@ public interface ICacheStateRepository
         DateTimeOffset? workItemWatermark,
         DateTimeOffset? pullRequestWatermark,
         DateTimeOffset? pipelineWatermark,
+        DateTimeOffset? pipelineFinishWatermark,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -71,6 +73,7 @@ public interface ICacheStateRepository
         DateTimeOffset? workItemWatermark,
         DateTimeOffset? pullRequestWatermark,
         DateTimeOffset? pipelineWatermark,
+        DateTimeOffset? pipelineFinishWatermark,
         string? warningMessage,
         CancellationToken cancellationToken = default);
 
@@ -99,8 +102,8 @@ public interface ICacheStateRepository
     /// </summary>
     /// <param name="productOwnerId">The ProductOwner ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Tuple of watermarks (workItem, pullRequest, pipeline).</returns>
-    Task<(DateTimeOffset? WorkItem, DateTimeOffset? PullRequest, DateTimeOffset? Pipeline)> GetWatermarksAsync(
+    /// <returns>Tuple of watermarks (workItem, pullRequest, pipeline-start, pipeline-finish).</returns>
+    Task<(DateTimeOffset? WorkItem, DateTimeOffset? PullRequest, DateTimeOffset? Pipeline, DateTimeOffset? PipelineFinish)> GetWatermarksAsync(
         int productOwnerId,
         CancellationToken cancellationToken = default);
 }

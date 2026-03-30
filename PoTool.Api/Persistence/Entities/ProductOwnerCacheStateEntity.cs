@@ -67,9 +67,14 @@ public class ProductOwnerCacheStateEntity
     public DateTimeOffset? PullRequestWatermark { get; set; }
 
     /// <summary>
-    /// Watermark for pipeline incremental sync (LastRunDate).
+    /// Compatibility watermark for pipeline incremental sync anchored on run start time.
     /// </summary>
     public DateTimeOffset? PipelineWatermark { get; set; }
+
+    /// <summary>
+    /// Canonical watermark for pipeline incremental sync anchored on run finish time.
+    /// </summary>
+    public DateTimeOffset? PipelineFinishWatermark { get; set; }
 
     /// <summary>
     /// Timestamp of the last relationships snapshot build.

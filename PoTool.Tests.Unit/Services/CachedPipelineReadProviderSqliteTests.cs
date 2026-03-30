@@ -67,7 +67,7 @@ public sealed class CachedPipelineReadProviderSqliteTests
         var runs = (await _provider.GetRunsForPipelinesAsync(
                 [101, 202],
                 branchName: null,
-                minStartTime: null,
+                minFinishTime: null,
                 top: 2,
                 cancellationToken: CancellationToken.None))
             .ToList();
@@ -91,8 +91,8 @@ public sealed class CachedPipelineReadProviderSqliteTests
         var runs = (await _provider.GetRunsForPipelinesAsync(
                 [101, 202],
                 branchName: "refs/heads/release",
-                minStartTime: null,
-                maxStartTime: null,
+                minFinishTime: null,
+                maxFinishTime: null,
                 branchScope: null,
                 top: 1,
                 cancellationToken: CancellationToken.None))
@@ -115,8 +115,8 @@ public sealed class CachedPipelineReadProviderSqliteTests
         var runs = (await _provider.GetRunsForPipelinesAsync(
                 [101],
                 branchName: null,
-                minStartTime: null,
-                maxStartTime: new DateTimeOffset(2026, 3, 20, 23, 59, 59, TimeSpan.Zero),
+                minFinishTime: null,
+                maxFinishTime: new DateTimeOffset(2026, 3, 20, 23, 59, 59, TimeSpan.Zero),
                 branchScope:
                 [
                     new PoTool.Core.Pipelines.Filters.PipelineBranchScope(101, "refs/heads/main")
@@ -127,6 +127,40 @@ public sealed class CachedPipelineReadProviderSqliteTests
 
         Assert.HasCount(1, runs);
         Assert.AreEqual(3, runs[0].RunId);
+    }
+
+    [TestMethod]
+    public async Task GetRunsForPipelinesAsync_UsesFinishTimeForWindowFiltering()
+    {
+        await SeedDefinitionAsync(101, "Finish Anchor Pipeline");
+
+        await SeedRunAsync(
+            id: 1,
+            pipelineDefinitionId: 101,
+            tfsRunId: 1,
+            createdUtc: new DateTime(2026, 3, 10, 9, 0, 0, DateTimeKind.Utc),
+            finishedUtc: new DateTime(2026, 3, 15, 9, 0, 0, DateTimeKind.Utc),
+            branch: "refs/heads/main");
+        await SeedRunAsync(
+            id: 2,
+            pipelineDefinitionId: 101,
+            tfsRunId: 2,
+            createdUtc: new DateTime(2026, 3, 15, 9, 0, 0, DateTimeKind.Utc),
+            finishedUtc: new DateTime(2026, 3, 25, 9, 0, 0, DateTimeKind.Utc),
+            branch: "refs/heads/main");
+
+        var runs = (await _provider.GetRunsForPipelinesAsync(
+                [101],
+                branchName: null,
+                minFinishTime: new DateTimeOffset(2026, 3, 12, 0, 0, 0, TimeSpan.Zero),
+                maxFinishTime: new DateTimeOffset(2026, 3, 20, 23, 59, 59, TimeSpan.Zero),
+                branchScope: null,
+                top: 5,
+                cancellationToken: CancellationToken.None))
+            .ToList();
+
+        Assert.HasCount(1, runs);
+        Assert.AreEqual(1, runs[0].RunId, "Run should be selected by finish time even when start time is outside the window.");
     }
 
     private async Task SeedDefinitionAsync(int pipelineDefinitionId, string name)
@@ -176,10 +210,10 @@ public sealed class CachedPipelineReadProviderSqliteTests
         await _dbContext.SaveChangesAsync();
     }
 
-    private async Task SeedRunAsync(int id, int pipelineDefinitionId, int tfsRunId, DateTime createdUtc, string branch)
+    private async Task SeedRunAsync(int id, int pipelineDefinitionId, int tfsRunId, DateTime createdUtc, string branch, DateTime? finishedUtc = null)
     {
         var createdOffset = new DateTimeOffset(createdUtc, TimeSpan.Zero);
-        var finishedOffset = createdOffset.AddMinutes(15);
+        var finishedOffset = new DateTimeOffset(finishedUtc ?? createdUtc.AddMinutes(15), TimeSpan.Zero);
 
         _dbContext.CachedPipelineRuns.Add(new CachedPipelineRunEntity
         {

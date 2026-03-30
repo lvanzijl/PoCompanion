@@ -70,7 +70,9 @@ public class PipelineRepository : IPipelineRepository
     public Task<IEnumerable<PipelineRunDto>> GetRunsForPipelinesAsync(
         IEnumerable<int> pipelineIds,
         string? branchName = null,
-        DateTimeOffset? minStartTime = null,
+        DateTimeOffset? minFinishTime = null,
+        DateTimeOffset? maxFinishTime = null,
+        IReadOnlyList<PoTool.Core.Pipelines.Filters.PipelineBranchScope>? branchScope = null,
         int top = 100,
         CancellationToken cancellationToken = default)
     {
@@ -85,14 +87,19 @@ public class PipelineRepository : IPipelineRepository
                 filteredRuns = filteredRuns.Where(r => r.Branch == branchName);
             }
 
-            if (minStartTime.HasValue)
+            if (minFinishTime.HasValue)
             {
-                filteredRuns = filteredRuns.Where(r => r.StartTime.HasValue && r.StartTime.Value >= minStartTime.Value);
+                filteredRuns = filteredRuns.Where(r => r.FinishTime.HasValue && r.FinishTime.Value >= minFinishTime.Value);
+            }
+
+            if (maxFinishTime.HasValue)
+            {
+                filteredRuns = filteredRuns.Where(r => r.FinishTime.HasValue && r.FinishTime.Value <= maxFinishTime.Value);
             }
 
             var result = filteredRuns
                 .GroupBy(r => r.PipelineId)
-                .SelectMany(g => g.OrderByDescending(r => r.StartTime).Take(top))
+                .SelectMany(g => g.OrderByDescending(r => r.FinishTime).ThenByDescending(r => r.StartTime).Take(top))
                 .ToList();
 
             return Task.FromResult<IEnumerable<PipelineRunDto>>(result);

@@ -18,6 +18,8 @@ public class PipelineSyncStage : ISyncStage
     private readonly PoToolDbContext _context;
     private readonly ILogger<PipelineSyncStage> _logger;
 
+    public DateTimeOffset? NewStartWatermark { get; private set; }
+
     public string StageName => "SyncPipelines";
     public int StageNumber => 8;
 
@@ -49,28 +51,51 @@ public class PipelineSyncStage : ISyncStage
 
             progressCallback(0);
 
+            NewStartWatermark = context.PipelineWatermark;
+
+            var startWatermark = context.PipelineWatermark;
+            var finishWatermark = context.PipelineFinishWatermark ?? context.PipelineWatermark;
+            var trackedRunningRuns = await LoadTrackedRunningRunsAsync(
+                context.ProductOwnerId,
+                context.PipelineDefinitionIds,
+                cancellationToken);
+            var compatibilityFetchFrom = ResolveCompatibilityFetchFrom(
+                startWatermark,
+                finishWatermark,
+                trackedRunningRuns);
+
             _logger.LogInformation(
                 "PIPELINE_INGEST_STAGE_START: ProductOwner {ProductOwnerId}, pipelineDefs={PipelineCount} [{PipelineIds}], " +
-                "dateWindow from={FromDate} to=now",
+                "dateWindow from={FromDate} to=now, pipelineStartWatermark={PipelineStartWatermark}, pipelineFinishWatermark={PipelineFinishWatermark}",
                 context.ProductOwnerId,
                 context.PipelineDefinitionIds.Length,
                 string.Join(", ", context.PipelineDefinitionIds),
-                context.PipelineWatermark?.ToString("O") ?? "null (full sync)");
+                compatibilityFetchFrom?.ToString("O") ?? "null (full sync)",
+                startWatermark?.ToString("O") ?? "null",
+                finishWatermark?.ToString("O") ?? "null");
 
             // Fetch pipeline runs from TFS
             var pipelineRuns = await _tfsClient.GetPipelineRunsAsync(
                 context.PipelineDefinitionIds,
                 branchName: null,
-                minStartTime: context.PipelineWatermark,
+                minStartTime: compatibilityFetchFrom,
                 top: 100,
                 cancellationToken);
 
             var runList = pipelineRuns.ToList();
+            var diagnostics = BuildTemporalDiagnostics(
+                runList,
+                startWatermark,
+                finishWatermark,
+                trackedRunningRuns.Keys);
+            LogTemporalDiagnostics(context.ProductOwnerId, diagnostics, compatibilityFetchFrom);
+            var effectiveRuns = diagnostics.IncludedRuns;
 
             _logger.LogInformation(
-                "Fetched {Count} pipeline runs from TFS for ProductOwner {ProductOwnerId}",
+                "Fetched {FetchedCount} pipeline runs from TFS for ProductOwner {ProductOwnerId}; {IncludedCount} runs matched the migration inclusion contract",
                 runList.Count,
-                context.ProductOwnerId);
+                context.ProductOwnerId,
+                effectiveRuns.Count);
 
             var pipelineIdMapping = await _context.PipelineDefinitions
                 .Where(pd => context.PipelineDefinitionIds.Contains(pd.PipelineDefinitionId))
@@ -78,30 +103,31 @@ public class PipelineSyncStage : ISyncStage
 
             progressCallback(80);
 
-            DateTimeOffset? maxDate = null;
-            if (runList.Count != 0)
+            DateTimeOffset? maxFinishDate = finishWatermark;
+            if (effectiveRuns.Count != 0)
             {
                 // Upsert pipeline runs to database so the build anchor exists before child facts are processed.
-                maxDate = await UpsertPipelineRunsAsync(runList, context.ProductOwnerId, pipelineIdMapping, progressCallback, cancellationToken);
+                maxFinishDate = await UpsertPipelineRunsAsync(effectiveRuns, context.ProductOwnerId, pipelineIdMapping, progressCallback, cancellationToken);
             }
 
             var buildQualityResult = await SyncBuildQualityFactsAsync(
                 context.ProductOwnerId,
                 pipelineIdMapping.Values.ToArray(),
-                runList,
+                effectiveRuns,
                 cancellationToken);
 
             progressCallback(100);
 
             _logger.LogInformation(
-                "Successfully synced {Count} pipeline runs for ProductOwner {ProductOwnerId}, new watermark: {Watermark}",
-                runList.Count,
+                "Successfully synced {Count} pipeline runs for ProductOwner {ProductOwnerId}, new finish watermark: {Watermark}, new start watermark: {StartWatermark}",
+                effectiveRuns.Count,
                 context.ProductOwnerId,
-                maxDate?.ToString("O") ?? "none");
+                maxFinishDate?.ToString("O") ?? "none",
+                NewStartWatermark?.ToString("O") ?? "none");
 
             return SyncStageResult.CreateSuccess(
-                runList.Count,
-                maxDate ?? context.PipelineWatermark,
+                effectiveRuns.Count,
+                maxFinishDate ?? finishWatermark,
                 buildQualityResult.HasWarnings,
                 buildQualityResult.WarningMessage);
         }
@@ -118,14 +144,15 @@ public class PipelineSyncStage : ISyncStage
     }
 
     private async Task<DateTimeOffset?> UpsertPipelineRunsAsync(
-        List<PipelineRunDto> runs,
+        IReadOnlyList<PipelineRunDto> runs,
         int productOwnerId,
         Dictionary<int, int> pipelineIdMapping,
         Action<int> progressCallback,
         CancellationToken cancellationToken)
     {
         const int batchSize = 100;
-        DateTimeOffset? maxDate = null;
+        DateTimeOffset? maxFinishDate = null;
+        var maxStartDate = NewStartWatermark;
 
         // Build unique key set for existing runs
         var runKeys = runs
@@ -164,10 +191,15 @@ public class PipelineSyncStage : ISyncStage
                     continue; // Skip runs for unknown pipelines
                 }
 
-                // Track max finish date for watermark
-                if (dto.FinishTime.HasValue && (maxDate == null || dto.FinishTime > maxDate))
+                if (dto.StartTime.HasValue && (!maxStartDate.HasValue || dto.StartTime > maxStartDate))
                 {
-                    maxDate = dto.FinishTime;
+                    maxStartDate = dto.StartTime;
+                }
+
+                // Track max finish date for watermark
+                if (dto.FinishTime.HasValue && (maxFinishDate == null || dto.FinishTime > maxFinishDate))
+                {
+                    maxFinishDate = dto.FinishTime;
                 }
 
                 var key = (internalPipelineDefId, dto.RunId);
@@ -192,7 +224,8 @@ public class PipelineSyncStage : ISyncStage
             progressCallback(Math.Min(percent, 99));
         }
 
-        return maxDate;
+        NewStartWatermark = maxStartDate;
+        return maxFinishDate;
     }
 
     private async Task<BuildQualitySyncResult> SyncBuildQualityFactsAsync(
@@ -595,6 +628,157 @@ public class PipelineSyncStage : ISyncStage
         return 1;
     }
 
+    private async Task<Dictionary<(int PipelineId, int RunId), DateTimeOffset?>> LoadTrackedRunningRunsAsync(
+        int productOwnerId,
+        IReadOnlyCollection<int> pipelineDefinitionIds,
+        CancellationToken cancellationToken)
+    {
+        if (pipelineDefinitionIds.Count == 0)
+        {
+            return new Dictionary<(int PipelineId, int RunId), DateTimeOffset?>();
+        }
+
+        return await _context.CachedPipelineRuns
+            .AsNoTracking()
+            .Where(run =>
+                run.ProductOwnerId == productOwnerId
+                && pipelineDefinitionIds.Contains(run.PipelineDefinition.PipelineDefinitionId)
+                && !run.FinishedDateUtc.HasValue)
+            .Select(run => new
+            {
+                PipelineId = run.PipelineDefinition.PipelineDefinitionId,
+                RunId = run.TfsRunId,
+                run.CreatedDate
+            })
+            .ToDictionaryAsync(
+                run => (run.PipelineId, run.RunId),
+                run => run.CreatedDate,
+                cancellationToken);
+    }
+
+    private static DateTimeOffset? ResolveCompatibilityFetchFrom(
+        DateTimeOffset? startWatermark,
+        DateTimeOffset? finishWatermark,
+        IReadOnlyDictionary<(int PipelineId, int RunId), DateTimeOffset?> trackedRunningRuns)
+    {
+        var candidates = new List<DateTimeOffset>();
+
+        if (startWatermark.HasValue)
+        {
+            candidates.Add(startWatermark.Value);
+        }
+
+        if (finishWatermark.HasValue)
+        {
+            candidates.Add(finishWatermark.Value);
+        }
+
+        candidates.AddRange(trackedRunningRuns.Values
+            .Where(value => value.HasValue)
+            .Select(value => value!.Value));
+
+        return candidates.Count == 0
+            ? null
+            : candidates.Min();
+    }
+
+    private static PipelineTemporalDiagnostics BuildTemporalDiagnostics(
+        IReadOnlyCollection<PipelineRunDto> fetchedRuns,
+        DateTimeOffset? startWatermark,
+        DateTimeOffset? finishWatermark,
+        IEnumerable<(int PipelineId, int RunId)> trackedRunningRunKeys)
+    {
+        var trackedRunningSet = trackedRunningRunKeys.ToHashSet();
+        var seenKeys = new HashSet<(int PipelineId, int RunId)>();
+        var duplicateCount = 0;
+        var completedWithoutFinishCount = 0;
+        var finishOnlyCount = 0;
+        var startOnlyCount = 0;
+        var crossingBoundaryCount = 0;
+        var includedRuns = new List<PipelineRunDto>();
+
+        foreach (var run in fetchedRuns)
+        {
+            var key = (run.PipelineId, run.RunId);
+            if (!seenKeys.Add(key))
+            {
+                duplicateCount++;
+            }
+
+            var matchesStartWindow = !startWatermark.HasValue
+                || (run.StartTime.HasValue && run.StartTime.Value >= startWatermark.Value);
+            var matchesFinishWindow = !finishWatermark.HasValue
+                || (run.FinishTime.HasValue && run.FinishTime.Value >= finishWatermark.Value);
+            var trackedRunning = trackedRunningSet.Contains(key);
+            var shouldInclude = !startWatermark.HasValue && !finishWatermark.HasValue
+                || matchesStartWindow
+                || matchesFinishWindow
+                || trackedRunning;
+
+            if (!run.FinishTime.HasValue
+                && run.Result is not PipelineRunResult.Unknown and not PipelineRunResult.None)
+            {
+                completedWithoutFinishCount++;
+            }
+
+            if (matchesStartWindow && !matchesFinishWindow)
+            {
+                startOnlyCount++;
+            }
+
+            if (!matchesStartWindow && matchesFinishWindow)
+            {
+                finishOnlyCount++;
+            }
+
+            if (startWatermark.HasValue
+                && finishWatermark.HasValue
+                && run.StartTime.HasValue
+                && run.FinishTime.HasValue
+                && run.StartTime.Value < startWatermark.Value
+                && run.FinishTime.Value >= finishWatermark.Value)
+            {
+                crossingBoundaryCount++;
+            }
+
+            if (shouldInclude)
+            {
+                includedRuns.Add(run);
+            }
+        }
+
+        return new PipelineTemporalDiagnostics(
+            fetchedRuns.Count,
+            includedRuns,
+            crossingBoundaryCount,
+            startOnlyCount,
+            finishOnlyCount,
+            duplicateCount,
+            trackedRunningSet.Count,
+            includedRuns.Count(run => !run.FinishTime.HasValue),
+            completedWithoutFinishCount);
+    }
+
+    private void LogTemporalDiagnostics(
+        int productOwnerId,
+        PipelineTemporalDiagnostics diagnostics,
+        DateTimeOffset? compatibilityFetchFrom)
+    {
+        _logger.LogInformation(
+            "PIPELINE_TIME_SEMANTICS_DIAGNOSTICS: productOwnerId={ProductOwnerId}, fetchedRunCount={FetchedRunCount}, includedRunCount={IncludedRunCount}, compatibilityFetchFrom={CompatibilityFetchFrom}, trackedRunningRunCount={TrackedRunningRunCount}, crossingBoundaryCount={CrossingBoundaryCount}, startOnlyInclusionCount={StartOnlyInclusionCount}, finishOnlyInclusionCount={FinishOnlyInclusionCount}, duplicateRunCount={DuplicateRunCount}, inProgressWithoutFinishCount={InProgressWithoutFinishCount}, completedWithoutFinishCount={CompletedWithoutFinishCount}",
+            productOwnerId,
+            diagnostics.FetchedRunCount,
+            diagnostics.IncludedRuns.Count,
+            compatibilityFetchFrom?.ToString("O") ?? "none",
+            diagnostics.TrackedRunningRunCount,
+            diagnostics.CrossingBoundaryCount,
+            diagnostics.StartOnlyInclusionCount,
+            diagnostics.FinishOnlyInclusionCount,
+            diagnostics.DuplicateRunCount,
+            diagnostics.InProgressWithoutFinishCount,
+            diagnostics.CompletedWithoutFinishCount);
+    }
+
     private void LogBuildQualityChildIngestSummary(
         int productOwnerId,
         long childIngestionElapsedMs,
@@ -667,6 +851,17 @@ public class PipelineSyncStage : ISyncStage
     {
         public static BuildQualitySyncResult None { get; } = new(false, null);
     }
+
+    private sealed record PipelineTemporalDiagnostics(
+        int FetchedRunCount,
+        IReadOnlyList<PipelineRunDto> IncludedRuns,
+        int CrossingBoundaryCount,
+        int StartOnlyInclusionCount,
+        int FinishOnlyInclusionCount,
+        int DuplicateRunCount,
+        int TrackedRunningRunCount,
+        int InProgressWithoutFinishCount,
+        int CompletedWithoutFinishCount);
 
     private sealed record BuildQualityPersistenceResult(
         int WarningCount,

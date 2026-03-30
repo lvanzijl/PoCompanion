@@ -267,6 +267,61 @@ public class GetPipelineMetricsQueryHandlerTests
         Assert.AreEqual(1, metrics[1].SuccessfulRuns);
     }
 
+    [TestMethod]
+    public async Task Handle_UsesFinishTimeForLastRunOrdering()
+    {
+        var query = new GetPipelineMetricsQuery(CreateFilter(
+            productIds: [1],
+            repositories: [10],
+            pipelineIds: [101],
+            branchScope: [new PipelineBranchScope(101, "refs/heads/main")]));
+
+        _mockProvider.Setup(p => p.GetRunsForPipelinesAsync(
+                It.IsAny<IEnumerable<int>>(),
+                null,
+                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<IReadOnlyList<PipelineBranchScope>>(),
+                100,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new PipelineRunDto(
+                    1,
+                    101,
+                    "Pipeline1",
+                    new DateTimeOffset(2026, 3, 1, 8, 0, 0, TimeSpan.Zero),
+                    new DateTimeOffset(2026, 3, 10, 8, 0, 0, TimeSpan.Zero),
+                    TimeSpan.FromHours(1),
+                    PipelineRunResult.Succeeded,
+                    PipelineRunTrigger.ContinuousIntegration,
+                    null,
+                    "refs/heads/main",
+                    "user1",
+                    DateTimeOffset.UtcNow),
+                new PipelineRunDto(
+                    2,
+                    101,
+                    "Pipeline1",
+                    new DateTimeOffset(2026, 3, 5, 8, 0, 0, TimeSpan.Zero),
+                    new DateTimeOffset(2026, 3, 8, 8, 0, 0, TimeSpan.Zero),
+                    TimeSpan.FromHours(1),
+                    PipelineRunResult.Failed,
+                    PipelineRunTrigger.ContinuousIntegration,
+                    null,
+                    "refs/heads/main",
+                    "user2",
+                    DateTimeOffset.UtcNow)
+            ]);
+        _mockProvider.Setup(p => p.GetByIdsAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new PipelineDto(101, "Pipeline1", PipelineType.Build, null, DateTimeOffset.UtcNow)]);
+
+        var metric = (await _handler.Handle(query, CancellationToken.None)).Single();
+
+        Assert.AreEqual(new DateTimeOffset(2026, 3, 10, 8, 0, 0, TimeSpan.Zero), metric.LastRunTime);
+        Assert.AreEqual(PipelineRunResult.Succeeded, metric.LastRunResult);
+    }
+
     private static PipelineEffectiveFilter CreateFilter(
         IReadOnlyList<int>? productIds,
         IReadOnlyList<int> repositories,

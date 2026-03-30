@@ -364,6 +364,27 @@ public class GetPipelineInsightsQueryHandlerTests
     }
 
     [TestMethod]
+    [Description("Runs that start before the sprint but finish inside the sprint are counted because analytics are finish-time anchored")]
+    public async Task Handle_RunStartingBeforeSprintButFinishingInsideWindow_IsCounted()
+    {
+        var (profileId, _, _, pipeDefId, sprintId, _) = await SeedFullScenarioAsync(seed: 81);
+        await AddRunAsync(
+            id: 1,
+            pipeDefId,
+            profileId,
+            finishedUtc: new DateTime(2026, 2, 2, 10, 0, 0, DateTimeKind.Utc),
+            result: "Succeeded",
+            startedUtc: new DateTime(2026, 1, 31, 22, 0, 0, DateTimeKind.Utc));
+
+        var result = await _handler.Handle(
+            new GetPipelineInsightsQuery(PipelineInsightTestFilters.Create(new[] { profileId }, new[] { profileId }, sprintId)),
+            CancellationToken.None);
+
+        Assert.AreEqual(1, result.TotalBuilds);
+        Assert.AreEqual(1, result.Products[0].CompletedBuilds);
+    }
+
+    [TestMethod]
     [Description("Top-3 ranking: pipeline with highest failure rate gets rank 1")]
     public async Task Handle_Top3_RankedByFailureRateDescending()
     {

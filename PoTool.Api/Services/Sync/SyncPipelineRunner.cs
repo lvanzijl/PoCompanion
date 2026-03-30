@@ -115,6 +115,7 @@ public class SyncPipelineRunner : ISyncPipeline
             SyncStageResult? workItemResult = null;
             SyncStageResult? pullRequestResult = null;
             SyncStageResult? pipelineResult = null;
+            DateTimeOffset? pipelineStartWatermark = null;
             var hasWarnings = false;
             string? warningMessage = null;
 
@@ -146,7 +147,7 @@ public class SyncPipelineRunner : ISyncPipeline
             if (activityUpdate.HasFailed)
             {
                 await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
-                    workItemResult?.NewWatermark, null, null, cts.Token);
+                    workItemResult?.NewWatermark, null, null, null, cts.Token);
                 yield break;
             }
             if (activityResult.HasWarnings)
@@ -167,7 +168,7 @@ public class SyncPipelineRunner : ISyncPipeline
                 // Sprint sync failed, but preserve work item watermark to avoid re-syncing work items.
                 // Sprint sync failures are non-critical - sprints can be re-synced in next run.
                 await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
-                    workItemResult?.NewWatermark, null, null, cts.Token);
+                    workItemResult?.NewWatermark, null, null, null, cts.Token);
                 yield break;
             }
             if (stage2Result.HasWarnings)
@@ -206,7 +207,7 @@ public class SyncPipelineRunner : ISyncPipeline
             if (stage4Update.HasFailed)
             {
                 await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
-                    workItemResult?.NewWatermark, null, null, cts.Token);
+                    workItemResult?.NewWatermark, null, null, null, cts.Token);
                 yield break;
             }
             if (stage4Result.HasWarnings)
@@ -225,7 +226,7 @@ public class SyncPipelineRunner : ISyncPipeline
             if (stage5Update.HasFailed)
             {
                 await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
-                    workItemResult?.NewWatermark, null, null, cts.Token);
+                    workItemResult?.NewWatermark, null, null, null, cts.Token);
                 yield break;
             }
             if (stage5Result.HasWarnings)
@@ -244,7 +245,7 @@ public class SyncPipelineRunner : ISyncPipeline
             if (stage6Update.HasFailed)
             {
                 await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
-                    workItemResult?.NewWatermark, null, null, cts.Token);
+                    workItemResult?.NewWatermark, null, null, null, cts.Token);
                 yield break;
             }
             pullRequestResult = stage6Result;
@@ -264,10 +265,11 @@ public class SyncPipelineRunner : ISyncPipeline
             if (stage7Update.HasFailed)
             {
                 await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
-                    workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, null, cts.Token);
+                    workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, null, null, cts.Token);
                 yield break;
             }
             pipelineResult = stage7Result;
+            pipelineStartWatermark = pipelineStage.NewStartWatermark;
             if (pipelineResult.HasWarnings)
             {
                 hasWarnings = true;
@@ -284,7 +286,7 @@ public class SyncPipelineRunner : ISyncPipeline
             if (stage8Update.HasFailed)
             {
                 await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
-                    workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, pipelineResult?.NewWatermark, cts.Token);
+                    workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, pipelineStartWatermark, pipelineResult?.NewWatermark, cts.Token);
                 yield break;
             }
             if (stage8Result.HasWarnings)
@@ -303,7 +305,7 @@ public class SyncPipelineRunner : ISyncPipeline
             if (stage9Update.HasFailed)
             {
                 await CommitPartialSuccessAsync(cacheStateRepo, productOwnerId, context,
-                    workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, pipelineResult?.NewWatermark, cts.Token);
+                    workItemResult?.NewWatermark, pullRequestResult?.NewWatermark, pipelineStartWatermark, pipelineResult?.NewWatermark, cts.Token);
                 yield break;
             }
             if (stage9Result.HasWarnings)
@@ -340,7 +342,8 @@ public class SyncPipelineRunner : ISyncPipeline
             finalizeStage.PipelineCount = pipelineCount;
             finalizeStage.WorkItemWatermark = workItemResult?.NewWatermark;
             finalizeStage.PullRequestWatermark = pullRequestResult?.NewWatermark;
-            finalizeStage.PipelineWatermark = pipelineResult?.NewWatermark;
+            finalizeStage.PipelineWatermark = pipelineStartWatermark;
+            finalizeStage.PipelineFinishWatermark = pipelineResult?.NewWatermark;
             finalizeStage.HasWarnings = hasWarnings;
             finalizeStage.WarningMessage = warningMessage;
 
@@ -442,6 +445,7 @@ public class SyncPipelineRunner : ISyncPipeline
         DateTimeOffset? workItemWatermark,
         DateTimeOffset? pullRequestWatermark,
         DateTimeOffset? pipelineWatermark,
+        DateTimeOffset? pipelineFinishWatermark,
         CancellationToken cancellationToken)
     {
         // Commit successful watermarks even if later stages failed
@@ -459,6 +463,7 @@ public class SyncPipelineRunner : ISyncPipeline
             workItemWatermark,
             pullRequestWatermark,
             pipelineWatermark,
+            pipelineFinishWatermark,
             cancellationToken);
     }
 
@@ -524,6 +529,7 @@ public class SyncPipelineRunner : ISyncPipeline
             WorkItemWatermark = watermarks.WorkItem,
             PullRequestWatermark = watermarks.PullRequest,
             PipelineWatermark = watermarks.Pipeline,
+            PipelineFinishWatermark = watermarks.PipelineFinish,
             RepositoryNames = repositories.ToArray(),
             PipelineDefinitionIds = pipelineDefinitionIds.ToArray()
         };
@@ -614,7 +620,7 @@ public class SyncPipelineRunner : ISyncPipeline
             "SYNC_EFFECTIVE_SCOPE: ProductOwner {ProductOwnerId} — " +
             "rootWorkItems={RootCount}, repos={RepoCount} [{RepoNames}], " +
             "pipelineDefs={PipelineCount} [{PipelineIds}], " +
-            "watermarks: workItem={WiWm}, pullRequest={PrWm}, pipeline={PlWm}",
+                "watermarks: workItem={WiWm}, pullRequest={PrWm}, pipelineStart={PlStartWm}, pipelineFinish={PlFinishWm}",
             syncContext.ProductOwnerId,
             syncContext.RootWorkItemIds.Length,
             syncContext.RepositoryNames.Length,
@@ -623,7 +629,8 @@ public class SyncPipelineRunner : ISyncPipeline
             string.Join(", ", syncContext.PipelineDefinitionIds),
             syncContext.WorkItemWatermark?.ToString("O") ?? "null",
             syncContext.PullRequestWatermark?.ToString("O") ?? "null",
-            syncContext.PipelineWatermark?.ToString("O") ?? "null");
+            syncContext.PipelineWatermark?.ToString("O") ?? "null",
+            syncContext.PipelineFinishWatermark?.ToString("O") ?? "null");
 
         if (syncContext.RepositoryNames.Length == 0)
         {

@@ -36,13 +36,15 @@ public interface IPipelineRepository
     /// </summary>
     /// <param name="pipelineIds">Collection of pipeline IDs to get runs for.</param>
     /// <param name="branchName">Optional branch name to filter by.</param>
-    /// <param name="minStartTime">Optional minimum start time to filter by.</param>
+    /// <param name="minFinishTime">Optional minimum finish time to filter by.</param>
     /// <param name="top">Maximum number of runs to retrieve per pipeline.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IEnumerable<PipelineRunDto>> GetRunsForPipelinesAsync(
         IEnumerable<int> pipelineIds,
         string? branchName = null,
-        DateTimeOffset? minStartTime = null,
+        DateTimeOffset? minFinishTime = null,
+        DateTimeOffset? maxFinishTime = null,
+        IReadOnlyList<PoTool.Core.Pipelines.Filters.PipelineBranchScope>? branchScope = null,
         int top = 100,
         CancellationToken cancellationToken = default);
 
