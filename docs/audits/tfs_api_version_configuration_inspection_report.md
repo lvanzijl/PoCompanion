@@ -32,9 +32,7 @@
 - The main API runtime does **not** define a checked-in `ApiVersion` appsettings key in `PoTool.Api/appsettings.json`.
 - The checked-in API config only includes `TfsIntegration.UseMockClient`; the live TFS API version is stored via the persisted TFS configuration record instead of appsettings.
 - There is one appsettings-based consumer outside the main runtime:
-  - `PoTool.Tools.TfsRetrievalValidator/appsettings.json`
   - Key: `Tfs:ApiVersion`
-  - Bound through `services.Configure<TfsConfigEntity>(configuration.GetSection("Tfs"))` in `PoTool.Tools.TfsRetrievalValidator/Program.cs`
 
 ### Defaults and fallback behavior
 

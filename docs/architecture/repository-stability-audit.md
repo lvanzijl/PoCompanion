@@ -48,7 +48,6 @@ Current state is therefore **test-baseline unstable**, not restore/build unstabl
 | `PoTool.Integrations.Tfs/PoTool.Integrations.Tfs.csproj` | Success | No issues |
 | `PoTool.Shared/PoTool.Shared.csproj` | Success | No issues |
 | `PoTool.Tests.Unit/PoTool.Tests.Unit.csproj` | Success | No issues |
-| `PoTool.Tools.TfsRetrievalValidator/PoTool.Tools.TfsRetrievalValidator.csproj` | Success | No issues |
 
 ### Root-cause grouping
 
@@ -87,7 +86,6 @@ The reported restore concern is **not reproducible in the current environment**.
 | `PoTool.Integrations.Tfs/PoTool.Integrations.Tfs.csproj` | Success | |
 | `PoTool.Shared/PoTool.Shared.csproj` | Success | |
 | `PoTool.Tests.Unit/PoTool.Tests.Unit.csproj` | Success | Test assembly builds even though runtime tests fail |
-| `PoTool.Tools.TfsRetrievalValidator/PoTool.Tools.TfsRetrievalValidator.csproj` | Success | |
 
 ### Solution build result
 
@@ -461,7 +459,6 @@ Projects in solution:
 - `PoTool.Api`
 - `PoTool.Shared`
 - `PoTool.Integrations.Tfs`
-- `PoTool.Tools.TfsRetrievalValidator`
 - `PoTool.Core.Domain`
 - `PoTool.Core.Domain.Tests`
 
@@ -471,7 +468,6 @@ Projects in solution:
 |---|---|
 | `PoTool.Api` references `PoTool.Client` | Acceptable for hosted Blazor setup; not currently breaking build |
 | `PoTool.Tests.Unit` references API, Client, Integrations, Tools, Core, Core.Domain | Broad test-project scope increases blast radius and makes the baseline noisy |
-| `PoTool.Tools.TfsRetrievalValidator` references `PoTool.Api` | Acceptable but couples tool stability to API architecture |
 
 ### Package/version observations
 

@@ -162,4 +162,4 @@ Validated generated migration with a temporary SQLite database:
 
 - Phase B still needs an explicit mapping from persisted product `EstimationMode` into runtime CDC progress-mode decisions.
 - `Mixed` and `EffortHours` are now represented explicitly but intentionally do not change current delivery-progress behavior yet.
-- If a later phase requires historical change tracking for `ProjectNumber`, `ProjectElement`, or `TimeCriticality`, `RevisionFieldWhitelist` and the historical ingestion path should be expanded deliberately with the correct OData/reporting-field mapping rather than inferred speculatively.
+- If a later phase requires historical change tracking for `ProjectNumber`, `ProjectElement`, or `TimeCriticality`, `RevisionFieldWhitelist` and the historical ingestion path should be expanded deliberately through the active revision APIs rather than inferred speculatively.

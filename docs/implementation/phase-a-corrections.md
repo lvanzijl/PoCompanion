@@ -15,13 +15,13 @@ Applied:
   - `Rhodium.Funding.ProjectNumber`
   - `Rhodium.Funding.ProjectElement`
   - `Microsoft.VSTS.Common.TimeCriticality`
-- Added OData selection/parse mappings for the same fields through `RevisionFieldWhitelist.BuildODataRevisionSelectionSpec(...)`.
+- Added the same fields to the canonical revision whitelist used by the active revision APIs.
 - Verified activity/revision ingestion accepts and persists these fields without interpreting their values.
 
 Verification:
 - `ActivityEventIngestionServiceTests.IngestAsync_PhaseACorrectionFields_ArePersistedToActivityLedger`
 - `RevisionFieldWhitelistTests.Fields_IncludePhaseACorrectionFields`
-- `RevisionFieldWhitelistTests.BuildODataRevisionSelectionSpec_ContainsScalarMappingsForPhaseACorrectionFields`
+- `RevisionFieldWhitelistTests.Fields_DoNotContainDuplicates`
 
 ### 2. Enforce semantic relevance by WorkItemType
 
@@ -132,7 +132,7 @@ Verification:
 
 Added/updated coverage for:
 - revision whitelist field inclusion
-- OData revision selection mappings
+- Revision whitelist field coverage
 - activity ledger persistence for the three hardening fields
 - canonical/domain relevance normalization by work item type
 - estimation mode runtime warning guard
@@ -151,6 +151,6 @@ Added/updated coverage for:
 
 ## Remaining risks (if any)
 
-- The revision whitelist now contains OData mappings for the new fields, but actual server-side availability of those OData properties still depends on the target TFS/Azure DevOps deployment exposing them in its analytics model.
+- The revision whitelist now contains the new fields for the active revision APIs, subject to target TFS/Azure DevOps field availability.
 - The runtime guard only warns today; Phase B still needs the explicit decision that maps non-default product `EstimationMode` into actual calculation behavior.
 - Historical ingestion currently persists field changes generically; later phases that consume these fields from history must still define the exact CDC business behavior for those historical values.

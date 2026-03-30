@@ -229,7 +229,7 @@ Per the binding clarification, the date-prefixed `YYYY-MM-DD-...` rule applies o
 
 | Path | Classification | Notes |
 |---|---|---|
-| `docs/reports/odata-ingestion-fix-plan.md` | `unclear` | Active plan/report; keep in place until ingestion cleanup batch decides whether it remains active or moves to history. |
+| `docs/archive/legacy-revision-ingestion/odata-ingestion-fix-plan.md` | `archive` | Archived in Batch 3 because the OData ingestion experiment was removed. |
 | `docs/archive/legacy-revision-ingestion/odata-validator-vs-ingestion-report.md` | `archive` | Already archived legacy ingestion analysis; leave as archived residue. |
 | `docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md` | `archive` | Already archived divergence analysis; keep archived. |
 | `docs/archive/legacy-revision-ingestion/revision-ingestor-v2.md` | `archive` | Legacy revision-ingestion design artifact; keep archived. |

@@ -10,8 +10,7 @@ public class TfsAccessBoundaryArchitectureTests
 {
     private static readonly string[] ProductionAssemblyNames =
     [
-        "PoTool.Api",
-        "PoTool.Tools.TfsRetrievalValidator"
+        "PoTool.Api"
     ];
 
     private static readonly string[] ForbiddenSourcePatterns =
@@ -41,8 +40,7 @@ public class TfsAccessBoundaryArchitectureTests
         (
             "RealTfsClientFactory.Create(",
             [
-                "PoTool.Api/Configuration/ApiServiceCollectionExtensions.cs",
-                "PoTool.Tools.TfsRetrievalValidator/Program.cs"
+                "PoTool.Api/Configuration/ApiServiceCollectionExtensions.cs"
             ]
         ),
         (
@@ -113,8 +111,7 @@ public class TfsAccessBoundaryArchitectureTests
         var repoRoot = FindRepositoryRoot();
         var productionDirectories = new[]
         {
-            Path.Combine(repoRoot, "PoTool.Api"),
-            Path.Combine(repoRoot, "PoTool.Tools.TfsRetrievalValidator")
+            Path.Combine(repoRoot, "PoTool.Api")
         };
 
         var violations = new List<string>();

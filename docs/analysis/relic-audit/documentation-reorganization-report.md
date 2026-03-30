@@ -250,8 +250,8 @@ docs/filters/pr-batching-verification.md
 docs/filters/pr-cache-only-guardrails.md
 docs/filters/pr-live-provider-usage-audit.md
 docs/filters/pr-provider-cleanup.md
-docs/filters/tfs-access-boundary-sealed.md
-docs/filters/tfs-access-boundary-verification.md
+docs/archive/legacy-revision-ingestion/tfs-access-boundary-sealed.md
+docs/archive/legacy-revision-ingestion/tfs-access-boundary-verification.md
 docs/filters/workitem-route-classification-fix.md
 docs/health_additional_signals.md
 docs/health_workspace_fix_plan.md
@@ -287,7 +287,7 @@ docs/pr_template.md
 docs/release-notes.json
 docs/reports
 docs/reports/ingestion-observability-hardening.md
-docs/reports/odata-ingestion-fix-plan.md
+docs/archive/legacy-revision-ingestion/odata-ingestion-fix-plan.md
 docs/reports/sprint-attribution-analysis.md
 docs/reports/sprint-trends-current-state-analysis.md
 docs/reviews

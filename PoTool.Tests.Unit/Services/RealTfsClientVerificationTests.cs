@@ -304,21 +304,6 @@ public class RealTfsClientVerificationTests
         StringAssert.Contains(workItemFieldsCheck.ObservedBehavior ?? string.Empty, "Null-only sampled fields");
     }
 
-    [TestMethod]
-    public async Task ValidateConnectionAsync_WhenAnalyticsMetadataEndpointFails_ReturnsFalse()
-    {
-        // Arrange
-        SetupHttpResponse("_apis/projects", HttpStatusCode.OK, "{\"value\":[{\"name\":\"TestProject\"}]}");
-        SetupHttpResponse($"_apis/projects/{_testConfig.Project}", HttpStatusCode.OK, $"{{\"name\":\"{_testConfig.Project}\"}}");
-        SetupHttpResponse("_odata/v3.0-preview/$metadata", HttpStatusCode.NotFound, "Not Found");
-
-        // Act
-        var isValid = await _sut.ValidateConnectionAsync();
-
-        // Assert
-        Assert.IsFalse(isValid);
-    }
-
     private void SetupSuccessfulHttpResponses()
     {
         // Server reachability

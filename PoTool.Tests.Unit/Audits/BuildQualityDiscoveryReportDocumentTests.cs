@@ -31,7 +31,6 @@ public sealed class BuildQualityDiscoveryReportDocumentTests
         StringAssert.Contains(report, "`/home/health`");
         StringAssert.Contains(report, "`/home/delivery`");
         StringAssert.Contains(report, "`/home/pipeline-insights`");
-        StringAssert.Contains(report, "PoTool.Tools.TfsRetrievalValidator");
     }
 
     private static string GetRepositoryRoot()

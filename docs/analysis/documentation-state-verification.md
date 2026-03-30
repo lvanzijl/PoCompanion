@@ -12,7 +12,7 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
   - **157** files violate lowercase and/or kebab-case naming rules.
   - **7** noncanonical `docs/` subtrees remain: `docs/cleanup`, `docs/domain`, `docs/exploration`, `docs/filters`, `docs/implementation`, `docs/roadmaps`, `docs/screenshots`.
   - `.github/github-instructions` is absent, so `.github` alignment currently depends entirely on `.github/copilot-instructions.md`.
-  - OData / validator residue is still active in current docs, solution/project references, tests, and the `PoTool.Tools.TfsRetrievalValidator` project.
+  - Batch 3 later removed the deprecated OData/validator runtime residue; this document captures the pre-removal state.
 
 ## 2. Root violations
 - None. `README.md` is the only markdown file at repository root.
@@ -250,7 +250,7 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 - Active references that still keep deprecated architecture/tooling alive:
 | Path | Classification | Severity | Why it matters |
 | --- | --- | --- | --- |
-| `docs/reports/odata-ingestion-fix-plan.md` | documentation | active reference (incorrect) | Present-tense report still references deleted revision-ingestion types such as RevisionIngestionService and RealODataRevisionTfsClient. |
+| `docs/archive/legacy-revision-ingestion/odata-ingestion-fix-plan.md` | documentation | active reference (incorrect) | Present-tense report still references deleted revision-ingestion types such as RevisionIngestionService and RealODataRevisionTfsClient. |
 | `PoTool.Tools.TfsRetrievalValidator/appsettings.json` | other | active reference (incorrect) | Contains stale AnalyticsOData* keys and RevisionIngestionPagination settings that the relic audit already marked as misleading residue. |
 | `PoTool.Tools.TfsRetrievalValidator/Program.cs` | code references | active reference (incorrect) | Validator still binds RevisionIngestionPaginationOptions and keeps the retrieval-validator tool active in the current solution surface. |
 | `PoTool.Core/Configuration/RevisionIngestionV2Options.cs` | code references | active reference (incorrect) | Unconsumed V2 revision-ingestion options keep a deprecated design direction alive in code. |
@@ -282,7 +282,7 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
   - Decide whether `PoTool.Tools.TfsRetrievalValidator` remains part of the supported toolchain.
   - If not, remove the project from `PoTool.sln`, `PoTool.Tests.Unit`, and architecture-test assumptions, then archive validator-only docs.
 - **Batch 4: OData cleanup**
-  - Archive or rewrite `docs/reports/odata-ingestion-fix-plan.md` so it no longer presents deleted revision-ingestion components as current.
+  - `docs/archive/legacy-revision-ingestion/odata-ingestion-fix-plan.md` was archived in Batch 3 with the deprecated OData ingestion experiment.
   - Remove stale validator `AnalyticsOData*` / `RevisionIngestionPagination` configuration and any disconnected revision-ingestion option/diagnostic classes that are confirmed unused.
 
 ## Appendix A. Complete markdown inventory
@@ -536,8 +536,8 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 - `docs/filters/pr-cache-only-guardrails.md` — filename `pr-cache-only-guardrails.md` — purpose: general markdown documentation — title: PR Cache-Only Guardrails
 - `docs/filters/pr-live-provider-usage-audit.md` — filename `pr-live-provider-usage-audit.md` — purpose: structured audit or compliance verification — title: PR Live Provider Usage Audit
 - `docs/filters/pr-provider-cleanup.md` — filename `pr-provider-cleanup.md` — purpose: general markdown documentation — title: PR Provider Cleanup
-- `docs/filters/tfs-access-boundary-sealed.md` — filename `tfs-access-boundary-sealed.md` — purpose: general markdown documentation — title: TFS Access Boundary Sealed
-- `docs/filters/tfs-access-boundary-verification.md` — filename `tfs-access-boundary-verification.md` — purpose: general markdown documentation — title: TFS Access Boundary Verification
+- `docs/archive/legacy-revision-ingestion/tfs-access-boundary-sealed.md` — filename `tfs-access-boundary-sealed.md` — purpose: general markdown documentation — title: TFS Access Boundary Sealed
+- `docs/archive/legacy-revision-ingestion/tfs-access-boundary-verification.md` — filename `tfs-access-boundary-verification.md` — purpose: general markdown documentation — title: TFS Access Boundary Verification
 - `docs/filters/workitem-route-classification-fix.md` — filename `workitem-route-classification-fix.md` — purpose: general markdown documentation — title: Work Item Route Classification Fix
 - `docs/health_additional_signals.md` — filename `health_additional_signals.md` — purpose: general markdown documentation — title: Additional Health Signals Proposal
 - `docs/health_workspace_fix_plan.md` — filename `health_workspace_fix_plan.md` — purpose: plan or migration guidance — title: Health Workspace Fix Plan
@@ -587,7 +587,7 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 
 ### reports
 - `docs/reports/ingestion-observability-hardening.md` — filename `ingestion-observability-hardening.md` — purpose: report or summarized findings — title: Ingestion observability hardening
-- `docs/reports/odata-ingestion-fix-plan.md` — filename `odata-ingestion-fix-plan.md` — purpose: report or summarized findings — title: OData Ingestion Fix Plan
+- `docs/archive/legacy-revision-ingestion/odata-ingestion-fix-plan.md` — filename `odata-ingestion-fix-plan.md` — purpose: report or summarized findings — title: OData Ingestion Fix Plan
 - `docs/reports/sprint-attribution-analysis.md` — filename `sprint-attribution-analysis.md` — purpose: exploratory analysis or investigation — title: Sprint Attribution Strategy Analysis
 - `docs/reports/sprint-trends-current-state-analysis.md` — filename `sprint-trends-current-state-analysis.md` — purpose: exploratory analysis or investigation — title: Sprint Trends — Current State Analysis
 

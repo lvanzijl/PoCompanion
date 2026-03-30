@@ -155,7 +155,7 @@ Assume strict review by default.
 ### 9.2 Assembly boundaries
 
 - `PoTool.Shared`: DTOs, enums, constants, request/response contracts, and cross-boundary exception contracts only.
-- `PoTool.Core`: business logic, domain services, validators, abstractions, command/query contracts, and use-case orchestration.
+- `PoTool.Core`: business logic, domain services, validation components, abstractions, command/query contracts, and use-case orchestration.
 - `PoTool.Api`: handlers, controllers, persistence, repositories, TFS clients, SignalR hubs, and integration implementations.
 - `PoTool.Client`: Razor components, pages, layouts, UI state, view models, and typed frontend services.
 
@@ -373,7 +373,7 @@ Core principle: render first, then load data progressively.
 
 ### 15.1 Validation pipeline
 
-- Commands and queries with input must have validators.
+- Commands and queries with input must have validation components.
 - Validators belong alongside the command or query.
 - Validation runs through the mediator pipeline, not in controllers.
 
