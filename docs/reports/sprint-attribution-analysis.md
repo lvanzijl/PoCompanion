@@ -233,5 +233,5 @@ The following existing documents already discuss parts of sprint attribution and
 - `docs/revisions/REVISION_PIPELINE_INVENTORY.md`
 - `docs/revision-window-backfill.md`
 - `docs/sprint-scoping-limitations.md`
-- `docs/sprintmetrics_iteration_migration_plan.md`
-- `docs/iteration_path_sorting_audit.md`
+- `docs/plans/sprintmetrics-iteration-migration-plan.md`
+- `docs/audits/iteration-path-sorting-audit.md`

@@ -8,7 +8,7 @@ Scope analyzed:
 - `PoTool.Client/Pages/Home/DeliveryWorkspace.razor`
 - `PoTool.Client/Pages/Home/TrendsWorkspace.razor`
 - `PoTool.Client/Pages/Home/PlanningWorkspace.razor`
-- `docs/NAVIGATION_MAP.md`
+- `docs/user/navigation-map.md`
 - `docs/user/gebruikershandleiding.md`
 
 Notes:
@@ -171,7 +171,7 @@ These tiles mostly communicate *what the page is* rather than *why now*:
 ### Static tiles that should become dynamic?
 
 - **Health hub tiles should not automatically be treated as missing signals.**  
-  The documented intent in `docs/NAVIGATION_MAP.md` is that `/home/health` stays lightweight and loads no Health data on entry. Making those tiles dynamic would cut against the current hub contract.
+  The documented intent in `docs/user/navigation-map.md` is that `/home/health` stays lightweight and loads no Health data on entry. Making those tiles dynamic would cut against the current hub contract.
 - **Delivery and Planning hubs are also intentionally lightweight navigation pages.**  
   Their current static behavior is consistent with the docs and does not look accidentally incomplete.
 - **Trends is the only workspace where more dynamic tile behavior seems semantically aligned with the page intent.**
@@ -200,7 +200,7 @@ Their subtitles identify topic areas, but not the decision or problem that shoul
 ### Must not change
 
 - **Health hub should remain lightweight and non-loading on entry.**  
-  `docs/NAVIGATION_MAP.md` explicitly says the Health workspace hub “loads no Health data on entry” and only routes to subpages.
+  `docs/user/navigation-map.md` explicitly says the Health workspace hub “loads no Health data on entry” and only routes to subpages.
 - **Health, Delivery, and Planning tiles should remain static.**  
   They are navigation workspaces, not signal dashboards.
 - **Bug Trend, PR Trend, and Pipeline Insights should remain dynamic only when a real signal exists.**  

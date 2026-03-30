@@ -135,7 +135,7 @@ wi.IterationPath.Equals(query.IterationPath, StringComparison.OrdinalIgnoreCase)
    - Estimated effort: 2-3 hours
    - Status: ✅ MIGRATED (2026-01-28)
    - Health workspace now uses date-based selection
-   - See detailed migration plan in `sprintmetrics_iteration_migration_plan.md`
+   - See detailed migration plan in `../plans/sprintmetrics-iteration-migration-plan.md`
 
 ### Priority 1 (Optional Improvements)
 None identified at this time.

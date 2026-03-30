@@ -99,5 +99,5 @@ private void ClearSelections()
 
 ## References
 - [MudBlazor Select Documentation](https://mudblazor.com/components/select)
-- [Fluent UI Compact Rules](./Fluent_UI_compat_rules.md)
-- [UI Rules](./UI_RULES.md)
+- [Fluent UI Compact Rules](../Fluent_UI_compat_rules.md)
+- [UI Rules](../UI_RULES.md)

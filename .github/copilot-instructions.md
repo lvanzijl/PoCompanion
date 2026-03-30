@@ -122,18 +122,29 @@ If documentation governance cannot be satisfied without clarification, batch all
 ## Markdown report output (hard)
 
 - For every analysis, validation, audit, review, migration, cleanup, or implementation prompt:
-  - A markdown report file MUST be created or updated in the repository.
-  - The prompt MUST specify the exact target path of the report.
-  - The task is incomplete if the report file is not written.
+  - A markdown report file MUST be created in the repository.
+  - The prompt MUST specify the exact path.
+  - The task is incomplete if the report is not written.
+
+### Filename convention (hard)
+
+- Format: `YYYY-MM-DD-<kebab-case-name>.md`
+- Example: `2026-03-30-documentation-state-verification.md`
+
+Rules:
+- lowercase only
+- kebab-case only
+- no spaces or underscores
+- no generic names
+
+Hard failure:
+- Missing report = failure
+- Invalid filename = failure
 
 Required behavior:
 1. Perform the requested work.
-2. Write the markdown report file to the specified path.
-3. Summarize results in normal output.
-4. Explicitly confirm the written report path.
-
-Hard failure condition:
-- If the markdown report file is not created at the specified path, the task is considered failed.
+2. Write report file (correct filename)
+3. Confirm path
 
 ---
 

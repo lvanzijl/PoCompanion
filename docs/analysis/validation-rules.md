@@ -44,7 +44,7 @@ The repository currently surfaces validation, integrity, and health signals thro
   Shared metadata bridge used by queue/triage/filter consumers. This is also where `RC-2` is aliased into the UI category `EFF`.
 - `PoTool.Core/WorkItems/Filtering/WorkItemFilterer.cs`  
   Resolves validation categories for filtering and still carries local filter/category logic.
-- `docs/NAVIGATION_MAP.md` and `docs/user/gebruikershandleiding.md`  
+- `docs/user/navigation-map.md` and `docs/user/gebruikershandleiding.md`  
   Document current user-visible grouping as `SI`, `RR`, `RC`, and `EFF`.
 
 ## 2. Full inventory of current rules

@@ -251,7 +251,7 @@ No direct contradictions were found in the current completion-forecasting formul
 
 4. **No burn-up / burn-down prediction implementation**
    - production code contains no dedicated burn-up or burn-down predictor
-   - documentation mentions a long-horizon burndown-style chart in `docs/NAVIGATION_MAP.md`
+   - documentation mentions a long-horizon burndown-style chart in `docs/user/navigation-map.md`
    - if that feature is implemented later, it should be added to Forecasting rather than DeliveryTrends
 
 ## Recommended boundaries for a Forecasting slice
