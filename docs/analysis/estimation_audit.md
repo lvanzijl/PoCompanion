@@ -1,0 +1,295 @@
+# PoTool Estimation Audit
+
+## Summary
+
+### Files analyzed
+
+- `docs/architecture/domain-model.md`
+- `docs/rules/estimation-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/hierarchy-rules.md`
+- `docs/rules/propagation-rules.md`
+- `PoTool.Integrations.Tfs/Clients/RealTfsClient.Core.cs`
+- `PoTool.Integrations.Tfs/Clients/RealTfsClient.WorkItemsHierarchy.cs`
+- `PoTool.Api/Persistence/Entities/WorkItemEntity.cs`
+- `PoTool.Shared/WorkItems/WorkItemDto.cs`
+- `PoTool.Api/Repositories/WorkItemRepository.cs`
+- `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs`
+- `PoTool.Api/Handlers/Metrics/GetEpicCompletionForecastQueryHandler.cs`
+- `PoTool.Api/Handlers/Metrics/GetSprintTrendMetricsQueryHandler.cs`
+- `PoTool.Api/Services/SprintTrendProjectionService.cs`
+- `PoTool.Api/Persistence/Entities/SprintMetricsProjectionEntity.cs`
+
+### Verdict
+
+**Needs fixes**
+
+The repository has some correct estimation foundations. TFS retrieval already requests `StoryPoints`, `BusinessValue`, and `Effort`, and sprint metrics already use event-history helpers for commitment reconstruction and first-done attribution. However, the current implementation is not estimation-domain compliant because story points are collapsed into `Effort` during ingestion, downstream metrics treat `Effort` as story points, missing estimates silently become zero or rounded integers, and parent/bug/task rules are not consistently enforced.
+
+## Domain Rules Reviewed
+
+- `docs/architecture/domain-model.md` §§ 3.1-3.12
+- `docs/rules/estimation-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/hierarchy-rules.md`
+- `docs/rules/propagation-rules.md`
+
+## Compliant Areas
+
+- `PoTool.Integrations.Tfs/Clients/RealTfsClient.Core.cs` requests `Microsoft.VSTS.Scheduling.StoryPoints`, `Microsoft.VSTS.Common.BusinessValue`, and `Microsoft.VSTS.Scheduling.Effort`, so the source layer can retrieve the canonical estimation fields.
+- `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs` uses `SprintCommitmentLookup` and `FirstDoneDeliveryLookup`, which matches the domain requirement that sprint metrics depend on commitment reconstruction and first-done history rather than only current snapshots.
+- `PoTool.Api/Services/SprintTrendProjectionService.cs` calculates `CompletedPbiCount`, `CompletedPbiEffort`, and spillover from `pbiResolved`, so those specific projection counters already exclude bugs and tasks from the PBI-specific counts.
+- `PoTool.Api/Services/SprintTrendProjectionService.cs` surfaces `MissingEffortCount` and `IsApproximate`, which means missing-estimate diagnostics are at least exposed at aggregate level, even though the implementation is incomplete for the canonical derived-estimate behavior.
+
+## Violations Found
+
+| Priority | File | Class | Method | Rule violation |
+| --- | --- | --- | --- | --- |
+| P0 | `PoTool.Integrations.Tfs/Clients/RealTfsClient.WorkItemsHierarchy.cs` | `RealTfsClient` | `ParseEffortField` | Collapses effort hours and story points into one integer field by falling back from `Effort` to `StoryPoints`. |
+| P0 | `PoTool.Api/Persistence/Entities/WorkItemEntity.cs` | `WorkItemEntity` | `Effort` / `BusinessValue` properties | The persisted work-item model has no dedicated story-point field. Because authoritative story points are not stored separately, the repository cannot enforce `StoryPoints -> BusinessValue -> Missing` resolution or distinguish real story points from effort hours. |
+| P0 | `PoTool.Shared/WorkItems/WorkItemDto.cs` | `WorkItemDto` | Record shape | The public DTO only exposes `Effort` and `BusinessValue`, so every consumer is forced to treat story-point data indirectly. This prevents explicit authoring of PBI-only story point logic and derived-estimate flags. |
+| P0 | `PoTool.Api/Repositories/WorkItemRepository.cs` | `WorkItemRepository` | `MapToDto`, `MapToEntity` | Repository mapping preserves only `Effort` and `BusinessValue`. Even if TFS retrieval sees story points, the mapping layer discards them as a first-class concept, so parent rollups and velocity queries cannot resolve canonical story points later. |
+| P0 | `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs` | `GetSprintMetricsQueryHandler` | `Handle` | Computes `CompletedStoryPoints` and `PlannedStoryPoints` from `wi.Effort`, so velocity uses hours, includes non-PBI items, and hides missing estimates. |
+| P0 | `PoTool.Api/Handlers/Metrics/GetEpicCompletionForecastQueryHandler.cs` | `GetEpicCompletionForecastQueryHandler` | `Handle` | Forecasting sums descendant `Effort` across all child items, including tasks and bugs, then divides remaining effort by average sprint `CompletedStoryPoints`. That mixes effort-hours scope with story-point velocity and ignores the rule that task/bug story points are not authoritative. |
+| P1 | `PoTool.Api/Services/SprintTrendProjectionService.cs` | `SprintTrendProjectionService` | `ComputeProductSprintProjection` | Completed, planned, worked, and spillover totals are all based on `wi.Effort ?? 0`. Missing estimates therefore become zero in aggregations, and no fractional derived estimate is produced even when sibling estimates exist. `IsApproximate` is only a boolean marker on the aggregate row, not a distinguishable derived value. |
+| P1 | `PoTool.Api/Services/SprintTrendProjectionService.cs` | `SprintTrendProjectionService` | `ComputeProgressionDelta` | Missing PBI estimates are approximated by rounding sibling average to `int`, then folded into completion percentages as if they were real estimates. The domain model requires fractional derived estimates that remain distinguishable from real estimates and are never reused as velocity. |
+| P1 | `PoTool.Api/Services/SprintTrendProjectionService.cs` | `SprintTrendProjectionService` | `ComputeFeatureProgress`, `ComputeEpicProgress` | Feature and epic progress rollups use descendant `Effort` values as the sizing basis. This bypasses the rule that story points propagate upward from PBIs, that parent story-point values must be ignored once child PBIs have estimates, and that task estimates should not drive story-point progress. |
+| P1 | `PoTool.Api/Persistence/Entities/SprintMetricsProjectionEntity.cs` | `SprintMetricsProjectionEntity` | `CompletedPbiEffort`, `PlannedEffort`, `WorkedEffort`, `SpilloverEffort`, `MissingEffortCount`, `IsApproximate` | The projection schema only stores effort-based aggregate numbers plus a coarse approximation flag. There is no place to persist resolved story points, derived fractional estimates, or real-vs-derived distinction, so the sprint-trend pipeline cannot satisfy the canonical estimation model. |
+| P2 | `PoTool.Api/Handlers/Metrics/GetSprintTrendMetricsQueryHandler.cs` | `GetSprintTrendMetricsQueryHandler` | `Handle` | The handler exposes only effort-based projection totals to sprint-trend consumers. That is acceptable for support metrics, but it means the current trend pipeline has no canonical story-point metric stream for velocity-aligned sprint delivery reporting. |
+
+## Architectural Risks
+
+- **Semantic overload in the core work-item model**: the repository uses `Effort` as both an hours field and an implicit story-point carrier. Any downstream fix that does not first separate those concepts will keep reintroducing mixed semantics.
+- **Projection/storage lock-in**: sprint trend projections and DTOs are named and typed around integer effort aggregates. This makes it hard to add fractional derived story-point values without expanding the persistence contract.
+- **No first-class derived estimate representation**: current code can only say “some approximation happened” at row level. It cannot show which PBIs were derived, what the derived value was, or exclude those derived values from velocity while still using them for forecasting.
+- **Rollup behavior is scattered**: sprint metrics, forecasting, feature progress, and epic progress all implement their own estimate aggregation. Without a shared estimation-resolution service, domain drift is likely to continue.
+
+## Recommended Fixes
+
+1. **Introduce explicit story-point storage end to end**  
+   Add a dedicated story-point field to TFS parsing, `WorkItemDto`, `WorkItemEntity`, repository mapping, and any API contracts that need it. Stop falling back from story points into `Effort`.
+2. **Centralize estimation resolution in a shared service**  
+   Implement one service that resolves canonical story points using `StoryPoints -> BusinessValue -> Missing`, applies the done-without-estimate zero rule, marks derived estimates, and keeps fractional derived values.
+3. **Rebuild velocity and sprint delivery metrics on resolved PBI story points**  
+   Update `GetSprintMetricsQueryHandler` and any velocity consumers so only PBIs contribute, bugs/tasks are excluded, and parent estimates are ignored once child PBI estimates exist.
+4. **Keep effort rollups separate from story-point rollups**  
+   Preserve effort-hours analytics for support metrics, but compute feature/epic story-point progress from PBI rollups and use effort only where the domain model explicitly allows it.
+5. **Expand projections/tests for derived-estimate behavior**  
+   Persist and surface resolved story-point totals plus derived-estimate diagnostics, then add focused tests for missing estimates, done-without-estimate, bug/task exclusion, and parent-fallback behavior.
+
+## Final Compliance Classification
+
+**Needs fixes**
+
+### Prioritized fix list
+
+1. Separate `StoryPoints` from `Effort` in ingestion, persistence, and DTOs.
+2. Replace `Effort`-based velocity and sprint story-point calculations with canonical PBI story-point resolution.
+3. Implement shared derived-estimate handling with fractional values and explicit derived markers.
+4. Update feature/epic rollups and forecasting to use the canonical story-point/effort rules instead of descendant-effort shortcuts.
+5. Extend unit tests around sprint metrics, trend projections, and forecasting to lock in the canonical estimation behavior.
+
+## Fix Progress — First-Class StoryPoints Foundation
+
+- **Files changed**
+  - `PoTool.Shared/WorkItems/WorkItemDto.cs`
+  - `PoTool.Shared/WorkItems/WorkItemWithValidationDto.cs`
+  - `PoTool.Api/Persistence/Entities/WorkItemEntity.cs`
+  - `PoTool.Api/Repositories/WorkItemRepository.cs`
+  - `PoTool.Api/Handlers/WorkItems/GetAllWorkItemsWithValidationQueryHandler.cs`
+  - `PoTool.Api/Handlers/WorkItems/GetWorkItemByIdWithValidationQueryHandler.cs`
+  - `PoTool.Integrations.Tfs/Clients/RealTfsClient.WorkItems.cs`
+  - `PoTool.Integrations.Tfs/Clients/RealTfsClient.WorkItemsHierarchy.cs`
+  - `PoTool.Integrations.Tfs/Clients/RealTfsClient.WorkItemsUpdate.cs`
+  - `PoTool.Tests.Unit/Test1.cs`
+  - `PoTool.Tests.Unit/WorkItemRepositoryTests.cs`
+  - `PoTool.Tests.Unit/TfsClientTests.cs`
+
+- **Model changes**
+  - Added `StoryPoints` as a first-class nullable field on `WorkItemDto`, `WorkItemWithValidationDto`, and `WorkItemEntity`.
+  - Kept `Effort` as a separate hours field.
+  - Kept `BusinessValue` as an independent raw source field for later canonical resolution.
+
+- **Ingestion changes**
+  - TFS ingestion now parses `Microsoft.VSTS.Scheduling.StoryPoints` into `StoryPoints`.
+  - `Effort` parsing no longer falls back to `StoryPoints`, so hours and story points remain separate.
+  - Repository and validation DTO mapping now preserve `StoryPoints` end to end.
+
+- **Tests added**
+  - `WorkItemDto_PreservesSeparateStoryPointsField`
+  - `UpsertManyAsync_PreservesStoryPointsSeparatelyFromEffortAndBusinessValue`
+  - `GetWorkItemsAsync_PreservesStoryPointsEffortAndBusinessValueSeparately`
+  - `GetWorkItemsByRootIdsAsync_DoesNotFallbackStoryPointsIntoEffort`
+
+## Fix Progress — Canonical StoryPoint Resolution
+
+- **New shared service**
+  - Added `PoTool.Core/Metrics/Services/CanonicalStoryPointResolutionService.cs` with a reusable `ICanonicalStoryPointResolutionService`.
+
+- **Rules implemented**
+  - Resolves canonical story points using `StoryPoints -> BusinessValue -> Missing`.
+  - Treats `StoryPoints = 0` as valid only when the item is Done; otherwise zero remains missing unless BusinessValue fallback exists.
+  - Distinguishes `Real`, `Fallback`, `Missing`, and `Derived` estimate sources.
+  - Derives missing PBI estimates from same-feature sibling averages without rounding, while keeping derived values distinct from real estimates.
+  - Keeps effort separate by resolving only story-point semantics from `StoryPoints` and `BusinessValue`.
+
+- **Tests added**
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_UsesStoryPointsWhenPresent`
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_UsesBusinessValueFallbackWhenStoryPointsAreMissing`
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_ReturnsMissingWhenNoEstimateExists`
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_TreatsZeroStoryPointsOnDoneItemAsValidRealEstimate`
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_TreatsZeroStoryPointsOnNonDoneItemAsMissing`
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_DerivesMissingEstimateFromSameFeatureSiblingAverage`
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_KeepsDerivedEstimateFractional`
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_ReturnsExpectedEstimateSourceClassification`
+
+## Fix Progress — Sprint StoryPoint Metrics
+
+- **Sprint metric handlers updated**
+  - `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs` now resolves sprint `PlannedStoryPoints` and `CompletedStoryPoints` through `ICanonicalStoryPointResolutionService` instead of summing `Effort`.
+  - The handler now counts story points only from authoritative PBIs and continues to keep historical sprint-window semantics based on commitment reconstruction and first Done delivery.
+
+- **Velocity semantics corrected**
+  - Delivered story points now include only PBIs whose first canonical Done transition occurred inside the sprint window.
+  - Bugs, tasks, missing estimates, and derived estimates are excluded from sprint story-point totals.
+  - BusinessValue fallback is honored for PBIs when `StoryPoints` is absent, and zero-point PBIs are treated according to the canonical done/non-done rule.
+
+- **Tests added**
+  - `GetSprintMetricsQueryHandlerTests.Handle_ExcludesBugAndTaskStoryPointsFromSprintTotals`
+  - `GetSprintMetricsQueryHandlerTests.Handle_UsesBusinessValueFallbackForSprintStoryPoints`
+  - `GetSprintMetricsQueryHandlerTests.Handle_ExcludesDeliveredPBIsWithoutEstimatesFromVelocity`
+  - `GetSprintMetricsQueryHandlerTests.Handle_TreatsZeroDonePbiAsValidZeroPointDelivery`
+  - `GetSprintMetricsQueryHandlerTests.Handle_TreatsZeroNonDonePbiAsMissingEstimate`
+
+## Fix Progress — Forecasting and Rollup Semantics
+
+- **Services updated**
+  - `PoTool.Api/Services/SprintTrendProjectionService.cs`
+  - `PoTool.Api/Handlers/Metrics/GetEpicCompletionForecastQueryHandler.cs`
+  - `PoTool.Api/Handlers/Metrics/GetSprintTrendMetricsQueryHandler.cs`
+  - `PoTool.Core/Metrics/Services/CanonicalStoryPointResolutionService.cs`
+
+- **Rollup logic replaced**
+  - Feature and epic progress now derive scope from canonical PBI story-point rollups instead of descendant effort totals.
+  - Parent fallback estimates now apply only when child PBIs have no canonical estimates, while bugs and tasks remain excluded from story-point analytics.
+  - Forecasting now uses nested canonical rollups with fractional derived estimates preserved for progress and remaining-scope calculations, while sprint trend effort diagnostics stay effort-based.
+
+- **Tests added**
+  - `CanonicalStoryPointResolutionServiceTests.ResolveParentFallback_UsesCanonicalFieldPrecedenceForNonPbiParents`
+  - `GetEpicCompletionForecastQueryHandlerTests.Handle_UsesFeatureFallbackOnlyWhenChildPbisLackEstimates`
+  - `GetEpicCompletionForecastQueryHandlerTests.Handle_ExcludesBugAndTaskStoryPointsFromForecastScope`
+  - `GetEpicCompletionForecastQueryHandlerTests.Handle_UsesFractionalDerivedStoryPointsInForecast`
+  - `SprintTrendProjectionServiceTests.ComputeFeatureProgress_UsesFeatureFallbackOnlyWhenChildPbisLackEstimates`
+  - `SprintTrendProjectionServiceTests.ComputeFeatureProgress_UsesFractionalDerivedStoryPointsWithoutRounding`
+  - `SprintTrendProjectionServiceTests.ComputeFeatureProgress_ExcludesBugAndTaskStoryPoints`
+
+## Fix Progress — Projection and Persistence Alignment
+
+- **Entities/contracts updated**
+  - `PoTool.Api/Persistence/Entities/SprintMetricsProjectionEntity.cs`
+  - `PoTool.Shared/Metrics/SprintTrendDtos.cs`
+  - `PoTool.Api/Handlers/Metrics/GetSprintTrendMetricsQueryHandler.cs`
+  - `PoTool.Api/Migrations/20260314113737_AddSprintProjectionStoryPointMetrics.cs`
+  - `PoTool.Api/Migrations/20260314113737_AddSprintProjectionStoryPointMetrics.Designer.cs`
+
+- **Fields added**
+  - Added additive projection fields for `PlannedStoryPoints`, `CompletedPbiStoryPoints`, and `SpilloverStoryPoints` so sprint trend projections can persist canonical story-point totals separately from effort hours.
+  - Added aggregate diagnostics for `MissingStoryPointCount`, `DerivedStoryPointCount`, `DerivedStoryPoints`, and `UnestimatedDeliveryCount`.
+  - Preserved backward compatibility by keeping the existing effort-based fields and broadening trend DTO outputs additively.
+
+- **Tests added**
+  - `SprintTrendProjectionServiceTests.ComputeProductSprintProjection_StoresStoryPointTotalsSeparatelyFromEffort`
+  - `SprintTrendProjectionServiceTests.ComputeProductSprintProjection_PreservesDerivedStoryPointDiagnostics`
+  - `GetSprintTrendMetricsQueryHandlerTests.Handle_MultipleProducts_AggregatesMetricsCorrectly` now verifies aggregated story-point and diagnostic fields in the surfaced sprint trend response.
+
+## Re-Audit Results — Post Fix Validation
+
+### Reconstructed domain expectations
+
+- Story Points remain a first-class concept, stored separately from Effort and preserved from TFS ingestion through persistence, DTO mapping, and analytics.
+- Effort remains an hours-based diagnostic/reporting concept and is not reused as Story Points.
+- Authoritative Story Points exist only on PBIs; bugs, tasks, and other work item types are excluded from story-point resolution and velocity.
+- Canonical story-point resolution follows `StoryPoints -> BusinessValue -> Missing`.
+- `StoryPoints = 0` is valid only for Done PBIs; `0` on non-Done PBIs remains missing.
+- Missing estimates remain visible and are not silently coerced to zero.
+- Derived estimates use sibling averages, remain fractional, and stay distinguishable from direct/fallback values.
+- Parent fallback estimates apply only when child PBIs have no canonical estimates.
+- Velocity uses resolved PBI story points from first-Done delivery inside the sprint window and excludes missing/derived estimates.
+- Progress, spillover, sprint trend aggregation, and epic forecasting use the canonical story-point rollup rules instead of descendant effort shortcuts.
+
+### Compliance classification
+
+| Category | Status | Evidence |
+| --- | --- | --- |
+| Explicit `StoryPoints` storage | **Compliant** | `PoTool.Integrations.Tfs/Clients/RealTfsClient.Core.cs`, `PoTool.Integrations.Tfs/Clients/RealTfsClient.WorkItemsHierarchy.cs`, `PoTool.Shared/WorkItems/WorkItemDto.cs`, `PoTool.Api/Persistence/Entities/WorkItemEntity.cs`, and `PoTool.Api/Repositories/WorkItemRepository.cs` now request, parse, persist, and map `StoryPoints` independently from `Effort` and `BusinessValue`. |
+| Story Points separated from Effort | **Compliant** | `WorkItemDto`, `WorkItemEntity`, `WorkItemRepository`, and `SprintMetricsProjectionEntity` keep separate fields and totals for effort-hours vs story-point analytics. |
+| PBI-only story-point authority | **Compliant** | `PoTool.Core/Metrics/Services/CanonicalStoryPointResolutionService.cs` rejects non-PBI story-point authority, and downstream rollups in `GetSprintMetricsQueryHandler`, `GetEpicCompletionForecastQueryHandler`, and `SprintTrendProjectionService` consume that shared rule. |
+| `BusinessValue` fallback | **Compliant** | `CanonicalStoryPointResolutionService` resolves `BusinessValue` as explicit fallback source when `StoryPoints` is absent. |
+| Zero-on-Done rule | **Compliant** | `CanonicalStoryPointResolutionService` accepts `StoryPoints = 0` only when the item is Done and otherwise keeps the estimate missing. |
+| Missing estimate handling | **Compliant** | Missing estimates resolve to `StoryPointEstimateSource.Missing`, are excluded from velocity, and are surfaced through sprint projection diagnostics (`MissingStoryPointCount`, `UnestimatedDeliveryCount`). |
+| Fractional derived estimates | **Compliant** | `CanonicalStoryPointResolutionService` derives sibling averages using `Average()` without rounding, while `SprintMetricsProjectionEntity` and sprint trend DTOs preserve fractional totals. |
+| Bug/task exclusion | **Compliant** | Sprint metrics, sprint projections, and epic forecasting exclude bugs/tasks from story-point totals while still tracking them separately where operational metrics require it. |
+| Parent fallback semantics | **Compliant** | `GetEpicCompletionForecastQueryHandler` and `SprintTrendProjectionService` only apply parent fallback after confirming that child PBIs lack canonical estimates. |
+| Velocity based on resolved PBI Story Points | **Compliant** | `GetSprintMetricsQueryHandler` and `SprintTrendProjectionService` count only resolved PBI estimates that are neither missing nor derived, aligned with first-Done delivery semantics. |
+| Canonical rollups for progress/forecasting | **Compliant** | `GetEpicCompletionForecastQueryHandler`, `GetSprintTrendMetricsQueryHandler`, and `SprintTrendProjectionService` now use canonical PBI rollups, additive story-point projection fields, and preserved diagnostics. |
+
+### Focused test coverage validation
+
+- **StoryPoints vs Effort separation**
+  - `Test1.WorkItemDto_PreservesSeparateStoryPointsField`
+  - `WorkItemRepositoryTests.UpsertManyAsync_PreservesStoryPointsSeparatelyFromEffortAndBusinessValue`
+  - `TfsClientTests.GetWorkItemsAsync_PreservesStoryPointsEffortAndBusinessValueSeparately`
+  - `TfsClientTests.GetWorkItemsByRootIdsAsync_DoesNotFallbackStoryPointsIntoEffort`
+- **BusinessValue fallback**
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_UsesBusinessValueFallbackWhenStoryPointsAreMissing`
+  - `GetSprintMetricsQueryHandlerTests.Handle_UsesBusinessValueFallbackForSprintStoryPoints`
+- **Zero-on-Done / zero-non-Done handling**
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_TreatsZeroStoryPointsOnDoneItemAsValidRealEstimate`
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_TreatsZeroStoryPointsOnNonDoneItemAsMissing`
+  - `GetSprintMetricsQueryHandlerTests.Handle_TreatsZeroDonePbiAsValidZeroPointDelivery`
+  - `GetSprintMetricsQueryHandlerTests.Handle_TreatsZeroNonDonePbiAsMissingEstimate`
+- **Derived sibling estimates**
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_DerivesMissingEstimateFromSameFeatureSiblingAverage`
+  - `CanonicalStoryPointResolutionServiceTests.Resolve_KeepsDerivedEstimateFractional`
+  - `GetEpicCompletionForecastQueryHandlerTests.Handle_UsesFractionalDerivedStoryPointsInForecast`
+  - `SprintTrendProjectionServiceTests.ComputeFeatureProgress_UsesFractionalDerivedStoryPointsWithoutRounding`
+- **Bug/task exclusion**
+  - `GetSprintMetricsQueryHandlerTests.Handle_ExcludesBugAndTaskStoryPointsFromSprintTotals`
+  - `GetEpicCompletionForecastQueryHandlerTests.Handle_ExcludesBugAndTaskStoryPointsFromForecastScope`
+  - `SprintTrendProjectionServiceTests.ComputeFeatureProgress_ExcludesBugAndTaskStoryPoints`
+- **Parent fallback estimates**
+  - `CanonicalStoryPointResolutionServiceTests.ResolveParentFallback_UsesCanonicalFieldPrecedenceForNonPbiParents`
+  - `GetEpicCompletionForecastQueryHandlerTests.Handle_UsesFeatureFallbackOnlyWhenChildPbisLackEstimates`
+  - `SprintTrendProjectionServiceTests.ComputeFeatureProgress_UsesFeatureFallbackOnlyWhenChildPbisLackEstimates`
+- **Velocity based on resolved PBI Story Points**
+  - `GetSprintMetricsQueryHandlerTests.Handle_ExcludesDeliveredPBIsWithoutEstimatesFromVelocity`
+  - `SprintTrendProjectionServiceTests.ComputeProductSprintProjection_StoresStoryPointTotalsSeparatelyFromEffort`
+  - `SprintTrendProjectionServiceTests.ComputeProductSprintProjection_PreservesDerivedStoryPointDiagnostics`
+  - `GetSprintTrendMetricsQueryHandlerTests.Handle_MultipleProducts_AggregatesMetricsCorrectly`
+
+### Summary of improvements
+
+- The earlier first-class StoryPoints refactor is now consistently visible across ingestion, persistence, DTO contracts, repositories, handlers, and projections.
+- Story-point resolution is centralized in a shared canonical service, eliminating the previous handler-by-handler drift.
+- Velocity, sprint metrics, trend projections, and epic forecasting now all resolve story points from canonical PBI semantics instead of reusing effort hours.
+- Projection storage and surfaced DTOs now preserve derived/missing story-point diagnostics needed by the domain model.
+
+### Remaining violations
+
+- No remaining estimation-domain compliance violations were identified in the re-audit.
+
+### Architectural risks
+
+- No blocking architectural risks remain for estimation-domain compliance.
+- Minor compatibility debt remains in `PoTool.Shared/Metrics/EpicCompletionForecastDto.cs`: the forecast DTO keeps legacy `*Effort` property names for API compatibility even though the XML documentation now clarifies that these fields carry canonical story-point scope. This does not break the domain model, but it is worth tracking to avoid future semantic confusion.
+
+### Final recommended next fixes
+
+- No additional fixes are required for estimation-domain compliance.
+- Optional follow-up only: introduce additive, story-point-specific forecast field names in a future contract cleanup when API compatibility allows it.
+
+### Final verdict
+
+**Fully compliant**
+
+The estimation pipeline now aligns with the canonical domain model: Story Points are first-class and PBI-authoritative, Effort remains separate, missing/derived estimates preserve their intended semantics, bugs/tasks are excluded from story-point analytics, and velocity/progress/forecasting now follow canonical rollup rules.

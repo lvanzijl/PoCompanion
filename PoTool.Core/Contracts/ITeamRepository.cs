@@ -52,6 +52,6 @@ public interface ITeamRepository
     /// Permanently deletes a team and all its product links.
     /// OBSOLETE: This method is unused. Client uses ArchiveTeamAsync (soft delete) instead.
     /// </summary>
-    [Obsolete("UNUSED: Only called by obsolete DeleteTeamCommandHandler. UI uses ArchiveTeamAsync (soft delete) instead. See docs/cleanup/phase3-handler-usage-report.md section 3.4", error: false)]
+    [Obsolete("UNUSED: Only called by obsolete DeleteTeamCommandHandler. UI uses ArchiveTeamAsync (soft delete) instead. See docs/reports/2026-03-30-cleanup-phase3-handler-usage-report.md section 3.4", error: false)]
     Task<bool> DeleteTeamAsync(int id, CancellationToken cancellationToken = default);
 }

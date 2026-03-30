@@ -9,7 +9,7 @@ namespace PoTool.Api.Handlers.Settings.Teams;
 /// 
 /// DEAD CODE WARNING: This handler is unused. Only handles obsolete DeleteTeamCommand.
 /// UI uses ArchiveTeamCommandHandler (soft delete) instead.
-/// See docs/cleanup/phase3-handler-usage-report.md section 3.3
+/// See docs/reports/2026-03-30-cleanup-phase3-handler-usage-report.md section 3.3
 /// </summary>
 public class DeleteTeamCommandHandler : ICommandHandler<DeleteTeamCommand, bool>
 {

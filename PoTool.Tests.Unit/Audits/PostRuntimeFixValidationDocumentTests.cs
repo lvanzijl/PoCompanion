@@ -7,9 +7,9 @@ public sealed class PostRuntimeFixValidationDocumentTests
     public void PostRuntimeFixValidation_ReportExistsWithRequiredSectionsAndEvidence()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "post_runtime_fix_validation.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "post_runtime_fix_validation.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The post runtime fix validation report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The post runtime fix validation report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

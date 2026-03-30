@@ -4,7 +4,7 @@
 
 The PoCompanion validation system uses a **hierarchical validation system** as the primary engine
 for all rule-based checks. The `HierarchicalToLegacyValidatorAdapter` bridges hierarchical validation
-results into the legacy `IWorkItemValidator` pipeline.
+results into the `IWorkItemValidator` query surface.
 
 ### Architecture
 

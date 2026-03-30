@@ -28,9 +28,9 @@ public sealed class UiSemanticCorrectionDocumentTests
     public void UiSemanticCorrectionAudit_DocumentExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var documentPath = Path.Combine(repositoryRoot, "docs", "audits", "ui_semantic_correction.md");
+        var documentPath = Path.Combine(repositoryRoot, "docs", "analysis", "ui_semantic_correction.md");
 
-        Assert.IsTrue(File.Exists(documentPath), "The UI semantic correction audit should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(documentPath), "The UI semantic correction audit should exist under docs/analysis.");
 
         var document = File.ReadAllText(documentPath);
 

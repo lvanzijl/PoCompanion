@@ -7,9 +7,9 @@ public sealed class BuildQualityDiscoveryReportDocumentTests
     public void BuildQualityDiscoveryReport_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "buildquality_discovery_report.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality_discovery_report.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The BuildQuality discovery report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The BuildQuality discovery report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

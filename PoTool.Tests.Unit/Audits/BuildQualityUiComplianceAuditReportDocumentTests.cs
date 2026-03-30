@@ -7,9 +7,9 @@ public sealed class BuildQualityUiComplianceAuditReportDocumentTests
     public void BuildQualityUiComplianceAuditReport_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "buildquality_ui_compliance_audit_report.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality_ui_compliance_audit_report.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The BuildQuality UI compliance audit report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The BuildQuality UI compliance audit report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

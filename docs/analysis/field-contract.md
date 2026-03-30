@@ -1,3 +1,5 @@
+> **NOTE:** This document reflects a historical state prior to Batch 3 cleanup.
+
 # Field Contract & Usage Analysis
 
 ## 1. Summary
@@ -75,7 +77,7 @@ As with `Rhodium.Funding.ProjectNumber`, the repository contains no type-specifi
 
 #### Logic usage
 
-- The domain rules in `docs/domain/domain_model.md` and `docs/rules/estimation-rules.md` define Effort as an hours-based metric that may appear on `Epic`, `Feature`, and `PBI`.
+- The domain rules in `docs/architecture/domain-model.md` and `docs/rules/estimation-rules.md` define Effort as an hours-based metric that may appear on `Epic`, `Feature`, and `PBI`.
 - `PoTool.Api/Services/SprintTrendProjectionService.cs` tracks effort change history with `EffortFieldRef = "Microsoft.VSTS.Scheduling.Effort"`.
 - The backlog-quality slice carries Effort in `WorkItemSnapshot`.
 - A legacy validation path still checks for missing effort in `PoTool.Core/WorkItems/Validators/WorkItemInProgressWithoutEffortValidator.cs`, although the class is explicitly marked deprecated and unregistered.

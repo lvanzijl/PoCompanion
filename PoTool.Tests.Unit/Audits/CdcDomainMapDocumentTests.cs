@@ -7,9 +7,9 @@ public sealed class CdcDomainMapDocumentTests
     public void CdcDomainMap_ReportExistsWithRequiredSectionsNodesAndDependencyRules()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "domain", "cdc_domain_map.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "architecture", "cdc-domain-map.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The CDC domain map document should exist under docs/domain.");
+        Assert.IsTrue(File.Exists(reportPath), "The CDC domain map document should exist under docs/architecture.");
 
         var report = File.ReadAllText(reportPath);
 

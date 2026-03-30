@@ -19,10 +19,10 @@
   - `PoTool.Tests.Unit/Architecture/TfsAccessBoundaryArchitectureTests.cs`
 - Cleaned validator-tool residue from tests and docs:
   - `PoTool.Tests.Unit/Audits/BuildQualityDiscoveryReportDocumentTests.cs`
-  - `docs/audits/buildquality_discovery_report.md`
+  - `docs/analysis/buildquality_discovery_report.md`
   - `docs/architecture/repository-stability-audit.md`
   - `docs/architecture/restore-build-determinism-fix.md`
-  - `docs/audits/tfs_api_version_configuration_inspection_report.md`
+  - `docs/analysis/tfs_api_version_configuration_inspection_report.md`
 
 ## 3. OData removal
 - Removed OData-specific code and settings classes:
@@ -47,8 +47,8 @@
     - `docs/filters/tfs-access-boundary-sealed.md`
     - `docs/reports/odata-ingestion-fix-plan.md`
 - Files archived (with paths):
-  - `docs/archive/legacy-revision-ingestion/tfs-access-boundary-verification.md`
-  - `docs/archive/legacy-revision-ingestion/tfs-access-boundary-sealed.md`
+  - `docs/analysis/tfs-access-boundary-verification.md`
+  - `docs/analysis/tfs-access-boundary-sealed.md`
   - `docs/archive/legacy-revision-ingestion/odata-ingestion-fix-plan.md`
 - Updated path/reference cleanup in:
   - `docs/analysis/relic-audit/documentation-reorganization-report.md`

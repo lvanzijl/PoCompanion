@@ -7,9 +7,9 @@ public sealed class SprintCommitmentHandlerSimplificationDocumentTests
     public void SprintCommitmentHandlerSimplification_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "sprint_commitment_handler_simplification.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "sprint_commitment_handler_simplification.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The sprint commitment handler simplification report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The sprint commitment handler simplification report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

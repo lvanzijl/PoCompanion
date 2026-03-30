@@ -7,9 +7,9 @@ public sealed class StatisticalHelperAuditDocumentTests
     public void StatisticalHelperAudit_ReportExistsWithRequiredSectionsAndKeyFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var auditPath = Path.Combine(repositoryRoot, "docs", "audits", "statistical_helper_audit.md");
+        var auditPath = Path.Combine(repositoryRoot, "docs", "analysis", "statistical_helper_audit.md");
 
-        Assert.IsTrue(File.Exists(auditPath), "The statistical helper audit report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(auditPath), "The statistical helper audit report should exist under docs/analysis.");
 
         var audit = File.ReadAllText(auditPath);
 
@@ -32,9 +32,9 @@ public sealed class StatisticalHelperAuditDocumentTests
     public void StatisticalCoreCleanupReport_ExistsWithOwnershipConsolidationSection()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "statistical_core_cleanup_report.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "statistical_core_cleanup_report.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The statistical core cleanup report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The statistical core cleanup report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 
@@ -58,9 +58,9 @@ public sealed class StatisticalHelperAuditDocumentTests
     public void StatisticalCoreCleanupReport_ContainsReauditResultsAndFinalVerdict()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "statistical_core_cleanup_report.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "statistical_core_cleanup_report.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The statistical core cleanup report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The statistical core cleanup report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

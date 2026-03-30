@@ -7,9 +7,9 @@ public sealed class BuildQualitySeedDataReportDocumentTests
     public void BuildQualitySeedDataReport_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "buildquality_seed_data_report.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality_seed_data_report.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The BuildQuality seed data report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The BuildQuality seed data report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

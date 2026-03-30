@@ -6,11 +6,11 @@
 
 The repository’s canonical analytics model is the four-level operational hierarchy documented in:
 
-- `docs/domain/domain_model.md`
+- `docs/architecture/domain-model.md`
 - `docs/rules/hierarchy-rules.md`
 - `docs/rules/estimation-rules.md`
 - `docs/rules/propagation-rules.md`
-- `docs/domain/cdc_reference.md`
+- `docs/architecture/cdc-reference.md`
 
 That model is:
 
@@ -241,7 +241,7 @@ The implementation is **partly centralized**:
 
 Comparing current code to:
 
-- `docs/domain/cdc_reference.md`
+- `docs/architecture/cdc-reference.md`
 - `docs/rules/hierarchy-rules.md`
 - `docs/rules/estimation-rules.md`
 - `docs/rules/propagation-rules.md`

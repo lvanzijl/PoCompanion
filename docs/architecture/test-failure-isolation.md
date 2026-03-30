@@ -220,7 +220,7 @@ Representative mismatches reproduced in the current run:
 
 - expected handler anchor `new GetSprintMetricsQuery(path)` not found in current handler source
 - expected document content `"Line" or "Lines"` not found in the build-quality analysis report
-- expected generated-domain-map symbol ``IEpicAggregationService`` not found in `docs/domain/cdc_domain_map_generated.md`
+- expected generated-domain-map symbol ``IEpicAggregationService`` not found in `docs/architecture/cdc-domain-map-generated.md`
 
 Evidence:
 
@@ -233,9 +233,9 @@ Evidence:
   - dynamically detects public interfaces and expects every one to appear in the generated document
 - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Core.Domain/Domain/DeliveryTrends/Services/EpicAggregationService.cs:9-15`
   - `IEpicAggregationService` exists in source
-- `/home/runner/work/PoCompanion/PoCompanion/docs/domain/cdc_domain_map_generated.md:153-180`
+- `/home/runner/work/PoCompanion/PoCompanion/docs/architecture/cdc-domain-map-generated.md:153-180`
   - current generated map does not include ``IEpicAggregationService``
-- `/home/runner/work/PoCompanion/PoCompanion/docs/audits/buildquality_missing_ingestion_build_168570_code_analysis_report.md:1-120`
+- `/home/runner/work/PoCompanion/PoCompanion/docs/analysis/buildquality_missing_ingestion_build_168570_code_analysis_report.md:1-120`
   - report exists and mostly matches, but not every exact expected phrase remains present
 
 **Type:** **incorrect test expectation / documentation drift**

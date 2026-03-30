@@ -7,9 +7,9 @@ public sealed class BacklogHealthSimplificationDocumentTests
     public void BacklogHealthSimplification_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "backlog_health_simplification.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "backlog_health_simplification.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The backlog health simplification report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The backlog health simplification report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

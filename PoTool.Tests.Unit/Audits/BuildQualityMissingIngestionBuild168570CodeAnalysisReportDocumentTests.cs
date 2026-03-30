@@ -10,10 +10,10 @@ public sealed class BuildQualityMissingIngestionBuild168570CodeAnalysisReportDoc
         var reportPath = Path.Combine(
             repositoryRoot,
             "docs",
-            "audits",
+            "analysis",
             "buildquality_missing_ingestion_build_168570_code_analysis_report.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The BuildQuality ingestion code analysis report for build 168570 should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The BuildQuality ingestion code analysis report for build 168570 should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

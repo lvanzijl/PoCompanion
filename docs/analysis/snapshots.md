@@ -1,3 +1,5 @@
+> **NOTE:** This document reflects a historical state prior to Batch 3 cleanup.
+
 # Snapshot & Budget Model Analysis
 
 ## 1. Existing patterns
@@ -123,7 +125,7 @@ So there is no platform gap around timestamp support. The gap is specifically ar
 
 The current repository already documents part of this landscape in:
 
-- `docs/audits/buildquality_discovery_report.md`
+- `docs/analysis/buildquality_discovery_report.md`
 - `docs/analysis/field-contract.md`
 
 `buildquality_discovery_report.md` already identifies `RoadmapSnapshotEntity`, `ActivityEventLedgerEntryEntity`, `SprintMetricsProjectionEntity`, `PortfolioFlowProjectionEntity`, and `CachedMetricsEntity` as existing snapshot/history/projection patterns. `field-contract.md` also confirms that `Rhodium.Funding.ProjectNumber` and `Rhodium.Funding.ProjectElement` are currently absent end to end.
@@ -175,7 +177,7 @@ There is a good structural fit for a project-level budget snapshot **if “proje
 
 That recommendation follows the domain rules:
 
-- `docs/domain/domain_model.md`
+- `docs/architecture/domain-model.md`
 - `docs/rules/hierarchy-rules.md`
 
 Those documents define **Product** as the primary analytics boundary. In contrast, TFS project scope is currently used mainly for shared configuration, such as `WorkItemStateClassificationEntity.TfsProjectName`.

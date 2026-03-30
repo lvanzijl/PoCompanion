@@ -148,7 +148,7 @@ public class TeamRepository : ITeamRepository
     }
 
     /// <inheritdoc />
-    [Obsolete("UNUSED: Only called by obsolete DeleteTeamCommandHandler. UI uses ArchiveTeamAsync (soft delete) instead. See docs/cleanup/phase3-handler-usage-report.md section 3.4", error: false)]
+    [Obsolete("UNUSED: Only called by obsolete DeleteTeamCommandHandler. UI uses ArchiveTeamAsync (soft delete) instead. See docs/reports/2026-03-30-cleanup-phase3-handler-usage-report.md section 3.4", error: false)]
     public async Task<bool> DeleteTeamAsync(int id, CancellationToken cancellationToken = default)
     {
         var entity = await _context.Teams

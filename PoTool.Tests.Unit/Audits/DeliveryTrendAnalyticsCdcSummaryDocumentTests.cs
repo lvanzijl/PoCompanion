@@ -7,9 +7,9 @@ public sealed class DeliveryTrendAnalyticsCdcSummaryDocumentTests
     public void DeliveryTrendAnalyticsCdcSummary_ReportExistsWithRequiredSectionsAndVerdict()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "delivery_trend_analytics_cdc_summary.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "delivery_trend_analytics_cdc_summary.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The delivery trend analytics CDC summary should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The delivery trend analytics CDC summary should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

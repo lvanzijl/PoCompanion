@@ -1,3 +1,5 @@
+> **NOTE:** This document reflects a historical state prior to Batch 3 cleanup.
+
 # Planning Quality & Signal Integration Analysis
 
 ## 1. Current severity model

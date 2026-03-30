@@ -15,16 +15,16 @@ Batch 1 applied only the safe subset requested. Existing files were not date-pre
 |---|---|
 | `docs/LIVE_TFS_CALLS_ANALYSIS.md` | `docs/analysis/live-tfs-calls-analysis.md` |
 | `docs/REALTFSCLIENT_GETALL_ANALYSIS.md` | `docs/analysis/realtfsclient-getall-analysis.md` |
-| `docs/TFS_CACHE_IMPLEMENTATION_PLAN.md` | `docs/plans/tfs-cache-implementation-plan.md` |
-| `docs/UI_MIGRATION_PLAN.md` | `docs/plans/ui-migration-plan.md` |
-| `docs/MULTI_SELECT_BEHAVIOR.md` | `docs/user/multi-select-behavior.md` |
-| `docs/NAVIGATION_MAP.md` | `docs/user/navigation-map.md` |
-| `docs/health_workspace_fix_plan.md` | `docs/plans/health-workspace-fix-plan.md` |
-| `docs/iteration_path_sorting_audit.md` | `docs/audits/iteration-path-sorting-audit.md` |
-| `docs/sprintmetrics_iteration_migration_plan.md` | `docs/plans/sprintmetrics-iteration-migration-plan.md` |
-| `docs/sqlite-datetime-fix.md` | `docs/reports/sqlite-datetime-fix.md` |
-| `docs/sqlite-timestamp-fix-audit.md` | `docs/audits/sqlite-timestamp-fix-audit.md` |
-| `docs/test-determinism-report.md` | `docs/reports/test-determinism-report.md` |
+| `docs/TFS_CACHE_IMPLEMENTATION_PLAN.md` | `docs/implementation/tfs-cache-implementation-plan.md` |
+| `docs/UI_MIGRATION_PLAN.md` | `docs/implementation/ui-migration-plan.md` |
+| `docs/MULTI_SELECT_BEHAVIOR.md` | `docs/architecture/multi-select-behavior.md` |
+| `docs/NAVIGATION_MAP.md` | `docs/architecture/navigation-map.md` |
+| `docs/health_workspace_fix_plan.md` | `docs/implementation/health-workspace-fix-plan.md` |
+| `docs/iteration_path_sorting_audit.md` | `docs/analysis/iteration-path-sorting-audit.md` |
+| `docs/sprintmetrics_iteration_migration_plan.md` | `docs/implementation/sprintmetrics-iteration-migration-plan.md` |
+| `docs/sqlite-datetime-fix.md` | `docs/reports/2026-03-30-sqlite-datetime-fix.md` |
+| `docs/sqlite-timestamp-fix-audit.md` | `docs/analysis/sqlite-timestamp-fix-audit.md` |
+| `docs/test-determinism-report.md` | `docs/reports/2026-03-30-test-determinism-report.md` |
 
 ## 3. Naming normalization
 
@@ -32,16 +32,16 @@ The following moved files were normalized to lowercase kebab-case as part of the
 
 - `docs/analysis/live-tfs-calls-analysis.md`
 - `docs/analysis/realtfsclient-getall-analysis.md`
-- `docs/plans/tfs-cache-implementation-plan.md`
-- `docs/plans/ui-migration-plan.md`
-- `docs/user/multi-select-behavior.md`
-- `docs/user/navigation-map.md`
-- `docs/plans/health-workspace-fix-plan.md`
-- `docs/audits/iteration-path-sorting-audit.md`
-- `docs/plans/sprintmetrics-iteration-migration-plan.md`
-- `docs/reports/sqlite-datetime-fix.md`
-- `docs/audits/sqlite-timestamp-fix-audit.md`
-- `docs/reports/test-determinism-report.md`
+- `docs/implementation/tfs-cache-implementation-plan.md`
+- `docs/implementation/ui-migration-plan.md`
+- `docs/architecture/multi-select-behavior.md`
+- `docs/architecture/navigation-map.md`
+- `docs/implementation/health-workspace-fix-plan.md`
+- `docs/analysis/iteration-path-sorting-audit.md`
+- `docs/implementation/sprintmetrics-iteration-migration-plan.md`
+- `docs/reports/2026-03-30-sqlite-datetime-fix.md`
+- `docs/analysis/sqlite-timestamp-fix-audit.md`
+- `docs/reports/2026-03-30-test-determinism-report.md`
 
 ## 4. Filename convention violations (proposals only)
 
@@ -62,102 +62,102 @@ Per the binding clarification, the date-prefixed `YYYY-MM-DD-...` rule applies o
 | `docs/rules/ui-loading-rules.md` | `ui-loading-rules.md` |
 | `docs/rules/ui-rules.md` | `ui-rules.md` |
 | `docs/architecture/portfolio_flow_data_signals.md` | `portfolio-flow-data-signals.md` |
-| `docs/audits/application_handler_cleanup.md` | `application-handler-cleanup.md` |
-| `docs/audits/application_semantic_audit.md` | `application-semantic-audit.md` |
-| `docs/audits/application_simplification_audit.md` | `application-simplification-audit.md` |
-| `docs/audits/backlog_health_simplification.md` | `backlog-health-simplification.md` |
-| `docs/audits/backlog_quality_cdc_summary.md` | `backlog-quality-cdc-summary.md` |
-| `docs/audits/backlog_quality_domain_exploration.md` | `backlog-quality-domain-exploration.md` |
-| `docs/audits/buildquality_application_page_integration_report.md` | `buildquality-application-page-integration-report.md` |
-| `docs/audits/buildquality_calculation_validation_report.md` | `buildquality-calculation-validation-report.md` |
-| `docs/audits/buildquality_cdc_contract_report.md` | `buildquality-cdc-contract-report.md` |
-| `docs/audits/buildquality_chart_state_cleanup_report.md` | `buildquality-chart-state-cleanup-report.md` |
-| `docs/audits/buildquality_data_aggregation_contract_report.md` | `buildquality-data-aggregation-contract-report.md` |
-| `docs/audits/buildquality_discovery_report.md` | `buildquality-discovery-report.md` |
-| `docs/audits/buildquality_edge_consistency_report.md` | `buildquality-edge-consistency-report.md` |
-| `docs/audits/buildquality_implementation_contract_report.md` | `buildquality-implementation-contract-report.md` |
-| `docs/audits/buildquality_missing_ingestion_build_168570_code_analysis_report.md` | `buildquality-missing-ingestion-build-168570-code-analysis-report.md` |
-| `docs/audits/buildquality_retrieval_performance_report.md` | `buildquality-retrieval-performance-report.md` |
-| `docs/audits/buildquality_seed_data_report.md` | `buildquality-seed-data-report.md` |
-| `docs/audits/buildquality_ui_compliance_audit_report.md` | `buildquality-ui-compliance-audit-report.md` |
-| `docs/audits/buildquality_ui_final_integration_report.md` | `buildquality-ui-final-integration-report.md` |
-| `docs/audits/cdc_behavioral_stress_test_audit.md` | `cdc-behavioral-stress-test-audit.md` |
-| `docs/audits/cdc_completion_summary.md` | `cdc-completion-summary.md` |
-| `docs/audits/cdc_coverage_audit.md` | `cdc-coverage-audit.md` |
-| `docs/audits/cdc_extraction_summary.md` | `cdc-extraction-summary.md` |
-| `docs/audits/cdc_freeze_audit.md` | `cdc-freeze-audit.md` |
-| `docs/audits/cdc_invariant_tests.md` | `cdc-invariant-tests.md` |
-| `docs/audits/cdc_replay_fixture_validation.md` | `cdc-replay-fixture-validation.md` |
-| `docs/audits/cdc_usage_coverage.md` | `cdc-usage-coverage.md` |
-| `docs/audits/compatibility_cleanup_phase3.md` | `compatibility-cleanup-phase3.md` |
-| `docs/audits/delivery_trend_analytics_cdc_summary.md` | `delivery-trend-analytics-cdc-summary.md` |
-| `docs/audits/domain_library_readiness_audit.md` | `domain-library-readiness-audit.md` |
-| `docs/audits/domain_logic_outside_cdc_exploration.md` | `domain-logic-outside-cdc-exploration.md` |
-| `docs/audits/dto_contract_cleanup.md` | `dto-contract-cleanup.md` |
-| `docs/audits/effort_diagnostics_cdc_extraction_report.md` | `effort-diagnostics-cdc-extraction-report.md` |
-| `docs/audits/effort_diagnostics_cleanup_report.md` | `effort-diagnostics-cleanup-report.md` |
-| `docs/audits/effort_diagnostics_domain_exploration.md` | `effort-diagnostics-domain-exploration.md` |
-| `docs/audits/effort_diagnostics_semantic_audit.md` | `effort-diagnostics-semantic-audit.md` |
-| `docs/audits/effort_planning_boundary_audit.md` | `effort-planning-boundary-audit.md` |
-| `docs/audits/effort_planning_boundary_cleanup.md` | `effort-planning-boundary-cleanup.md` |
-| `docs/audits/effort_planning_cdc_extraction.md` | `effort-planning-cdc-extraction.md` |
-| `docs/audits/estimation_audit.md` | `estimation-audit.md` |
-| `docs/audits/final_pre_usage_validation.md` | `final-pre-usage-validation.md` |
-| `docs/audits/forecasting_cdc_summary.md` | `forecasting-cdc-summary.md` |
-| `docs/audits/forecasting_domain_exploration.md` | `forecasting-domain-exploration.md` |
-| `docs/audits/forecasting_semantic_audit.md` | `forecasting-semantic-audit.md` |
-| `docs/audits/hexagon_boundary_enforcement.md` | `hexagon-boundary-enforcement.md` |
-| `docs/audits/hierarchy_propagation_audit.md` | `hierarchy-propagation-audit.md` |
-| `docs/audits/metrics_audit.md` | `metrics-audit.md` |
-| `docs/audits/mock_data_quality.md` | `mock-data-quality.md` |
-| `docs/audits/mock_pr_pipeline_seed_validation.md` | `mock-pr-pipeline-seed-validation.md` |
-| `docs/audits/portfolio_flow_application_migration.md` | `portfolio-flow-application-migration.md` |
-| `docs/audits/portfolio_flow_consumers_audit.md` | `portfolio-flow-consumers-audit.md` |
-| `docs/audits/portfolio_flow_domain_exploration.md` | `portfolio-flow-domain-exploration.md` |
-| `docs/audits/portfolio_flow_feasibility.md` | `portfolio-flow-feasibility.md` |
-| `docs/audits/portfolio_flow_projection.md` | `portfolio-flow-projection.md` |
-| `docs/audits/portfolio_flow_projection_validation.md` | `portfolio-flow-projection-validation.md` |
-| `docs/audits/portfolio_flow_semantic_audit.md` | `portfolio-flow-semantic-audit.md` |
-| `docs/audits/portfolio_flow_signal_enablement.md` | `portfolio-flow-signal-enablement.md` |
-| `docs/audits/portfolio_handler_simplification.md` | `portfolio-handler-simplification.md` |
-| `docs/audits/post_runtime_fix_validation.md` | `post-runtime-fix-validation.md` |
-| `docs/audits/pr_pipeline_linkage_analysis.md` | `pr-pipeline-linkage-analysis.md` |
-| `docs/audits/pre_cleanup_app_validation.md` | `pre-cleanup-app-validation.md` |
-| `docs/audits/projection_determinism_audit.md` | `projection-determinism-audit.md` |
-| `docs/audits/projection_trend_pipeline_audit.md` | `projection-trend-pipeline-audit.md` |
-| `docs/audits/runtime_integrity_fix.md` | `runtime-integrity-fix.md` |
-| `docs/audits/sprint_commitment_application_alignment.md` | `sprint-commitment-application-alignment.md` |
-| `docs/audits/sprint_commitment_cdc_extraction.md` | `sprint-commitment-cdc-extraction.md` |
-| `docs/audits/sprint_commitment_handler_simplification.md` | `sprint-commitment-handler-simplification.md` |
-| `docs/audits/sprint_scope_audit.md` | `sprint-scope-audit.md` |
-| `docs/audits/sqlite_buildquality_database_discovery_report.md` | `sqlite-buildquality-database-discovery-report.md` |
-| `docs/audits/state_sprint_delivery_audit.md` | `state-sprint-delivery-audit.md` |
-| `docs/audits/statistical_core_cleanup_report.md` | `statistical-core-cleanup-report.md` |
-| `docs/audits/statistical_helper_audit.md` | `statistical-helper-audit.md` |
-| `docs/audits/test_cleanup_step1.md` | `test-cleanup-step1.md` |
-| `docs/audits/test_ownership_audit.md` | `test-ownership-audit.md` |
-| `docs/audits/test_ownership_normalization.md` | `test-ownership-normalization.md` |
-| `docs/audits/tfs_api_version_configuration_inspection_report.md` | `tfs-api-version-configuration-inspection-report.md` |
-| `docs/audits/transport_naming_alignment.md` | `transport-naming-alignment.md` |
-| `docs/audits/trend_delivery_analytics_exploration.md` | `trend-delivery-analytics-exploration.md` |
-| `docs/audits/ui_semantic_correction.md` | `ui-semantic-correction.md` |
-| `docs/audits/ui_storypoint_adoption.md` | `ui-storypoint-adoption.md` |
-| `docs/audits/unit_test_cleanup_report.md` | `unit-test-cleanup-report.md` |
-| `docs/audits/unit_test_inventory_audit.md` | `unit-test-inventory-audit.md` |
-| `docs/audits/unit_test_redundancy_audit.md` | `unit-test-redundancy-audit.md` |
-| `docs/audits/unit_test_speed_audit.md` | `unit-test-speed-audit.md` |
-| `docs/audits/unit_test_strategy.md` | `unit-test-strategy.md` |
-| `docs/audits/workspace_hub_tile_analysis.md` | `workspace-hub-tile-analysis.md` |
-| `docs/bug_trend_followups.md` | `bug-trend-followups.md` |
-| `docs/domain/REPOSITORY_DOMAIN_DISCOVERY.md` | `repository-domain-discovery.md` |
-| `docs/domain/backlog_quality_domain_model.md` | `backlog-quality-domain-model.md` |
-| `docs/domain/cdc_domain_map.md` | `cdc-domain-map.md` |
-| `docs/domain/cdc_domain_map_generated.md` | `cdc-domain-map-generated.md` |
-| `docs/domain/cdc_reference.md` | `cdc-reference.md` |
-| `docs/domain/domain_model.md` | `domain-model.md` |
-| `docs/domain/effort_diagnostics_domain_model.md` | `effort-diagnostics-domain-model.md` |
-| `docs/domain/forecasting_domain_model.md` | `forecasting-domain-model.md` |
-| `docs/domain/portfolio_flow_model.md` | `portfolio-flow-model.md` |
+| `docs/analysis/application_handler_cleanup.md` | `application-handler-cleanup.md` |
+| `docs/analysis/application_semantic_audit.md` | `application-semantic-audit.md` |
+| `docs/analysis/application_simplification_audit.md` | `application-simplification-audit.md` |
+| `docs/analysis/backlog_health_simplification.md` | `backlog-health-simplification.md` |
+| `docs/analysis/backlog_quality_cdc_summary.md` | `backlog-quality-cdc-summary.md` |
+| `docs/analysis/backlog_quality_domain_exploration.md` | `backlog-quality-domain-exploration.md` |
+| `docs/analysis/buildquality_application_page_integration_report.md` | `buildquality-application-page-integration-report.md` |
+| `docs/analysis/buildquality_calculation_validation_report.md` | `buildquality-calculation-validation-report.md` |
+| `docs/analysis/buildquality_cdc_contract_report.md` | `buildquality-cdc-contract-report.md` |
+| `docs/analysis/buildquality_chart_state_cleanup_report.md` | `buildquality-chart-state-cleanup-report.md` |
+| `docs/analysis/buildquality_data_aggregation_contract_report.md` | `buildquality-data-aggregation-contract-report.md` |
+| `docs/analysis/buildquality_discovery_report.md` | `buildquality-discovery-report.md` |
+| `docs/analysis/buildquality_edge_consistency_report.md` | `buildquality-edge-consistency-report.md` |
+| `docs/analysis/buildquality_implementation_contract_report.md` | `buildquality-implementation-contract-report.md` |
+| `docs/analysis/buildquality_missing_ingestion_build_168570_code_analysis_report.md` | `buildquality-missing-ingestion-build-168570-code-analysis-report.md` |
+| `docs/analysis/buildquality_retrieval_performance_report.md` | `buildquality-retrieval-performance-report.md` |
+| `docs/analysis/buildquality_seed_data_report.md` | `buildquality-seed-data-report.md` |
+| `docs/analysis/buildquality_ui_compliance_audit_report.md` | `buildquality-ui-compliance-audit-report.md` |
+| `docs/analysis/buildquality_ui_final_integration_report.md` | `buildquality-ui-final-integration-report.md` |
+| `docs/analysis/cdc_behavioral_stress_test_audit.md` | `cdc-behavioral-stress-test-audit.md` |
+| `docs/analysis/cdc_completion_summary.md` | `cdc-completion-summary.md` |
+| `docs/analysis/cdc_coverage_audit.md` | `cdc-coverage-audit.md` |
+| `docs/analysis/cdc_extraction_summary.md` | `cdc-extraction-summary.md` |
+| `docs/analysis/cdc_freeze_audit.md` | `cdc-freeze-audit.md` |
+| `docs/analysis/cdc_invariant_tests.md` | `cdc-invariant-tests.md` |
+| `docs/analysis/cdc_replay_fixture_validation.md` | `cdc-replay-fixture-validation.md` |
+| `docs/analysis/cdc_usage_coverage.md` | `cdc-usage-coverage.md` |
+| `docs/analysis/compatibility_cleanup_phase3.md` | `compatibility-cleanup-phase3.md` |
+| `docs/analysis/delivery_trend_analytics_cdc_summary.md` | `delivery-trend-analytics-cdc-summary.md` |
+| `docs/analysis/domain_library_readiness_audit.md` | `domain-library-readiness-audit.md` |
+| `docs/analysis/domain_logic_outside_cdc_exploration.md` | `domain-logic-outside-cdc-exploration.md` |
+| `docs/analysis/dto_contract_cleanup.md` | `dto-contract-cleanup.md` |
+| `docs/analysis/effort_diagnostics_cdc_extraction_report.md` | `effort-diagnostics-cdc-extraction-report.md` |
+| `docs/analysis/effort_diagnostics_cleanup_report.md` | `effort-diagnostics-cleanup-report.md` |
+| `docs/analysis/effort_diagnostics_domain_exploration.md` | `effort-diagnostics-domain-exploration.md` |
+| `docs/analysis/effort_diagnostics_semantic_audit.md` | `effort-diagnostics-semantic-audit.md` |
+| `docs/analysis/effort_planning_boundary_audit.md` | `effort-planning-boundary-audit.md` |
+| `docs/analysis/effort_planning_boundary_cleanup.md` | `effort-planning-boundary-cleanup.md` |
+| `docs/analysis/effort_planning_cdc_extraction.md` | `effort-planning-cdc-extraction.md` |
+| `docs/analysis/estimation_audit.md` | `estimation-audit.md` |
+| `docs/analysis/final_pre_usage_validation.md` | `final-pre-usage-validation.md` |
+| `docs/analysis/forecasting_cdc_summary.md` | `forecasting-cdc-summary.md` |
+| `docs/analysis/forecasting_domain_exploration.md` | `forecasting-domain-exploration.md` |
+| `docs/analysis/forecasting_semantic_audit.md` | `forecasting-semantic-audit.md` |
+| `docs/analysis/hexagon_boundary_enforcement.md` | `hexagon-boundary-enforcement.md` |
+| `docs/analysis/hierarchy_propagation_audit.md` | `hierarchy-propagation-audit.md` |
+| `docs/analysis/metrics_audit.md` | `metrics-audit.md` |
+| `docs/analysis/mock_data_quality.md` | `mock-data-quality.md` |
+| `docs/analysis/mock_pr_pipeline_seed_validation.md` | `mock-pr-pipeline-seed-validation.md` |
+| `docs/analysis/portfolio_flow_application_migration.md` | `portfolio-flow-application-migration.md` |
+| `docs/analysis/portfolio_flow_consumers_audit.md` | `portfolio-flow-consumers-audit.md` |
+| `docs/analysis/portfolio_flow_domain_exploration.md` | `portfolio-flow-domain-exploration.md` |
+| `docs/analysis/portfolio_flow_feasibility.md` | `portfolio-flow-feasibility.md` |
+| `docs/analysis/portfolio_flow_projection.md` | `portfolio-flow-projection.md` |
+| `docs/analysis/portfolio_flow_projection_validation.md` | `portfolio-flow-projection-validation.md` |
+| `docs/analysis/portfolio_flow_semantic_audit.md` | `portfolio-flow-semantic-audit.md` |
+| `docs/analysis/portfolio_flow_signal_enablement.md` | `portfolio-flow-signal-enablement.md` |
+| `docs/analysis/portfolio_handler_simplification.md` | `portfolio-handler-simplification.md` |
+| `docs/analysis/post_runtime_fix_validation.md` | `post-runtime-fix-validation.md` |
+| `docs/analysis/pr_pipeline_linkage_analysis.md` | `pr-pipeline-linkage-analysis.md` |
+| `docs/analysis/pre_cleanup_app_validation.md` | `pre-cleanup-app-validation.md` |
+| `docs/analysis/projection_determinism_audit.md` | `projection-determinism-audit.md` |
+| `docs/analysis/projection_trend_pipeline_audit.md` | `projection-trend-pipeline-audit.md` |
+| `docs/analysis/runtime_integrity_fix.md` | `runtime-integrity-fix.md` |
+| `docs/analysis/sprint_commitment_application_alignment.md` | `sprint-commitment-application-alignment.md` |
+| `docs/analysis/sprint_commitment_cdc_extraction.md` | `sprint-commitment-cdc-extraction.md` |
+| `docs/analysis/sprint_commitment_handler_simplification.md` | `sprint-commitment-handler-simplification.md` |
+| `docs/analysis/sprint_scope_audit.md` | `sprint-scope-audit.md` |
+| `docs/analysis/sqlite_buildquality_database_discovery_report.md` | `sqlite-buildquality-database-discovery-report.md` |
+| `docs/analysis/state_sprint_delivery_audit.md` | `state-sprint-delivery-audit.md` |
+| `docs/analysis/statistical_core_cleanup_report.md` | `statistical-core-cleanup-report.md` |
+| `docs/analysis/statistical_helper_audit.md` | `statistical-helper-audit.md` |
+| `docs/analysis/test_cleanup_step1.md` | `test-cleanup-step1.md` |
+| `docs/analysis/test_ownership_audit.md` | `test-ownership-audit.md` |
+| `docs/analysis/test_ownership_normalization.md` | `test-ownership-normalization.md` |
+| `docs/analysis/tfs_api_version_configuration_inspection_report.md` | `tfs-api-version-configuration-inspection-report.md` |
+| `docs/analysis/transport_naming_alignment.md` | `transport-naming-alignment.md` |
+| `docs/analysis/trend_delivery_analytics_exploration.md` | `trend-delivery-analytics-exploration.md` |
+| `docs/analysis/ui_semantic_correction.md` | `ui-semantic-correction.md` |
+| `docs/analysis/ui_storypoint_adoption.md` | `ui-storypoint-adoption.md` |
+| `docs/analysis/unit_test_cleanup_report.md` | `unit-test-cleanup-report.md` |
+| `docs/analysis/unit_test_inventory_audit.md` | `unit-test-inventory-audit.md` |
+| `docs/analysis/unit_test_redundancy_audit.md` | `unit-test-redundancy-audit.md` |
+| `docs/analysis/unit_test_speed_audit.md` | `unit-test-speed-audit.md` |
+| `docs/analysis/unit_test_strategy.md` | `unit-test-strategy.md` |
+| `docs/analysis/workspace_hub_tile_analysis.md` | `workspace-hub-tile-analysis.md` |
+| `docs/implementation/bug-trend-followups.md` | `bug-trend-followups.md` |
+| `docs/architecture/repository-domain-discovery.md` | `repository-domain-discovery.md` |
+| `docs/architecture/backlog-quality-domain-model.md` | `backlog-quality-domain-model.md` |
+| `docs/architecture/cdc-domain-map.md` | `cdc-domain-map.md` |
+| `docs/architecture/cdc-domain-map-generated.md` | `cdc-domain-map-generated.md` |
+| `docs/architecture/cdc-reference.md` | `cdc-reference.md` |
+| `docs/architecture/domain-model.md` | `domain-model.md` |
+| `docs/architecture/effort-diagnostics-domain-model.md` | `effort-diagnostics-domain-model.md` |
+| `docs/architecture/forecasting-domain-model.md` | `forecasting-domain-model.md` |
+| `docs/architecture/portfolio-flow-model.md` | `portfolio-flow-model.md` |
 | `docs/rules/estimation-rules.md` | `estimation-rules.md` |
 | `docs/rules/hierarchy-rules.md` | `hierarchy-rules.md` |
 | `docs/rules/metrics-rules.md` | `metrics-rules.md` |
@@ -165,18 +165,18 @@ Per the binding clarification, the date-prefixed `YYYY-MM-DD-...` rule applies o
 | `docs/rules/source-rules.md` | `source-rules.md` |
 | `docs/rules/sprint-rules.md` | `sprint-rules.md` |
 | `docs/rules/state-rules.md` | `state-rules.md` |
-| `docs/domain/sprint_commitment_cdc_summary.md` | `sprint-commitment-cdc-summary.md` |
-| `docs/domain/sprint_commitment_domain_model.md` | `sprint-commitment-domain-model.md` |
+| `docs/architecture/sprint-commitment-cdc-summary.md` | `sprint-commitment-cdc-summary.md` |
+| `docs/architecture/sprint-commitment-domain-model.md` | `sprint-commitment-domain-model.md` |
 | `docs/rules/ui-semantic-rules.md` | `ui-semantic-rules.md` |
-| `docs/exploration/sprint_commitment_domain_exploration.md` | `sprint-commitment-domain-exploration.md` |
-| `docs/filters/canonical_filter_state_model.md` | `canonical-filter-state-model.md` |
-| `docs/health_additional_signals.md` | `health-additional-signals.md` |
-| `docs/navigation_decision_backlog.md` | `navigation-decision-backlog.md` |
-| `docs/navigation_followup_actions.md` | `navigation-followup-actions.md` |
-| `docs/pr_template.md` | `pr-template.md` |
-| `docs/reviews/TfsIntegrationReview.md` | `tfsintegrationreview.md` |
-| `docs/roadmaps/application_simplification_plan.md` | `application-simplification-plan.md` |
-| `docs/screenshots/README.md` | `readme.md` |
+| `docs/analysis/sprint-commitment-domain-exploration.md` | `sprint-commitment-domain-exploration.md` |
+| `docs/analysis/canonical_filter_state_model.md` | `canonical-filter-state-model.md` |
+| `docs/implementation/health-additional-signals.md` | `health-additional-signals.md` |
+| `docs/implementation/navigation-decision-backlog.md` | `navigation-decision-backlog.md` |
+| `docs/implementation/navigation-followup-actions.md` | `navigation-followup-actions.md` |
+| `.github/pull_request_template.md` | `pr-template.md` |
+| `docs/analysis/tfs-integration-review.md` | `tfsintegrationreview.md` |
+| `docs/implementation/application-simplification-plan.md` | `application-simplification-plan.md` |
+| `docs/analysis/screenshot-index-exploratory-testing.md` | `readme.md` |
 | `features/02032026_backlog_health.md` | `02032026-backlog-health.md` |
 | `features/20260110_User_profile_creation.md` | `20260110-user-profile-creation.md` |
 | `features/20260119_workitem_validation.md` | `20260119-workitem-validation.md` |
@@ -205,12 +205,12 @@ Per the binding clarification, the date-prefixed `YYYY-MM-DD-...` rule applies o
 - `docs/rules/tfs-integration-rules.md`
 - `docs/rules/ui-loading-rules.md`
 - `docs/rules/ui-rules.md`
-- `docs/bug_trend_followups.md`
-- `docs/health_additional_signals.md`
-- `docs/navigation_decision_backlog.md`
-- `docs/navigation_followup_actions.md`
-- `docs/pr_template.md`
-- `docs/sprint-scoping-limitations.md`
+- `docs/implementation/bug-trend-followups.md`
+- `docs/implementation/health-additional-signals.md`
+- `docs/implementation/navigation-decision-backlog.md`
+- `docs/implementation/navigation-followup-actions.md`
+- `.github/pull_request_template.md`
+- `docs/analysis/sprint-scoping-limitations.md`
 
 ### 5.2 Non-canonical docs folders still containing markdown
 - `docs/cleanup`
@@ -233,12 +233,12 @@ Per the binding clarification, the date-prefixed `YYYY-MM-DD-...` rule applies o
 | `docs/archive/legacy-revision-ingestion/odata-validator-vs-ingestion-report.md` | `archive` | Already archived legacy ingestion analysis; leave as archived residue. |
 | `docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md` | `archive` | Already archived divergence analysis; keep archived. |
 | `docs/archive/legacy-revision-ingestion/revision-ingestor-v2.md` | `archive` | Legacy revision-ingestion design artifact; keep archived. |
-| `docs/history/validation/validators-implementation-2026-01-30.md` | `unclear` | Historical validator implementation summary; keep as history until a dedicated validator cleanup batch decides whether it still adds value. |
+| `docs/archive/validation/validators-implementation-2026-01-30.md` | `unclear` | Historical validator implementation summary; keep as history until a dedicated validator cleanup batch decides whether it still adds value. |
 
 ## 7. .github candidates
 
 - `.github/workflows/README.md` — candidate for later docs/history or docs/analysis relocation; not moved because workflow-local placement may still be intentional
-- `.github/pull_request_template.md` — keep in .github for functionality, but include in later consolidation review because duplicate template content also exists at docs/pr_template.md
+- `.github/pull_request_template.md` — keep in .github for functionality, but include in later consolidation review because duplicate template content also exists at .github/pull_request_template.md
 
 ## 8. Next batch plan
 

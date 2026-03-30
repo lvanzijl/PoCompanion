@@ -398,7 +398,7 @@ The current validation/integrity model includes structural integrity, refinement
 
 ## 16. Domain model and canonical analytics rules (binding)
 
-PoTool analytics logic must follow the canonical domain model in `docs/domain/domain_model.md`.
+PoTool analytics logic must follow the canonical domain model in `docs/architecture/domain-model.md`.
 
 ### 16.1 Hierarchy rules
 

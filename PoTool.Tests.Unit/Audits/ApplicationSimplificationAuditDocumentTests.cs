@@ -7,9 +7,9 @@ public sealed class ApplicationSimplificationAuditDocumentTests
     public void ApplicationSimplificationAudit_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "application_simplification_audit.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "application_simplification_audit.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The application simplification audit report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The application simplification audit report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

@@ -8,7 +8,7 @@ Reference documents:
 - `docs/analysis/2026-03-18-sync-testability-architecture.md`
 - `docs/rules/copilot-architecture-contract.md`
 - `docs/rules/architecture-rules.md`
-- `docs/domain/domain_model.md`
+- `docs/architecture/domain-model.md`
 - `docs/rules/hierarchy-rules.md`
 - `docs/rules/source-rules.md`
 

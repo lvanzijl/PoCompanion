@@ -1,3 +1,5 @@
+> **NOTE:** This document reflects a historical state prior to Batch 3 cleanup.
+
 # Documentation Reorganization Report
 
 ## 1. Summary
@@ -95,117 +97,117 @@ docs/archive/code-quality/work-completed-2026-01-30.md
 docs/archive/experiments
 docs/archive/experiments/.gitkeep
 docs/archive/legacy-revision-ingestion
-docs/archive/legacy-revision-ingestion/cache-insights-and-validation-report.md
+docs/analysis/cache-insights-and-validation-report.md
 docs/archive/legacy-revision-ingestion/odata-validator-vs-ingestion-report.md
 docs/archive/legacy-revision-ingestion/real-revision-tfsclient-pagination-review.md
 docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md
 docs/archive/legacy-revision-ingestion/revision-ingestor-v2.md
-docs/archive/legacy-revision-ingestion/sprint-trends-vs-revisions-report.md
+docs/analysis/sprint-trends-vs-revisions-report.md
 docs/audits
-docs/audits/application_handler_cleanup.md
-docs/audits/application_semantic_audit.md
-docs/audits/application_simplification_audit.md
-docs/audits/backlog_health_simplification.md
-docs/audits/backlog_quality_cdc_summary.md
-docs/audits/backlog_quality_domain_exploration.md
-docs/audits/buildquality_application_page_integration_report.md
-docs/audits/buildquality_calculation_validation_report.md
-docs/audits/buildquality_cdc_contract_report.md
-docs/audits/buildquality_chart_state_cleanup_report.md
-docs/audits/buildquality_data_aggregation_contract_report.md
-docs/audits/buildquality_discovery_report.md
-docs/audits/buildquality_edge_consistency_report.md
-docs/audits/buildquality_implementation_contract_report.md
-docs/audits/buildquality_missing_ingestion_build_168570_code_analysis_report.md
-docs/audits/buildquality_retrieval_performance_report.md
-docs/audits/buildquality_seed_data_report.md
-docs/audits/buildquality_ui_compliance_audit_report.md
-docs/audits/buildquality_ui_final_integration_report.md
-docs/audits/cdc-full-quality-audit.md
-docs/audits/cdc_behavioral_stress_test_audit.md
-docs/audits/cdc_completion_summary.md
-docs/audits/cdc_coverage_audit.md
-docs/audits/cdc_extraction_summary.md
-docs/audits/cdc_freeze_audit.md
-docs/audits/cdc_invariant_tests.md
-docs/audits/cdc_replay_fixture_validation.md
-docs/audits/cdc_usage_coverage.md
-docs/audits/compatibility_cleanup_phase3.md
-docs/audits/delivery_trend_analytics_cdc_summary.md
-docs/audits/domain_library_readiness_audit.md
-docs/audits/domain_logic_outside_cdc_exploration.md
-docs/audits/dto_contract_cleanup.md
-docs/audits/effort_diagnostics_cdc_extraction_report.md
-docs/audits/effort_diagnostics_cleanup_report.md
-docs/audits/effort_diagnostics_domain_exploration.md
-docs/audits/effort_diagnostics_semantic_audit.md
-docs/audits/effort_planning_boundary_audit.md
-docs/audits/effort_planning_boundary_cleanup.md
-docs/audits/effort_planning_cdc_extraction.md
-docs/audits/estimation_audit.md
-docs/audits/final_pre_usage_validation.md
-docs/audits/forecasting_cdc_summary.md
-docs/audits/forecasting_domain_exploration.md
-docs/audits/forecasting_semantic_audit.md
-docs/audits/hexagon_boundary_enforcement.md
-docs/audits/hierarchy_propagation_audit.md
-docs/audits/metrics_audit.md
-docs/audits/mock_data_quality.md
-docs/audits/mock_pr_pipeline_seed_validation.md
-docs/audits/portfolio_flow_application_migration.md
-docs/audits/portfolio_flow_consumers_audit.md
-docs/audits/portfolio_flow_domain_exploration.md
-docs/audits/portfolio_flow_feasibility.md
-docs/audits/portfolio_flow_projection.md
-docs/audits/portfolio_flow_projection_validation.md
-docs/audits/portfolio_flow_semantic_audit.md
-docs/audits/portfolio_flow_signal_enablement.md
-docs/audits/portfolio_handler_simplification.md
-docs/audits/post_runtime_fix_validation.md
-docs/audits/pr_pipeline_linkage_analysis.md
-docs/audits/pre_cleanup_app_validation.md
-docs/audits/projection_determinism_audit.md
-docs/audits/projection_trend_pipeline_audit.md
-docs/audits/runtime_integrity_fix.md
-docs/audits/sprint_commitment_application_alignment.md
-docs/audits/sprint_commitment_cdc_extraction.md
-docs/audits/sprint_commitment_handler_simplification.md
-docs/audits/sprint_scope_audit.md
-docs/audits/sqlite_buildquality_database_discovery_report.md
-docs/audits/state_sprint_delivery_audit.md
-docs/audits/statistical_core_cleanup_report.md
-docs/audits/statistical_helper_audit.md
-docs/audits/test_cleanup_step1.md
-docs/audits/test_ownership_audit.md
-docs/audits/test_ownership_normalization.md
-docs/audits/tfs_api_version_configuration_inspection_report.md
-docs/audits/transport_naming_alignment.md
-docs/audits/trend_delivery_analytics_exploration.md
-docs/audits/ui_semantic_correction.md
-docs/audits/ui_storypoint_adoption.md
-docs/audits/unit_test_cleanup_report.md
-docs/audits/unit_test_inventory_audit.md
-docs/audits/unit_test_redundancy_audit.md
-docs/audits/unit_test_speed_audit.md
-docs/audits/unit_test_strategy.md
-docs/audits/workspace_hub_tile_analysis.md
-docs/bug_trend_followups.md
+docs/analysis/application_handler_cleanup.md
+docs/analysis/application_semantic_audit.md
+docs/analysis/application_simplification_audit.md
+docs/analysis/backlog_health_simplification.md
+docs/analysis/backlog_quality_cdc_summary.md
+docs/analysis/backlog_quality_domain_exploration.md
+docs/analysis/buildquality_application_page_integration_report.md
+docs/analysis/buildquality_calculation_validation_report.md
+docs/analysis/buildquality_cdc_contract_report.md
+docs/analysis/buildquality_chart_state_cleanup_report.md
+docs/analysis/buildquality_data_aggregation_contract_report.md
+docs/analysis/buildquality_discovery_report.md
+docs/analysis/buildquality_edge_consistency_report.md
+docs/analysis/buildquality_implementation_contract_report.md
+docs/analysis/buildquality_missing_ingestion_build_168570_code_analysis_report.md
+docs/analysis/buildquality_retrieval_performance_report.md
+docs/analysis/buildquality_seed_data_report.md
+docs/analysis/buildquality_ui_compliance_audit_report.md
+docs/analysis/buildquality_ui_final_integration_report.md
+docs/analysis/cdc-full-quality-audit.md
+docs/analysis/cdc_behavioral_stress_test_audit.md
+docs/analysis/cdc_completion_summary.md
+docs/analysis/cdc_coverage_audit.md
+docs/analysis/cdc_extraction_summary.md
+docs/analysis/cdc_freeze_audit.md
+docs/analysis/cdc_invariant_tests.md
+docs/analysis/cdc_replay_fixture_validation.md
+docs/analysis/cdc_usage_coverage.md
+docs/analysis/compatibility_cleanup_phase3.md
+docs/analysis/delivery_trend_analytics_cdc_summary.md
+docs/analysis/domain_library_readiness_audit.md
+docs/analysis/domain_logic_outside_cdc_exploration.md
+docs/analysis/dto_contract_cleanup.md
+docs/analysis/effort_diagnostics_cdc_extraction_report.md
+docs/analysis/effort_diagnostics_cleanup_report.md
+docs/analysis/effort_diagnostics_domain_exploration.md
+docs/analysis/effort_diagnostics_semantic_audit.md
+docs/analysis/effort_planning_boundary_audit.md
+docs/analysis/effort_planning_boundary_cleanup.md
+docs/analysis/effort_planning_cdc_extraction.md
+docs/analysis/estimation_audit.md
+docs/analysis/final_pre_usage_validation.md
+docs/analysis/forecasting_cdc_summary.md
+docs/analysis/forecasting_domain_exploration.md
+docs/analysis/forecasting_semantic_audit.md
+docs/analysis/hexagon_boundary_enforcement.md
+docs/analysis/hierarchy_propagation_audit.md
+docs/analysis/metrics_audit.md
+docs/analysis/mock_data_quality.md
+docs/analysis/mock_pr_pipeline_seed_validation.md
+docs/analysis/portfolio_flow_application_migration.md
+docs/analysis/portfolio_flow_consumers_audit.md
+docs/analysis/portfolio_flow_domain_exploration.md
+docs/analysis/portfolio_flow_feasibility.md
+docs/analysis/portfolio_flow_projection.md
+docs/analysis/portfolio_flow_projection_validation.md
+docs/analysis/portfolio_flow_semantic_audit.md
+docs/analysis/portfolio_flow_signal_enablement.md
+docs/analysis/portfolio_handler_simplification.md
+docs/analysis/post_runtime_fix_validation.md
+docs/analysis/pr_pipeline_linkage_analysis.md
+docs/analysis/pre_cleanup_app_validation.md
+docs/analysis/projection_determinism_audit.md
+docs/analysis/projection_trend_pipeline_audit.md
+docs/analysis/runtime_integrity_fix.md
+docs/analysis/sprint_commitment_application_alignment.md
+docs/analysis/sprint_commitment_cdc_extraction.md
+docs/analysis/sprint_commitment_handler_simplification.md
+docs/analysis/sprint_scope_audit.md
+docs/analysis/sqlite_buildquality_database_discovery_report.md
+docs/analysis/state_sprint_delivery_audit.md
+docs/analysis/statistical_core_cleanup_report.md
+docs/analysis/statistical_helper_audit.md
+docs/analysis/test_cleanup_step1.md
+docs/analysis/test_ownership_audit.md
+docs/analysis/test_ownership_normalization.md
+docs/analysis/tfs_api_version_configuration_inspection_report.md
+docs/analysis/transport_naming_alignment.md
+docs/analysis/trend_delivery_analytics_exploration.md
+docs/analysis/ui_semantic_correction.md
+docs/analysis/ui_storypoint_adoption.md
+docs/analysis/unit_test_cleanup_report.md
+docs/analysis/unit_test_inventory_audit.md
+docs/analysis/unit_test_redundancy_audit.md
+docs/analysis/unit_test_speed_audit.md
+docs/analysis/unit_test_strategy.md
+docs/analysis/workspace_hub_tile_analysis.md
+docs/implementation/bug-trend-followups.md
 docs/cleanup
-docs/cleanup/obsolete-changes-log.md
-docs/cleanup/phase1-client-reachability-report.md
-docs/cleanup/phase2-endpoint-usage-report.md
-docs/cleanup/phase3-handler-usage-report.md
-docs/cleanup/phase4-full-layer-summary.md
+docs/reports/2026-03-30-cleanup-obsolete-changes-log.md
+docs/reports/2026-03-30-cleanup-phase1-client-reachability-report.md
+docs/reports/2026-03-30-cleanup-phase2-endpoint-usage-report.md
+docs/reports/2026-03-30-cleanup-phase3-handler-usage-report.md
+docs/reports/2026-03-30-cleanup-phase4-full-layer-summary.md
 docs/domain
-docs/domain/REPOSITORY_DOMAIN_DISCOVERY.md
-docs/domain/backlog_quality_domain_model.md
-docs/domain/cdc_domain_map.md
-docs/domain/cdc_domain_map_generated.md
-docs/domain/cdc_reference.md
-docs/domain/domain_model.md
-docs/domain/effort_diagnostics_domain_model.md
-docs/domain/forecasting_domain_model.md
-docs/domain/portfolio_flow_model.md
+docs/architecture/repository-domain-discovery.md
+docs/architecture/backlog-quality-domain-model.md
+docs/architecture/cdc-domain-map.md
+docs/architecture/cdc-domain-map-generated.md
+docs/architecture/cdc-reference.md
+docs/architecture/domain-model.md
+docs/architecture/effort-diagnostics-domain-model.md
+docs/architecture/forecasting-domain-model.md
+docs/architecture/portfolio-flow-model.md
 docs/domain/rules
 docs/rules/estimation-rules.md
 docs/rules/hierarchy-rules.md
@@ -214,55 +216,55 @@ docs/rules/propagation-rules.md
 docs/rules/source-rules.md
 docs/rules/sprint-rules.md
 docs/rules/state-rules.md
-docs/domain/sprint_commitment_cdc_summary.md
-docs/domain/sprint_commitment_domain_model.md
+docs/architecture/sprint-commitment-cdc-summary.md
+docs/architecture/sprint-commitment-domain-model.md
 docs/rules/ui-semantic-rules.md
 docs/exploration
-docs/exploration/sprint_commitment_domain_exploration.md
+docs/analysis/sprint-commitment-domain-exploration.md
 docs/filters
-docs/filters/cache-only-guardrail-analysis-pipeline-workitems.md
-docs/filters/canonical_filter_state_model.md
-docs/filters/datasource-enforcement.md
-docs/filters/filter-analysis-improved.md
-docs/filters/filter-analysis.md
-docs/filters/filter-canonical-model.md
-docs/filters/filter-cross-slice-migration.md
-docs/filters/filter-current-state-analysis.md
-docs/filters/filter-delivery-migration.md
-docs/filters/filter-final-cleanup-report.md
-docs/filters/filter-implementation-design.md
-docs/filters/filter-implementation-execution-plan.md
-docs/filters/filter-implementation-plan.md
-docs/filters/filter-performance-audit.md
-docs/filters/filter-performance-verification.md
-docs/filters/filter-phases-1-4-pr-breakdown.md
-docs/filters/filter-pipeline-migration.md
-docs/filters/filter-pipeline-truncation-fix.md
-docs/filters/filter-pr-migration.md
-docs/filters/filter-sprint-migration.md
-docs/filters/filter-ui-behavior.md
-docs/filters/filter-ui-metadata-fix.md
-docs/filters/filter-validation-report.md
-docs/filters/page-filter-contracts.md
-docs/filters/pipeline-guardrail-and-workitem-split.md
-docs/filters/pipeline-provider-cleanup.md
-docs/filters/pr-batching-verification.md
-docs/filters/pr-cache-only-guardrails.md
-docs/filters/pr-live-provider-usage-audit.md
-docs/filters/pr-provider-cleanup.md
-docs/archive/legacy-revision-ingestion/tfs-access-boundary-sealed.md
-docs/archive/legacy-revision-ingestion/tfs-access-boundary-verification.md
-docs/filters/workitem-route-classification-fix.md
-docs/health_additional_signals.md
+docs/analysis/cache-only-guardrail-analysis-pipeline-workitems.md
+docs/analysis/canonical_filter_state_model.md
+docs/analysis/datasource-enforcement.md
+docs/analysis/filter-analysis-improved.md
+docs/analysis/filter-analysis.md
+docs/analysis/filter-canonical-model.md
+docs/analysis/filter-cross-slice-migration.md
+docs/analysis/filter-current-state-analysis.md
+docs/analysis/filter-delivery-migration.md
+docs/analysis/filter-final-cleanup-report.md
+docs/analysis/filter-implementation-design.md
+docs/analysis/filter-implementation-execution-plan.md
+docs/analysis/filter-implementation-plan.md
+docs/analysis/filter-performance-audit.md
+docs/analysis/filter-performance-verification.md
+docs/analysis/filter-phases-1-4-pr-breakdown.md
+docs/analysis/filter-pipeline-migration.md
+docs/analysis/filter-pipeline-truncation-fix.md
+docs/analysis/filter-pr-migration.md
+docs/analysis/filter-sprint-migration.md
+docs/analysis/filter-ui-behavior.md
+docs/analysis/filter-ui-metadata-fix.md
+docs/analysis/filter-validation-report.md
+docs/analysis/page-filter-contracts.md
+docs/analysis/pipeline-guardrail-and-workitem-split.md
+docs/analysis/pipeline-provider-cleanup.md
+docs/analysis/pr-batching-verification.md
+docs/analysis/pr-cache-only-guardrails.md
+docs/analysis/pr-live-provider-usage-audit.md
+docs/analysis/pr-provider-cleanup.md
+docs/analysis/tfs-access-boundary-sealed.md
+docs/analysis/tfs-access-boundary-verification.md
+docs/analysis/workitem-route-classification-fix.md
+docs/implementation/health-additional-signals.md
 docs/health_workspace_fix_plan.md
 docs/history
 docs/history/code-quality
-docs/history/code-quality/code-audit-report-2026-01-30.md
-docs/history/code-quality/final-summary-2026-01-30.md
-docs/history/code-quality/fixes-applied-2026-01-30.md
-docs/history/code-quality/non-test-issues-analysis-2026-01-30.md
+docs/archive/code-quality/code-audit-report-2026-01-30.md
+docs/archive/code-quality/final-summary-2026-01-30.md
+docs/archive/code-quality/fixes-applied-2026-01-30.md
+docs/archive/code-quality/non-test-issues-analysis-2026-01-30.md
 docs/history/validation
-docs/history/validation/validators-implementation-2026-01-30.md
+docs/archive/validation/validators-implementation-2026-01-30.md
 docs/implementation
 docs/implementation/battleship-cdc-extension-report.md
 docs/implementation/cdc-critical-fixes.md
@@ -281,29 +283,29 @@ docs/implementation/phase-h-persistence.md
 docs/implementation/phase-i-finalization.md
 docs/investigations
 docs/iteration_path_sorting_audit.md
-docs/navigation_decision_backlog.md
-docs/navigation_followup_actions.md
-docs/pr_template.md
+docs/implementation/navigation-decision-backlog.md
+docs/implementation/navigation-followup-actions.md
+.github/pull_request_template.md
 docs/release-notes.json
 docs/reports
-docs/reports/ingestion-observability-hardening.md
+docs/reports/2026-03-30-ingestion-observability-hardening.md
 docs/archive/legacy-revision-ingestion/odata-ingestion-fix-plan.md
-docs/reports/sprint-attribution-analysis.md
-docs/reports/sprint-trends-current-state-analysis.md
+docs/reports/2026-03-30-sprint-attribution-analysis.md
+docs/reports/2026-03-30-sprint-trends-current-state-analysis.md
 docs/reviews
-docs/reviews/TfsIntegrationReview.md
-docs/reviews/swepo-review-report.md
+docs/analysis/tfs-integration-review.md
+docs/reports/2026-03-30-swepo-review-report.md
 docs/roadmaps
-docs/roadmaps/application_simplification_plan.md
+docs/implementation/application-simplification-plan.md
 docs/screenshots
-docs/screenshots/README.md
-docs/sprint-scoping-limitations.md
+docs/analysis/screenshot-index-exploratory-testing.md
+docs/analysis/sprint-scoping-limitations.md
 docs/sprintmetrics_iteration_migration_plan.md
 docs/sqlite-datetime-fix.md
 docs/sqlite-timestamp-fix-audit.md
 docs/test-determinism-report.md
 docs/user
-docs/user/gebruikershandleiding.md
+docs/architecture/gebruikershandleiding.md
 ```
 
 ## 3. Files moved
@@ -330,52 +332,52 @@ docs/user/gebruikershandleiding.md
 - `docs/analyze/validation-rules.md` → `docs/rules/validation-rules.md`
 - `VALIDATION_SYSTEM_REPORT.md` → `docs/architecture/validation-system-report.md`
 - `WORK_COMPLETED.md` → `docs/archive/code-quality/work-completed-2026-01-30.md`
-- `REPORT.md` → `docs/archive/legacy-revision-ingestion/cache-insights-and-validation-report.md`
+- `REPORT.md` → `docs/analysis/cache-insights-and-validation-report.md`
 - `docs/reports/odata-validator-vs-ingestion-report.md` → `docs/archive/legacy-revision-ingestion/odata-validator-vs-ingestion-report.md`
 - `docs/reviews/RealRevisionTfsClient_Pagination_Review.md` → `docs/archive/legacy-revision-ingestion/real-revision-tfsclient-pagination-review.md`
 - `docs/investigations/revision-ingestion-api-vs-validator-odata-divergence.md` → `docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md`
 - `docs/reports/revision-ingestor-v2.md` → `docs/archive/legacy-revision-ingestion/revision-ingestor-v2.md`
-- `docs/reports/sprint-trends-vs-revisions-report.md` → `docs/archive/legacy-revision-ingestion/sprint-trends-vs-revisions-report.md`
-- `docs/audit/cdc-full-quality-audit.md` → `docs/audits/cdc-full-quality-audit.md`
-- `CODE_AUDIT_REPORT.md` → `docs/history/code-quality/code-audit-report-2026-01-30.md`
-- `FINAL_SUMMARY.md` → `docs/history/code-quality/final-summary-2026-01-30.md`
-- `FIXES_APPLIED.md` → `docs/history/code-quality/fixes-applied-2026-01-30.md`
-- `NON_TEST_ISSUES_ANALYSIS.md` → `docs/history/code-quality/non-test-issues-analysis-2026-01-30.md`
-- `VALIDATORS_IMPLEMENTATION.md` → `docs/history/validation/validators-implementation-2026-01-30.md`
-- `docs/Reports/SprintAttributionAnalysis.md` → `docs/reports/sprint-attribution-analysis.md`
-- `SWEPO_REVIEW_REPORT.md` → `docs/reviews/swepo-review-report.md`
-- `docs/GEBRUIKERSHANDLEIDING.md` → `docs/user/gebruikershandleiding.md`
+- `docs/reports/sprint-trends-vs-revisions-report.md` → `docs/analysis/sprint-trends-vs-revisions-report.md`
+- `docs/audit/cdc-full-quality-audit.md` → `docs/analysis/cdc-full-quality-audit.md`
+- `CODE_AUDIT_REPORT.md` → `docs/archive/code-quality/code-audit-report-2026-01-30.md`
+- `FINAL_SUMMARY.md` → `docs/archive/code-quality/final-summary-2026-01-30.md`
+- `FIXES_APPLIED.md` → `docs/archive/code-quality/fixes-applied-2026-01-30.md`
+- `NON_TEST_ISSUES_ANALYSIS.md` → `docs/archive/code-quality/non-test-issues-analysis-2026-01-30.md`
+- `VALIDATORS_IMPLEMENTATION.md` → `docs/archive/validation/validators-implementation-2026-01-30.md`
+- `docs/Reports/SprintAttributionAnalysis.md` → `docs/reports/2026-03-30-sprint-attribution-analysis.md`
+- `SWEPO_REVIEW_REPORT.md` → `docs/reports/2026-03-30-swepo-review-report.md`
+- `docs/GEBRUIKERSHANDLEIDING.md` → `docs/architecture/gebruikershandleiding.md`
 
 ## 4. Files archived
 - `docs/archive/code-quality/work-completed-2026-01-30.md`
-- `docs/archive/legacy-revision-ingestion/cache-insights-and-validation-report.md`
+- `docs/analysis/cache-insights-and-validation-report.md`
 - `docs/archive/legacy-revision-ingestion/odata-validator-vs-ingestion-report.md`
 - `docs/archive/legacy-revision-ingestion/real-revision-tfsclient-pagination-review.md`
 - `docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md`
 - `docs/archive/legacy-revision-ingestion/revision-ingestor-v2.md`
-- `docs/archive/legacy-revision-ingestion/sprint-trends-vs-revisions-report.md`
+- `docs/analysis/sprint-trends-vs-revisions-report.md`
 
 ## 5. Updated references
-- Updated `prompts/seniorswe_and_seniorpo_review` to write to `docs/reviews/swepo-review-report.md`.
+- Updated `prompts/seniorswe_and_seniorpo_review` to write to `docs/reports/2026-03-30-swepo-review-report.md`.
 - Updated `docs/README.md` to remove the missing `mock-data-rules.md` link.
 - Updated active docs that still referenced moved paths:
-  - `docs/audits/state_sprint_delivery_audit.md`
-  - `docs/audits/workspace_hub_tile_analysis.md`
-  - `docs/audits/backlog_quality_domain_exploration.md`
-  - `docs/filters/filter-analysis-improved.md`
+  - `docs/analysis/state_sprint_delivery_audit.md`
+  - `docs/analysis/workspace_hub_tile_analysis.md`
+  - `docs/analysis/backlog_quality_domain_exploration.md`
+  - `docs/analysis/filter-analysis-improved.md`
   - `docs/analysis/cdc-corrections.md`
   - `docs/analysis/final-cdc-integration.md`
   - `docs/analysis/progress-model.md`
   - `docs/analysis/snapshots.md`
   - `docs/analysis/insight-null-semantics-fix.md`
   - `docs/rules/validation-rules.md`
-  - `docs/audits/cdc_replay_fixture_validation.md`
-  - `docs/screenshots/README.md`
+  - `docs/analysis/cdc_replay_fixture_validation.md`
+  - `docs/analysis/screenshot-index-exploratory-testing.md`
 - Updated document tests in `PoTool.Tests.Unit/Audits/*` from `docs/analyze/...` to `docs/analysis/...` where required.
 - Updated one historical planning checklist and one mock-data code comment to remove references to the missing mock-data rules filename.
 
 ## 6. Prompt updates
-- Confirmed: `prompts/seniorswe_and_seniorpo_review` now writes to `docs/reviews/swepo-review-report.md`.
+- Confirmed: `prompts/seniorswe_and_seniorpo_review` now writes to `docs/reports/2026-03-30-swepo-review-report.md`.
 
 ## 7. Validation results
 - **Build:** `dotnet build PoTool.sln --configuration Release --no-restore --nologo` ✅ passed

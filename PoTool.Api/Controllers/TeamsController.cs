@@ -135,7 +135,7 @@ public class TeamsController : ControllerBase
     /// Permanently deletes a team and all its product links.
     /// OBSOLETE: This endpoint is unused. Client uses ArchiveTeam (soft delete) instead.
     /// </summary>
-    [Obsolete("UNUSED: No client-side calls found. UI uses ArchiveTeam (soft delete) instead. See docs/cleanup/phase2-endpoint-usage-report.md section 4.1", error: true)]
+    [Obsolete("UNUSED: No client-side calls found. UI uses ArchiveTeam (soft delete) instead. See docs/reports/2026-03-30-cleanup-phase2-endpoint-usage-report.md section 4.1", error: true)]
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

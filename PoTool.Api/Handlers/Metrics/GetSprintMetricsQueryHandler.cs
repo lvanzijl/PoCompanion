@@ -22,7 +22,7 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Reconstructs historical sprint metrics for a sprint window.
 /// Planned scope comes from sprint membership at the canonical commitment timestamp,
 /// and completed scope comes from the first canonical Done transition within the sprint window.
-/// This matches the delivery rules in docs/domain/domain_model.md,
+/// This matches the delivery rules in docs/architecture/domain-model.md,
 /// docs/rules/sprint-rules.md, docs/rules/metrics-rules.md,
 /// and docs/rules/source-rules.md.
 /// </summary>

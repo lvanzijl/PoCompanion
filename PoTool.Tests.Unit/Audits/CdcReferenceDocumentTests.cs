@@ -7,9 +7,9 @@ public sealed class CdcReferenceDocumentTests
     public void CdcReference_ReportExistsWithRequiredSectionsSlicesAndCrossReferences()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "domain", "cdc_reference.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "architecture", "cdc-reference.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The CDC reference document should exist under docs/domain.");
+        Assert.IsTrue(File.Exists(reportPath), "The CDC reference document should exist under docs/architecture.");
 
         var report = File.ReadAllText(reportPath);
 
@@ -34,23 +34,23 @@ public sealed class CdcReferenceDocumentTests
         StringAssert.Contains(report, "### Shared Statistics");
 
         StringAssert.Contains(report, "Authoritative CDC consolidation");
-        StringAssert.Contains(report, "docs/domain/domain_model.md");
+        StringAssert.Contains(report, "docs/architecture/domain-model.md");
         StringAssert.Contains(report, "docs/rules/estimation-rules.md");
-        StringAssert.Contains(report, "docs/domain/forecasting_domain_model.md");
-        StringAssert.Contains(report, "docs/domain/portfolio_flow_model.md");
-        StringAssert.Contains(report, "docs/domain/sprint_commitment_domain_model.md");
-        StringAssert.Contains(report, "docs/audits/backlog_quality_cdc_summary.md");
-        StringAssert.Contains(report, "docs/audits/effort_diagnostics_cdc_extraction_report.md");
-        StringAssert.Contains(report, "docs/audits/effort_planning_cdc_extraction.md");
-        StringAssert.Contains(report, "docs/audits/delivery_trend_analytics_cdc_summary.md");
-        StringAssert.Contains(report, "docs/audits/forecasting_cdc_summary.md");
-        StringAssert.Contains(report, "docs/audits/portfolio_flow_projection.md");
-        StringAssert.Contains(report, "docs/audits/portfolio_flow_projection_validation.md");
-        StringAssert.Contains(report, "docs/audits/portfolio_flow_consumers_audit.md");
-        StringAssert.Contains(report, "docs/audits/application_semantic_audit.md");
-        StringAssert.Contains(report, "docs/audits/statistical_core_cleanup_report.md");
-        StringAssert.Contains(report, "docs/domain/cdc_domain_map.md");
-        StringAssert.Contains(report, "docs/audits/cdc_completion_summary.md");
+        StringAssert.Contains(report, "docs/architecture/forecasting-domain-model.md");
+        StringAssert.Contains(report, "docs/architecture/portfolio-flow-model.md");
+        StringAssert.Contains(report, "docs/architecture/sprint-commitment-domain-model.md");
+        StringAssert.Contains(report, "docs/analysis/backlog_quality_cdc_summary.md");
+        StringAssert.Contains(report, "docs/analysis/effort_diagnostics_cdc_extraction_report.md");
+        StringAssert.Contains(report, "docs/analysis/effort_planning_cdc_extraction.md");
+        StringAssert.Contains(report, "docs/analysis/delivery_trend_analytics_cdc_summary.md");
+        StringAssert.Contains(report, "docs/analysis/forecasting_cdc_summary.md");
+        StringAssert.Contains(report, "docs/analysis/portfolio_flow_projection.md");
+        StringAssert.Contains(report, "docs/analysis/portfolio_flow_projection_validation.md");
+        StringAssert.Contains(report, "docs/analysis/portfolio_flow_consumers_audit.md");
+        StringAssert.Contains(report, "docs/analysis/application_semantic_audit.md");
+        StringAssert.Contains(report, "docs/analysis/statistical_core_cleanup_report.md");
+        StringAssert.Contains(report, "docs/architecture/cdc-domain-map.md");
+        StringAssert.Contains(report, "docs/analysis/cdc_completion_summary.md");
         StringAssert.Contains(report, "story points");
         StringAssert.Contains(report, "effort hours");
         StringAssert.Contains(report, "stock");

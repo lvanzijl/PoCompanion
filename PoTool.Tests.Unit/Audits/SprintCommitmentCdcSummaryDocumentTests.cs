@@ -7,9 +7,9 @@ public sealed class SprintCommitmentCdcSummaryDocumentTests
     public void SprintCommitmentCdcSummary_ReportExistsWithCanonicalConceptsSignalsMetricsAndInterfaces()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "domain", "sprint_commitment_cdc_summary.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "architecture", "sprint-commitment-cdc-summary.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The sprint commitment CDC summary should exist under docs/domain.");
+        Assert.IsTrue(File.Exists(reportPath), "The sprint commitment CDC summary should exist under docs/architecture.");
 
         var report = File.ReadAllText(reportPath);
 

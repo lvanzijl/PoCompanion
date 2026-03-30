@@ -7,9 +7,9 @@ public sealed class CdcInvariantTestsDocumentTests
     public void CdcInvariantTests_ReportExistsWithCorrectedInvariantDefinitions()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "cdc_invariant_tests.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "cdc_invariant_tests.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The CDC invariant audit should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The CDC invariant audit should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 
@@ -25,8 +25,8 @@ public sealed class CdcInvariantTestsDocumentTests
         StringAssert.Contains(report, "SprintFacts uses story points only");
         StringAssert.Contains(report, "EffortPlanning distribution totals equal the sum of work-item effort hours");
         StringAssert.Contains(report, "must not equate effort hours with story points");
-        StringAssert.Contains(report, "docs/domain/cdc_reference.md");
-        StringAssert.Contains(report, "docs/domain/cdc_domain_map.md");
+        StringAssert.Contains(report, "docs/architecture/cdc-reference.md");
+        StringAssert.Contains(report, "docs/architecture/cdc-domain-map.md");
     }
 
     private static string GetRepositoryRoot()

@@ -1,3 +1,5 @@
+> **NOTE:** This document reflects a historical state prior to Batch 3 cleanup.
+
 # Documentation State Verification
 
 _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/PoCompanion/PoCompanion`, excluding `.git/`, `bin/`, and `obj/`._
@@ -34,14 +36,14 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 | `docs/rules/ui-loading-rules.md` | `docs/rules` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
 | `docs/UI_MIGRATION_PLAN.md` | `docs/plans` | Stored directly under `docs/` even though its purpose is `plan or migration guidance`. |
 | `docs/rules/ui-rules.md` | `docs/rules` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
-| `docs/bug_trend_followups.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
-| `docs/health_additional_signals.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
+| `docs/implementation/bug-trend-followups.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
+| `docs/implementation/health-additional-signals.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
 | `docs/health_workspace_fix_plan.md` | `docs/plans` | Stored directly under `docs/` even though its purpose is `plan or migration guidance`. |
 | `docs/iteration_path_sorting_audit.md` | `docs/audits` | Stored directly under `docs/` even though its purpose is `structured audit or compliance verification`. |
-| `docs/navigation_decision_backlog.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
-| `docs/navigation_followup_actions.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
-| `docs/pr_template.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
-| `docs/sprint-scoping-limitations.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
+| `docs/implementation/navigation-decision-backlog.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
+| `docs/implementation/navigation-followup-actions.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
+| `.github/pull_request_template.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
+| `docs/analysis/sprint-scoping-limitations.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
 | `docs/sprintmetrics_iteration_migration_plan.md` | `docs/plans` | Stored directly under `docs/` even though its purpose is `plan or migration guidance`. |
 | `docs/sqlite-datetime-fix.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
 | `docs/sqlite-timestamp-fix-audit.md` | `docs/audits` | Stored directly under `docs/` even though its purpose is `structured audit or compliance verification`. |
@@ -81,23 +83,23 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 | `docs/architecture/test-failure-cluster-fix.md` | `architecture` | `reports` | Document title/content are report-style current-state findings, not durable architecture reference. |
 | `docs/architecture/validation-system-report.md` | `architecture` | `reports` | Document title/content are report-style current-state findings, not durable architecture reference. |
 | `docs/archive/code-quality/work-completed-2026-01-30.md` | `archive` | `audits` | Archived location does not match the document title/content; either the file needs a dated archive name or its content still reads as active material. |
-| `docs/archive/legacy-revision-ingestion/cache-insights-and-validation-report.md` | `archive` | `reports` | Archived location does not match the document title/content; either the file needs a dated archive name or its content still reads as active material. |
+| `docs/analysis/cache-insights-and-validation-report.md` | `archive` | `reports` | Archived location does not match the document title/content; either the file needs a dated archive name or its content still reads as active material. |
 | `docs/archive/legacy-revision-ingestion/odata-validator-vs-ingestion-report.md` | `archive` | `reports` | Archived location does not match the document title/content; either the file needs a dated archive name or its content still reads as active material. |
 | `docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md` | `archive` | `analysis` | Inferred purpose is exploratory analysis or investigation; governance expects docs/analysis. |
-| `docs/archive/legacy-revision-ingestion/sprint-trends-vs-revisions-report.md` | `archive` | `reports` | Archived location does not match the document title/content; either the file needs a dated archive name or its content still reads as active material. |
-| `docs/cleanup/phase1-client-reachability-report.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
-| `docs/cleanup/phase2-endpoint-usage-report.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
-| `docs/cleanup/phase3-handler-usage-report.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
-| `docs/cleanup/phase4-full-layer-summary.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
-| `docs/domain/REPOSITORY_DOMAIN_DISCOVERY.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/architecture. |
-| `docs/domain/backlog_quality_domain_model.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
-| `docs/domain/cdc_domain_map.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
-| `docs/domain/cdc_domain_map_generated.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
-| `docs/domain/cdc_reference.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
-| `docs/domain/domain_model.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
-| `docs/domain/effort_diagnostics_domain_model.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
-| `docs/domain/forecasting_domain_model.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
-| `docs/domain/portfolio_flow_model.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
+| `docs/analysis/sprint-trends-vs-revisions-report.md` | `archive` | `reports` | Archived location does not match the document title/content; either the file needs a dated archive name or its content still reads as active material. |
+| `docs/reports/2026-03-30-cleanup-phase1-client-reachability-report.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
+| `docs/reports/2026-03-30-cleanup-phase2-endpoint-usage-report.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
+| `docs/reports/2026-03-30-cleanup-phase3-handler-usage-report.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
+| `docs/reports/2026-03-30-cleanup-phase4-full-layer-summary.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
+| `docs/architecture/repository-domain-discovery.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/architecture. |
+| `docs/architecture/backlog-quality-domain-model.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
+| `docs/architecture/cdc-domain-map.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
+| `docs/architecture/cdc-domain-map-generated.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
+| `docs/architecture/cdc-reference.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
+| `docs/architecture/domain-model.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
+| `docs/architecture/effort-diagnostics-domain-model.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
+| `docs/architecture/forecasting-domain-model.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
+| `docs/architecture/portfolio-flow-model.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
 | `docs/rules/estimation-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
 | `docs/rules/hierarchy-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
 | `docs/rules/metrics-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
@@ -105,41 +107,41 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 | `docs/rules/source-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
 | `docs/rules/sprint-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
 | `docs/rules/state-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
-| `docs/domain/sprint_commitment_cdc_summary.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/architecture. |
-| `docs/domain/sprint_commitment_domain_model.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
+| `docs/architecture/sprint-commitment-cdc-summary.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/architecture. |
+| `docs/architecture/sprint-commitment-domain-model.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
 | `docs/rules/ui-semantic-rules.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/architecture. |
-| `docs/exploration/sprint_commitment_domain_exploration.md` | `other` | `analysis` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/analysis. |
-| `docs/filters/cache-only-guardrail-analysis-pipeline-workitems.md` | `other` | `analysis` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/analysis. |
-| `docs/filters/filter-analysis-improved.md` | `other` | `analysis` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/analysis. |
-| `docs/filters/filter-analysis.md` | `other` | `analysis` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/analysis. |
-| `docs/filters/filter-cross-slice-migration.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
-| `docs/filters/filter-current-state-analysis.md` | `other` | `analysis` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/analysis. |
-| `docs/filters/filter-delivery-migration.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
-| `docs/filters/filter-final-cleanup-report.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
-| `docs/filters/filter-implementation-execution-plan.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
-| `docs/filters/filter-implementation-plan.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
-| `docs/filters/filter-performance-audit.md` | `other` | `audits` | Stored outside the canonical docs taxonomy; inferred purpose is structured audit or compliance verification, so it belongs under docs/audits. |
-| `docs/filters/filter-pipeline-migration.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
-| `docs/filters/filter-pr-migration.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
-| `docs/filters/filter-sprint-migration.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
-| `docs/filters/filter-validation-report.md` | `other` | `audits` | Stored outside the canonical docs taxonomy; inferred purpose is structured audit or compliance verification, so it belongs under docs/audits. |
-| `docs/filters/page-filter-contracts.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/architecture. |
-| `docs/filters/pipeline-guardrail-and-workitem-split.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
-| `docs/filters/pr-live-provider-usage-audit.md` | `other` | `audits` | Stored outside the canonical docs taxonomy; inferred purpose is structured audit or compliance verification, so it belongs under docs/audits. |
+| `docs/analysis/sprint-commitment-domain-exploration.md` | `other` | `analysis` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/analysis. |
+| `docs/analysis/cache-only-guardrail-analysis-pipeline-workitems.md` | `other` | `analysis` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/analysis. |
+| `docs/analysis/filter-analysis-improved.md` | `other` | `analysis` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/analysis. |
+| `docs/analysis/filter-analysis.md` | `other` | `analysis` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/analysis. |
+| `docs/analysis/filter-cross-slice-migration.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
+| `docs/analysis/filter-current-state-analysis.md` | `other` | `analysis` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/analysis. |
+| `docs/analysis/filter-delivery-migration.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
+| `docs/analysis/filter-final-cleanup-report.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
+| `docs/analysis/filter-implementation-execution-plan.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
+| `docs/analysis/filter-implementation-plan.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
+| `docs/analysis/filter-performance-audit.md` | `other` | `audits` | Stored outside the canonical docs taxonomy; inferred purpose is structured audit or compliance verification, so it belongs under docs/audits. |
+| `docs/analysis/filter-pipeline-migration.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
+| `docs/analysis/filter-pr-migration.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
+| `docs/analysis/filter-sprint-migration.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
+| `docs/analysis/filter-validation-report.md` | `other` | `audits` | Stored outside the canonical docs taxonomy; inferred purpose is structured audit or compliance verification, so it belongs under docs/audits. |
+| `docs/analysis/page-filter-contracts.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/architecture. |
+| `docs/analysis/pipeline-guardrail-and-workitem-split.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
+| `docs/analysis/pr-live-provider-usage-audit.md` | `other` | `audits` | Stored outside the canonical docs taxonomy; inferred purpose is structured audit or compliance verification, so it belongs under docs/audits. |
 | `docs/health_workspace_fix_plan.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
-| `docs/history/code-quality/code-audit-report-2026-01-30.md` | `history` | `audits` | Historical folder conflicts with present-tense audit content that still reads as a current check. |
-| `docs/history/code-quality/final-summary-2026-01-30.md` | `history` | `audits` | Historical folder conflicts with present-tense audit content that still reads as a current check. |
-| `docs/history/code-quality/fixes-applied-2026-01-30.md` | `history` | `audits` | Historical folder conflicts with present-tense audit content that still reads as a current check. |
-| `docs/history/code-quality/non-test-issues-analysis-2026-01-30.md` | `history` | `audits` | Historical folder conflicts with present-tense audit content that still reads as a current check. |
-| `docs/history/validation/validators-implementation-2026-01-30.md` | `history` | `reports` | Inferred purpose is report or summarized findings; governance expects docs/reports. |
+| `docs/archive/code-quality/code-audit-report-2026-01-30.md` | `history` | `audits` | Historical folder conflicts with present-tense audit content that still reads as a current check. |
+| `docs/archive/code-quality/final-summary-2026-01-30.md` | `history` | `audits` | Historical folder conflicts with present-tense audit content that still reads as a current check. |
+| `docs/archive/code-quality/fixes-applied-2026-01-30.md` | `history` | `audits` | Historical folder conflicts with present-tense audit content that still reads as a current check. |
+| `docs/archive/code-quality/non-test-issues-analysis-2026-01-30.md` | `history` | `audits` | Historical folder conflicts with present-tense audit content that still reads as a current check. |
+| `docs/archive/validation/validators-implementation-2026-01-30.md` | `history` | `reports` | Inferred purpose is report or summarized findings; governance expects docs/reports. |
 | `docs/implementation/battleship-cdc-extension-report.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
 | `docs/implementation/cdc-fallback-timestamp-hardening.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
 | `docs/implementation/cdc-fix-report-empty-snapshot-snapshotcount.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
 | `docs/iteration_path_sorting_audit.md` | `other` | `audits` | Stored outside the canonical docs taxonomy; inferred purpose is structured audit or compliance verification, so it belongs under docs/audits. |
-| `docs/reports/sprint-attribution-analysis.md` | `reports` | `analysis` | Report folder overstates stability; the file still reads as exploratory/problem-analysis material. |
-| `docs/reports/sprint-trends-current-state-analysis.md` | `reports` | `analysis` | Report folder overstates stability; the file still reads as exploratory/problem-analysis material. |
-| `docs/reviews/swepo-review-report.md` | `reviews` | `reports` | Review folder does not match the file’s present-tense report content. |
-| `docs/roadmaps/application_simplification_plan.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
+| `docs/reports/2026-03-30-sprint-attribution-analysis.md` | `reports` | `analysis` | Report folder overstates stability; the file still reads as exploratory/problem-analysis material. |
+| `docs/reports/2026-03-30-sprint-trends-current-state-analysis.md` | `reports` | `analysis` | Report folder overstates stability; the file still reads as exploratory/problem-analysis material. |
+| `docs/reports/2026-03-30-swepo-review-report.md` | `reviews` | `reports` | Review folder does not match the file’s present-tense report content. |
+| `docs/implementation/application-simplification-plan.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
 | `docs/sprintmetrics_iteration_migration_plan.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
 | `docs/sqlite-timestamp-fix-audit.md` | `other` | `audits` | Stored outside the canonical docs taxonomy; inferred purpose is structured audit or compliance verification, so it belongs under docs/audits. |
 | `docs/test-determinism-report.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
@@ -161,12 +163,12 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
   - `docs/exploration`: **1** naming violations
   - `docs/filters`: **1** naming violations
 - Required-date violations (historical/archive files missing dates):
-  - `docs/archive/legacy-revision-ingestion/cache-insights-and-validation-report.md`
+  - `docs/analysis/cache-insights-and-validation-report.md`
   - `docs/archive/legacy-revision-ingestion/odata-validator-vs-ingestion-report.md`
   - `docs/archive/legacy-revision-ingestion/real-revision-tfsclient-pagination-review.md`
   - `docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md`
   - `docs/archive/legacy-revision-ingestion/revision-ingestor-v2.md`
-  - `docs/archive/legacy-revision-ingestion/sprint-trends-vs-revisions-report.md`
+  - `docs/analysis/sprint-trends-vs-revisions-report.md`
 - Notable non-`docs/` naming violations:
   - `.github/pull_request_template.md` — not kebab-case
   - `features/02032026_backlog_health.md` — not kebab-case
@@ -214,7 +216,7 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
   - `docs/analysis/2026-03-18-progress-trend-effort-spike.md` — inferred lifecycle `historical` but current folder is `analysis`
   - `docs/analysis/2026-03-18-sync-testability-architecture.md` — inferred lifecycle `historical` but current folder is `analysis`
   - `docs/analysis/2026-03-20-profile-export-import-and-onboarding-completion.md` — inferred lifecycle `historical` but current folder is `analysis`
-  - `docs/cleanup/obsolete-changes-log.md` — inferred lifecycle `obsolete` but current folder is `other`
+  - `docs/reports/2026-03-30-cleanup-obsolete-changes-log.md` — inferred lifecycle `obsolete` but current folder is `other`
 
 ## 7. .github alignment issues
 - `.github/github-instructions` is missing; there is no file to validate for referenced markdown inputs.
@@ -229,7 +231,7 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 | `docs/README.md` | Yes | `other` | `other` | No |
 | `docs/rules/ui-loading-rules.md` | Yes | `other` | `rules` | Yes |
 | `docs/rules/ui-rules.md` | Yes | `other` | `rules` | Yes |
-| `docs/domain/domain_model.md` | Yes | `other` | `architecture` | No |
+| `docs/architecture/domain-model.md` | Yes | `other` | `architecture` | No |
 | `docs/rules/estimation-rules.md` | Yes | `other` | `rules` | No |
 | `docs/rules/hierarchy-rules.md` | Yes | `other` | `rules` | No |
 | `docs/rules/metrics-rules.md` | Yes | `other` | `rules` | No |
@@ -274,7 +276,7 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 - **Batch 1: safe moves**
   - Move the 26 `docs/`-root violations into canonical subfolders.
   - Move `docs/domain/*` material into `docs/architecture` / `docs/rules` and retire the noncanonical `docs/domain` subtree.
-  - Move `docs/roadmaps/application_simplification_plan.md` into `docs/plans` and reclassify `docs/cleanup/*` and `docs/implementation/*` by current lifecycle.
+  - Move `docs/implementation/application-simplification-plan.md` into `docs/plans` and reclassify `docs/cleanup/*` and `docs/implementation/*` by current lifecycle.
 - **Batch 2: rule consolidation**
   - Rename uppercase / underscore-heavy rule docs to lowercase kebab-case.
   - Decide whether agent-facing rule files referenced by `.github/copilot-instructions.md` should live under `.github/` in a later repository-instructions migration.
@@ -358,108 +360,108 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 
 ### archive
 - `docs/archive/code-quality/work-completed-2026-01-30.md` — filename `work-completed-2026-01-30.md` — purpose: structured audit or compliance verification — title: Work Completed - CODE_AUDIT_REPORT.md
-- `docs/archive/legacy-revision-ingestion/cache-insights-and-validation-report.md` — filename `cache-insights-and-validation-report.md` — purpose: report or summarized findings — title: Cache Insights & Validation — Design Report
+- `docs/analysis/cache-insights-and-validation-report.md` — filename `cache-insights-and-validation-report.md` — purpose: report or summarized findings — title: Cache Insights & Validation — Design Report
 - `docs/archive/legacy-revision-ingestion/odata-validator-vs-ingestion-report.md` — filename `odata-validator-vs-ingestion-report.md` — purpose: report or summarized findings — title: OData Validator vs Ingestion Report
 - `docs/archive/legacy-revision-ingestion/real-revision-tfsclient-pagination-review.md` — filename `real-revision-tfsclient-pagination-review.md` — purpose: general markdown documentation — title: RealRevisionTfsClient Pagination Review
 - `docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md` — filename `revision-ingestion-api-vs-validator-odata-divergence.md` — purpose: exploratory analysis or investigation — title: Revision ingestion divergence investigation: PoTool.Api vs TfsRetrievalValidator
 - `docs/archive/legacy-revision-ingestion/revision-ingestor-v2.md` — filename `revision-ingestor-v2.md` — purpose: general markdown documentation — title: Revision Ingestor V2
-- `docs/archive/legacy-revision-ingestion/sprint-trends-vs-revisions-report.md` — filename `sprint-trends-vs-revisions-report.md` — purpose: report or summarized findings — title: Sprint Trends vs Revision Database — Engineering Report
+- `docs/analysis/sprint-trends-vs-revisions-report.md` — filename `sprint-trends-vs-revisions-report.md` — purpose: report or summarized findings — title: Sprint Trends vs Revision Database — Engineering Report
 
 ### audits
-- `docs/audits/application_handler_cleanup.md` — filename `application_handler_cleanup.md` — purpose: structured audit or compliance verification — title: Application Handler Cleanup
-- `docs/audits/application_semantic_audit.md` — filename `application_semantic_audit.md` — purpose: structured audit or compliance verification — title: Application Semantic Audit — Effort vs StoryPoints Usage
-- `docs/audits/application_simplification_audit.md` — filename `application_simplification_audit.md` — purpose: structured audit or compliance verification — title: Application Simplification Audit
-- `docs/audits/backlog_health_simplification.md` — filename `backlog_health_simplification.md` — purpose: structured audit or compliance verification — title: Backlog Health Simplification
-- `docs/audits/backlog_quality_cdc_summary.md` — filename `backlog_quality_cdc_summary.md` — purpose: structured audit or compliance verification — title: Backlog Quality CDC Summary
-- `docs/audits/backlog_quality_domain_exploration.md` — filename `backlog_quality_domain_exploration.md` — purpose: structured audit or compliance verification — title: Backlog Quality Domain Exploration
-- `docs/audits/buildquality_application_page_integration_report.md` — filename `buildquality_application_page_integration_report.md` — purpose: structured audit or compliance verification — title: Prompt 3 — BuildQuality Application & Page Integration Report
-- `docs/audits/buildquality_calculation_validation_report.md` — filename `buildquality_calculation_validation_report.md` — purpose: structured audit or compliance verification — title: BuildQuality Calculation Validation Report
-- `docs/audits/buildquality_cdc_contract_report.md` — filename `buildquality_cdc_contract_report.md` — purpose: normative rule or governance reference — title: Prompt 1 — BuildQuality CDC Contract Report
-- `docs/audits/buildquality_chart_state_cleanup_report.md` — filename `buildquality_chart_state_cleanup_report.md` — purpose: structured audit or compliance verification — title: BuildQuality Chart State Cleanup Report
-- `docs/audits/buildquality_data_aggregation_contract_report.md` — filename `buildquality_data_aggregation_contract_report.md` — purpose: normative rule or governance reference — title: Prompt 2 — BuildQuality Data & Aggregation Contract Report
-- `docs/audits/buildquality_discovery_report.md` — filename `buildquality_discovery_report.md` — purpose: structured audit or compliance verification — title: Prompt 0 — BuildQuality Discovery Report
-- `docs/audits/buildquality_edge_consistency_report.md` — filename `buildquality_edge_consistency_report.md` — purpose: structured audit or compliance verification — title: BuildQuality Edge Case & Cross-Workspace Consistency Report
-- `docs/audits/buildquality_implementation_contract_report.md` — filename `buildquality_implementation_contract_report.md` — purpose: normative rule or governance reference — title: Prompt 4 — BuildQuality Data Foundation (Ingestion & Persistence Contract Report)
-- `docs/audits/buildquality_missing_ingestion_build_168570_code_analysis_report.md` — filename `buildquality_missing_ingestion_build_168570_code_analysis_report.md` — purpose: structured audit or compliance verification — title: BuildQuality Missing Ingestion For Build 168570 — Code Analysis Report
-- `docs/audits/buildquality_retrieval_performance_report.md` — filename `buildquality_retrieval_performance_report.md` — purpose: structured audit or compliance verification — title: BuildQuality Retrieval Performance Report
-- `docs/audits/buildquality_seed_data_report.md` — filename `buildquality_seed_data_report.md` — purpose: structured audit or compliance verification — title: BuildQuality Seed Data Report
-- `docs/audits/buildquality_ui_compliance_audit_report.md` — filename `buildquality_ui_compliance_audit_report.md` — purpose: structured audit or compliance verification — title: BuildQuality UI Compliance Audit Report
-- `docs/audits/buildquality_ui_final_integration_report.md` — filename `buildquality_ui_final_integration_report.md` — purpose: structured audit or compliance verification — title: BuildQuality UI Final Integration Report
-- `docs/audits/cdc-full-quality-audit.md` — filename `cdc-full-quality-audit.md` — purpose: structured audit or compliance verification — title: CDC Full Quality Audit
-- `docs/audits/cdc_behavioral_stress_test_audit.md` — filename `cdc_behavioral_stress_test_audit.md` — purpose: structured audit or compliance verification — title: CDC Behavioral Stress-Test Audit
-- `docs/audits/cdc_completion_summary.md` — filename `cdc_completion_summary.md` — purpose: structured audit or compliance verification — title: CDC Completion Summary
-- `docs/audits/cdc_coverage_audit.md` — filename `cdc_coverage_audit.md` — purpose: structured audit or compliance verification — title: CDC Coverage Audit
-- `docs/audits/cdc_extraction_summary.md` — filename `cdc_extraction_summary.md` — purpose: structured audit or compliance verification — title: CDC Extraction Summary
-- `docs/audits/cdc_freeze_audit.md` — filename `cdc_freeze_audit.md` — purpose: structured audit or compliance verification — title: CDC Freeze Audit
-- `docs/audits/cdc_invariant_tests.md` — filename `cdc_invariant_tests.md` — purpose: structured audit or compliance verification — title: CDC Invariant Tests
-- `docs/audits/cdc_replay_fixture_validation.md` — filename `cdc_replay_fixture_validation.md` — purpose: structured audit or compliance verification — title: CDC Replay Fixture Validation
-- `docs/audits/cdc_usage_coverage.md` — filename `cdc_usage_coverage.md` — purpose: structured audit or compliance verification — title: CDC Usage Coverage Audit
-- `docs/audits/compatibility_cleanup_phase3.md` — filename `compatibility_cleanup_phase3.md` — purpose: structured audit or compliance verification — title: Compatibility Cleanup Phase 3
-- `docs/audits/delivery_trend_analytics_cdc_summary.md` — filename `delivery_trend_analytics_cdc_summary.md` — purpose: structured audit or compliance verification — title: Delivery Trend Analytics CDC Summary
-- `docs/audits/domain_library_readiness_audit.md` — filename `domain_library_readiness_audit.md` — purpose: structured audit or compliance verification — title: PoTool Domain Library Extraction Readiness Audit
-- `docs/audits/domain_logic_outside_cdc_exploration.md` — filename `domain_logic_outside_cdc_exploration.md` — purpose: structured audit or compliance verification — title: Domain Logic Outside CDC Exploration
-- `docs/audits/dto_contract_cleanup.md` — filename `dto_contract_cleanup.md` — purpose: normative rule or governance reference — title: DTO Contract Cleanup — Canonical Naming
-- `docs/audits/effort_diagnostics_cdc_extraction_report.md` — filename `effort_diagnostics_cdc_extraction_report.md` — purpose: structured audit or compliance verification — title: Effort Diagnostics CDC Extraction Report
-- `docs/audits/effort_diagnostics_cleanup_report.md` — filename `effort_diagnostics_cleanup_report.md` — purpose: structured audit or compliance verification — title: Effort Diagnostics Cleanup Report
-- `docs/audits/effort_diagnostics_domain_exploration.md` — filename `effort_diagnostics_domain_exploration.md` — purpose: structured audit or compliance verification — title: Effort Diagnostics Domain Exploration
-- `docs/audits/effort_diagnostics_semantic_audit.md` — filename `effort_diagnostics_semantic_audit.md` — purpose: structured audit or compliance verification — title: Effort Diagnostics Semantic Audit
-- `docs/audits/effort_planning_boundary_audit.md` — filename `effort_planning_boundary_audit.md` — purpose: structured audit or compliance verification — title: Effort Planning Boundary Audit
-- `docs/audits/effort_planning_boundary_cleanup.md` — filename `effort_planning_boundary_cleanup.md` — purpose: structured audit or compliance verification — title: EffortPlanning Boundary Cleanup
-- `docs/audits/effort_planning_cdc_extraction.md` — filename `effort_planning_cdc_extraction.md` — purpose: structured audit or compliance verification — title: EffortPlanning CDC Extraction
-- `docs/audits/estimation_audit.md` — filename `estimation_audit.md` — purpose: structured audit or compliance verification — title: PoTool Estimation Audit
-- `docs/audits/final_pre_usage_validation.md` — filename `final_pre_usage_validation.md` — purpose: structured audit or compliance verification — title: Final Pre-Usage Validation
-- `docs/audits/forecasting_cdc_summary.md` — filename `forecasting_cdc_summary.md` — purpose: structured audit or compliance verification — title: Forecasting CDC Summary
-- `docs/audits/forecasting_domain_exploration.md` — filename `forecasting_domain_exploration.md` — purpose: structured audit or compliance verification — title: Forecasting Domain Exploration
-- `docs/audits/forecasting_semantic_audit.md` — filename `forecasting_semantic_audit.md` — purpose: structured audit or compliance verification — title: Forecasting Semantic Audit
-- `docs/audits/hexagon_boundary_enforcement.md` — filename `hexagon_boundary_enforcement.md` — purpose: structured audit or compliance verification — title: Hexagon Boundary Enforcement
-- `docs/audits/hierarchy_propagation_audit.md` — filename `hierarchy_propagation_audit.md` — purpose: structured audit or compliance verification — title: PoTool Hierarchy and Propagation Domain Audit
-- `docs/audits/metrics_audit.md` — filename `metrics_audit.md` — purpose: structured audit or compliance verification — title: PoTool Metrics Domain Audit
-- `docs/audits/mock_data_quality.md` — filename `mock_data_quality.md` — purpose: structured audit or compliance verification — title: Mock Data Quality Audit
-- `docs/audits/mock_pr_pipeline_seed_validation.md` — filename `mock_pr_pipeline_seed_validation.md` — purpose: structured audit or compliance verification — title: Mock PR/Pipeline Seed Validation
-- `docs/audits/portfolio_flow_application_migration.md` — filename `portfolio_flow_application_migration.md` — purpose: structured audit or compliance verification — title: PortfolioFlow Application Migration
-- `docs/audits/portfolio_flow_consumers_audit.md` — filename `portfolio_flow_consumers_audit.md` — purpose: structured audit or compliance verification — title: PortfolioFlow Projection Consumer Audit
-- `docs/audits/portfolio_flow_domain_exploration.md` — filename `portfolio_flow_domain_exploration.md` — purpose: structured audit or compliance verification — title: PortfolioFlow Domain Exploration
-- `docs/audits/portfolio_flow_feasibility.md` — filename `portfolio_flow_feasibility.md` — purpose: structured audit or compliance verification — title: PortfolioFlow Feasibility Audit
-- `docs/audits/portfolio_flow_projection.md` — filename `portfolio_flow_projection.md` — purpose: structured audit or compliance verification — title: PortfolioFlow Projection
-- `docs/audits/portfolio_flow_projection_validation.md` — filename `portfolio_flow_projection_validation.md` — purpose: structured audit or compliance verification — title: PortfolioFlow Projection Validation
-- `docs/audits/portfolio_flow_semantic_audit.md` — filename `portfolio_flow_semantic_audit.md` — purpose: structured audit or compliance verification — title: PortfolioFlow Semantic Audit
-- `docs/audits/portfolio_flow_signal_enablement.md` — filename `portfolio_flow_signal_enablement.md` — purpose: structured audit or compliance verification — title: PortfolioFlow Signal Enablement
-- `docs/audits/portfolio_handler_simplification.md` — filename `portfolio_handler_simplification.md` — purpose: structured audit or compliance verification — title: Portfolio Handler Simplification
-- `docs/audits/post_runtime_fix_validation.md` — filename `post_runtime_fix_validation.md` — purpose: structured audit or compliance verification — title: Post Runtime Fix Validation
-- `docs/audits/pr_pipeline_linkage_analysis.md` — filename `pr_pipeline_linkage_analysis.md` — purpose: structured audit or compliance verification — title: PR Pipeline Linkage Analysis
-- `docs/audits/pre_cleanup_app_validation.md` — filename `pre_cleanup_app_validation.md` — purpose: structured audit or compliance verification — title: Pre-Cleanup App Validation
-- `docs/audits/projection_determinism_audit.md` — filename `projection_determinism_audit.md` — purpose: structured audit or compliance verification — title: Projection Determinism Audit
-- `docs/audits/projection_trend_pipeline_audit.md` — filename `projection_trend_pipeline_audit.md` — purpose: structured audit or compliance verification — title: PoTool Projection and Trend Pipeline Domain Audit
-- `docs/audits/runtime_integrity_fix.md` — filename `runtime_integrity_fix.md` — purpose: structured audit or compliance verification — title: Runtime Integrity Fix (Dev Startup + TFS Access Boundary)
-- `docs/audits/sprint_commitment_application_alignment.md` — filename `sprint_commitment_application_alignment.md` — purpose: structured audit or compliance verification — title: Sprint Commitment Application Alignment
-- `docs/audits/sprint_commitment_cdc_extraction.md` — filename `sprint_commitment_cdc_extraction.md` — purpose: structured audit or compliance verification — title: Sprint Commitment CDC Extraction
-- `docs/audits/sprint_commitment_handler_simplification.md` — filename `sprint_commitment_handler_simplification.md` — purpose: structured audit or compliance verification — title: Sprint Commitment Handler Simplification
-- `docs/audits/sprint_scope_audit.md` — filename `sprint_scope_audit.md` — purpose: structured audit or compliance verification — title: PoTool Sprint Scope Domain Audit
-- `docs/audits/sqlite_buildquality_database_discovery_report.md` — filename `sqlite_buildquality_database_discovery_report.md` — purpose: structured audit or compliance verification — title: SQLite BuildQuality Database Discovery Report
-- `docs/audits/state_sprint_delivery_audit.md` — filename `state_sprint_delivery_audit.md` — purpose: structured audit or compliance verification — title: PoTool State + Sprint + Delivery Audit
-- `docs/audits/statistical_core_cleanup_report.md` — filename `statistical_core_cleanup_report.md` — purpose: structured audit or compliance verification — title: Statistical Core Cleanup Report
-- `docs/audits/statistical_helper_audit.md` — filename `statistical_helper_audit.md` — purpose: structured audit or compliance verification — title: Statistical Helper Audit
-- `docs/audits/test_cleanup_step1.md` — filename `test_cleanup_step1.md` — purpose: structured audit or compliance verification — title: Test Cleanup Step 1
-- `docs/audits/test_ownership_audit.md` — filename `test_ownership_audit.md` — purpose: structured audit or compliance verification — title: Test Ownership Audit
-- `docs/audits/test_ownership_normalization.md` — filename `test_ownership_normalization.md` — purpose: structured audit or compliance verification — title: Test Ownership Normalization
-- `docs/audits/tfs_api_version_configuration_inspection_report.md` — filename `tfs_api_version_configuration_inspection_report.md` — purpose: structured audit or compliance verification — title: TFS API Version Configuration Inspection Report
-- `docs/audits/transport_naming_alignment.md` — filename `transport_naming_alignment.md` — purpose: structured audit or compliance verification — title: Transport Naming Alignment Audit
-- `docs/audits/trend_delivery_analytics_exploration.md` — filename `trend_delivery_analytics_exploration.md` — purpose: structured audit or compliance verification — title: Trend / Delivery Analytics Exploration
-- `docs/audits/ui_semantic_correction.md` — filename `ui_semantic_correction.md` — purpose: structured audit or compliance verification — title: UI Semantic Correction Audit
-- `docs/audits/ui_storypoint_adoption.md` — filename `ui_storypoint_adoption.md` — purpose: structured audit or compliance verification — title: UI Story Point Adoption Audit
-- `docs/audits/unit_test_cleanup_report.md` — filename `unit_test_cleanup_report.md` — purpose: structured audit or compliance verification — title: PoTool Unit Test Cleanup Report
-- `docs/audits/unit_test_inventory_audit.md` — filename `unit_test_inventory_audit.md` — purpose: structured audit or compliance verification — title: PoTool Unit Test Inventory Audit
-- `docs/audits/unit_test_redundancy_audit.md` — filename `unit_test_redundancy_audit.md` — purpose: structured audit or compliance verification — title: PoTool Unit Test Redundancy Audit
-- `docs/audits/unit_test_speed_audit.md` — filename `unit_test_speed_audit.md` — purpose: structured audit or compliance verification — title: PoTool Unit Test Speed Audit
-- `docs/audits/unit_test_strategy.md` — filename `unit_test_strategy.md` — purpose: structured audit or compliance verification — title: PoTool Unit Test Strategy
-- `docs/audits/workspace_hub_tile_analysis.md` — filename `workspace_hub_tile_analysis.md` — purpose: structured audit or compliance verification — title: Workspace Hub Tile Analysis
+- `docs/analysis/application_handler_cleanup.md` — filename `application_handler_cleanup.md` — purpose: structured audit or compliance verification — title: Application Handler Cleanup
+- `docs/analysis/application_semantic_audit.md` — filename `application_semantic_audit.md` — purpose: structured audit or compliance verification — title: Application Semantic Audit — Effort vs StoryPoints Usage
+- `docs/analysis/application_simplification_audit.md` — filename `application_simplification_audit.md` — purpose: structured audit or compliance verification — title: Application Simplification Audit
+- `docs/analysis/backlog_health_simplification.md` — filename `backlog_health_simplification.md` — purpose: structured audit or compliance verification — title: Backlog Health Simplification
+- `docs/analysis/backlog_quality_cdc_summary.md` — filename `backlog_quality_cdc_summary.md` — purpose: structured audit or compliance verification — title: Backlog Quality CDC Summary
+- `docs/analysis/backlog_quality_domain_exploration.md` — filename `backlog_quality_domain_exploration.md` — purpose: structured audit or compliance verification — title: Backlog Quality Domain Exploration
+- `docs/analysis/buildquality_application_page_integration_report.md` — filename `buildquality_application_page_integration_report.md` — purpose: structured audit or compliance verification — title: Prompt 3 — BuildQuality Application & Page Integration Report
+- `docs/analysis/buildquality_calculation_validation_report.md` — filename `buildquality_calculation_validation_report.md` — purpose: structured audit or compliance verification — title: BuildQuality Calculation Validation Report
+- `docs/analysis/buildquality_cdc_contract_report.md` — filename `buildquality_cdc_contract_report.md` — purpose: normative rule or governance reference — title: Prompt 1 — BuildQuality CDC Contract Report
+- `docs/analysis/buildquality_chart_state_cleanup_report.md` — filename `buildquality_chart_state_cleanup_report.md` — purpose: structured audit or compliance verification — title: BuildQuality Chart State Cleanup Report
+- `docs/analysis/buildquality_data_aggregation_contract_report.md` — filename `buildquality_data_aggregation_contract_report.md` — purpose: normative rule or governance reference — title: Prompt 2 — BuildQuality Data & Aggregation Contract Report
+- `docs/analysis/buildquality_discovery_report.md` — filename `buildquality_discovery_report.md` — purpose: structured audit or compliance verification — title: Prompt 0 — BuildQuality Discovery Report
+- `docs/analysis/buildquality_edge_consistency_report.md` — filename `buildquality_edge_consistency_report.md` — purpose: structured audit or compliance verification — title: BuildQuality Edge Case & Cross-Workspace Consistency Report
+- `docs/analysis/buildquality_implementation_contract_report.md` — filename `buildquality_implementation_contract_report.md` — purpose: normative rule or governance reference — title: Prompt 4 — BuildQuality Data Foundation (Ingestion & Persistence Contract Report)
+- `docs/analysis/buildquality_missing_ingestion_build_168570_code_analysis_report.md` — filename `buildquality_missing_ingestion_build_168570_code_analysis_report.md` — purpose: structured audit or compliance verification — title: BuildQuality Missing Ingestion For Build 168570 — Code Analysis Report
+- `docs/analysis/buildquality_retrieval_performance_report.md` — filename `buildquality_retrieval_performance_report.md` — purpose: structured audit or compliance verification — title: BuildQuality Retrieval Performance Report
+- `docs/analysis/buildquality_seed_data_report.md` — filename `buildquality_seed_data_report.md` — purpose: structured audit or compliance verification — title: BuildQuality Seed Data Report
+- `docs/analysis/buildquality_ui_compliance_audit_report.md` — filename `buildquality_ui_compliance_audit_report.md` — purpose: structured audit or compliance verification — title: BuildQuality UI Compliance Audit Report
+- `docs/analysis/buildquality_ui_final_integration_report.md` — filename `buildquality_ui_final_integration_report.md` — purpose: structured audit or compliance verification — title: BuildQuality UI Final Integration Report
+- `docs/analysis/cdc-full-quality-audit.md` — filename `cdc-full-quality-audit.md` — purpose: structured audit or compliance verification — title: CDC Full Quality Audit
+- `docs/analysis/cdc_behavioral_stress_test_audit.md` — filename `cdc_behavioral_stress_test_audit.md` — purpose: structured audit or compliance verification — title: CDC Behavioral Stress-Test Audit
+- `docs/analysis/cdc_completion_summary.md` — filename `cdc_completion_summary.md` — purpose: structured audit or compliance verification — title: CDC Completion Summary
+- `docs/analysis/cdc_coverage_audit.md` — filename `cdc_coverage_audit.md` — purpose: structured audit or compliance verification — title: CDC Coverage Audit
+- `docs/analysis/cdc_extraction_summary.md` — filename `cdc_extraction_summary.md` — purpose: structured audit or compliance verification — title: CDC Extraction Summary
+- `docs/analysis/cdc_freeze_audit.md` — filename `cdc_freeze_audit.md` — purpose: structured audit or compliance verification — title: CDC Freeze Audit
+- `docs/analysis/cdc_invariant_tests.md` — filename `cdc_invariant_tests.md` — purpose: structured audit or compliance verification — title: CDC Invariant Tests
+- `docs/analysis/cdc_replay_fixture_validation.md` — filename `cdc_replay_fixture_validation.md` — purpose: structured audit or compliance verification — title: CDC Replay Fixture Validation
+- `docs/analysis/cdc_usage_coverage.md` — filename `cdc_usage_coverage.md` — purpose: structured audit or compliance verification — title: CDC Usage Coverage Audit
+- `docs/analysis/compatibility_cleanup_phase3.md` — filename `compatibility_cleanup_phase3.md` — purpose: structured audit or compliance verification — title: Compatibility Cleanup Phase 3
+- `docs/analysis/delivery_trend_analytics_cdc_summary.md` — filename `delivery_trend_analytics_cdc_summary.md` — purpose: structured audit or compliance verification — title: Delivery Trend Analytics CDC Summary
+- `docs/analysis/domain_library_readiness_audit.md` — filename `domain_library_readiness_audit.md` — purpose: structured audit or compliance verification — title: PoTool Domain Library Extraction Readiness Audit
+- `docs/analysis/domain_logic_outside_cdc_exploration.md` — filename `domain_logic_outside_cdc_exploration.md` — purpose: structured audit or compliance verification — title: Domain Logic Outside CDC Exploration
+- `docs/analysis/dto_contract_cleanup.md` — filename `dto_contract_cleanup.md` — purpose: normative rule or governance reference — title: DTO Contract Cleanup — Canonical Naming
+- `docs/analysis/effort_diagnostics_cdc_extraction_report.md` — filename `effort_diagnostics_cdc_extraction_report.md` — purpose: structured audit or compliance verification — title: Effort Diagnostics CDC Extraction Report
+- `docs/analysis/effort_diagnostics_cleanup_report.md` — filename `effort_diagnostics_cleanup_report.md` — purpose: structured audit or compliance verification — title: Effort Diagnostics Cleanup Report
+- `docs/analysis/effort_diagnostics_domain_exploration.md` — filename `effort_diagnostics_domain_exploration.md` — purpose: structured audit or compliance verification — title: Effort Diagnostics Domain Exploration
+- `docs/analysis/effort_diagnostics_semantic_audit.md` — filename `effort_diagnostics_semantic_audit.md` — purpose: structured audit or compliance verification — title: Effort Diagnostics Semantic Audit
+- `docs/analysis/effort_planning_boundary_audit.md` — filename `effort_planning_boundary_audit.md` — purpose: structured audit or compliance verification — title: Effort Planning Boundary Audit
+- `docs/analysis/effort_planning_boundary_cleanup.md` — filename `effort_planning_boundary_cleanup.md` — purpose: structured audit or compliance verification — title: EffortPlanning Boundary Cleanup
+- `docs/analysis/effort_planning_cdc_extraction.md` — filename `effort_planning_cdc_extraction.md` — purpose: structured audit or compliance verification — title: EffortPlanning CDC Extraction
+- `docs/analysis/estimation_audit.md` — filename `estimation_audit.md` — purpose: structured audit or compliance verification — title: PoTool Estimation Audit
+- `docs/analysis/final_pre_usage_validation.md` — filename `final_pre_usage_validation.md` — purpose: structured audit or compliance verification — title: Final Pre-Usage Validation
+- `docs/analysis/forecasting_cdc_summary.md` — filename `forecasting_cdc_summary.md` — purpose: structured audit or compliance verification — title: Forecasting CDC Summary
+- `docs/analysis/forecasting_domain_exploration.md` — filename `forecasting_domain_exploration.md` — purpose: structured audit or compliance verification — title: Forecasting Domain Exploration
+- `docs/analysis/forecasting_semantic_audit.md` — filename `forecasting_semantic_audit.md` — purpose: structured audit or compliance verification — title: Forecasting Semantic Audit
+- `docs/analysis/hexagon_boundary_enforcement.md` — filename `hexagon_boundary_enforcement.md` — purpose: structured audit or compliance verification — title: Hexagon Boundary Enforcement
+- `docs/analysis/hierarchy_propagation_audit.md` — filename `hierarchy_propagation_audit.md` — purpose: structured audit or compliance verification — title: PoTool Hierarchy and Propagation Domain Audit
+- `docs/analysis/metrics_audit.md` — filename `metrics_audit.md` — purpose: structured audit or compliance verification — title: PoTool Metrics Domain Audit
+- `docs/analysis/mock_data_quality.md` — filename `mock_data_quality.md` — purpose: structured audit or compliance verification — title: Mock Data Quality Audit
+- `docs/analysis/mock_pr_pipeline_seed_validation.md` — filename `mock_pr_pipeline_seed_validation.md` — purpose: structured audit or compliance verification — title: Mock PR/Pipeline Seed Validation
+- `docs/analysis/portfolio_flow_application_migration.md` — filename `portfolio_flow_application_migration.md` — purpose: structured audit or compliance verification — title: PortfolioFlow Application Migration
+- `docs/analysis/portfolio_flow_consumers_audit.md` — filename `portfolio_flow_consumers_audit.md` — purpose: structured audit or compliance verification — title: PortfolioFlow Projection Consumer Audit
+- `docs/analysis/portfolio_flow_domain_exploration.md` — filename `portfolio_flow_domain_exploration.md` — purpose: structured audit or compliance verification — title: PortfolioFlow Domain Exploration
+- `docs/analysis/portfolio_flow_feasibility.md` — filename `portfolio_flow_feasibility.md` — purpose: structured audit or compliance verification — title: PortfolioFlow Feasibility Audit
+- `docs/analysis/portfolio_flow_projection.md` — filename `portfolio_flow_projection.md` — purpose: structured audit or compliance verification — title: PortfolioFlow Projection
+- `docs/analysis/portfolio_flow_projection_validation.md` — filename `portfolio_flow_projection_validation.md` — purpose: structured audit or compliance verification — title: PortfolioFlow Projection Validation
+- `docs/analysis/portfolio_flow_semantic_audit.md` — filename `portfolio_flow_semantic_audit.md` — purpose: structured audit or compliance verification — title: PortfolioFlow Semantic Audit
+- `docs/analysis/portfolio_flow_signal_enablement.md` — filename `portfolio_flow_signal_enablement.md` — purpose: structured audit or compliance verification — title: PortfolioFlow Signal Enablement
+- `docs/analysis/portfolio_handler_simplification.md` — filename `portfolio_handler_simplification.md` — purpose: structured audit or compliance verification — title: Portfolio Handler Simplification
+- `docs/analysis/post_runtime_fix_validation.md` — filename `post_runtime_fix_validation.md` — purpose: structured audit or compliance verification — title: Post Runtime Fix Validation
+- `docs/analysis/pr_pipeline_linkage_analysis.md` — filename `pr_pipeline_linkage_analysis.md` — purpose: structured audit or compliance verification — title: PR Pipeline Linkage Analysis
+- `docs/analysis/pre_cleanup_app_validation.md` — filename `pre_cleanup_app_validation.md` — purpose: structured audit or compliance verification — title: Pre-Cleanup App Validation
+- `docs/analysis/projection_determinism_audit.md` — filename `projection_determinism_audit.md` — purpose: structured audit or compliance verification — title: Projection Determinism Audit
+- `docs/analysis/projection_trend_pipeline_audit.md` — filename `projection_trend_pipeline_audit.md` — purpose: structured audit or compliance verification — title: PoTool Projection and Trend Pipeline Domain Audit
+- `docs/analysis/runtime_integrity_fix.md` — filename `runtime_integrity_fix.md` — purpose: structured audit or compliance verification — title: Runtime Integrity Fix (Dev Startup + TFS Access Boundary)
+- `docs/analysis/sprint_commitment_application_alignment.md` — filename `sprint_commitment_application_alignment.md` — purpose: structured audit or compliance verification — title: Sprint Commitment Application Alignment
+- `docs/analysis/sprint_commitment_cdc_extraction.md` — filename `sprint_commitment_cdc_extraction.md` — purpose: structured audit or compliance verification — title: Sprint Commitment CDC Extraction
+- `docs/analysis/sprint_commitment_handler_simplification.md` — filename `sprint_commitment_handler_simplification.md` — purpose: structured audit or compliance verification — title: Sprint Commitment Handler Simplification
+- `docs/analysis/sprint_scope_audit.md` — filename `sprint_scope_audit.md` — purpose: structured audit or compliance verification — title: PoTool Sprint Scope Domain Audit
+- `docs/analysis/sqlite_buildquality_database_discovery_report.md` — filename `sqlite_buildquality_database_discovery_report.md` — purpose: structured audit or compliance verification — title: SQLite BuildQuality Database Discovery Report
+- `docs/analysis/state_sprint_delivery_audit.md` — filename `state_sprint_delivery_audit.md` — purpose: structured audit or compliance verification — title: PoTool State + Sprint + Delivery Audit
+- `docs/analysis/statistical_core_cleanup_report.md` — filename `statistical_core_cleanup_report.md` — purpose: structured audit or compliance verification — title: Statistical Core Cleanup Report
+- `docs/analysis/statistical_helper_audit.md` — filename `statistical_helper_audit.md` — purpose: structured audit or compliance verification — title: Statistical Helper Audit
+- `docs/analysis/test_cleanup_step1.md` — filename `test_cleanup_step1.md` — purpose: structured audit or compliance verification — title: Test Cleanup Step 1
+- `docs/analysis/test_ownership_audit.md` — filename `test_ownership_audit.md` — purpose: structured audit or compliance verification — title: Test Ownership Audit
+- `docs/analysis/test_ownership_normalization.md` — filename `test_ownership_normalization.md` — purpose: structured audit or compliance verification — title: Test Ownership Normalization
+- `docs/analysis/tfs_api_version_configuration_inspection_report.md` — filename `tfs_api_version_configuration_inspection_report.md` — purpose: structured audit or compliance verification — title: TFS API Version Configuration Inspection Report
+- `docs/analysis/transport_naming_alignment.md` — filename `transport_naming_alignment.md` — purpose: structured audit or compliance verification — title: Transport Naming Alignment Audit
+- `docs/analysis/trend_delivery_analytics_exploration.md` — filename `trend_delivery_analytics_exploration.md` — purpose: structured audit or compliance verification — title: Trend / Delivery Analytics Exploration
+- `docs/analysis/ui_semantic_correction.md` — filename `ui_semantic_correction.md` — purpose: structured audit or compliance verification — title: UI Semantic Correction Audit
+- `docs/analysis/ui_storypoint_adoption.md` — filename `ui_storypoint_adoption.md` — purpose: structured audit or compliance verification — title: UI Story Point Adoption Audit
+- `docs/analysis/unit_test_cleanup_report.md` — filename `unit_test_cleanup_report.md` — purpose: structured audit or compliance verification — title: PoTool Unit Test Cleanup Report
+- `docs/analysis/unit_test_inventory_audit.md` — filename `unit_test_inventory_audit.md` — purpose: structured audit or compliance verification — title: PoTool Unit Test Inventory Audit
+- `docs/analysis/unit_test_redundancy_audit.md` — filename `unit_test_redundancy_audit.md` — purpose: structured audit or compliance verification — title: PoTool Unit Test Redundancy Audit
+- `docs/analysis/unit_test_speed_audit.md` — filename `unit_test_speed_audit.md` — purpose: structured audit or compliance verification — title: PoTool Unit Test Speed Audit
+- `docs/analysis/unit_test_strategy.md` — filename `unit_test_strategy.md` — purpose: structured audit or compliance verification — title: PoTool Unit Test Strategy
+- `docs/analysis/workspace_hub_tile_analysis.md` — filename `workspace_hub_tile_analysis.md` — purpose: structured audit or compliance verification — title: Workspace Hub Tile Analysis
 
 ### history
-- `docs/history/code-quality/code-audit-report-2026-01-30.md` — filename `code-audit-report-2026-01-30.md` — purpose: structured audit or compliance verification — title: Code Quality & Architecture Audit Report
-- `docs/history/code-quality/final-summary-2026-01-30.md` — filename `final-summary-2026-01-30.md` — purpose: structured audit or compliance verification — title: Final Summary - CODE_AUDIT_REPORT.md Complete Analysis
-- `docs/history/code-quality/fixes-applied-2026-01-30.md` — filename `fixes-applied-2026-01-30.md` — purpose: structured audit or compliance verification — title: Fixes Applied - CODE_AUDIT_REPORT.md
-- `docs/history/code-quality/non-test-issues-analysis-2026-01-30.md` — filename `non-test-issues-analysis-2026-01-30.md` — purpose: structured audit or compliance verification — title: Non-Test Issues Analysis - CODE_AUDIT_REPORT.md
-- `docs/history/validation/validators-implementation-2026-01-30.md` — filename `validators-implementation-2026-01-30.md` — purpose: report or summarized findings — title: Validators Implementation Summary
+- `docs/archive/code-quality/code-audit-report-2026-01-30.md` — filename `code-audit-report-2026-01-30.md` — purpose: structured audit or compliance verification — title: Code Quality & Architecture Audit Report
+- `docs/archive/code-quality/final-summary-2026-01-30.md` — filename `final-summary-2026-01-30.md` — purpose: structured audit or compliance verification — title: Final Summary - CODE_AUDIT_REPORT.md Complete Analysis
+- `docs/archive/code-quality/fixes-applied-2026-01-30.md` — filename `fixes-applied-2026-01-30.md` — purpose: structured audit or compliance verification — title: Fixes Applied - CODE_AUDIT_REPORT.md
+- `docs/archive/code-quality/non-test-issues-analysis-2026-01-30.md` — filename `non-test-issues-analysis-2026-01-30.md` — purpose: structured audit or compliance verification — title: Non-Test Issues Analysis - CODE_AUDIT_REPORT.md
+- `docs/archive/validation/validators-implementation-2026-01-30.md` — filename `validators-implementation-2026-01-30.md` — purpose: report or summarized findings — title: Validators Implementation Summary
 
 ### other
 - `.github/copilot-instructions.md` — filename `copilot-instructions.md` — purpose: normative rule or governance reference — title: Copilot Instructions — PO Companion (Authoritative)
@@ -480,21 +482,21 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 - `docs/rules/ui-loading-rules.md` — filename `UI_LOADING_RULES.md` — purpose: normative rule or governance reference — title: No H1 title
 - `docs/UI_MIGRATION_PLAN.md` — filename `UI_MIGRATION_PLAN.md` — purpose: plan or migration guidance — title: UI Migration Plan — PO Companion
 - `docs/rules/ui-rules.md` — filename `UI_RULES.md` — purpose: normative rule or governance reference — title: UI & UX Rules — PO Companion (Blazor WebAssembly)
-- `docs/bug_trend_followups.md` — filename `bug_trend_followups.md` — purpose: general markdown documentation — title: Bug Trend Follow-up Actions
-- `docs/cleanup/obsolete-changes-log.md` — filename `obsolete-changes-log.md` — purpose: general markdown documentation — title: Obsolete Changes Log — Dead Code Cleanup
-- `docs/cleanup/phase1-client-reachability-report.md` — filename `phase1-client-reachability-report.md` — purpose: report or summarized findings — title: Phase 1 — Client-Side UI Reachability Report
-- `docs/cleanup/phase2-endpoint-usage-report.md` — filename `phase2-endpoint-usage-report.md` — purpose: report or summarized findings — title: Phase 2 — Endpoint Usage Mapping Report
-- `docs/cleanup/phase3-handler-usage-report.md` — filename `phase3-handler-usage-report.md` — purpose: report or summarized findings — title: Phase 3 — Handler Usage Report
-- `docs/cleanup/phase4-full-layer-summary.md` — filename `phase4-full-layer-summary.md` — purpose: report or summarized findings — title: PoCompanion Solution Architecture Map — Phase 4 Summary
-- `docs/domain/REPOSITORY_DOMAIN_DISCOVERY.md` — filename `REPOSITORY_DOMAIN_DISCOVERY.md` — purpose: exploratory analysis or investigation — title: Repository Domain Discovery
-- `docs/domain/backlog_quality_domain_model.md` — filename `backlog_quality_domain_model.md` — purpose: architecture or reference documentation — title: Backlog Quality Domain Model
-- `docs/domain/cdc_domain_map.md` — filename `cdc_domain_map.md` — purpose: architecture or reference documentation — title: CDC Domain Map
-- `docs/domain/cdc_domain_map_generated.md` — filename `cdc_domain_map_generated.md` — purpose: architecture or reference documentation — title: CDC Domain Map — Generated
-- `docs/domain/cdc_reference.md` — filename `cdc_reference.md` — purpose: architecture or reference documentation — title: Canonical Domain Core Reference
-- `docs/domain/domain_model.md` — filename `domain_model.md` — purpose: architecture or reference documentation — title: PoTool Domain Model
-- `docs/domain/effort_diagnostics_domain_model.md` — filename `effort_diagnostics_domain_model.md` — purpose: architecture or reference documentation — title: EffortDiagnostics Domain Model
-- `docs/domain/forecasting_domain_model.md` — filename `forecasting_domain_model.md` — purpose: architecture or reference documentation — title: Forecasting Domain Model
-- `docs/domain/portfolio_flow_model.md` — filename `portfolio_flow_model.md` — purpose: architecture or reference documentation — title: PortfolioFlow Canonical Model
+- `docs/implementation/bug-trend-followups.md` — filename `bug_trend_followups.md` — purpose: general markdown documentation — title: Bug Trend Follow-up Actions
+- `docs/reports/2026-03-30-cleanup-obsolete-changes-log.md` — filename `obsolete-changes-log.md` — purpose: general markdown documentation — title: Obsolete Changes Log — Dead Code Cleanup
+- `docs/reports/2026-03-30-cleanup-phase1-client-reachability-report.md` — filename `phase1-client-reachability-report.md` — purpose: report or summarized findings — title: Phase 1 — Client-Side UI Reachability Report
+- `docs/reports/2026-03-30-cleanup-phase2-endpoint-usage-report.md` — filename `phase2-endpoint-usage-report.md` — purpose: report or summarized findings — title: Phase 2 — Endpoint Usage Mapping Report
+- `docs/reports/2026-03-30-cleanup-phase3-handler-usage-report.md` — filename `phase3-handler-usage-report.md` — purpose: report or summarized findings — title: Phase 3 — Handler Usage Report
+- `docs/reports/2026-03-30-cleanup-phase4-full-layer-summary.md` — filename `phase4-full-layer-summary.md` — purpose: report or summarized findings — title: PoCompanion Solution Architecture Map — Phase 4 Summary
+- `docs/architecture/repository-domain-discovery.md` — filename `REPOSITORY_DOMAIN_DISCOVERY.md` — purpose: exploratory analysis or investigation — title: Repository Domain Discovery
+- `docs/architecture/backlog-quality-domain-model.md` — filename `backlog_quality_domain_model.md` — purpose: architecture or reference documentation — title: Backlog Quality Domain Model
+- `docs/architecture/cdc-domain-map.md` — filename `cdc_domain_map.md` — purpose: architecture or reference documentation — title: CDC Domain Map
+- `docs/architecture/cdc-domain-map-generated.md` — filename `cdc_domain_map_generated.md` — purpose: architecture or reference documentation — title: CDC Domain Map — Generated
+- `docs/architecture/cdc-reference.md` — filename `cdc_reference.md` — purpose: architecture or reference documentation — title: Canonical Domain Core Reference
+- `docs/architecture/domain-model.md` — filename `domain_model.md` — purpose: architecture or reference documentation — title: PoTool Domain Model
+- `docs/architecture/effort-diagnostics-domain-model.md` — filename `effort_diagnostics_domain_model.md` — purpose: architecture or reference documentation — title: EffortDiagnostics Domain Model
+- `docs/architecture/forecasting-domain-model.md` — filename `forecasting_domain_model.md` — purpose: architecture or reference documentation — title: Forecasting Domain Model
+- `docs/architecture/portfolio-flow-model.md` — filename `portfolio_flow_model.md` — purpose: architecture or reference documentation — title: PortfolioFlow Canonical Model
 - `docs/rules/estimation-rules.md` — filename `estimation_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Estimation
 - `docs/rules/hierarchy-rules.md` — filename `hierarchy_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Hierarchy
 - `docs/rules/metrics-rules.md` — filename `metrics_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Metrics
@@ -502,44 +504,44 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 - `docs/rules/source-rules.md` — filename `source_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Data Sources
 - `docs/rules/sprint-rules.md` — filename `sprint_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Sprint Semantics
 - `docs/rules/state-rules.md` — filename `state_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — State Classification
-- `docs/domain/sprint_commitment_cdc_summary.md` — filename `sprint_commitment_cdc_summary.md` — purpose: report or summarized findings — title: Sprint Commitment CDC Summary
-- `docs/domain/sprint_commitment_domain_model.md` — filename `sprint_commitment_domain_model.md` — purpose: architecture or reference documentation — title: Sprint Commitment Domain Model
+- `docs/architecture/sprint-commitment-cdc-summary.md` — filename `sprint_commitment_cdc_summary.md` — purpose: report or summarized findings — title: Sprint Commitment CDC Summary
+- `docs/architecture/sprint-commitment-domain-model.md` — filename `sprint_commitment_domain_model.md` — purpose: architecture or reference documentation — title: Sprint Commitment Domain Model
 - `docs/rules/ui-semantic-rules.md` — filename `ui_semantic_rules.md` — purpose: normative rule or governance reference — title: UI Semantic Rules
-- `docs/exploration/sprint_commitment_domain_exploration.md` — filename `sprint_commitment_domain_exploration.md` — purpose: exploratory analysis or investigation — title: Sprint Commitment Domain Exploration
-- `docs/filters/cache-only-guardrail-analysis-pipeline-workitems.md` — filename `cache-only-guardrail-analysis-pipeline-workitems.md` — purpose: exploratory analysis or investigation — title: Cache-Only Guardrail Analysis — Pipeline and Work Item Read Paths
-- `docs/filters/canonical_filter_state_model.md` — filename `canonical_filter_state_model.md` — purpose: general markdown documentation — title: Canonical Filter State Model
-- `docs/filters/datasource-enforcement.md` — filename `datasource-enforcement.md` — purpose: general markdown documentation — title: DataSourceMode Enforcement
-- `docs/filters/filter-analysis-improved.md` — filename `filter-analysis-improved.md` — purpose: exploratory analysis or investigation — title: PoTool Global Filtering — Decision-Grade Analysis
-- `docs/filters/filter-analysis.md` — filename `filter-analysis.md` — purpose: exploratory analysis or investigation — title: Filter analysis
-- `docs/filters/filter-canonical-model.md` — filename `filter-canonical-model.md` — purpose: general markdown documentation — title: Canonical Filter Model
-- `docs/filters/filter-cross-slice-migration.md` — filename `filter-cross-slice-migration.md` — purpose: plan or migration guidance — title: Cross-Slice Canonical Filter Migration
-- `docs/filters/filter-current-state-analysis.md` — filename `filter-current-state-analysis.md` — purpose: exploratory analysis or investigation — title: Current Filter State Analysis
-- `docs/filters/filter-delivery-migration.md` — filename `filter-delivery-migration.md` — purpose: plan or migration guidance — title: Delivery Slice Canonical Filter Migration
-- `docs/filters/filter-final-cleanup-report.md` — filename `filter-final-cleanup-report.md` — purpose: report or summarized findings — title: Filter Final Cleanup Report
-- `docs/filters/filter-implementation-design.md` — filename `filter-implementation-design.md` — purpose: general markdown documentation — title: Canonical Filter Implementation Design
-- `docs/filters/filter-implementation-execution-plan.md` — filename `filter-implementation-execution-plan.md` — purpose: plan or migration guidance — title: Canonical Filter Implementation Execution Plan
-- `docs/filters/filter-implementation-plan.md` — filename `filter-implementation-plan.md` — purpose: plan or migration guidance — title: Filter Implementation Plan
-- `docs/filters/filter-performance-audit.md` — filename `filter-performance-audit.md` — purpose: structured audit or compliance verification — title: Filter Performance Audit and Optimization Plan
-- `docs/filters/filter-performance-verification.md` — filename `filter-performance-verification.md` — purpose: general markdown documentation — title: Filter Performance Verification
-- `docs/filters/filter-phases-1-4-pr-breakdown.md` — filename `filter-phases-1-4-pr-breakdown.md` — purpose: general markdown documentation — title: Canonical Filter Phases 1–4 PR Breakdown
-- `docs/filters/filter-pipeline-migration.md` — filename `filter-pipeline-migration.md` — purpose: plan or migration guidance — title: Pipeline Slice Canonical Filter Migration
-- `docs/filters/filter-pipeline-truncation-fix.md` — filename `filter-pipeline-truncation-fix.md` — purpose: general markdown documentation — title: Pipeline Run Truncation Corrective Fix
-- `docs/filters/filter-pr-migration.md` — filename `filter-pr-migration.md` — purpose: plan or migration guidance — title: PR Slice Canonical Filter Migration
-- `docs/filters/filter-sprint-migration.md` — filename `filter-sprint-migration.md` — purpose: plan or migration guidance — title: Sprint Slice Canonical Filter Migration
-- `docs/filters/filter-ui-behavior.md` — filename `filter-ui-behavior.md` — purpose: general markdown documentation — title: Filter UI Behavior
-- `docs/filters/filter-ui-metadata-fix.md` — filename `filter-ui-metadata-fix.md` — purpose: general markdown documentation — title: UI/Client Canonical Filter Metadata Fix
-- `docs/filters/filter-validation-report.md` — filename `filter-validation-report.md` — purpose: structured audit or compliance verification — title: Filter Integration Validation & Regression Audit
-- `docs/filters/page-filter-contracts.md` — filename `page-filter-contracts.md` — purpose: normative rule or governance reference — title: Page Filter Contracts
-- `docs/filters/pipeline-guardrail-and-workitem-split.md` — filename `pipeline-guardrail-and-workitem-split.md` — purpose: plan or migration guidance — title: Pipeline Guardrail Implementation Plan and Work Item API Split Design
-- `docs/filters/pipeline-provider-cleanup.md` — filename `pipeline-provider-cleanup.md` — purpose: general markdown documentation — title: Pipeline Provider Cleanup
-- `docs/filters/pr-batching-verification.md` — filename `pr-batching-verification.md` — purpose: general markdown documentation — title: PR Batching Verification
-- `docs/filters/pr-cache-only-guardrails.md` — filename `pr-cache-only-guardrails.md` — purpose: general markdown documentation — title: PR Cache-Only Guardrails
-- `docs/filters/pr-live-provider-usage-audit.md` — filename `pr-live-provider-usage-audit.md` — purpose: structured audit or compliance verification — title: PR Live Provider Usage Audit
-- `docs/filters/pr-provider-cleanup.md` — filename `pr-provider-cleanup.md` — purpose: general markdown documentation — title: PR Provider Cleanup
-- `docs/archive/legacy-revision-ingestion/tfs-access-boundary-sealed.md` — filename `tfs-access-boundary-sealed.md` — purpose: general markdown documentation — title: TFS Access Boundary Sealed
-- `docs/archive/legacy-revision-ingestion/tfs-access-boundary-verification.md` — filename `tfs-access-boundary-verification.md` — purpose: general markdown documentation — title: TFS Access Boundary Verification
-- `docs/filters/workitem-route-classification-fix.md` — filename `workitem-route-classification-fix.md` — purpose: general markdown documentation — title: Work Item Route Classification Fix
-- `docs/health_additional_signals.md` — filename `health_additional_signals.md` — purpose: general markdown documentation — title: Additional Health Signals Proposal
+- `docs/analysis/sprint-commitment-domain-exploration.md` — filename `sprint_commitment_domain_exploration.md` — purpose: exploratory analysis or investigation — title: Sprint Commitment Domain Exploration
+- `docs/analysis/cache-only-guardrail-analysis-pipeline-workitems.md` — filename `cache-only-guardrail-analysis-pipeline-workitems.md` — purpose: exploratory analysis or investigation — title: Cache-Only Guardrail Analysis — Pipeline and Work Item Read Paths
+- `docs/analysis/canonical_filter_state_model.md` — filename `canonical_filter_state_model.md` — purpose: general markdown documentation — title: Canonical Filter State Model
+- `docs/analysis/datasource-enforcement.md` — filename `datasource-enforcement.md` — purpose: general markdown documentation — title: DataSourceMode Enforcement
+- `docs/analysis/filter-analysis-improved.md` — filename `filter-analysis-improved.md` — purpose: exploratory analysis or investigation — title: PoTool Global Filtering — Decision-Grade Analysis
+- `docs/analysis/filter-analysis.md` — filename `filter-analysis.md` — purpose: exploratory analysis or investigation — title: Filter analysis
+- `docs/analysis/filter-canonical-model.md` — filename `filter-canonical-model.md` — purpose: general markdown documentation — title: Canonical Filter Model
+- `docs/analysis/filter-cross-slice-migration.md` — filename `filter-cross-slice-migration.md` — purpose: plan or migration guidance — title: Cross-Slice Canonical Filter Migration
+- `docs/analysis/filter-current-state-analysis.md` — filename `filter-current-state-analysis.md` — purpose: exploratory analysis or investigation — title: Current Filter State Analysis
+- `docs/analysis/filter-delivery-migration.md` — filename `filter-delivery-migration.md` — purpose: plan or migration guidance — title: Delivery Slice Canonical Filter Migration
+- `docs/analysis/filter-final-cleanup-report.md` — filename `filter-final-cleanup-report.md` — purpose: report or summarized findings — title: Filter Final Cleanup Report
+- `docs/analysis/filter-implementation-design.md` — filename `filter-implementation-design.md` — purpose: general markdown documentation — title: Canonical Filter Implementation Design
+- `docs/analysis/filter-implementation-execution-plan.md` — filename `filter-implementation-execution-plan.md` — purpose: plan or migration guidance — title: Canonical Filter Implementation Execution Plan
+- `docs/analysis/filter-implementation-plan.md` — filename `filter-implementation-plan.md` — purpose: plan or migration guidance — title: Filter Implementation Plan
+- `docs/analysis/filter-performance-audit.md` — filename `filter-performance-audit.md` — purpose: structured audit or compliance verification — title: Filter Performance Audit and Optimization Plan
+- `docs/analysis/filter-performance-verification.md` — filename `filter-performance-verification.md` — purpose: general markdown documentation — title: Filter Performance Verification
+- `docs/analysis/filter-phases-1-4-pr-breakdown.md` — filename `filter-phases-1-4-pr-breakdown.md` — purpose: general markdown documentation — title: Canonical Filter Phases 1–4 PR Breakdown
+- `docs/analysis/filter-pipeline-migration.md` — filename `filter-pipeline-migration.md` — purpose: plan or migration guidance — title: Pipeline Slice Canonical Filter Migration
+- `docs/analysis/filter-pipeline-truncation-fix.md` — filename `filter-pipeline-truncation-fix.md` — purpose: general markdown documentation — title: Pipeline Run Truncation Corrective Fix
+- `docs/analysis/filter-pr-migration.md` — filename `filter-pr-migration.md` — purpose: plan or migration guidance — title: PR Slice Canonical Filter Migration
+- `docs/analysis/filter-sprint-migration.md` — filename `filter-sprint-migration.md` — purpose: plan or migration guidance — title: Sprint Slice Canonical Filter Migration
+- `docs/analysis/filter-ui-behavior.md` — filename `filter-ui-behavior.md` — purpose: general markdown documentation — title: Filter UI Behavior
+- `docs/analysis/filter-ui-metadata-fix.md` — filename `filter-ui-metadata-fix.md` — purpose: general markdown documentation — title: UI/Client Canonical Filter Metadata Fix
+- `docs/analysis/filter-validation-report.md` — filename `filter-validation-report.md` — purpose: structured audit or compliance verification — title: Filter Integration Validation & Regression Audit
+- `docs/analysis/page-filter-contracts.md` — filename `page-filter-contracts.md` — purpose: normative rule or governance reference — title: Page Filter Contracts
+- `docs/analysis/pipeline-guardrail-and-workitem-split.md` — filename `pipeline-guardrail-and-workitem-split.md` — purpose: plan or migration guidance — title: Pipeline Guardrail Implementation Plan and Work Item API Split Design
+- `docs/analysis/pipeline-provider-cleanup.md` — filename `pipeline-provider-cleanup.md` — purpose: general markdown documentation — title: Pipeline Provider Cleanup
+- `docs/analysis/pr-batching-verification.md` — filename `pr-batching-verification.md` — purpose: general markdown documentation — title: PR Batching Verification
+- `docs/analysis/pr-cache-only-guardrails.md` — filename `pr-cache-only-guardrails.md` — purpose: general markdown documentation — title: PR Cache-Only Guardrails
+- `docs/analysis/pr-live-provider-usage-audit.md` — filename `pr-live-provider-usage-audit.md` — purpose: structured audit or compliance verification — title: PR Live Provider Usage Audit
+- `docs/analysis/pr-provider-cleanup.md` — filename `pr-provider-cleanup.md` — purpose: general markdown documentation — title: PR Provider Cleanup
+- `docs/analysis/tfs-access-boundary-sealed.md` — filename `tfs-access-boundary-sealed.md` — purpose: general markdown documentation — title: TFS Access Boundary Sealed
+- `docs/analysis/tfs-access-boundary-verification.md` — filename `tfs-access-boundary-verification.md` — purpose: general markdown documentation — title: TFS Access Boundary Verification
+- `docs/analysis/workitem-route-classification-fix.md` — filename `workitem-route-classification-fix.md` — purpose: general markdown documentation — title: Work Item Route Classification Fix
+- `docs/implementation/health-additional-signals.md` — filename `health_additional_signals.md` — purpose: general markdown documentation — title: Additional Health Signals Proposal
 - `docs/health_workspace_fix_plan.md` — filename `health_workspace_fix_plan.md` — purpose: plan or migration guidance — title: Health Workspace Fix Plan
 - `docs/implementation/battleship-cdc-extension-report.md` — filename `battleship-cdc-extension-report.md` — purpose: report or summarized findings — title: Battleship CDC Extension Report
 - `docs/implementation/cdc-critical-fixes.md` — filename `cdc-critical-fixes.md` — purpose: general markdown documentation — title: CDC Critical Fixes
@@ -557,12 +559,12 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 - `docs/implementation/phase-h-persistence.md` — filename `phase-h-persistence.md` — purpose: general markdown documentation — title: Phase H Snapshot Persistence & Selection Policy
 - `docs/implementation/phase-i-finalization.md` — filename `phase-i-finalization.md` — purpose: general markdown documentation — title: Phase I Finalization Validation
 - `docs/iteration_path_sorting_audit.md` — filename `iteration_path_sorting_audit.md` — purpose: structured audit or compliance verification — title: Iteration Path Sorting Audit
-- `docs/navigation_decision_backlog.md` — filename `navigation_decision_backlog.md` — purpose: general markdown documentation — title: Navigation Decision Backlog
-- `docs/navigation_followup_actions.md` — filename `navigation_followup_actions.md` — purpose: general markdown documentation — title: Navigation Follow-up Actions
-- `docs/pr_template.md` — filename `pr_template.md` — purpose: general markdown documentation — title: Pull Request Template — PO Companion
-- `docs/roadmaps/application_simplification_plan.md` — filename `application_simplification_plan.md` — purpose: plan or migration guidance — title: Application Simplification Plan
-- `docs/screenshots/README.md` — filename `README.md` — purpose: folder index or entry-point documentation — title: Screenshot Index — PoCompanion Exploratory Testing
-- `docs/sprint-scoping-limitations.md` — filename `sprint-scoping-limitations.md` — purpose: general markdown documentation — title: Sprint Scoping — Limitations and Current Implementation
+- `docs/implementation/navigation-decision-backlog.md` — filename `navigation_decision_backlog.md` — purpose: general markdown documentation — title: Navigation Decision Backlog
+- `docs/implementation/navigation-followup-actions.md` — filename `navigation_followup_actions.md` — purpose: general markdown documentation — title: Navigation Follow-up Actions
+- `.github/pull_request_template.md` — filename `pr_template.md` — purpose: general markdown documentation — title: Pull Request Template — PO Companion
+- `docs/implementation/application-simplification-plan.md` — filename `application_simplification_plan.md` — purpose: plan or migration guidance — title: Application Simplification Plan
+- `docs/analysis/screenshot-index-exploratory-testing.md` — filename `README.md` — purpose: folder index or entry-point documentation — title: Screenshot Index — PoCompanion Exploratory Testing
+- `docs/analysis/sprint-scoping-limitations.md` — filename `sprint-scoping-limitations.md` — purpose: general markdown documentation — title: Sprint Scoping — Limitations and Current Implementation
 - `docs/sprintmetrics_iteration_migration_plan.md` — filename `sprintmetrics_iteration_migration_plan.md` — purpose: plan or migration guidance — title: Sprint Metrics Iteration Migration Plan
 - `docs/sqlite-datetime-fix.md` — filename `sqlite-datetime-fix.md` — purpose: general markdown documentation — title: SQLite DateTime translation fix
 - `docs/sqlite-timestamp-fix-audit.md` — filename `sqlite-timestamp-fix-audit.md` — purpose: structured audit or compliance verification — title: SQLite timestamp translation fix audit
@@ -586,17 +588,17 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 - `prompts/CONTEXT_PACK.MD` — filename `CONTEXT_PACK.MD` — purpose: general markdown documentation — title: 0) Repo Snapshot
 
 ### reports
-- `docs/reports/ingestion-observability-hardening.md` — filename `ingestion-observability-hardening.md` — purpose: report or summarized findings — title: Ingestion observability hardening
+- `docs/reports/2026-03-30-ingestion-observability-hardening.md` — filename `ingestion-observability-hardening.md` — purpose: report or summarized findings — title: Ingestion observability hardening
 - `docs/archive/legacy-revision-ingestion/odata-ingestion-fix-plan.md` — filename `odata-ingestion-fix-plan.md` — purpose: report or summarized findings — title: OData Ingestion Fix Plan
-- `docs/reports/sprint-attribution-analysis.md` — filename `sprint-attribution-analysis.md` — purpose: exploratory analysis or investigation — title: Sprint Attribution Strategy Analysis
-- `docs/reports/sprint-trends-current-state-analysis.md` — filename `sprint-trends-current-state-analysis.md` — purpose: exploratory analysis or investigation — title: Sprint Trends — Current State Analysis
+- `docs/reports/2026-03-30-sprint-attribution-analysis.md` — filename `sprint-attribution-analysis.md` — purpose: exploratory analysis or investigation — title: Sprint Attribution Strategy Analysis
+- `docs/reports/2026-03-30-sprint-trends-current-state-analysis.md` — filename `sprint-trends-current-state-analysis.md` — purpose: exploratory analysis or investigation — title: Sprint Trends — Current State Analysis
 
 ### reviews
-- `docs/reviews/TfsIntegrationReview.md` — filename `TfsIntegrationReview.md` — purpose: general markdown documentation — title: TFS Integration Review — Fix-Ready, Risk-Ranked Findings
-- `docs/reviews/swepo-review-report.md` — filename `swepo-review-report.md` — purpose: report or summarized findings — title: Senior SWE/PO Review Report – main branch
+- `docs/analysis/tfs-integration-review.md` — filename `TfsIntegrationReview.md` — purpose: general markdown documentation — title: TFS Integration Review — Fix-Ready, Risk-Ranked Findings
+- `docs/reports/2026-03-30-swepo-review-report.md` — filename `swepo-review-report.md` — purpose: report or summarized findings — title: Senior SWE/PO Review Report – main branch
 
 ### root
 - `README.md` — filename `README.md` — purpose: repository entry point — title: potool
 
 ### user
-- `docs/user/gebruikershandleiding.md` — filename `gebruikershandleiding.md` — purpose: user-facing or feature-planning documentation — title: PO Companion — Gebruikershandleiding
+- `docs/architecture/gebruikershandleiding.md` — filename `gebruikershandleiding.md` — purpose: user-facing or feature-planning documentation — title: PO Companion — Gebruikershandleiding

@@ -49,7 +49,7 @@ public sealed class DataSourceModeMiddleware
 
         if (routeIntent == DataSourceModeConfiguration.RouteIntent.BlockedAmbiguous)
         {
-            var reason = DataSourceModeConfiguration.GetBlockedRouteReason(path) ?? "Requires endpoint split; see docs/filters/datasource-enforcement.md#deferred-work.";
+            var reason = DataSourceModeConfiguration.GetBlockedRouteReason(path) ?? "Requires endpoint split; see docs/analysis/datasource-enforcement.md#deferred-work.";
             _logger.LogError(
                 "[Violation] Route={Route} Mode=BlockedAmbiguous AttemptedProvider=Live Action=Blocked Reason={Reason}",
                 path,

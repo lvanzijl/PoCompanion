@@ -7,9 +7,9 @@ public sealed class PortfolioFlowProjectionValidationDocumentTests
     public void PortfolioFlowProjectionValidation_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "portfolio_flow_projection_validation.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "portfolio_flow_projection_validation.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The portfolio flow projection validation audit should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The portfolio flow projection validation audit should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

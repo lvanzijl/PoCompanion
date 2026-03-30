@@ -5,9 +5,9 @@ Purpose: Define the minimum ingestion and persistence changes required to make t
 
 Reference documents:
 
-- `docs/domain/portfolio_flow_model.md`
-- `docs/audits/portfolio_flow_feasibility.md`
-- `docs/audits/portfolio_flow_semantic_audit.md`
+- `docs/architecture/portfolio-flow-model.md`
+- `docs/analysis/portfolio_flow_feasibility.md`
+- `docs/analysis/portfolio_flow_semantic_audit.md`
 
 This document is intentionally limited to **historical signals, ingestion, persistence, and projection boundaries**.  
 It does not introduce UI changes, handler rewrites, or projection implementation details beyond what is necessary to make PortfolioFlow computable.
@@ -340,7 +340,7 @@ This design does **not** require:
 - removing legacy effort-based metrics immediately
 - introducing per-cycle membership snapshots
 - introducing a separate StoryPoints history table
-- changing the canonical domain formulas already defined in `docs/domain/portfolio_flow_model.md`
+- changing the canonical domain formulas already defined in `docs/architecture/portfolio-flow-model.md`
 
 ### Final design statement
 

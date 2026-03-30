@@ -7,9 +7,9 @@ public sealed class EffortPlanningBoundaryAuditDocumentTests
     public void EffortPlanningBoundaryAudit_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var auditPath = Path.Combine(repositoryRoot, "docs", "audits", "effort_planning_boundary_audit.md");
+        var auditPath = Path.Combine(repositoryRoot, "docs", "analysis", "effort_planning_boundary_audit.md");
 
-        Assert.IsTrue(File.Exists(auditPath), "The effort planning boundary audit should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(auditPath), "The effort planning boundary audit should exist under docs/analysis.");
 
         var audit = File.ReadAllText(auditPath);
 
