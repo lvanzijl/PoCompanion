@@ -574,6 +574,151 @@ public class PipelineSyncStageBuildQualityTests
         AssertLogged(logger, "missingBuildCount=1");
     }
 
+    [TestMethod]
+    public async Task ExecuteAsync_IncludesTrackedLongRunningRunWhenFinishTimeCrossesCanonicalBoundary()
+    {
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase($"PipelineSyncStageBuildQuality_{Guid.NewGuid()}")
+            .Options;
+
+        await using var dbContext = new PoToolDbContext(options);
+        SeedPipelineDefinition(dbContext, productOwnerId: 1, pipelineDefinitionId: 42);
+
+        dbContext.CachedPipelineRuns.Add(new CachedPipelineRunEntity
+        {
+            ProductOwnerId = 1,
+            PipelineDefinitionId = 1,
+            TfsRunId = 1001,
+            RunName = "Long Running",
+            State = "running",
+            Result = "Unknown",
+            CreatedDate = new DateTimeOffset(2026, 3, 1, 8, 0, 0, TimeSpan.Zero),
+            CreatedDateUtc = new DateTime(2026, 3, 1, 8, 0, 0, DateTimeKind.Utc),
+            CachedAt = DateTimeOffset.UtcNow
+        });
+        await dbContext.SaveChangesAsync();
+
+        var completedRun = CreatePipelineRun(
+            runId: 1001,
+            pipelineId: 42,
+            startTime: new DateTimeOffset(2026, 3, 1, 8, 0, 0, TimeSpan.Zero),
+            finishTime: new DateTimeOffset(2026, 3, 10, 12, 0, 0, TimeSpan.Zero),
+            result: PipelineRunResult.Failed);
+
+        var tfsClient = new Mock<ITfsClient>();
+        tfsClient
+            .Setup(client => client.GetPipelineRunsAsync(
+                It.IsAny<int[]>(),
+                It.IsAny<string?>(),
+                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([completedRun]);
+        tfsClient
+            .Setup(client => client.GetTestRunsByBuildIdsAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<TestRunDto>());
+        tfsClient
+            .Setup(client => client.GetCoverageByBuildIdsAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<CoverageDto>());
+
+        var logger = new Mock<ILogger<PipelineSyncStage>>();
+        var stage = new PipelineSyncStage(tfsClient.Object, dbContext, logger.Object);
+
+        var result = await stage.ExecuteAsync(
+            new SyncContext
+            {
+                ProductOwnerId = 1,
+                RootWorkItemIds = [100],
+                PipelineDefinitionIds = [42],
+                PipelineWatermark = new DateTimeOffset(2026, 3, 5, 0, 0, 0, TimeSpan.Zero),
+                PipelineFinishWatermark = new DateTimeOffset(2026, 3, 9, 0, 0, 0, TimeSpan.Zero)
+            },
+            _ => { },
+            CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual(new DateTimeOffset(2026, 3, 10, 12, 0, 0, TimeSpan.Zero), result.NewWatermark);
+        Assert.AreEqual(new DateTimeOffset(2026, 3, 5, 0, 0, 0, TimeSpan.Zero), stage.NewStartWatermark);
+
+        var persistedRun = await dbContext.CachedPipelineRuns.SingleAsync(run => run.TfsRunId == 1001);
+        Assert.AreEqual("completed", persistedRun.State);
+        Assert.AreEqual(new DateTime(2026, 3, 10, 12, 0, 0, DateTimeKind.Utc), persistedRun.FinishedDateUtc);
+        AssertLogged(logger, "finishOnlyInclusionCount=1");
+        AssertLogged(logger, "crossingBoundaryCount=1");
+        tfsClient.Verify(client => client.GetPipelineRunsAsync(
+            It.IsAny<int[]>(),
+            It.IsAny<string?>(),
+            new DateTimeOffset(2026, 3, 1, 8, 0, 0, TimeSpan.Zero),
+            It.IsAny<int>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task ExecuteAsync_InProgressRunWithoutFinishTime_DoesNotAdvanceCanonicalFinishWatermark()
+    {
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseInMemoryDatabase($"PipelineSyncStageBuildQuality_{Guid.NewGuid()}")
+            .Options;
+
+        await using var dbContext = new PoToolDbContext(options);
+        SeedPipelineDefinition(dbContext, productOwnerId: 1, pipelineDefinitionId: 42);
+
+        var inProgressRun = new PipelineRunDto(
+            RunId: 1002,
+            PipelineId: 42,
+            PipelineName: "Pipeline",
+            StartTime: new DateTimeOffset(2026, 3, 11, 9, 0, 0, TimeSpan.Zero),
+            FinishTime: null,
+            Duration: null,
+            Result: PipelineRunResult.Unknown,
+            Trigger: PipelineRunTrigger.ContinuousIntegration,
+            TriggerInfo: "individualCI",
+            Branch: "refs/heads/main",
+            RequestedFor: "Build User",
+            RetrievedAt: DateTimeOffset.UtcNow);
+
+        var tfsClient = new Mock<ITfsClient>();
+        tfsClient
+            .Setup(client => client.GetPipelineRunsAsync(
+                It.IsAny<int[]>(),
+                It.IsAny<string?>(),
+                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([inProgressRun]);
+        tfsClient
+            .Setup(client => client.GetTestRunsByBuildIdsAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<TestRunDto>());
+        tfsClient
+            .Setup(client => client.GetCoverageByBuildIdsAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<CoverageDto>());
+
+        var logger = new Mock<ILogger<PipelineSyncStage>>();
+        var stage = new PipelineSyncStage(tfsClient.Object, dbContext, logger.Object);
+
+        var existingFinishWatermark = new DateTimeOffset(2026, 3, 10, 0, 0, 0, TimeSpan.Zero);
+        var result = await stage.ExecuteAsync(
+            new SyncContext
+            {
+                ProductOwnerId = 1,
+                RootWorkItemIds = [100],
+                PipelineDefinitionIds = [42],
+                PipelineWatermark = new DateTimeOffset(2026, 3, 10, 0, 0, 0, TimeSpan.Zero),
+                PipelineFinishWatermark = existingFinishWatermark
+            },
+            _ => { },
+            CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual(existingFinishWatermark, result.NewWatermark);
+        Assert.AreEqual(new DateTimeOffset(2026, 3, 11, 9, 0, 0, TimeSpan.Zero), stage.NewStartWatermark);
+
+        var persistedRun = await dbContext.CachedPipelineRuns.SingleAsync(run => run.TfsRunId == 1002);
+        Assert.AreEqual("running", persistedRun.State);
+        Assert.IsNull(persistedRun.FinishedDateUtc);
+        AssertLogged(logger, "inProgressWithoutFinishCount=1");
+    }
+
     private static int GetMaxBuildQualityBuildBatchSize()
     {
         var field = typeof(PipelineSyncStage).GetField(
@@ -626,10 +771,15 @@ public class PipelineSyncStageBuildQualityTests
         dbContext.SaveChanges();
     }
 
-    private static PipelineRunDto CreatePipelineRun(int runId, int pipelineId)
+    private static PipelineRunDto CreatePipelineRun(
+        int runId,
+        int pipelineId,
+        DateTimeOffset? startTime = null,
+        DateTimeOffset? finishTime = null,
+        PipelineRunResult result = PipelineRunResult.Succeeded)
     {
-        var finishTime = DateTimeOffset.UtcNow;
-        var startTime = finishTime.AddMinutes(-10);
+        finishTime ??= DateTimeOffset.UtcNow;
+        startTime ??= finishTime?.AddMinutes(-10);
 
         return new PipelineRunDto(
             RunId: runId,
@@ -637,8 +787,8 @@ public class PipelineSyncStageBuildQualityTests
             PipelineName: "Pipeline",
             StartTime: startTime,
             FinishTime: finishTime,
-            Duration: finishTime - startTime,
-            Result: PipelineRunResult.Succeeded,
+            Duration: startTime.HasValue && finishTime.HasValue ? finishTime - startTime : null,
+            Result: result,
             Trigger: PipelineRunTrigger.ContinuousIntegration,
             TriggerInfo: "individualCI",
             Branch: "refs/heads/main",

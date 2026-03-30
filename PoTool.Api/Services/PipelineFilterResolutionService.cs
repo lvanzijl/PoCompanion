@@ -15,6 +15,7 @@ public sealed record PipelineFilterResolution(
 public sealed record PipelineFilterBoundaryRequest(
     int? ProductOwnerId = null,
     IReadOnlyList<int>? ProductIds = null,
+    IReadOnlyList<int>? RepositoryIds = null,
     int? SprintId = null,
     DateTimeOffset? RangeStartUtc = null,
     DateTimeOffset? RangeEndUtc = null);
@@ -41,15 +42,17 @@ public sealed class PipelineFilterResolutionService
         var issues = new List<FilterValidationIssue>();
         ValidateRequestedFilter(requestedFilter, issues);
 
-        var effectiveProductIds = await ResolveProductIdsAsync(
-            request.ProductOwnerId,
+        var ownerProductIds = await LoadOwnerProductIdsAsync(request.ProductOwnerId, cancellationToken);
+        var effectiveProductIds = ResolveProductIds(
             requestedFilter.ProductIds,
-            cancellationToken);
+            ownerProductIds,
+            request.ProductOwnerId.HasValue,
+            issues);
 
         var repositoryUniverse = await LoadRepositoryUniverseAsync(effectiveProductIds, cancellationToken);
-        var repositoryScope = requestedFilter.RepositoryNames.IsAll
+        var repositoryScope = requestedFilter.RepositoryIds.IsAll
             ? repositoryUniverse
-            : ResolveRepositoryScope(requestedFilter.RepositoryNames, repositoryUniverse, issues);
+            : ResolveRepositoryScope(requestedFilter.RepositoryIds, repositoryUniverse, issues);
 
         var pipelineDefinitions = await LoadPipelineDefinitionsAsync(
             effectiveProductIds,
@@ -65,9 +68,9 @@ public sealed class PipelineFilterResolutionService
             new PipelineFilterContext(
                 effectiveProductIds,
                 requestedFilter.TeamIds,
-                requestedFilter.RepositoryNames.IsAll
-                    ? FilterSelection<string>.Selected(repositoryScope)
-                    : FilterSelection<string>.Selected(requestedFilter.RepositoryNames.Values),
+                requestedFilter.RepositoryIds.IsAll
+                    ? FilterSelection<int>.Selected(repositoryScope)
+                    : FilterSelection<int>.Selected(requestedFilter.RepositoryIds.Values),
                 effectiveTime),
             repositoryScope,
             pipelineDefinitions
@@ -125,7 +128,7 @@ public sealed class PipelineFilterResolutionService
         => new(
             ToIntSelection(request.ProductIds),
             FilterSelection<int>.All(),
-            FilterSelection<string>.All(),
+            ToIntSelection(request.RepositoryIds),
             MapTime(request));
 
     private static FilterTimeSelection MapTime(PipelineFilterBoundaryRequest request)
@@ -148,6 +151,7 @@ public sealed class PipelineFilterResolutionService
         ICollection<FilterValidationIssue> issues)
     {
         ValidateIntSelection(filter.ProductIds, nameof(PipelineFilterContext.ProductIds), issues);
+        ValidateIntSelection(filter.RepositoryIds, nameof(PipelineFilterContext.RepositoryIds), issues);
 
         switch (filter.Time.Mode)
         {
@@ -173,42 +177,81 @@ public sealed class PipelineFilterResolutionService
         }
     }
 
-    private async Task<FilterSelection<int>> ResolveProductIdsAsync(
+    private async Task<IReadOnlyList<int>> LoadOwnerProductIdsAsync(
         int? productOwnerId,
-        FilterSelection<int> requestedProductIds,
         CancellationToken cancellationToken)
     {
-        if (!requestedProductIds.IsAll)
-        {
-            return FilterSelection<int>.Selected(requestedProductIds.Values.Where(value => value > 0).Distinct());
-        }
-
         if (!productOwnerId.HasValue)
         {
-            return FilterSelection<int>.All();
+            return Array.Empty<int>();
         }
 
-        var productIds = await _context.Products
+        return await _context.Products
             .AsNoTracking()
             .Where(product => product.ProductOwnerId == productOwnerId.Value)
             .Select(product => product.Id)
             .OrderBy(id => id)
             .ToArrayAsync(cancellationToken);
-
-        return FilterSelection<int>.Selected(productIds);
     }
 
-    private async Task<IReadOnlyList<string>> LoadRepositoryUniverseAsync(
+    private static FilterSelection<int> ResolveProductIds(
+        FilterSelection<int> requestedProductIds,
+        IReadOnlyList<int> ownerProductIds,
+        bool hasOwnerScope,
+        ICollection<FilterValidationIssue> issues)
+    {
+        if (hasOwnerScope && ownerProductIds.Count == 0)
+        {
+            return FilterSelection<int>.Selected(Array.Empty<int>());
+        }
+
+        if (requestedProductIds.IsAll)
+        {
+            return hasOwnerScope
+                ? FilterSelection<int>.Selected(ownerProductIds)
+                : FilterSelection<int>.All();
+        }
+
+        var normalizedRequestedIds = requestedProductIds.Values
+            .Where(value => value > 0)
+            .Distinct()
+            .OrderBy(id => id)
+            .ToArray();
+
+        if (normalizedRequestedIds.Length == 0)
+        {
+            issues.Add(new FilterValidationIssue(nameof(PipelineFilterContext.ProductIds), "Product selection cannot be empty when not using ALL."));
+            return hasOwnerScope
+                ? FilterSelection<int>.Selected(ownerProductIds)
+                : FilterSelection<int>.All();
+        }
+
+        if (!hasOwnerScope)
+        {
+            return FilterSelection<int>.Selected(normalizedRequestedIds);
+        }
+
+        var ownerProductSet = ownerProductIds.ToHashSet();
+        if (normalizedRequestedIds.Any(id => !ownerProductSet.Contains(id)))
+        {
+            issues.Add(new FilterValidationIssue(nameof(PipelineFilterContext.ProductIds), "One or more selected products are outside the product owner's scope and were replaced with all owner products."));
+            return FilterSelection<int>.Selected(ownerProductIds);
+        }
+
+        return FilterSelection<int>.Selected(normalizedRequestedIds);
+    }
+
+    private async Task<IReadOnlyList<int>> LoadRepositoryUniverseAsync(
         FilterSelection<int> productIds,
         CancellationToken cancellationToken)
     {
         var repositoryQuery = _context.Repositories
             .AsNoTracking()
-            .Select(repository => new { repository.ProductId, repository.Name });
+            .Select(repository => new { repository.ProductId, repository.Id });
 
         var definitionQuery = _context.PipelineDefinitions
             .AsNoTracking()
-            .Select(definition => new { definition.ProductId, Name = definition.RepoName });
+            .Select(definition => new { definition.ProductId, definition.RepositoryId });
 
         if (!productIds.IsAll)
         {
@@ -217,45 +260,42 @@ public sealed class PipelineFilterResolutionService
             definitionQuery = definitionQuery.Where(definition => scopedProductIds.Contains(definition.ProductId));
         }
 
-        var repositories = await repositoryQuery.Select(repository => repository.Name).ToListAsync(cancellationToken);
-        var definitions = await definitionQuery.Select(definition => definition.Name).ToListAsync(cancellationToken);
+        var repositories = await repositoryQuery.Select(repository => repository.Id).ToListAsync(cancellationToken);
+        var definitions = await definitionQuery.Select(definition => definition.RepositoryId).ToListAsync(cancellationToken);
 
         return repositories
             .Concat(definitions)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Select(name => name.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .Where(id => id > 0)
+            .Distinct()
+            .OrderBy(id => id)
             .ToArray();
     }
 
-    private static IReadOnlyList<string> ResolveRepositoryScope(
-        FilterSelection<string> requestedRepositories,
-        IReadOnlyList<string> repositoryUniverse,
+    private static IReadOnlyList<int> ResolveRepositoryScope(
+        FilterSelection<int> requestedRepositories,
+        IReadOnlyList<int> repositoryUniverse,
         ICollection<FilterValidationIssue> issues)
     {
         var requestedValues = requestedRepositories.Values
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(value => value > 0)
+            .Distinct()
             .ToArray();
 
         if (requestedValues.Length == 0)
         {
-            issues.Add(new FilterValidationIssue(nameof(PipelineFilterContext.RepositoryNames), "Repository selection cannot be empty when not using ALL."));
-            return Array.Empty<string>();
+            issues.Add(new FilterValidationIssue(nameof(PipelineFilterContext.RepositoryIds), "Repository selection cannot be empty when not using ALL."));
+            return Array.Empty<int>();
         }
 
-        var universeLookup = repositoryUniverse.ToDictionary(value => value, value => value, StringComparer.OrdinalIgnoreCase);
+        var universeLookup = repositoryUniverse.ToHashSet();
         return requestedValues
-            .Where(universeLookup.ContainsKey)
-            .Select(value => universeLookup[value])
+            .Where(universeLookup.Contains)
             .ToArray();
     }
 
     private async Task<List<PipelineDefinitionScope>> LoadPipelineDefinitionsAsync(
         FilterSelection<int> productIds,
-        IReadOnlyList<string> repositoryScope,
+        IReadOnlyList<int> repositoryScope,
         CancellationToken cancellationToken)
     {
         var query = _context.PipelineDefinitions
@@ -264,7 +304,6 @@ public sealed class PipelineFilterResolutionService
                 definition.PipelineDefinitionId,
                 definition.ProductId,
                 definition.RepositoryId,
-                definition.RepoName,
                 definition.DefaultBranch));
 
         if (!productIds.IsAll)
@@ -275,7 +314,7 @@ public sealed class PipelineFilterResolutionService
 
         if (repositoryScope.Count > 0)
         {
-            query = query.Where(definition => repositoryScope.Contains(definition.RepositoryName));
+            query = query.Where(definition => repositoryScope.Contains(definition.RepositoryId));
         }
 
         return await query
@@ -343,7 +382,7 @@ public sealed class PipelineFilterResolutionService
         {
             ProductIds = ToDto(filter.ProductIds),
             TeamIds = ToDto(filter.TeamIds),
-            RepositoryNames = ToDto(filter.RepositoryNames),
+            RepositoryIds = ToDto(filter.RepositoryIds),
             Time = new FilterTimeSelectionDto
             {
                 Mode = (FilterTimeSelectionModeDto)filter.Time.Mode,
@@ -378,14 +417,13 @@ public sealed class PipelineFilterResolutionService
     }
 
     private static FilterSelection<int> ToIntSelection(IReadOnlyList<int>? values)
-        => values is { Count: > 0 }
-            ? FilterSelection<int>.Selected(values)
-            : FilterSelection<int>.All();
+        => values is null
+            ? FilterSelection<int>.All()
+            : FilterSelection<int>.Selected(values);
 
     private sealed record PipelineDefinitionScope(
         int PipelineDefinitionId,
         int ProductId,
         int RepositoryId,
-        string RepositoryName,
         string? DefaultBranch);
 }

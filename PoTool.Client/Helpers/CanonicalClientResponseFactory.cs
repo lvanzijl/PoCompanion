@@ -97,7 +97,7 @@ public static class CanonicalClientResponseFactory
         [
             CreateDifference("Products", FormatSelection(requested.ProductIds), FormatSelection(effective.ProductIds)),
             CreateDifference("Teams", FormatSelection(requested.TeamIds), FormatSelection(effective.TeamIds)),
-            CreateDifference("Repositories", FormatSelection(requested.RepositoryNames), FormatSelection(effective.RepositoryNames)),
+            CreateDifference("Repositories", FormatSelection(requested.RepositoryIds), FormatSelection(effective.RepositoryIds)),
             CreateDifference("Time", FormatTime(requested.Time), FormatTime(effective.Time))
         ];
     }

@@ -18,7 +18,7 @@ public sealed class CanonicalClientResponseFactoryTests
             {
                 ProductIds = new FilterSelectionDto<int> { IsAll = false, Values = [42] },
                 TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = [] },
-                RepositoryNames = new FilterSelectionDto<string> { IsAll = false, Values = ["Repo-A", "Repo-B"] },
+                RepositoryIds = new FilterSelectionDto<int> { IsAll = false, Values = [1, 2] },
                 Time = new FilterTimeSelectionDto
                 {
                     Mode = FilterTimeSelectionModeDto.DateRange,
@@ -31,7 +31,7 @@ public sealed class CanonicalClientResponseFactoryTests
             {
                 ProductIds = new FilterSelectionDto<int> { IsAll = true, Values = [] },
                 TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = [] },
-                RepositoryNames = new FilterSelectionDto<string> { IsAll = false, Values = ["Repo-A"] },
+                RepositoryIds = new FilterSelectionDto<int> { IsAll = false, Values = [1] },
                 Time = new FilterTimeSelectionDto
                 {
                     Mode = FilterTimeSelectionModeDto.DateRange,

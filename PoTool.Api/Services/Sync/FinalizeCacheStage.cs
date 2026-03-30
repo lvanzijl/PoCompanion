@@ -22,6 +22,7 @@ public class FinalizeCacheStage : ISyncStage
     public DateTimeOffset? WorkItemWatermark { get; set; }
     public DateTimeOffset? PullRequestWatermark { get; set; }
     public DateTimeOffset? PipelineWatermark { get; set; }
+    public DateTimeOffset? PipelineFinishWatermark { get; set; }
     public bool HasWarnings { get; set; }
     public string? WarningMessage { get; set; }
 
@@ -59,6 +60,7 @@ public class FinalizeCacheStage : ISyncStage
                     WorkItemWatermark,
                     PullRequestWatermark,
                     PipelineWatermark,
+                    PipelineFinishWatermark,
                     WarningMessage,
                     cancellationToken);
             }
@@ -72,6 +74,7 @@ public class FinalizeCacheStage : ISyncStage
                     WorkItemWatermark,
                     PullRequestWatermark,
                     PipelineWatermark,
+                    PipelineFinishWatermark,
                     cancellationToken);
             }
 

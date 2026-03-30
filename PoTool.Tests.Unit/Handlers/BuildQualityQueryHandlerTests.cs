@@ -181,6 +181,7 @@ public sealed class BuildQualityQueryHandlerTests
         Assert.HasCount(2, result.Products);
         Assert.AreEqual(1, result.Products[0].ProductId);
         Assert.AreEqual("Product A", result.Products[0].ProductName);
+        CollectionAssert.AreEqual(new[] { 1001 }, result.Products[0].PipelineDefinitionIds.ToArray());
         AssertBuildQualityResult(
             result.Products[0].Result,
             successRate: 1d,
@@ -202,6 +203,7 @@ public sealed class BuildQualityQueryHandlerTests
             testThresholdMet: false);
         Assert.AreEqual(2, result.Products[1].ProductId);
         Assert.AreEqual("Product B", result.Products[1].ProductName);
+        CollectionAssert.AreEqual(new[] { 2001 }, result.Products[1].PipelineDefinitionIds.ToArray());
         AssertBuildQualityResult(
             result.Products[1].Result,
             successRate: 0d,

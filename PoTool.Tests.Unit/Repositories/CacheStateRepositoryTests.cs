@@ -149,6 +149,7 @@ public class CacheStateRepositoryTests
                 100, 50, 25,
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow);
             Assert.Fail("Expected ProductOwnerNotFoundException was not thrown");
         }
@@ -222,5 +223,29 @@ public class CacheStateRepositoryTests
         Assert.IsNull(watermarks.WorkItem);
         Assert.IsNull(watermarks.PullRequest);
         Assert.IsNull(watermarks.Pipeline);
+        Assert.IsNull(watermarks.PipelineFinish);
+    }
+
+    [TestMethod]
+    public async Task GetWatermarksAsync_ReturnsFinishWatermark_WhenStoredSeparately()
+    {
+        var profile = await _profileRepository.CreateProfileAsync("Test Owner", new List<int>());
+        var pipelineStartWatermark = new DateTimeOffset(2026, 3, 10, 0, 0, 0, TimeSpan.Zero);
+        var pipelineFinishWatermark = new DateTimeOffset(2026, 3, 11, 0, 0, 0, TimeSpan.Zero);
+
+        await _repository.MarkSyncSuccessAsync(
+            profile.Id,
+            10,
+            5,
+            3,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow,
+            pipelineStartWatermark,
+            pipelineFinishWatermark);
+
+        var watermarks = await _repository.GetWatermarksAsync(profile.Id);
+
+        Assert.AreEqual(pipelineStartWatermark, watermarks.Pipeline);
+        Assert.AreEqual(pipelineFinishWatermark, watermarks.PipelineFinish);
     }
 }

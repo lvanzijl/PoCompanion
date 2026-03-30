@@ -1,3 +1,4 @@
+using PoTool.Core.Pipelines.Analytics;
 using PoTool.Shared.BuildQuality;
 
 namespace PoTool.Api.Services.BuildQuality;
@@ -18,11 +19,14 @@ public sealed class BuildQualityProvider : IBuildQualityProvider
         var buildList = builds.ToList();
         var testRunList = testRuns.ToList();
         var coverageList = coverages.ToList();
+        var normalizedBuildOutcomes = buildList
+            .Select(build => PipelineAnalyticalOutcomeClassifier.Normalize(build.Result))
+            .ToList();
 
-        var succeededBuilds = buildList.Count(build => ResultEquals(build.Result, "succeeded"));
-        var failedBuilds = buildList.Count(build => ResultEquals(build.Result, "failed"));
-        var partiallySucceededBuilds = buildList.Count(build => ResultEquals(build.Result, "partiallysucceeded"));
-        var canceledBuilds = buildList.Count(build => ResultEquals(build.Result, "canceled"));
+        var succeededBuilds = normalizedBuildOutcomes.Count(outcome => outcome == PipelineAnalyticalOutcome.Succeeded);
+        var failedBuilds = normalizedBuildOutcomes.Count(outcome => outcome == PipelineAnalyticalOutcome.Failed);
+        var partiallySucceededBuilds = normalizedBuildOutcomes.Count(outcome => outcome == PipelineAnalyticalOutcome.Warning);
+        var canceledBuilds = normalizedBuildOutcomes.Count(outcome => outcome == PipelineAnalyticalOutcome.Canceled);
         var eligibleBuilds = succeededBuilds + failedBuilds + partiallySucceededBuilds;
 
         var totalTests = testRunList.Sum(testRun => testRun.TotalTests);
@@ -82,8 +86,4 @@ public sealed class BuildQualityProvider : IBuildQualityProvider
         };
     }
 
-    private static bool ResultEquals(string? value, string expected)
-    {
-        return string.Equals(value, expected, StringComparison.OrdinalIgnoreCase);
-    }
 }

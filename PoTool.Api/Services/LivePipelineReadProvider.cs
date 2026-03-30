@@ -137,8 +137,8 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
     public async Task<IEnumerable<PipelineRunDto>> GetRunsForPipelinesAsync(
         IEnumerable<int> pipelineIds,
         string? branchName = null,
-        DateTimeOffset? minStartTime = null,
-        DateTimeOffset? maxStartTime = null,
+        DateTimeOffset? minFinishTime = null,
+        DateTimeOffset? maxFinishTime = null,
         IReadOnlyList<PoTool.Core.Pipelines.Filters.PipelineBranchScope>? branchScope = null,
         int top = 100,
         CancellationToken cancellationToken = default)
@@ -146,11 +146,14 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
         EnsureLiveUsageAllowed(nameof(GetRunsForPipelinesAsync));
         _logger.LogWarning("LivePipelineReadProvider.{Method} called — may indicate cache bypass", nameof(GetRunsForPipelinesAsync));
         _logger.LogDebug(
-            "LivePipelineReadProvider: Fetching pipeline runs for {Count} pipelines with filters (branch: {Branch}, minTime: {MinTime})",
-            pipelineIds.Count(), branchName ?? "none", minStartTime?.ToString("o") ?? "none");
+            "LivePipelineReadProvider: Fetching pipeline runs for {Count} pipelines with finish-time filters (branch: {Branch}, minFinishTime: {MinFinishTime}, maxFinishTime: {MaxFinishTime})",
+            pipelineIds.Count(), branchName ?? "none", minFinishTime?.ToString("o") ?? "none", maxFinishTime?.ToString("o") ?? "none");
         
-        // Use the new bulk method with filtering from TFS client
-        return await _tfsClient.GetPipelineRunsAsync(pipelineIds, branchName, minStartTime, top, cancellationToken);
+        var runs = await _tfsClient.GetPipelineRunsAsync(pipelineIds, branchName, minFinishTime, top, cancellationToken);
+
+        return runs.Where(run =>
+            (!minFinishTime.HasValue || (run.FinishTime.HasValue && run.FinishTime.Value >= minFinishTime.Value))
+            && (!maxFinishTime.HasValue || (run.FinishTime.HasValue && run.FinishTime.Value <= maxFinishTime.Value)));
     }
 
     public async Task<IEnumerable<PipelineDefinitionDto>> GetDefinitionsByProductIdAsync(int productId, CancellationToken cancellationToken = default)

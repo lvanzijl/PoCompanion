@@ -142,7 +142,7 @@ public class PipelineServiceTests
             {
                 ProductIds = new PoTool.Shared.Metrics.FilterSelectionDto<int> { IsAll = false, Values = new[] { productId } },
                 TeamIds = new PoTool.Shared.Metrics.FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
-                RepositoryNames = new PoTool.Shared.Metrics.FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
+                RepositoryIds = new PoTool.Shared.Metrics.FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
                 Time = new PoTool.Shared.Metrics.FilterTimeSelectionDto
                 {
                     Mode = PoTool.Shared.Metrics.FilterTimeSelectionModeDto.None,
@@ -153,7 +153,7 @@ public class PipelineServiceTests
             {
                 ProductIds = new PoTool.Shared.Metrics.FilterSelectionDto<int> { IsAll = false, Values = new[] { productId } },
                 TeamIds = new PoTool.Shared.Metrics.FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
-                RepositoryNames = new PoTool.Shared.Metrics.FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
+                RepositoryIds = new PoTool.Shared.Metrics.FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
                 Time = new PoTool.Shared.Metrics.FilterTimeSelectionDto
                 {
                     Mode = PoTool.Shared.Metrics.FilterTimeSelectionModeDto.None,

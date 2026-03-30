@@ -148,8 +148,8 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
     public async Task<IEnumerable<PipelineRunDto>> GetRunsForPipelinesAsync(
         IEnumerable<int> pipelineIds,
         string? branchName = null,
-        DateTimeOffset? minStartTime = null,
-        DateTimeOffset? maxStartTime = null,
+        DateTimeOffset? minFinishTime = null,
+        DateTimeOffset? maxFinishTime = null,
         IReadOnlyList<PoTool.Core.Pipelines.Filters.PipelineBranchScope>? branchScope = null,
         int top = 100,
         CancellationToken cancellationToken = default)
@@ -171,8 +171,8 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
             return Enumerable.Empty<PipelineRunDto>();
         }
 
-        var minStartTimeUtc = minStartTime?.UtcDateTime;
-        var maxStartTimeUtc = maxStartTime?.UtcDateTime;
+        var minFinishTimeUtc = minFinishTime?.UtcDateTime;
+        var maxFinishTimeUtc = maxFinishTime?.UtcDateTime;
         var branchScopeByPipelineId = branchScope?
             .GroupBy(scope => scope.PipelineId)
             .ToDictionary(group => group.Key, group => group.Last().DefaultBranch);
@@ -201,18 +201,19 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
                 query = query.Where(r => r.SourceBranch != null && r.SourceBranch.ToLower() == normalizedDefaultBranch);
             }
 
-            if (minStartTimeUtc.HasValue)
+            if (minFinishTimeUtc.HasValue)
             {
-                query = query.Where(r => r.CreatedDateUtc >= minStartTimeUtc.Value);
+                query = query.Where(r => r.FinishedDateUtc.HasValue && r.FinishedDateUtc.Value >= minFinishTimeUtc.Value);
             }
 
-            if (maxStartTimeUtc.HasValue)
+            if (maxFinishTimeUtc.HasValue)
             {
-                query = query.Where(r => r.CreatedDateUtc <= maxStartTimeUtc.Value);
+                query = query.Where(r => r.FinishedDateUtc.HasValue && r.FinishedDateUtc.Value <= maxFinishTimeUtc.Value);
             }
 
             var pipelineRuns = await query
-                .OrderByDescending(r => r.CreatedDateUtc)
+                .OrderByDescending(r => r.FinishedDateUtc)
+                .ThenByDescending(r => r.CreatedDateUtc)
                 .Take(top)
                 .ToListAsync(cancellationToken);
 
@@ -220,13 +221,14 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
         }
 
         runs = runs
-            .OrderByDescending(run => run.StartTime)
+            .OrderByDescending(run => run.FinishTime)
+            .ThenByDescending(run => run.StartTime)
             .ThenByDescending(run => run.RunId)
             .ToList();
 
         if (runs.Count == 0)
         {
-            await LogEmptyRunsDiagnosticsAsync(pipelineIdList, branchName, minStartTime, cancellationToken);
+            await LogEmptyRunsDiagnosticsAsync(pipelineIdList, branchName, minFinishTime, cancellationToken);
         }
 
         _logger.LogDebug(
@@ -323,7 +325,7 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
     private async Task LogEmptyRunsDiagnosticsAsync(
         List<int> pipelineIds,
         string? branchName,
-        DateTimeOffset? minStartTime,
+        DateTimeOffset? minFinishTime,
         CancellationToken cancellationToken)
     {
         try
@@ -343,13 +345,13 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
             _logger.LogDebug(
                 "PIPELINE_EMPTY_RESULT_DIAG: totalDbRows={TotalRows}, " +
                 "dbDateRange=[{MinDate} .. {MaxDate}], " +
-                "appliedFilters: pipelineIds=[{PipelineIds}], branch={Branch}, minStartTime={MinStartTime}",
+                "appliedFilters: pipelineIds=[{PipelineIds}], branch={Branch}, minFinishTime={MinFinishTime}",
                 totalRuns,
                 minDate?.ToString("O") ?? "n/a",
                 maxDate?.ToString("O") ?? "n/a",
                 string.Join(",", pipelineIds),
                 branchName ?? "any",
-                minStartTime?.ToString("O") ?? "none");
+                minFinishTime?.ToString("O") ?? "none");
         }
         catch (Exception ex)
         {

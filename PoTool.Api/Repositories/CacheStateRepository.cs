@@ -84,6 +84,7 @@ public class CacheStateRepository : ICacheStateRepository
         DateTimeOffset? workItemWatermark,
         DateTimeOffset? pullRequestWatermark,
         DateTimeOffset? pipelineWatermark,
+        DateTimeOffset? pipelineFinishWatermark,
         CancellationToken cancellationToken = default)
     {
         var entity = await GetOrCreateEntityAsync(productOwnerId, cancellationToken);
@@ -98,6 +99,7 @@ public class CacheStateRepository : ICacheStateRepository
         entity.WorkItemWatermark = workItemWatermark;
         entity.PullRequestWatermark = pullRequestWatermark;
         entity.PipelineWatermark = pipelineWatermark;
+        entity.PipelineFinishWatermark = pipelineFinishWatermark;
         entity.LastErrorMessage = null;
         entity.CurrentSyncStage = null;
         entity.StageProgressPercent = 0;
@@ -114,6 +116,7 @@ public class CacheStateRepository : ICacheStateRepository
         DateTimeOffset? workItemWatermark,
         DateTimeOffset? pullRequestWatermark,
         DateTimeOffset? pipelineWatermark,
+        DateTimeOffset? pipelineFinishWatermark,
         string? warningMessage,
         CancellationToken cancellationToken = default)
     {
@@ -129,6 +132,7 @@ public class CacheStateRepository : ICacheStateRepository
         entity.WorkItemWatermark = workItemWatermark;
         entity.PullRequestWatermark = pullRequestWatermark;
         entity.PipelineWatermark = pipelineWatermark;
+        entity.PipelineFinishWatermark = pipelineFinishWatermark;
         entity.LastErrorMessage = warningMessage?.Length > 2000 ? warningMessage[..1997] + "..." : warningMessage;
         entity.CurrentSyncStage = null;
         entity.StageProgressPercent = 0;
@@ -171,6 +175,7 @@ public class CacheStateRepository : ICacheStateRepository
         entity.WorkItemWatermark = null;
         entity.PullRequestWatermark = null;
         entity.PipelineWatermark = null;
+        entity.PipelineFinishWatermark = null;
         entity.RelationshipsSnapshotAsOfUtc = null;
         entity.RelationshipsSnapshotWorkItemWatermark = null;
         entity.ResolutionAsOfUtc = null;
@@ -289,7 +294,7 @@ public class CacheStateRepository : ICacheStateRepository
     }
 
     /// <inheritdoc />
-    public async Task<(DateTimeOffset? WorkItem, DateTimeOffset? PullRequest, DateTimeOffset? Pipeline)> GetWatermarksAsync(
+    public async Task<(DateTimeOffset? WorkItem, DateTimeOffset? PullRequest, DateTimeOffset? Pipeline, DateTimeOffset? PipelineFinish)> GetWatermarksAsync(
         int productOwnerId,
         CancellationToken cancellationToken = default)
     {
@@ -299,10 +304,14 @@ public class CacheStateRepository : ICacheStateRepository
 
         if (entity == null)
         {
-            return (null, null, null);
+            return (null, null, null, null);
         }
 
-        return (entity.WorkItemWatermark, entity.PullRequestWatermark, entity.PipelineWatermark);
+        return (
+            entity.WorkItemWatermark,
+            entity.PullRequestWatermark,
+            entity.PipelineWatermark,
+            entity.PipelineFinishWatermark ?? entity.PipelineWatermark);
     }
 
     private async Task<ProductOwnerCacheStateEntity> GetOrCreateEntityAsync(int productOwnerId, CancellationToken cancellationToken)

@@ -319,6 +319,28 @@ public class ServiceCollectionTests
     }
 
     [TestMethod]
+    public void AddPoToolApiServices_RegistersPipelineInsightsReadStore()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+
+        services.AddLogging();
+        RegisterHostEnvironment(services);
+        services.AddDbContext<PoToolDbContext>(options =>
+            options.UseInMemoryDatabase("TestDbPipelineInsights"));
+
+        services.AddPoToolApiServices(configuration, isDevelopment: true);
+
+        using var serviceProvider = services.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+
+        var readStore = scope.ServiceProvider.GetRequiredService<IPipelineInsightsReadStore>();
+        Assert.IsInstanceOfType<EfPipelineInsightsReadStore>(
+            readStore,
+            "Pipeline Insights handlers should resolve the EF-backed Pipeline Insights read store.");
+    }
+
+    [TestMethod]
     public void AddPoToolApiServices_RegistersCachedPipelineProviderAsDefault_AndPreservesExplicitLiveProvider()
     {
         var services = new ServiceCollection();

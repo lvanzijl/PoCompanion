@@ -34,8 +34,8 @@ public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMe
         var allRuns = await _pipelineReadProvider.GetRunsForPipelinesAsync(
             filter.PipelineIds,
             branchName: null,
-            minStartTime: filter.RangeStartUtc,
-            maxStartTime: filter.RangeEndUtc,
+            minFinishTime: filter.RangeStartUtc,
+            maxFinishTime: filter.RangeEndUtc,
             branchScope: filter.BranchScope,
             top: 100,
             cancellationToken);
@@ -89,7 +89,10 @@ public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMe
                 }
             }
 
-            var orderedRuns = runs.OrderByDescending(r => r.StartTime).ToList();
+            var orderedRuns = runs
+                .OrderByDescending(r => r.FinishTime)
+                .ThenByDescending(r => r.StartTime)
+                .ToList();
             var lastRun = orderedRuns.FirstOrDefault();
 
             // Count consecutive failures
@@ -121,7 +124,7 @@ public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMe
                 MaxDuration: maxDuration,
                 DurationVariance: durationVariance,
                 LastRunResult: lastRun?.Result,
-                LastRunTime: lastRun?.StartTime,
+                LastRunTime: lastRun?.FinishTime,
                 ConsecutiveFailures: consecutiveFailures
             ));
         }

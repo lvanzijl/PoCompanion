@@ -33,8 +33,8 @@ public sealed class GetPipelineRunsForProductsQueryHandler : IQueryHandler<GetPi
         var runs = await _pipelineReadProvider.GetRunsForPipelinesAsync(
             filter.PipelineIds,
             branchName: null,
-            minStartTime: filter.RangeStartUtc,
-            maxStartTime: filter.RangeEndUtc,
+            minFinishTime: filter.RangeStartUtc,
+            maxFinishTime: filter.RangeEndUtc,
             branchScope: filter.BranchScope,
             top: 100,
             cancellationToken);

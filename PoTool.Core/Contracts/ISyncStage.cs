@@ -54,9 +54,14 @@ public class SyncContext
     public DateTimeOffset? PullRequestWatermark { get; init; }
 
     /// <summary>
-    /// Current pipeline watermark (null = full sync).
+    /// Compatibility pipeline watermark anchored on run start time (null = full sync).
     /// </summary>
     public DateTimeOffset? PipelineWatermark { get; init; }
+
+    /// <summary>
+    /// Canonical pipeline watermark anchored on run finish time (null = full sync).
+    /// </summary>
+    public DateTimeOffset? PipelineFinishWatermark { get; init; }
 
     /// <summary>
     /// Repository names linked to ProductOwner's products.

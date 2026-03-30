@@ -28,7 +28,7 @@ public class GetPipelineMetricsQueryHandlerTests
         // Arrange
         var query = new GetPipelineMetricsQuery(CreateFilter(
             productIds: [1, 2],
-            repositories: ["TestRepo1", "TestRepo2"],
+            repositories: [10, 20],
             pipelineIds: [101, 102],
             branchScope:
             [
@@ -100,7 +100,7 @@ public class GetPipelineMetricsQueryHandlerTests
         // Arrange
         var query = new GetPipelineMetricsQuery(CreateFilter(
             productIds: null,
-            repositories: ["TestRepo1"],
+            repositories: [10],
             pipelineIds: [101],
             branchScope: [new PipelineBranchScope(101, "refs/heads/main")]));
 
@@ -155,7 +155,7 @@ public class GetPipelineMetricsQueryHandlerTests
         // Arrange
         var query = new GetPipelineMetricsQuery(CreateFilter(
             productIds: [999],
-            repositories: ["Repo-X"],
+            repositories: [999],
             pipelineIds: Array.Empty<int>(),
             branchScope: Array.Empty<PipelineBranchScope>()));
 
@@ -183,7 +183,7 @@ public class GetPipelineMetricsQueryHandlerTests
     {
         var query = new GetPipelineMetricsQuery(CreateFilter(
             productIds: [1],
-            repositories: ["TestRepo1"],
+            repositories: [10],
             pipelineIds: [101],
             branchScope: [new PipelineBranchScope(101, "refs/heads/release")]));
 
@@ -225,7 +225,7 @@ public class GetPipelineMetricsQueryHandlerTests
     {
         var query = new GetPipelineMetricsQuery(CreateFilter(
             productIds: [1, 2],
-            repositories: ["Repo-A", "Repo-B"],
+            repositories: [10, 20],
             pipelineIds: [101, 202],
             branchScope:
             [
@@ -267,9 +267,64 @@ public class GetPipelineMetricsQueryHandlerTests
         Assert.AreEqual(1, metrics[1].SuccessfulRuns);
     }
 
+    [TestMethod]
+    public async Task Handle_UsesFinishTimeForLastRunOrdering()
+    {
+        var query = new GetPipelineMetricsQuery(CreateFilter(
+            productIds: [1],
+            repositories: [10],
+            pipelineIds: [101],
+            branchScope: [new PipelineBranchScope(101, "refs/heads/main")]));
+
+        _mockProvider.Setup(p => p.GetRunsForPipelinesAsync(
+                It.IsAny<IEnumerable<int>>(),
+                null,
+                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<DateTimeOffset?>(),
+                It.IsAny<IReadOnlyList<PipelineBranchScope>>(),
+                100,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new PipelineRunDto(
+                    1,
+                    101,
+                    "Pipeline1",
+                    new DateTimeOffset(2026, 3, 1, 8, 0, 0, TimeSpan.Zero),
+                    new DateTimeOffset(2026, 3, 10, 8, 0, 0, TimeSpan.Zero),
+                    TimeSpan.FromHours(1),
+                    PipelineRunResult.Succeeded,
+                    PipelineRunTrigger.ContinuousIntegration,
+                    null,
+                    "refs/heads/main",
+                    "user1",
+                    DateTimeOffset.UtcNow),
+                new PipelineRunDto(
+                    2,
+                    101,
+                    "Pipeline1",
+                    new DateTimeOffset(2026, 3, 5, 8, 0, 0, TimeSpan.Zero),
+                    new DateTimeOffset(2026, 3, 8, 8, 0, 0, TimeSpan.Zero),
+                    TimeSpan.FromHours(1),
+                    PipelineRunResult.Failed,
+                    PipelineRunTrigger.ContinuousIntegration,
+                    null,
+                    "refs/heads/main",
+                    "user2",
+                    DateTimeOffset.UtcNow)
+            ]);
+        _mockProvider.Setup(p => p.GetByIdsAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new PipelineDto(101, "Pipeline1", PipelineType.Build, null, DateTimeOffset.UtcNow)]);
+
+        var metric = (await _handler.Handle(query, CancellationToken.None)).Single();
+
+        Assert.AreEqual(new DateTimeOffset(2026, 3, 10, 8, 0, 0, TimeSpan.Zero), metric.LastRunTime);
+        Assert.AreEqual(PipelineRunResult.Succeeded, metric.LastRunResult);
+    }
+
     private static PipelineEffectiveFilter CreateFilter(
         IReadOnlyList<int>? productIds,
-        IReadOnlyList<string> repositories,
+        IReadOnlyList<int> repositories,
         IReadOnlyList<int> pipelineIds,
         IReadOnlyList<PipelineBranchScope> branchScope,
         DateTimeOffset? rangeStartUtc = null,
@@ -280,7 +335,7 @@ public class GetPipelineMetricsQueryHandlerTests
                     ? FilterSelection<int>.Selected(productIds)
                     : FilterSelection<int>.All(),
                 FilterSelection<int>.All(),
-                FilterSelection<string>.Selected(repositories),
+                FilterSelection<int>.Selected(repositories),
                 rangeStartUtc.HasValue || rangeEndUtc.HasValue
                     ? FilterTimeSelection.DateRange(rangeStartUtc, rangeEndUtc)
                     : FilterTimeSelection.None()),

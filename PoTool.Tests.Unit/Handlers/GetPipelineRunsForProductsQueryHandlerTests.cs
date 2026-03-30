@@ -22,11 +22,11 @@ public sealed class GetPipelineRunsForProductsQueryHandlerTests
             new PipelineFilterContext(
                 FilterSelection<int>.Selected([1, 2]),
                 FilterSelection<int>.All(),
-                FilterSelection<string>.Selected(["Repo-A", "Repo-B"]),
+                FilterSelection<int>.Selected([10, 20]),
                 FilterTimeSelection.DateRange(
                     new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
                     new DateTimeOffset(2026, 3, 31, 23, 59, 59, TimeSpan.Zero))),
-            RepositoryScope: ["Repo-A", "Repo-B"],
+            RepositoryScope: [10, 20],
             PipelineIds: [101, 202],
             BranchScope:
             [

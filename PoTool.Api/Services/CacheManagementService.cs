@@ -134,6 +134,7 @@ public class CacheManagementService
                 cacheState.WorkItemWatermark = null;
                 cacheState.PullRequestWatermark = null;
                 cacheState.PipelineWatermark = null;
+                cacheState.PipelineFinishWatermark = null;
                 cacheState.LastErrorMessage = null;
                 cacheState.CurrentSyncStage = null;
                 cacheState.StageProgressPercent = 0;

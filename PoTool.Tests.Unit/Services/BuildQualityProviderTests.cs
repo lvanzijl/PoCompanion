@@ -229,6 +229,26 @@ public sealed class BuildQualityProviderTests
     }
 
     [TestMethod]
+    public void Compute_UnknownAndMissingResults_AreExcludedFromEligibleBuilds()
+    {
+        var result = _provider.Compute(
+            [
+                new BuildQualityBuildFact(1, null),
+                new BuildQualityBuildFact(2, "Unknown"),
+                new BuildQualityBuildFact(3, "None"),
+                new BuildQualityBuildFact(4, "Deferred")
+            ],
+            Array.Empty<BuildQualityTestRunFact>(),
+            Array.Empty<BuildQualityCoverageFact>());
+
+        Assert.IsNull(result.Metrics.SuccessRate);
+        Assert.AreEqual(0, result.Evidence.EligibleBuilds);
+        Assert.AreEqual(0, result.Evidence.CanceledBuilds);
+        Assert.IsTrue(result.Evidence.SuccessRateUnknown);
+        Assert.AreEqual(BuildQualityUnknownReasons.NoEligibleBuilds, result.Evidence.SuccessRateUnknownReason);
+    }
+
+    [TestMethod]
     public void Compute_MultipleRowsAggregateTotalsInsteadOfAveragingPercentages()
     {
         var result = _provider.Compute(
