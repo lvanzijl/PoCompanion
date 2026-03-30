@@ -7,7 +7,7 @@ public sealed class PortfolioHandlerSimplificationDocumentTests
     public void PortfolioHandlerSimplification_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "portfolio_handler_simplification.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "portfolio-handler-simplification.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The portfolio handler simplification report should exist under docs/analysis.");
 

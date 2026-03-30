@@ -7,7 +7,7 @@ public sealed class CdcFreezeAuditDocumentTests
     public void CdcFreezeAudit_ReportExistsWithRequiredSectionsAndFreezeDecision()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = $"{repositoryRoot}/docs/analysis/cdc_freeze_audit.md";
+        var reportPath = $"{repositoryRoot}/docs/analysis/cdc-freeze-audit.md";
 
         Assert.IsTrue(File.Exists(reportPath), "The CDC freeze audit should exist under docs/analysis.");
 

@@ -28,7 +28,7 @@ public sealed class WorkspaceUxRulesDocumentTests
     public void WorkspaceHubTileAnalysis_ReflectsCurrentSignalWorkspaceExamples()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var documentPath = Path.Combine(repositoryRoot, "docs", "analysis", "workspace_hub_tile_analysis.md");
+        var documentPath = Path.Combine(repositoryRoot, "docs", "analysis", "workspace-hub-tile-analysis.md");
 
         Assert.IsTrue(File.Exists(documentPath), "The workspace hub tile analysis document should exist under docs/analysis.");
 

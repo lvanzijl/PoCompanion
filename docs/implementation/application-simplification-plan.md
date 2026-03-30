@@ -2,8 +2,8 @@
 
 This document is a refactoring plan only. It is based on:
 
-- `docs/analysis/application_simplification_audit.md`
-- `docs/analysis/cdc_usage_coverage.md`
+- `docs/analysis/application-simplification-audit.md`
+- `docs/analysis/cdc-usage-coverage.md`
 - `docs/architecture/cdc-reference.md`
 
 The goal is to simplify the application layer by turning analytics handlers into thin adapters around existing CDC slices.

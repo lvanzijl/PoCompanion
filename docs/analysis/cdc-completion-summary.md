@@ -9,19 +9,19 @@ The completed Canonical Domain Core now consists of these stable slices:
 - Core Concepts
   - shared hierarchy, estimation, state, sprint, propagation, and source-truth semantics from `docs/architecture/domain-model.md` and `docs/domain/rules/*.md`
 - BacklogQuality
-  - current-state backlog validation and readiness semantics documented in `docs/analysis/backlog_quality_cdc_summary.md`
+  - current-state backlog validation and readiness semantics documented in `docs/analysis/backlog-quality-cdc-summary.md`
 - SprintCommitment
-  - commitment, scope change, completion, and spillover semantics documented in `docs/architecture/sprint-commitment-domain-model.md`, `docs/architecture/sprint-commitment-cdc-summary.md`, and `docs/analysis/sprint_commitment_application_alignment.md`
+  - commitment, scope change, completion, and spillover semantics documented in `docs/architecture/sprint-commitment-domain-model.md`, `docs/architecture/sprint-commitment-cdc-summary.md`, and `docs/analysis/sprint-commitment-application-alignment.md`
 - DeliveryTrends
-  - historical delivery-trend semantics documented in `docs/analysis/delivery_trend_analytics_cdc_summary.md`
+  - historical delivery-trend semantics documented in `docs/analysis/delivery-trend-analytics-cdc-summary.md`
 - Forecasting
-  - forecast, calibration, and completion projection semantics documented in `docs/architecture/forecasting-domain-model.md` and `docs/analysis/forecasting_cdc_summary.md`
+  - forecast, calibration, and completion projection semantics documented in `docs/architecture/forecasting-domain-model.md` and `docs/analysis/forecasting-cdc-summary.md`
 - EffortDiagnostics
-  - stable effort-diagnostics formulas documented in `docs/analysis/effort_diagnostics_cdc_extraction_report.md`
+  - stable effort-diagnostics formulas documented in `docs/analysis/effort-diagnostics-cdc-extraction-report.md`
 - PortfolioFlow
-  - story-point stock, inflow, throughput, and remaining scope semantics documented in `docs/architecture/portfolio-flow-model.md`, `docs/analysis/portfolio_flow_projection.md`, and `docs/analysis/portfolio_flow_projection_validation.md`
+  - story-point stock, inflow, throughput, and remaining scope semantics documented in `docs/architecture/portfolio-flow-model.md`, `docs/analysis/portfolio-flow-projection.md`, and `docs/analysis/portfolio-flow-projection-validation.md`
 - Shared Statistics
-  - reusable pure-math contracts documented in `docs/analysis/statistical_core_cleanup_report.md`
+  - reusable pure-math contracts documented in `docs/analysis/statistical-core-cleanup-report.md`
 
 Overall CDC status:
 
@@ -35,7 +35,7 @@ Application alignment is substantially complete for the finished CDC slices.
 
 Confirmed alignment points:
 
-- SprintCommitment is the application-facing gateway for commitment, completion, and spillover reconstruction according to `docs/analysis/sprint_commitment_application_alignment.md` and `docs/analysis/cdc_coverage_audit.md`
+- SprintCommitment is the application-facing gateway for commitment, completion, and spillover reconstruction according to `docs/analysis/sprint-commitment-application-alignment.md` and `docs/analysis/cdc-coverage-audit.md`
 - DeliveryTrends consumes SprintCommitment outputs rather than re-creating commitment semantics
 - Forecasting consumes historical delivery outputs rather than owning sprint-history replay
 - BacklogQuality and EffortDiagnostics keep handlers focused on loading, orchestration, filtering, and DTO mapping
@@ -54,7 +54,7 @@ Current status:
 
 - the CDC vocabulary now consistently uses story points, effort hours, stock, inflow, throughput, remaining scope, commitment, spillover, delivery trend, and forecast
 - UI and transport compatibility layers still preserve older naming where current clients expect it
-- `docs/analysis/application_semantic_audit.md` and `docs/analysis/portfolio_flow_consumers_audit.md` document the remaining semantic mismatch at the application and presentation boundaries
+- `docs/analysis/application-semantic-audit.md` and `docs/analysis/portfolio-flow-consumers-audit.md` document the remaining semantic mismatch at the application and presentation boundaries
 
 Examples of remaining UI or transport compatibility debt:
 
@@ -69,7 +69,7 @@ Projection work is far enough along to support the stable CDC.
 Current projection status:
 
 - sprint metrics projections are aligned behind the CDC sprint services
-- PortfolioFlow has canonical story-point projection materialization and projection validation documented in `docs/analysis/portfolio_flow_projection.md` and `docs/analysis/portfolio_flow_projection_validation.md`
+- PortfolioFlow has canonical story-point projection materialization and projection validation documented in `docs/analysis/portfolio-flow-projection.md` and `docs/analysis/portfolio-flow-projection-validation.md`
 - projection documents now act as persistence and consumer references, not as replacements for semantic ownership
 
 What still remains:

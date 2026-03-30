@@ -7,7 +7,7 @@ public sealed class SqliteBuildQualityDatabaseDiscoveryReportDocumentTests
     public void SqliteBuildQualityDatabaseDiscoveryReport_ReportExistsWithRequiredSectionsAndKeyFacts()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "sqlite_buildquality_database_discovery_report.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "sqlite-buildquality-database-discovery-report.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The SQLite BuildQuality database discovery report should exist under docs/analysis.");
 

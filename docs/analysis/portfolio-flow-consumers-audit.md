@@ -4,8 +4,8 @@ _Generated: 2026-03-16_
 
 Reference documents:
 
-- `docs/analysis/portfolio_flow_application_migration.md`
-- `docs/analysis/portfolio_flow_semantic_audit.md`
+- `docs/analysis/portfolio-flow-application-migration.md`
+- `docs/analysis/portfolio-flow-semantic-audit.md`
 - `docs/architecture/domain-model.md`
 - `docs/rules/estimation-rules.md`
 - `docs/rules/metrics-rules.md`

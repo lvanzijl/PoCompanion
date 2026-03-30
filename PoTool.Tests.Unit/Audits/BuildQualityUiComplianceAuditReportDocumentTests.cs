@@ -7,7 +7,7 @@ public sealed class BuildQualityUiComplianceAuditReportDocumentTests
     public void BuildQualityUiComplianceAuditReport_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality_ui_compliance_audit_report.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality-ui-compliance-audit-report.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The BuildQuality UI compliance audit report should exist under docs/analysis.");
 
@@ -42,7 +42,7 @@ public sealed class BuildQualityUiComplianceAuditReportDocumentTests
         StringAssert.Contains(report, "QualityStrokeColor");
         StringAssert.Contains(report, "None.");
         StringAssert.Contains(report, "**PASS — SAFE TO MERGE**");
-        StringAssert.Contains(report, "refreshed `buildquality_ui_compliance_audit_report.md` to match current UI implementation after the final cleanup");
+        StringAssert.Contains(report, "refreshed `buildquality-ui-compliance-audit-report.md` to match current UI implementation after the final cleanup");
         StringAssert.Contains(report, "updated the matching MSTest document audit to enforce the current result");
         StringAssert.Contains(report, "no backend/provider/query/DTO changes");
         StringAssert.Contains(report, "no UI redesign beyond the already completed compliance fix and chart cleanup");

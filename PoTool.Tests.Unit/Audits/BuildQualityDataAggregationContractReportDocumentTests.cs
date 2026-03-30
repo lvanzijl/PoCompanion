@@ -7,7 +7,7 @@ public sealed class BuildQualityDataAggregationContractReportDocumentTests
     public void BuildQualityDataAggregationContractReport_ReportExistsWithRequiredSectionsAndLockedContent()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality_data_aggregation_contract_report.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality-data-aggregation-contract-report.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The BuildQuality data and aggregation contract report should exist under docs/analysis.");
 

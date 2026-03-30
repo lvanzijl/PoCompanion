@@ -60,7 +60,7 @@ The directly implemented sprint CDC contracts in `PoTool.Core.Domain.Cdc.Sprints
   - `Forecasting` may consume delivery-trend history but must not reconstruct sprint history;
   - `BacklogQuality` remains snapshot-driven and does not depend on historical delivery slices;
   - application/persistence/UI layers consume CDC outputs and must not feed semantics back into the CDC (`docs/architecture/cdc-domain-map.md`).
-- The application-side CDC coverage audit also confirms handlers and projection services are expected to consume CDC interfaces instead of legacy helper functions (`docs/analysis/cdc_coverage_audit.md`).
+- The application-side CDC coverage audit also confirms handlers and projection services are expected to consume CDC interfaces instead of legacy helper functions (`docs/analysis/cdc-coverage-audit.md`).
 
 ## 3. Data Ingestion
 

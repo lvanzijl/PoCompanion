@@ -5,7 +5,7 @@ _Generated: 2026-03-16_
 Reference documents:
 
 - `docs/architecture/forecasting-domain-model.md`
-- `docs/analysis/forecasting_domain_exploration.md`
+- `docs/analysis/forecasting-domain-exploration.md`
 - `docs/architecture/domain-model.md`
 
 ## Scope re-audited

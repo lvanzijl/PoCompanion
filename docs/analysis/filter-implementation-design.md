@@ -10,7 +10,7 @@ It bridges:
 
 - the **current fragmented filter reality** described in `docs/analysis/filter-current-state-analysis.md`
 - the **target canonical state and behavior** described in:
-  - `docs/analysis/canonical_filter_state_model.md`
+  - `docs/analysis/canonical-filter-state-model.md`
   - `docs/analysis/page-filter-contracts.md`
   - `docs/analysis/filter-ui-behavior.md`
   - `docs/analysis/filter-canonical-model.md`

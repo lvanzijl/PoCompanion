@@ -7,7 +7,7 @@ public sealed class ProjectionDeterminismAuditDocumentTests
     public void ProjectionDeterminismAudit_ReportExistsWithRequiredServicesChecksAndCoverage()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "projection_determinism_audit.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "projection-determinism-audit.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The projection determinism audit report should exist under docs/analysis.");
 

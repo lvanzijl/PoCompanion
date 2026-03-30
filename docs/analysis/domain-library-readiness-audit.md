@@ -12,9 +12,9 @@ _Generated: 2026-03-14_
 - `docs/rules/estimation-rules.md`
 - `docs/rules/hierarchy-rules.md`
 - `docs/rules/propagation-rules.md`
-- `docs/analysis/metrics_audit.md`
-- `docs/analysis/hierarchy_propagation_audit.md`
-- `docs/analysis/projection_trend_pipeline_audit.md`
+- `docs/analysis/metrics-audit.md`
+- `docs/analysis/hierarchy-propagation-audit.md`
+- `docs/analysis/projection-trend-pipeline-audit.md`
 - `PoTool.Api/Configuration/ApiServiceCollectionExtensions.cs`
 - `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs`
 - `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs`
@@ -64,7 +64,7 @@ Extraction therefore appears **feasible with targeted boundary refactors, not wi
   `SprintExecutionDtos.cs`, `SprintTrendDtos.cs`, `EpicCompletionForecastDto.cs`, and `WorkItemDto.cs` are record contracts with data and XML documentation only. They describe formulas but do not compute them, so the repository does not currently embed calculation logic inside transport contracts.
 
 - **The current implementation is already backed by prior semantic audits.**  
-  `docs/analysis/metrics_audit.md`, `docs/analysis/hierarchy_propagation_audit.md`, and `docs/analysis/projection_trend_pipeline_audit.md` all show the current sprint analytics behavior is canonically aligned. This readiness audit therefore focuses on extraction boundaries and ownership, not on re-opening already-fixed semantics.
+  `docs/analysis/metrics-audit.md`, `docs/analysis/hierarchy-propagation-audit.md`, and `docs/analysis/projection-trend-pipeline-audit.md` all show the current sprint analytics behavior is canonically aligned. This readiness audit therefore focuses on extraction boundaries and ownership, not on re-opening already-fixed semantics.
 
 ## Violations Found
 

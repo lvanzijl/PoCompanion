@@ -7,7 +7,7 @@ public sealed class PortfolioFlowSemanticAuditDocumentTests
     public void PortfolioFlowSemanticAudit_ReportExistsWithRequiredSectionsAndClassification()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "portfolio_flow_semantic_audit.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "portfolio-flow-semantic-audit.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The portfolio flow semantic audit report should exist under docs/analysis.");
 

@@ -17,15 +17,15 @@
 - `docs/EF_RULES.md` → `docs/rules/ef-rules.md`
 - `docs/Fluent_UI_compat_rules.md` → `docs/rules/fluent-ui-compat-rules.md`
 - `docs/COPILOT_ARCHITECTURE_CONTRACT.md` → `docs/rules/copilot-architecture-contract.md`
-- `docs/domain/ui_semantic_rules.md` → `docs/rules/ui-semantic-rules.md`
+- `docs/domain/ui-semantic-rules.md` → `docs/rules/ui-semantic-rules.md`
 - `docs/analysis/validation-rules.md` → `docs/rules/validation-rules.md`
-- `docs/domain/rules/hierarchy_rules.md` → `docs/rules/hierarchy-rules.md`
-- `docs/domain/rules/estimation_rules.md` → `docs/rules/estimation-rules.md`
-- `docs/domain/rules/state_rules.md` → `docs/rules/state-rules.md`
-- `docs/domain/rules/sprint_rules.md` → `docs/rules/sprint-rules.md`
-- `docs/domain/rules/propagation_rules.md` → `docs/rules/propagation-rules.md`
-- `docs/domain/rules/metrics_rules.md` → `docs/rules/metrics-rules.md`
-- `docs/domain/rules/source_rules.md` → `docs/rules/source-rules.md`
+- `docs/domain/rules/hierarchy-rules.md` → `docs/rules/hierarchy-rules.md`
+- `docs/domain/rules/estimation-rules.md` → `docs/rules/estimation-rules.md`
+- `docs/domain/rules/state-rules.md` → `docs/rules/state-rules.md`
+- `docs/domain/rules/sprint-rules.md` → `docs/rules/sprint-rules.md`
+- `docs/domain/rules/propagation-rules.md` → `docs/rules/propagation-rules.md`
+- `docs/domain/rules/metrics-rules.md` → `docs/rules/metrics-rules.md`
+- `docs/domain/rules/source-rules.md` → `docs/rules/source-rules.md`
 
 ## Authoritative consolidation
 

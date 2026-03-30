@@ -73,7 +73,7 @@ Belongs here:
 - superseded historical documents
 - experiment residue retained only for traceability
 
-`docs/archive/legacy-revision-ingestion/` is reserved for OData- and validator-related legacy ingestion artifacts only.
+`docs/archive/legacy-revision-ingestion/` is reserved for legacy revision-ingestion artifacts only and must not contain active guidance.
 
 ### `docs/rules/`
 

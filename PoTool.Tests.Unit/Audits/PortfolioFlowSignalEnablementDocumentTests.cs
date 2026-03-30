@@ -7,7 +7,7 @@ public sealed class PortfolioFlowSignalEnablementDocumentTests
     public void PortfolioFlowSignalEnablement_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "portfolio_flow_signal_enablement.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "portfolio-flow-signal-enablement.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The portfolio flow signal enablement audit should exist under docs/analysis.");
 

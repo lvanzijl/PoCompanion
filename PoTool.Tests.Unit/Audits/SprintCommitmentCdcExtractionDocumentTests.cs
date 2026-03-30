@@ -7,7 +7,7 @@ public sealed class SprintCommitmentCdcExtractionDocumentTests
     public void SprintCommitmentCdcExtraction_ReportExistsWithWrappedFilesFallbacksInterfacesAndMigrationTasks()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "sprint_commitment_cdc_extraction.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "sprint-commitment-cdc-extraction.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The sprint commitment CDC extraction audit should exist under docs/analysis.");
 

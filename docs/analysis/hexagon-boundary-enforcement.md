@@ -6,8 +6,8 @@ Reference documents:
 
 - `docs/architecture/cdc-reference.md`
 - `docs/architecture/cdc-domain-map.md`
-- `docs/analysis/application_handler_cleanup.md`
-- `docs/analysis/application_simplification_audit.md`
+- `docs/analysis/application-handler-cleanup.md`
+- `docs/analysis/application-simplification-audit.md`
 
 ## Architecture rules
 

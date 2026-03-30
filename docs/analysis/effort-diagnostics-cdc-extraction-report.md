@@ -19,7 +19,7 @@
 - Deleted `/PoTool.Core/Metrics/EffortDiagnosticsStatistics.cs`
 - Deleted `/PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsStatistics.cs`
 - Added `/PoTool.Tests.Unit/Audits/EffortDiagnosticsCdcExtractionAuditTests.cs`
-- Added `/docs/analysis/effort_diagnostics_cdc_extraction_report.md`
+- Added `/docs/analysis/effort-diagnostics-cdc-extraction-report.md`
 
 ## Math removed from handlers
 

@@ -40,7 +40,7 @@ Added replay validations:
 
 ## Invariant Results
 
-Replay validation was checked against the corrected invariants from `docs/analysis/cdc_invariant_tests.md`.
+Replay validation was checked against the corrected invariants from `docs/analysis/cdc-invariant-tests.md`.
 
 Observed results on replay fixtures:
 

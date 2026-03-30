@@ -4,12 +4,12 @@ _Generated: 2026-03-17_
 
 Reference documents:
 
-- `docs/analysis/cdc_completion_summary.md`
-- `docs/analysis/cdc_usage_coverage.md`
-- `docs/analysis/cdc_invariant_tests.md`
-- `docs/analysis/cdc_replay_fixture_validation.md`
-- `docs/analysis/test_cleanup_step1.md`
-- `docs/analysis/test_ownership_normalization.md`
+- `docs/analysis/cdc-completion-summary.md`
+- `docs/analysis/cdc-usage-coverage.md`
+- `docs/analysis/cdc-invariant-tests.md`
+- `docs/analysis/cdc-replay-fixture-validation.md`
+- `docs/analysis/test-cleanup-step1.md`
+- `docs/analysis/test-ownership-normalization.md`
 - `docs/architecture/cdc-reference.md`
 - `docs/architecture/cdc-domain-map.md`
 
@@ -19,8 +19,8 @@ Semantic ownership is stable and CDC-owned for the audited delivery analytics sc
 
 Confirmed ownership signals:
 
-- `docs/analysis/cdc_completion_summary.md` classifies the CDC slices as complete at the semantic level and explicitly frames the remaining work as structural cleanup rather than additional slice extraction.
-- `docs/analysis/cdc_usage_coverage.md` reports zero CDC bypass findings in the audited handler set.
+- `docs/analysis/cdc-completion-summary.md` classifies the CDC slices as complete at the semantic level and explicitly frames the remaining work as structural cleanup rather than additional slice extraction.
+- `docs/analysis/cdc-usage-coverage.md` reports zero CDC bypass findings in the audited handler set.
 - The same usage audit classifies 12 of 14 audited handlers as `CDC compliant` and the remaining 2 as `unavoidable adapter logic`, not as semantic reimplementation.
 - Sprint commitment, scope change, completion, spillover, delivery trend, forecasting, backlog quality, portfolio flow, effort diagnostics, and effort planning semantics are all documented as slice-owned in `docs/architecture/cdc-reference.md`.
 
@@ -44,10 +44,10 @@ Confirmed ownership split:
 
 Supporting evidence from the referenced audits:
 
-- `docs/analysis/test_cleanup_step1.md` records the removal of duplicate semantic assertions from handler suites and the strengthening of `SprintCommitmentCdcServicesTests.cs`
-- `docs/analysis/test_ownership_normalization.md` documents the final ownership split and states that no production code changes were required to normalize it
-- `docs/analysis/cdc_replay_fixture_validation.md` confirms deterministic replay coverage for SprintFacts, PortfolioFlow, DeliveryTrends, Forecasting, and EffortPlanning
-- `docs/analysis/cdc_invariant_tests.md` corrects the canonical invariant set so semantic assertions now live in the proper CDC/domain tests
+- `docs/analysis/test-cleanup-step1.md` records the removal of duplicate semantic assertions from handler suites and the strengthening of `SprintCommitmentCdcServicesTests.cs`
+- `docs/analysis/test-ownership-normalization.md` documents the final ownership split and states that no production code changes were required to normalize it
+- `docs/analysis/cdc-replay-fixture-validation.md` confirms deterministic replay coverage for SprintFacts, PortfolioFlow, DeliveryTrends, Forecasting, and EffortPlanning
+- `docs/analysis/cdc-invariant-tests.md` corrects the canonical invariant set so semantic assertions now live in the proper CDC/domain tests
 
 Ownership conclusion:
 
@@ -63,8 +63,8 @@ The CDC is clean enough to freeze semantically, with only compatibility-oriented
 Confirmed clean boundaries:
 
 - `docs/architecture/cdc-reference.md` and `docs/architecture/cdc-domain-map.md` place handler orchestration, DTO shaping, persistence entities, compatibility adapters, and UI consumers outside the CDC slices
-- `docs/analysis/cdc_usage_coverage.md` shows the audited handlers consuming CDC services instead of re-owning the formulas
-- `docs/analysis/test_cleanup_step1.md` and `docs/analysis/test_ownership_normalization.md` confirm that higher-layer tests no longer act as semantic owners
+- `docs/analysis/cdc-usage-coverage.md` shows the audited handlers consuming CDC services instead of re-owning the formulas
+- `docs/analysis/test-cleanup-step1.md` and `docs/analysis/test-ownership-normalization.md` confirm that higher-layer tests no longer act as semantic owners
 - repository spot-checks in the audited paths show CDC services in `PoTool.Core.Domain` free of EF Core, HTTP, SignalR, controller, and UI framework dependencies
 
 Boundary findings:
@@ -89,7 +89,7 @@ Confirmed debt still present:
 - legacy `*Effort` DTO names still carry story-point semantics in forecast and portfolio responses
 - backlog-quality compatibility aliases such as `RC-2` and `EFF` remain visible at application and presentation seams
 - some portfolio handlers and pages still preserve older response shapes while canonical stock, inflow, throughput, and remaining-scope semantics are already CDC-owned
-- `docs/analysis/cdc_usage_coverage.md` still identifies client-side roadmap scope replay as the main remaining non-CDC path in the audited scope
+- `docs/analysis/cdc-usage-coverage.md` still identifies client-side roadmap scope replay as the main remaining non-CDC path in the audited scope
 - the EffortPlanning suggestion service still accepts `EffortEstimationSettingsDto`, which leaves a DTO-shaped settings contract inside a CDC-facing service boundary
 
 Debt conclusion:

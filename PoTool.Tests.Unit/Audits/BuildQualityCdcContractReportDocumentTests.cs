@@ -7,7 +7,7 @@ public sealed class BuildQualityCdcContractReportDocumentTests
     public void BuildQualityCdcContractReport_ReportExistsWithRequiredSectionsAndLockedDecisions()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality_cdc_contract_report.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality-cdc-contract-report.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The BuildQuality CDC contract report should exist under docs/analysis.");
 

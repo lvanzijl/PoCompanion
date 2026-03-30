@@ -109,7 +109,7 @@ public sealed class HexagonBoundaryTests
     public void HexagonBoundary_AuditDocumentExistsWithRequiredSectionsAndAnchors()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var auditPath = Path.Combine(repositoryRoot, "docs", "analysis", "hexagon_boundary_enforcement.md");
+        var auditPath = Path.Combine(repositoryRoot, "docs", "analysis", "hexagon-boundary-enforcement.md");
 
         Assert.IsTrue(File.Exists(auditPath), "The hexagon boundary enforcement audit should exist under docs/analysis.");
 
@@ -121,8 +121,8 @@ public sealed class HexagonBoundaryTests
         StringAssert.Contains(audit, "## Enforcement tests");
         StringAssert.Contains(audit, "docs/architecture/cdc-reference.md");
         StringAssert.Contains(audit, "docs/architecture/cdc-domain-map.md");
-        StringAssert.Contains(audit, "docs/analysis/application_handler_cleanup.md");
-        StringAssert.Contains(audit, "docs/analysis/application_simplification_audit.md");
+        StringAssert.Contains(audit, "docs/analysis/application-handler-cleanup.md");
+        StringAssert.Contains(audit, "docs/analysis/application-simplification-audit.md");
         StringAssert.Contains(audit, "ISprintFactService");
         StringAssert.Contains(audit, "IPortfolioFlowSummaryService");
         StringAssert.Contains(audit, "IBacklogQualityAnalysisService");

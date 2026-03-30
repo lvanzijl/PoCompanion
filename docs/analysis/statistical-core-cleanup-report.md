@@ -14,9 +14,9 @@
   - `PoTool.Tests.Unit/Domain/EffortDiagnosticsStatisticsTests.cs`
   - `PoTool.Tests.Unit/Services/EffortDiagnosticsDomainModelsTests.cs`
   - `PoTool.Tests.Unit/Audits/EffortDiagnosticsCdcExtractionAuditTests.cs`
-  - `docs/analysis/statistical_helper_audit.md`
-  - `docs/analysis/effort_diagnostics_cdc_extraction_report.md`
-  - `docs/analysis/statistical_core_cleanup_report.md`
+  - `docs/analysis/statistical-helper-audit.md`
+  - `docs/analysis/effort-diagnostics-cdc-extraction-report.md`
+  - `docs/analysis/statistical-core-cleanup-report.md`
 - Tests updated:
   - `PoTool.Tests.Unit/Domain/EffortDiagnosticsStatisticsTests.cs`
   - `PoTool.Tests.Unit/Services/EffortDiagnosticsDomainModelsTests.cs`

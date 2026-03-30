@@ -4,8 +4,8 @@ _Generated: 2026-03-17_
 
 Reference documents:
 
-- `docs/analysis/test_ownership_audit.md`
-- `docs/analysis/cdc_completion_summary.md`
+- `docs/analysis/test-ownership-audit.md`
+- `docs/analysis/cdc-completion-summary.md`
 - `docs/architecture/cdc-reference.md`
 
 ## Files Updated

@@ -4,7 +4,7 @@ _Generated: 2026-03-15_
 
 Reference documents:
 
-- `docs/analysis/trend_delivery_analytics_exploration.md`
+- `docs/analysis/trend-delivery-analytics-exploration.md`
 - `docs/architecture/domain-model.md`
 
 ## Scope re-audited

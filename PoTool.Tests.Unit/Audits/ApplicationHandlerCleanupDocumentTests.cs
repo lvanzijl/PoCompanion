@@ -7,7 +7,7 @@ public sealed class ApplicationHandlerCleanupDocumentTests
     public void ApplicationHandlerCleanup_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "application_handler_cleanup.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "application-handler-cleanup.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The application handler cleanup report should exist under docs/analysis.");
 

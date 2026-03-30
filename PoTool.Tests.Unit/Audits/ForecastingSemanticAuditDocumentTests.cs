@@ -7,7 +7,7 @@ public sealed class ForecastingSemanticAuditDocumentTests
     public void ForecastingSemanticAudit_ReportExistsWithRequiredSectionsAndReadinessClassification()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "forecasting_semantic_audit.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "forecasting-semantic-audit.md");
 
         Assert.IsTrue(reportPath is not null && File.Exists(reportPath), "The forecasting semantic audit report should exist under docs/analysis.");
 

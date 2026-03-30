@@ -7,7 +7,7 @@ public sealed class TransportNamingAlignmentDocumentTests
     public void TransportNamingAlignment_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "transport_naming_alignment.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "transport-naming-alignment.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The transport naming alignment audit should exist under docs/analysis.");
 

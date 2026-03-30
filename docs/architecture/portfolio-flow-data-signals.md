@@ -6,8 +6,8 @@ Purpose: Define the minimum ingestion and persistence changes required to make t
 Reference documents:
 
 - `docs/architecture/portfolio-flow-model.md`
-- `docs/analysis/portfolio_flow_feasibility.md`
-- `docs/analysis/portfolio_flow_semantic_audit.md`
+- `docs/analysis/portfolio-flow-feasibility.md`
+- `docs/analysis/portfolio-flow-semantic-audit.md`
 
 This document is intentionally limited to **historical signals, ingestion, persistence, and projection boundaries**.  
 It does not introduce UI changes, handler rewrites, or projection implementation details beyond what is necessary to make PortfolioFlow computable.

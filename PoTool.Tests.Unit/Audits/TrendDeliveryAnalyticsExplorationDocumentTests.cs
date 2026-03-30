@@ -7,7 +7,7 @@ public sealed class TrendDeliveryAnalyticsExplorationDocumentTests
     public void TrendDeliveryAnalyticsExploration_ReportExistsWithRequiredSectionsAndKeyFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "trend_delivery_analytics_exploration.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "trend-delivery-analytics-exploration.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The trend/delivery analytics exploration report should exist under docs/analysis.");
 

@@ -235,7 +235,7 @@ Evidence:
   - `IEpicAggregationService` exists in source
 - `/home/runner/work/PoCompanion/PoCompanion/docs/architecture/cdc-domain-map-generated.md:153-180`
   - current generated map does not include ``IEpicAggregationService``
-- `/home/runner/work/PoCompanion/PoCompanion/docs/analysis/buildquality_missing_ingestion_build_168570_code_analysis_report.md:1-120`
+- `/home/runner/work/PoCompanion/PoCompanion/docs/analysis/buildquality-missing-ingestion-build-168570-code-analysis-report.md:1-120`
   - report exists and mostly matches, but not every exact expected phrase remains present
 
 **Type:** **incorrect test expectation / documentation drift**

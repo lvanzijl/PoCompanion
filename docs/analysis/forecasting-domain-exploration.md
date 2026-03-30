@@ -5,8 +5,8 @@ _Generated: 2026-03-15_
 Reference documents:
 
 - `docs/architecture/domain-model.md`
-- `docs/analysis/trend_delivery_analytics_exploration.md`
-- `docs/analysis/delivery_trend_analytics_cdc_summary.md`
+- `docs/analysis/trend-delivery-analytics-exploration.md`
+- `docs/analysis/delivery-trend-analytics-cdc-summary.md`
 
 ## Summary
 

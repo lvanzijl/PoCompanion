@@ -73,7 +73,7 @@ docs/architecture/pipeline-identity-normalization.md
 docs/architecture/pipeline-insights-persistence-abstraction.md
 docs/architecture/pipeline-time-semantics-migration.md
 docs/architecture/portfolio-backlog-regression-investigation.md
-docs/architecture/portfolio_flow_data_signals.md
+docs/architecture/portfolio-flow-data-signals.md
 docs/architecture/post-fix-stability-verification.md
 docs/architecture/product-scope-validation-alignment.md
 docs/architecture/pull-request-analytical-read-consolidation.md
@@ -104,93 +104,93 @@ docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata
 docs/archive/legacy-revision-ingestion/revision-ingestor-v2.md
 docs/analysis/sprint-trends-vs-revisions-report.md
 docs/audits
-docs/analysis/application_handler_cleanup.md
-docs/analysis/application_semantic_audit.md
-docs/analysis/application_simplification_audit.md
-docs/analysis/backlog_health_simplification.md
-docs/analysis/backlog_quality_cdc_summary.md
-docs/analysis/backlog_quality_domain_exploration.md
-docs/analysis/buildquality_application_page_integration_report.md
-docs/analysis/buildquality_calculation_validation_report.md
-docs/analysis/buildquality_cdc_contract_report.md
-docs/analysis/buildquality_chart_state_cleanup_report.md
-docs/analysis/buildquality_data_aggregation_contract_report.md
-docs/analysis/buildquality_discovery_report.md
-docs/analysis/buildquality_edge_consistency_report.md
-docs/analysis/buildquality_implementation_contract_report.md
-docs/analysis/buildquality_missing_ingestion_build_168570_code_analysis_report.md
-docs/analysis/buildquality_retrieval_performance_report.md
-docs/analysis/buildquality_seed_data_report.md
-docs/analysis/buildquality_ui_compliance_audit_report.md
-docs/analysis/buildquality_ui_final_integration_report.md
+docs/analysis/application-handler-cleanup.md
+docs/analysis/application-semantic-audit.md
+docs/analysis/application-simplification-audit.md
+docs/analysis/backlog-health-simplification.md
+docs/analysis/backlog-quality-cdc-summary.md
+docs/analysis/backlog-quality-domain-exploration.md
+docs/analysis/buildquality-application-page-integration-report.md
+docs/analysis/buildquality-calculation-validation-report.md
+docs/analysis/buildquality-cdc-contract-report.md
+docs/analysis/buildquality-chart-state-cleanup-report.md
+docs/analysis/buildquality-data-aggregation-contract-report.md
+docs/analysis/buildquality-discovery-report.md
+docs/analysis/buildquality-edge-consistency-report.md
+docs/analysis/buildquality-implementation-contract-report.md
+docs/analysis/buildquality-missing-ingestion-build-168570-code-analysis-report.md
+docs/analysis/buildquality-retrieval-performance-report.md
+docs/analysis/buildquality-seed-data-report.md
+docs/analysis/buildquality-ui-compliance-audit-report.md
+docs/analysis/buildquality-ui-final-integration-report.md
 docs/analysis/cdc-full-quality-audit.md
-docs/analysis/cdc_behavioral_stress_test_audit.md
-docs/analysis/cdc_completion_summary.md
-docs/analysis/cdc_coverage_audit.md
-docs/analysis/cdc_extraction_summary.md
-docs/analysis/cdc_freeze_audit.md
-docs/analysis/cdc_invariant_tests.md
-docs/analysis/cdc_replay_fixture_validation.md
-docs/analysis/cdc_usage_coverage.md
-docs/analysis/compatibility_cleanup_phase3.md
-docs/analysis/delivery_trend_analytics_cdc_summary.md
-docs/analysis/domain_library_readiness_audit.md
-docs/analysis/domain_logic_outside_cdc_exploration.md
-docs/analysis/dto_contract_cleanup.md
-docs/analysis/effort_diagnostics_cdc_extraction_report.md
-docs/analysis/effort_diagnostics_cleanup_report.md
-docs/analysis/effort_diagnostics_domain_exploration.md
-docs/analysis/effort_diagnostics_semantic_audit.md
-docs/analysis/effort_planning_boundary_audit.md
-docs/analysis/effort_planning_boundary_cleanup.md
-docs/analysis/effort_planning_cdc_extraction.md
-docs/analysis/estimation_audit.md
-docs/analysis/final_pre_usage_validation.md
-docs/analysis/forecasting_cdc_summary.md
-docs/analysis/forecasting_domain_exploration.md
-docs/analysis/forecasting_semantic_audit.md
-docs/analysis/hexagon_boundary_enforcement.md
-docs/analysis/hierarchy_propagation_audit.md
-docs/analysis/metrics_audit.md
-docs/analysis/mock_data_quality.md
-docs/analysis/mock_pr_pipeline_seed_validation.md
-docs/analysis/portfolio_flow_application_migration.md
-docs/analysis/portfolio_flow_consumers_audit.md
-docs/analysis/portfolio_flow_domain_exploration.md
-docs/analysis/portfolio_flow_feasibility.md
-docs/analysis/portfolio_flow_projection.md
-docs/analysis/portfolio_flow_projection_validation.md
-docs/analysis/portfolio_flow_semantic_audit.md
-docs/analysis/portfolio_flow_signal_enablement.md
-docs/analysis/portfolio_handler_simplification.md
-docs/analysis/post_runtime_fix_validation.md
-docs/analysis/pr_pipeline_linkage_analysis.md
-docs/analysis/pre_cleanup_app_validation.md
-docs/analysis/projection_determinism_audit.md
-docs/analysis/projection_trend_pipeline_audit.md
-docs/analysis/runtime_integrity_fix.md
-docs/analysis/sprint_commitment_application_alignment.md
-docs/analysis/sprint_commitment_cdc_extraction.md
-docs/analysis/sprint_commitment_handler_simplification.md
-docs/analysis/sprint_scope_audit.md
-docs/analysis/sqlite_buildquality_database_discovery_report.md
-docs/analysis/state_sprint_delivery_audit.md
-docs/analysis/statistical_core_cleanup_report.md
-docs/analysis/statistical_helper_audit.md
-docs/analysis/test_cleanup_step1.md
-docs/analysis/test_ownership_audit.md
-docs/analysis/test_ownership_normalization.md
-docs/analysis/tfs_api_version_configuration_inspection_report.md
-docs/analysis/transport_naming_alignment.md
-docs/analysis/trend_delivery_analytics_exploration.md
-docs/analysis/ui_semantic_correction.md
-docs/analysis/ui_storypoint_adoption.md
-docs/analysis/unit_test_cleanup_report.md
-docs/analysis/unit_test_inventory_audit.md
-docs/analysis/unit_test_redundancy_audit.md
-docs/analysis/unit_test_speed_audit.md
-docs/analysis/unit_test_strategy.md
-docs/analysis/workspace_hub_tile_analysis.md
+docs/analysis/cdc-behavioral-stress-test-audit.md
+docs/analysis/cdc-completion-summary.md
+docs/analysis/cdc-coverage-audit.md
+docs/analysis/cdc-extraction-summary.md
+docs/analysis/cdc-freeze-audit.md
+docs/analysis/cdc-invariant-tests.md
+docs/analysis/cdc-replay-fixture-validation.md
+docs/analysis/cdc-usage-coverage.md
+docs/analysis/compatibility-cleanup-phase3.md
+docs/analysis/delivery-trend-analytics-cdc-summary.md
+docs/analysis/domain-library-readiness-audit.md
+docs/analysis/domain-logic-outside-cdc-exploration.md
+docs/analysis/dto-contract-cleanup.md
+docs/analysis/effort-diagnostics-cdc-extraction-report.md
+docs/analysis/effort-diagnostics-cleanup-report.md
+docs/analysis/effort-diagnostics-domain-exploration.md
+docs/analysis/effort-diagnostics-semantic-audit.md
+docs/analysis/effort-planning-boundary-audit.md
+docs/analysis/effort-planning-boundary-cleanup.md
+docs/analysis/effort-planning-cdc-extraction.md
+docs/analysis/estimation-audit.md
+docs/analysis/final-pre-usage-validation.md
+docs/analysis/forecasting-cdc-summary.md
+docs/analysis/forecasting-domain-exploration.md
+docs/analysis/forecasting-semantic-audit.md
+docs/analysis/hexagon-boundary-enforcement.md
+docs/analysis/hierarchy-propagation-audit.md
+docs/analysis/metrics-audit.md
+docs/analysis/mock-data-quality.md
+docs/analysis/mock-pr-pipeline-seed-validation.md
+docs/analysis/portfolio-flow-application-migration.md
+docs/analysis/portfolio-flow-consumers-audit.md
+docs/analysis/portfolio-flow-domain-exploration.md
+docs/analysis/portfolio-flow-feasibility.md
+docs/analysis/portfolio-flow-projection.md
+docs/analysis/portfolio-flow-projection-validation.md
+docs/analysis/portfolio-flow-semantic-audit.md
+docs/analysis/portfolio-flow-signal-enablement.md
+docs/analysis/portfolio-handler-simplification.md
+docs/analysis/post-runtime-fix-validation.md
+docs/analysis/pr-pipeline-linkage-analysis.md
+docs/analysis/pre-cleanup-app-validation.md
+docs/analysis/projection-determinism-audit.md
+docs/analysis/projection-trend-pipeline-audit.md
+docs/analysis/runtime-integrity-fix.md
+docs/analysis/sprint-commitment-application-alignment.md
+docs/analysis/sprint-commitment-cdc-extraction.md
+docs/analysis/sprint-commitment-handler-simplification.md
+docs/analysis/sprint-scope-audit.md
+docs/analysis/sqlite-buildquality-database-discovery-report.md
+docs/analysis/state-sprint-delivery-audit.md
+docs/analysis/statistical-core-cleanup-report.md
+docs/analysis/statistical-helper-audit.md
+docs/analysis/test-cleanup-step1.md
+docs/analysis/test-ownership-audit.md
+docs/analysis/test-ownership-normalization.md
+docs/analysis/tfs-api-version-configuration-inspection-report.md
+docs/analysis/transport-naming-alignment.md
+docs/analysis/trend-delivery-analytics-exploration.md
+docs/analysis/ui-semantic-correction.md
+docs/analysis/ui-storypoint-adoption.md
+docs/analysis/unit-test-cleanup-report.md
+docs/analysis/unit-test-inventory-audit.md
+docs/analysis/unit-test-redundancy-audit.md
+docs/analysis/unit-test-speed-audit.md
+docs/analysis/unit-test-strategy.md
+docs/analysis/workspace-hub-tile-analysis.md
 docs/implementation/bug-trend-followups.md
 docs/cleanup
 docs/reports/2026-03-30-cleanup-obsolete-changes-log.md
@@ -223,7 +223,7 @@ docs/exploration
 docs/analysis/sprint-commitment-domain-exploration.md
 docs/filters
 docs/analysis/cache-only-guardrail-analysis-pipeline-workitems.md
-docs/analysis/canonical_filter_state_model.md
+docs/analysis/canonical-filter-state-model.md
 docs/analysis/datasource-enforcement.md
 docs/analysis/filter-analysis-improved.md
 docs/analysis/filter-analysis.md
@@ -256,7 +256,7 @@ docs/analysis/tfs-access-boundary-sealed.md
 docs/analysis/tfs-access-boundary-verification.md
 docs/analysis/workitem-route-classification-fix.md
 docs/implementation/health-additional-signals.md
-docs/health_workspace_fix_plan.md
+docs/health-workspace-fix-plan.md
 docs/history
 docs/history/code-quality
 docs/archive/code-quality/code-audit-report-2026-01-30.md
@@ -282,7 +282,7 @@ docs/implementation/phase-g-consumption.md
 docs/implementation/phase-h-persistence.md
 docs/implementation/phase-i-finalization.md
 docs/investigations
-docs/iteration_path_sorting_audit.md
+docs/iteration-path-sorting-audit.md
 docs/implementation/navigation-decision-backlog.md
 docs/implementation/navigation-followup-actions.md
 .github/pull_request_template.md
@@ -300,7 +300,7 @@ docs/implementation/application-simplification-plan.md
 docs/screenshots
 docs/analysis/screenshot-index-exploratory-testing.md
 docs/analysis/sprint-scoping-limitations.md
-docs/sprintmetrics_iteration_migration_plan.md
+docs/sprintmetrics-iteration-migration-plan.md
 docs/sqlite-datetime-fix.md
 docs/sqlite-timestamp-fix-audit.md
 docs/test-determinism-report.md
@@ -361,9 +361,9 @@ docs/architecture/gebruikershandleiding.md
 - Updated `prompts/seniorswe_and_seniorpo_review` to write to `docs/reports/2026-03-30-swepo-review-report.md`.
 - Updated `docs/README.md` to remove the missing `mock-data-rules.md` link.
 - Updated active docs that still referenced moved paths:
-  - `docs/analysis/state_sprint_delivery_audit.md`
-  - `docs/analysis/workspace_hub_tile_analysis.md`
-  - `docs/analysis/backlog_quality_domain_exploration.md`
+  - `docs/analysis/state-sprint-delivery-audit.md`
+  - `docs/analysis/workspace-hub-tile-analysis.md`
+  - `docs/analysis/backlog-quality-domain-exploration.md`
   - `docs/analysis/filter-analysis-improved.md`
   - `docs/analysis/cdc-corrections.md`
   - `docs/analysis/final-cdc-integration.md`
@@ -371,7 +371,7 @@ docs/architecture/gebruikershandleiding.md
   - `docs/analysis/snapshots.md`
   - `docs/analysis/insight-null-semantics-fix.md`
   - `docs/rules/validation-rules.md`
-  - `docs/analysis/cdc_replay_fixture_validation.md`
+  - `docs/analysis/cdc-replay-fixture-validation.md`
   - `docs/analysis/screenshot-index-exploratory-testing.md`
 - Updated document tests in `PoTool.Tests.Unit/Audits/*` from `docs/analyze/...` to `docs/analysis/...` where required.
 - Updated one historical planning checklist and one mock-data code comment to remove references to the missing mock-data rules filename.

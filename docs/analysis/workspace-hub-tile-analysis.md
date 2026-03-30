@@ -250,7 +250,7 @@ In short:
 
 ### What changed
 
-- added this analysis-only audit document at `docs/analysis/workspace_hub_tile_analysis.md`
+- added this analysis-only audit document at `docs/analysis/workspace-hub-tile-analysis.md`
 
 ### What was intentionally not changed
 

@@ -7,7 +7,7 @@ References:
 - `docs/architecture/cdc-reference.md`
 - `docs/architecture/cdc-domain-map.md`
 - `docs/architecture/sprint-commitment-domain-model.md`
-- `docs/analysis/effort_planning_cdc_extraction.md`
+- `docs/analysis/effort-planning-cdc-extraction.md`
 
 ## Reason for correction
 

@@ -77,7 +77,7 @@ Canonical inputs:
 - current work-item snapshots
 - canonical hierarchy and product scope
 - canonical estimation and state semantics
-- backlog validation rules cataloged in `docs/analysis/backlog_quality_cdc_summary.md`
+- backlog validation rules cataloged in `docs/analysis/backlog-quality-cdc-summary.md`
 
 Canonical outputs:
 
@@ -100,7 +100,7 @@ What remains outside the slice:
 
 Primary references:
 
-- `docs/analysis/backlog_quality_cdc_summary.md`
+- `docs/analysis/backlog-quality-cdc-summary.md`
 
 ### SprintCommitment
 
@@ -141,8 +141,8 @@ Primary references:
 
 - `docs/architecture/sprint-commitment-domain-model.md`
 - `docs/architecture/sprint-commitment-cdc-summary.md`
-- `docs/analysis/sprint_commitment_application_alignment.md`
-- `docs/analysis/cdc_coverage_audit.md`
+- `docs/analysis/sprint-commitment-application-alignment.md`
+- `docs/analysis/cdc-coverage-audit.md`
 
 ### DeliveryTrends
 
@@ -181,7 +181,7 @@ What remains outside the slice:
 
 Primary references:
 
-- `docs/analysis/delivery_trend_analytics_cdc_summary.md`
+- `docs/analysis/delivery-trend-analytics-cdc-summary.md`
 
 ### Forecasting
 
@@ -218,7 +218,7 @@ What remains outside the slice:
 Primary references:
 
 - `docs/architecture/forecasting-domain-model.md`
-- `docs/analysis/forecasting_cdc_summary.md`
+- `docs/analysis/forecasting-cdc-summary.md`
 
 ### EffortDiagnostics
 
@@ -251,7 +251,7 @@ What remains outside the slice:
 
 Primary references:
 
-- `docs/analysis/effort_diagnostics_cdc_extraction_report.md`
+- `docs/analysis/effort-diagnostics-cdc-extraction-report.md`
 
 ### EffortPlanning
 
@@ -289,7 +289,7 @@ What remains outside the slice:
 
 Primary references:
 
-- `docs/analysis/effort_planning_cdc_extraction.md`
+- `docs/analysis/effort-planning-cdc-extraction.md`
 
 ### PortfolioFlow
 
@@ -329,8 +329,8 @@ What remains outside the slice:
 Primary references:
 
 - `docs/architecture/portfolio-flow-model.md`
-- `docs/analysis/portfolio_flow_projection.md`
-- `docs/analysis/portfolio_flow_projection_validation.md`
+- `docs/analysis/portfolio-flow-projection.md`
+- `docs/analysis/portfolio-flow-projection-validation.md`
 
 ### Shared Statistics
 
@@ -361,7 +361,7 @@ What remains outside the slice:
 
 Primary references:
 
-- `docs/analysis/statistical_core_cleanup_report.md`
+- `docs/analysis/statistical-core-cleanup-report.md`
 
 ## Cross-Slice Dependencies
 
@@ -422,8 +422,8 @@ Outside the CDC but allowed to consume it:
 
 Application alignment references:
 
-- `docs/analysis/sprint_commitment_application_alignment.md`
-- `docs/analysis/cdc_coverage_audit.md`
+- `docs/analysis/sprint-commitment-application-alignment.md`
+- `docs/analysis/cdc-coverage-audit.md`
 
 ## Persistence Boundary
 
@@ -439,8 +439,8 @@ Current persistence facts described by the CDC documentation:
 
 Persistence references:
 
-- `docs/analysis/portfolio_flow_projection.md`
-- `docs/analysis/portfolio_flow_projection_validation.md`
+- `docs/analysis/portfolio-flow-projection.md`
+- `docs/analysis/portfolio-flow-projection-validation.md`
 
 ## Future Architecture Directions
 
@@ -456,7 +456,7 @@ Established future directions already implied by the existing documents:
 
 Completion summary reference:
 
-- `docs/analysis/cdc_completion_summary.md`
+- `docs/analysis/cdc-completion-summary.md`
 
 ## Compatibility Debt Still Present
 
@@ -473,8 +473,8 @@ Documented examples:
 
 Compatibility references:
 
-- `docs/analysis/application_semantic_audit.md`
-- `docs/analysis/portfolio_flow_projection.md`
-- `docs/analysis/portfolio_flow_projection_validation.md`
-- `docs/analysis/portfolio_flow_consumers_audit.md`
-- `docs/analysis/backlog_quality_cdc_summary.md`
+- `docs/analysis/application-semantic-audit.md`
+- `docs/analysis/portfolio-flow-projection.md`
+- `docs/analysis/portfolio-flow-projection-validation.md`
+- `docs/analysis/portfolio-flow-consumers-audit.md`
+- `docs/analysis/backlog-quality-cdc-summary.md`

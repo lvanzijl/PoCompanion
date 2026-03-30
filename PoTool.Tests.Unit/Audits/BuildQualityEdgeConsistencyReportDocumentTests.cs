@@ -7,7 +7,7 @@ public sealed class BuildQualityEdgeConsistencyReportDocumentTests
     public void BuildQualityEdgeConsistencyReport_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality_edge_consistency_report.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality-edge-consistency-report.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The BuildQuality edge consistency report should exist under docs/analysis.");
 

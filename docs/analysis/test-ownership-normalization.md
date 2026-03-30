@@ -4,8 +4,8 @@ _Generated: 2026-03-17_
 
 Reference documents:
 
-- `docs/analysis/test_ownership_audit.md`
-- `docs/analysis/test_cleanup_step1.md`
+- `docs/analysis/test-ownership-audit.md`
+- `docs/analysis/test-cleanup-step1.md`
 - `docs/architecture/cdc-reference.md`
 
 ## Ownership Rules Applied

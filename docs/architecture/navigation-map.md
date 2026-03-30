@@ -797,7 +797,7 @@ Each level only appears when the user drills into the previous one. Users naviga
 
 ## 4. Ten Suggestions for Navigation Improvement
 
-The following suggestions are derived from analysing the current navigation structure, the open decision backlog (`../navigation_decision_backlog.md`), and the follow-up actions log (`../navigation_followup_actions.md`).
+The following suggestions are derived from analysing the current navigation structure, the open decision backlog (`../navigation-decision-backlog.md`), and the follow-up actions log (`../navigation-followup-actions.md`).
 
 ---
 

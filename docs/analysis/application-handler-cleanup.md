@@ -4,8 +4,8 @@ _Generated: 2026-03-16_
 
 Reference documents:
 
-- `docs/analysis/cdc_usage_coverage.md`
-- `docs/analysis/application_simplification_audit.md`
+- `docs/analysis/cdc-usage-coverage.md`
+- `docs/analysis/application-simplification-audit.md`
 
 ## Handlers Scanned
 
@@ -68,10 +68,10 @@ Other handler groups under `PoTool.Api/Handlers/PullRequests`, `PoTool.Api/Handl
 
 - `0` additional handler lines were removed in this follow-up scan
 - the current codebase already reflects the earlier removals documented in:
-  - `docs/analysis/sprint_commitment_handler_simplification.md`
-  - `docs/analysis/portfolio_handler_simplification.md`
-  - `docs/analysis/backlog_health_simplification.md`
-  - `docs/analysis/effort_planning_boundary_cleanup.md`
+  - `docs/analysis/sprint-commitment-handler-simplification.md`
+  - `docs/analysis/portfolio-handler-simplification.md`
+  - `docs/analysis/backlog-health-simplification.md`
+  - `docs/analysis/effort-planning-boundary-cleanup.md`
 
 ## Final Handler Responsibilities
 

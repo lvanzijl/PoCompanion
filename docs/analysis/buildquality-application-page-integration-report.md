@@ -26,7 +26,7 @@ Define how the locked `BuildQuality` CDC slice is exposed through the existing a
 
 ## 4. Locked decisions applied
 
-The following constraints from `docs/analysis/buildquality_data_aggregation_contract_report.md` and its upstream CDC dependency are applied unchanged:
+The following constraints from `docs/analysis/buildquality-data-aggregation-contract-report.md` and its upstream CDC dependency are applied unchanged:
 
 - default branch only
 - no feature branches

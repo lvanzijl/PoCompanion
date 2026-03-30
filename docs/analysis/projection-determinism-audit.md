@@ -9,8 +9,8 @@ Reference documents:
 - `docs/rules/metrics-rules.md`
 - `docs/rules/source-rules.md`
 - `docs/rules/sprint-rules.md`
-- `docs/analysis/portfolio_flow_projection_validation.md`
-- `docs/analysis/forecasting_cdc_summary.md`
+- `docs/analysis/portfolio-flow-projection-validation.md`
+- `docs/analysis/forecasting-cdc-summary.md`
 
 ## Projection inventory
 

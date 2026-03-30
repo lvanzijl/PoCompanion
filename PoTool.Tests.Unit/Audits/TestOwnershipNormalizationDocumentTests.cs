@@ -7,7 +7,7 @@ public sealed class TestOwnershipNormalizationDocumentTests
     public void TestOwnershipNormalization_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "test_ownership_normalization.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "test-ownership-normalization.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The test ownership normalization report should exist under docs/analysis.");
 

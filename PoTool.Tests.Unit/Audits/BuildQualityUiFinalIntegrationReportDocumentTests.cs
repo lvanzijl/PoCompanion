@@ -7,7 +7,7 @@ public sealed class BuildQualityUiFinalIntegrationReportDocumentTests
     public void BuildQualityUiFinalIntegrationReport_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality_ui_final_integration_report.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality-ui-final-integration-report.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The BuildQuality UI final integration report should exist under docs/analysis.");
 

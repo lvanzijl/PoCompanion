@@ -7,7 +7,7 @@ public sealed class PortfolioFlowDataSignalsDocumentTests
     public void PortfolioFlowDataSignals_ReportExistsWithRequiredSectionsAndDecisions()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "architecture", "portfolio_flow_data_signals.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "architecture", "portfolio-flow-data-signals.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The portfolio flow data signals design document should exist under docs/architecture.");
 

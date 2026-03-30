@@ -7,7 +7,7 @@ public sealed class ForecastingCdcSummaryDocumentTests
     public void ForecastingCdcSummary_ReportExistsWithRequiredSectionsAndVerdict()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "forecasting_cdc_summary.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "forecasting-cdc-summary.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The forecasting CDC summary should exist under docs/analysis.");
 

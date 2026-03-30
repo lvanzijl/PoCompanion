@@ -55,7 +55,7 @@ The projection consumes these persisted signals:
 - `StateReconstructionLookup`
 - `CanonicalStoryPointResolutionService`
 
-This keeps the boundary aligned with `docs/architecture/portfolio_flow_data_signals.md`: the ledger remains the source of historical facts, and the projection remains the source of repeated portfolio-flow series queries.
+This keeps the boundary aligned with `docs/architecture/portfolio-flow-data-signals.md`: the ledger remains the source of historical facts, and the projection remains the source of repeated portfolio-flow series queries.
 
 ## Validation Tests
 

@@ -5,8 +5,8 @@ _Generated: 2026-03-16_
 Reference documents:
 
 - `docs/architecture/portfolio-flow-model.md`
-- `docs/analysis/portfolio_flow_semantic_audit.md`
-- `docs/analysis/portfolio_flow_domain_exploration.md`
+- `docs/analysis/portfolio-flow-semantic-audit.md`
+- `docs/analysis/portfolio-flow-domain-exploration.md`
 - `docs/rules/estimation-rules.md`
 - `docs/rules/state-rules.md`
 - `docs/rules/source-rules.md`

@@ -5,7 +5,7 @@
 - Scope handling: **PASS**
 - No recomputation: **PASS**
 
-This audit was refreshed against the current `PoTool.Client` implementation after the final chart-state cleanup documented in `docs/analysis/buildquality_chart_state_cleanup_report.md`.
+This audit was refreshed against the current `PoTool.Client` implementation after the final chart-state cleanup documented in `docs/analysis/buildquality-chart-state-cleanup-report.md`.
 
 Current repository truth:
 
@@ -205,7 +205,7 @@ The current `PoTool.Client` BuildQuality UI complies with the audited scope-hand
 
 ### What changed
 
-- refreshed `buildquality_ui_compliance_audit_report.md` to match current UI implementation after the final cleanup
+- refreshed `buildquality-ui-compliance-audit-report.md` to match current UI implementation after the final cleanup
 - updated the matching MSTest document audit to enforce the current result
 
 ### What was intentionally not changed

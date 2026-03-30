@@ -8,7 +8,7 @@ Reference documents:
 - `docs/rules/sprint-rules.md`
 - `docs/rules/metrics-rules.md`
 - `docs/rules/source-rules.md`
-- `docs/analysis/sprint_commitment_application_alignment.md`
+- `docs/analysis/sprint-commitment-application-alignment.md`
 
 Files analyzed:
 

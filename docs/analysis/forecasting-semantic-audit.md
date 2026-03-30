@@ -4,7 +4,7 @@ _Generated: 2026-03-15_
 
 Reference documents:
 
-- `docs/analysis/forecasting_domain_exploration.md`
+- `docs/analysis/forecasting-domain-exploration.md`
 - `docs/architecture/domain-model.md`
 - `docs/rules/estimation-rules.md`
 - `docs/rules/metrics-rules.md`

@@ -8,12 +8,12 @@ Reference documents:
 
 - `docs/architecture/cdc-reference.md`
 - `docs/architecture/cdc-domain-map.md`
-- `docs/analysis/cdc_completion_summary.md`
-- `docs/analysis/backlog_quality_cdc_summary.md`
-- `docs/analysis/delivery_trend_analytics_cdc_summary.md`
-- `docs/analysis/forecasting_cdc_summary.md`
-- `docs/analysis/effort_diagnostics_cdc_extraction_report.md`
-- `docs/analysis/application_simplification_audit.md`
+- `docs/analysis/cdc-completion-summary.md`
+- `docs/analysis/backlog-quality-cdc-summary.md`
+- `docs/analysis/delivery-trend-analytics-cdc-summary.md`
+- `docs/analysis/forecasting-cdc-summary.md`
+- `docs/analysis/effort-diagnostics-cdc-extraction-report.md`
+- `docs/analysis/application-simplification-audit.md`
 
 Files analyzed:
 

@@ -7,7 +7,7 @@ public sealed class CdcInvariantTestsDocumentTests
     public void CdcInvariantTests_ReportExistsWithCorrectedInvariantDefinitions()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "cdc_invariant_tests.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "cdc-invariant-tests.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The CDC invariant audit should exist under docs/analysis.");
 

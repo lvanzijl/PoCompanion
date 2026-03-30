@@ -27,7 +27,7 @@ public sealed class CdcCoverageAuditDocumentTests
     public void CdcCoverageAudit_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "cdc_coverage_audit.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "cdc-coverage-audit.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The CDC coverage audit report should exist under docs/analysis.");
 

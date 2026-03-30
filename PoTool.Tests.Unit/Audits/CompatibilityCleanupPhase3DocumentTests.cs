@@ -7,7 +7,7 @@ public sealed class CompatibilityCleanupPhase3DocumentTests
     public void CompatibilityCleanupPhase3_ReportAndCdcReferenceContainRequiredUpdates()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "compatibility_cleanup_phase3.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "compatibility-cleanup-phase3.md");
         var cdcReferencePath = Path.Combine(repositoryRoot, "docs", "architecture", "cdc-reference.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The phase 3 compatibility cleanup audit should exist under docs/analysis.");

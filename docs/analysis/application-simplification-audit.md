@@ -8,7 +8,7 @@ Reference documents:
 
 - `docs/architecture/cdc-reference.md`
 - `docs/architecture/cdc-domain-map.md`
-- `docs/analysis/cdc_completion_summary.md`
+- `docs/analysis/cdc-completion-summary.md`
 - `docs/architecture/domain-model.md`
 - `docs/rules/hierarchy-rules.md`
 - `docs/rules/estimation-rules.md`

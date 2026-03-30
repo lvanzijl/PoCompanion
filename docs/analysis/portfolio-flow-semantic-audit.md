@@ -4,7 +4,7 @@ _Generated: 2026-03-16_
 
 Reference documents:
 
-- `docs/analysis/portfolio_flow_domain_exploration.md`
+- `docs/analysis/portfolio-flow-domain-exploration.md`
 - `docs/architecture/domain-model.md`
 - `docs/rules/estimation-rules.md`
 - `docs/rules/metrics-rules.md`

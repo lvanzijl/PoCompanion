@@ -7,7 +7,7 @@ public sealed class BuildQualityChartStateCleanupReportDocumentTests
     public void BuildQualityChartStateCleanupReport_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality_chart_state_cleanup_report.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality-chart-state-cleanup-report.md");
 
         Assert.IsTrue(File.Exists(reportPath), "The BuildQuality chart state cleanup report should exist under docs/analysis.");
 

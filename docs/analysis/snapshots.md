@@ -125,10 +125,10 @@ So there is no platform gap around timestamp support. The gap is specifically ar
 
 The current repository already documents part of this landscape in:
 
-- `docs/analysis/buildquality_discovery_report.md`
+- `docs/analysis/buildquality-discovery-report.md`
 - `docs/analysis/field-contract.md`
 
-`buildquality_discovery_report.md` already identifies `RoadmapSnapshotEntity`, `ActivityEventLedgerEntryEntity`, `SprintMetricsProjectionEntity`, `PortfolioFlowProjectionEntity`, and `CachedMetricsEntity` as existing snapshot/history/projection patterns. `field-contract.md` also confirms that `Rhodium.Funding.ProjectNumber` and `Rhodium.Funding.ProjectElement` are currently absent end to end.
+`buildquality-discovery-report.md` already identifies `RoadmapSnapshotEntity`, `ActivityEventLedgerEntryEntity`, `SprintMetricsProjectionEntity`, `PortfolioFlowProjectionEntity`, and `CachedMetricsEntity` as existing snapshot/history/projection patterns. `field-contract.md` also confirms that `Rhodium.Funding.ProjectNumber` and `Rhodium.Funding.ProjectElement` are currently absent end to end.
 
 ## 2. How data is persisted over time
 

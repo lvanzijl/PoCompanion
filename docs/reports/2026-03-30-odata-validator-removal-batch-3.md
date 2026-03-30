@@ -19,10 +19,10 @@
   - `PoTool.Tests.Unit/Architecture/TfsAccessBoundaryArchitectureTests.cs`
 - Cleaned validator-tool residue from tests and docs:
   - `PoTool.Tests.Unit/Audits/BuildQualityDiscoveryReportDocumentTests.cs`
-  - `docs/analysis/buildquality_discovery_report.md`
+  - `docs/analysis/buildquality-discovery-report.md`
   - `docs/architecture/repository-stability-audit.md`
   - `docs/architecture/restore-build-determinism-fix.md`
-  - `docs/analysis/tfs_api_version_configuration_inspection_report.md`
+  - `docs/analysis/tfs-api-version-configuration-inspection-report.md`
 
 ## 3. OData removal
 - Removed OData-specific code and settings classes:

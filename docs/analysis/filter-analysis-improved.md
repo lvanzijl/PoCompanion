@@ -89,7 +89,7 @@ FilterSystem
 
 ### 1.3 Canonical decisions
 
-1. **Product is the strongest verified global filter.** The domain model explicitly defines product as the primary analytics boundary (`hierarchy_rules.md:38-46`).
+1. **Product is the strongest verified global filter.** The domain model explicitly defines product as the primary analytics boundary (`hierarchy-rules.md:38-46`).
 2. **Team is the strongest secondary shared filter, but not yet truly global.** It is reused heavily, yet not consistently persisted by `WorkspaceBase`.
 3. **Time is not one filter; it is a family of filters.** The codebase currently mixes single sprint, sprint range, date range, and fixed windows.
 4. **Project / Package / State are already canonical in the portfolio backend, but not in the current UI.**
