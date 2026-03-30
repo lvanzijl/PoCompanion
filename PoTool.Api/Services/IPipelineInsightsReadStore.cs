@@ -23,7 +23,7 @@ public interface IPipelineInsightsReadStore
 
     Task<IReadOnlyList<PipelineInsightsDefinitionSelection>> GetPipelineDefinitionsAsync(
         IReadOnlyList<int> productIds,
-        IReadOnlyCollection<string> repositories,
+        IReadOnlyCollection<int> repositoryIds,
         CancellationToken cancellationToken);
 
     Task<IReadOnlyList<PipelineInsightsRun>> GetRunsAsync(
@@ -50,6 +50,7 @@ public sealed record PipelineInsightsDefinitionSelection(
     int Id,
     int ExternalPipelineDefinitionId,
     int ProductId,
+    int RepositoryId,
     string Name,
     string? DefaultBranch);
 

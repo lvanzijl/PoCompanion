@@ -77,13 +77,12 @@ public sealed class GetPipelineInsightsQueryHandler
         }
 
         var scopedProductIds = products.Select(p => p.Id).ToList();
-        var repositoryScope = filter.RepositoryScope.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         // ── 4. Load pipeline definitions per product ──────────────────────────
         // Key: PipelineDefinitionEntity.Id (DB PK) → (ProductId, Name, DefaultBranch)
         var pipelineDefs = await _readStore.GetPipelineDefinitionsAsync(
             scopedProductIds,
-            repositoryScope,
+            filter.RepositoryScope,
             cancellationToken);
 
         if (pipelineDefs.Count == 0)

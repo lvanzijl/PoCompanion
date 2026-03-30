@@ -28,7 +28,7 @@ public class GetPipelineMetricsQueryHandlerTests
         // Arrange
         var query = new GetPipelineMetricsQuery(CreateFilter(
             productIds: [1, 2],
-            repositories: ["TestRepo1", "TestRepo2"],
+            repositories: [10, 20],
             pipelineIds: [101, 102],
             branchScope:
             [
@@ -100,7 +100,7 @@ public class GetPipelineMetricsQueryHandlerTests
         // Arrange
         var query = new GetPipelineMetricsQuery(CreateFilter(
             productIds: null,
-            repositories: ["TestRepo1"],
+            repositories: [10],
             pipelineIds: [101],
             branchScope: [new PipelineBranchScope(101, "refs/heads/main")]));
 
@@ -155,7 +155,7 @@ public class GetPipelineMetricsQueryHandlerTests
         // Arrange
         var query = new GetPipelineMetricsQuery(CreateFilter(
             productIds: [999],
-            repositories: ["Repo-X"],
+            repositories: [999],
             pipelineIds: Array.Empty<int>(),
             branchScope: Array.Empty<PipelineBranchScope>()));
 
@@ -183,7 +183,7 @@ public class GetPipelineMetricsQueryHandlerTests
     {
         var query = new GetPipelineMetricsQuery(CreateFilter(
             productIds: [1],
-            repositories: ["TestRepo1"],
+            repositories: [10],
             pipelineIds: [101],
             branchScope: [new PipelineBranchScope(101, "refs/heads/release")]));
 
@@ -225,7 +225,7 @@ public class GetPipelineMetricsQueryHandlerTests
     {
         var query = new GetPipelineMetricsQuery(CreateFilter(
             productIds: [1, 2],
-            repositories: ["Repo-A", "Repo-B"],
+            repositories: [10, 20],
             pipelineIds: [101, 202],
             branchScope:
             [
@@ -269,7 +269,7 @@ public class GetPipelineMetricsQueryHandlerTests
 
     private static PipelineEffectiveFilter CreateFilter(
         IReadOnlyList<int>? productIds,
-        IReadOnlyList<string> repositories,
+        IReadOnlyList<int> repositories,
         IReadOnlyList<int> pipelineIds,
         IReadOnlyList<PipelineBranchScope> branchScope,
         DateTimeOffset? rangeStartUtc = null,
@@ -280,7 +280,7 @@ public class GetPipelineMetricsQueryHandlerTests
                     ? FilterSelection<int>.Selected(productIds)
                     : FilterSelection<int>.All(),
                 FilterSelection<int>.All(),
-                FilterSelection<string>.Selected(repositories),
+                FilterSelection<int>.Selected(repositories),
                 rangeStartUtc.HasValue || rangeEndUtc.HasValue
                     ? FilterTimeSelection.DateRange(rangeStartUtc, rangeEndUtc)
                     : FilterTimeSelection.None()),

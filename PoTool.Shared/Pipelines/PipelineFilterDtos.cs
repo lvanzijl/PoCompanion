@@ -8,7 +8,7 @@ public sealed record PipelineFilterContextDto
 
     public required FilterSelectionDto<int> TeamIds { get; init; }
 
-    public required FilterSelectionDto<string> RepositoryNames { get; init; }
+    public required FilterSelectionDto<int> RepositoryIds { get; init; }
 
     public required FilterTimeSelectionDto Time { get; init; }
 }

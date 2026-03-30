@@ -80,10 +80,10 @@ public sealed class EfPipelineInsightsReadStore : IPipelineInsightsReadStore
 
     public async Task<IReadOnlyList<PipelineInsightsDefinitionSelection>> GetPipelineDefinitionsAsync(
         IReadOnlyList<int> productIds,
-        IReadOnlyCollection<string> repositories,
+        IReadOnlyCollection<int> repositoryIds,
         CancellationToken cancellationToken)
     {
-        if (productIds.Count == 0 || repositories.Count == 0)
+        if (productIds.Count == 0 || repositoryIds.Count == 0)
         {
             return Array.Empty<PipelineInsightsDefinitionSelection>();
         }
@@ -91,11 +91,12 @@ public sealed class EfPipelineInsightsReadStore : IPipelineInsightsReadStore
         return await _context.PipelineDefinitions
             .AsNoTracking()
             .Where(definition => productIds.Contains(definition.ProductId)
-                && repositories.Contains(definition.RepoName))
+                && repositoryIds.Contains(definition.RepositoryId))
             .Select(definition => new PipelineInsightsDefinitionSelection(
                 definition.Id,
                 definition.PipelineDefinitionId,
                 definition.ProductId,
+                definition.RepositoryId,
                 definition.Name,
                 definition.DefaultBranch))
             .ToListAsync(cancellationToken);

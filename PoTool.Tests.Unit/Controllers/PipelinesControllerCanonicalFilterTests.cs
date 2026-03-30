@@ -47,7 +47,7 @@ public sealed class PipelinesControllerCanonicalFilterTests
             .Setup(service => service.Send(
                 It.Is<GetPipelineMetricsQuery>(query =>
                     query.EffectiveFilter.Context.ProductIds.Values.SequenceEqual(new[] { 100 })
-                    && query.EffectiveFilter.RepositoryScope.SequenceEqual(new[] { "Repo-A" })
+                    && query.EffectiveFilter.RepositoryScope.SequenceEqual(new[] { 1 })
                     && query.EffectiveFilter.PipelineIds.SequenceEqual(new[] { 101 })
                     && query.EffectiveFilter.RangeStartUtc == fromDate),
                 It.IsAny<CancellationToken>()))
@@ -89,6 +89,7 @@ public sealed class PipelinesControllerCanonicalFilterTests
         Assert.IsNotNull(envelope);
         CollectionAssert.AreEqual(new[] { 100 }, envelope.RequestedFilter.ProductIds.Values.ToArray());
         CollectionAssert.AreEqual(new[] { 100 }, envelope.EffectiveFilter.ProductIds.Values.ToArray());
+        CollectionAssert.AreEqual(new[] { 1 }, envelope.EffectiveFilter.RepositoryIds.Values.ToArray());
         CollectionAssert.AreEqual(Array.Empty<string>(), envelope.InvalidFields.ToArray());
         Assert.HasCount(1, envelope.Data);
     }

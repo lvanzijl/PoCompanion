@@ -5,13 +5,13 @@ namespace PoTool.Core.Pipelines.Filters;
 public sealed record PipelineFilterContext(
     FilterSelection<int> ProductIds,
     FilterSelection<int> TeamIds,
-    FilterSelection<string> RepositoryNames,
+    FilterSelection<int> RepositoryIds,
     FilterTimeSelection Time)
 {
     public static PipelineFilterContext Empty() => new(
         FilterSelection<int>.All(),
         FilterSelection<int>.All(),
-        FilterSelection<string>.All(),
+        FilterSelection<int>.All(),
         FilterTimeSelection.None());
 }
 
@@ -21,7 +21,7 @@ public sealed record PipelineBranchScope(
 
 public sealed record PipelineEffectiveFilter(
     PipelineFilterContext Context,
-    IReadOnlyList<string> RepositoryScope,
+    IReadOnlyList<int> RepositoryScope,
     IReadOnlyList<int> PipelineIds,
     IReadOnlyList<PipelineBranchScope> BranchScope,
     DateTimeOffset? RangeStartUtc,
