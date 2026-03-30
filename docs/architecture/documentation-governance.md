@@ -329,7 +329,6 @@ Every PR that adds, moves, or renames markdown documents must verify the followi
 ### 7.2 Hard PR rules
 
 - No new markdown in repository root.
-- No new markdown in root.
 - No mixed-purpose folders.
 - No generic markdown filenames.
 - No creation of parallel folders for the same concept.
