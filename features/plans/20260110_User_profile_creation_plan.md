@@ -39,7 +39,7 @@ Verify understanding of requirements, constraints, and repository structure befo
   - [x] `docs/PROCESS_RULES.md`
   - [x] `docs/COPILOT_ARCHITECTURE_CONTRACT.md`
   - [x] `docs/Fluent_UI_compat_rules.md`
-  - [x] `docs/mock-data-rules.md`
+  - [x] mock data rules documentation
 - [x] Analyze existing Profile implementation
 - [x] Identify assembly boundaries (Shared/Core/Api/Client)
 - [x] Confirm ProductOwner maps to existing Profile entity conceptually

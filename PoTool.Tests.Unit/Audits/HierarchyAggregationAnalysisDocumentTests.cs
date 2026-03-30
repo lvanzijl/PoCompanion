@@ -7,9 +7,9 @@ public sealed class HierarchyAggregationAnalysisDocumentTests
     public void HierarchyAggregationAnalysis_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = $"{repositoryRoot}/docs/analyze/hierarchy-aggregation.md";
+        var reportPath = $"{repositoryRoot}/docs/analysis/hierarchy-aggregation.md";
 
-        Assert.IsTrue(File.Exists(reportPath), "The hierarchy aggregation analysis report should exist under docs/analyze.");
+        Assert.IsTrue(File.Exists(reportPath), "The hierarchy aggregation analysis report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

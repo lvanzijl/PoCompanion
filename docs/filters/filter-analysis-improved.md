@@ -25,7 +25,7 @@ Primary verified sources:
 - `PoTool.Api/Controllers/BuildQualityController.cs:22-62`
 - `PoTool.Shared/Metrics/PortfolioConsumptionDtos.cs:1-119`
 - `PoTool.Api/Services/PortfolioReadModelFiltering.cs:6-45`
-- `docs/analyze/filtering.md:1-200` (existing repository analysis document)
+- `docs/analysis/filtering.md:1-200` (existing repository analysis document)
 - `docs/domain/rules/hierarchy_rules.md:38-46`
 
 ## 1. Canonical Filter Definitions
@@ -35,7 +35,7 @@ Primary verified sources:
 The current codebase does **not** have one canonical client filter model. It has:
 
 1. **Route/query-based workspace context** via `WorkspaceBase` for `productId` and `teamId` only (`WorkspaceBase.cs:24-80`)
-2. **Local component state** for sprint, sprint range, date range, repository, toggles, and search fields (`docs/analyze/filtering.md:47-68`)
+2. **Local component state** for sprint, sprint range, date range, repository, toggles, and search fields (`docs/analysis/filtering.md:47-68`)
 3. **Portfolio read-model filters** already defined in backend DTO/query contracts via `PortfolioReadQueryOptions` (`PortfolioConsumptionDtos.cs:103-119`)
 
 The canonical target model implied by current backend contracts is:

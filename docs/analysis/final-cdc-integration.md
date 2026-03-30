@@ -1,6 +1,6 @@
 # Final CDC Integration Audit & Implementation Plan
 
-_Reference: Prompts 1–8 analysis documents under `docs/analyze/`_
+_Reference: Prompts 1–8 analysis documents under `docs/analysis/`_
 
 ---
 
@@ -53,10 +53,10 @@ The system as designed is largely consistent and conflict-free. The main residua
 | `StoryPoints` | `double` | PBI only (authoritative) | Fully wired |
 
 - `ProjectNumber`: not in `RequiredWorkItemFields`, `RevisionFieldWhitelist`, `WorkItemEntity`,
-  `WorkItemDto`, or any domain rule. Source: `docs/analyze/field-contract.md §2`.
-- `WorkPackage`: same gap as `ProjectNumber`. Source: `docs/analyze/field-contract.md §3`.
-- `TimeCriticality`: not retrieved, persisted, or analyzed. Source: `docs/analyze/field-contract.md §5`.
-- `Effort`: fully supported from retrieval through analytics. Source: `docs/analyze/field-contract.md §4`.
+  `WorkItemDto`, or any domain rule. Source: `docs/analysis/field-contract.md §2`.
+- `WorkPackage`: same gap as `ProjectNumber`. Source: `docs/analysis/field-contract.md §3`.
+- `TimeCriticality`: not retrieved, persisted, or analyzed. Source: `docs/analysis/field-contract.md §5`.
+- `Effort`: fully supported from retrieval through analytics. Source: `docs/analysis/field-contract.md §4`.
 - No field is used in multiple semantic roles. No ambiguity detected.
 
 **Action required:** Implement `ProjectNumber`, `WorkPackage`, and `TimeCriticality` in Phase A
@@ -68,13 +68,13 @@ The system as designed is largely consistent and conflict-free. The main residua
 
 **Finding: Consistent.**
 
-- Canonical hierarchy is `Epic ← Feature ← PBI ← Task`. Source: `docs/analyze/hierarchy-aggregation.md §1`.
+- Canonical hierarchy is `Epic ← Feature ← PBI ← Task`. Source: `docs/analysis/hierarchy-aggregation.md §1`.
 - SP rollup is the canonical aggregation path. Effort rollup is secondary and optional.
 - Override is scoped to Feature level only. `FeatureProgressService` applies the override; all
   downstream rollups consume `EffectiveProgress` without re-computing it. Source:
-  `docs/analyze/progress-model.md §3`.
+  `docs/analysis/progress-model.md §3`.
 - Aggregation is deterministic: `HierarchyRollupService.RollupCanonicalScope` is the single
-  computation point for scope. Source: `docs/analyze/hierarchy-aggregation.md §3`.
+  computation point for scope. Source: `docs/analysis/hierarchy-aggregation.md §3`.
 - Tasks are excluded from story-point scope. Bugs can drive activity but not authoritative SP
   aggregation. Source: `PoTool.Core.Domain/Domain/WorkItems/CanonicalWorkItemTypes.cs`.
 
@@ -94,9 +94,9 @@ The system as designed is largely consistent and conflict-free. The main residua
 | Planning Quality | `PQ` | (new, delivery-trend domain only) | Warning / Critical / Info |
 
 - `SI`, `RR`, and `RC` rules are registered in `RuleCatalog` and executed in fixed order by
-  `BacklogValidationService`. Source: `docs/analyze/validation-rules.md §2`.
+  `BacklogValidationService`. Source: `docs/analysis/validation-rules.md §2`.
 - `PQ` signals are currently isolated to the delivery-trend domain and do not overlap with the
-  backlog-quality rules. Source: `docs/analyze/planning-quality.md §1`.
+  backlog-quality rules. Source: `docs/analysis/planning-quality.md §1`.
 - No duplicate signals exist across categories. Each rule carries a unique stable ID (`SI-*`,
   `RR-*`, `RC-*`, `PQ-*`).
 - Severity mapping is enforced in `ValidationCategoryMeta.GetAlertSeverity`.
@@ -113,10 +113,10 @@ The system as designed is largely consistent and conflict-free. The main residua
 - `Override` = manual override field on Feature, sourced from `TimeCriticality` (once wired).
 - `EffectiveProgress` = `Override` when present; otherwise `CalculatedProgress`.
 - No frontend recomputation occurs. `ProgressPercent` is a pre-computed DTO value consumed
-  directly by the UI. Source: `docs/analyze/progress-model.md §1–§4`.
+  directly by the UI. Source: `docs/analysis/progress-model.md §1–§4`.
 - Null semantics are preserved: a null `Override` propagates null `EffectiveProgress` only when
   `TimeCriticality` is absent — not when it is zero. Source:
-  `docs/analyze/epic-aggregation-null-semantics-fix.md`.
+  `docs/analysis/epic-aggregation-null-semantics-fix.md`.
 
 **Action required:** None once `TimeCriticality` is wired (Phase A). The model is correct.
 
@@ -127,11 +127,11 @@ The system as designed is largely consistent and conflict-free. The main residua
 **Finding: Consistent in principle — lifecycle rules are not yet enforced in code.**
 
 - A snapshot is scoped to `Project + WorkPackage`. `WorkPackage` is optional globally but
-  required for consistency within a project that uses it. Source: `docs/analyze/snapshots.md §3`.
+  required for consistency within a project that uses it. Source: `docs/analysis/snapshots.md §3`.
 - `RoadmapSnapshotEntity` is a separate, existing entity for roadmap-specific snapshots and is
-  not mixed with delivery-trend snapshots. Source: `docs/analyze/snapshots.md §1`.
+  not mixed with delivery-trend snapshots. Source: `docs/analysis/snapshots.md §1`.
 - `ProductSnapshot` and `SnapshotComparisonService` are implemented for delivery-trend snapshots.
-  Source: `docs/analyze/snapshot-comparison-validation.md`.
+  Source: `docs/analysis/snapshot-comparison-validation.md`.
 
 **Action required:** Implement snapshot lifecycle rules (creation trigger, versioning, comparison
 enforcement) in Phase D.
@@ -143,7 +143,7 @@ enforcement) in Phase D.
 **Finding: Consistent — no hidden filtering detected.**
 
 - Default filter: all products, all projects, current sprint (when applicable). Source:
-  `docs/analyze/filtering.md §3`.
+  `docs/analysis/filtering.md §3`.
 - `WorkspaceBase` propagates `productId` and `teamId` via URL query strings. No implicit
   pre-filtering occurs at the component level.
 - Legacy workspace uses `INavigationContextService` with explicit context serialization. No

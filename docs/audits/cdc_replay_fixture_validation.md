@@ -76,4 +76,4 @@ These checks validate deterministic repeated outputs without relying on live TFS
 - The exported revision snapshot assets currently represent a small task-level cross-page revision example, so they are useful for replay plumbing validation but not sufficient on their own for story-point-heavy analytics.
 - The SQLite replay fixture is intentionally compact. It covers commitment, churn, spillover, portfolio entry, delivery, and effort-hour mix behavior, but it is not a full production export.
 - Replay validation focuses on CDC behavior, not on broad integration coverage of every handler or UI surface.
-- Existing repository documentation still references `docs/mock-data-rules.md`, but that file is not present in the current clone; the replay validation added here does not depend on that missing document.
+- Older repository planning/documentation references mention a now-missing mock data rules document; the replay validation added here does not depend on that document.

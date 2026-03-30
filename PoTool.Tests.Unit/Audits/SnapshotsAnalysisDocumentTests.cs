@@ -7,9 +7,9 @@ public sealed class SnapshotsAnalysisDocumentTests
     public void SnapshotsAnalysis_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analyze", "snapshots.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "snapshots.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The snapshots analysis report should exist under docs/analyze.");
+        Assert.IsTrue(File.Exists(reportPath), "The snapshots analysis report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

@@ -5,7 +5,7 @@ using PoTool.Core.WorkItems;
 namespace PoTool.Api.Services.MockData;
 
 /// <summary>
-/// Generates dependency links between work items following mock-data-rules.md requirements.
+/// Generates dependency links between work items following the repository mock-data rules requirements.
 /// Creates 15,000-20,000 links with 30-40% cross-team dependencies.
 /// </summary>
 public class BattleshipDependencyGenerator

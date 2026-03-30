@@ -7,9 +7,9 @@ public sealed class CdcCorrectionsDocumentTests
     public void CdcCorrections_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analyze", "cdc-corrections.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "cdc-corrections.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The CDC corrections audit report should exist under docs/analyze.");
+        Assert.IsTrue(File.Exists(reportPath), "The CDC corrections audit report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

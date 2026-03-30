@@ -10,7 +10,7 @@ Current state:
 
 - Progress is always story-point based. No count-based mode exists.
 - No manual override field is wired end to end. `Microsoft.VSTS.Common.TimeCriticality` is
-  absent from the entire stack (see `docs/analyze/field-contract.md` §5).
+  absent from the entire stack (see `docs/analysis/field-contract.md` §5).
 - There is no `EffectiveProgress` concept in any DTO, domain model, or service.
 - All progress arithmetic is performed in the backend domain layer. The frontend consumes
   pre-computed `ProgressPercent` values from DTOs and renders them directly.
@@ -244,7 +244,7 @@ displayed.
 
 ### Step 1 — Wire TimeCriticality (prerequisite)
 
-Follow the steps in `docs/analyze/field-contract.md` §7 to add `TimeCriticality` to:
+Follow the steps in `docs/analysis/field-contract.md` §7 to add `TimeCriticality` to:
 
 1. `RequiredWorkItemFields` in `PoTool.Integrations.Tfs/Clients/RealTfsClient.Core.cs`.
 2. `RevisionFieldWhitelist` if historical change tracking is needed.

@@ -29,10 +29,6 @@ Violating these rules is a design error, not an implementation shortcut.
 4. **[PROCESS_RULES.md](PROCESS_RULES.md)** - Development workflow and review standards
 5. **[TFS_INTEGRATION_RULES.md](TFS_INTEGRATION_RULES.md)** - TFS integration rules
 6. **[Fluent_UI_compat_rules.md](Fluent_UI_compat_rules.md)** - Fluent UI Compact rules
-7. **[mock-data-rules.md](mock-data-rules.md)** - Mock data generation rules (MANDATORY for testing and development)
-
-
-
 ---
 
 ## Quick Links

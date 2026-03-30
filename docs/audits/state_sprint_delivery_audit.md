@@ -26,7 +26,7 @@
 - `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs`
 - `PoTool.Tests.Unit/Services/WorkItemResolutionServiceTests.cs`
 - `docs/domain/REPOSITORY_DOMAIN_DISCOVERY.md`
-- `docs/Reports/SprintAttributionAnalysis.md`
+- `docs/reports/sprint-attribution-analysis.md`
 - `docs/bug_trend_followups.md`
 
 ### State logic findings
@@ -181,7 +181,7 @@
 
 ### 2. Existing attribution analysis already calls out the mixed strategy
 
-- **File:** `docs/Reports/SprintAttributionAnalysis.md`
+- **File:** `docs/reports/sprint-attribution-analysis.md`
 - **Function:** Repository-wide attribution analysis
 - **Observed logic:** Documents hybrid and snapshot strategies for `GetSprintMetricsQueryHandler`, `GetSprintExecutionQueryHandler`, and `SprintTrendProjectionService` (`lines 61-79`, `lines 186-199`).
 - **Canonical rule:** Supporting documents for this audit override legacy assumptions and require the canonical domain model.

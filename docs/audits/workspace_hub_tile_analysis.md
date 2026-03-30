@@ -9,7 +9,7 @@ Scope analyzed:
 - `PoTool.Client/Pages/Home/TrendsWorkspace.razor`
 - `PoTool.Client/Pages/Home/PlanningWorkspace.razor`
 - `docs/NAVIGATION_MAP.md`
-- `docs/GEBRUIKERSHANDLEIDING.md`
+- `docs/user/gebruikershandleiding.md`
 
 Notes:
 

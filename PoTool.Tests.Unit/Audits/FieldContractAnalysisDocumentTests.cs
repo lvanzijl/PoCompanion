@@ -7,9 +7,9 @@ public sealed class FieldContractAnalysisDocumentTests
     public void FieldContractAnalysis_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analyze", "field-contract.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "field-contract.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The field contract analysis report should exist under docs/analyze.");
+        Assert.IsTrue(File.Exists(reportPath), "The field contract analysis report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

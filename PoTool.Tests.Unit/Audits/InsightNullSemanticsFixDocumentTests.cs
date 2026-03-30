@@ -7,9 +7,9 @@ public sealed class InsightNullSemanticsFixDocumentTests
     public void InsightNullSemanticsFix_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analyze", "insight-null-semantics-fix.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "insight-null-semantics-fix.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The insight null semantics fix report should exist under docs/analyze.");
+        Assert.IsTrue(File.Exists(reportPath), "The insight null semantics fix report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

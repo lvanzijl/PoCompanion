@@ -124,7 +124,7 @@ So there is no platform gap around timestamp support. The gap is specifically ar
 The current repository already documents part of this landscape in:
 
 - `docs/audits/buildquality_discovery_report.md`
-- `docs/analyze/field-contract.md`
+- `docs/analysis/field-contract.md`
 
 `buildquality_discovery_report.md` already identifies `RoadmapSnapshotEntity`, `ActivityEventLedgerEntryEntity`, `SprintMetricsProjectionEntity`, `PortfolioFlowProjectionEntity`, and `CachedMetricsEntity` as existing snapshot/history/projection patterns. `field-contract.md` also confirms that `Rhodium.Funding.ProjectNumber` and `Rhodium.Funding.ProjectElement` are currently absent end to end.
 
@@ -202,7 +202,7 @@ What does not fit yet:
 
 - there is **no explicit work package entity**
 - there are **no budget/cost fields**
-- `Rhodium.Funding.ProjectNumber` and `Rhodium.Funding.ProjectElement` are not retrieved, persisted, or exposed today (`docs/analyze/field-contract.md`)
+- `Rhodium.Funding.ProjectNumber` and `Rhodium.Funding.ProjectElement` are not retrieved, persisted, or exposed today (`docs/analysis/field-contract.md`)
 
 So a work package breakdown snapshot can still be introduced, but today it would have to derive its rows from the existing hierarchy:
 
@@ -237,7 +237,7 @@ Without that contract, a snapshot table would only preserve structure, not a rel
 
 ### 2. Funding and work-package fields are currently missing
 
-`docs/analyze/field-contract.md` shows that:
+`docs/analysis/field-contract.md` shows that:
 
 - `Rhodium.Funding.ProjectNumber`
 - `Rhodium.Funding.ProjectElement`

@@ -1,8 +1,8 @@
 # Corrective CDC Integration Audit
 
-_Reference: `docs/analyze/final-cdc-integration.md` (Prompt 9), `docs/analyze/planning-quality.md`,
-`docs/analyze/validation-rules.md`, `docs/analyze/snapshots.md`, `docs/analyze/progress-model.md`,
-`docs/analyze/filtering.md`_
+_Reference: `docs/analysis/final-cdc-integration.md` (Prompt 9), `docs/analysis/planning-quality.md`,
+`docs/analysis/validation-rules.md`, `docs/analysis/snapshots.md`, `docs/analysis/progress-model.md`,
+`docs/analysis/filtering.md`_
 
 ---
 
@@ -163,7 +163,7 @@ semantics for `RR → RC` are retained as-is and are not expressed via `IsBlocki
 - No existing tests break. `IsBlocking = false` on all current rules preserves existing behavior.
 - CDC build blocking requires `PlanningQualityService` to communicate null scope results to the
   aggregation layer, which must propagate null correctly (already supported for `EpicProgress =
-  null` per `docs/analyze/epic-aggregation-null-semantics-fix.md`).
+  null` per `docs/analysis/epic-aggregation-null-semantics-fix.md`).
 - UI workflow blocking requires a new client-side check; no existing UI paths are affected until
   blocking rules are activated.
 

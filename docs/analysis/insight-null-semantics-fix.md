@@ -15,7 +15,7 @@
   - Added mutual-exclusivity assertions so `IN-1` and `IN-8` cannot appear together.
   - Added a combined scenario proving `IN-8` can coexist with planning quality warnings.
 
-- Updated `/home/runner/work/PoCompanion/PoCompanion/docs/analyze/insight-validation.md`
+- Updated `/home/runner/work/PoCompanion/PoCompanion/docs/analysis/insight-validation.md`
   - Corrected the published mapping so `null` is no longer documented as stalled progress.
   - Added `IN-8` to the validation report and verification list.
 

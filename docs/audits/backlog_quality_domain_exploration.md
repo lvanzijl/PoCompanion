@@ -13,7 +13,7 @@
   - Orchestration and suppression order: `/PoTool.Core/WorkItems/Validators/HierarchicalWorkItemValidator.cs`
   - Shared consequence/responsibility contracts: `/PoTool.Shared/WorkItems/ValidationCategory.cs`, `/ValidationConsequence.cs`, `/ResponsibleParty.cs`, `/HierarchicalValidationResult.cs`
   - UI/reporting consumers: `/PoTool.Api/Handlers/WorkItems/GetValidationTriageSummaryQueryHandler.cs`, `/GetValidationQueueQueryHandler.cs`, `/PoTool.Client/Components/Validation/TriageCategoryCard.razor`
-  - Spec/docs: `/features/20260119_workitem_validation.md`, `/VALIDATION_SYSTEM_REPORT.md`
+  - Spec/docs: `/features/20260119_workitem_validation.md`, `/docs/architecture/validation-system-report.md`
 - **What exists today**
   - `SI-1`: done parent with unfinished descendants
   - `SI-2`: removed parent with non-removed descendants

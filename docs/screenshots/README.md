@@ -97,10 +97,7 @@ To view all screenshots:
 2. Use an image viewer that supports quick navigation (e.g., Windows Photos, macOS Preview)
 3. Or open in a web browser for easy navigation
 
-To reference in documentation:
-```markdown
-![Feature Name](screenshots/01-home-page.png)
-```
+To reference in documentation, use standard Markdown image syntax with the actual relative path to the screenshot you captured.
 
 ## Screenshot Guidelines
 
@@ -120,9 +117,7 @@ This screenshot collection provides visual proof that:
 
 ## Related Documents
 
-- [Exploratory Test Plan](../EXPLORATORY_TEST_PLAN.md) - Complete test plan and procedures
-- [Test Results](../TEST_RESULTS.md) - Detailed test execution results
-- [Startup Scripts](../../start-exploratory-testing.ps1) - Scripts to launch the application
+- No accompanying exploratory test plan, test results document, or startup script is present in the current repository snapshot.
 
 ## Notes
 

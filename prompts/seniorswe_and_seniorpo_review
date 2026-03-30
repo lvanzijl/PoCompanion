@@ -4,5 +4,5 @@ you are so senior that you dont need to start the application to review the func
 
 review the code, identify technical flaws, architectural flaws and functional flaws. review the tests and make sure that they make sense and are complete. review the current functionality and think of ways to improve it and think of ways to build new features upon it. make a wishlist of what you as product owner would love to see. take into account that features that can't be achieved in tfs itself have higher value.
 
-write a report and store it in SWEPO_REVIEW_REPORT.md. if it already exists then update it, make sure that there are no contradictions or duplications.
+write a report and store it in docs/reviews/swepo-review-report.md. if it already exists then update it, make sure that there are no contradictions or duplications.
 The report should have all improvement lists. ordered by priority and end in a plan what could be done first

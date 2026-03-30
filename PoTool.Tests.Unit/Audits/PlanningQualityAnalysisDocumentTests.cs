@@ -7,9 +7,9 @@ public sealed class PlanningQualityAnalysisDocumentTests
     public void PlanningQualityAnalysis_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analyze", "planning-quality.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "planning-quality.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The planning quality analysis report should exist under docs/analyze.");
+        Assert.IsTrue(File.Exists(reportPath), "The planning quality analysis report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 
