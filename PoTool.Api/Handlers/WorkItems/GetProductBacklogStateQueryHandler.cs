@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Health;
 using PoTool.Core.WorkItems;
@@ -18,21 +19,18 @@ namespace PoTool.Api.Handlers.WorkItems;
 public sealed class GetProductBacklogStateQueryHandler
     : IQueryHandler<GetProductBacklogStateQuery, ProductBacklogStateDto?>
 {
-    private readonly IProductRepository _productRepository;
-    private readonly IWorkItemReadProvider _workItemReadProvider;
+    private readonly IWorkItemQuery _workItemQuery;
     private readonly BacklogStateComputationService _computationService;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<GetProductBacklogStateQueryHandler> _logger;
 
     public GetProductBacklogStateQueryHandler(
-        IProductRepository productRepository,
-        IWorkItemReadProvider workItemReadProvider,
+        IWorkItemQuery workItemQuery,
         BacklogStateComputationService computationService,
         IWorkItemStateClassificationService stateClassificationService,
         ILogger<GetProductBacklogStateQueryHandler> logger)
     {
-        _productRepository = productRepository;
-        _workItemReadProvider = workItemReadProvider;
+        _workItemQuery = workItemQuery;
         _computationService = computationService;
         _stateClassificationService = stateClassificationService;
         _logger = logger;
@@ -44,14 +42,14 @@ public sealed class GetProductBacklogStateQueryHandler
     {
         _logger.LogDebug("Handling GetProductBacklogStateQuery for ProductId: {ProductId}", query.ProductId);
 
-        var product = await _productRepository.GetProductByIdAsync(query.ProductId, cancellationToken);
-        if (product is null)
+        var source = await _workItemQuery.GetProductBacklogAnalyticsSourceAsync(query.ProductId, cancellationToken);
+        if (source is null)
         {
             _logger.LogWarning("Product {ProductId} not found", query.ProductId);
             return null;
         }
 
-        if (product.BacklogRootWorkItemIds.Count == 0)
+        if (source.WorkItems.Count == 0)
         {
             _logger.LogDebug("Product {ProductId} has no backlog root work items configured", query.ProductId);
             return new ProductBacklogStateDto
@@ -61,9 +59,7 @@ public sealed class GetProductBacklogStateQueryHandler
             };
         }
 
-        var allItems = (await _workItemReadProvider.GetByRootIdsAsync(
-            product.BacklogRootWorkItemIds.ToArray(),
-            cancellationToken)).ToList();
+        var allItems = source.WorkItems.ToList();
 
         _logger.LogDebug(
             "Loaded {Count} work items for product {ProductId}",

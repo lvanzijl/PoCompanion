@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Queries;
@@ -14,24 +15,18 @@ namespace PoTool.Api.Handlers.WorkItems;
 public sealed class GetValidationImpactAnalysisQueryHandler
     : IQueryHandler<GetValidationImpactAnalysisQuery, ValidationImpactAnalysisDto>
 {
-    private readonly IWorkItemRepository _repository;
-    private readonly IWorkItemReadProvider _workItemReadProvider;
-    private readonly IProductRepository _productRepository;
+    private readonly IWorkItemQuery _workItemQuery;
     private readonly IWorkItemValidator _validator;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<GetValidationImpactAnalysisQueryHandler> _logger;
 
     public GetValidationImpactAnalysisQueryHandler(
-        IWorkItemRepository repository,
-        IWorkItemReadProvider workItemReadProvider,
-        IProductRepository productRepository,
+        IWorkItemQuery workItemQuery,
         IWorkItemValidator validator,
         IWorkItemStateClassificationService stateClassificationService,
         ILogger<GetValidationImpactAnalysisQueryHandler> logger)
     {
-        _repository = repository;
-        _workItemReadProvider = workItemReadProvider;
-        _productRepository = productRepository;
+        _workItemQuery = workItemQuery;
         _validator = validator;
         _stateClassificationService = stateClassificationService;
         _logger = logger;
@@ -44,55 +39,19 @@ public sealed class GetValidationImpactAnalysisQueryHandler
         _logger.LogDebug("Handling GetValidationImpactAnalysisQuery with AreaPathFilter={AreaPath}, IterationPathFilter={IterationPath}",
             query.AreaPathFilter, query.IterationPathFilter);
 
-        // Load work items using product-scoped approach
-        IEnumerable<WorkItemDto> workItems;
-        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
-        var productsList = allProducts.ToList();
+        var source = await _workItemQuery.GetValidationImpactSourceAsync(
+            query.AreaPathFilter,
+            query.IterationPathFilter,
+            cancellationToken);
 
-        if (productsList.Count > 0)
-        {
-            var rootIds = productsList
-                .SelectMany(p => p.BacklogRootWorkItemIds)
-                .ToArray();
-
-            if (rootIds.Length > 0)
-            {
-                _logger.LogDebug("Loading work items from {Count} product roots for impact analysis", rootIds.Length);
-                workItems = await _workItemReadProvider.GetByRootIdsAsync(rootIds, cancellationToken);
-            }
-            else
-            {
-                workItems = await _repository.GetAllAsync(cancellationToken);
-            }
-        }
-        else
-        {
-            workItems = await _repository.GetAllAsync(cancellationToken);
-        }
-
-        var workItemsList = workItems.ToList();
-
-        // Apply filters
-        if (!string.IsNullOrEmpty(query.AreaPathFilter))
-        {
-            workItemsList = workItemsList
-                .Where(wi => wi.AreaPath.StartsWith(query.AreaPathFilter, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        }
-
-        if (!string.IsNullOrEmpty(query.IterationPathFilter))
-        {
-            workItemsList = workItemsList
-                .Where(wi => wi.IterationPath.Contains(query.IterationPathFilter, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        }
+        var workItemsList = source.WorkItems.ToList();
 
         // Run validation
         var validationResults = _validator.ValidateWorkItems(workItemsList);
 
         // Build lookup maps
         var workItemLookup = workItemsList.ToDictionary(wi => wi.TfsId);
-        var childrenLookup = BuildChildrenLookup(workItemsList);
+        var childrenLookup = source.ChildrenByParentId;
 
         // Analyze impact of each violation
         var violations = new List<ViolationImpact>();
@@ -142,28 +101,9 @@ public sealed class GetValidationImpactAnalysisQueryHandler
         return result;
     }
 
-    private Dictionary<int, List<int>> BuildChildrenLookup(List<WorkItemDto> workItems)
-    {
-        var lookup = new Dictionary<int, List<int>>();
-
-        foreach (var wi in workItems)
-        {
-            if (wi.ParentTfsId.HasValue)
-            {
-                if (!lookup.ContainsKey(wi.ParentTfsId.Value))
-                {
-                    lookup[wi.ParentTfsId.Value] = new List<int>();
-                }
-                lookup[wi.ParentTfsId.Value].Add(wi.TfsId);
-            }
-        }
-
-        return lookup;
-    }
-
     private IReadOnlyList<int> GetBlockedChildren(
         int parentId,
-        Dictionary<int, List<int>> childrenLookup,
+        IReadOnlyDictionary<int, IReadOnlyList<int>> childrenLookup,
         Dictionary<int, WorkItemDto> workItemLookup)
     {
         if (!childrenLookup.ContainsKey(parentId))
@@ -189,7 +129,7 @@ public sealed class GetValidationImpactAnalysisQueryHandler
         return blocked;
     }
 
-    private IReadOnlyList<int> GetAllDescendants(int parentId, Dictionary<int, List<int>> childrenLookup)
+    private IReadOnlyList<int> GetAllDescendants(int parentId, IReadOnlyDictionary<int, IReadOnlyList<int>> childrenLookup)
     {
         var descendants = new List<int>();
         var queue = new Queue<int>();

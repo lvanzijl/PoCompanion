@@ -15,17 +15,14 @@ namespace PoTool.Api.Handlers.WorkItems;
 public sealed class GetDependencyGraphQueryHandler
     : IQueryHandler<GetDependencyGraphQuery, DependencyGraphDto>
 {
-    private readonly IWorkItemReadProvider _workItemReadProvider;
-    private readonly IProductRepository _productRepository;
+    private readonly IWorkItemQuery _workItemQuery;
     private readonly ILogger<GetDependencyGraphQueryHandler> _logger;
 
     public GetDependencyGraphQueryHandler(
-        IWorkItemReadProvider workItemReadProvider,
-        IProductRepository productRepository,
+        IWorkItemQuery workItemQuery,
         ILogger<GetDependencyGraphQueryHandler> logger)
     {
-        _workItemReadProvider = workItemReadProvider;
-        _productRepository = productRepository;
+        _workItemQuery = workItemQuery;
         _logger = logger;
     }
 
@@ -35,63 +32,18 @@ public sealed class GetDependencyGraphQueryHandler
     {
         _logger.LogDebug("Handling GetDependencyGraphQuery");
 
-        // Load work items using product-scoped approach
-        IEnumerable<WorkItemDto> allWorkItems;
-        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
-        var productsList = allProducts.ToList();
-
-        if (productsList.Count > 0)
-        {
-            var rootIds = productsList
-                .SelectMany(p => p.BacklogRootWorkItemIds)
-                .ToArray();
-
-            if (rootIds.Length > 0)
-            {
-                _logger.LogDebug("Loading work items from {Count} product roots for dependency analysis", rootIds.Length);
-                allWorkItems = await _workItemReadProvider.GetByRootIdsAsync(rootIds, cancellationToken);
-            }
-            else
-            {
-                allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
-            }
-        }
-        else
-        {
-            allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
-        }
-
-        var workItemsList = allWorkItems.ToList();
-
-        // Filter work items if specified
-        IEnumerable<WorkItemDto> filteredItems = workItemsList;
-
-        if (!string.IsNullOrWhiteSpace(query.AreaPathFilter))
-        {
-            filteredItems = filteredItems.Where(wi =>
-                wi.AreaPath != null &&
-                wi.AreaPath.Contains(query.AreaPathFilter, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (query.WorkItemIds != null && query.WorkItemIds.Any())
-        {
-            filteredItems = filteredItems.Where(wi => query.WorkItemIds.Contains(wi.TfsId));
-        }
-
-        if (query.WorkItemTypes != null && query.WorkItemTypes.Any())
-        {
-            filteredItems = filteredItems.Where(wi =>
-                query.WorkItemTypes.Contains(wi.Type, StringComparer.OrdinalIgnoreCase));
-        }
-
-        var relevantWorkItems = filteredItems.ToList();
+        var source = await _workItemQuery.GetDependencyGraphSourceAsync(
+            query.AreaPathFilter,
+            query.WorkItemIds,
+            query.WorkItemTypes,
+            cancellationToken);
 
         // Build nodes and links
         var nodes = new List<DependencyNode>();
         var links = new List<DependencyLink>();
-        var workItemMap = workItemsList.ToDictionary(wi => wi.TfsId);
+        var workItemMap = source.ScopedWorkItems.ToDictionary(wi => wi.TfsId);
 
-        foreach (var workItem in relevantWorkItems)
+        foreach (var workItem in source.RelevantWorkItems)
         {
             // Use Relations property directly instead of parsing JsonPayload
             var relations = workItem.Relations ?? new List<WorkItemRelation>();

@@ -1,11 +1,12 @@
 using Microsoft.Extensions.Logging;
 using Moq;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Api.Handlers.WorkItems;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Health;
 using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Queries;
-using PoTool.Shared.Health;
 using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 
@@ -14,8 +15,7 @@ namespace PoTool.Tests.Unit.Handlers;
 [TestClass]
 public sealed class GetHealthWorkspaceProductSummaryQueryHandlerTests
 {
-    private Mock<IProductRepository> _productRepository = null!;
-    private Mock<IWorkItemReadProvider> _workItemReadProvider = null!;
+    private Mock<IWorkItemQuery> _workItemQuery = null!;
     private Mock<IWorkItemStateClassificationService> _stateClassificationService = null!;
     private Mock<ILogger<GetHealthWorkspaceProductSummaryQueryHandler>> _logger = null!;
     private BacklogStateComputationService _computationService = null!;
@@ -24,8 +24,7 @@ public sealed class GetHealthWorkspaceProductSummaryQueryHandlerTests
     [TestInitialize]
     public void Setup()
     {
-        _productRepository = new Mock<IProductRepository>();
-        _workItemReadProvider = new Mock<IWorkItemReadProvider>();
+        _workItemQuery = new Mock<IWorkItemQuery>();
         _stateClassificationService = new Mock<IWorkItemStateClassificationService>();
         _logger = new Mock<ILogger<GetHealthWorkspaceProductSummaryQueryHandler>>();
         _computationService = new BacklogStateComputationService();
@@ -66,8 +65,7 @@ public sealed class GetHealthWorkspaceProductSummaryQueryHandlerTests
             });
 
         _handler = new GetHealthWorkspaceProductSummaryQueryHandler(
-            _productRepository.Object,
-            _workItemReadProvider.Object,
+            _workItemQuery.Object,
             _computationService,
             _stateClassificationService.Object,
             _logger.Object);
@@ -76,7 +74,6 @@ public sealed class GetHealthWorkspaceProductSummaryQueryHandlerTests
     [TestMethod]
     public async Task Handle_WithReadyAndPendingEpics_ReturnsDashboardSummary()
     {
-        var product = CreateProduct(1, [1000]);
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1000, WorkItemType.Epic, "Ready epic", state: "Active", description: "ready epic"),
@@ -91,14 +88,9 @@ public sealed class GetHealthWorkspaceProductSummaryQueryHandlerTests
             CreateWorkItem(1009, WorkItemType.Pbi, "Removed pbi", state: "Removed", parentId: 1004, description: "removed pbi", effort: 21)
         };
 
-        _productRepository
-            .Setup(repository => repository.GetProductByIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(product);
-        _workItemReadProvider
-            .Setup(provider => provider.GetByRootIdsAsync(
-                It.Is<int[]>(ids => ids.SequenceEqual(new[] { 1000 })),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(items);
+        _workItemQuery
+            .Setup(provider => provider.GetProductBacklogAnalyticsSourceAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProductBacklogAnalyticsSource(1, items));
 
         var result = await _handler.Handle(new GetHealthWorkspaceProductSummaryQuery(1), CancellationToken.None);
 
@@ -118,33 +110,17 @@ public sealed class GetHealthWorkspaceProductSummaryQueryHandlerTests
     [TestMethod]
     public async Task Handle_WithUnknownProduct_ReturnsNull()
     {
-        _productRepository
-            .Setup(repository => repository.GetProductByIdAsync(99, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((ProductDto?)null);
+        _workItemQuery
+            .Setup(provider => provider.GetProductBacklogAnalyticsSourceAsync(99, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ProductBacklogAnalyticsSource?)null);
 
         var result = await _handler.Handle(new GetHealthWorkspaceProductSummaryQuery(99), CancellationToken.None);
 
         Assert.IsNull(result);
-        _workItemReadProvider.Verify(
-            provider => provider.GetByRootIdsAsync(It.IsAny<int[]>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        _workItemQuery.Verify(
+            provider => provider.GetProductBacklogAnalyticsSourceAsync(99, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
-
-    private static ProductDto CreateProduct(int id, IReadOnlyList<int> backlogRoots) =>
-        new(
-            Id: id,
-            ProductOwnerId: 1,
-            Name: $"Product {id}",
-            BacklogRootWorkItemIds: backlogRoots.ToList(),
-            Order: 0,
-            PictureType: ProductPictureType.Default,
-            DefaultPictureId: 0,
-            CustomPicturePath: null,
-            CreatedAt: DateTimeOffset.UtcNow,
-            LastModified: DateTimeOffset.UtcNow,
-            LastSyncedAt: null,
-            TeamIds: [],
-            Repositories: []);
 
     private static WorkItemDto CreateWorkItem(
         int tfsId,
