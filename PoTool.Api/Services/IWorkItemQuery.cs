@@ -8,6 +8,10 @@ namespace PoTool.Api.Services;
 /// </summary>
 public interface IWorkItemQuery
 {
+    Task<IReadOnlyList<WorkItemDto>> GetGoalHierarchyAsync(
+        IReadOnlyList<int> goalIds,
+        CancellationToken cancellationToken);
+
     Task<IReadOnlyList<WorkItemDto>> GetWorkItemsForListingAsync(
         IReadOnlyList<int>? productIds,
         IReadOnlyList<string>? fallbackAreaPaths,

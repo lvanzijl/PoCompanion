@@ -16,6 +16,14 @@ public sealed class EfWorkItemQuery : IWorkItemQuery
         _context = context;
     }
 
+    public async Task<IReadOnlyList<WorkItemDto>> GetGoalHierarchyAsync(
+        IReadOnlyList<int> goalIds,
+        CancellationToken cancellationToken)
+    {
+        var entities = await LoadHierarchyByRootIdsAsync(goalIds, cancellationToken);
+        return MapToDtos(entities);
+    }
+
     public async Task<IReadOnlyList<WorkItemDto>> GetWorkItemsForListingAsync(
         IReadOnlyList<int>? productIds,
         IReadOnlyList<string>? fallbackAreaPaths,

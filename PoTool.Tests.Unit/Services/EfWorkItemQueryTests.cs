@@ -38,6 +38,21 @@ public sealed class EfWorkItemQueryTests
     }
 
     [TestMethod]
+    public async Task GetGoalHierarchyAsync_ReturnsHierarchyScopedToSpecifiedGoalIds()
+    {
+        _context.WorkItems.AddRange(
+            CreateEntity(100, null, "Area\\One", WorkItemType.Goal),
+            CreateEntity(101, 100, "Area\\One", WorkItemType.Epic),
+            CreateEntity(102, 101, "Area\\One", WorkItemType.Feature),
+            CreateEntity(200, null, "Area\\Two", WorkItemType.Goal));
+        await _context.SaveChangesAsync();
+
+        var result = await _query.GetGoalHierarchyAsync([100], CancellationToken.None);
+
+        CollectionAssert.AreEquivalent(new[] { 100, 101, 102 }, result.Select(item => item.TfsId).ToArray());
+    }
+
+    [TestMethod]
     public async Task GetWorkItemsForListingAsync_WithProductIds_ReturnsHierarchyScopedItems()
     {
         _context.Products.Add(new ProductEntity { Id = 1, Name = "Product 1" });
