@@ -91,6 +91,28 @@ public class ServiceCollectionTests
     }
 
     [TestMethod]
+    public void AddPoToolApiServices_RegistersWorkItemQueryBoundary_Successfully()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+
+        services.AddLogging();
+        RegisterHostEnvironment(services);
+        services.AddDbContext<PoToolDbContext>(options =>
+            options.UseInMemoryDatabase("TestDbWorkItemQuery"));
+
+        services.AddPoToolApiServices(configuration, isDevelopment: true);
+
+        using var serviceProvider = services.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+
+        var query = scope.ServiceProvider.GetService<IWorkItemQuery>();
+
+        Assert.IsNotNull(query, "IWorkItemQuery should be resolvable from DI.");
+        Assert.IsInstanceOfType<EfWorkItemQuery>(query, "IWorkItemQuery should resolve to the EF-backed cache query store.");
+    }
+
+    [TestMethod]
     public void AddPoToolApiServices_RegistersCanonicalMetricsServices_ForDiConsumers()
     {
         var services = new ServiceCollection();

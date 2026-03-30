@@ -11,20 +11,20 @@ using PoTool.Shared.WorkItems;
 
 namespace PoTool.Tests.Unit.Handlers;
 
-[TestClass]
-public class GetAllWorkItemsWithValidationQueryHandlerTests
-{
-    private Mock<IWorkItemReadProvider> _mockProvider = null!;
-    private Mock<IWorkItemValidator> _mockValidator = null!;
+    [TestClass]
+    public class GetAllWorkItemsWithValidationQueryHandlerTests
+    {
+        private Mock<IWorkItemQuery> _mockQuery = null!;
+        private Mock<IWorkItemValidator> _mockValidator = null!;
     private ProfileFilterService _profileFilterService = null!;
     private Mock<IProductRepository> _mockProductRepository = null!;
     private Mock<ILogger<GetAllWorkItemsWithValidationQueryHandler>> _mockLogger = null!;
     private GetAllWorkItemsWithValidationQueryHandler _handler = null!;
 
     [TestInitialize]
-    public void Setup()
-    {
-        _mockProvider = new Mock<IWorkItemReadProvider>();
+        public void Setup()
+        {
+            _mockQuery = new Mock<IWorkItemQuery>();
         _mockValidator = new Mock<IWorkItemValidator>();
         _mockProductRepository = new Mock<IProductRepository>();
         _mockLogger = new Mock<ILogger<GetAllWorkItemsWithValidationQueryHandler>>();
@@ -43,7 +43,7 @@ public class GetAllWorkItemsWithValidationQueryHandlerTests
             .Returns(new Dictionary<int, List<ValidationIssue>>());
 
         _handler = new GetAllWorkItemsWithValidationQueryHandler(
-            _mockProvider.Object,
+            _mockQuery.Object,
             _mockValidator.Object,
             _profileFilterService,
             _mockProductRepository.Object,
@@ -70,7 +70,7 @@ public class GetAllWorkItemsWithValidationQueryHandlerTests
 
         _mockProductRepository.Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(products);
-        _mockProvider.Setup(p => p.GetByRootIdsAsync(
+        _mockQuery.Setup(p => p.GetByRootIdsAsync(
                 It.Is<int[]>(ids => ids.Length == 3 && ids.Contains(100) && ids.Contains(200) && ids.Contains(300)),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
@@ -84,7 +84,7 @@ public class GetAllWorkItemsWithValidationQueryHandlerTests
         Assert.IsNotNull(result);
         Assert.AreEqual(3, result.Count());
         _mockProductRepository.Verify(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _mockProvider.Verify(p => p.GetByRootIdsAsync(
+        _mockQuery.Verify(p => p.GetByRootIdsAsync(
             It.Is<int[]>(ids => ids.Length == 3),
             It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -108,7 +108,7 @@ public class GetAllWorkItemsWithValidationQueryHandlerTests
 
         _mockProductRepository.Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(allProducts);
-        _mockProvider.Setup(p => p.GetByRootIdsAsync(
+        _mockQuery.Setup(p => p.GetByRootIdsAsync(
                 It.Is<int[]>(ids => ids.Length == 1 && ids.Contains(100)),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItemsForProductA);
@@ -123,7 +123,7 @@ public class GetAllWorkItemsWithValidationQueryHandlerTests
         Assert.IsNotNull(result);
         Assert.AreEqual(2, result.Count());
         _mockProductRepository.Verify(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _mockProvider.Verify(p => p.GetByRootIdsAsync(
+        _mockQuery.Verify(p => p.GetByRootIdsAsync(
             It.Is<int[]>(ids => ids.Length == 1 && ids[0] == 100),
             It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -147,7 +147,7 @@ public class GetAllWorkItemsWithValidationQueryHandlerTests
 
         _mockProductRepository.Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(allProducts);
-        _mockProvider.Setup(p => p.GetByRootIdsAsync(
+        _mockQuery.Setup(p => p.GetByRootIdsAsync(
                 It.Is<int[]>(ids => ids.Length == 2 && ids.Contains(100) && ids.Contains(200)),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
@@ -161,7 +161,7 @@ public class GetAllWorkItemsWithValidationQueryHandlerTests
         // Assert
         Assert.IsNotNull(result);
         Assert.AreEqual(2, result.Count());
-        _mockProvider.Verify(p => p.GetByRootIdsAsync(
+        _mockQuery.Verify(p => p.GetByRootIdsAsync(
             It.Is<int[]>(ids => ids.Length == 2),
             It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -188,7 +188,7 @@ public class GetAllWorkItemsWithValidationQueryHandlerTests
 
         _mockProductRepository.Setup(r => r.GetAllProductsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(products);
-        _mockProvider.Setup(p => p.GetByRootIdsAsync(It.IsAny<int[]>(), It.IsAny<CancellationToken>()))
+        _mockQuery.Setup(p => p.GetByRootIdsAsync(It.IsAny<IReadOnlyList<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(validationIssues);

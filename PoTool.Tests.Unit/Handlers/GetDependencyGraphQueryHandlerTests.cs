@@ -17,15 +17,15 @@ namespace PoTool.Tests.Unit.Handlers;
 [TestClass]
 public class GetDependencyGraphQueryHandlerTests
 {
-    private Mock<IWorkItemReadProvider> _mockProvider = null!;
+    private Mock<IWorkItemQuery> _mockQuery = null!;
     private Mock<IProductRepository> _mockProductRepository = null!;
     private Mock<ILogger<GetDependencyGraphQueryHandler>> _mockLogger = null!;
     private GetDependencyGraphQueryHandler _handler = null!;
 
     [TestInitialize]
-    public void Setup()
-    {
-        _mockProvider = new Mock<IWorkItemReadProvider>();
+        public void Setup()
+        {
+        _mockQuery = new Mock<IWorkItemQuery>();
         _mockProductRepository = new Mock<IProductRepository>();
         _mockLogger = new Mock<ILogger<GetDependencyGraphQueryHandler>>();
 
@@ -34,7 +34,7 @@ public class GetDependencyGraphQueryHandlerTests
             .ReturnsAsync(new List<ProductDto>());
 
         _handler = new GetDependencyGraphQueryHandler(
-            _mockProvider.Object,
+            _mockQuery.Object,
             _mockProductRepository.Object,
             _mockLogger.Object);
     }
@@ -43,7 +43,7 @@ public class GetDependencyGraphQueryHandlerTests
     public async Task Handle_WithNoWorkItems_ReturnsEmptyGraph()
     {
         // Arrange
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockQuery.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkItemDto>());
         var query = new GetDependencyGraphQuery();
 
@@ -71,7 +71,7 @@ public class GetDependencyGraphQueryHandlerTests
                 @"{""relations"":[{""rel"":""System.LinkTypes.Dependency-Reverse"",""url"":""http://tfs/workItems/1""}]}")
         };
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockQuery.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         var query = new GetDependencyGraphQuery();
 
@@ -107,7 +107,7 @@ public class GetDependencyGraphQueryHandlerTests
             CreateWorkItem(3, "Task", "New", "Project\\TeamA", 5, "{}")
         };
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockQuery.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         var query = new GetDependencyGraphQuery(AreaPathFilter: "TeamA");
 
@@ -131,7 +131,7 @@ public class GetDependencyGraphQueryHandlerTests
             CreateWorkItem(3, "Task", "New", "Project\\TeamA", 5, "{}")
         };
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockQuery.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         var query = new GetDependencyGraphQuery(WorkItemTypes: new[] { "Epic", "Feature" });
 
@@ -155,7 +155,7 @@ public class GetDependencyGraphQueryHandlerTests
             CreateWorkItem(3, "Task", "New", "Project\\TeamA", 5, "{}")
         };
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockQuery.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         var query = new GetDependencyGraphQuery(WorkItemIds: new[] { 1, 3 });
 
@@ -182,7 +182,7 @@ public class GetDependencyGraphQueryHandlerTests
                 @"{""relations"":[{""rel"":""System.LinkTypes.Dependency-Forward"",""url"":""http://tfs/workItems/1""}]}")
         };
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockQuery.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         var query = new GetDependencyGraphQuery();
 
@@ -210,7 +210,7 @@ public class GetDependencyGraphQueryHandlerTests
             CreateWorkItem(4, "Task", "New", "Project\\TeamA", 15, "{}"),
         };
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockQuery.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         var query = new GetDependencyGraphQuery();
 
@@ -239,7 +239,7 @@ public class GetDependencyGraphQueryHandlerTests
                 @"{""relations"":[{""rel"":""System.LinkTypes.Dependency-Forward"",""url"":""http://tfs/workItems/1""}]}")
         };
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockQuery.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         var query = new GetDependencyGraphQuery();
 
@@ -266,7 +266,7 @@ public class GetDependencyGraphQueryHandlerTests
                 @"{""relations"":[{""rel"":""System.LinkTypes.Hierarchy-Reverse"",""url"":""http://tfs/workItems/1""}]}")
         };
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockQuery.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         var query = new GetDependencyGraphQuery();
 
@@ -293,7 +293,7 @@ public class GetDependencyGraphQueryHandlerTests
             CreateWorkItem(2, "Feature", "New", "Project\\TeamA", 10, "{}")
         };
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockQuery.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         var query = new GetDependencyGraphQuery();
 
@@ -319,7 +319,7 @@ public class GetDependencyGraphQueryHandlerTests
                 @"{""relations"":[{""rel"":""System.LinkTypes.Dependency-Forward"",""url"":""http://tfs/workItems/999""}]}")
         };
 
-        _mockProvider.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockQuery.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         var query = new GetDependencyGraphQuery();
 

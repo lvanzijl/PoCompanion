@@ -16,8 +16,7 @@ namespace PoTool.Tests.Unit.Handlers;
 [TestClass]
 public class GetValidationImpactAnalysisQueryHandlerTests
 {
-    private Mock<IWorkItemRepository> _mockRepository = null!;
-    private Mock<IWorkItemReadProvider> _mockReadProvider = null!;
+    private Mock<IWorkItemQuery> _mockWorkItemQuery = null!;
     private Mock<IProductRepository> _mockProductRepository = null!;
     private Mock<IWorkItemValidator> _mockValidator = null!;
     private Mock<IWorkItemStateClassificationService> _mockStateClassificationService = null!;
@@ -25,10 +24,9 @@ public class GetValidationImpactAnalysisQueryHandlerTests
     private GetValidationImpactAnalysisQueryHandler _handler = null!;
 
     [TestInitialize]
-    public void Setup()
-    {
-        _mockRepository = new Mock<IWorkItemRepository>();
-        _mockReadProvider = new Mock<IWorkItemReadProvider>();
+        public void Setup()
+        {
+        _mockWorkItemQuery = new Mock<IWorkItemQuery>();
         _mockProductRepository = new Mock<IProductRepository>();
         _mockValidator = new Mock<IWorkItemValidator>();
         _mockStateClassificationService = new Mock<IWorkItemStateClassificationService>();
@@ -42,8 +40,7 @@ public class GetValidationImpactAnalysisQueryHandlerTests
         SetupStateClassifications();
 
         _handler = new GetValidationImpactAnalysisQueryHandler(
-            _mockRepository.Object,
-            _mockReadProvider.Object,
+            _mockWorkItemQuery.Object,
             _mockProductRepository.Object,
             _mockValidator.Object,
             _mockStateClassificationService.Object,
@@ -79,7 +76,7 @@ public class GetValidationImpactAnalysisQueryHandlerTests
             CreateWorkItem(2, "Epic", "In Progress", 1)
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockWorkItemQuery.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(new Dictionary<int, List<ValidationIssue>>());
@@ -115,7 +112,7 @@ public class GetValidationImpactAnalysisQueryHandlerTests
             }
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockWorkItemQuery.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(validationResults);
@@ -156,7 +153,7 @@ public class GetValidationImpactAnalysisQueryHandlerTests
             }
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockWorkItemQuery.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(validationResults);
@@ -196,7 +193,7 @@ public class GetValidationImpactAnalysisQueryHandlerTests
             }
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockWorkItemQuery.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(validationResults);
@@ -242,7 +239,7 @@ public class GetValidationImpactAnalysisQueryHandlerTests
             }
         };
 
-        _mockRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockWorkItemQuery.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(workItems);
         _mockValidator.Setup(v => v.ValidateWorkItems(It.IsAny<IEnumerable<WorkItemDto>>()))
             .Returns(validationResults);

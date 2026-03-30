@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Health;
 using PoTool.Core.WorkItems;
@@ -19,20 +20,20 @@ public sealed class GetProductBacklogStateQueryHandler
     : IQueryHandler<GetProductBacklogStateQuery, ProductBacklogStateDto?>
 {
     private readonly IProductRepository _productRepository;
-    private readonly IWorkItemReadProvider _workItemReadProvider;
+    private readonly IWorkItemQuery _workItemQuery;
     private readonly BacklogStateComputationService _computationService;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<GetProductBacklogStateQueryHandler> _logger;
 
     public GetProductBacklogStateQueryHandler(
         IProductRepository productRepository,
-        IWorkItemReadProvider workItemReadProvider,
+        IWorkItemQuery workItemQuery,
         BacklogStateComputationService computationService,
         IWorkItemStateClassificationService stateClassificationService,
         ILogger<GetProductBacklogStateQueryHandler> logger)
     {
         _productRepository = productRepository;
-        _workItemReadProvider = workItemReadProvider;
+        _workItemQuery = workItemQuery;
         _computationService = computationService;
         _stateClassificationService = stateClassificationService;
         _logger = logger;
@@ -61,7 +62,7 @@ public sealed class GetProductBacklogStateQueryHandler
             };
         }
 
-        var allItems = (await _workItemReadProvider.GetByRootIdsAsync(
+        var allItems = (await _workItemQuery.GetByRootIdsAsync(
             product.BacklogRootWorkItemIds.ToArray(),
             cancellationToken)).ToList();
 

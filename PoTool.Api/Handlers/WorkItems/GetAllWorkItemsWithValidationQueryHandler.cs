@@ -18,20 +18,20 @@ namespace PoTool.Api.Handlers.WorkItems;
 public sealed class GetAllWorkItemsWithValidationQueryHandler
     : IQueryHandler<GetAllWorkItemsWithValidationQuery, IEnumerable<WorkItemWithValidationDto>>
 {
-    private readonly IWorkItemReadProvider _workItemReadProvider;
+    private readonly IWorkItemQuery _workItemQuery;
     private readonly IWorkItemValidator _validator;
     private readonly ProfileFilterService _profileFilterService;
     private readonly IProductRepository _productRepository;
     private readonly ILogger<GetAllWorkItemsWithValidationQueryHandler> _logger;
 
     public GetAllWorkItemsWithValidationQueryHandler(
-        IWorkItemReadProvider workItemReadProvider,
+        IWorkItemQuery workItemQuery,
         IWorkItemValidator validator,
         ProfileFilterService profileFilterService,
         IProductRepository productRepository,
         ILogger<GetAllWorkItemsWithValidationQueryHandler> logger)
     {
-        _workItemReadProvider = workItemReadProvider;
+        _workItemQuery = workItemQuery;
         _validator = validator;
         _profileFilterService = profileFilterService;
         _productRepository = productRepository;
@@ -85,7 +85,7 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
                 _logger.LogInformation("Loading work items hierarchically from {Count} product roots: {RootIds}",
                     rootIds.Length, string.Join(", ", rootIds));
                 
-                workItems = await _workItemReadProvider.GetByRootIdsAsync(rootIds, cancellationToken);
+                workItems = await _workItemQuery.GetByRootIdsAsync(rootIds, cancellationToken);
                 _logger.LogDebug("Loaded {Count} work items via hierarchical loading", workItems.Count());
                 
                 // Skip area path loading
@@ -102,11 +102,11 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
             if (profileAreaPaths != null && profileAreaPaths.Count > 0)
             {
                 _logger.LogDebug("Filtering work items by active profile area paths for validation");
-                workItems = await _workItemReadProvider.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
+                workItems = await _workItemQuery.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
             }
             else
             {
-                workItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
+                workItems = await _workItemQuery.GetAllAsync(cancellationToken);
             }
         }
 

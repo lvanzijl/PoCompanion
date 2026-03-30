@@ -15,16 +15,16 @@ namespace PoTool.Api.Handlers.WorkItems;
 public sealed class GetDependencyGraphQueryHandler
     : IQueryHandler<GetDependencyGraphQuery, DependencyGraphDto>
 {
-    private readonly IWorkItemReadProvider _workItemReadProvider;
+    private readonly IWorkItemQuery _workItemQuery;
     private readonly IProductRepository _productRepository;
     private readonly ILogger<GetDependencyGraphQueryHandler> _logger;
 
     public GetDependencyGraphQueryHandler(
-        IWorkItemReadProvider workItemReadProvider,
+        IWorkItemQuery workItemQuery,
         IProductRepository productRepository,
         ILogger<GetDependencyGraphQueryHandler> logger)
     {
-        _workItemReadProvider = workItemReadProvider;
+        _workItemQuery = workItemQuery;
         _productRepository = productRepository;
         _logger = logger;
     }
@@ -49,16 +49,16 @@ public sealed class GetDependencyGraphQueryHandler
             if (rootIds.Length > 0)
             {
                 _logger.LogDebug("Loading work items from {Count} product roots for dependency analysis", rootIds.Length);
-                allWorkItems = await _workItemReadProvider.GetByRootIdsAsync(rootIds, cancellationToken);
+                allWorkItems = await _workItemQuery.GetByRootIdsAsync(rootIds, cancellationToken);
             }
             else
             {
-                allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
+                allWorkItems = await _workItemQuery.GetAllAsync(cancellationToken);
             }
         }
         else
         {
-            allWorkItems = await _workItemReadProvider.GetAllAsync(cancellationToken);
+            allWorkItems = await _workItemQuery.GetAllAsync(cancellationToken);
         }
 
         var workItemsList = allWorkItems.ToList();

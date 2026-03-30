@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Queries;
@@ -14,23 +15,20 @@ namespace PoTool.Api.Handlers.WorkItems;
 public sealed class GetValidationImpactAnalysisQueryHandler
     : IQueryHandler<GetValidationImpactAnalysisQuery, ValidationImpactAnalysisDto>
 {
-    private readonly IWorkItemRepository _repository;
-    private readonly IWorkItemReadProvider _workItemReadProvider;
+    private readonly IWorkItemQuery _workItemQuery;
     private readonly IProductRepository _productRepository;
     private readonly IWorkItemValidator _validator;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<GetValidationImpactAnalysisQueryHandler> _logger;
 
     public GetValidationImpactAnalysisQueryHandler(
-        IWorkItemRepository repository,
-        IWorkItemReadProvider workItemReadProvider,
+        IWorkItemQuery workItemQuery,
         IProductRepository productRepository,
         IWorkItemValidator validator,
         IWorkItemStateClassificationService stateClassificationService,
         ILogger<GetValidationImpactAnalysisQueryHandler> logger)
     {
-        _repository = repository;
-        _workItemReadProvider = workItemReadProvider;
+        _workItemQuery = workItemQuery;
         _productRepository = productRepository;
         _validator = validator;
         _stateClassificationService = stateClassificationService;
@@ -58,16 +56,16 @@ public sealed class GetValidationImpactAnalysisQueryHandler
             if (rootIds.Length > 0)
             {
                 _logger.LogDebug("Loading work items from {Count} product roots for impact analysis", rootIds.Length);
-                workItems = await _workItemReadProvider.GetByRootIdsAsync(rootIds, cancellationToken);
+                workItems = await _workItemQuery.GetByRootIdsAsync(rootIds, cancellationToken);
             }
             else
             {
-                workItems = await _repository.GetAllAsync(cancellationToken);
+                workItems = await _workItemQuery.GetAllAsync(cancellationToken);
             }
         }
         else
         {
-            workItems = await _repository.GetAllAsync(cancellationToken);
+            workItems = await _workItemQuery.GetAllAsync(cancellationToken);
         }
 
         var workItemsList = workItems.ToList();

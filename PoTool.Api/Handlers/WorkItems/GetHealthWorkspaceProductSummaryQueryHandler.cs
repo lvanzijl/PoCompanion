@@ -1,4 +1,5 @@
 using Mediator;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Health;
 using PoTool.Core.WorkItems;
@@ -19,20 +20,20 @@ public sealed class GetHealthWorkspaceProductSummaryQueryHandler
     private const int TopEpicCount = 3;
 
     private readonly IProductRepository _productRepository;
-    private readonly IWorkItemReadProvider _workItemReadProvider;
+    private readonly IWorkItemQuery _workItemQuery;
     private readonly BacklogStateComputationService _computationService;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<GetHealthWorkspaceProductSummaryQueryHandler> _logger;
 
     public GetHealthWorkspaceProductSummaryQueryHandler(
         IProductRepository productRepository,
-        IWorkItemReadProvider workItemReadProvider,
+        IWorkItemQuery workItemQuery,
         BacklogStateComputationService computationService,
         IWorkItemStateClassificationService stateClassificationService,
         ILogger<GetHealthWorkspaceProductSummaryQueryHandler> logger)
     {
         _productRepository = productRepository;
-        _workItemReadProvider = workItemReadProvider;
+        _workItemQuery = workItemQuery;
         _computationService = computationService;
         _stateClassificationService = stateClassificationService;
         _logger = logger;
@@ -62,7 +63,7 @@ public sealed class GetHealthWorkspaceProductSummaryQueryHandler
             };
         }
 
-        var allItems = (await _workItemReadProvider.GetByRootIdsAsync(
+        var allItems = (await _workItemQuery.GetByRootIdsAsync(
             product.BacklogRootWorkItemIds.ToArray(),
             cancellationToken)).ToList();
 

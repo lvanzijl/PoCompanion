@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Api.Handlers.WorkItems;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Health;
 using PoTool.Core.WorkItems;
@@ -15,7 +17,7 @@ namespace PoTool.Tests.Unit.Handlers;
 public sealed class GetHealthWorkspaceProductSummaryQueryHandlerTests
 {
     private Mock<IProductRepository> _productRepository = null!;
-    private Mock<IWorkItemReadProvider> _workItemReadProvider = null!;
+    private Mock<IWorkItemQuery> _workItemQuery = null!;
     private Mock<IWorkItemStateClassificationService> _stateClassificationService = null!;
     private Mock<ILogger<GetHealthWorkspaceProductSummaryQueryHandler>> _logger = null!;
     private BacklogStateComputationService _computationService = null!;
@@ -25,7 +27,7 @@ public sealed class GetHealthWorkspaceProductSummaryQueryHandlerTests
     public void Setup()
     {
         _productRepository = new Mock<IProductRepository>();
-        _workItemReadProvider = new Mock<IWorkItemReadProvider>();
+        _workItemQuery = new Mock<IWorkItemQuery>();
         _stateClassificationService = new Mock<IWorkItemStateClassificationService>();
         _logger = new Mock<ILogger<GetHealthWorkspaceProductSummaryQueryHandler>>();
         _computationService = new BacklogStateComputationService();
@@ -67,7 +69,7 @@ public sealed class GetHealthWorkspaceProductSummaryQueryHandlerTests
 
         _handler = new GetHealthWorkspaceProductSummaryQueryHandler(
             _productRepository.Object,
-            _workItemReadProvider.Object,
+            _workItemQuery.Object,
             _computationService,
             _stateClassificationService.Object,
             _logger.Object);
@@ -94,9 +96,9 @@ public sealed class GetHealthWorkspaceProductSummaryQueryHandlerTests
         _productRepository
             .Setup(repository => repository.GetProductByIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(product);
-        _workItemReadProvider
+        _workItemQuery
             .Setup(provider => provider.GetByRootIdsAsync(
-                It.Is<int[]>(ids => ids.SequenceEqual(new[] { 1000 })),
+                It.Is<IReadOnlyList<int>>(ids => ids.SequenceEqual(new[] { 1000 })),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(items);
 
@@ -125,8 +127,8 @@ public sealed class GetHealthWorkspaceProductSummaryQueryHandlerTests
         var result = await _handler.Handle(new GetHealthWorkspaceProductSummaryQuery(99), CancellationToken.None);
 
         Assert.IsNull(result);
-        _workItemReadProvider.Verify(
-            provider => provider.GetByRootIdsAsync(It.IsAny<int[]>(), It.IsAny<CancellationToken>()),
+        _workItemQuery.Verify(
+            provider => provider.GetByRootIdsAsync(It.IsAny<IReadOnlyList<int>>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 

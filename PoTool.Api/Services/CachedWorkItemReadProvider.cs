@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
@@ -13,13 +12,16 @@ namespace PoTool.Api.Services;
 /// </summary>
 public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
 {
+    private readonly IWorkItemQuery _workItemQuery;
     private readonly PoToolDbContext _dbContext;
     private readonly ILogger<CachedWorkItemReadProvider> _logger;
 
     public CachedWorkItemReadProvider(
+        IWorkItemQuery workItemQuery,
         PoToolDbContext dbContext,
         ILogger<CachedWorkItemReadProvider> logger)
     {
+        _workItemQuery = workItemQuery;
         _dbContext = dbContext;
         _logger = logger;
     }
@@ -30,12 +32,7 @@ public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
     public async Task<IEnumerable<WorkItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("CachedWorkItemReadProvider: Fetching all work items from cache");
-
-        var entities = await _dbContext.WorkItems
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
-
-        return entities.Select(MapToDto);
+        return await _workItemQuery.GetAllAsync(cancellationToken);
     }
 
     /// <summary>
@@ -55,7 +52,7 @@ public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
             .Where(wi => EF.Functions.Like(wi.Title, $"%{filter}%"))
             .ToListAsync(cancellationToken);
 
-        return entities.Select(MapToDto);
+        return entities.Select(WorkItemQueryMapping.MapToDto);
     }
 
     /// <summary>
@@ -65,21 +62,9 @@ public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
     {
         _logger.LogDebug("CachedWorkItemReadProvider: Fetching work items by area paths: {AreaPaths}", 
             string.Join(", ", areaPaths));
-
-        if (areaPaths == null || areaPaths.Count == 0)
-        {
-            return Enumerable.Empty<WorkItemDto>();
-        }
-
-        // Build query for hierarchical area path matching
-        var query = _dbContext.WorkItems.AsNoTracking();
-        
-        // Filter by area paths (any that start with the specified paths)
-        var entities = await query
-            .Where(wi => areaPaths.Any(ap => wi.AreaPath.StartsWith(ap)))
-            .ToListAsync(cancellationToken);
-
-        return entities.Select(MapToDto);
+        return areaPaths == null
+            ? Array.Empty<WorkItemDto>()
+            : await _workItemQuery.GetByAreaPathsAsync(areaPaths, cancellationToken);
     }
 
     /// <summary>
@@ -94,7 +79,7 @@ public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
             .OrderBy(wi => wi.TfsId)
             .FirstOrDefaultAsync(wi => wi.TfsId == tfsId, cancellationToken);
 
-        return entity != null ? MapToDto(entity) : null;
+        return entity != null ? WorkItemQueryMapping.MapToDto(entity) : null;
     }
 
     /// <summary>
@@ -104,90 +89,15 @@ public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
     {
         _logger.LogDebug("CachedWorkItemReadProvider: Fetching work items by root IDs: {RootIds}", 
             string.Join(", ", rootWorkItemIds));
-
         if (rootWorkItemIds == null || rootWorkItemIds.Length == 0)
         {
             _logger.LogWarning("CachedWorkItemReadProvider: No root work item IDs provided, returning empty collection");
-            return Enumerable.Empty<WorkItemDto>();
+            return Array.Empty<WorkItemDto>();
         }
 
-        // Load all work items from cache (cache is already filtered during sync)
-        var allEntities = await _dbContext.WorkItems
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
-
-        // Build a set of TfsIds to include (roots + all descendants)
-        var includedIds = new HashSet<int>(rootWorkItemIds);
-        var entityLookup = allEntities.ToDictionary(e => e.TfsId);
-        
-        // Find all descendants iteratively
-        bool changed;
-        do
-        {
-            changed = false;
-            foreach (var entity in allEntities)
-            {
-                if (entity.ParentTfsId.HasValue && 
-                    includedIds.Contains(entity.ParentTfsId.Value) && 
-                    !includedIds.Contains(entity.TfsId))
-                {
-                    includedIds.Add(entity.TfsId);
-                    changed = true;
-                }
-            }
-        } while (changed);
-
-        // Filter and return
-        var result = allEntities
-            .Where(e => includedIds.Contains(e.TfsId))
-            .Select(MapToDto)
-            .ToList();
-
-        _logger.LogDebug("CachedWorkItemReadProvider: Found {Count} work items for roots {RootIds}", 
+        var result = await _workItemQuery.GetByRootIdsAsync(rootWorkItemIds, cancellationToken);
+        _logger.LogDebug("CachedWorkItemReadProvider: Found {Count} work items for roots {RootIds}",
             result.Count, string.Join(", ", rootWorkItemIds));
-
         return result;
-    }
-
-    private static WorkItemDto MapToDto(Persistence.Entities.WorkItemEntity entity)
-    {
-        List<WorkItemRelation>? relations = null;
-        if (!string.IsNullOrEmpty(entity.Relations))
-        {
-            try
-            {
-                relations = System.Text.Json.JsonSerializer.Deserialize<List<WorkItemRelation>>(entity.Relations);
-            }
-            catch (System.Text.Json.JsonException)
-            {
-                // Ignore deserialization errors
-            }
-        }
-
-        return new WorkItemDto(
-            TfsId: entity.TfsId,
-            Type: entity.Type,
-            Title: entity.Title,
-            ParentTfsId: entity.ParentTfsId,
-            AreaPath: entity.AreaPath,
-            IterationPath: entity.IterationPath,
-            State: entity.State,
-            RetrievedAt: entity.RetrievedAt,
-            Effort: entity.Effort,
-            Description: entity.Description,
-            CreatedDate: entity.CreatedDate,
-            ClosedDate: entity.ClosedDate,
-            Severity: entity.Severity,
-            Tags: entity.Tags,
-            IsBlocked: entity.IsBlocked,
-            Relations: relations,
-            ChangedDate: entity.TfsChangedDate,
-            BusinessValue: entity.BusinessValue,
-            BacklogPriority: entity.BacklogPriority,
-            StoryPoints: entity.StoryPoints,
-            TimeCriticality: entity.TimeCriticality,
-            ProjectNumber: entity.ProjectNumber,
-            ProjectElement: entity.ProjectElement
-        );
     }
 }

@@ -14,18 +14,18 @@ namespace PoTool.Api.Handlers.WorkItems;
 /// </summary>
 public sealed class GetAllWorkItemsQueryHandler : IQueryHandler<GetAllWorkItemsQuery, IEnumerable<WorkItemDto>>
 {
-    private readonly IWorkItemReadProvider _workItemReadProvider;
+    private readonly IWorkItemQuery _workItemQuery;
     private readonly ProfileFilterService _profileFilterService;
     private readonly IProductRepository _productRepository;
     private readonly ILogger<GetAllWorkItemsQueryHandler> _logger;
 
     public GetAllWorkItemsQueryHandler(
-        IWorkItemReadProvider workItemReadProvider,
+        IWorkItemQuery workItemQuery,
         ProfileFilterService profileFilterService,
         IProductRepository productRepository,
         ILogger<GetAllWorkItemsQueryHandler> logger)
     {
-        _workItemReadProvider = workItemReadProvider;
+        _workItemQuery = workItemQuery;
         _profileFilterService = profileFilterService;
         _productRepository = productRepository;
         _logger = logger;
@@ -52,7 +52,7 @@ public sealed class GetAllWorkItemsQueryHandler : IQueryHandler<GetAllWorkItemsQ
             {
                 _logger.LogInformation("Loading work items hierarchically from {Count} product roots: {RootIds}",
                     rootIds.Length, string.Join(", ", rootIds));
-                return await _workItemReadProvider.GetByRootIdsAsync(rootIds, cancellationToken);
+                return await _workItemQuery.GetByRootIdsAsync(rootIds, cancellationToken);
             }
         }
 
@@ -64,9 +64,9 @@ public sealed class GetAllWorkItemsQueryHandler : IQueryHandler<GetAllWorkItemsQ
         {
             _logger.LogDebug("Filtering work items by active profile area paths: {AreaPaths}",
                 string.Join(", ", profileAreaPaths));
-            return await _workItemReadProvider.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
+            return await _workItemQuery.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
         }
 
-        return await _workItemReadProvider.GetAllAsync(cancellationToken);
+        return await _workItemQuery.GetAllAsync(cancellationToken);
     }
 }
