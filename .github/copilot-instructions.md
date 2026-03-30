@@ -33,6 +33,9 @@ Before producing any output, you MUST load, understand, and apply:
 8. UI Loading rules
    `docs/UI_LOADING_RULES.md`
 
+9. Documentation governance
+   Apply the repository-wide documentation rules defined below.
+
 10. Release notes discipline  
    `docs/PROCESS_RULES.md` §14
 
@@ -85,6 +88,34 @@ This verification is mandatory and MUST NOT be mentioned in the output.
   - wait for instruction before choosing
 
 When uncertain, stop.
+
+If clarification is required, collect all blocking questions first and ask them together in a single response instead of one-by-one.
+
+---
+
+## 3A. Documentation governance (hard)
+
+Repository documentation governance is enforced strictly.
+
+- Markdown files under `docs/` must live only in these canonical folders:
+  - `architecture`
+  - `analysis`
+  - `reports`
+  - `audits`
+  - `history`
+  - `archive`
+  - `user`
+  - `rules`
+  - `plans`
+  - `reviews`
+- `docs/README.md` is the only markdown file allowed at the `docs/` root.
+- Markdown filenames under `docs/` must use lowercase kebab-case.
+- Active documentation must not be stored under `docs/archive`.
+- Historical material belongs under `docs/history` or `docs/archive`, not in active canonical folders.
+- When moving or renaming documentation, all affected links and references must be updated in the same change.
+- Do not create markdown report, analysis, or planning files unless the user explicitly requests a specific markdown file or an existing canonical repository document must be updated.
+
+If documentation governance cannot be satisfied without clarification, batch all blocking questions together before asking.
 
 ---
 
