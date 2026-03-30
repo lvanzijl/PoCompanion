@@ -273,6 +273,24 @@ Result:
 
 Final full validation was then run after implementation and documentation updates.
 
+```bash
+dotnet build PoTool.sln --configuration Release --no-restore --nologo
+dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --configuration Release --no-build --nologo -v minimal
+dotnet test PoTool.Core.Domain.Tests/PoTool.Core.Domain.Tests.csproj --configuration Release --no-build --nologo -v minimal
+```
+
+Result:
+
+- Release build succeeded
+- `PoTool.Tests.Unit`: 1711 passed
+- `PoTool.Core.Domain.Tests`: 1 passed
+
+## Security Summary
+
+- `code_review` reported no review comments
+- `codeql_checker` reported no alerts, but the C# database scan was skipped because the database size was too large
+- no localized vulnerabilities were identified in the changed Goal Hierarchy query-boundary code
+
 ## Risks / Deferred Areas
 
 ### Remaining deferred area
