@@ -509,7 +509,7 @@ Specific consequence:
 Resolved decision:
 
 - readiness scoring is **not blocked** by structural-integrity findings
-- readiness scoring is **not derived from validator suppression**
+- readiness scoring is **not derived from rule suppression**
 - readiness scoring **does share the same canonical semantics** as refinement and implementation readiness
 
 Therefore:

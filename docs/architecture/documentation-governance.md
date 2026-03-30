@@ -73,7 +73,7 @@ Belongs here:
 - superseded historical documents
 - experiment residue retained only for traceability
 
-`docs/archive/legacy-revision-ingestion/` is reserved for legacy revision-ingestion artifacts only and must not contain active guidance.
+Archive subfolders must remain single-purpose, traceability-only domains and must not contain active guidance.
 
 ### `docs/rules/`
 

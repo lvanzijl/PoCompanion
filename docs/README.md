@@ -15,6 +15,6 @@ This repository uses the following canonical documentation structure:
 - Active plans: `docs/implementation/`
 - Analysis and audits: `docs/analysis/`
 - Task reports: `docs/reports/`
-- Legacy ingestion history: `docs/archive/legacy-revision-ingestion/`
+- Archive history: `docs/archive/`
 
 Historical notes remain in `docs/archive/` and selected `docs/analysis/` documents where a dated audit still has traceability value.

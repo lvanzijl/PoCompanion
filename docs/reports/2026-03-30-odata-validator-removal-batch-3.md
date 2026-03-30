@@ -49,7 +49,7 @@
 - Files archived (with paths):
   - `docs/analysis/tfs-access-boundary-verification.md`
   - `docs/analysis/tfs-access-boundary-sealed.md`
-  - `docs/archive/legacy-revision-ingestion/odata-ingestion-fix-plan.md`
+  - `docs/archive/revision-ingestion/odata-ingestion-fix-plan.md`
 - Updated path/reference cleanup in:
   - `docs/analysis/relic-audit/documentation-reorganization-report.md`
   - `docs/reports/2026-03-30-documentation-migration-batch-1.md`
@@ -62,7 +62,7 @@
 ## 5. Residual references (if any)
 - Historical OData references remain in EF Core migrations and migration designer files under `PoTool.Api/Migrations/`.
   - These were intentionally kept as migration history and not edited.
-- Historical validator/OData discussion remains in some analysis and archive markdown files under `docs/analysis/**` and `docs/archive/legacy-revision-ingestion/**`.
+- Historical validator/OData discussion remains in some analysis and archive markdown files under `docs/analysis/**` and `docs/archive/revision-ingestion/**`.
   - These are retained as traceability/history, not active implementation guidance.
 
 ## 6. Risks / uncertainties

@@ -66,7 +66,7 @@ All of the above passed in the current checkout, so this report treats candidate
 | `DropLegacyODataColumns` migration | `PoTool.Api/Migrations/20260225173702_DropLegacyODataColumns.cs` | Historical only | Confirms old explicit OData config columns were intentionally removed from persisted config | Keep because migration history |
 | `docs/reports/odata-validator-vs-ingestion-report.md` | Report | **Not connected** | Describes deleted classes as active | Archive/history |
 | `docs/investigations/revision-ingestion-api-vs-validator-odata-divergence.md` | Investigation | **Not connected** | Same stale OData runtime narrative | Archive/history |
-| `docs/archive/legacy-revision-ingestion/odata-ingestion-fix-plan.md` | Report/plan | **Not connected** | Follow-up plan for deleted ingestion components | Archive/history |
+| `docs/archive/revision-ingestion/odata-ingestion-fix-plan.md` | Report/plan | **Not connected** | Follow-up plan for deleted ingestion components | Archive/history |
 | `docs/reports/revision-ingestor-v2.md` | Design note | **Not connected** | Documents a V2 ingestor that was never completed and is no longer wired | Archive |
 | `docs/reviews/RealRevisionTfsClient_Pagination_Review.md` | Review report | **Not connected** | Reviews removed classes and a removed pipeline stage | Archive |
 | `docs/reports/sprint-trends-vs-revisions-report.md` | Engineering report | **Not connected** | Still treats revision DB tables as active dependencies | Archive |
@@ -99,7 +99,7 @@ All of the above passed in the current checkout, so this report treats candidate
 | `FIXES_APPLIED.md` | No | Work log for a completed audit cycle | `docs/history/code-quality/` |
 | `NON_TEST_ISSUES_ANALYSIS.md` | No | Time-bound follow-up analysis | `docs/history/code-quality/` |
 | `WORK_COMPLETED.md` | No | Duplicate completion summary for the same audit cycle | `docs/archive/code-quality/` |
-| `REPORT.md` | No | Generic name; stale revision-cache design; strongly misleading in root | `docs/archive/legacy-revision-ingestion/` |
+| `REPORT.md` | No | Generic name; stale revision-cache design; strongly misleading in root | `docs/archive/revision-ingestion/` |
 | `VALIDATION_SYSTEM_REPORT.md` | Probably not | Content is still useful, but root placement makes it look like a transient report instead of architecture documentation | `docs/architecture/` |
 | `VALIDATORS_IMPLEMENTATION.md` | No | Time-bound implementation summary, not canonical architecture | `docs/history/validation/` |
 | `SWEPO_REVIEW_REPORT.md` | **Conditional** | Suspicious by default, but there is a strong current reason: `prompts/seniorswe_and_seniorpo_review` hardcodes this root filename | Keep for now, or move to `docs/reviews/` only together with prompt update |
@@ -155,7 +155,7 @@ All of the above passed in the current checkout, so this report treats candidate
 - Move `VALIDATION_SYSTEM_REPORT.md` to `docs/architecture`
 - Move `docs/Reports/SprintAttributionAnalysis.md` to `docs/reports`
 - Move `docs/audit/cdc-full-quality-audit.md` to `docs/audits`
-- Archive stale OData/revision-ingestion reports under `docs/archive/legacy-revision-ingestion/`:
+- Archive stale OData/revision-ingestion reports under `docs/archive/revision-ingestion/`:
   - `docs/reports/revision-ingestor-v2.md`
   - `docs/reports/odata-validator-vs-ingestion-report.md`
   - `docs/investigations/revision-ingestion-api-vs-validator-odata-divergence.md`
@@ -203,10 +203,10 @@ Recommended target structure:
 | `REPORT.md` | `docs/analysis/cache-insights-and-validation-report.md` |
 | `docs/Reports/SprintAttributionAnalysis.md` | `docs/reports/2026-03-30-sprint-attribution-analysis.md` |
 | `docs/audit/cdc-full-quality-audit.md` | `docs/analysis/cdc-full-quality-audit.md` |
-| `docs/reports/revision-ingestor-v2.md` | `docs/archive/legacy-revision-ingestion/revision-ingestor-v2.md` |
-| `docs/reports/odata-validator-vs-ingestion-report.md` | `docs/archive/legacy-revision-ingestion/odata-validator-vs-ingestion-report.md` |
-| `docs/investigations/revision-ingestion-api-vs-validator-odata-divergence.md` | `docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md` |
-| `docs/reviews/RealRevisionTfsClient_Pagination_Review.md` | `docs/archive/legacy-revision-ingestion/real-revision-tfsclient-pagination-review.md` |
+| `docs/reports/revision-ingestor-v2.md` | `docs/archive/revision-ingestion/revision-ingestor-v2.md` |
+| `docs/reports/odata-validator-vs-ingestion-report.md` | `docs/archive/revision-ingestion/odata-validator-vs-ingestion-report.md` |
+| `docs/investigations/revision-ingestion-api-vs-validator-odata-divergence.md` | `docs/archive/revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md` |
+| `docs/reviews/RealRevisionTfsClient_Pagination_Review.md` | `docs/archive/revision-ingestion/real-revision-tfsclient-pagination-review.md` |
 | `docs/reports/sprint-trends-vs-revisions-report.md` | `docs/analysis/sprint-trends-vs-revisions-report.md` |
 | `docs/GEBRUIKERSHANDLEIDING.md` | `docs/architecture/gebruikershandleiding.md` |
 | `SWEPO_REVIEW_REPORT.md` | `docs/reports/2026-03-30-swepo-review-report.md` **only if** `prompts/seniorswe_and_seniorpo_review` is updated in the same change |

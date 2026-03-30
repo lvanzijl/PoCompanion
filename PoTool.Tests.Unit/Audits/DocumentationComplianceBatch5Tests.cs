@@ -100,7 +100,7 @@ public sealed class DocumentationComplianceBatch5Tests
     public void DocumentationCompliance_LegacyRevisionIngestionArchiveContainsOnlyApprovedArtifacts()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var archiveRoot = Path.Combine(repositoryRoot, "docs", "archive", "legacy-revision-ingestion");
+        var archiveRoot = Path.Combine(repositoryRoot, "docs", "archive", "revision-ingestion");
 
         var files = Directory
             .EnumerateFiles(archiveRoot, "*.md", SearchOption.TopDirectoryOnly)

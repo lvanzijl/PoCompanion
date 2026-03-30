@@ -81,7 +81,7 @@ private ValidationCategory? GetCategoryFromRuleId(string? ruleId)
 **Hypothesis:**
 - Validation rules might not be generating issues with RR-* or RC-* rule IDs
 - Or validation issues exist but don't have RuleId set (legacy format)
-- Or WorkItemValidator is not running these categories
+- Or the work-item rule engine is not running these categories
 
 **Need to verify:**
 - Are ValidationIssues being created with proper RuleId values?

@@ -27,7 +27,7 @@ CI investigation note:
 |---|---|---|
 | `GetWorkItemsByRootIdsAsync_CompletesAncestors_WhenRootHasParents` | Test fixture still modeled the old multi-query descendant traversal, while the client now uses one recursive WIQL query and then relation inspection for ancestor discovery. | Both: code + test |
 | `GetWorkItemsByRootIdsAsync_HandlesItemsWithMissingRelations` | Ancestor completion needed to tolerate relation-expansion payloads that omit `relations` and log the diagnostic instead of failing the hierarchy pass. | Code |
-| `SanitizeFilter_RemovesSQLInjectionAttempts` | Test assertion expected containment using reversed MSTest argument order instead of matching the actual sanitized string returned by `InputValidator.SanitizeFilter`. | Test |
+| `SanitizeFilter_RemovesSQLInjectionAttempts` | Test assertion expected containment using reversed MSTest argument order instead of matching the actual sanitized string returned by the input-sanitization helper. | Test |
 | `Handle_CallsTfsClientWithNullDepth` | Handler passed hardcoded `depth: 5` even though the contract/test expects `null` depth to fetch all levels. | Code |
 | `BuildQualityMissingIngestionBuild168570CodeAnalysisReport_ReportExistsWithRequiredSectionsAndDiagnosis` | Audit document wording drifted from the strict test expectation (`"Line" / "Lines"` vs `"Line" or "Lines"`). | Documentation |
 | `CdcUsageCoverage_AuditClaimsMatchCurrentHandlerAnchors` | Audit anchor expected an older epic-forecast handler call shape (`new GetSprintMetricsQuery(path)`) while the current handler now builds `GetSprintMetricsQuery` with `SprintEffectiveFilter`. | Test |

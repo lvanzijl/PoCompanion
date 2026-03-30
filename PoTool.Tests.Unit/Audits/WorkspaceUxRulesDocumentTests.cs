@@ -16,7 +16,9 @@ public sealed class WorkspaceUxRulesDocumentTests
         var mirror = File.ReadAllText(mirrorPath);
         var authoritative = File.ReadAllText(authoritativePath);
 
-        Assert.AreEqual("# \n", mirror, "The docs/rules mirror should contain the exact Batch 2 template.");
+        StringAssert.Contains(mirror, "No semantic interpretation is allowed.");
+        StringAssert.Contains(mirror, "Historical leakage");
+        StringAssert.Contains(mirror, "../../.github/copilot-instructions.md");
         StringAssert.Contains(authoritative, "### 12.4 Workspace rules");
         StringAssert.Contains(authoritative, "Navigation workspaces use static tiles and should not require heavy hub-entry data loading.");
         StringAssert.Contains(authoritative, "Signal workspaces may expose dynamic signal tiles only when the runtime signal is meaningful and independently loaded.");

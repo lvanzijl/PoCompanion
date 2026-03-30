@@ -229,10 +229,10 @@ Per the binding clarification, the date-prefixed `YYYY-MM-DD-...` rule applies o
 
 | Path | Classification | Notes |
 |---|---|---|
-| `docs/archive/legacy-revision-ingestion/odata-ingestion-fix-plan.md` | `archive` | Archived in Batch 3 because the OData ingestion experiment was removed. |
-| `docs/archive/legacy-revision-ingestion/odata-validator-vs-ingestion-report.md` | `archive` | Already archived legacy ingestion analysis; leave as archived residue. |
-| `docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md` | `archive` | Already archived divergence analysis; keep archived. |
-| `docs/archive/legacy-revision-ingestion/revision-ingestor-v2.md` | `archive` | Legacy revision-ingestion design artifact; keep archived. |
+| `docs/archive/revision-ingestion/odata-ingestion-fix-plan.md` | `archive` | Archived in Batch 3 because the OData ingestion experiment was removed. |
+| `docs/archive/revision-ingestion/odata-validator-vs-ingestion-report.md` | `archive` | Already archived legacy ingestion analysis; leave as archived residue. |
+| `docs/archive/revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md` | `archive` | Already archived divergence analysis; keep archived. |
+| `docs/archive/revision-ingestion/revision-ingestor-v2.md` | `archive` | Legacy revision-ingestion design artifact; keep archived. |
 | `docs/archive/validation/validators-implementation-2026-01-30.md` | `unclear` | Historical validator implementation summary; keep as history until a dedicated validator cleanup batch decides whether it still adds value. |
 
 ## 7. .github candidates

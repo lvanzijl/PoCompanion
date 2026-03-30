@@ -49,7 +49,7 @@ The current TFS data access follows a dual-mode pattern:
 | Work Items | `IWorkItemReadProvider` | Core contract | `LiveWorkItemReadProvider` (TFS direct) |
 | Pull Requests | `IPullRequestReadProvider` | Core contract | `LivePullRequestReadProvider` (TFS direct) |
 | Pipelines | `IPipelineReadProvider` | Core contract | `LivePipelineReadProvider` (TFS direct) |
-| Validations | `IHierarchicalWorkItemValidator` | Core contract | Computed at query time |
+| Validations | Hierarchical rule-evaluation contract | Core contract | Computed at query time |
 | Metrics | `GetProductMetricsQuery` | Core query | Computed at query time |
 
 **Current Workspace Data Paths:**
@@ -328,7 +328,7 @@ A single sync run MUST execute the following stages **in order**:
 | 1 | `SyncWorkItems` | Fetch work items from TFS for ProductOwner's product roots |
 | 2 | `SyncPullRequests` | Fetch pull requests from TFS for linked repositories |
 | 3 | `SyncPipelines` | Fetch pipeline runs from TFS for linked pipeline definitions |
-| 4 | `ComputeValidations` | Run hierarchical validators on cached work items |
+| 4 | `ComputeValidations` | Run the hierarchical rule engine on cached work items |
 | 5 | `ComputeMetrics` | Calculate metrics from cached data |
 | 6 | `FinalizeCache` | Update cache state, watermarks, counts, timestamps |
 
@@ -416,7 +416,7 @@ Progress: {fetched}/{total} runs from {current}/{total} pipelines
 
 **Inputs:**
 - All cached `WorkItemEntity` records for ProductOwner
-- Validation rules from `IHierarchicalWorkItemValidator`
+- Validation rules from the hierarchical rule-evaluation contract
 
 **Operations:**
 1. Build work item tree from cached entities

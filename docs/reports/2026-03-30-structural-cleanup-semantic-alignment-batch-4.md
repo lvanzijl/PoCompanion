@@ -18,7 +18,7 @@
 - added historical-state notes to analysis documents that still discuss pre-Batch-3 residue
 
 ## 4. Archive cleanup
-- kept only OData/validator legacy-ingestion artifacts in `docs/archive/legacy-revision-ingestion/`
+- kept only OData/validator legacy-ingestion artifacts in `docs/archive/revision-ingestion/`
 - moved unrelated boundary/cache/sprint-trend documents out of that archive subtree into active canonical folders
 
 ## 5. Test and reference updates
@@ -27,7 +27,7 @@
 
 ## 6. Residual references
 - historical path references remain inside some analysis and dated report documents where they are part of the retained audit trail
-- `docs/archive/experiments/` and `docs/archive/code-quality/` remain as non-active historical archives outside the legacy revision-ingestion subtree
+- `former docs/archive/experiments placeholder/` and `docs/archive/code-quality/` remain as non-active historical archives outside the legacy revision-ingestion subtree
 
 ## 7. Risks / uncertainties
 - the strict Batch 4 folder model compresses several former categories into broader buckets, so a few documents now live in the closest canonical folder rather than a purpose-built category

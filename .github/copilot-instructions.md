@@ -14,6 +14,9 @@ You MUST apply every rule in this file to every response, proposal, refactor, re
 - Do not treat any other rule document as authoritative.
 - `docs/rules/` exists only as a mirror for humans.
 - If a mirrored rule file conflicts with this file, this file wins.
+- No semantic interpretation is allowed when enforcing repository rules.
+- If a rule requires zero occurrences, zero is absolute.
+- If a violation is found, it MUST be fixed, not justified.
 - If any instruction set conflicts, is ambiguous, or cannot be satisfied, stop and ask for clarification unless the active user prompt explicitly resolves the conflict.
 
 ---
@@ -69,6 +72,9 @@ Repository documentation governance is enforced strictly.
 - When moving or renaming documentation, update all affected links and references in the same change.
 - Do not create markdown report, analysis, or planning files unless the user explicitly requests a specific markdown file or an existing canonical repository document must be updated.
 - `docs/rules/` is a mirror only; do not treat it as the source of truth.
+- Historical leakage means active documentation preserves superseded semantics, removed terminology, or archive-only narratives as if they still guide current work.
+- Active documentation means any markdown outside `docs/archive/**` that describes current architecture, implementation, process, user guidance, or working agreements.
+- Archive-only content means superseded material retained only for traceability under `docs/archive/**`; it must never be treated as current guidance.
 
 If documentation governance cannot be satisfied without clarification, batch all blocking questions together before asking.
 

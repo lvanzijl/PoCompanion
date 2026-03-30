@@ -2,28 +2,28 @@
 
 ## Overview
 
-The PoCompanion validation system uses a **hierarchical validation system** as the primary engine
-for all rule-based checks. The `HierarchicalToLegacyValidatorAdapter` bridges hierarchical validation
-results into the `IWorkItemValidator` query surface.
+The PoCompanion validation system uses a **hierarchical rule-evaluation system** as the primary engine
+for all rule-based checks. The hierarchical-to-legacy compatibility adapter bridges hierarchical validation
+results into the legacy compatibility query surface.
 
 ### Architecture
 
 ```
-IWorkItemValidator (HierarchicalToLegacyValidatorAdapter)
-└── IHierarchicalWorkItemValidator (HierarchicalWorkItemValidator)
+Legacy compatibility query surface
+└── Hierarchical rule-evaluation contract
         ├── SI rules: SI-1, SI-2, SI-3
         ├── RR rules: RR-1, RR-2, RR-3
         └── RC rules: RC-1, RC-2, RC-3
 ```
 
-`IWorkItemValidator` is consumed by:
+The legacy compatibility query surface is consumed by:
 - `GetAllWorkItemsWithValidationQueryHandler` (powers ValidationQueue and Fix Session pages)
 - `GetValidationViolationHistoryQueryHandler`
 - `GetValidationImpactAnalysisQueryHandler`
 - `GetWorkItemByIdWithValidationQueryHandler`
 - `SyncChangesSummaryService`
 
-`IHierarchicalWorkItemValidator` is also consumed directly by:
+The hierarchical rule-evaluation contract is also consumed directly by:
 - `GetBacklogHealthQueryHandler` (health metrics)
 - `GetMultiIterationBacklogHealthQueryHandler` (health metrics)
 - `ValidationComputeStage` (sync pipeline, stores `CachedValidationResults` indicators)
@@ -234,22 +234,22 @@ Rules skip work items in terminal states (Done/Removed) unless the rule explicit
 **Symptom**: The Validation Queue and Fix Session pages showed no SI, RR, or RC violations.
 Health cards showed counts but clicking through showed empty queues.
 
-**Root Cause**: `GetAllWorkItemsWithValidationQueryHandler` used only `IWorkItemValidator`
-(the legacy composite validator), which only ran a now-removed legacy validator. The
+**Root Cause**: `GetAllWorkItemsWithValidationQueryHandler` used only the legacy compatibility query surface
+(the legacy composite rule component), which only ran a now-removed legacy rule component. The
 hierarchical rules were only used in health/metrics endpoints.
 
-**Fix**: Introduced `HierarchicalToLegacyValidatorAdapter` which implements `IWorkItemValidator`
-by delegating to `IHierarchicalWorkItemValidator` and converting `HierarchicalValidationResult`
+**Fix**: Introduced the hierarchical-to-legacy compatibility adapter, which implements the legacy compatibility query surface
+by delegating to the hierarchical rule-evaluation contract and converting `HierarchicalValidationResult`
 violations to `ValidationIssue` objects.
 
-### Bug: RuleId Collision on Legacy Validator
+### Bug: RuleId Collision on Legacy Rule Component
 **Symptom**: The UI showed "Epic must have at least one Feature child" for violations that were
-actually from the legacy validator. Violation counts and descriptions were mixed.
+actually from the legacy rule component. Violation counts and descriptions were mixed.
 
-**Root Cause**: Both `EpicWithoutFeaturesRule` (hierarchical) and the now-removed legacy validator
+**Root Cause**: Both `EpicWithoutFeaturesRule` (hierarchical) and the now-removed legacy rule component
 used the same RuleId `"RR-3"`.
 
-**Fix**: Renamed the legacy validator's RuleId to avoid collision. The legacy validator was
+**Fix**: Renamed the legacy rule component's RuleId to avoid collision. The legacy rule component was
 subsequently removed entirely.
 
 ---

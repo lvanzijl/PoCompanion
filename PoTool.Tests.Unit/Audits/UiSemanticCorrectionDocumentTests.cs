@@ -16,7 +16,9 @@ public sealed class UiSemanticCorrectionDocumentTests
         var mirror = File.ReadAllText(mirrorPath);
         var authoritative = File.ReadAllText(authoritativePath);
 
-        Assert.AreEqual("# \n", mirror, "The docs/rules mirror should contain the exact Batch 2 template.");
+        StringAssert.Contains(mirror, "No semantic interpretation is allowed.");
+        StringAssert.Contains(mirror, "Historical leakage");
+        StringAssert.Contains(mirror, "../../.github/copilot-instructions.md");
         StringAssert.Contains(authoritative, "### 15.3 UI semantics");
         StringAssert.Contains(authoritative, "Story points represent planning and delivery scope.");
         StringAssert.Contains(authoritative, "Effort hours represent engineering workload.");

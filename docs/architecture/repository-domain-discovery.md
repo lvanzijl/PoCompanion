@@ -33,8 +33,8 @@ The analysis focuses on how the code currently interprets:
 | `PoTool.Api/Persistence/Entities/ResolvedWorkItemEntity.cs` | `ResolvedWorkItemEntity` | Cached hierarchy resolution | Stores resolved product, epic, feature, and sprint IDs for each work item; sprint resolution is explicitly based on the current iteration path. |
 | `PoTool.Api/Services/WorkItemResolutionService.cs` | `WorkItemResolutionService` | Product/feature/epic/sprint attribution | Walks backlog roots, resolves epic/feature ancestry by parent chain, and resolves sprint membership by matching `IterationPath` to `SprintEntity.Path`. |
 | `PoTool.Api/Services/WorkItemStateClassificationService.cs` | `WorkItemStateClassificationService` | State semantics | Supplies configurable and default state classifications (`New`, `InProgress`, `Done`, `Removed`) per work item type; many handlers use this as the source of truth for terminal state logic. |
-| `PoTool.Core/WorkItems/Validators/HierarchicalWorkItemValidator.cs` | `HierarchicalWorkItemValidator` | Validation framework | Evaluates validation rules in phases: structural integrity, refinement readiness, refinement completeness, and missing effort. |
-| `PoTool.Core/WorkItems/Validators/Rules/*.cs` | Validation rule classes | Backlog health rules | Implements concrete rule checks such as missing epic/feature descriptions, missing children, missing effort, and invalid parent/child state combinations. |
+| `PoTool.Core/WorkItems/` hierarchical rule engine | Hierarchical rule engine | Validation framework | Evaluates rule phases for structural integrity, refinement readiness, refinement completeness, and missing effort. |
+| `PoTool.Core/WorkItems/` rule classes | Rule classes | Backlog health rules | Implements concrete rule checks such as missing epic/feature descriptions, missing children, missing effort, and invalid parent/child state combinations. |
 | `PoTool.Core/Health/BacklogStateComputationService.cs` | `BacklogStateComputationService` | Planning/readiness scoring | Computes PBI, Feature, and Epic refinement scores and feature ownership states from the loaded work item graph. |
 | `PoTool.Api/Handlers/WorkItems/GetProductBacklogStateQueryHandler.cs` | `GetProductBacklogStateQueryHandler` | Backlog state projection | Builds product backlog state DTOs from hierarchy plus state classifications; removed items are excluded, done items count in scoring but are hidden from display. |
 | `PoTool.Api/Persistence/Entities/ActivityEventLedgerEntryEntity.cs` | `ActivityEventLedgerEntryEntity` | Activity ledger | Stores field-level activity events with timestamp, iteration path, and resolved hierarchy context. |
@@ -310,7 +310,7 @@ Stored activity and reported activity are not identical:
 
 ### Validation framework
 
-The main validation system is the hierarchical validator in `PoTool.Core/WorkItems/Validators`.
+The main validation system is the hierarchical rule engine in `PoTool.Core/WorkItems/`.
 
 Evaluation phases:
 

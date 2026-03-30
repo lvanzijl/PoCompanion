@@ -254,7 +254,7 @@ These tests validate documentation strings and generated-report content, not run
 
 - `PoTool.Tests.Unit.Handlers.GetPipelineInsightsScatterPointTests.Handle_ScatterPoints_OrderedByStartTimeAscending`
 - `PoTool.Tests.Unit.Handlers.GetAreaPathsFromTfsQueryHandlerTests.Handle_CallsTfsClientWithNullDepth`
-- `PoTool.Tests.Unit.Helpers.InputValidatorTests.SanitizeFilter_RemovesSQLInjectionAttempts`
+- `PoTool.Tests.Unit.Helpers.InputSanitizationTests.SanitizeFilter_RemovesSQLInjectionAttempts`
 
 **Failure type / messages:**
 
@@ -292,13 +292,13 @@ This is an explicit implementation/test divergence.
 **Type:** **incorrect test expectation or intentional implementation drift**  
 **Confidence:** **high**
 
-#### 6c. InputValidator SQL-injection sanitization test
+#### 6c. Input-sanitization SQL-injection test
 
 Evidence:
 
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Helpers/InputValidator.cs:26-29`
+- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Helpers/` input-sanitization helper
   - removes disallowed characters `<`, `>`, `;`, `"`, `'`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Helpers/InputValidatorTests.cs:87-94`
+- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Helpers/` input-sanitization tests
   - expects sanitized output to still contain `"test"` and `"DROP"`
 - current failure text shows the actual output collapsed to `"test"`
 

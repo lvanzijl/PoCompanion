@@ -24,7 +24,7 @@ The goal is to simplify the application layer by turning analytics handlers into
 
 #### BacklogQuality
 
-- Current path uses `IHierarchicalWorkItemValidator`, but the handlers still compute blocked-item counts, in-progress counts, grouped summaries, placeholder sprint windows, and trend directions locally.
+- Current path uses the hierarchical rule-evaluation contract, but the handlers still compute blocked-item counts, in-progress counts, grouped summaries, placeholder sprint windows, and trend directions locally.
 - `docs/architecture/cdc-reference.md` already assigns backlog validation findings, readiness scores, and implementation readiness to `BacklogQuality`.
 - Migration priority is medium: the handlers are smaller than the sprint and portfolio consumers, but they still carry compatibility logic that should not keep growing.
 
@@ -146,7 +146,7 @@ Step 4: remove unused helper utilities that were only needed for handler-owned p
 
 - `PoTool.Client/Services/RoadmapAnalyticsService.cs`
   - Remove or reduce `ComputeLocalAnalytics` to pure presentation shaping once the API exposes CDC-backed roadmap scope totals.
-- `IHierarchicalWorkItemValidator` compatibility path used by `GetBacklogHealthQueryHandler` and `GetMultiIterationBacklogHealthQueryHandler`
+- Hierarchical rule-evaluation compatibility path used by `GetBacklogHealthQueryHandler` and `GetMultiIterationBacklogHealthQueryHandler`
   - Collapse the wrapper once handlers can read direct `BacklogQuality` outputs.
 
 ### Duplicated calculators and handler-owned aggregations to remove

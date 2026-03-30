@@ -29,7 +29,7 @@
    - 9.2 [PR Delivery Insights](#92-pr-delivery-insights)
    - 9.3 [Pipeline-inzichten](#93-pipeline-inzichten)
    - 9.4 [Delivery Trends](#94-delivery-trends)
-10. [Planning-werkruimte — Toekomst](#10-planning-werkruimte--toekomst)
+10. [Planning-werkruimte — Toekomst](#10-planning-werkruimte)
     - 10.1 [Afhankelijkheidsoverzicht](#101-afhankelijkheidsoverzicht)
     - 10.2 [Plan Board](#102-plan-board)
     - 10.3 [Product Roadmaps](#103-product-roadmaps)
@@ -110,7 +110,7 @@ Nadat de TFS-verbinding is geconfigureerd, kom je op de profielen-startpagina. H
 - **Profiel selecteren** — klik op een tegel om dat profiel te activeren. Je wordt daarna doorgestuurd naar de Startpagina.
 - **Terugkeer-URL** — als je ergens in de applicatie een pagina bezoekt zonder actief profiel, word je automatisch teruggestuurd naar de profielen-pagina. Na selectie ga je direct naar de oorspronkelijke pagina.
 
-Als er nog geen profielen zijn, ga je eerst naar **Instellingen → Product Owners** om een profiel aan te maken. Zie ook [§12.1 Product Owners beheren](#121-product-owners-beheren).
+Als er nog geen profielen zijn, ga je eerst naar **Instellingen → Product Owners** om een profiel aan te maken. Zie ook [§13.1 Product Owners beheren](#131-product-owners-beheren).
 
 ---
 

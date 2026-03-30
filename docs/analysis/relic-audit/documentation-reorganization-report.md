@@ -94,14 +94,14 @@ docs/architecture/workitem-query-boundary-phase3-goal-hierarchy.md
 docs/archive
 docs/archive/code-quality
 docs/archive/code-quality/work-completed-2026-01-30.md
-docs/archive/experiments
-docs/archive/experiments/.gitkeep
-docs/archive/legacy-revision-ingestion
+former docs/archive/experiments placeholder
+former docs/archive/experiments placeholder/.gitkeep
+docs/archive/revision-ingestion
 docs/analysis/cache-insights-and-validation-report.md
-docs/archive/legacy-revision-ingestion/odata-validator-vs-ingestion-report.md
-docs/archive/legacy-revision-ingestion/real-revision-tfsclient-pagination-review.md
-docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md
-docs/archive/legacy-revision-ingestion/revision-ingestor-v2.md
+docs/archive/revision-ingestion/odata-validator-vs-ingestion-report.md
+docs/archive/revision-ingestion/real-revision-tfsclient-pagination-review.md
+docs/archive/revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md
+docs/archive/revision-ingestion/revision-ingestor-v2.md
 docs/analysis/sprint-trends-vs-revisions-report.md
 docs/audits
 docs/analysis/application-handler-cleanup.md
@@ -289,7 +289,7 @@ docs/implementation/navigation-followup-actions.md
 docs/release-notes.json
 docs/reports
 docs/reports/2026-03-30-ingestion-observability-hardening.md
-docs/archive/legacy-revision-ingestion/odata-ingestion-fix-plan.md
+docs/archive/revision-ingestion/odata-ingestion-fix-plan.md
 docs/reports/2026-03-30-sprint-attribution-analysis.md
 docs/reports/2026-03-30-sprint-trends-current-state-analysis.md
 docs/reviews
@@ -333,10 +333,10 @@ docs/architecture/gebruikershandleiding.md
 - `VALIDATION_SYSTEM_REPORT.md` → `docs/architecture/validation-system-report.md`
 - `WORK_COMPLETED.md` → `docs/archive/code-quality/work-completed-2026-01-30.md`
 - `REPORT.md` → `docs/analysis/cache-insights-and-validation-report.md`
-- `docs/reports/odata-validator-vs-ingestion-report.md` → `docs/archive/legacy-revision-ingestion/odata-validator-vs-ingestion-report.md`
-- `docs/reviews/RealRevisionTfsClient_Pagination_Review.md` → `docs/archive/legacy-revision-ingestion/real-revision-tfsclient-pagination-review.md`
-- `docs/investigations/revision-ingestion-api-vs-validator-odata-divergence.md` → `docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md`
-- `docs/reports/revision-ingestor-v2.md` → `docs/archive/legacy-revision-ingestion/revision-ingestor-v2.md`
+- `docs/reports/odata-validator-vs-ingestion-report.md` → `docs/archive/revision-ingestion/odata-validator-vs-ingestion-report.md`
+- `docs/reviews/RealRevisionTfsClient_Pagination_Review.md` → `docs/archive/revision-ingestion/real-revision-tfsclient-pagination-review.md`
+- `docs/investigations/revision-ingestion-api-vs-validator-odata-divergence.md` → `docs/archive/revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md`
+- `docs/reports/revision-ingestor-v2.md` → `docs/archive/revision-ingestion/revision-ingestor-v2.md`
 - `docs/reports/sprint-trends-vs-revisions-report.md` → `docs/analysis/sprint-trends-vs-revisions-report.md`
 - `docs/audit/cdc-full-quality-audit.md` → `docs/analysis/cdc-full-quality-audit.md`
 - `CODE_AUDIT_REPORT.md` → `docs/archive/code-quality/code-audit-report-2026-01-30.md`
@@ -351,10 +351,10 @@ docs/architecture/gebruikershandleiding.md
 ## 4. Files archived
 - `docs/archive/code-quality/work-completed-2026-01-30.md`
 - `docs/analysis/cache-insights-and-validation-report.md`
-- `docs/archive/legacy-revision-ingestion/odata-validator-vs-ingestion-report.md`
-- `docs/archive/legacy-revision-ingestion/real-revision-tfsclient-pagination-review.md`
-- `docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md`
-- `docs/archive/legacy-revision-ingestion/revision-ingestor-v2.md`
+- `docs/archive/revision-ingestion/odata-validator-vs-ingestion-report.md`
+- `docs/archive/revision-ingestion/real-revision-tfsclient-pagination-review.md`
+- `docs/archive/revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md`
+- `docs/archive/revision-ingestion/revision-ingestor-v2.md`
 - `docs/analysis/sprint-trends-vs-revisions-report.md`
 
 ## 5. Updated references
@@ -387,5 +387,5 @@ docs/architecture/gebruikershandleiding.md
 
 ## 8. Remaining issues
 - `docs/analysis/relic-audit/repository-relic-audit.md` intentionally still contains pre-reorganization paths as historical audit evidence and move mappings.
-- `docs/archive/experiments/.gitkeep` was added only to preserve the required empty folder in git.
+- `former docs/archive/experiments/.gitkeep` was added only to preserve the required empty folder in git.
 - No behavioral code changes were made; the only non-doc source edits were path/comment updates needed to keep prompts, tests, and repository references consistent with the new documentation structure.

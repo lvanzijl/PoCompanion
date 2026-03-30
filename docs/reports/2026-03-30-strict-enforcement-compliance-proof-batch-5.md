@@ -28,7 +28,7 @@ Markdown inventory after Batch 5 enforcement:
 ## Semantic compliance
 - Active folders (`docs/architecture`, `docs/implementation`, `docs/rules`) were rescanned for deprecated OData / validator-tooling / deprecated-ingestion terminology
 - No remaining active-folder semantic hits were found after enforcement
-- `docs/archive/legacy-revision-ingestion/` contains only approved legacy revision-ingestion artifacts:
+- `docs/archive/revision-ingestion/` contains only approved legacy revision-ingestion artifacts:
   - `odata-ingestion-fix-plan.md`
   - `odata-validator-vs-ingestion-report.md`
   - `real-revision-tfsclient-pagination-review.md`

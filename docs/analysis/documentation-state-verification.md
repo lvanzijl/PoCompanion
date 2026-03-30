@@ -84,8 +84,8 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 | `docs/architecture/validation-system-report.md` | `architecture` | `reports` | Document title/content are report-style current-state findings, not durable architecture reference. |
 | `docs/archive/code-quality/work-completed-2026-01-30.md` | `archive` | `audits` | Archived location does not match the document title/content; either the file needs a dated archive name or its content still reads as active material. |
 | `docs/analysis/cache-insights-and-validation-report.md` | `archive` | `reports` | Archived location does not match the document title/content; either the file needs a dated archive name or its content still reads as active material. |
-| `docs/archive/legacy-revision-ingestion/odata-validator-vs-ingestion-report.md` | `archive` | `reports` | Archived location does not match the document title/content; either the file needs a dated archive name or its content still reads as active material. |
-| `docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md` | `archive` | `analysis` | Inferred purpose is exploratory analysis or investigation; governance expects docs/analysis. |
+| `docs/archive/revision-ingestion/odata-validator-vs-ingestion-report.md` | `archive` | `reports` | Archived location does not match the document title/content; either the file needs a dated archive name or its content still reads as active material. |
+| `docs/archive/revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md` | `archive` | `analysis` | Inferred purpose is exploratory analysis or investigation; governance expects docs/analysis. |
 | `docs/analysis/sprint-trends-vs-revisions-report.md` | `archive` | `reports` | Archived location does not match the document title/content; either the file needs a dated archive name or its content still reads as active material. |
 | `docs/reports/2026-03-30-cleanup-phase1-client-reachability-report.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
 | `docs/reports/2026-03-30-cleanup-phase2-endpoint-usage-report.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
@@ -157,17 +157,17 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
   - `features`: **15** naming violations
   - `docs/domain`: **12** naming violations
   - `docs/domain/rules`: **7** naming violations
-  - `docs/archive/legacy-revision-ingestion`: **6** naming violations
+  - `docs/archive/revision-ingestion`: **6** naming violations
   - `.github`: **1** naming violations
   - `docs/architecture`: **1** naming violations
   - `docs/exploration`: **1** naming violations
   - `docs/filters`: **1** naming violations
 - Required-date violations (historical/archive files missing dates):
   - `docs/analysis/cache-insights-and-validation-report.md`
-  - `docs/archive/legacy-revision-ingestion/odata-validator-vs-ingestion-report.md`
-  - `docs/archive/legacy-revision-ingestion/real-revision-tfsclient-pagination-review.md`
-  - `docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md`
-  - `docs/archive/legacy-revision-ingestion/revision-ingestor-v2.md`
+  - `docs/archive/revision-ingestion/odata-validator-vs-ingestion-report.md`
+  - `docs/archive/revision-ingestion/real-revision-tfsclient-pagination-review.md`
+  - `docs/archive/revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md`
+  - `docs/archive/revision-ingestion/revision-ingestor-v2.md`
   - `docs/analysis/sprint-trends-vs-revisions-report.md`
 - Notable non-`docs/` naming violations:
   - `.github/pull_request_template.md` — not kebab-case
@@ -252,7 +252,7 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 - Active references that still keep deprecated architecture/tooling alive:
 | Path | Classification | Severity | Why it matters |
 | --- | --- | --- | --- |
-| `docs/archive/legacy-revision-ingestion/odata-ingestion-fix-plan.md` | documentation | active reference (incorrect) | Present-tense report still references deleted revision-ingestion types such as RevisionIngestionService and RealODataRevisionTfsClient. |
+| `docs/archive/revision-ingestion/odata-ingestion-fix-plan.md` | documentation | active reference (incorrect) | Present-tense report still references deleted revision-ingestion types such as RevisionIngestionService and RealODataRevisionTfsClient. |
 | `PoTool.Tools.TfsRetrievalValidator/appsettings.json` | other | active reference (incorrect) | Contains stale AnalyticsOData* keys and RevisionIngestionPagination settings that the relic audit already marked as misleading residue. |
 | `PoTool.Tools.TfsRetrievalValidator/Program.cs` | code references | active reference (incorrect) | Validator still binds RevisionIngestionPaginationOptions and keeps the retrieval-validator tool active in the current solution surface. |
 | `PoTool.Core/Configuration/RevisionIngestionV2Options.cs` | code references | active reference (incorrect) | Unconsumed V2 revision-ingestion options keep a deprecated design direction alive in code. |
@@ -263,7 +263,7 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 - Historical references that are acceptable to keep:
 | Path | Classification | Severity | Why it is acceptable |
 | --- | --- | --- | --- |
-| `docs/archive/legacy-revision-ingestion/*` | documentation | historical reference (acceptable) | Archive subtree correctly preserves superseded OData/revision-ingestion material for traceability. |
+| `docs/archive/revision-ingestion/*` | documentation | historical reference (acceptable) | Archive subtree correctly preserves superseded OData/revision-ingestion material for traceability. |
 | `PoTool.Api/Migrations/*DropLegacyODataColumns*.cs` | code references | historical reference (acceptable) | Migration history shows the old explicit OData configuration was intentionally removed. |
 | `docs/analysis/relic-audit/repository-relic-audit.md` | documentation | historical reference (acceptable) | Current relic audit documents residue precisely; it should not be treated as evidence that OData is active architecture. |
 - Unclear references that need targeted follow-up rather than immediate removal:
@@ -284,7 +284,7 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
   - Decide whether `PoTool.Tools.TfsRetrievalValidator` remains part of the supported toolchain.
   - If not, remove the project from `PoTool.sln`, `PoTool.Tests.Unit`, and architecture-test assumptions, then archive validator-only docs.
 - **Batch 4: OData cleanup**
-  - `docs/archive/legacy-revision-ingestion/odata-ingestion-fix-plan.md` was archived in Batch 3 with the deprecated OData ingestion experiment.
+  - `docs/archive/revision-ingestion/odata-ingestion-fix-plan.md` was archived in Batch 3 with the deprecated OData ingestion experiment.
   - Remove stale validator `AnalyticsOData*` / `RevisionIngestionPagination` configuration and any disconnected revision-ingestion option/diagnostic classes that are confirmed unused.
 
 ## Appendix A. Complete markdown inventory
@@ -361,10 +361,10 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 ### archive
 - `docs/archive/code-quality/work-completed-2026-01-30.md` — filename `work-completed-2026-01-30.md` — purpose: structured audit or compliance verification — title: Work Completed - CODE_AUDIT_REPORT.md
 - `docs/analysis/cache-insights-and-validation-report.md` — filename `cache-insights-and-validation-report.md` — purpose: report or summarized findings — title: Cache Insights & Validation — Design Report
-- `docs/archive/legacy-revision-ingestion/odata-validator-vs-ingestion-report.md` — filename `odata-validator-vs-ingestion-report.md` — purpose: report or summarized findings — title: OData Validator vs Ingestion Report
-- `docs/archive/legacy-revision-ingestion/real-revision-tfsclient-pagination-review.md` — filename `real-revision-tfsclient-pagination-review.md` — purpose: general markdown documentation — title: RealRevisionTfsClient Pagination Review
-- `docs/archive/legacy-revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md` — filename `revision-ingestion-api-vs-validator-odata-divergence.md` — purpose: exploratory analysis or investigation — title: Revision ingestion divergence investigation: PoTool.Api vs TfsRetrievalValidator
-- `docs/archive/legacy-revision-ingestion/revision-ingestor-v2.md` — filename `revision-ingestor-v2.md` — purpose: general markdown documentation — title: Revision Ingestor V2
+- `docs/archive/revision-ingestion/odata-validator-vs-ingestion-report.md` — filename `odata-validator-vs-ingestion-report.md` — purpose: report or summarized findings — title: OData Validator vs Ingestion Report
+- `docs/archive/revision-ingestion/real-revision-tfsclient-pagination-review.md` — filename `real-revision-tfsclient-pagination-review.md` — purpose: general markdown documentation — title: RealRevisionTfsClient Pagination Review
+- `docs/archive/revision-ingestion/revision-ingestion-api-vs-validator-odata-divergence.md` — filename `revision-ingestion-api-vs-validator-odata-divergence.md` — purpose: exploratory analysis or investigation — title: Revision ingestion divergence investigation: PoTool.Api vs TfsRetrievalValidator
+- `docs/archive/revision-ingestion/revision-ingestor-v2.md` — filename `revision-ingestor-v2.md` — purpose: general markdown documentation — title: Revision Ingestor V2
 - `docs/analysis/sprint-trends-vs-revisions-report.md` — filename `sprint-trends-vs-revisions-report.md` — purpose: report or summarized findings — title: Sprint Trends vs Revision Database — Engineering Report
 
 ### audits
@@ -589,7 +589,7 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 
 ### reports
 - `docs/reports/2026-03-30-ingestion-observability-hardening.md` — filename `ingestion-observability-hardening.md` — purpose: report or summarized findings — title: Ingestion observability hardening
-- `docs/archive/legacy-revision-ingestion/odata-ingestion-fix-plan.md` — filename `odata-ingestion-fix-plan.md` — purpose: report or summarized findings — title: OData Ingestion Fix Plan
+- `docs/archive/revision-ingestion/odata-ingestion-fix-plan.md` — filename `odata-ingestion-fix-plan.md` — purpose: report or summarized findings — title: OData Ingestion Fix Plan
 - `docs/reports/2026-03-30-sprint-attribution-analysis.md` — filename `sprint-attribution-analysis.md` — purpose: exploratory analysis or investigation — title: Sprint Attribution Strategy Analysis
 - `docs/reports/2026-03-30-sprint-trends-current-state-analysis.md` — filename `sprint-trends-current-state-analysis.md` — purpose: exploratory analysis or investigation — title: Sprint Trends — Current State Analysis
 

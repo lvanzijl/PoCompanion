@@ -69,11 +69,11 @@
 - archive subfolders: 3
 - files per archive subfolder:
   - code-quality: 5
-  - legacy-revision-ingestion: 5
+  - revision-ingestion: 5
   - validation: 1
 - violations found: 0
 - violations fixed: 0
-- archive validation result: `docs/archive/legacy-revision-ingestion/` contains only ingestion-related artifacts
+- archive validation result: `docs/archive/revision-ingestion/` contains only ingestion-related artifacts
 
 ## 8. Broken links
 - total links scanned: 2

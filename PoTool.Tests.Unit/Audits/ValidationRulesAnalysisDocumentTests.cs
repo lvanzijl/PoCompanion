@@ -16,7 +16,9 @@ public sealed class ValidationRulesAnalysisDocumentTests
         var mirror = File.ReadAllText(mirrorPath);
         var authoritative = File.ReadAllText(authoritativePath);
 
-        Assert.AreEqual("# \n", mirror, "The docs/rules mirror should contain the exact Batch 2 template.");
+        StringAssert.Contains(mirror, "No semantic interpretation is allowed.");
+        StringAssert.Contains(mirror, "Historical leakage");
+        StringAssert.Contains(mirror, "../../.github/copilot-instructions.md");
         StringAssert.Contains(authoritative, "## 15. Validation and semantic rules (binding)");
         StringAssert.Contains(authoritative, "The current validation/integrity model includes structural integrity, refinement readiness, and implementation readiness rules.");
         StringAssert.Contains(authoritative, "The missing-effort rule is an alias of the canonical implementation-readiness effort rule and must not diverge semantically.");
