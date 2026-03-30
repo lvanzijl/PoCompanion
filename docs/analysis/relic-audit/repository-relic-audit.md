@@ -2,13 +2,13 @@
 
 ## 1. Executive summary
 
-- **Total relic candidates reviewed:** 20
+- **Total relic candidates reviewed:** 24
 - **High-confidence removal candidates:** 4
-- **High-confidence archive/move candidates:** 12
+- **High-confidence archive/move candidates:** 13
 - **Areas with the most obsolete residue:**
-  - OData / revision-ingestion experiment residue in reports, investigations, and validator-only configuration
+  - OData/revision-ingestion experiment residue in reports, investigations, and validator-only configuration
   - Root-level markdown reports from one-off audits and implementation summaries
-  - Documentation taxonomy drift (`docs/Reports` vs `docs/reports`, `docs/audit` vs `docs/audits`, `docs/analyze` vs `docs/analysis`)
+  - Inconsistent documentation folder naming conventions (`docs/Reports` vs `docs/reports`, `docs/audit` vs `docs/audits`, `docs/analyze` vs `docs/analysis`)
 
 Baseline verification before this audit:
 
@@ -24,7 +24,7 @@ All of the above passed in the current checkout, so this report treats candidate
 | ID | Type | Path | Name | Suspected original purpose | Current status | Evidence of non-use or obsolescence | Confidence | Recommended action |
 |---|---|---|---|---|---|---|---|---|
 | C01 | Code | `PoTool.Core/Configuration/RevisionIngestionV2Options.cs` | `RevisionIngestionV2Options` | Planned V2 streaming revision ingestor toggle/options | Not referenced from runtime, validator, tests, DI, or appsettings | Repo search finds only the type declaration; no registrations or consumers | High | Remove |
-| C02 | Code | `PoTool.Integrations.Tfs/Diagnostics/RevisionIngestionDiagnostics.cs` | `RevisionIngestionDiagnostics` | Diagnostics helper for removed revision-ingestion pipeline | Effectively disconnected | Only referenced by optional ctor parameter in `TfsRequestThrottler`; no DI registration; no callers invoke `StartRun`, `BeginPageScope`, or page logging methods | High | Remove |
+| C02 | Code | `PoTool.Integrations.Tfs/Diagnostics/RevisionIngestionDiagnostics.cs` | `RevisionIngestionDiagnostics` | Diagnostics helper for removed revision-ingestion pipeline | Effectively disconnected | Only referenced by optional ctor parameter in `TfsRequestThrottler`; both API and validator register `AddSingleton<TfsRequestThrottler>()` without registering `RevisionIngestionDiagnostics`, so DI uses the default `null` value; no callers invoke `StartRun`, `BeginPageScope`, or page logging methods | High | Remove |
 | C03 | Config | `PoTool.Core/Configuration/RevisionIngestionDiagnosticsOptions.cs` | `RevisionIngestionDiagnosticsOptions` | Options backing `RevisionIngestionDiagnostics` | Disconnected with C02 | Only referenced by `RevisionIngestionDiagnostics`; no `Configure<RevisionIngestionDiagnosticsOptions>` registration found | High | Remove |
 | C04 | Config | `PoTool.Tools.TfsRetrievalValidator/appsettings.json` | `AnalyticsODataBaseUrl`, `AnalyticsODataEntitySetPath` keys | Old explicit OData endpoint configuration for validator/revision ingestor | Misleading leftover config | `TfsConfigEntity` no longer defines these properties; repo search shows these keys are only in this file and old migrations; `RealTfsClient` derives OData metadata URL from `Url` + `Project` instead | High | Remove |
 | C05 | Code | `PoTool.Shared/Settings/AnalyticsODataDefaults.cs` | `AnalyticsODataDefaults` | Shared OData path builder | Still active but legacy-looking | Used by `RealTfsClient.WorkItems.cs` during `ValidateConnectionAsync`; verified by `RealTfsClientVerificationTests` OData metadata failure test | High | Keep but document better |
@@ -133,7 +133,7 @@ All of the above passed in the current checkout, so this report treats candidate
 ### Temporary analysis mixed with user-facing docs
 
 - `docs/README.md` is a user/developer entry point, but surrounding docs root files include deep internal analyses and plans
-- `docs/GEBRUIKERSHANDLEIDING.md` shares the same top-level namespace as engineering investigations rather than a `docs/user` area
+- `docs/GEBRUIKERSHANDLEIDING.md` (Dutch user manual) shares the same top-level namespace as engineering investigations rather than a `docs/user` area
 
 ## 6. Proposed cleanup batches
 
@@ -148,12 +148,12 @@ All of the above passed in the current checkout, so this report treats candidate
 
 ### Batch B: safe moves/archives
 
-- Move root historical audit files (`CODE_AUDIT_REPORT.md`, `FINAL_SUMMARY.md`, `FIXES_APPLIED.md`, `NON_TEST_ISSUES_ANALYSIS.md`, `VALIDATORS_IMPLEMENTATION.md`) under `docs/history/...`
-- Archive `WORK_COMPLETED.md`
+- Move root historical audit files (`CODE_AUDIT_REPORT.md`, `FINAL_SUMMARY.md`, `FIXES_APPLIED.md`, `NON_TEST_ISSUES_ANALYSIS.md`, `VALIDATORS_IMPLEMENTATION.md`) under `docs/history/code-quality/` or `docs/history/validation/` as listed in Section 7
+- Archive `WORK_COMPLETED.md` under `docs/archive/code-quality/`
 - Move `VALIDATION_SYSTEM_REPORT.md` to `docs/architecture`
 - Move `docs/Reports/SprintAttributionAnalysis.md` to `docs/reports`
 - Move `docs/audit/cdc-full-quality-audit.md` to `docs/audits`
-- Archive stale OData/revision-ingestion reports:
+- Archive stale OData/revision-ingestion reports under `docs/archive/legacy-revision-ingestion/`:
   - `docs/reports/revision-ingestor-v2.md`
   - `docs/reports/odata-validator-vs-ingestion-report.md`
   - `docs/investigations/revision-ingestion-api-vs-validator-odata-divergence.md`
@@ -166,7 +166,7 @@ All of the above passed in the current checkout, so this report treats candidate
 - `SWEPO_REVIEW_REPORT.md` because prompt automation currently targets the repo root
 - `PoTool.Tools.TfsRetrievalValidator/` because it still participates in build/tests/docs, even if it feels legacy
 - `PoTool.Core/Configuration/RevisionIngestionPaginationOptions.cs` because it is still validator-connected, not dead
-- Any decision to remove remaining OData metadata validation from `RealTfsClient.ValidateConnectionAsync`
+- The OData metadata validation logic in `PoTool.Integrations.Tfs/Clients/RealTfsClient.WorkItems.cs` (`ValidateConnectionAsync`)
 
 ### Batch D: keep but clarify
 
@@ -229,15 +229,15 @@ Recommended target structure:
 
 Use this exact next implementation prompt:
 
-> Reorganize repository documentation based on `docs/analysis/relic-audit/repository-relic-audit.md`.  
+> Reorganize repository documentation based on the current repository relic audit report at `docs/analysis/relic-audit/repository-relic-audit.md` (or its moved equivalent if this path changes during the reorganization).  
 >  
 > Scope:
 > - move root-level documentation out of the repository root except `README.md`
-> - normalize documentation folders so `docs/Reports` → `docs/reports`, `docs/audit` → `docs/audits`, and reconcile `docs/analyze` vs `docs/analysis`
+> - normalize documentation folders so `docs/Reports` → `docs/reports`, `docs/audit` → `docs/audits`, and merge `docs/analyze` into `docs/analysis` as the canonical target while preserving and reviewing existing content from both folders
 > - move enduring architecture docs under `docs/architecture`
 > - move user-facing docs under `docs/user`
 > - move historical but still useful docs under `docs/history`
-> - move obsolete/superseded OData and revision-ingestion reports under `docs/archive`
+> - move obsolete/superseded OData/revision-ingestion reports under `docs/archive`
 > - preserve or update `SWEPO_REVIEW_REPORT.md` handling safely; if you move it, update `prompts/seniorswe_and_seniorpo_review` in the same change
 > - update links, references, indexes, and any document tests so nothing breaks
 > - do not delete EF migration history or other schema-history artifacts
