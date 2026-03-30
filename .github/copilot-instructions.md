@@ -119,6 +119,24 @@ If documentation governance cannot be satisfied without clarification, batch all
 
 ---
 
+## Markdown report output (hard)
+
+- For every analysis, validation, audit, review, migration, cleanup, or implementation prompt:
+  - A markdown report file MUST be created or updated in the repository.
+  - The prompt MUST specify the exact target path of the report.
+  - The task is incomplete if the report file is not written.
+
+Required behavior:
+1. Perform the requested work.
+2. Write the markdown report file to the specified path.
+3. Summarize results in normal output.
+4. Explicitly confirm the written report path.
+
+Hard failure condition:
+- If the markdown report file is not created at the specified path, the task is considered failed.
+
+---
+
 ## 4. Duplication policy (non-negotiable)
 
 - Duplication is forbidden.
