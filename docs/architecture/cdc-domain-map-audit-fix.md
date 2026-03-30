@@ -4,7 +4,7 @@
 
 The failing CDC domain map audit was caused by drift between the generated snapshot document and the current public service interfaces present in the source tree.
 
-The audit reflection logic detected more public interfaces than were documented in `/home/runner/work/PoCompanion/PoCompanion/docs/domain/cdc_domain_map_generated.md`, with the missing interfaces concentrated in the `DeliveryTrends` slice.
+The audit reflection logic detected more public interfaces than were documented in `/home/runner/work/PoCompanion/PoCompanion/docs/architecture/cdc-domain-map-generated.md`, with the missing interfaces concentrated in the `DeliveryTrends` slice.
 
 Specifically:
 
@@ -29,7 +29,7 @@ Missing interfaces from the generated document:
 
 The audit test source of truth is the reflection-style scan implemented in `CdcGeneratedDomainMapDocumentTests.GetPublicInterfaces(...)`, which enumerates `public interface` declarations from the configured slice directories.
 
-That logic is correct for the current test contract. The failure happened because the snapshot document `/home/runner/work/PoCompanion/PoCompanion/docs/domain/cdc_domain_map_generated.md` was not updated after the `DeliveryTrends` implementation evolved and added additional public interfaces.
+That logic is correct for the current test contract. The failure happened because the snapshot document `/home/runner/work/PoCompanion/PoCompanion/docs/architecture/cdc-domain-map-generated.md` was not updated after the `DeliveryTrends` implementation evolved and added additional public interfaces.
 
 In short:
 
@@ -45,7 +45,7 @@ No production behavior, domain logic, or generator logic was changed.
 
 Updated file:
 
-- `/home/runner/work/PoCompanion/PoCompanion/docs/domain/cdc_domain_map_generated.md`
+- `/home/runner/work/PoCompanion/PoCompanion/docs/architecture/cdc-domain-map-generated.md`
 
 Changes made:
 
@@ -73,7 +73,7 @@ Audit logic:
 
 Validated document:
 
-- `/home/runner/work/PoCompanion/PoCompanion/docs/domain/cdc_domain_map_generated.md`
+- `/home/runner/work/PoCompanion/PoCompanion/docs/architecture/cdc-domain-map-generated.md`
 
 Current runtime-discovered interface total:
 

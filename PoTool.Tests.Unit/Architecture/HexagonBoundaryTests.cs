@@ -109,9 +109,9 @@ public sealed class HexagonBoundaryTests
     public void HexagonBoundary_AuditDocumentExistsWithRequiredSectionsAndAnchors()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var auditPath = Path.Combine(repositoryRoot, "docs", "audits", "hexagon_boundary_enforcement.md");
+        var auditPath = Path.Combine(repositoryRoot, "docs", "analysis", "hexagon-boundary-enforcement.md");
 
-        Assert.IsTrue(File.Exists(auditPath), "The hexagon boundary enforcement audit should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(auditPath), "The hexagon boundary enforcement audit should exist under docs/analysis.");
 
         var audit = File.ReadAllText(auditPath);
         StringAssert.Contains(audit, "# Hexagon Boundary Enforcement");
@@ -119,10 +119,10 @@ public sealed class HexagonBoundaryTests
         StringAssert.Contains(audit, "## Allowed dependencies");
         StringAssert.Contains(audit, "## Forbidden dependencies");
         StringAssert.Contains(audit, "## Enforcement tests");
-        StringAssert.Contains(audit, "docs/domain/cdc_reference.md");
-        StringAssert.Contains(audit, "docs/domain/cdc_domain_map.md");
-        StringAssert.Contains(audit, "docs/audits/application_handler_cleanup.md");
-        StringAssert.Contains(audit, "docs/audits/application_simplification_audit.md");
+        StringAssert.Contains(audit, "docs/architecture/cdc-reference.md");
+        StringAssert.Contains(audit, "docs/architecture/cdc-domain-map.md");
+        StringAssert.Contains(audit, "docs/analysis/application-handler-cleanup.md");
+        StringAssert.Contains(audit, "docs/analysis/application-simplification-audit.md");
         StringAssert.Contains(audit, "ISprintFactService");
         StringAssert.Contains(audit, "IPortfolioFlowSummaryService");
         StringAssert.Contains(audit, "IBacklogQualityAnalysisService");

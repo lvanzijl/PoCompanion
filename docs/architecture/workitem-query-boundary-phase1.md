@@ -18,7 +18,7 @@ Phase 1 focuses on the safest analytical handlers that were previously coupled t
 | Handler | Present | Previous persistence dependency | Leakage assessment | Phase 1 outcome |
 |---|---:|---|---|---|
 | `GetAllWorkItemsQueryHandler` | Yes | `IWorkItemReadProvider` + `IProductRepository` + `ProfileFilterService` | Broad provider leakage because `IWorkItemReadProvider` can resolve live or cached reads | **Migrated** |
-| `GetAllWorkItemsWithValidationQueryHandler` | Yes | `IWorkItemReadProvider` + `IProductRepository` + `ProfileFilterService` + validator | Same broad provider leakage; validation is in-memory and safe to keep in handler | **Migrated** |
+| `GetAllWorkItemsWithValidationQueryHandler` | Yes | `IWorkItemReadProvider` + `IProductRepository` + `ProfileFilterService` + validation components | Same broad provider leakage; validation is in-memory and safe to keep in handler | **Migrated** |
 | `GetAllGoalsQueryHandler` | Yes | `IWorkItemReadProvider` + `IProductRepository` + `ProfileFilterService` | Cache-only analytical filtering over work item snapshots | **Migrated** |
 | `GetGoalHierarchyQueryHandler` | Yes | `IWorkItemReadProvider` + `TfsRuntimeMode` + optional `BattleshipMockDataFacade` | Not a safe cache-only candidate because it explicitly participates in mock/live runtime behavior | **Deferred** |
 | `GetDependencyGraphQueryHandler` | Yes | `IWorkItemReadProvider` + `IProductRepository` | Analytical graph construction over current cached relations | **Migrated** |

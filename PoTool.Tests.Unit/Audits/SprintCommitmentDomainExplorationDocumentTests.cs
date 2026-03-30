@@ -7,9 +7,9 @@ public sealed class SprintCommitmentDomainExplorationDocumentTests
     public void SprintCommitmentDomainExploration_ReportExistsWithRequiredSectionsConceptsConflictsAndFeasibility()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "exploration", "sprint_commitment_domain_exploration.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "sprint-commitment-domain-exploration.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The sprint commitment domain exploration document should exist under docs/exploration.");
+        Assert.IsTrue(File.Exists(reportPath), "The sprint commitment domain exploration document should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

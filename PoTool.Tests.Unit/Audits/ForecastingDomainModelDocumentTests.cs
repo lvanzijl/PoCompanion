@@ -7,9 +7,9 @@ public sealed class ForecastingDomainModelDocumentTests
     public void ForecastingDomainModel_ReportExistsWithRequiredConceptsInputsOutputsAndBoundaries()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "domain", "forecasting_domain_model.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "architecture", "forecasting-domain-model.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The forecasting domain model document should exist under docs/domain.");
+        Assert.IsTrue(File.Exists(reportPath), "The forecasting domain model document should exist under docs/architecture.");
 
         var report = File.ReadAllText(reportPath);
 

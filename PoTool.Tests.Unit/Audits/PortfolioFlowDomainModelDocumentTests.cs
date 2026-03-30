@@ -7,9 +7,9 @@ public sealed class PortfolioFlowDomainModelDocumentTests
     public void PortfolioFlowDomainModel_ReportExistsWithCanonicalUnitFormulasMappingsAndBoundary()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "domain", "portfolio_flow_model.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "architecture", "portfolio-flow-model.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The portfolio flow domain model document should exist under docs/domain.");
+        Assert.IsTrue(File.Exists(reportPath), "The portfolio flow domain model document should exist under docs/architecture.");
 
         var report = File.ReadAllText(reportPath);
 

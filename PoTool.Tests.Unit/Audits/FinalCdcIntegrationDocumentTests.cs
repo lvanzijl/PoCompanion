@@ -7,9 +7,9 @@ public sealed class FinalCdcIntegrationDocumentTests
     public void FinalCdcIntegration_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analyze", "final-cdc-integration.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "final-cdc-integration.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The final CDC integration audit report should exist under docs/analyze.");
+        Assert.IsTrue(File.Exists(reportPath), "The final CDC integration audit report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

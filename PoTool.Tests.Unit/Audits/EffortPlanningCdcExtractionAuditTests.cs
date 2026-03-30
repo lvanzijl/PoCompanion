@@ -9,9 +9,9 @@ public sealed class EffortPlanningCdcExtractionAuditTests
     public void EffortPlanningExtraction_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "effort_planning_cdc_extraction.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "effort-planning-cdc-extraction.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The effort planning extraction report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The effort planning extraction report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
         StringAssert.Contains(report, "# EffortPlanning CDC Extraction");

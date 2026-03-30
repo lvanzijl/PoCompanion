@@ -7,9 +7,9 @@ public sealed class CdcCompletionSummaryDocumentTests
     public void CdcCompletionSummary_ReportExistsWithRequiredSectionsAndCompletionStatus()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "cdc_completion_summary.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "cdc-completion-summary.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The CDC completion summary should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The CDC completion summary should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

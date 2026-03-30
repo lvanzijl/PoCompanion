@@ -7,9 +7,9 @@ Provide historical state transition analysis for work items, enabling teams to i
 This feature must explicitly reference and comply with:
 
 * `docs/UX_PRINCIPLES.md`
-* `docs/UI_RULES.md`
-* `docs/ARCHITECTURE_RULES.md`
-* `docs/PROCESS_RULES.md`
+* `docs/rules/ui-rules.md`
+* `docs/rules/architecture-rules.md`
+* `docs/rules/process-rules.md`
 
 ---
 
@@ -224,7 +224,7 @@ Future enhancement could add:
 
 ### Caching Strategy
 
-Per `docs/ARCHITECTURE_RULES.md`:
+Per `docs/rules/architecture-rules.md`:
 
 1. **Local Cache** - Work items cached in SQLite with revision history
    - Retrieved via "Pull & Cache" command
@@ -377,7 +377,7 @@ public enum BottleneckSeverity
 
 ## UI Rules Compliance
 
-Per `docs/UI_RULES.md`:
+Per `docs/rules/ui-rules.md`:
 
 - **Platform**: Blazor WebAssembly ✓
 - **Components**: MudBlazor only (MudPaper, MudCard, MudTable, MudChart, MudAlert, MudTimeline, MudNumericField, MudButton, MudChip) ✓
@@ -482,7 +482,7 @@ If approved in the future:
 7. **Custom Bottleneck Thresholds** - User-configurable delay definitions
 8. **Anomaly Detection** - ML-based detection of unusual patterns
 
-All enhancements must comply with `docs/UI_RULES.md` and `docs/ARCHITECTURE_RULES.md`.
+All enhancements must comply with `docs/rules/ui-rules.md` and `docs/rules/architecture-rules.md`.
 
 ---
 
@@ -517,8 +517,8 @@ Team uses insights to:
 ## References
 
 - UX Principles: `docs/UX_PRINCIPLES.md`
-- UI Rules: `docs/UI_RULES.md`
-- Architecture Rules: `docs/ARCHITECTURE_RULES.md`
-- Process Rules: `docs/PROCESS_RULES.md`
+- UI Rules: `docs/rules/ui-rules.md`
+- Architecture Rules: `docs/rules/architecture-rules.md`
+- Process Rules: `docs/rules/process-rules.md`
 - Implementation: `PoTool.Client/Pages/Metrics/StateTimeline.razor`
 - Query: `PoTool.Core/WorkItems/Queries/GetWorkItemStateTimelineQuery.cs`

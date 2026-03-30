@@ -7,9 +7,9 @@ public sealed class StateClassificationsAnalysisDocumentTests
     public void StateClassificationsAnalysis_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analyze", "state-classifications.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "state-classifications.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The state classifications analysis report should exist under docs/analyze.");
+        Assert.IsTrue(File.Exists(reportPath), "The state classifications analysis report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

@@ -85,9 +85,9 @@ public sealed class CdcGeneratedDomainMapDocumentTests
     public void GeneratedCdcDomainMap_ReportExistsWithRequiredSectionsMetadataAndWarnings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "domain", "cdc_domain_map_generated.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "architecture", "cdc-domain-map-generated.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The generated CDC domain map document should exist under docs/domain.");
+        Assert.IsTrue(File.Exists(reportPath), "The generated CDC domain map document should exist under docs/architecture.");
 
         var report = File.ReadAllText(reportPath);
 
@@ -96,7 +96,7 @@ public sealed class CdcGeneratedDomainMapDocumentTests
         StringAssert.Contains(report, "## Mermaid Diagram");
         StringAssert.Contains(report, "## Simplified Architecture Diagram");
         StringAssert.Contains(report, "## Service Dependency Map");
-        StringAssert.Contains(report, "## Drift Warning Against `docs/domain/cdc_domain_map.md`");
+        StringAssert.Contains(report, "## Drift Warning Against `docs/architecture/cdc-domain-map.md`");
         StringAssert.Contains(report, "Generation date: 2026-03-17");
         StringAssert.Contains(report, "Service count:");
         StringAssert.Contains(report, "PoTool.Core.Domain/Domain/Cdc/` currently exposes only the sprint slice");
@@ -118,7 +118,7 @@ public sealed class CdcGeneratedDomainMapDocumentTests
     public void GeneratedCdcDomainMap_ServiceCountAndDetectedInterfacesMatchCurrentSource()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "domain", "cdc_domain_map_generated.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "architecture", "cdc-domain-map-generated.md");
         var report = File.ReadAllText(reportPath);
 
         var detectedInterfaces = SliceDefinitions

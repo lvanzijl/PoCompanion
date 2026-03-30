@@ -7,9 +7,9 @@ public sealed class ProgressModelAnalysisDocumentTests
     public void ProgressModelAnalysis_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analyze", "progress-model.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "progress-model.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The progress model analysis report should exist under docs/analyze.");
+        Assert.IsTrue(File.Exists(reportPath), "The progress model analysis report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

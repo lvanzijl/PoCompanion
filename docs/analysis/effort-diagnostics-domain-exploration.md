@@ -1,0 +1,336 @@
+# Effort Diagnostics Domain Exploration
+
+## Summary
+- **Rule families found:** five primary effort-related families exist today in active code: effort imbalance, effort concentration risk, estimation quality, estimation suggestions, and sprint capacity planning. A closely related sixth family, capacity calibration, also exists but is more tightly coupled to canonical sprint/story-point metrics than to effort-hour diagnostics.
+- **Where they live:** executable logic is concentrated in `/PoTool.Api/Handlers/Metrics/GetEffortImbalanceQueryHandler.cs`, `/GetEffortConcentrationRiskQueryHandler.cs`, `/GetEffortEstimationQualityQueryHandler.cs`, `/GetEffortEstimationSuggestionsQueryHandler.cs`, `/GetSprintCapacityPlanQueryHandler.cs`, and adjacent `/GetCapacityCalibrationQueryHandler.cs`. Query contracts live in `/PoTool.Core/Metrics/Queries`. DTOs, enums, and settings live in `/PoTool.Shared/Metrics` and `/PoTool.Shared/Settings/EffortEstimationSettingsDto.cs`.
+- **Stability assessment:**
+  - **Most stable:** effort imbalance and effort concentration risk. They have explicit thresholds, DTO contracts, feature documentation in `/features/effort_distribution_analytics.md`, and focused tests.
+  - **Less stable:** estimation quality and estimation suggestions. They are heuristic, share no canonical domain contract, and their current comments overstate certainty.
+  - **Least mature:** sprint capacity planning. `/GetSprintCapacityPlanQueryHandler.cs` still uses placeholder team-member grouping and default-capacity assumptions.
+- **Duplication assessment:** duplication is structural rather than formula-for-formula. The same product-scoped loading, area-path filtering, effort-only filtering, sprint-name extraction, and local statistical helpers are repeated across multiple handlers. Estimation quality and suggestion handlers also duplicate variance-based heuristics separately.
+- **Contract drift summary:**
+  - `/PoTool.Core/Metrics/Queries/GetEffortConcentrationRiskQuery.cs` exposes `ConcentrationThreshold`, but `/PoTool.Api/Handlers/Metrics/GetEffortConcentrationRiskQueryHandler.cs` does not use it in the risk calculation.
+  - `/PoTool.Core/Metrics/Queries/GetEffortEstimationQualityQuery.cs` and `/PoTool.Api/Handlers/Metrics/GetEffortEstimationQualityQueryHandler.cs` describe estimate-vs-actual analysis, but the current implementation measures consistency of effort values within groups instead.
+- **Recommendation:** **do not extract one broad `EffortDiagnostics` CDC next in its current shape.** A future effort-diagnostics slice is viable, but only part of it is stable enough now. If this area is chosen next, the first extraction should be narrowly scoped to **effort imbalance + effort concentration risk**, with shared statistical helpers. Estimation suggestions, estimation quality semantics, and sprint capacity planning should remain outside until their heuristics are canonicalized. Capacity calibration should remain aligned with sprint analytics.
+
+## Effort Imbalance Rules
+- **Locations**
+  - Executable logic: `/PoTool.Api/Handlers/Metrics/GetEffortImbalanceQueryHandler.cs`.
+  - Query contract: `/PoTool.Core/Metrics/Queries/GetEffortImbalanceQuery.cs`.
+  - DTOs/enums: `/PoTool.Shared/Metrics/EffortImbalanceDto.cs`
+  - Feature/spec narrative: `/features/effort_distribution_analytics.md`
+  - Focused tests: `/PoTool.Tests.Unit/Handlers/GetEffortImbalanceQueryHandlerTests.cs`
+- **Current formulas / thresholds**
+  - Filters to work items with `Effort > 0`.
+  - Team imbalance groups by `AreaPath`; sprint imbalance groups by `IterationPath`.
+  - Deviation formula: `abs(actual - average) / average` in `/GetEffortImbalanceQueryHandler.cs:161-163` and `:201-203`.
+  - Per-group risk bands come from `DetermineImbalanceRisk` in `/GetEffortImbalanceQueryHandler.cs:224-234`:
+    - `Low` when deviation `< threshold`
+    - `Medium` when deviation `< threshold * 1.5`
+    - `High` when deviation `< threshold * 2.5`
+    - `Critical` otherwise
+  - The public query default is `ImbalanceThreshold = 0.3` in `/PoTool.Core/Metrics/Queries/GetEffortImbalanceQuery.cs:11-16`, so the effective default bands are roughly `<30%`, `30-45%`, `45-75%`, `>=75%`.
+  - Overall score in `/GetEffortImbalanceQueryHandler.cs:236-265`:
+    - `imbalanceScore = (maxDeviation * 0.6 + avgDeviation * 0.4) * 100`
+    - overall risk uses fixed max-deviation bands `<30`, `30-50`, `50-80`, `>=80`
+  - Recommendation heuristics in `/GetEffortImbalanceQueryHandler.cs:267-349`:
+    - top 3 overloaded teams -> `ReduceTeamLoad`
+    - top 3 underloaded teams -> `IncreaseTeamLoad`
+    - top 2 overloaded sprints -> `LevelSprintLoad`
+    - `High` or `Critical` overall risk prepends a global rebalance recommendation with a `75-85% utilization target`
+- **Duplication**
+  - Product-scoped loading and fallback to `_repository.GetAllAsync` are duplicated almost verbatim across this and the other effort handlers.
+  - `AreaPathFilter` prefix filtering repeats here and in concentration, estimation quality, and estimation suggestions handlers.
+  - `ExtractSprintName` and short-path formatting are local helper duplicates shared with concentration and capacity handlers.
+  - The rule family is also duplicated descriptively in `/features/effort_distribution_analytics.md:297-309` and in XML comments on `/PoTool.Shared/Metrics/EffortImbalanceDto.cs:3-13`.
+- **Extraction readiness**
+  - **Moderate to high.**
+  - Positive signals:
+    - explicit formulas and thresholds
+    - narrow DTO surface
+    - documentation and tests already refer to the same concepts
+  - Remaining instability:
+    - handler still owns data loading/orchestration
+    - group selection is partly operational (`top 10` area paths by work item count, `maxIterations`)
+    - recommendations are phrased for UI consumption rather than separated from the rule engine
+- **Recommended ownership**
+  - Future domain ownership:
+    - deviation calculation
+    - risk-band classification
+    - overall-score calculation
+    - recommendation decision rules
+  - Keep outside:
+    - product-scoped loading
+    - area-path filtering
+    - DTO shaping and titles/descriptions formatted for API consumers
+
+## Effort Concentration Rules
+- **Locations**
+  - Executable logic: `/PoTool.Api/Handlers/Metrics/GetEffortConcentrationRiskQueryHandler.cs`
+  - Query contract: `/PoTool.Core/Metrics/Queries/GetEffortConcentrationRiskQuery.cs`
+  - DTOs/enums: `/PoTool.Shared/Metrics/EffortConcentrationRiskDto.cs`
+  - Feature/spec narrative: `/features/effort_distribution_analytics.md`
+  - Focused tests: `/PoTool.Tests.Unit/Handlers/GetEffortConcentrationRiskQueryHandlerTests.cs`
+- **Current formulas / thresholds**
+  - Filters to work items with `Effort > 0`.
+  - Calculates `percentage = effortAmount / totalEffort` per area and per iteration in `/GetEffortConcentrationRiskQueryHandler.cs:141-143` and `:183-185`.
+  - Per-group risk bands in `/GetEffortConcentrationRiskQueryHandler.cs:213-223`:
+    - `None` `< 25%`
+    - `Low` `25-40%`
+    - `Medium` `40-60%`
+    - `High` `60-80%`
+    - `Critical` `>= 80%`
+  - Overall concentration index in `/GetEffortConcentrationRiskQueryHandler.cs:225-257`:
+    - HHI-style formula: `Σ((percentageOfTotal / 100)^2) * 10000`
+    - normalized index: `Min(100, hhi / 100)`
+    - overall risk uses the max concentration percentage and the same `25/40/60/80` bands
+  - Recommendation heuristics in `/GetEffortConcentrationRiskQueryHandler.cs:259-354`:
+    - medium+ area risk -> move about `20%` of that area's effort
+    - medium+ iteration risk -> defer about `15%` to adjacent sprints
+    - any large-item evidence -> generic `BreakDownLargeItems`
+    - critical overall risk -> urgent diversification recommendation
+    - medium+ overall risk -> generic backlog-diversity recommendation
+  - Top-work-item evidence uses the 5 highest-effort items per risk group in `/GetEffortConcentrationRiskQueryHandler.cs:144-148` and `:186-190`.
+- **Duplication**
+  - Shares the same loading, filtering, and path/sprint helper structure as imbalance.
+  - Repeats recommendation-generation structure seen in imbalance and capacity planning: select highest-risk groups, generate human-readable actions, prepend a global warning when overall severity is high.
+  - `/features/effort_distribution_analytics.md:329-346` repeats the same thresholds and mitigation ideas.
+  - XML comments in `/PoTool.Shared/Metrics/EffortConcentrationRiskDto.cs:3-14` mirror the same ownership story but do not centralize it.
+- **Extraction readiness**
+  - **High for the risk engine, moderate for the full handler.**
+  - Positive signals:
+    - formulas are explicit and coherent
+    - HHI-based model is already documented
+    - contracts and tests are dedicated
+  - Instability signals:
+    - the public query exposes `ConcentrationThreshold = 0.5` in `/PoTool.Core/Metrics/Queries/GetEffortConcentrationRiskQuery.cs:11-15`, but the handler does not use that parameter anywhere in its risk calculation. That suggests the API contract and executable semantics are not fully aligned yet.
+- **Known contract drift**
+  - The query contract implies caller-tunable concentration thresholds, but the executable risk bands are hard-coded to `25/40/60/80` in `/GetEffortConcentrationRiskQueryHandler.cs:213-223`.
+- **Recommended ownership**
+  - Future domain ownership:
+    - concentration-per-bucket calculation
+    - HHI/concentration-index calculation
+    - risk-band classification
+    - mitigation rule selection
+  - Keep outside:
+    - product-scoped loading
+    - top-work-item string formatting
+    - API-facing recommendation phrasing
+
+## Estimation Quality Rules
+- **Locations**
+  - Executable logic: `/PoTool.Api/Handlers/Metrics/GetEffortEstimationQualityQueryHandler.cs`
+  - Query contract: `/PoTool.Core/Metrics/Queries/GetEffortEstimationQualityQuery.cs`
+  - DTOs: `/PoTool.Shared/Metrics/EffortEstimationQualityDto.cs`
+  - Related domain guidance: `/docs/rules/estimation-rules.md`
+  - Focused tests: `/PoTool.Tests.Unit/Handlers/GetEffortEstimationQualityQueryHandlerTests.cs`
+- **Current formulas / thresholds**
+  - Filters to completed work items by calling `IWorkItemStateClassificationService.IsDoneStateAsync(...)` in `/GetEffortEstimationQualityQueryHandler.cs:82-90`.
+  - Uses only items with `Effort > 0`.
+  - Quality-by-type calculation in `/GetEffortEstimationQualityQueryHandler.cs:125-165`:
+    - group by `Type`
+    - compute `min`, `max`, rounded `average`
+    - variance = average squared difference from mean
+    - coefficient of variation = `sqrt(variance) / average`
+    - accuracy = `max(0, 1 - min(1, coefficientOfVariation))`
+  - Trend-over-time in `/GetEffortEstimationQualityQueryHandler.cs:167-200` applies the same accuracy formula per iteration group.
+  - Overall accuracy in `/GetEffortEstimationQualityQueryHandler.cs:202-225` is a weighted average of per-type accuracy by item count.
+- **Duplication**
+  - Variance calculation is implemented locally here and again in estimation suggestions.
+  - State-based completion filtering is similar to estimation suggestions.
+  - The handler comment and query comment say it “compares historical estimates vs actuals” (`/GetEffortEstimationQualityQueryHandler.cs:13-16`, `/PoTool.Core/Metrics/Queries/GetEffortEstimationQualityQuery.cs:7-13`), but the code does not compare estimate to actual completion effort or duration; it measures **consistency of observed effort values within groups**. That semantic gap is a duplication/drift problem between contract language and executable logic.
+- **Extraction readiness**
+  - **Moderate at best.**
+  - Positive signals:
+    - the statistical formula is simple and reusable
+    - the DTO shape is stable
+  - Reasons not yet fully ready:
+    - “quality” is heuristic consistency, not a confirmed canonical business definition
+    - the code has no explicit actual-vs-estimate model despite comments claiming one
+    - the same statistical primitives are duplicated instead of owned by one shared service
+- **Known contract drift**
+  - The public contract describes estimate-vs-actual accuracy, but the current handler computes within-group consistency of effort values. That mismatch should be resolved before any domain extraction treats this as canonical estimation-quality logic.
+- **Recommended ownership**
+  - Future domain ownership:
+    - variance / coefficient-of-variation helpers
+    - accuracy-score transform if the team accepts this as the canonical quality metric
+  - Keep outside until semantics are clarified:
+    - handler orchestration
+    - done-state lookup
+    - API period grouping and DTO assembly
+
+## Estimation Suggestion Rules
+- **Locations**
+  - Executable logic: `/PoTool.Api/Handlers/Metrics/GetEffortEstimationSuggestionsQueryHandler.cs`
+  - Query contract: `/PoTool.Core/Metrics/Queries/GetEffortEstimationSuggestionsQuery.cs`
+  - DTOs: `/PoTool.Shared/Metrics/EffortEstimationSuggestionDto.cs`
+  - Settings defaults: `/PoTool.Shared/Settings/EffortEstimationSettingsDto.cs`
+  - Focused tests: `/PoTool.Tests.Unit/Handlers/GetEffortEstimationSuggestionsQueryHandlerTests.cs`
+- **Current formulas / heuristics**
+  - Candidate items are work items without effort (`null` or `0`) in `/GetEffortEstimationSuggestionsQueryHandler.cs:82-85`.
+  - Optional filters:
+    - exact `IterationPath`
+    - prefix `AreaPath`
+    - `OnlyInProgressItems` using literal `"In Progress"` or `"Active"` state names in `/GetEffortEstimationSuggestionsQueryHandler.cs:102-108`
+  - Historical sample = completed items with `Effort > 0`, again using `IsDoneStateAsync(...)`.
+  - Default-estimate fallback uses `/PoTool.Shared/Settings/EffortEstimationSettingsDto.cs:21-49`:
+    - Task `3`
+    - Bug `3`
+    - User Story `5`
+    - PBI `5`
+    - Feature `13`
+    - Epic `21`
+    - Generic `5`
+  - Similarity score in `/GetEffortEstimationSuggestionsQueryHandler.cs:214-234`:
+    - same type = `+0.4`
+    - same area path = `+0.3`
+    - partial area hierarchy match = `+0.15`
+    - title similarity contributes `titleSimilarity * 0.3`
+    - capped at `1.0`
+  - Title similarity in `/GetEffortEstimationSuggestionsQueryHandler.cs:236-279`:
+    - token cleanup with stop-word removal
+    - Jaccard word overlap
+    - character-overlap similarity
+    - combined as `70%` word-level and `30%` character-level
+  - Suggestion value:
+    - take top 5 similar items
+    - suggested effort = median of their effort values in `/GetEffortEstimationSuggestionsQueryHandler.cs:178-183` and `:281-293`
+  - Confidence in `/GetEffortEstimationSuggestionsQueryHandler.cs:305-314`:
+    - `sampleConfidence = min(1, sampleSize / 10)`
+    - `varianceConfidence = 1.0` when variance `< 4.0`, else `max(0.3, 1 - variance / 100.0)`
+    - final confidence = average of the two
+    - no-history fallback confidence = `0.3`
+- **Duplication**
+  - Duplicates variance calculation from estimation quality.
+  - Repeats historical completed-item selection pattern from estimation quality.
+  - Uses direct state-name matching for “in progress” filtering even though completion detection goes through state classification, so state semantics are split.
+  - `EffortEstimationSettingsDto` owns default values, while the suggestion heuristics own matching/confidence/median logic; there is no single canonical estimation-diagnostics service tying them together.
+- **Extraction readiness**
+  - **Low to moderate.**
+  - Positive signals:
+    - settings defaults are explicit and reusable
+    - heuristics are well-contained in one handler
+  - Reasons not ready for CDC:
+    - heavy use of heuristics with arbitrary weights (`0.4/0.3/0.3`, top-5 median, variance cutoff `4.0`)
+    - no spec document makes these weights canonical
+    - parts of the rule set are operational/UI-oriented rather than clear domain invariants
+- **Recommended ownership**
+  - Future domain ownership, once confirmed:
+    - historical-similarity scoring
+    - median/variance/confidence helpers
+    - default-estimate resolution interface over settings
+  - Keep outside for now:
+    - work-item selection filters
+    - state-name “in progress” workflow filtering
+    - suggestion DTO wording and example formatting
+
+## Capacity Planning Heuristics
+- **Locations**
+  - Effort-hour sprint capacity planning: `/PoTool.Api/Handlers/Metrics/GetSprintCapacityPlanQueryHandler.cs`
+  - Query contract: `/PoTool.Core/Metrics/Queries/GetSprintCapacityPlanQuery.cs`
+  - DTOs/enums: `/PoTool.Shared/Metrics/SprintCapacityPlanDto.cs` and `CapacityStatus` in `/PoTool.Shared/Metrics/EffortDistributionDto.cs`
+  - Related but distinct sprint-capacity calibration: `/PoTool.Api/Handlers/Metrics/GetCapacityCalibrationQueryHandler.cs`, `/PoTool.Core/Metrics/Queries/GetCapacityCalibrationQuery.cs`, `/PoTool.Shared/Metrics/CapacityCalibrationDto.cs`
+  - Focused tests only exist for calibration: `/PoTool.Tests.Unit/Handlers/GetCapacityCalibrationQueryHandlerTests.cs`
+- **Current formulas / thresholds**
+  - `/GetSprintCapacityPlanQueryHandler.cs`:
+    - selects work items in one iteration
+    - `totalPlannedEffort = sum(Effort ?? 0)`
+    - team capacities are derived by grouping all items under the literal `"Team Member"` placeholder in `/GetSprintCapacityPlanQueryHandler.cs:106-130`
+    - default capacity per person is `40` when not provided
+    - utilization = `assignedEffort / capacity * 100`
+    - status bands in `/GetSprintCapacityPlanQueryHandler.cs:133-149`:
+      - `Underutilized` `< 50%`
+      - `Normal` `50-85%`
+      - `NearCapacity` `85-100%`
+      - `OverCapacity` `>= 100%`
+    - warnings in `/GetSprintCapacityPlanQueryHandler.cs:151-201`:
+      - critical when total effort `> 110%` of capacity
+      - warning when total effort `> 100%`
+      - member-level warning for any over-capacity entries
+      - info when total effort `< 50%`
+  - `/GetCapacityCalibrationQueryHandler.cs` is adjacent rather than the same family:
+    - current implementation committed story points = `PlannedStoryPoints - DerivedStoryPoints`, because the handler explicitly removes derived estimates from committed scope before calculating predictability.
+    - delivered story points = `CompletedPbiStoryPoints`
+    - hours per SP = `DeliveredEffort / DeliveredStoryPoints`
+    - predictability ratio = `Done / Committed`
+    - percentile method uses linear interpolation for P10/P25/P50/P75/P90 over the sorted per-sprint `DeliveredStoryPoints` values in `/GetCapacityCalibrationQueryHandler.cs:142-152` and `:181-196`
+    - outliers are sprints whose `DeliveredStoryPoints` fall outside P10/P90
+- **Duplication**
+  - `GetSprintCapacityPlanQueryHandler.cs` shares the same product-scoped loading and sprint-name extraction pattern as imbalance/concentration handlers.
+  - Warning/recommendation style is structurally similar to the other effort handlers.
+  - There is no test coverage for `/GetSprintCapacityPlanQueryHandler.cs`, which makes its current heuristics less locked down than imbalance/concentration or calibration.
+  - Capacity calibration is not duplicated, but it belongs to a different semantic slice: it consumes canonical sprint projections and story-point delivery semantics rather than raw effort grouping.
+- **Extraction readiness**
+  - **Low for sprint capacity planning as currently implemented.**
+  - Reasons:
+    - placeholder grouping by `"Team Member"` means the handler is not yet grounded in a real assignee/capacity model
+    - start/end dates are returned as `null`
+    - no dedicated unit tests found
+  - **High for capacity calibration, but not into an effort-diagnostics CDC.**
+    - its formulas are stable, documented, and tested
+    - however, it is really an extension of sprint analytics / planning calibration, not a raw effort-diagnostics heuristic
+- **Recommended ownership**
+  - Future domain ownership:
+    - utilization-band classification helpers
+    - generic capacity-warning thresholds if a real capacity model is introduced
+  - Keep outside for now:
+    - current sprint-capacity handler as application logic until the team-member capacity model is real
+    - capacity calibration in the sprint analytics / planning domain, not in EffortDiagnostics
+
+## Keep Outside CDC
+- `/PoTool.Api/Handlers/Metrics/GetEffortImbalanceQueryHandler.cs` loading/orchestration code:
+  - product lookup
+  - `BacklogRootWorkItemIds` expansion
+  - mediator dispatch to `GetWorkItemsByRootIdsQuery`
+  - area-path and iteration filtering
+  - These are application concerns, not domain rules.
+- `/PoTool.Api/Handlers/Metrics/GetEffortConcentrationRiskQueryHandler.cs` formatting concerns:
+  - top-work-item display strings
+  - recommendation titles/descriptions
+  - path-shortening helpers
+  - These are DTO/presentation shaping concerns.
+- `/PoTool.Api/Handlers/Metrics/GetEffortEstimationQualityQueryHandler.cs` completion lookup and period grouping:
+  - state classification service calls
+  - “recent iterations” selection by `RetrievedAt`
+  - These are workflow/orchestration concerns around the heuristic.
+- `/PoTool.Api/Handlers/Metrics/GetEffortEstimationSuggestionsQueryHandler.cs` item selection workflow:
+  - filtering only unestimated items
+  - literal `"In Progress"` / `"Active"` gating
+  - similar-work-item display payloads
+  - These are workflow-specific application choices.
+- `/PoTool.Api/Handlers/Metrics/GetSprintCapacityPlanQueryHandler.cs` current implementation:
+  - placeholder member grouping and API response shaping should stay outside until there is a real capacity model.
+- `/PoTool.Api/Handlers/Metrics/GetCapacityCalibrationQueryHandler.cs`
+  - should remain outside a future EffortDiagnostics CDC because it is based on canonical sprint projection and story-point delivery rules already aligned with sprint analytics.
+- `/PoTool.Core/Metrics/Queries/*.cs` and `/PoTool.Shared/Metrics/*.cs`
+  - query/DTO contracts are transport/application boundaries. Their comments may imply ownership, but the rules themselves should live in domain services if extracted later.
+
+## Conclusion
+`EffortDiagnostics` is a **real future slice**, but it is **not yet ready to become the next broad CDC/domain package after BacklogQuality**.
+
+Why it should **not** be extracted as one package yet:
+- the family is actually three different maturity levels:
+  - **stable:** imbalance and concentration risk
+  - **semi-stable heuristic:** estimation quality and suggestions
+  - **immature / placeholder:** sprint capacity planning
+- duplication exists mostly in handler structure and utility math, not in one already-canonical domain service
+- public contracts and executable semantics still drift in places:
+  - concentration query exposes a threshold parameter that is not used
+  - estimation quality claims estimate-vs-actual analysis but currently measures consistency only
+  - sprint capacity planning uses placeholder team-member logic
+
+Recommendation:
+- **Do not centralize the entire effort family next.**
+- If the team wants to move into this area next, create a narrower first slice for:
+  - effort imbalance rules
+  - effort concentration rules
+  - shared statistical helpers used by those rules
+- Keep outside that first slice:
+  - estimation suggestion heuristics
+  - estimation quality semantics until canonicalized
+  - current sprint capacity plan workflow
+  - capacity calibration, which belongs with sprint analytics/planning
+
+So the best answer today is:
+- **Future package:** yes, but narrower than “all effort diagnostics”
+- **Next slice after BacklogQuality:** **not the full EffortDiagnostics package yet**

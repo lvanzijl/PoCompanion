@@ -7,9 +7,9 @@ public sealed class SprintCommitmentDomainModelDocumentTests
     public void SprintCommitmentDomainModel_ReportExistsWithCanonicalConceptsSignalsMetricsRelationshipsAndMigration()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "domain", "sprint_commitment_domain_model.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "architecture", "sprint-commitment-domain-model.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The sprint commitment domain model document should exist under docs/domain.");
+        Assert.IsTrue(File.Exists(reportPath), "The sprint commitment domain model document should exist under docs/architecture.");
 
         var report = File.ReadAllText(reportPath);
 

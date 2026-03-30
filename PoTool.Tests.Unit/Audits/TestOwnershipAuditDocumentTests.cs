@@ -7,9 +7,9 @@ public sealed class TestOwnershipAuditDocumentTests
     public void TestOwnershipAudit_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "test_ownership_audit.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "test-ownership-audit.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The test ownership audit report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The test ownership audit report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

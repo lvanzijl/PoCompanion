@@ -7,9 +7,9 @@ public sealed class PortfolioFlowFeasibilityDocumentTests
     public void PortfolioFlowFeasibility_ReportExistsWithRequiredSectionsAndKeyFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "portfolio_flow_feasibility.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "portfolio-flow-feasibility.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The portfolio flow feasibility report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The portfolio flow feasibility report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

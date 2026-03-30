@@ -7,9 +7,9 @@ public sealed class ForecastingDomainExplorationDocumentTests
     public void ForecastingDomainExploration_ReportExistsWithRequiredSectionsAndBoundaries()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "forecasting_domain_exploration.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "forecasting-domain-exploration.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The forecasting domain exploration report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The forecasting domain exploration report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

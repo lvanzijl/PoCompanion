@@ -7,9 +7,9 @@ public sealed class ApiReadModelsValidationDocumentTests
     public void ApiReadModelsValidation_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analyze", "api-readmodels-validation.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "api-readmodels-validation.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The API read-models validation report should exist under docs/analyze.");
+        Assert.IsTrue(File.Exists(reportPath), "The API read-models validation report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

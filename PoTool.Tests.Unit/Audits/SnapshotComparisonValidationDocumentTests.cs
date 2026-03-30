@@ -7,9 +7,9 @@ public sealed class SnapshotComparisonValidationDocumentTests
     public void SnapshotComparisonValidation_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analyze", "snapshot-comparison-validation.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "snapshot-comparison-validation.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The snapshot comparison validation report should exist under docs/analyze.");
+        Assert.IsTrue(File.Exists(reportPath), "The snapshot comparison validation report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

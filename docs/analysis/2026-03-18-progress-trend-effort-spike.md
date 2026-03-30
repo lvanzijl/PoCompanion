@@ -1,3 +1,5 @@
+> **NOTE:** This document reflects a historical state prior to Batch 3 cleanup.
+
 # Bug Analysis Report
 
 ## Metadata

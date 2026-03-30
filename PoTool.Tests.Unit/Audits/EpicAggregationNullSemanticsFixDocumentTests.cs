@@ -7,9 +7,9 @@ public sealed class EpicAggregationNullSemanticsFixDocumentTests
     public void EpicAggregationNullSemanticsFix_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analyze", "epic-aggregation-null-semantics-fix.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "epic-aggregation-null-semantics-fix.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The epic aggregation null semantics fix report should exist under docs/analyze.");
+        Assert.IsTrue(File.Exists(reportPath), "The epic aggregation null semantics fix report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

@@ -7,9 +7,9 @@ public sealed class EpicAggregationValidationDocumentTests
     public void EpicAggregationValidation_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analyze", "epic-aggregation-validation.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "epic-aggregation-validation.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The epic aggregation validation report should exist under docs/analyze.");
+        Assert.IsTrue(File.Exists(reportPath), "The epic aggregation validation report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

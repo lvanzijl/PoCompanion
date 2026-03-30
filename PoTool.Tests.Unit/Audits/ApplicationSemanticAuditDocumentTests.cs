@@ -7,9 +7,9 @@ public sealed class ApplicationSemanticAuditDocumentTests
     public void ApplicationSemanticAudit_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = $"{repositoryRoot}/docs/audits/application_semantic_audit.md";
+        var reportPath = $"{repositoryRoot}/docs/analysis/application-semantic-audit.md";
 
-        Assert.IsTrue(File.Exists(reportPath), "The application semantic audit report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The application semantic audit report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

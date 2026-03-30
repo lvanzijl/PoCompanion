@@ -7,9 +7,9 @@ public sealed class TransportNamingAlignmentDocumentTests
     public void TransportNamingAlignment_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "transport_naming_alignment.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "transport-naming-alignment.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The transport naming alignment audit should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The transport naming alignment audit should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 
@@ -33,7 +33,7 @@ public sealed class TransportNamingAlignmentDocumentTests
         StringAssert.Contains(report, "GetEpicCompletionForecastQueryHandler.cs");
         StringAssert.Contains(report, "DeliveryTrendProgressRollupMapper.cs");
         StringAssert.Contains(report, "GetPortfolioDeliveryQueryHandler.cs");
-        StringAssert.Contains(report, "docs/domain/cdc_reference.md");
+        StringAssert.Contains(report, "docs/architecture/cdc-reference.md");
         StringAssert.Contains(report, "legacy transport aliases for story points");
     }
 

@@ -7,9 +7,9 @@ public sealed class FinalPreUsageValidationDocumentTests
     public void FinalPreUsageValidation_ReportExistsWithRequiredSectionsAndEvidence()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "final_pre_usage_validation.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "final-pre-usage-validation.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The final pre-usage validation report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The final pre-usage validation report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

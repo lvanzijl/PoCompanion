@@ -7,9 +7,9 @@ public sealed class DtoContractCleanupDocumentTests
     public void DtoContractCleanupAudit_ReportExistsWithRequiredSectionsAndMappings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "dto_contract_cleanup.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "dto-contract-cleanup.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The DTO contract cleanup audit should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The DTO contract cleanup audit should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

@@ -7,9 +7,9 @@ public sealed class BuildQualityRetrievalPerformanceReportDocumentTests
     public void BuildQualityRetrievalPerformanceReport_ReportExistsWithRequiredSectionsAndLimitations()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "buildquality_retrieval_performance_report.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality-retrieval-performance-report.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The BuildQuality retrieval performance report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The BuildQuality retrieval performance report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

@@ -167,7 +167,7 @@ public static class DataSourceModeConfiguration
     public static bool IsBlockedAmbiguousRoute(string? path)
     {
         // TODO: Requires endpoint split; see "Deferred Work" in
-        // docs/filters/datasource-enforcement.md.
+        // docs/analysis/datasource-enforcement.md.
         // State timeline currently mixes cached work item reads with live revision retrieval and
         // is intentionally blocked at runtime.
         return !string.IsNullOrEmpty(path) &&
@@ -180,7 +180,7 @@ public static class DataSourceModeConfiguration
     public static string? GetBlockedRouteReason(string? path)
     {
         return IsBlockedAmbiguousRoute(path)
-            ? "Requires endpoint split; see Deferred Work in docs/filters/datasource-enforcement.md."
+            ? "Requires endpoint split; see Deferred Work in docs/analysis/datasource-enforcement.md."
             : null;
     }
 

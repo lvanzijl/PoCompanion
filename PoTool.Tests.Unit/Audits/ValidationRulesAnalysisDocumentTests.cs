@@ -7,25 +7,21 @@ public sealed class ValidationRulesAnalysisDocumentTests
     public void ValidationRulesAnalysis_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs/analyze/validation-rules.md");
+        var mirrorPath = Path.Combine(repositoryRoot, "docs", "rules", "validation-rules.md");
+        var authoritativePath = Path.Combine(repositoryRoot, ".github", "copilot-instructions.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The validation rules analysis report should exist under docs/analyze.");
+        Assert.IsTrue(File.Exists(mirrorPath), "The validation rules mirror should exist under docs/rules.");
+        Assert.IsTrue(File.Exists(authoritativePath), "The authoritative copilot instructions should exist under .github.");
 
-        var report = File.ReadAllText(reportPath);
+        var mirror = File.ReadAllText(mirrorPath);
+        var authoritative = File.ReadAllText(authoritativePath);
 
-        StringAssert.Contains(report, "# Validation, Integrity, and Health Rules Analysis");
-        StringAssert.Contains(report, "## 1. Current health providers and entry points");
-        StringAssert.Contains(report, "## 2. Full inventory of current rules");
-        StringAssert.Contains(report, "## 3. Current categorization and execution model");
-        StringAssert.Contains(report, "## 4. Overlap and duplicate logic");
-        StringAssert.Contains(report, "## 5. Gaps vs desired Integrity / Planning Quality model");
-        StringAssert.Contains(report, "## 6. Refactoring recommendations");
-        StringAssert.Contains(report, "SI-1");
-        StringAssert.Contains(report, "RC-2");
-        StringAssert.Contains(report, "EFF");
-        StringAssert.Contains(report, "BacklogHealthCalculator");
-        StringAssert.Contains(report, "HierarchicalWorkItemValidator");
-        StringAssert.Contains(report, "BacklogValidationService");
+        StringAssert.Contains(mirror, "No semantic interpretation is allowed.");
+        StringAssert.Contains(mirror, "Historical leakage");
+        StringAssert.Contains(mirror, "../../.github/copilot-instructions.md");
+        StringAssert.Contains(authoritative, "## 15. Validation and semantic rules (binding)");
+        StringAssert.Contains(authoritative, "The current validation/integrity model includes structural integrity, refinement readiness, and implementation readiness rules.");
+        StringAssert.Contains(authoritative, "The missing-effort rule is an alias of the canonical implementation-readiness effort rule and must not diverge semantically.");
     }
 
     private static string GetRepositoryRoot()

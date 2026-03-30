@@ -7,9 +7,9 @@ public sealed class BuildQualityImplementationContractReportDocumentTests
     public void BuildQualityImplementationContractReport_ReportExistsWithRequiredSectionsAndLockedContent()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "buildquality_implementation_contract_report.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality-implementation-contract-report.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The BuildQuality implementation contract report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The BuildQuality implementation contract report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

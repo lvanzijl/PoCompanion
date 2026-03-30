@@ -7,9 +7,9 @@ public sealed class TestCleanupStep1DocumentTests
     public void TestCleanupStep1_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "test_cleanup_step1.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "test-cleanup-step1.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The test cleanup step 1 report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The test cleanup step 1 report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

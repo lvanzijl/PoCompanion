@@ -220,7 +220,7 @@ Representative mismatches reproduced in the current run:
 
 - expected handler anchor `new GetSprintMetricsQuery(path)` not found in current handler source
 - expected document content `"Line" or "Lines"` not found in the build-quality analysis report
-- expected generated-domain-map symbol ``IEpicAggregationService`` not found in `docs/domain/cdc_domain_map_generated.md`
+- expected generated-domain-map symbol ``IEpicAggregationService`` not found in `docs/architecture/cdc-domain-map-generated.md`
 
 Evidence:
 
@@ -233,9 +233,9 @@ Evidence:
   - dynamically detects public interfaces and expects every one to appear in the generated document
 - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Core.Domain/Domain/DeliveryTrends/Services/EpicAggregationService.cs:9-15`
   - `IEpicAggregationService` exists in source
-- `/home/runner/work/PoCompanion/PoCompanion/docs/domain/cdc_domain_map_generated.md:153-180`
+- `/home/runner/work/PoCompanion/PoCompanion/docs/architecture/cdc-domain-map-generated.md:153-180`
   - current generated map does not include ``IEpicAggregationService``
-- `/home/runner/work/PoCompanion/PoCompanion/docs/audits/buildquality_missing_ingestion_build_168570_code_analysis_report.md:1-120`
+- `/home/runner/work/PoCompanion/PoCompanion/docs/analysis/buildquality-missing-ingestion-build-168570-code-analysis-report.md:1-120`
   - report exists and mostly matches, but not every exact expected phrase remains present
 
 **Type:** **incorrect test expectation / documentation drift**
@@ -254,7 +254,7 @@ These tests validate documentation strings and generated-report content, not run
 
 - `PoTool.Tests.Unit.Handlers.GetPipelineInsightsScatterPointTests.Handle_ScatterPoints_OrderedByStartTimeAscending`
 - `PoTool.Tests.Unit.Handlers.GetAreaPathsFromTfsQueryHandlerTests.Handle_CallsTfsClientWithNullDepth`
-- `PoTool.Tests.Unit.Helpers.InputValidatorTests.SanitizeFilter_RemovesSQLInjectionAttempts`
+- `PoTool.Tests.Unit.Helpers.InputSanitizationTests.SanitizeFilter_RemovesSQLInjectionAttempts`
 
 **Failure type / messages:**
 
@@ -292,13 +292,13 @@ This is an explicit implementation/test divergence.
 **Type:** **incorrect test expectation or intentional implementation drift**  
 **Confidence:** **high**
 
-#### 6c. InputValidator SQL-injection sanitization test
+#### 6c. Input-sanitization SQL-injection test
 
 Evidence:
 
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Helpers/InputValidator.cs:26-29`
+- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Helpers/` input-sanitization helper
   - removes disallowed characters `<`, `>`, `;`, `"`, `'`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Helpers/InputValidatorTests.cs:87-94`
+- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Helpers/` input-sanitization tests
   - expects sanitized output to still contain `"test"` and `"DROP"`
 - current failure text shows the actual output collapsed to `"test"`
 

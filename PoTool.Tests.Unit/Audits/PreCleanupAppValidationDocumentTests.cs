@@ -7,9 +7,9 @@ public sealed class PreCleanupAppValidationDocumentTests
     public void PreCleanupAppValidation_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "pre_cleanup_app_validation.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "pre-cleanup-app-validation.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The pre-cleanup app validation report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The pre-cleanup app validation report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

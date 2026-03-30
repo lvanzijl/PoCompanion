@@ -7,9 +7,9 @@ public sealed class ApplicationSimplificationPlanDocumentTests
     public void ApplicationSimplificationPlan_ReportExistsWithRequiredSectionsAndContent()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "roadmaps", "application_simplification_plan.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "implementation", "application-simplification-plan.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The application simplification plan should exist under docs/roadmaps.");
+        Assert.IsTrue(File.Exists(reportPath), "The application simplification plan should exist under docs/implementation.");
 
         var report = File.ReadAllText(reportPath);
 

@@ -7,8 +7,8 @@ Provide a comprehensive visualization of work item dependencies and relationship
 This feature must explicitly reference and comply with:
 
 * `docs/UX_PRINCIPLES.md`
-* `docs/UI_RULES.md`
-* `docs/ARCHITECTURE_RULES.md`
+* `docs/rules/ui-rules.md`
+* `docs/rules/architecture-rules.md`
 
 ---
 
@@ -28,7 +28,7 @@ The Dependency Graph feature analyzes work item relationships from cached TFS da
 
 ## Visualization Approach
 
-Per `docs/UI_RULES.md`, the UI **MUST** use only approved open-source Blazor component libraries (MudBlazor, Radzen, Fluent UI). None of these libraries provide native graph visualization components.
+Per `docs/rules/ui-rules.md`, the UI **MUST** use only approved open-source Blazor component libraries (MudBlazor, Radzen, Fluent UI). None of these libraries provide native graph visualization components.
 
 Therefore, the implementation uses a **hierarchical list-based view** with:
 
@@ -260,7 +260,7 @@ Returns the complete dependency graph with optional filters.
 
 ### Caching Strategy
 
-- Work items are cached locally per `docs/ARCHITECTURE_RULES.md`
+- Work items are cached locally per `docs/rules/architecture-rules.md`
 - Dependency graph is computed on-demand from cached data
 - No additional caching of graph results
 - Graph analysis timestamp included in response
@@ -347,13 +347,13 @@ If approved in the future:
 4. **Export capabilities** - Export graph data to CSV or JSON
 5. **Historical trends** - Track how dependency metrics change over time
 
-All future enhancements must comply with `docs/UI_RULES.md` and `docs/ARCHITECTURE_RULES.md`.
+All future enhancements must comply with `docs/rules/ui-rules.md` and `docs/rules/architecture-rules.md`.
 
 ---
 
 ## References
 
 - UX Principles: `docs/UX_PRINCIPLES.md`
-- UI Rules: `docs/UI_RULES.md`
-- Architecture Rules: `docs/ARCHITECTURE_RULES.md`
+- UI Rules: `docs/rules/ui-rules.md`
+- Architecture Rules: `docs/rules/architecture-rules.md`
 - Approved Component Libraries: MudBlazor (MIT), Radzen Blazor (MIT), Fluent UI Blazor (MIT)

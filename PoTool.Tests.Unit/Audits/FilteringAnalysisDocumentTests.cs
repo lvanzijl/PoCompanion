@@ -7,9 +7,9 @@ public sealed class FilteringAnalysisDocumentTests
     public void FilteringAnalysis_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analyze", "filtering.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "filtering.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The filtering analysis report should exist under docs/analyze.");
+        Assert.IsTrue(File.Exists(reportPath), "The filtering analysis report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

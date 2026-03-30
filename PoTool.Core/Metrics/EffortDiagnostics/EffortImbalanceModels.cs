@@ -2,7 +2,7 @@ namespace PoTool.Core.Metrics.EffortDiagnostics;
 
 /// <summary>
 /// Canonical bucket-level risk classification for effort imbalance as defined in
-/// <c>docs/domain/effort_diagnostics_domain_model.md</c>.
+/// <c>docs/architecture/effort-diagnostics-domain-model.md</c>.
 /// </summary>
 public enum ImbalanceRiskLevel
 {
@@ -29,7 +29,7 @@ public enum ImbalanceRiskLevel
 
 /// <summary>
 /// Represents one canonical effort imbalance bucket defined in
-/// <c>docs/domain/effort_diagnostics_domain_model.md</c>.
+/// <c>docs/architecture/effort-diagnostics-domain-model.md</c>.
 /// </summary>
 public sealed record EffortImbalanceBucket
 {
@@ -78,7 +78,7 @@ public sealed record EffortImbalanceBucket
 
 /// <summary>
 /// Represents the canonical effort imbalance analysis defined in
-/// <c>docs/domain/effort_diagnostics_domain_model.md</c>.
+/// <c>docs/architecture/effort-diagnostics-domain-model.md</c>.
 /// </summary>
 public sealed record EffortImbalanceAnalysis
 {

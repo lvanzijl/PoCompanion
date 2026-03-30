@@ -7,9 +7,9 @@ public sealed class BuildQualityDiscoveryReportDocumentTests
     public void BuildQualityDiscoveryReport_ReportExistsWithRequiredSectionsAndFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "buildquality_discovery_report.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "buildquality-discovery-report.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The BuildQuality discovery report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The BuildQuality discovery report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 
@@ -31,7 +31,6 @@ public sealed class BuildQualityDiscoveryReportDocumentTests
         StringAssert.Contains(report, "`/home/health`");
         StringAssert.Contains(report, "`/home/delivery`");
         StringAssert.Contains(report, "`/home/pipeline-insights`");
-        StringAssert.Contains(report, "PoTool.Tools.TfsRetrievalValidator");
     }
 
     private static string GetRepositoryRoot()

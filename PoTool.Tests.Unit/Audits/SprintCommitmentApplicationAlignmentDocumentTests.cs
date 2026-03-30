@@ -7,9 +7,9 @@ public sealed class SprintCommitmentApplicationAlignmentDocumentTests
     public void SprintCommitmentApplicationAlignment_ReportExistsWithMigrationSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "sprint_commitment_application_alignment.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "sprint-commitment-application-alignment.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The sprint commitment application alignment audit should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The sprint commitment application alignment audit should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

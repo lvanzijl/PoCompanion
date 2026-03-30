@@ -3,7 +3,7 @@ namespace PoTool.Client.Helpers;
 /// <summary>
 /// Utility class for parsing comma-separated string inputs.
 /// </summary>
-[Obsolete("UNUSED: No references found in codebase. Confirmed via reachability analysis (Phase 1). See docs/cleanup/phase1-client-reachability-report.md section 6.2", error: true)]
+[Obsolete("UNUSED: No references found in codebase. Confirmed via reachability analysis (Phase 1). See docs/reports/2026-03-30-cleanup-phase1-client-reachability-report.md section 6.2", error: true)]
 public static class InputParsingHelper
 {
     /// <summary>

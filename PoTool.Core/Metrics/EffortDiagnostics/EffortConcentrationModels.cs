@@ -2,7 +2,7 @@ namespace PoTool.Core.Metrics.EffortDiagnostics;
 
 /// <summary>
 /// Canonical bucket-level risk classification for effort concentration as defined in
-/// <c>docs/domain/effort_diagnostics_domain_model.md</c>.
+/// <c>docs/architecture/effort-diagnostics-domain-model.md</c>.
 /// </summary>
 public enum ConcentrationRiskLevel
 {
@@ -34,7 +34,7 @@ public enum ConcentrationRiskLevel
 
 /// <summary>
 /// Represents one canonical effort concentration bucket defined in
-/// <c>docs/domain/effort_diagnostics_domain_model.md</c>.
+/// <c>docs/architecture/effort-diagnostics-domain-model.md</c>.
 /// </summary>
 public sealed record EffortConcentrationBucket
 {
@@ -76,7 +76,7 @@ public sealed record EffortConcentrationBucket
 
 /// <summary>
 /// Represents the canonical effort concentration analysis defined in
-/// <c>docs/domain/effort_diagnostics_domain_model.md</c>.
+/// <c>docs/architecture/effort-diagnostics-domain-model.md</c>.
 /// </summary>
 public sealed record EffortConcentrationAnalysis
 {

@@ -75,7 +75,6 @@ Lock files added:
 - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Integrations.Tfs/packages.lock.json`
 - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Shared/packages.lock.json`
 - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/packages.lock.json`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tools.TfsRetrievalValidator/packages.lock.json`
 
 Files intentionally not changed:
 

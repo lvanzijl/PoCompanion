@@ -7,9 +7,9 @@ public sealed class PortfolioFlowDomainExplorationDocumentTests
     public void PortfolioFlowDomainExploration_ReportExistsWithRequiredSectionsAndKeyFindings()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "portfolio_flow_domain_exploration.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "portfolio-flow-domain-exploration.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The portfolio flow exploration report should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The portfolio flow exploration report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

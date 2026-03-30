@@ -6,7 +6,7 @@ Provide a hierarchical view of all work items (Goal, Objective, Epic, Feature, P
 This feature must explicitly reference and comply with:
 
 * `docs/ux-principles.md`
-* `docs/ARCHITECTURE_RULES.md`
+* `docs/rules/architecture-rules.md`
 
 ---
 
@@ -49,7 +49,7 @@ Within this menu bar is a **directly accessible button** for retrieving and cach
 * On click, the tool retrieves all work items under the configured Area Path following the 6-level hierarchy (Goal → Objective → Epic → Feature → PBI → Task).
 * Data is stored locally in SQLite, replacing previous cache atomically.
 * Any view relying on cached data re-renders after completion.
-* All communication paths, caching strategies, and component boundaries must follow `docs/ARCHITECTURE_RULES.md`.
+* All communication paths, caching strategies, and component boundaries must follow `docs/rules/architecture-rules.md`.
 
 ---
 
@@ -95,7 +95,7 @@ Highlighting must remain subtle and clean, according to the style rules in `docs
 The pull process:
 
 1. Retrieve all relevant work items via Azure DevOps REST API.
-2. Persist in local SQLite according to the caching rules in `docs/ARCHITECTURE_RULES.md`.
+2. Persist in local SQLite according to the caching rules in `docs/rules/architecture-rules.md`.
 3. Only necessary data for rendering and filtering is stored.
 4. Cache is replaced atomically.
 
@@ -110,6 +110,6 @@ Tree loads exclusively from the local cache for speed and offline exploration.
 This feature must always be implemented in compliance with:
 
 * **`docs/ux-principles.md`** — defines layout, clarity, consistency, interaction patterns, and filtering behavior.
-* **`docs/ARCHITECTURE_RULES.md`** — defines caching, API boundaries, component separation, and data integrity requirements.
+* **`docs/rules/architecture-rules.md`** — defines caching, API boundaries, component separation, and data integrity requirements.
 
 All further features related to work item visualization or configuration must reference and align with these same documents.

@@ -7,32 +7,32 @@ public sealed class WorkspaceUxRulesDocumentTests
     public void UiRules_DocumentDefinesWorkspaceTypesTileRulesAndHubConstraints()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var documentPath = Path.Combine(repositoryRoot, "docs", "UI_RULES.md");
+        var mirrorPath = Path.Combine(repositoryRoot, "docs", "rules", "ui-rules.md");
+        var authoritativePath = Path.Combine(repositoryRoot, ".github", "copilot-instructions.md");
 
-        Assert.IsTrue(File.Exists(documentPath), "The UI rules document should exist under docs.");
+        Assert.IsTrue(File.Exists(mirrorPath), "The UI rules mirror should exist under docs/rules.");
+        Assert.IsTrue(File.Exists(authoritativePath), "The authoritative copilot instructions should exist under .github.");
 
-        var document = File.ReadAllText(documentPath);
+        var mirror = File.ReadAllText(mirrorPath);
+        var authoritative = File.ReadAllText(authoritativePath);
 
-        StringAssert.Contains(document, "Workspace entry pages are divided into two explicit categories");
-        StringAssert.Contains(document, "Navigation workspaces");
-        StringAssert.Contains(document, "Signal workspace");
-        StringAssert.Contains(document, "Health, Delivery, and Planning");
-        StringAssert.Contains(document, "Trends");
-        StringAssert.Contains(document, "DYNAMIC tiles are allowed **only** in signal workspaces.");
-        StringAssert.Contains(document, "dynamic tile signals must answer **\"why click now?\"**");
-        StringAssert.Contains(document, "Navigation hubs must:");
-        StringAssert.Contains(document, "avoid heavy data loading on entry");
-        StringAssert.Contains(document, "Health, Delivery, and Planning are navigation hubs with STATIC tiles.");
-        StringAssert.Contains(document, "Trends is the signal workspace and may mix STATIC tiles with DYNAMIC tiles when a real signal exists.");
+        StringAssert.Contains(mirror, "No semantic interpretation is allowed.");
+        StringAssert.Contains(mirror, "Historical leakage");
+        StringAssert.Contains(mirror, "../../.github/copilot-instructions.md");
+        StringAssert.Contains(authoritative, "### 12.4 Workspace rules");
+        StringAssert.Contains(authoritative, "Navigation workspaces use static tiles and should not require heavy hub-entry data loading.");
+        StringAssert.Contains(authoritative, "Signal workspaces may expose dynamic signal tiles only when the runtime signal is meaningful and independently loaded.");
+        StringAssert.Contains(authoritative, "Static tiles must remain understandable without live data.");
+        StringAssert.Contains(authoritative, "Dynamic tiles must degrade gracefully and must not require heavy hub-entry queries.");
     }
 
     [TestMethod]
     public void WorkspaceHubTileAnalysis_ReflectsCurrentSignalWorkspaceExamples()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var documentPath = Path.Combine(repositoryRoot, "docs", "audits", "workspace_hub_tile_analysis.md");
+        var documentPath = Path.Combine(repositoryRoot, "docs", "analysis", "workspace-hub-tile-analysis.md");
 
-        Assert.IsTrue(File.Exists(documentPath), "The workspace hub tile analysis document should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(documentPath), "The workspace hub tile analysis document should exist under docs/analysis.");
 
         var document = File.ReadAllText(documentPath);
 

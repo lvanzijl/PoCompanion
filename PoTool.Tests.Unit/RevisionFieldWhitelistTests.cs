@@ -14,16 +14,10 @@ public sealed class RevisionFieldWhitelistTests
     }
 
     [TestMethod]
-    public void BuildODataRevisionSelectionSpec_ContainsScalarMappingsForPhaseACorrectionFields()
+    public void Fields_DoNotContainDuplicates()
     {
-        var selectionSpec = RevisionFieldWhitelist.BuildODataRevisionSelectionSpec();
+        var fields = RevisionFieldWhitelist.Fields.ToList();
 
-        var projectNumber = selectionSpec.ParseDescriptors.Single(descriptor => descriptor.RestFieldRef == "Rhodium.Funding.ProjectNumber");
-        var projectElement = selectionSpec.ParseDescriptors.Single(descriptor => descriptor.RestFieldRef == "Rhodium.Funding.ProjectElement");
-        var timeCriticality = selectionSpec.ParseDescriptors.Single(descriptor => descriptor.RestFieldRef == "Microsoft.VSTS.Common.TimeCriticality");
-
-        Assert.AreEqual("ProjectNumber", projectNumber.ScalarProperty);
-        Assert.AreEqual("ProjectElement", projectElement.ScalarProperty);
-        Assert.AreEqual("TimeCriticality", timeCriticality.ScalarProperty);
+        Assert.AreEqual(fields.Count, fields.Distinct(StringComparer.Ordinal).Count());
     }
 }

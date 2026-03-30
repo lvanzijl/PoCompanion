@@ -7,9 +7,9 @@ public sealed class CdcReplayFixtureValidationDocumentTests
     public void CdcReplayFixtureValidation_ReportExistsWithRequiredSectionsAndCoverage()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "audits", "cdc_replay_fixture_validation.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "cdc-replay-fixture-validation.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The CDC replay fixture validation audit should exist under docs/audits.");
+        Assert.IsTrue(File.Exists(reportPath), "The CDC replay fixture validation audit should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 

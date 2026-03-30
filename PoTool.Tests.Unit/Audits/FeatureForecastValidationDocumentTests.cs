@@ -7,9 +7,9 @@ public sealed class FeatureForecastValidationDocumentTests
     public void FeatureForecastValidation_ReportExistsWithRequiredSections()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var reportPath = Path.Combine(repositoryRoot, "docs", "analyze", "feature-forecast-validation.md");
+        var reportPath = Path.Combine(repositoryRoot, "docs", "analysis", "feature-forecast-validation.md");
 
-        Assert.IsTrue(File.Exists(reportPath), "The feature forecast validation report should exist under docs/analyze.");
+        Assert.IsTrue(File.Exists(reportPath), "The feature forecast validation report should exist under docs/analysis.");
 
         var report = File.ReadAllText(reportPath);
 
