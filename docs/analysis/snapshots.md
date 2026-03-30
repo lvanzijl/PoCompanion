@@ -176,7 +176,7 @@ There is a good structural fit for a project-level budget snapshot **if “proje
 That recommendation follows the domain rules:
 
 - `docs/domain/domain_model.md`
-- `docs/domain/rules/hierarchy_rules.md`
+- `docs/rules/hierarchy-rules.md`
 
 Those documents define **Product** as the primary analytics boundary. In contrast, TFS project scope is currently used mainly for shared configuration, such as `WorkItemStateClassificationEntity.TfsProjectName`.
 

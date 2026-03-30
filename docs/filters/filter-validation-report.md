@@ -106,7 +106,7 @@ Why the status is **UNSAFE** instead of **SAFE**:
 **Impact**
 
 - the migrated filter system is not presented with a consistent “render shell first, load progressively” UX
-- this conflicts with `docs/UI_LOADING_RULES.md:5-39`, `91-102`
+- this conflicts with `docs/rules/ui-loading-rules.md:5-39`, `91-102`
 
 **Assessment**
 

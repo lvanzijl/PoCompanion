@@ -7,11 +7,11 @@ _Generated: 2026-03-14_
 ### Files analyzed
 
 - `docs/domain/domain_model.md`
-- `docs/domain/rules/sprint_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/estimation_rules.md`
-- `docs/domain/rules/hierarchy_rules.md`
-- `docs/domain/rules/propagation_rules.md`
+- `docs/rules/sprint-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/estimation-rules.md`
+- `docs/rules/hierarchy-rules.md`
+- `docs/rules/propagation-rules.md`
 - `docs/audits/metrics_audit.md`
 - `docs/audits/hierarchy_propagation_audit.md`
 - `docs/audits/projection_trend_pipeline_audit.md`
@@ -43,11 +43,11 @@ Extraction therefore appears **feasible with targeted boundary refactors, not wi
 ## Domain Rules Reviewed
 
 - `docs/domain/domain_model.md` §§ 2.2-2.8, 3.3-3.9, 5.1-5.10, 7
-- `docs/domain/rules/sprint_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/estimation_rules.md`
-- `docs/domain/rules/hierarchy_rules.md`
-- `docs/domain/rules/propagation_rules.md`
+- `docs/rules/sprint-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/estimation-rules.md`
+- `docs/rules/hierarchy-rules.md`
+- `docs/rules/propagation-rules.md`
 
 ## Compliant Areas
 

@@ -7,18 +7,21 @@ public sealed class UiSemanticCorrectionDocumentTests
     public void UiSemanticRules_DocumentExistsWithRequiredRules()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var documentPath = Path.Combine(repositoryRoot, "docs", "domain", "ui_semantic_rules.md");
+        var mirrorPath = Path.Combine(repositoryRoot, "docs", "rules", "ui-semantic-rules.md");
+        var authoritativePath = Path.Combine(repositoryRoot, ".github", "copilot-instructions.md");
 
-        Assert.IsTrue(File.Exists(documentPath), "The UI semantic rules document should exist under docs/domain.");
+        Assert.IsTrue(File.Exists(mirrorPath), "The UI semantic rules mirror should exist under docs/rules.");
+        Assert.IsTrue(File.Exists(authoritativePath), "The authoritative copilot instructions should exist under .github.");
 
-        var document = File.ReadAllText(documentPath);
+        var mirror = File.ReadAllText(mirrorPath);
+        var authoritative = File.ReadAllText(authoritativePath);
 
-        StringAssert.Contains(document, "# UI Semantic Rules");
-        StringAssert.Contains(document, "Story points are the planning and delivery metric.");
-        StringAssert.Contains(document, "Effort hours are the engineering workload metric.");
-        StringAssert.Contains(document, "Never display effort hours with a `pts` suffix.");
-        StringAssert.Contains(document, "Portfolio flow uses canonical story-point scope.");
-        StringAssert.Contains(document, "Portfolio flow UI must label stock, inflow, throughput, remaining scope, and completion with story-point semantics.");
+        Assert.AreEqual("# \n", mirror, "The docs/rules mirror should contain the exact Batch 2 template.");
+        StringAssert.Contains(authoritative, "### 15.3 UI semantics");
+        StringAssert.Contains(authoritative, "Story points represent planning and delivery scope.");
+        StringAssert.Contains(authoritative, "Effort hours represent engineering workload.");
+        StringAssert.Contains(authoritative, "Never label effort hours as points.");
+        StringAssert.Contains(authoritative, "Portfolio-flow and related analytics surfaces must use canonical story-point semantics in both computation and labels.");
     }
 
     [TestMethod]

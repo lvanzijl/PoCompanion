@@ -7,11 +7,11 @@ _Generated: 2026-03-14_
 ### Files analyzed
 
 - `docs/domain/domain_model.md`
-- `docs/domain/rules/hierarchy_rules.md`
-- `docs/domain/rules/propagation_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/sprint_rules.md`
-- `docs/domain/rules/estimation_rules.md`
+- `docs/rules/hierarchy-rules.md`
+- `docs/rules/propagation-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/sprint-rules.md`
+- `docs/rules/estimation-rules.md`
 - `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs`
 - `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs`
 - `PoTool.Api/Handlers/Metrics/GetEpicCompletionForecastQueryHandler.cs`
@@ -38,11 +38,11 @@ The audited hierarchy and propagation paths now align with the canonical domain 
 ## Domain Rules Reviewed
 
 - `docs/domain/domain_model.md` §§ 2.2-2.8, 3.3-3.9, 5.5-5.9
-- `docs/domain/rules/hierarchy_rules.md`
-- `docs/domain/rules/propagation_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/sprint_rules.md`
-- `docs/domain/rules/estimation_rules.md`
+- `docs/rules/hierarchy-rules.md`
+- `docs/rules/propagation-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/sprint-rules.md`
+- `docs/rules/estimation-rules.md`
 
 ## Compliant Areas
 
@@ -109,5 +109,5 @@ No remaining violations were found in the audited production paths.
 ## Fix Progress — Descendant Activity Propagation
 
 - Updated `PoTool.Api/Services/SprintTrendProjectionService.cs` so functional activity now propagates recursively to all in-scope ancestors instead of stopping at direct parents.
-- Updated `SprintTrendProjectionService.ComputeFeatureProgress()` so activity-gated feature visibility treats task-descendant changes as parent activity, matching the boolean propagation rule in `docs/domain/rules/propagation_rules.md`.
+- Updated `SprintTrendProjectionService.ComputeFeatureProgress()` so activity-gated feature visibility treats task-descendant changes as parent activity, matching the boolean propagation rule in `docs/rules/propagation-rules.md`.
 - Expanded `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs` to assert full Task → PBI → Feature bubbling in `WorkedCount` and to verify that a feature remains visible when only a task descendant changed during the sprint.

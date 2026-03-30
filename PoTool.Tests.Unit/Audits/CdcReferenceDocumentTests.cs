@@ -35,7 +35,7 @@ public sealed class CdcReferenceDocumentTests
 
         StringAssert.Contains(report, "Authoritative CDC consolidation");
         StringAssert.Contains(report, "docs/domain/domain_model.md");
-        StringAssert.Contains(report, "docs/domain/rules/estimation_rules.md");
+        StringAssert.Contains(report, "docs/rules/estimation-rules.md");
         StringAssert.Contains(report, "docs/domain/forecasting_domain_model.md");
         StringAssert.Contains(report, "docs/domain/portfolio_flow_model.md");
         StringAssert.Contains(report, "docs/domain/sprint_commitment_domain_model.md");

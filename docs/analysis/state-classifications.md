@@ -15,7 +15,7 @@ Primary definitions:
 
 - `PoTool.Core.Domain/Models/StateClassificationModels.cs:1-23`
 - `PoTool.Shared/Settings/WorkItemStateClassificationDto.cs:1-86`
-- `docs/domain/rules/state_rules.md:1-84`
+- `docs/rules/state-rules.md:1-84`
 
 The domain rules explicitly state that PoTool should not rely on raw TFS states directly; every TFS state must map to exactly one canonical lifecycle state, and mappings are per work item type.
 

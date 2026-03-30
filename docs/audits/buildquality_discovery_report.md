@@ -134,9 +134,9 @@ Computed on read:
 
 ### Patterns used
 
-- **CQRS with source-generated Mediator:** queries/commands are defined in `PoTool.Core`; handlers live in `PoTool.Api`; MediatR is explicitly forbidden by repository rules (`PoTool.Core/Pipelines/Queries/GetPipelineInsightsQuery.cs`, `PoTool.Api/Handlers/Pipelines/GetPipelineInsightsQueryHandler.cs`, `docs/COPILOT_ARCHITECTURE_CONTRACT.md`, `docs/ARCHITECTURE_RULES.md`).
+- **CQRS with source-generated Mediator:** queries/commands are defined in `PoTool.Core`; handlers live in `PoTool.Api`; MediatR is explicitly forbidden by repository rules (`PoTool.Core/Pipelines/Queries/GetPipelineInsightsQuery.cs`, `PoTool.Api/Handlers/Pipelines/GetPipelineInsightsQueryHandler.cs`, `docs/rules/copilot-architecture-contract.md`, `docs/rules/architecture-rules.md`).
 - **Services:** both API services and client services are used heavily. API DI registers sync stages, read providers, configuration services, domain services, and validators; client DI registers typed API clients plus frontend orchestration services (`PoTool.Api/Configuration/ApiServiceCollectionExtensions.cs`, `PoTool.Client/Program.cs`).
-- **Repositories:** repository abstractions exist and are used where needed; the architecture rules explicitly say repositories are optional and direct `DbContext` use is acceptable for simple cases (`docs/ARCHITECTURE_RULES.md`, `PoTool.Api/Repositories/*.cs`).
+- **Repositories:** repository abstractions exist and are used where needed; the architecture rules explicitly say repositories are optional and direct `DbContext` use is acceptable for simple cases (`docs/rules/architecture-rules.md`, `PoTool.Api/Repositories/*.cs`).
 
 ### Where queries, handlers, DTOs, and view models are defined
 
@@ -151,7 +151,7 @@ Computed on read:
 - Repository-wide naming rules are explicitly documented as:
   - PascalCase for public members and types;
   - camelCase for locals/private variables;
-  - underscore-prefixed private fields (`docs/ARCHITECTURE_RULES.md`).
+  - underscore-prefixed private fields (`docs/rules/architecture-rules.md`).
 
 ## 6. Existing Pages
 
@@ -189,15 +189,15 @@ Computed on read:
 
 ## 7. Cross-cutting Rules
 
-- **UI architecture:** UI is presentational/orchestration only; pages/components must not contain business logic or persistence logic; backend access must go through typed frontend services (`docs/UI_RULES.md`).
-- **UI library:** MudBlazor is the mandatory UI component library (`docs/UI_RULES.md`).
-- **Navigation:** intent-driven navigation; workspace navigation should remain contextual and explicit (`docs/UI_RULES.md`, `PoTool.Client/Models/WorkspaceRoutes.cs`).
-- **UI loading:** pages must render immediately, then load data asynchronously; component-level loading states are required; full-page loading gates are forbidden (`docs/UI_LOADING_RULES.md`).
-- **Compact density:** compact wrappers and dense MudBlazor defaults are mandatory (`docs/Fluent_UI_compat_rules.md`).
-- **Architecture/layering:** Core must not depend on ASP.NET Core/EF/SignalR/HTTP/TFS/UI; only backend accesses TFS; queries live in Core, handlers in Api, UI must not use mediator directly (`docs/COPILOT_ARCHITECTURE_CONTRACT.md`).
-- **Repository/persistence rule:** local database is non-canonical and disposable cache storage (`docs/COPILOT_ARCHITECTURE_CONTRACT.md`).
-- **EF rule:** ingestion/aggregation flows should follow collect-then-persist; no concurrent EF operations on the same `DbContext` (`docs/EF_RULES.md`).
-- **Naming:** PascalCase for public members/types, camelCase for locals, underscore-prefixed private fields (`docs/ARCHITECTURE_RULES.md`).
+- **UI architecture:** UI is presentational/orchestration only; pages/components must not contain business logic or persistence logic; backend access must go through typed frontend services (`docs/rules/ui-rules.md`).
+- **UI library:** MudBlazor is the mandatory UI component library (`docs/rules/ui-rules.md`).
+- **Navigation:** intent-driven navigation; workspace navigation should remain contextual and explicit (`docs/rules/ui-rules.md`, `PoTool.Client/Models/WorkspaceRoutes.cs`).
+- **UI loading:** pages must render immediately, then load data asynchronously; component-level loading states are required; full-page loading gates are forbidden (`docs/rules/ui-loading-rules.md`).
+- **Compact density:** compact wrappers and dense MudBlazor defaults are mandatory (`docs/rules/fluent-ui-compat-rules.md`).
+- **Architecture/layering:** Core must not depend on ASP.NET Core/EF/SignalR/HTTP/TFS/UI; only backend accesses TFS; queries live in Core, handlers in Api, UI must not use mediator directly (`docs/rules/copilot-architecture-contract.md`).
+- **Repository/persistence rule:** local database is non-canonical and disposable cache storage (`docs/rules/copilot-architecture-contract.md`).
+- **EF rule:** ingestion/aggregation flows should follow collect-then-persist; no concurrent EF operations on the same `DbContext` (`docs/rules/ef-rules.md`).
+- **Naming:** PascalCase for public members/types, camelCase for locals, underscore-prefixed private fields (`docs/rules/architecture-rules.md`).
 - **CDC layering rule:** application, persistence, and UI may consume CDC outputs but must not feed semantics back into CDC slices (`docs/domain/cdc_domain_map.md`).
 
 ## 8. Multi-product Model
@@ -205,7 +205,7 @@ Computed on read:
 - **Does the system support multiple products?** YES.
   - `ProductEntity` is a first-class persisted concept.
   - A product belongs to a Product Owner through `ProductOwnerId`.
-  - A product may contain multiple backlog roots (`PoTool.Api/Persistence/Entities/ProductEntity.cs`, `docs/domain/rules/hierarchy_rules.md`).
+  - A product may contain multiple backlog roots (`PoTool.Api/Persistence/Entities/ProductEntity.cs`, `docs/rules/hierarchy-rules.md`).
 - **Can a PO see multiple products aggregated?** YES.
   - `/home` exposes an `All Products` selector (`PoTool.Client/Pages/Home/HomePage.razor`).
   - `GetPipelineInsightsQueryHandler` loads **all** products for the active Product Owner and returns global plus per-product sections (`PoTool.Api/Handlers/Pipelines/GetPipelineInsightsQueryHandler.cs`).

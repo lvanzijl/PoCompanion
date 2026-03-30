@@ -94,7 +94,7 @@ The system as designed is largely consistent and conflict-free. The main residua
 | Planning Quality | `PQ` | (new, delivery-trend domain only) | Warning / Critical / Info |
 
 - `SI`, `RR`, and `RC` rules are registered in `RuleCatalog` and executed in fixed order by
-  `BacklogValidationService`. Source: `docs/analysis/validation-rules.md §2`.
+  `BacklogValidationService`. Source: `docs/rules/validation-rules.md §2`.
 - `PQ` signals are currently isolated to the delivery-trend domain and do not overlap with the
   backlog-quality rules. Source: `docs/analysis/planning-quality.md §1`.
 - No duplicate signals exist across categories. Each rule carries a unique stable ID (`SI-*`,

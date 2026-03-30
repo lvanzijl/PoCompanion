@@ -7,9 +7,9 @@ Reference documents:
 - `docs/audits/portfolio_flow_application_migration.md`
 - `docs/audits/portfolio_flow_semantic_audit.md`
 - `docs/domain/domain_model.md`
-- `docs/domain/rules/estimation_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/source_rules.md`
+- `docs/rules/estimation-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/source-rules.md`
 
 Files analyzed:
 

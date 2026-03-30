@@ -52,15 +52,15 @@ Per the binding clarification, the date-prefixed `YYYY-MM-DD-...` rule applies o
 | `.github/pull_request_template.md` | `pull-request-template.md` |
 | `.github/workflows/README.md` | `readme.md` |
 | `README.md` | `readme.md` |
-| `docs/ARCHITECTURE_RULES.md` | `architecture-rules.md` |
-| `docs/COPILOT_ARCHITECTURE_CONTRACT.md` | `copilot-architecture-contract.md` |
-| `docs/EF_RULES.md` | `ef-rules.md` |
-| `docs/Fluent_UI_compat_rules.md` | `fluent-ui-compat-rules.md` |
-| `docs/PROCESS_RULES.md` | `process-rules.md` |
+| `docs/rules/architecture-rules.md` | `architecture-rules.md` |
+| `docs/rules/copilot-architecture-contract.md` | `copilot-architecture-contract.md` |
+| `docs/rules/ef-rules.md` | `ef-rules.md` |
+| `docs/rules/fluent-ui-compat-rules.md` | `fluent-ui-compat-rules.md` |
+| `docs/rules/process-rules.md` | `process-rules.md` |
 | `docs/README.md` | `readme.md` |
-| `docs/TFS_INTEGRATION_RULES.md` | `tfs-integration-rules.md` |
-| `docs/UI_LOADING_RULES.md` | `ui-loading-rules.md` |
-| `docs/UI_RULES.md` | `ui-rules.md` |
+| `docs/rules/tfs-integration-rules.md` | `tfs-integration-rules.md` |
+| `docs/rules/ui-loading-rules.md` | `ui-loading-rules.md` |
+| `docs/rules/ui-rules.md` | `ui-rules.md` |
 | `docs/architecture/portfolio_flow_data_signals.md` | `portfolio-flow-data-signals.md` |
 | `docs/audits/application_handler_cleanup.md` | `application-handler-cleanup.md` |
 | `docs/audits/application_semantic_audit.md` | `application-semantic-audit.md` |
@@ -158,16 +158,16 @@ Per the binding clarification, the date-prefixed `YYYY-MM-DD-...` rule applies o
 | `docs/domain/effort_diagnostics_domain_model.md` | `effort-diagnostics-domain-model.md` |
 | `docs/domain/forecasting_domain_model.md` | `forecasting-domain-model.md` |
 | `docs/domain/portfolio_flow_model.md` | `portfolio-flow-model.md` |
-| `docs/domain/rules/estimation_rules.md` | `estimation-rules.md` |
-| `docs/domain/rules/hierarchy_rules.md` | `hierarchy-rules.md` |
-| `docs/domain/rules/metrics_rules.md` | `metrics-rules.md` |
-| `docs/domain/rules/propagation_rules.md` | `propagation-rules.md` |
-| `docs/domain/rules/source_rules.md` | `source-rules.md` |
-| `docs/domain/rules/sprint_rules.md` | `sprint-rules.md` |
-| `docs/domain/rules/state_rules.md` | `state-rules.md` |
+| `docs/rules/estimation-rules.md` | `estimation-rules.md` |
+| `docs/rules/hierarchy-rules.md` | `hierarchy-rules.md` |
+| `docs/rules/metrics-rules.md` | `metrics-rules.md` |
+| `docs/rules/propagation-rules.md` | `propagation-rules.md` |
+| `docs/rules/source-rules.md` | `source-rules.md` |
+| `docs/rules/sprint-rules.md` | `sprint-rules.md` |
+| `docs/rules/state-rules.md` | `state-rules.md` |
 | `docs/domain/sprint_commitment_cdc_summary.md` | `sprint-commitment-cdc-summary.md` |
 | `docs/domain/sprint_commitment_domain_model.md` | `sprint-commitment-domain-model.md` |
-| `docs/domain/ui_semantic_rules.md` | `ui-semantic-rules.md` |
+| `docs/rules/ui-semantic-rules.md` | `ui-semantic-rules.md` |
 | `docs/exploration/sprint_commitment_domain_exploration.md` | `sprint-commitment-domain-exploration.md` |
 | `docs/filters/canonical_filter_state_model.md` | `canonical-filter-state-model.md` |
 | `docs/health_additional_signals.md` | `health-additional-signals.md` |
@@ -197,14 +197,14 @@ Per the binding clarification, the date-prefixed `YYYY-MM-DD-...` rule applies o
 ## 5. Remaining structural issues
 
 ### 5.1 Remaining docs root violations
-- `docs/ARCHITECTURE_RULES.md`
-- `docs/COPILOT_ARCHITECTURE_CONTRACT.md`
-- `docs/EF_RULES.md`
-- `docs/Fluent_UI_compat_rules.md`
-- `docs/PROCESS_RULES.md`
-- `docs/TFS_INTEGRATION_RULES.md`
-- `docs/UI_LOADING_RULES.md`
-- `docs/UI_RULES.md`
+- `docs/rules/architecture-rules.md`
+- `docs/rules/copilot-architecture-contract.md`
+- `docs/rules/ef-rules.md`
+- `docs/rules/fluent-ui-compat-rules.md`
+- `docs/rules/process-rules.md`
+- `docs/rules/tfs-integration-rules.md`
+- `docs/rules/ui-loading-rules.md`
+- `docs/rules/ui-rules.md`
 - `docs/bug_trend_followups.md`
 - `docs/health_additional_signals.md`
 - `docs/navigation_decision_backlog.md`

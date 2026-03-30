@@ -7,9 +7,9 @@ _Generated: 2026-03-14_
 ### Files analyzed
 
 - `docs/domain/domain_model.md`
-- `docs/domain/rules/sprint_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/state_rules.md`
+- `docs/rules/sprint-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/state-rules.md`
 - `PoTool.Api/Services/SprintCommitmentLookup.cs`
 - `PoTool.Api/Services/SprintSpilloverLookup.cs`
 - `PoTool.Api/Services/SprintTrendProjectionService.cs`
@@ -33,9 +33,9 @@ The repository's active sprint-scope analytics path follows the canonical domain
 ## Domain Rules Reviewed
 
 - `docs/domain/domain_model.md`
-- `docs/domain/rules/sprint_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/state_rules.md`
+- `docs/rules/sprint-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/state-rules.md`
 
 ### Canonical rules reconstructed
 

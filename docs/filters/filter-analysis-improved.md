@@ -26,7 +26,7 @@ Primary verified sources:
 - `PoTool.Shared/Metrics/PortfolioConsumptionDtos.cs:1-119`
 - `PoTool.Api/Services/PortfolioReadModelFiltering.cs:6-45`
 - `docs/analysis/filtering.md:1-200` (existing repository analysis document)
-- `docs/domain/rules/hierarchy_rules.md:38-46`
+- `docs/rules/hierarchy-rules.md:38-46`
 
 ## 1. Canonical Filter Definitions
 

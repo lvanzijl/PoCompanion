@@ -24,7 +24,7 @@ This exploration inventories the current sprint-planning and sprint-execution se
 | `PoTool.Tests.Unit/Handlers/GetSprintMetricsQueryHandlerTests.cs` | Handler coverage | Verifies commitment reconstruction, added scope, first-Done attribution, and no raw done fallback. |
 | `PoTool.Tests.Unit/Handlers/GetSprintExecutionQueryHandlerTests.cs` | Handler coverage | Verifies added scope, removed scope, direct-next-sprint spillover, backlog round-trip exclusion, and starved-work separation. |
 | `PoTool.Tests.Unit/Services/SprintTrendProjectionServiceTests.cs` | Projection coverage | Verifies committed planned scope, exclusion of items added after commitment, and spillover semantics in projections. |
-| `docs/domain/domain_model.md` / `docs/domain/rules/sprint_rules.md` / `docs/domain/rules/metrics_rules.md` / `docs/domain/rules/source_rules.md` | Canonical docs | Current authoritative domain statements for sprint window, commitment timestamp, churn, spillover, and update-vs-snapshot truth. |
+| `docs/domain/domain_model.md` / `docs/rules/sprint-rules.md` / `docs/rules/metrics-rules.md` / `docs/rules/source-rules.md` | Canonical docs | Current authoritative domain statements for sprint window, commitment timestamp, churn, spillover, and update-vs-snapshot truth. |
 | `docs/domain/REPOSITORY_DOMAIN_DISCOVERY.md` | Repository discovery | Still documents older snapshot-oriented descriptions for some sprint surfaces and therefore contains semantic drift. |
 
 ## Sprint Commitment Detection

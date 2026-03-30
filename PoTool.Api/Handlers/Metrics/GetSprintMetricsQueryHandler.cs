@@ -23,8 +23,8 @@ namespace PoTool.Api.Handlers.Metrics;
 /// Planned scope comes from sprint membership at the canonical commitment timestamp,
 /// and completed scope comes from the first canonical Done transition within the sprint window.
 /// This matches the delivery rules in docs/domain/domain_model.md,
-/// docs/domain/rules/sprint_rules.md, docs/domain/rules/metrics_rules.md,
-/// and docs/domain/rules/source_rules.md.
+/// docs/rules/sprint-rules.md, docs/rules/metrics-rules.md,
+/// and docs/rules/source-rules.md.
 /// </summary>
 public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetricsQuery, SprintMetricsDto?>
 {

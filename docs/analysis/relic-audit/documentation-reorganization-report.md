@@ -8,21 +8,21 @@
 ## 2. Folder structure (final)
 ```text
 docs
-docs/ARCHITECTURE_RULES.md
-docs/COPILOT_ARCHITECTURE_CONTRACT.md
-docs/EF_RULES.md
-docs/Fluent_UI_compat_rules.md
+docs/rules/architecture-rules.md
+docs/rules/copilot-architecture-contract.md
+docs/rules/ef-rules.md
+docs/rules/fluent-ui-compat-rules.md
 docs/LIVE_TFS_CALLS_ANALYSIS.md
 docs/MULTI_SELECT_BEHAVIOR.md
 docs/NAVIGATION_MAP.md
-docs/PROCESS_RULES.md
+docs/rules/process-rules.md
 docs/README.md
 docs/REALTFSCLIENT_GETALL_ANALYSIS.md
 docs/TFS_CACHE_IMPLEMENTATION_PLAN.md
-docs/TFS_INTEGRATION_RULES.md
-docs/UI_LOADING_RULES.md
+docs/rules/tfs-integration-rules.md
+docs/rules/ui-loading-rules.md
 docs/UI_MIGRATION_PLAN.md
-docs/UI_RULES.md
+docs/rules/ui-rules.md
 docs/analysis
 docs/analysis/2026-03-18-breadcrumbs-sprint-delivery.md
 docs/analysis/2026-03-18-bug-trend-count-mismatch.md
@@ -55,7 +55,7 @@ docs/analysis/snapshot-comparison-validation.md
 docs/analysis/snapshots.md
 docs/analysis/state-classifications.md
 docs/analysis/ui-integration-validation.md
-docs/analysis/validation-rules.md
+docs/rules/validation-rules.md
 docs/architecture
 docs/architecture/build-quality-persistence-abstraction.md
 docs/architecture/canonical-workitem-alignment.md
@@ -207,16 +207,16 @@ docs/domain/effort_diagnostics_domain_model.md
 docs/domain/forecasting_domain_model.md
 docs/domain/portfolio_flow_model.md
 docs/domain/rules
-docs/domain/rules/estimation_rules.md
-docs/domain/rules/hierarchy_rules.md
-docs/domain/rules/metrics_rules.md
-docs/domain/rules/propagation_rules.md
-docs/domain/rules/source_rules.md
-docs/domain/rules/sprint_rules.md
-docs/domain/rules/state_rules.md
+docs/rules/estimation-rules.md
+docs/rules/hierarchy-rules.md
+docs/rules/metrics-rules.md
+docs/rules/propagation-rules.md
+docs/rules/source-rules.md
+docs/rules/sprint-rules.md
+docs/rules/state-rules.md
 docs/domain/sprint_commitment_cdc_summary.md
 docs/domain/sprint_commitment_domain_model.md
-docs/domain/ui_semantic_rules.md
+docs/rules/ui-semantic-rules.md
 docs/exploration
 docs/exploration/sprint_commitment_domain_exploration.md
 docs/filters
@@ -327,7 +327,7 @@ docs/user/gebruikershandleiding.md
 - `docs/analyze/snapshots.md` → `docs/analysis/snapshots.md`
 - `docs/analyze/state-classifications.md` → `docs/analysis/state-classifications.md`
 - `docs/analyze/ui-integration-validation.md` → `docs/analysis/ui-integration-validation.md`
-- `docs/analyze/validation-rules.md` → `docs/analysis/validation-rules.md`
+- `docs/analyze/validation-rules.md` → `docs/rules/validation-rules.md`
 - `VALIDATION_SYSTEM_REPORT.md` → `docs/architecture/validation-system-report.md`
 - `WORK_COMPLETED.md` → `docs/archive/code-quality/work-completed-2026-01-30.md`
 - `REPORT.md` → `docs/archive/legacy-revision-ingestion/cache-insights-and-validation-report.md`
@@ -368,7 +368,7 @@ docs/user/gebruikershandleiding.md
   - `docs/analysis/progress-model.md`
   - `docs/analysis/snapshots.md`
   - `docs/analysis/insight-null-semantics-fix.md`
-  - `docs/analysis/validation-rules.md`
+  - `docs/rules/validation-rules.md`
   - `docs/audits/cdc_replay_fixture_validation.md`
   - `docs/screenshots/README.md`
 - Updated document tests in `PoTool.Tests.Unit/Audits/*` from `docs/analyze/...` to `docs/analysis/...` where required.

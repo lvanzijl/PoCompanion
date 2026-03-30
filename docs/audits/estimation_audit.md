@@ -5,10 +5,10 @@
 ### Files analyzed
 
 - `docs/domain/domain_model.md`
-- `docs/domain/rules/estimation_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/hierarchy_rules.md`
-- `docs/domain/rules/propagation_rules.md`
+- `docs/rules/estimation-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/hierarchy-rules.md`
+- `docs/rules/propagation-rules.md`
 - `PoTool.Integrations.Tfs/Clients/RealTfsClient.Core.cs`
 - `PoTool.Integrations.Tfs/Clients/RealTfsClient.WorkItemsHierarchy.cs`
 - `PoTool.Api/Persistence/Entities/WorkItemEntity.cs`
@@ -29,10 +29,10 @@ The repository has some correct estimation foundations. TFS retrieval already re
 ## Domain Rules Reviewed
 
 - `docs/domain/domain_model.md` §§ 3.1-3.12
-- `docs/domain/rules/estimation_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/hierarchy_rules.md`
-- `docs/domain/rules/propagation_rules.md`
+- `docs/rules/estimation-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/hierarchy-rules.md`
+- `docs/rules/propagation-rules.md`
 
 ## Compliant Areas
 

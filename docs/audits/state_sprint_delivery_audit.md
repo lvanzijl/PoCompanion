@@ -5,11 +5,11 @@
 ### Files analyzed
 
 - `docs/domain/domain_model.md`
-- `docs/domain/rules/state_rules.md`
-- `docs/domain/rules/sprint_rules.md`
-- `docs/domain/rules/propagation_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/source_rules.md`
+- `docs/rules/state-rules.md`
+- `docs/rules/sprint-rules.md`
+- `docs/rules/propagation-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/source-rules.md`
 - `PoTool.Api/Services/WorkItemStateClassificationService.cs`
 - `PoTool.Api/Services/ActivityEventIngestionService.cs`
 - `PoTool.Api/Services/WorkItemResolutionService.cs`
@@ -59,7 +59,7 @@
 - **File:** `PoTool.Api/Handlers/Metrics/GetSprintMetricsQueryHandler.cs`
 - **Function:** `Handle`
 - **Observed logic:** Filters work items by current `IterationPath` (`lines 73-75`) and counts completion from current canonical done state (`lines 85-91`).
-- **Canonical rule:** Delivery is attributed to a sprint only when the work item's first-ever canonical `Done` transition falls within that `SprintWindow`; sprint analytics about what happened during a sprint must come from updates, not current snapshots (`docs/domain/domain_model.md:435-445`, `docs/domain/rules/source_rules.md:21-37`).
+- **Canonical rule:** Delivery is attributed to a sprint only when the work item's first-ever canonical `Done` transition falls within that `SprintWindow`; sprint analytics about what happened during a sprint must come from updates, not current snapshots (`docs/domain/domain_model.md:435-445`, `docs/rules/source-rules.md:21-37`).
 - **Explanation:** This handler answers “currently in this sprint path and currently done,” not “delivered in this sprint.” Items done during the sprint and later moved out disappear. Items done before the sprint but still sitting in the sprint path are counted as delivered. Reopened items are also misrepresented because no first-done event is consulted.
 
 ### 2. Planned scope is derived from current iteration membership, not commitment timestamp
@@ -73,7 +73,7 @@
 - **File:** `PoTool.Api/Services/SprintTrendProjectionService.cs`
 - **Function:** `ComputeProductSprintProjection`
 - **Observed logic:** Planned PBIs and bugs come from `ResolvedSprintId == sprint.Id` (`lines 313-319`).
-- **Canonical rule:** `Committed scope = items whose IterationPath equals the sprint at CommitmentTimestamp`, where `CommitmentTimestamp = SprintStart + 1 day` (`docs/domain/domain_model.md:427-431`, `docs/domain/rules/sprint_rules.md:27-38`).
+- **Canonical rule:** `Committed scope = items whose IterationPath equals the sprint at CommitmentTimestamp`, where `CommitmentTimestamp = SprintStart + 1 day` (`docs/domain/domain_model.md:427-431`, `docs/rules/sprint-rules.md:27-38`).
 - **Explanation:** Current sprint assignment is not the same as committed scope. Items added after commitment can appear planned, and committed items moved away later can disappear from planned scope. That breaks commitment, churn, and spillover semantics throughout projection-based delivery metrics.
 
 ### 3. Raw TFS state comparisons bypass canonical mapping in delivery analytics
@@ -81,7 +81,7 @@
 - **File:** `PoTool.Api/Services/SprintTrendProjectionService.cs`
 - **Function:** `ComputeProductSprintProjection`
 - **Observed logic:** Directly compares state events to `"Done"` and `"Closed"` (`lines 232-234`, `lines 284-287`) instead of resolving canonical state through `IWorkItemStateClassificationService`.
-- **Canonical rule:** “PoTool does not rely on raw TFS states” and “Analytics must always resolve the canonical state using this mapping” (`docs/domain/rules/state_rules.md:3-32`).
+- **Canonical rule:** “PoTool does not rely on raw TFS states” and “Analytics must always resolve the canonical state using this mapping” (`docs/rules/state-rules.md:3-32`).
 - **Explanation:** A project with done semantics like `Resolved`, `Completed`, or any custom mapped value will produce wrong delivery counts. The repository already has a configurable state classifier, so these hardcoded comparisons are a direct domain-model violation.
 
 ### 4. Sprint execution completion and initial-scope logic are not canonical commitment/delivery logic
@@ -89,7 +89,7 @@
 - **File:** `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs`
 - **Function:** `Handle`
 - **Observed logic:** Uses current done-state membership for completed items (`lines 184-190`), derives initial scope from current sprint items minus in-window adds plus removed items (`lines 193-197`), and derives “starved work” from that heuristic (`lines 199-204`).
-- **Canonical rule:** Delivery must be first-done-within-window, committed scope must be reconstructed at `SprintStart + 1 day`, and spillover means committed + not done at sprint end + moved to next sprint (`docs/domain/domain_model.md:427-484`, `docs/domain/rules/sprint_rules.md:27-96`).
+- **Canonical rule:** Delivery must be first-done-within-window, committed scope must be reconstructed at `SprintStart + 1 day`, and spillover means committed + not done at sprint end + moved to next sprint (`docs/domain/domain_model.md:427-484`, `docs/rules/sprint-rules.md:27-96`).
 - **Explanation:** The handler has correct event-based add/remove detection, but its completion, initial scope, and starved/spillover-like logic still depend on current snapshots. That means it cannot reliably identify committed scope, true delivery timing, or canonical spillover.
 
 ## High Severity Issues
@@ -99,7 +99,7 @@
 - **File:** `PoTool.Api/Services/SprintTrendProjectionService.cs`
 - **Function:** `ComputeProductSprintProjection`
 - **Observed logic:** Counts a PBI as completed if any in-window state event changes to raw `"Done"` (`lines 232-239`).
-- **Canonical rule:** Only the first transition to canonical `Done` counts; `Done -> InProgress -> Done` must not create a new delivery (`docs/domain/rules/state_rules.md:34-50`, `docs/domain/rules/sprint_rules.md:45-54`).
+- **Canonical rule:** Only the first transition to canonical `Done` counts; `Done -> InProgress -> Done` must not create a new delivery (`docs/rules/state-rules.md:34-50`, `docs/rules/sprint-rules.md:45-54`).
 - **Explanation:** If a work item first reached done in an earlier sprint, was reopened, and transitioned to done again in the current sprint, this service will count a second delivery because it only inspects in-window events and does not check for an earlier done transition.
 
 ### 2. Bug closure semantics are hardcoded and incomplete
@@ -107,7 +107,7 @@
 - **File:** `PoTool.Api/Services/SprintTrendProjectionService.cs`
 - **Function:** `ComputeProductSprintProjection`
 - **Observed logic:** A bug is closed when an in-window state event changes to `"Done"` or `"Closed"` (`lines 284-292`).
-- **Canonical rule:** Delivery and completion must resolve through canonical state mapping, not raw TFS names (`docs/domain/rules/state_rules.md:3-32`).
+- **Canonical rule:** Delivery and completion must resolve through canonical state mapping, not raw TFS names (`docs/rules/state-rules.md:3-32`).
 - **Explanation:** This misses valid done mappings such as `Resolved` and keeps bug analytics dependent on legacy process-template names.
 
 ### 3. Feature progress and delivery rollups depend on raw current state
@@ -118,7 +118,7 @@
 - **File:** `PoTool.Api/Services/SprintTrendProjectionService.cs`
 - **Function:** `ComputeFeatureProgress`
 - **Observed logic:** Uses raw `"Done"` for child PBIs and feature state (`lines 629-638`).
-- **Canonical rule:** Delivery-related signals should be state-mapped, and parent delivery should remain state-driven rather than inferred from raw child state strings (`docs/domain/rules/propagation_rules.md:46-62`, `docs/domain/rules/state_rules.md:3-32`).
+- **Canonical rule:** Delivery-related signals should be state-mapped, and parent delivery should remain state-driven rather than inferred from raw child state strings (`docs/rules/propagation-rules.md:46-62`, `docs/rules/state-rules.md:3-32`).
 - **Explanation:** These rollups can drift from the configured domain mapping and overstate or understate progress when the project uses non-`Done` raw states for canonical completion.
 
 ### 4. No production implementation uses `CommitmentTimestamp = SprintStart + 1 day`
@@ -129,7 +129,7 @@
 - **File:** `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs`
 - **Function:** `Handle`
 - **Observed logic:** Initial scope is inferred from current membership plus in-window iteration changes (`lines 193-197`).
-- **Canonical rule:** Committed scope must be reconstructed at `SprintStart + 1 day` (`docs/domain/rules/sprint_rules.md:27-38`).
+- **Canonical rule:** Committed scope must be reconstructed at `SprintStart + 1 day` (`docs/rules/sprint-rules.md:27-38`).
 - **Explanation:** The required commitment timestamp is not used anywhere in the audited production paths. That makes committed-scope-based metrics non-canonical by construction.
 
 ### 5. Spillover detection is absent; “starved work” is a different heuristic
@@ -137,7 +137,7 @@
 - **File:** `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs`
 - **Function:** `Handle`
 - **Observed logic:** Builds `starvedItems` when later-added work completed while initial-scope work remained unfinished (`lines 199-204`).
-- **Canonical rule:** Spillover requires committed scope, not done at sprint end, and moved to next sprint (`docs/domain/domain_model.md:478-484`, `docs/domain/rules/sprint_rules.md:90-96`).
+- **Canonical rule:** Spillover requires committed scope, not done at sprint end, and moved to next sprint (`docs/domain/domain_model.md:478-484`, `docs/rules/sprint-rules.md:90-96`).
 - **Explanation:** Starved work is not the same as spillover. The handler does not check commitment timestamp or movement to the next sprint, so the repository does not currently implement canonical spillover detection.
 
 ## Medium Issues
@@ -147,7 +147,7 @@
 - **File:** `PoTool.Api/Handlers/Metrics/GetSprintExecutionQueryHandler.cs`
 - **Function:** `Handle`
 - **Observed logic:** Falls back to raw done names `Done` and `Closed` when state classifications are absent (`lines 25-26`, `lines 115-121`).
-- **Canonical rule:** Analytics should resolve canonical state via mapping rather than hardcoded raw names (`docs/domain/rules/state_rules.md:26-32`).
+- **Canonical rule:** Analytics should resolve canonical state via mapping rather than hardcoded raw names (`docs/rules/state-rules.md:26-32`).
 - **Explanation:** This is less severe than the direct projection-service comparisons because it only applies when classification data is missing, but it is still inconsistent with the canonical rules.
 
 ### 2. Advanced filtering and backlog health contain direct raw state checks
@@ -158,7 +158,7 @@
 - **File:** `PoTool.Api/Handlers/Metrics/GetBacklogHealthQueryHandler.cs`
 - **Function:** `CountInProgressAtEnd`
 - **Observed logic:** Counts in-progress items using raw `"In Progress"` and `"Active"` (`lines 151-163`).
-- **Canonical rule:** State semantics should go through canonical mapping (`docs/domain/rules/state_rules.md:3-32`).
+- **Canonical rule:** State semantics should go through canonical mapping (`docs/rules/state-rules.md:3-32`).
 - **Explanation:** These are not the core sprint-delivery metrics, but they show inconsistent state semantics in analytics-adjacent code.
 
 ### 3. Existing unit tests reinforce snapshot and raw-state semantics

@@ -88,7 +88,7 @@
 
 | Filter | Meaning | UI type | State scope | Server/client application | Main references |
 | --- | --- | --- | --- | --- | --- |
-| Product (`productId`) | Scope analytics to one product; product is the primary analytical boundary in the domain model. | Home chips, selects, context chips, popover selects | Shared by query string on `WorkspaceBase` pages; local on several pages | Server-side where API accepts product IDs; client-side on Bug Insights and some roadmap/planning pages | `PoTool.Client/Pages/Home/HomePage.razor:43-93,599-740`; `PoTool.Client/Pages/Home/WorkspaceBase.cs:24-80`; `docs/domain/rules/hierarchy_rules.md:38-46` |
+| Product (`productId`) | Scope analytics to one product; product is the primary analytical boundary in the domain model. | Home chips, selects, context chips, popover selects | Shared by query string on `WorkspaceBase` pages; local on several pages | Server-side where API accepts product IDs; client-side on Bug Insights and some roadmap/planning pages | `PoTool.Client/Pages/Home/HomePage.razor:43-93,599-740`; `PoTool.Client/Pages/Home/WorkspaceBase.cs:24-80`; `docs/rules/hierarchy-rules.md:38-46` |
 | Team (`teamId`) | Scope to one team or to the sprint list belonging to a team. | Selects, popover selects, context chips | Mixed: query string in Trends hub/detail pages; local state elsewhere | Usually server-side through `teamId`, or indirectly by choosing team-owned sprint IDs; sometimes client-side only for filtering lists | `PoTool.Client/Pages/Home/TrendsWorkspace.razor:41-92,785-795`; `PoTool.Client/Pages/Home/PrOverview.razor:70-126,733-849`; `PoTool.Client/Pages/Home/SprintExecution.razor:40-109,586-617` |
 | Sprint (single) | Pick one sprint window. | Select, popover select, implicit auto-selected current sprint | Local state; sometimes query string only for navigation context | Server-side via `sprintId`, `iterationPath`, or derived date range | `PoTool.Client/Pages/Home/SprintExecution.razor:61-83,548-562`; `PoTool.Client/Pages/Home/PrDeliveryInsights.razor:87-109,918-933`; `PoTool.Client/Pages/Home/SprintTrend.razor:1039-1399` |
 | Sprint range (`fromSprintId`, `toSprintId`) | Compare/aggregate multiple sprints. | Two selects or popover selects | Local state; URL-persisted in some pages only | Server-side via expanded `sprintIds[]` request; not a single backend range parameter | `PoTool.Client/Pages/Home/PortfolioProgressPage.razor:105-210,694-820`; `PoTool.Client/Pages/Home/PortfolioDelivery.razor:79-165,571-665` |
@@ -160,7 +160,7 @@ Legend:
 
 1. **Product**
    - Evidence: Home product bar writes product context into navigation (`PoTool.Client/Pages/Home/HomePage.razor:43-93,599-740`), and many Health/Trends pages read `productId` via `WorkspaceBase` (`PoTool.Client/Pages/Home/WorkspaceBase.cs:24-80`).
-   - Why global: it is the domain’s primary analytical boundary (`docs/domain/rules/hierarchy_rules.md:38-46`) and is reused across Home, Health, Trends, backlog, validation, bugs, portfolio flow, and planning.
+   - Why global: it is the domain’s primary analytical boundary (`docs/rules/hierarchy-rules.md:38-46`) and is reused across Home, Health, Trends, backlog, validation, bugs, portfolio flow, and planning.
    - Backend status: already supported on several pages (`/api/workitems/validated`, `/api/workitems/validation-*`, `/api/metrics/portfolio-progress-trend`, `/api/buildquality/rolling` indirectly by product-owner scope).
 
 2. **Team**

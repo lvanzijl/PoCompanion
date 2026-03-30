@@ -5,9 +5,9 @@ _Generated: 2026-03-16_
 Reference documents:
 
 - `docs/domain/domain_model.md`
-- `docs/domain/rules/sprint_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/source_rules.md`
+- `docs/rules/sprint-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/source-rules.md`
 
 ## Canonical concepts
 

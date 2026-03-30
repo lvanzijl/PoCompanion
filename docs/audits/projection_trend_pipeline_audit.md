@@ -7,10 +7,10 @@ _Generated: 2026-03-14_
 ### Files analyzed
 
 - `docs/domain/domain_model.md`
-- `docs/domain/rules/sprint_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/estimation_rules.md`
-- `docs/domain/rules/propagation_rules.md`
+- `docs/rules/sprint-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/estimation-rules.md`
+- `docs/rules/propagation-rules.md`
 - `PoTool.Api/Configuration/ApiServiceCollectionExtensions.cs`
 - `PoTool.Api/Handlers/Metrics/GetSprintTrendMetricsQueryHandler.cs`
 - `PoTool.Api/Persistence/Entities/ProductOwnerCacheStateEntity.cs`
@@ -35,10 +35,10 @@ The audited projection pipeline is aligned with the canonical sprint and estimat
 ## Domain Rules Reviewed
 
 - `docs/domain/domain_model.md` §§ 2.3-2.4, 3.3-3.9, 5.1-5.10, 7
-- `docs/domain/rules/sprint_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/estimation_rules.md`
-- `docs/domain/rules/propagation_rules.md`
+- `docs/rules/sprint-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/estimation-rules.md`
+- `docs/rules/propagation-rules.md`
 
 ## Compliant Areas
 

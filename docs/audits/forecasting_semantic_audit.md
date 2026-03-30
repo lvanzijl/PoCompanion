@@ -6,9 +6,9 @@ Reference documents:
 
 - `docs/audits/forecasting_domain_exploration.md`
 - `docs/domain/domain_model.md`
-- `docs/domain/rules/estimation_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/sprint_rules.md`
+- `docs/rules/estimation-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/sprint-rules.md`
 
 ## Scope
 

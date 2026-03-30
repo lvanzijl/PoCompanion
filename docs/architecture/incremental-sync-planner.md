@@ -6,11 +6,11 @@ Purpose: Define a pure, unit-testable planner contract for work-item incremental
 Reference documents:
 
 - `docs/analysis/2026-03-18-sync-testability-architecture.md`
-- `docs/COPILOT_ARCHITECTURE_CONTRACT.md`
-- `docs/ARCHITECTURE_RULES.md`
+- `docs/rules/copilot-architecture-contract.md`
+- `docs/rules/architecture-rules.md`
 - `docs/domain/domain_model.md`
-- `docs/domain/rules/hierarchy_rules.md`
-- `docs/domain/rules/source_rules.md`
+- `docs/rules/hierarchy-rules.md`
+- `docs/rules/source-rules.md`
 
 This document is intentionally limited to the **decision contract** for incremental work-item sync.  
 It does not implement code, change persistence, or redesign the full sync pipeline.
@@ -84,7 +84,7 @@ For sync-planning purposes, **product scope** means:
 - configured backlog roots
 - all descendants reachable from those roots through hierarchy links
 
-This follows the product-scoped hierarchy rules in `docs/domain/rules/hierarchy_rules.md`.
+This follows the product-scoped hierarchy rules in `docs/rules/hierarchy-rules.md`.
 
 ### Closure scope
 

@@ -5,10 +5,10 @@ _Generated: 2026-03-16_
 Reference documents:
 
 - `docs/domain/domain_model.md`
-- `docs/domain/rules/estimation_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/source_rules.md`
-- `docs/domain/rules/sprint_rules.md`
+- `docs/rules/estimation-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/source-rules.md`
+- `docs/rules/sprint-rules.md`
 - `docs/audits/portfolio_flow_projection_validation.md`
 - `docs/audits/forecasting_cdc_summary.md`
 

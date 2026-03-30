@@ -5,13 +5,13 @@ _Generated: 2026-03-27_
 Reference documents:
 
 - `docs/domain/domain_model.md`
-- `docs/domain/rules/hierarchy_rules.md`
-- `docs/domain/rules/estimation_rules.md`
-- `docs/domain/rules/state_rules.md`
-- `docs/domain/rules/sprint_rules.md`
-- `docs/domain/rules/propagation_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/source_rules.md`
+- `docs/rules/hierarchy-rules.md`
+- `docs/rules/estimation-rules.md`
+- `docs/rules/state-rules.md`
+- `docs/rules/sprint-rules.md`
+- `docs/rules/propagation-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/source-rules.md`
 - `docs/implementation/phase-e-snapshots.md`
 - `docs/implementation/phase-f-lifecycle.md`
 - `docs/implementation/phase-g-consumption.md`

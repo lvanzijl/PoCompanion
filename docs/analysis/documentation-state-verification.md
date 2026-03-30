@@ -20,20 +20,20 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 ## 3. Docs root violations
 | Path | Expected folder | Reason |
 | --- | --- | --- |
-| `docs/ARCHITECTURE_RULES.md` | `docs/architecture` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
-| `docs/COPILOT_ARCHITECTURE_CONTRACT.md` | `docs/architecture` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
-| `docs/EF_RULES.md` | `docs/rules` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
-| `docs/Fluent_UI_compat_rules.md` | `docs/rules` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
+| `docs/rules/architecture-rules.md` | `docs/architecture` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
+| `docs/rules/copilot-architecture-contract.md` | `docs/architecture` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
+| `docs/rules/ef-rules.md` | `docs/rules` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
+| `docs/rules/fluent-ui-compat-rules.md` | `docs/rules` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
 | `docs/LIVE_TFS_CALLS_ANALYSIS.md` | `docs/analysis` | Stored directly under `docs/` even though its purpose is `exploratory analysis or investigation`. |
 | `docs/MULTI_SELECT_BEHAVIOR.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
 | `docs/NAVIGATION_MAP.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
-| `docs/PROCESS_RULES.md` | `docs/rules` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
+| `docs/rules/process-rules.md` | `docs/rules` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
 | `docs/REALTFSCLIENT_GETALL_ANALYSIS.md` | `docs/analysis` | Stored directly under `docs/` even though its purpose is `exploratory analysis or investigation`. |
 | `docs/TFS_CACHE_IMPLEMENTATION_PLAN.md` | `docs/plans` | Stored directly under `docs/` even though its purpose is `plan or migration guidance`. |
-| `docs/TFS_INTEGRATION_RULES.md` | `docs/rules` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
-| `docs/UI_LOADING_RULES.md` | `docs/rules` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
+| `docs/rules/tfs-integration-rules.md` | `docs/rules` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
+| `docs/rules/ui-loading-rules.md` | `docs/rules` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
 | `docs/UI_MIGRATION_PLAN.md` | `docs/plans` | Stored directly under `docs/` even though its purpose is `plan or migration guidance`. |
-| `docs/UI_RULES.md` | `docs/rules` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
+| `docs/rules/ui-rules.md` | `docs/rules` | Stored directly under `docs/` even though its purpose is `normative rule or governance reference`. |
 | `docs/bug_trend_followups.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
 | `docs/health_additional_signals.md` | `docs/other` | Stored directly under `docs/` even though its purpose is `general markdown documentation`. |
 | `docs/health_workspace_fix_plan.md` | `docs/plans` | Stored directly under `docs/` even though its purpose is `plan or migration guidance`. |
@@ -50,24 +50,24 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 ## 4. Misplaced documents
 | Path | Current folder | Expected folder | Reason |
 | --- | --- | --- | --- |
-| `docs/ARCHITECTURE_RULES.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/architecture. |
-| `docs/COPILOT_ARCHITECTURE_CONTRACT.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/architecture. |
-| `docs/EF_RULES.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
-| `docs/Fluent_UI_compat_rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
+| `docs/rules/architecture-rules.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/architecture. |
+| `docs/rules/copilot-architecture-contract.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/architecture. |
+| `docs/rules/ef-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
+| `docs/rules/fluent-ui-compat-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
 | `docs/LIVE_TFS_CALLS_ANALYSIS.md` | `other` | `analysis` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/analysis. |
-| `docs/PROCESS_RULES.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
+| `docs/rules/process-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
 | `docs/REALTFSCLIENT_GETALL_ANALYSIS.md` | `other` | `analysis` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/analysis. |
 | `docs/TFS_CACHE_IMPLEMENTATION_PLAN.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
-| `docs/TFS_INTEGRATION_RULES.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
-| `docs/UI_LOADING_RULES.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
+| `docs/rules/tfs-integration-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
+| `docs/rules/ui-loading-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
 | `docs/UI_MIGRATION_PLAN.md` | `other` | `plans` | Stored outside the canonical docs taxonomy; inferred purpose is plan or migration guidance, so it belongs under docs/plans. |
-| `docs/UI_RULES.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
+| `docs/rules/ui-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
 | `docs/analysis/cdc-corrections.md` | `analysis` | `audits` | Document reads as a completed verification artifact rather than active exploratory analysis. |
 | `docs/analysis/ef-sqlite-compatibility-audit.md` | `analysis` | `audits` | Document reads as a completed verification artifact rather than active exploratory analysis. |
 | `docs/analysis/final-cdc-integration.md` | `analysis` | `audits` | Document reads as a completed verification artifact rather than active exploratory analysis. |
 | `docs/analysis/relic-audit/documentation-reorganization-report.md` | `analysis` | `audits` | Document reads as a completed verification artifact rather than active exploratory analysis. |
 | `docs/analysis/relic-audit/repository-relic-audit.md` | `analysis` | `audits` | Document reads as a completed verification artifact rather than active exploratory analysis. |
-| `docs/analysis/validation-rules.md` | `analysis` | `rules` | Inferred purpose is normative rule or governance reference; governance expects docs/rules. |
+| `docs/rules/validation-rules.md` | `analysis` | `rules` | Inferred purpose is normative rule or governance reference; governance expects docs/rules. |
 | `docs/architecture/canonical-workitem-test-fix.md` | `architecture` | `reports` | Document title/content are report-style current-state findings, not durable architecture reference. |
 | `docs/architecture/cdc-decision-record.md` | `architecture` | `plans` | Document is forward-looking planning/migration material rather than stable architecture guidance. |
 | `docs/architecture/cdc-domain-map-audit-fix.md` | `architecture` | `audits` | Inferred purpose is structured audit or compliance verification; governance expects docs/audits. |
@@ -98,16 +98,16 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 | `docs/domain/effort_diagnostics_domain_model.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
 | `docs/domain/forecasting_domain_model.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
 | `docs/domain/portfolio_flow_model.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
-| `docs/domain/rules/estimation_rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
-| `docs/domain/rules/hierarchy_rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
-| `docs/domain/rules/metrics_rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
-| `docs/domain/rules/propagation_rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
-| `docs/domain/rules/source_rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
-| `docs/domain/rules/sprint_rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
-| `docs/domain/rules/state_rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
+| `docs/rules/estimation-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
+| `docs/rules/hierarchy-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
+| `docs/rules/metrics-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
+| `docs/rules/propagation-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
+| `docs/rules/source-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
+| `docs/rules/sprint-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
+| `docs/rules/state-rules.md` | `other` | `rules` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/rules. |
 | `docs/domain/sprint_commitment_cdc_summary.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/architecture. |
 | `docs/domain/sprint_commitment_domain_model.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is architecture or reference documentation, so it belongs under docs/architecture. |
-| `docs/domain/ui_semantic_rules.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/architecture. |
+| `docs/rules/ui-semantic-rules.md` | `other` | `architecture` | Stored outside the canonical docs taxonomy; inferred purpose is normative rule or governance reference, so it belongs under docs/architecture. |
 | `docs/exploration/sprint_commitment_domain_exploration.md` | `other` | `analysis` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/analysis. |
 | `docs/filters/cache-only-guardrail-analysis-pipeline-workitems.md` | `other` | `analysis` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/analysis. |
 | `docs/filters/filter-analysis-improved.md` | `other` | `analysis` | Stored outside the canonical docs taxonomy; inferred purpose is exploratory analysis or investigation, so it belongs under docs/analysis. |
@@ -221,30 +221,30 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 - `.github/copilot-instructions.md` references the following markdown files:
 | Referenced file | Exists | Current folder | Expected folder | Should move under `.github` later? |
 | --- | --- | --- | --- | --- |
-| `docs/ARCHITECTURE_RULES.md` | Yes | `other` | `architecture` | Yes |
-| `docs/COPILOT_ARCHITECTURE_CONTRACT.md` | Yes | `other` | `architecture` | Yes |
-| `docs/EF_RULES.md` | Yes | `other` | `rules` | Yes |
-| `docs/Fluent_UI_compat_rules.md` | Yes | `other` | `rules` | Yes |
-| `docs/PROCESS_RULES.md` | Yes | `other` | `rules` | Yes |
+| `docs/rules/architecture-rules.md` | Yes | `other` | `architecture` | Yes |
+| `docs/rules/copilot-architecture-contract.md` | Yes | `other` | `architecture` | Yes |
+| `docs/rules/ef-rules.md` | Yes | `other` | `rules` | Yes |
+| `docs/rules/fluent-ui-compat-rules.md` | Yes | `other` | `rules` | Yes |
+| `docs/rules/process-rules.md` | Yes | `other` | `rules` | Yes |
 | `docs/README.md` | Yes | `other` | `other` | No |
-| `docs/UI_LOADING_RULES.md` | Yes | `other` | `rules` | Yes |
-| `docs/UI_RULES.md` | Yes | `other` | `rules` | Yes |
+| `docs/rules/ui-loading-rules.md` | Yes | `other` | `rules` | Yes |
+| `docs/rules/ui-rules.md` | Yes | `other` | `rules` | Yes |
 | `docs/domain/domain_model.md` | Yes | `other` | `architecture` | No |
-| `docs/domain/rules/estimation_rules.md` | Yes | `other` | `rules` | No |
-| `docs/domain/rules/hierarchy_rules.md` | Yes | `other` | `rules` | No |
-| `docs/domain/rules/metrics_rules.md` | Yes | `other` | `rules` | No |
-| `docs/domain/rules/propagation_rules.md` | Yes | `other` | `rules` | No |
-| `docs/domain/rules/source_rules.md` | Yes | `other` | `rules` | No |
-| `docs/domain/rules/sprint_rules.md` | Yes | `other` | `rules` | No |
-| `docs/domain/rules/state_rules.md` | Yes | `other` | `rules` | No |
+| `docs/rules/estimation-rules.md` | Yes | `other` | `rules` | No |
+| `docs/rules/hierarchy-rules.md` | Yes | `other` | `rules` | No |
+| `docs/rules/metrics-rules.md` | Yes | `other` | `rules` | No |
+| `docs/rules/propagation-rules.md` | Yes | `other` | `rules` | No |
+| `docs/rules/source-rules.md` | Yes | `other` | `rules` | No |
+| `docs/rules/sprint-rules.md` | Yes | `other` | `rules` | No |
+| `docs/rules/state-rules.md` | Yes | `other` | `rules` | No |
 - Later `.github` consolidation candidates:
-  - `docs/ARCHITECTURE_RULES.md`
-  - `docs/COPILOT_ARCHITECTURE_CONTRACT.md`
-  - `docs/EF_RULES.md`
-  - `docs/Fluent_UI_compat_rules.md`
-  - `docs/PROCESS_RULES.md`
-  - `docs/UI_LOADING_RULES.md`
-  - `docs/UI_RULES.md`
+  - `docs/rules/architecture-rules.md`
+  - `docs/rules/copilot-architecture-contract.md`
+  - `docs/rules/ef-rules.md`
+  - `docs/rules/fluent-ui-compat-rules.md`
+  - `docs/rules/process-rules.md`
+  - `docs/rules/ui-loading-rules.md`
+  - `docs/rules/ui-rules.md`
 
 ## 8. OData / validator residue
 - Active references that still keep deprecated architecture/tooling alive:
@@ -319,7 +319,7 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 - `docs/analysis/snapshots.md` — filename `snapshots.md` — purpose: exploratory analysis or investigation — title: Snapshot & Budget Model Analysis
 - `docs/analysis/state-classifications.md` — filename `state-classifications.md` — purpose: exploratory analysis or investigation — title: State Classifications & Refinement Gating Analysis
 - `docs/analysis/ui-integration-validation.md` — filename `ui-integration-validation.md` — purpose: exploratory analysis or investigation — title: UI Integration Validation
-- `docs/analysis/validation-rules.md` — filename `validation-rules.md` — purpose: normative rule or governance reference — title: Validation, Integrity, and Health Rules Analysis
+- `docs/rules/validation-rules.md` — filename `validation-rules.md` — purpose: normative rule or governance reference — title: Validation, Integrity, and Health Rules Analysis
 
 ### architecture
 - `docs/architecture/build-quality-persistence-abstraction.md` — filename `build-quality-persistence-abstraction.md` — purpose: architecture or reference documentation — title: Build Quality Persistence Abstraction
@@ -465,21 +465,21 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 - `.github/copilot-instructions.md` — filename `copilot-instructions.md` — purpose: normative rule or governance reference — title: Copilot Instructions — PO Companion (Authoritative)
 - `.github/pull_request_template.md` — filename `pull_request_template.md` — purpose: general markdown documentation — title: Pull Request Template — PO Companion
 - `.github/workflows/README.md` — filename `README.md` — purpose: folder index or entry-point documentation — title: GitHub Actions Workflows
-- `docs/ARCHITECTURE_RULES.md` — filename `ARCHITECTURE_RULES.md` — purpose: normative rule or governance reference — title: No H1 title
-- `docs/COPILOT_ARCHITECTURE_CONTRACT.md` — filename `COPILOT_ARCHITECTURE_CONTRACT.md` — purpose: normative rule or governance reference — title: Copilot Architecture Contract — PO Companion
-- `docs/EF_RULES.md` — filename `EF_RULES.md` — purpose: normative rule or governance reference — title: EF Core Concurrency Rules (Non-Negotiable)
-- `docs/Fluent_UI_compat_rules.md` — filename `Fluent_UI_compat_rules.md` — purpose: normative rule or governance reference — title: UI Density Rules — Fluent UI Compact Aligned
+- `docs/rules/architecture-rules.md` — filename `ARCHITECTURE_RULES.md` — purpose: normative rule or governance reference — title: No H1 title
+- `docs/rules/copilot-architecture-contract.md` — filename `COPILOT_ARCHITECTURE_CONTRACT.md` — purpose: normative rule or governance reference — title: Copilot Architecture Contract — PO Companion
+- `docs/rules/ef-rules.md` — filename `EF_RULES.md` — purpose: normative rule or governance reference — title: EF Core Concurrency Rules (Non-Negotiable)
+- `docs/rules/fluent-ui-compat-rules.md` — filename `Fluent_UI_compat_rules.md` — purpose: normative rule or governance reference — title: UI Density Rules — Fluent UI Compact Aligned
 - `docs/LIVE_TFS_CALLS_ANALYSIS.md` — filename `LIVE_TFS_CALLS_ANALYSIS.md` — purpose: exploratory analysis or investigation — title: Investigation Report: Unexpected Live TFS Calls in Workspace Navigation
 - `docs/MULTI_SELECT_BEHAVIOR.md` — filename `MULTI_SELECT_BEHAVIOR.md` — purpose: general markdown documentation — title: Multi-Select Dropdown Behavior
 - `docs/NAVIGATION_MAP.md` — filename `NAVIGATION_MAP.md` — purpose: general markdown documentation — title: PO Companion — Navigation Map
-- `docs/PROCESS_RULES.md` — filename `PROCESS_RULES.md` — purpose: normative rule or governance reference — title: Process Rules — PO Companion
+- `docs/rules/process-rules.md` — filename `PROCESS_RULES.md` — purpose: normative rule or governance reference — title: Process Rules — PO Companion
 - `docs/README.md` — filename `README.md` — purpose: folder index or entry-point documentation — title: No H1 title
 - `docs/REALTFSCLIENT_GETALL_ANALYSIS.md` — filename `REALTFSCLIENT_GETALL_ANALYSIS.md` — purpose: exploratory analysis or investigation — title: RealTfsClient 'GetAll' Methods Analysis Report
 - `docs/TFS_CACHE_IMPLEMENTATION_PLAN.md` — filename `TFS_CACHE_IMPLEMENTATION_PLAN.md` — purpose: plan or migration guidance — title: ProductOwner-Scoped Incremental TFS Cache — Implementation Plan
-- `docs/TFS_INTEGRATION_RULES.md` — filename `TFS_INTEGRATION_RULES.md` — purpose: normative rule or governance reference — title: TFS Integration Rules
-- `docs/UI_LOADING_RULES.md` — filename `UI_LOADING_RULES.md` — purpose: normative rule or governance reference — title: No H1 title
+- `docs/rules/tfs-integration-rules.md` — filename `TFS_INTEGRATION_RULES.md` — purpose: normative rule or governance reference — title: TFS Integration Rules
+- `docs/rules/ui-loading-rules.md` — filename `UI_LOADING_RULES.md` — purpose: normative rule or governance reference — title: No H1 title
 - `docs/UI_MIGRATION_PLAN.md` — filename `UI_MIGRATION_PLAN.md` — purpose: plan or migration guidance — title: UI Migration Plan — PO Companion
-- `docs/UI_RULES.md` — filename `UI_RULES.md` — purpose: normative rule or governance reference — title: UI & UX Rules — PO Companion (Blazor WebAssembly)
+- `docs/rules/ui-rules.md` — filename `UI_RULES.md` — purpose: normative rule or governance reference — title: UI & UX Rules — PO Companion (Blazor WebAssembly)
 - `docs/bug_trend_followups.md` — filename `bug_trend_followups.md` — purpose: general markdown documentation — title: Bug Trend Follow-up Actions
 - `docs/cleanup/obsolete-changes-log.md` — filename `obsolete-changes-log.md` — purpose: general markdown documentation — title: Obsolete Changes Log — Dead Code Cleanup
 - `docs/cleanup/phase1-client-reachability-report.md` — filename `phase1-client-reachability-report.md` — purpose: report or summarized findings — title: Phase 1 — Client-Side UI Reachability Report
@@ -495,16 +495,16 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 - `docs/domain/effort_diagnostics_domain_model.md` — filename `effort_diagnostics_domain_model.md` — purpose: architecture or reference documentation — title: EffortDiagnostics Domain Model
 - `docs/domain/forecasting_domain_model.md` — filename `forecasting_domain_model.md` — purpose: architecture or reference documentation — title: Forecasting Domain Model
 - `docs/domain/portfolio_flow_model.md` — filename `portfolio_flow_model.md` — purpose: architecture or reference documentation — title: PortfolioFlow Canonical Model
-- `docs/domain/rules/estimation_rules.md` — filename `estimation_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Estimation
-- `docs/domain/rules/hierarchy_rules.md` — filename `hierarchy_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Hierarchy
-- `docs/domain/rules/metrics_rules.md` — filename `metrics_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Metrics
-- `docs/domain/rules/propagation_rules.md` — filename `propagation_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Propagation
-- `docs/domain/rules/source_rules.md` — filename `source_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Data Sources
-- `docs/domain/rules/sprint_rules.md` — filename `sprint_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Sprint Semantics
-- `docs/domain/rules/state_rules.md` — filename `state_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — State Classification
+- `docs/rules/estimation-rules.md` — filename `estimation_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Estimation
+- `docs/rules/hierarchy-rules.md` — filename `hierarchy_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Hierarchy
+- `docs/rules/metrics-rules.md` — filename `metrics_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Metrics
+- `docs/rules/propagation-rules.md` — filename `propagation_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Propagation
+- `docs/rules/source-rules.md` — filename `source_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Data Sources
+- `docs/rules/sprint-rules.md` — filename `sprint_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — Sprint Semantics
+- `docs/rules/state-rules.md` — filename `state_rules.md` — purpose: normative rule or governance reference — title: Domain Rules — State Classification
 - `docs/domain/sprint_commitment_cdc_summary.md` — filename `sprint_commitment_cdc_summary.md` — purpose: report or summarized findings — title: Sprint Commitment CDC Summary
 - `docs/domain/sprint_commitment_domain_model.md` — filename `sprint_commitment_domain_model.md` — purpose: architecture or reference documentation — title: Sprint Commitment Domain Model
-- `docs/domain/ui_semantic_rules.md` — filename `ui_semantic_rules.md` — purpose: normative rule or governance reference — title: UI Semantic Rules
+- `docs/rules/ui-semantic-rules.md` — filename `ui_semantic_rules.md` — purpose: normative rule or governance reference — title: UI Semantic Rules
 - `docs/exploration/sprint_commitment_domain_exploration.md` — filename `sprint_commitment_domain_exploration.md` — purpose: exploratory analysis or investigation — title: Sprint Commitment Domain Exploration
 - `docs/filters/cache-only-guardrail-analysis-pipeline-workitems.md` — filename `cache-only-guardrail-analysis-pipeline-workitems.md` — purpose: exploratory analysis or investigation — title: Cache-Only Guardrail Analysis — Pipeline and Work Item Read Paths
 - `docs/filters/canonical_filter_state_model.md` — filename `canonical_filter_state_model.md` — purpose: general markdown documentation — title: Canonical Filter State Model

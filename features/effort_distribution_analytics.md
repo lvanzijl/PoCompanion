@@ -7,9 +7,9 @@ Provide advanced analytics not available in TFS WebUI for effort distribution, i
 This feature must explicitly reference and comply with:
 
 * `docs/UX_PRINCIPLES.md`
-* `docs/UI_RULES.md`
-* `docs/ARCHITECTURE_RULES.md`
-* `docs/PROCESS_RULES.md`
+* `docs/rules/ui-rules.md`
+* `docs/rules/architecture-rules.md`
+* `docs/rules/process-rules.md`
 
 ---
 
@@ -269,7 +269,7 @@ No global configuration required; all settings are per-analysis.
 
 ### Caching Strategy
 
-Per `docs/ARCHITECTURE_RULES.md`:
+Per `docs/rules/architecture-rules.md`:
 
 1. **Local Cache** - All work items cached in SQLite
    - Retrieved via "Pull & Cache" command
@@ -413,7 +413,7 @@ Status Codes: Same as above
 
 ## UI Rules Compliance
 
-Per `docs/UI_RULES.md`:
+Per `docs/rules/ui-rules.md`:
 
 - **Platform**: Blazor WebAssembly ✓
 - **Components**: MudBlazor only (MudTabs, MudTable, MudChart, MudCard, MudChip, MudList, MudButton) ✓
@@ -536,16 +536,16 @@ If approved in the future:
 6. **Monte Carlo Simulation** - Probabilistic forecasting with confidence intervals
 7. **Machine Learning Trends** - More sophisticated pattern recognition
 
-All enhancements must comply with `docs/UI_RULES.md` and `docs/ARCHITECTURE_RULES.md`.
+All enhancements must comply with `docs/rules/ui-rules.md` and `docs/rules/architecture-rules.md`.
 
 ---
 
 ## References
 
 - UX Principles: `docs/UX_PRINCIPLES.md`
-- UI Rules: `docs/UI_RULES.md`
-- Architecture Rules: `docs/ARCHITECTURE_RULES.md`
-- Process Rules: `docs/PROCESS_RULES.md`
+- UI Rules: `docs/rules/ui-rules.md`
+- Architecture Rules: `docs/rules/architecture-rules.md`
+- Process Rules: `docs/rules/process-rules.md`
 - Implementation: `PoTool.Client/Pages/Metrics/EffortDistribution.razor`
 - Queries: `PoTool.Core/Metrics/Queries/GetEffort*.cs`
 - Handlers: `PoTool.Api/Handlers/Metrics/GetEffort*.cs`

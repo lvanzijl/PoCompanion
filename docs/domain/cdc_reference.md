@@ -21,13 +21,13 @@ It provides:
 Authoritative foundations:
 
 - `docs/domain/domain_model.md`
-- `docs/domain/rules/hierarchy_rules.md`
-- `docs/domain/rules/estimation_rules.md`
-- `docs/domain/rules/state_rules.md`
-- `docs/domain/rules/sprint_rules.md`
-- `docs/domain/rules/propagation_rules.md`
-- `docs/domain/rules/metrics_rules.md`
-- `docs/domain/rules/source_rules.md`
+- `docs/rules/hierarchy-rules.md`
+- `docs/rules/estimation-rules.md`
+- `docs/rules/state-rules.md`
+- `docs/rules/sprint-rules.md`
+- `docs/rules/propagation-rules.md`
+- `docs/rules/metrics-rules.md`
+- `docs/rules/source-rules.md`
 
 ## Slice Overview
 
@@ -40,10 +40,10 @@ Purpose:
 Canonical inputs:
 
 - work-item hierarchy and product scope from `docs/domain/domain_model.md`
-- canonical estimation semantics from `docs/domain/rules/estimation_rules.md`
-- canonical state semantics from `docs/domain/rules/state_rules.md`
-- sprint windows and commitment timing from `docs/domain/rules/sprint_rules.md`
-- source-truth and propagation rules from `docs/domain/rules/source_rules.md` and `docs/domain/rules/propagation_rules.md`
+- canonical estimation semantics from `docs/rules/estimation-rules.md`
+- canonical state semantics from `docs/rules/state-rules.md`
+- sprint windows and commitment timing from `docs/rules/sprint-rules.md`
+- source-truth and propagation rules from `docs/rules/source-rules.md` and `docs/rules/propagation-rules.md`
 
 Canonical outputs:
 

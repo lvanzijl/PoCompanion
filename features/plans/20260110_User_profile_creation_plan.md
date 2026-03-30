@@ -34,11 +34,11 @@ Verify understanding of requirements, constraints, and repository structure befo
 ### Tasks
 - [x] Read `features/20260110_User_profile_creation.md` completely
 - [x] Read all governing documents:
-  - [x] `docs/UI_RULES.md`
-  - [x] `docs/ARCHITECTURE_RULES.md`
-  - [x] `docs/PROCESS_RULES.md`
-  - [x] `docs/COPILOT_ARCHITECTURE_CONTRACT.md`
-  - [x] `docs/Fluent_UI_compat_rules.md`
+  - [x] `docs/rules/ui-rules.md`
+  - [x] `docs/rules/architecture-rules.md`
+  - [x] `docs/rules/process-rules.md`
+  - [x] `docs/rules/copilot-architecture-contract.md`
+  - [x] `docs/rules/fluent-ui-compat-rules.md`
   - [x] mock data rules documentation
 - [x] Analyze existing Profile implementation
 - [x] Identify assembly boundaries (Shared/Core/Api/Client)

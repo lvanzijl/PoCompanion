@@ -122,7 +122,7 @@
   - Executable logic: `/PoTool.Api/Handlers/Metrics/GetEffortEstimationQualityQueryHandler.cs`
   - Query contract: `/PoTool.Core/Metrics/Queries/GetEffortEstimationQualityQuery.cs`
   - DTOs: `/PoTool.Shared/Metrics/EffortEstimationQualityDto.cs`
-  - Related domain guidance: `/docs/domain/rules/estimation_rules.md`
+  - Related domain guidance: `/docs/rules/estimation-rules.md`
   - Focused tests: `/PoTool.Tests.Unit/Handlers/GetEffortEstimationQualityQueryHandlerTests.cs`
 - **Current formulas / thresholds**
   - Filters to completed work items by calling `IWorkItemStateClassificationService.IsDoneStateAsync(...)` in `/GetEffortEstimationQualityQueryHandler.cs:82-90`.

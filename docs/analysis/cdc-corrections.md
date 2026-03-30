@@ -1,7 +1,7 @@
 # Corrective CDC Integration Audit
 
 _Reference: `docs/analysis/final-cdc-integration.md` (Prompt 9), `docs/analysis/planning-quality.md`,
-`docs/analysis/validation-rules.md`, `docs/analysis/snapshots.md`, `docs/analysis/progress-model.md`,
+`docs/rules/validation-rules.md`, `docs/analysis/snapshots.md`, `docs/analysis/progress-model.md`,
 `docs/analysis/filtering.md`_
 
 ---
