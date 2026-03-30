@@ -21,20 +21,17 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
     private readonly IWorkItemQuery _workItemQuery;
     private readonly IWorkItemValidator _validator;
     private readonly ProfileFilterService _profileFilterService;
-    private readonly IProductRepository _productRepository;
     private readonly ILogger<GetAllWorkItemsWithValidationQueryHandler> _logger;
 
     public GetAllWorkItemsWithValidationQueryHandler(
         IWorkItemQuery workItemQuery,
         IWorkItemValidator validator,
         ProfileFilterService profileFilterService,
-        IProductRepository productRepository,
         ILogger<GetAllWorkItemsWithValidationQueryHandler> logger)
     {
         _workItemQuery = workItemQuery;
         _validator = validator;
         _profileFilterService = profileFilterService;
-        _productRepository = productRepository;
         _logger = logger;
     }
 
@@ -45,72 +42,12 @@ public sealed class GetAllWorkItemsWithValidationQueryHandler
         _logger.LogDebug("Handling GetAllWorkItemsWithValidationQuery with ProductIds: {ProductIds}", 
             query.ProductIds != null ? string.Join(", ", query.ProductIds) : "null (all products)");
 
-        IEnumerable<WorkItemDto> workItems;
+        var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);
+        var workItems = await _workItemQuery.GetWorkItemsForListingAsync(
+            query.ProductIds,
+            profileAreaPaths,
+            cancellationToken);
 
-        // Determine which products to load from
-        IEnumerable<ProductDto> productsToLoad;
-        if (query.ProductIds != null && query.ProductIds.Length > 0)
-        {
-            // Load only the specified products
-            var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
-            var productIdSet = new HashSet<int>(query.ProductIds);
-            productsToLoad = allProducts.Where(p => productIdSet.Contains(p.Id)).ToList();
-            _logger.LogDebug("Loading work items for {Count} specified products: {ProductIds}", 
-                productsToLoad.Count(), string.Join(", ", query.ProductIds));
-        }
-        else
-        {
-            // Load all products (existing behavior)
-            productsToLoad = await _productRepository.GetAllProductsAsync(cancellationToken);
-            _logger.LogDebug("Loading work items for all {Count} products", productsToLoad.Count());
-        }
-
-        var productsList = productsToLoad.ToList();
-
-        if (productsList.Count > 0)
-        {
-            // Product-scoped hierarchical loading
-            var rootIds = productsList
-                .SelectMany(p => p.BacklogRootWorkItemIds)
-                .Distinct()
-                .ToArray();
-
-            if (rootIds.Length == 0)
-            {
-                _logger.LogWarning("Products configured but none have backlog root work item IDs configured. Falling back to area path loading");
-                // Fall through to area path loading
-            }
-            else
-            {
-                _logger.LogInformation("Loading work items hierarchically from {Count} product roots: {RootIds}",
-                    rootIds.Length, string.Join(", ", rootIds));
-                
-                workItems = await _workItemQuery.GetByRootIdsAsync(rootIds, cancellationToken);
-                _logger.LogDebug("Loaded {Count} work items via hierarchical loading", workItems.Count());
-                
-                // Skip area path loading
-                goto ValidateWorkItems;
-            }
-        }
-
-        // Fallback to area path-based loading when no products are configured or all have invalid root IDs
-        {
-            _logger.LogDebug("Falling back to area path loading");
-            
-            var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);
-
-            if (profileAreaPaths != null && profileAreaPaths.Count > 0)
-            {
-                _logger.LogDebug("Filtering work items by active profile area paths for validation");
-                workItems = await _workItemQuery.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
-            }
-            else
-            {
-                workItems = await _workItemQuery.GetAllAsync(cancellationToken);
-            }
-        }
-
-    ValidateWorkItems:
         var workItemsList = workItems.ToList();
         var validationResults = _validator.ValidateWorkItems(workItemsList);
 

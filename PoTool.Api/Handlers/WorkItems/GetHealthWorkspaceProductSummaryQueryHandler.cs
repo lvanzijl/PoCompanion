@@ -19,20 +19,17 @@ public sealed class GetHealthWorkspaceProductSummaryQueryHandler
 {
     private const int TopEpicCount = 3;
 
-    private readonly IProductRepository _productRepository;
     private readonly IWorkItemQuery _workItemQuery;
     private readonly BacklogStateComputationService _computationService;
     private readonly IWorkItemStateClassificationService _stateClassificationService;
     private readonly ILogger<GetHealthWorkspaceProductSummaryQueryHandler> _logger;
 
     public GetHealthWorkspaceProductSummaryQueryHandler(
-        IProductRepository productRepository,
         IWorkItemQuery workItemQuery,
         BacklogStateComputationService computationService,
         IWorkItemStateClassificationService stateClassificationService,
         ILogger<GetHealthWorkspaceProductSummaryQueryHandler> logger)
     {
-        _productRepository = productRepository;
         _workItemQuery = workItemQuery;
         _computationService = computationService;
         _stateClassificationService = stateClassificationService;
@@ -45,14 +42,14 @@ public sealed class GetHealthWorkspaceProductSummaryQueryHandler
     {
         _logger.LogDebug("Handling GetHealthWorkspaceProductSummaryQuery for ProductId: {ProductId}", query.ProductId);
 
-        var product = await _productRepository.GetProductByIdAsync(query.ProductId, cancellationToken);
-        if (product is null)
+        var source = await _workItemQuery.GetProductBacklogAnalyticsSourceAsync(query.ProductId, cancellationToken);
+        if (source is null)
         {
             _logger.LogWarning("Product {ProductId} not found", query.ProductId);
             return null;
         }
 
-        if (product.BacklogRootWorkItemIds.Count == 0)
+        if (source.WorkItems.Count == 0)
         {
             return new HealthWorkspaceProductSummaryDto
             {
@@ -63,9 +60,7 @@ public sealed class GetHealthWorkspaceProductSummaryQueryHandler
             };
         }
 
-        var allItems = (await _workItemQuery.GetByRootIdsAsync(
-            product.BacklogRootWorkItemIds.ToArray(),
-            cancellationToken)).ToList();
+        var allItems = source.WorkItems.ToList();
 
         var classifications = await _stateClassificationService.GetClassificationsAsync(cancellationToken);
         var doneStateLookup = classifications.Classifications

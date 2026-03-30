@@ -16,18 +16,15 @@ public sealed class GetAllWorkItemsQueryHandler : IQueryHandler<GetAllWorkItemsQ
 {
     private readonly IWorkItemQuery _workItemQuery;
     private readonly ProfileFilterService _profileFilterService;
-    private readonly IProductRepository _productRepository;
     private readonly ILogger<GetAllWorkItemsQueryHandler> _logger;
 
     public GetAllWorkItemsQueryHandler(
         IWorkItemQuery workItemQuery,
         ProfileFilterService profileFilterService,
-        IProductRepository productRepository,
         ILogger<GetAllWorkItemsQueryHandler> logger)
     {
         _workItemQuery = workItemQuery;
         _profileFilterService = profileFilterService;
-        _productRepository = productRepository;
         _logger = logger;
     }
 
@@ -37,36 +34,10 @@ public sealed class GetAllWorkItemsQueryHandler : IQueryHandler<GetAllWorkItemsQ
     {
         _logger.LogDebug("Handling GetAllWorkItemsQuery");
 
-        // Check if there are products configured - if so, use hierarchical loading
-        var allProducts = await _productRepository.GetAllProductsAsync(cancellationToken);
-        var productsList = allProducts.ToList();
-
-        if (productsList.Count > 0)
-        {
-            // Product-scoped hierarchical loading
-            var rootIds = productsList
-                .SelectMany(p => p.BacklogRootWorkItemIds)
-                .ToArray();
-
-            if (rootIds.Length > 0)
-            {
-                _logger.LogInformation("Loading work items hierarchically from {Count} product roots: {RootIds}",
-                    rootIds.Length, string.Join(", ", rootIds));
-                return await _workItemQuery.GetByRootIdsAsync(rootIds, cancellationToken);
-            }
-        }
-
-        // Fallback to area path-based loading when no products are configured
-        _logger.LogDebug("No products configured, falling back to area path loading");
         var profileAreaPaths = await _profileFilterService.GetActiveProfileAreaPathsAsync(cancellationToken);
-
-        if (profileAreaPaths != null && profileAreaPaths.Count > 0)
-        {
-            _logger.LogDebug("Filtering work items by active profile area paths: {AreaPaths}",
-                string.Join(", ", profileAreaPaths));
-            return await _workItemQuery.GetByAreaPathsAsync(profileAreaPaths, cancellationToken);
-        }
-
-        return await _workItemQuery.GetAllAsync(cancellationToken);
+        return await _workItemQuery.GetWorkItemsForListingAsync(
+            productIds: null,
+            fallbackAreaPaths: profileAreaPaths,
+            cancellationToken);
     }
 }

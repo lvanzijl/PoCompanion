@@ -7,7 +7,6 @@ using PoTool.Core.Contracts;
 using PoTool.Core.Health;
 using PoTool.Core.WorkItems;
 using PoTool.Core.WorkItems.Queries;
-using PoTool.Shared.Health;
 using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 
@@ -16,7 +15,6 @@ namespace PoTool.Tests.Unit.Handlers;
 [TestClass]
 public sealed class GetProductBacklogStateQueryHandlerTests
 {
-    private Mock<IProductRepository> _productRepository = null!;
     private Mock<IWorkItemQuery> _workItemQuery = null!;
     private Mock<IWorkItemStateClassificationService> _stateClassificationService = null!;
     private Mock<ILogger<GetProductBacklogStateQueryHandler>> _logger = null!;
@@ -26,7 +24,6 @@ public sealed class GetProductBacklogStateQueryHandlerTests
     [TestInitialize]
     public void Setup()
     {
-        _productRepository = new Mock<IProductRepository>();
         _workItemQuery = new Mock<IWorkItemQuery>();
         _stateClassificationService = new Mock<IWorkItemStateClassificationService>();
         _logger = new Mock<ILogger<GetProductBacklogStateQueryHandler>>();
@@ -56,7 +53,6 @@ public sealed class GetProductBacklogStateQueryHandlerTests
             });
 
         _handler = new GetProductBacklogStateQueryHandler(
-            _productRepository.Object,
             _workItemQuery.Object,
             _computationService,
             _stateClassificationService.Object,
@@ -64,9 +60,8 @@ public sealed class GetProductBacklogStateQueryHandlerTests
     }
 
     [TestMethod]
-    public async Task Handle_WithConfiguredProduct_LoadsHierarchyFromQueryBoundary()
+    public async Task Handle_WithConfiguredProduct_LoadsBacklogAnalyticsSource()
     {
-        var product = CreateProduct(1, [1000]);
         var items = new List<WorkItemDto>
         {
             CreateWorkItem(1000, WorkItemType.Epic, "Epic"),
@@ -74,14 +69,9 @@ public sealed class GetProductBacklogStateQueryHandlerTests
             CreateWorkItem(1002, WorkItemType.Pbi, "Ready PBI", 1001, "pbi", effort: 8)
         };
 
-        _productRepository
-            .Setup(repository => repository.GetProductByIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(product);
         _workItemQuery
-            .Setup(query => query.GetByRootIdsAsync(
-                It.Is<IReadOnlyList<int>>(ids => ids.SequenceEqual(new[] { 1000 })),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(items);
+            .Setup(query => query.GetProductBacklogAnalyticsSourceAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProductBacklogAnalyticsSource(1, items));
 
         var result = await _handler.Handle(new GetProductBacklogStateQuery(1), CancellationToken.None);
 
@@ -90,22 +80,6 @@ public sealed class GetProductBacklogStateQueryHandlerTests
         Assert.HasCount(1, result.Epics);
         Assert.AreEqual("Epic", result.Epics[0].Title);
     }
-
-    private static ProductDto CreateProduct(int id, IReadOnlyList<int> backlogRoots) =>
-        new(
-            Id: id,
-            ProductOwnerId: 1,
-            Name: $"Product {id}",
-            BacklogRootWorkItemIds: backlogRoots.ToList(),
-            Order: 0,
-            PictureType: ProductPictureType.Default,
-            DefaultPictureId: 0,
-            CustomPicturePath: null,
-            CreatedAt: DateTimeOffset.UtcNow,
-            LastModified: DateTimeOffset.UtcNow,
-            LastSyncedAt: null,
-            TeamIds: [],
-            Repositories: []);
 
     private static WorkItemDto CreateWorkItem(
         int tfsId,

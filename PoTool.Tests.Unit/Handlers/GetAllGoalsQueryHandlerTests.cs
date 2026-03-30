@@ -16,7 +16,6 @@ public class GetAllGoalsQueryHandlerTests
 {
     private Mock<IWorkItemQuery> _workItemQuery = null!;
     private ProfileFilterService _profileFilterService = null!;
-    private Mock<IProductRepository> _productRepository = null!;
     private Mock<ILogger<GetAllGoalsQueryHandler>> _logger = null!;
     private GetAllGoalsQueryHandler _handler = null!;
 
@@ -24,7 +23,6 @@ public class GetAllGoalsQueryHandlerTests
     public void Setup()
     {
         _workItemQuery = new Mock<IWorkItemQuery>();
-        _productRepository = new Mock<IProductRepository>();
         _logger = new Mock<ILogger<GetAllGoalsQueryHandler>>();
 
         var settingsRepository = new Mock<ISettingsRepository>();
@@ -38,22 +36,17 @@ public class GetAllGoalsQueryHandlerTests
         _handler = new GetAllGoalsQueryHandler(
             _workItemQuery.Object,
             _profileFilterService,
-            _productRepository.Object,
             _logger.Object);
     }
 
     [TestMethod]
-    public async Task Handle_FiltersGoalsFromCacheScopedHierarchy()
+    public async Task Handle_UsesGoalListingSource()
     {
-        _productRepository
-            .Setup(repository => repository.GetAllProductsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CreateProduct(1, 100)]);
         _workItemQuery
-            .Setup(query => query.GetByRootIdsAsync(It.IsAny<IReadOnlyList<int>>(), It.IsAny<CancellationToken>()))
+            .Setup(query => query.GetGoalsForListingAsync(null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
                 CreateWorkItem(100, WorkItemType.Goal),
-                CreateWorkItem(101, WorkItemType.Epic),
                 CreateWorkItem(102, WorkItemType.Goal)
             ]);
 
@@ -62,22 +55,6 @@ public class GetAllGoalsQueryHandlerTests
         Assert.HasCount(2, result);
         Assert.IsTrue(result.All(item => item.Type == WorkItemType.Goal));
     }
-
-    private static ProductDto CreateProduct(int id, int backlogRootWorkItemId) =>
-        new(
-            Id: id,
-            ProductOwnerId: 1,
-            Name: $"Product {id}",
-            BacklogRootWorkItemIds: [backlogRootWorkItemId],
-            Order: id,
-            PictureType: ProductPictureType.Default,
-            DefaultPictureId: 0,
-            CustomPicturePath: null,
-            CreatedAt: DateTimeOffset.UtcNow,
-            LastModified: DateTimeOffset.UtcNow,
-            LastSyncedAt: null,
-            TeamIds: [],
-            Repositories: []);
 
     private static WorkItemDto CreateWorkItem(int tfsId, string type) =>
         new(

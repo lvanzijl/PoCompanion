@@ -12,16 +12,13 @@ namespace PoTool.Api.Services;
 /// </summary>
 public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
 {
-    private readonly IWorkItemQuery _workItemQuery;
     private readonly PoToolDbContext _dbContext;
     private readonly ILogger<CachedWorkItemReadProvider> _logger;
 
     public CachedWorkItemReadProvider(
-        IWorkItemQuery workItemQuery,
         PoToolDbContext dbContext,
         ILogger<CachedWorkItemReadProvider> logger)
     {
-        _workItemQuery = workItemQuery;
         _dbContext = dbContext;
         _logger = logger;
     }
@@ -32,7 +29,10 @@ public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
     public async Task<IEnumerable<WorkItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("CachedWorkItemReadProvider: Fetching all work items from cache");
-        return await _workItemQuery.GetAllAsync(cancellationToken);
+        var entities = await _dbContext.WorkItems
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+        return entities.Select(WorkItemQueryMapping.MapToDto);
     }
 
     /// <summary>
@@ -62,9 +62,16 @@ public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
     {
         _logger.LogDebug("CachedWorkItemReadProvider: Fetching work items by area paths: {AreaPaths}", 
             string.Join(", ", areaPaths));
-        return areaPaths == null
-            ? Array.Empty<WorkItemDto>()
-            : await _workItemQuery.GetByAreaPathsAsync(areaPaths, cancellationToken);
+        if (areaPaths == null || areaPaths.Count == 0)
+        {
+            return Array.Empty<WorkItemDto>();
+        }
+
+        var entities = await _dbContext.WorkItems
+            .AsNoTracking()
+            .Where(workItem => areaPaths.Any(areaPath => workItem.AreaPath.StartsWith(areaPath)))
+            .ToListAsync(cancellationToken);
+        return entities.Select(WorkItemQueryMapping.MapToDto);
     }
 
     /// <summary>
@@ -95,7 +102,14 @@ public sealed class CachedWorkItemReadProvider : IWorkItemReadProvider
             return Array.Empty<WorkItemDto>();
         }
 
-        var result = await _workItemQuery.GetByRootIdsAsync(rootWorkItemIds, cancellationToken);
+        var allEntities = await _dbContext.WorkItems
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+        var includedIds = WorkItemHierarchySelection.ExpandToDescendantIds(allEntities, rootWorkItemIds);
+        var result = allEntities
+            .Where(entity => includedIds.Contains(entity.TfsId))
+            .Select(WorkItemQueryMapping.MapToDto)
+            .ToList();
         _logger.LogDebug("CachedWorkItemReadProvider: Found {Count} work items for roots {RootIds}",
             result.Count, string.Join(", ", rootWorkItemIds));
         return result;
