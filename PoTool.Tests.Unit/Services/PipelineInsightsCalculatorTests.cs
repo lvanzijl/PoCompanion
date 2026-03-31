@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
+using PoTool.Shared.Pipelines;
 
 namespace PoTool.Tests.Unit.Services;
 

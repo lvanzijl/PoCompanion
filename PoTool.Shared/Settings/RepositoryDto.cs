@@ -10,4 +10,10 @@ public sealed record RepositoryDto(
     string Name,
     DateTimeOffset CreatedAt,
     string? RepositoryId = null
-);
+)
+{
+    public RepositoryDto()
+        : this(0, 0, string.Empty, default)
+    {
+    }
+}

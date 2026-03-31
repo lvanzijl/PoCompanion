@@ -95,7 +95,7 @@ public class TeamService
         {
             Name = name,
             TeamAreaPath = teamAreaPath,
-            PictureType = pictureType.HasValue ? (ApiClient.TeamPictureType?)pictureType.Value : null,
+            PictureType = pictureType,
             DefaultPictureId = defaultPictureId,
             CustomPicturePath = customPicturePath
         };

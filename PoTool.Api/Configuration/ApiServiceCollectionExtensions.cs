@@ -27,7 +27,6 @@ using PoTool.Core.Domain.EffortPlanning;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.Domain.Metrics;
 using PoTool.Core.Domain.Portfolio;
-using PoTool.Client.Services;
 
 namespace PoTool.Api.Configuration;
 

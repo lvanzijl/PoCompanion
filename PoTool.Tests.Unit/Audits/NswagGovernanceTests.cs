@@ -39,21 +39,7 @@ public sealed class NswagGovernanceTests
             .Cast<string>()
             .ToHashSet(StringComparer.Ordinal);
 
-        foreach (var requiredType in new[]
-                 {
-                     "BuildQualityPageDto",
-                     "DeliveryBuildQualityDto",
-                     "PipelineBuildQualityDto",
-                     "HomeProductBarMetricsDto",
-                     "TfsProjectDto",
-                     "ConfigurationImportResultDto",
-                     "ValidationTriageSummaryDto",
-                     "ValidationCategoryTriageDto",
-                     "HealthWorkspaceProductSummaryDto",
-                     "PortfolioSnapshotDto",
-                     "PortfolioComparisonDto",
-                     "PortfolioDecisionSignalDto"
-                 })
+        foreach (var requiredType in GetSharedPublicTypeNames(repositoryRoot))
         {
             Assert.Contains(requiredType, excludedTypeNames.ToList(), $"NSwag must exclude shared contract type '{requiredType}'.");
         }
@@ -100,13 +86,40 @@ public sealed class NswagGovernanceTests
             {
                 "ApiClient.DeliveryFilters.cs",
                 "ApiClient.Extensions.cs",
-                "ApiClient.LegacyCompatibility.cs",
                 "ApiClient.PipelineFilters.cs",
                 "ApiClient.PortfolioConsumption.cs",
                 "ApiClient.PullRequestFilters.cs",
                 "ApiClient.SprintFilters.cs"
             },
             rootFiles);
+    }
+
+    [TestMethod]
+    public void GeneratedClient_DoesNotRecreateSharedPublicTypes()
+    {
+        var repositoryRoot = GetRepositoryRoot();
+        var sharedTypeNames = GetSharedPublicTypeNames(repositoryRoot);
+        var generatedPath = Path.Combine(repositoryRoot, "PoTool.Client", "ApiClient", "Generated", "ApiClient.g.cs");
+        var generatedTypeNames = GetPublicTypeNames(File.ReadAllText(generatedPath));
+
+        var overlap = sharedTypeNames.Intersect(generatedTypeNames, StringComparer.Ordinal).OrderBy(value => value).ToArray();
+        CollectionAssert.AreEqual(Array.Empty<string>(), overlap, "Generated client types must not overlap with shared contract ownership.");
+    }
+
+    [TestMethod]
+    public void ApiProject_DoesNotReferenceClientProject()
+    {
+        var repositoryRoot = GetRepositoryRoot();
+        var projectPath = Path.Combine(repositoryRoot, "PoTool.Api", "PoTool.Api.csproj");
+        var project = XDocument.Load(projectPath);
+
+        var projectReferences = project.Descendants("ProjectReference")
+            .Select(element => element.Attribute("Include")?.Value)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Cast<string>()
+            .ToArray();
+
+        CollectionAssert.DoesNotContain(projectReferences, @"..\PoTool.Client\PoTool.Client.csproj");
     }
 
     private static string GetRepositoryRoot()
@@ -124,5 +137,29 @@ public sealed class NswagGovernanceTests
         }
 
         throw new DirectoryNotFoundException("Could not locate the repository root containing PoTool.sln.");
+    }
+
+    private static HashSet<string> GetSharedPublicTypeNames(string repositoryRoot)
+    {
+        var sharedRoot = Path.Combine(repositoryRoot, "PoTool.Shared");
+        var typeNames = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var path in Directory.GetFiles(sharedRoot, "*.cs", SearchOption.AllDirectories))
+        {
+            foreach (var typeName in GetPublicTypeNames(File.ReadAllText(path)))
+            {
+                typeNames.Add(typeName);
+            }
+        }
+
+        return typeNames;
+    }
+
+    private static IEnumerable<string> GetPublicTypeNames(string source)
+    {
+        return System.Text.RegularExpressions.Regex.Matches(
+                source,
+                @"public\s+(?:sealed\s+|partial\s+)?(?:record|class|enum|interface)\s+([A-Za-z0-9_]+)")
+            .Select(match => match.Groups[1].Value);
     }
 }

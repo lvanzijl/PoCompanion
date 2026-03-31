@@ -9,7 +9,13 @@ public sealed record FixValidationViolationDto(
     string Description,
     string NewState,
     string Justification
-);
+)
+{
+    public FixValidationViolationDto()
+        : this(0, string.Empty, string.Empty, string.Empty, string.Empty)
+    {
+    }
+}
 
 /// <summary>
 /// DTO representing the result of batch fix operations.

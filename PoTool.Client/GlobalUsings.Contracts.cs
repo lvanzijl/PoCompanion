@@ -1,0 +1,13 @@
+global using PoTool.Shared.BuildQuality;
+global using PoTool.Shared.Contracts.TfsVerification;
+global using PoTool.Shared.Health;
+global using PoTool.Shared.Metrics;
+global using PoTool.Shared.Pipelines;
+global using PoTool.Shared.Planning;
+global using PoTool.Shared.PullRequests;
+global using PoTool.Shared.ReleasePlanning;
+global using PoTool.Shared.Settings;
+global using PoTool.Shared.Statistics;
+global using PoTool.Shared.WorkItems;
+global using EpicPlacementDto = PoTool.Shared.ReleasePlanning.EpicPlacementDto;
+global using UnplannedEpicDto = PoTool.Shared.ReleasePlanning.UnplannedEpicDto;

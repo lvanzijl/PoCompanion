@@ -442,7 +442,7 @@
             if (sprintIds.Count == 0)
                 return;
 
-            var response = await MetricsClient.GetSprintTrendMetricsAsync(
+            var response = await MetricsClient.GetSprintTrendMetricsEnvelopeAsync(
                 _profileId.Value,
                 sprintIds,
                 productIds: null,

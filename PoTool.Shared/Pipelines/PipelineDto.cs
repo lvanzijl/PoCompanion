@@ -9,7 +9,13 @@ public record PipelineDto(
     PipelineType Type,
     string? Path,
     DateTimeOffset RetrievedAt
-);
+)
+{
+    public PipelineDto()
+        : this(0, string.Empty, PipelineType.Build, null, default)
+    {
+    }
+}
 
 /// <summary>
 /// Type of pipeline.

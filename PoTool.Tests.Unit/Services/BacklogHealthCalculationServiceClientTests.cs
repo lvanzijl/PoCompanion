@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
+using PoTool.Shared.Metrics;
 
 using PoTool.Core.WorkItems;
 

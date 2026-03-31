@@ -170,7 +170,6 @@ public class TreeBuilderService : ITreeBuilderService
                         AreaPath = dto.AreaPath,
                         IterationPath = dto.IterationPath,
                         State = dto.State,
-                        JsonPayload = dto.JsonPayload,
                         RetrievedAt = dto.RetrievedAt,
                         Effort = dto.Effort,
                         Description = dto.Description
@@ -193,7 +192,6 @@ public class TreeBuilderService : ITreeBuilderService
                     AreaPath = dto.AreaPath,
                     IterationPath = dto.IterationPath,
                     State = dto.State,
-                    JsonPayload = dto.JsonPayload,
                     RetrievedAt = dto.RetrievedAt,
                     Effort = dto.Effort,
                     Description = dto.Description
@@ -445,7 +443,6 @@ public class TreeBuilderService : ITreeBuilderService
                         AreaPath = dto.AreaPath,
                         IterationPath = dto.IterationPath,
                         State = dto.State,
-                        JsonPayload = dto.JsonPayload,
                         RetrievedAt = dto.RetrievedAt,
                         Effort = dto.Effort,
                         Description = dto.Description
@@ -468,7 +465,6 @@ public class TreeBuilderService : ITreeBuilderService
                     AreaPath = dto.AreaPath,
                     IterationPath = dto.IterationPath,
                     State = dto.State,
-                    JsonPayload = dto.JsonPayload,
                     RetrievedAt = dto.RetrievedAt,
                     Effort = dto.Effort,
                     Description = dto.Description

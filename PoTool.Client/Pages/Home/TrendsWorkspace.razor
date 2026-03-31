@@ -321,8 +321,8 @@
     private int? _selectedTeamId;
     private int? _selectedFromSprintId;
     private int? _selectedToSprintId;
-    private List<PoTool.Client.ApiClient.TeamDto> _teams = new();
-    private List<PoTool.Client.ApiClient.SprintDto> _sprints = new();
+    private List<TeamDto> _teams = new();
+    private List<SprintDto> _sprints = new();
     private DateTimeOffset _fromDate;
     private DateTimeOffset _toDate;
     
@@ -651,7 +651,7 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Error loading sprints: {ex.Message}", Severity.Warning);
-            _sprints = new List<PoTool.Client.ApiClient.SprintDto>();
+            _sprints = new List<SprintDto>();
         }
     }
 

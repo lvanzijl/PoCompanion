@@ -14,4 +14,10 @@ public sealed record SprintDto(
     DateTimeOffset? EndUtc,
     string? TimeFrame,
     DateTimeOffset LastSyncedUtc
-);
+)
+{
+    public SprintDto()
+        : this(0, 0, null, string.Empty, string.Empty, null, null, null, default)
+    {
+    }
+}

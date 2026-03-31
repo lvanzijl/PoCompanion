@@ -1,7 +1,7 @@
 using PoTool.Client.Services;
 using PoTool.Shared.WorkItems;
-using ClientValidationIssue = PoTool.Client.ApiClient.ValidationIssue;
-using ClientWorkItemWithValidationDto = PoTool.Client.ApiClient.WorkItemWithValidationDto;
+using ClientValidationIssue = PoTool.Shared.WorkItems.ValidationIssue;
+using ClientWorkItemWithValidationDto = PoTool.Shared.WorkItems.WorkItemWithValidationDto;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -22,12 +22,7 @@ public sealed class TreeBuilderServiceTests
                 State = "New",
                 ValidationIssues = new List<ClientValidationIssue>
                 {
-                    new()
-                    {
-                        Severity = "Warning",
-                        Message = "Looks like a parent-progress issue",
-                        RuleId = "RC-2"
-                    }
+                    new("RC-2", "Looks like a parent-progress issue", "Warning")
                 }
             }
         };

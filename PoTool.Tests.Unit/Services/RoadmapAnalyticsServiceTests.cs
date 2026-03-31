@@ -2,6 +2,7 @@ using Moq;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
 using PoTool.Shared.Health;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
 

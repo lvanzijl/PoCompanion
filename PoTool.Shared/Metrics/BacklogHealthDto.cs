@@ -18,7 +18,13 @@ public sealed record BacklogHealthDto(
     IReadOnlyList<ValidationIssueSummary> ValidationIssues,
     int RefinementBlockers = 0,
     int RefinementNeeded = 0
-);
+)
+{
+    public BacklogHealthDto()
+        : this(string.Empty, string.Empty, 0, 0, 0, 0, 0, 0, null, null, Array.Empty<ValidationIssueSummary>())
+    {
+    }
+}
 
 /// <summary>
 /// Summary of validation issues for a specific validation type.

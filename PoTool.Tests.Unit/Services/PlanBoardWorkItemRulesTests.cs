@@ -1,6 +1,7 @@
 using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
 using PoTool.Client.Services;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -79,9 +80,11 @@ public sealed class PlanBoardWorkItemRulesTests
     public void CreateDescriptor_CopiesWorkItemTypeAndFeatureContext()
     {
         var feature = CreateWorkItem(10, WorkItemTypeHelper.Feature, "Shared Inbox");
-        var pbi = CreateWorkItem(20, WorkItemTypeHelper.Pbi, "As a user I can sort messages", parentId: 10);
-        pbi.Effort = 5;
-        pbi.IterationPath = "Project\\Sprint 1";
+        var pbi = CreateWorkItem(20, WorkItemTypeHelper.Pbi, "As a user I can sort messages", parentId: 10) with
+        {
+            Effort = 5,
+            IterationPath = "Project\\Sprint 1"
+        };
 
         var descriptor = PlanBoardWorkItemRules.CreateDescriptor(
             pbi,
@@ -101,10 +104,8 @@ public sealed class PlanBoardWorkItemRulesTests
         var epic = CreateWorkItem(1, WorkItemTypeHelper.Epic, "Epic A");
         var feature = CreateWorkItem(2, WorkItemTypeHelper.Feature, "Feature 1", parentId: 1);
         var activePbi = CreateWorkItem(3, WorkItemTypeHelper.Pbi, "Active PBI", parentId: 2);
-        var donePbi = CreateWorkItem(4, WorkItemTypeHelper.Pbi, "Done PBI", parentId: 2);
-        donePbi.State = "Closed";
-        var removedPbi = CreateWorkItem(5, WorkItemTypeHelper.Pbi, "Removed PBI", parentId: 2);
-        removedPbi.State = "Removed";
+        var donePbi = CreateWorkItem(4, WorkItemTypeHelper.Pbi, "Done PBI", parentId: 2) with { State = "Closed" };
+        var removedPbi = CreateWorkItem(5, WorkItemTypeHelper.Pbi, "Removed PBI", parentId: 2) with { State = "Removed" };
 
         var doneOrRemoved = new HashSet<(string, string)>
         {
@@ -130,8 +131,7 @@ public sealed class PlanBoardWorkItemRulesTests
     {
         var epic = CreateWorkItem(1, WorkItemTypeHelper.Epic, "Epic A");
         var feature = CreateWorkItem(2, WorkItemTypeHelper.Feature, "Feature 1", parentId: 1);
-        var donePbi = CreateWorkItem(3, WorkItemTypeHelper.Pbi, "Done PBI", parentId: 2);
-        donePbi.State = "Closed";
+        var donePbi = CreateWorkItem(3, WorkItemTypeHelper.Pbi, "Done PBI", parentId: 2) with { State = "Closed" };
 
         var doneOrRemoved = new HashSet<(string, string)>
         {
@@ -158,8 +158,7 @@ public sealed class PlanBoardWorkItemRulesTests
         var epic = CreateWorkItem(1, WorkItemTypeHelper.Epic, "Epic A");
         var feature = CreateWorkItem(2, WorkItemTypeHelper.Feature, "Feature 1", parentId: 1);
         var unplannedPbi = CreateWorkItem(3, WorkItemTypeHelper.Pbi, "Unplanned PBI", parentId: 2);
-        var plannedPbi = CreateWorkItem(4, WorkItemTypeHelper.Pbi, "Planned PBI", parentId: 2);
-        plannedPbi.IterationPath = "Project\\Sprint 1";
+        var plannedPbi = CreateWorkItem(4, WorkItemTypeHelper.Pbi, "Planned PBI", parentId: 2) with { IterationPath = "Project\\Sprint 1" };
 
         var sprintPaths = new HashSet<string> { "Project\\Sprint 1" };
 
@@ -179,10 +178,8 @@ public sealed class PlanBoardWorkItemRulesTests
     {
         var epic = CreateWorkItem(1, WorkItemTypeHelper.Epic, "Epic A");
         var feature = CreateWorkItem(2, WorkItemTypeHelper.Feature, "Feature 1", parentId: 1);
-        var pbi1 = CreateWorkItem(3, WorkItemTypeHelper.Pbi, "PBI 1", parentId: 2);
-        pbi1.Effort = 3;
-        var pbi2 = CreateWorkItem(4, WorkItemTypeHelper.Pbi, "PBI 2", parentId: 2);
-        pbi2.Effort = 5;
+        var pbi1 = CreateWorkItem(3, WorkItemTypeHelper.Pbi, "PBI 1", parentId: 2) with { Effort = 3 };
+        var pbi2 = CreateWorkItem(4, WorkItemTypeHelper.Pbi, "PBI 2", parentId: 2) with { Effort = 5 };
 
         var tree = PlanBoardWorkItemRules.BuildCandidateTree(
             [epic, feature, pbi1, pbi2],
@@ -201,10 +198,8 @@ public sealed class PlanBoardWorkItemRulesTests
     {
         var epic = CreateWorkItem(1, WorkItemTypeHelper.Epic, "Epic A");
         var feature = CreateWorkItem(2, WorkItemTypeHelper.Feature, "Feature 1", parentId: 1);
-        var pbiHigh = CreateWorkItem(10, WorkItemTypeHelper.Pbi, "High priority PBI", parentId: 2);
-        pbiHigh.BacklogPriority = 1.0;
-        var pbiMid = CreateWorkItem(11, WorkItemTypeHelper.Pbi, "Mid priority PBI", parentId: 2);
-        pbiMid.BacklogPriority = 5.0;
+        var pbiHigh = CreateWorkItem(10, WorkItemTypeHelper.Pbi, "High priority PBI", parentId: 2) with { BacklogPriority = 1.0 };
+        var pbiMid = CreateWorkItem(11, WorkItemTypeHelper.Pbi, "Mid priority PBI", parentId: 2) with { BacklogPriority = 5.0 };
         var pbiNoPriority = CreateWorkItem(12, WorkItemTypeHelper.Pbi, "No priority PBI", parentId: 2);
         // no BacklogPriority → sorted last
 
@@ -223,10 +218,8 @@ public sealed class PlanBoardWorkItemRulesTests
     [TestMethod]
     public void BuildCandidateTree_OrdersVisibleParentsByBacklogPriorityThenTfsId()
     {
-        var epicLow = CreateWorkItem(10, WorkItemTypeHelper.Epic, "Epic Low");
-        epicLow.BacklogPriority = 10;
-        var epicHigh = CreateWorkItem(11, WorkItemTypeHelper.Epic, "Epic High");
-        epicHigh.BacklogPriority = 1;
+        var epicLow = CreateWorkItem(10, WorkItemTypeHelper.Epic, "Epic Low") with { BacklogPriority = 10 };
+        var epicHigh = CreateWorkItem(11, WorkItemTypeHelper.Epic, "Epic High") with { BacklogPriority = 1 };
         var epicNoPriority = CreateWorkItem(12, WorkItemTypeHelper.Epic, "Epic No Priority");
 
         var tree = PlanBoardWorkItemRules.BuildCandidateTree(
@@ -263,11 +256,9 @@ public sealed class PlanBoardWorkItemRulesTests
     [TestMethod]
     public void BuildCandidateTree_ExcludesDoneOrRemovedParents()
     {
-        var doneEpic = CreateWorkItem(1, WorkItemTypeHelper.Epic, "Done Epic");
-        doneEpic.State = "Closed";
+        var doneEpic = CreateWorkItem(1, WorkItemTypeHelper.Epic, "Done Epic") with { State = "Closed" };
         var activeEpic = CreateWorkItem(2, WorkItemTypeHelper.Epic, "Active Epic");
-        var removedFeature = CreateWorkItem(3, WorkItemTypeHelper.Feature, "Removed Feature", parentId: 2);
-        removedFeature.State = "Removed";
+        var removedFeature = CreateWorkItem(3, WorkItemTypeHelper.Feature, "Removed Feature", parentId: 2) with { State = "Removed" };
         var activeFeature = CreateWorkItem(4, WorkItemTypeHelper.Feature, "Active Feature", parentId: 2);
 
         var doneOrRemoved = new HashSet<(string, string)>
@@ -314,7 +305,6 @@ public sealed class PlanBoardWorkItemRulesTests
             AreaPath = "Project\\Team",
             IterationPath = "Project",
             State = "Active",
-            JsonPayload = "{}",
             RetrievedAt = DateTimeOffset.UtcNow
         };
     }

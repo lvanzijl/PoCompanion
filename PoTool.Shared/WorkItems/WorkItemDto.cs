@@ -28,4 +28,10 @@ public sealed record WorkItemDto(
     double? TimeCriticality = null,
     string? ProjectNumber = null,
     string? ProjectElement = null
-);
+)
+{
+    public WorkItemDto()
+        : this(0, string.Empty, string.Empty, null, string.Empty, string.Empty, string.Empty, default, null, null)
+    {
+    }
+}

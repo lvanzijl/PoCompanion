@@ -2,7 +2,7 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
 @using PoTool.Shared.WorkItems
-@using ApiWorkItemDto = PoTool.Client.ApiClient.WorkItemDto
+@using ApiWorkItemDto = PoTool.Shared.WorkItems.WorkItemDto
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject WorkItemService WorkItemService
@@ -1068,7 +1068,7 @@
         for (var i = 0; i < _roadmapEpics.Count; i++)
         {
             var newPriority = (i + 1) * 1000.0;
-            _roadmapEpics[i].BacklogPriority = newPriority;
+            _roadmapEpics[i] = _roadmapEpics[i] with { BacklogPriority = newPriority };
             var success = await WorkItemService.UpdateBacklogPriorityAsync(_roadmapEpics[i].TfsId, newPriority);
             if (!success)
             {

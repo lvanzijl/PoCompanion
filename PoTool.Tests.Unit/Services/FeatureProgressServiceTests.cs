@@ -2,6 +2,7 @@ using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Models;
 using PoTool.Core.Domain.WorkItems;
+using StateClassification = PoTool.Core.Domain.Models.StateClassification;
 
 namespace PoTool.Tests.Unit.Services;
 

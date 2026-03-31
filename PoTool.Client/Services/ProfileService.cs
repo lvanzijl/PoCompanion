@@ -72,7 +72,7 @@ public class ProfileService : IProfileService
         {
             Name = name,
             GoalIds = goalIds,
-            PictureType = (ApiClient.ProfilePictureType)pictureType,
+            PictureType = pictureType,
             DefaultPictureId = pictureId,
             CustomPicturePath = customPicturePath
         };
@@ -96,7 +96,7 @@ public class ProfileService : IProfileService
         {
             Name = name,
             GoalIds = goalIds,
-            PictureType = pictureType.HasValue ? (ApiClient.ProfilePictureType?)pictureType.Value : null,
+            PictureType = pictureType,
             DefaultPictureId = defaultPictureId,
             CustomPicturePath = customPicturePath
         };

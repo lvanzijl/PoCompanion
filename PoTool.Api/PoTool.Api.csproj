@@ -29,7 +29,6 @@
   <ItemGroup>
     <ProjectReference Include="..\PoTool.Core\PoTool.Core.csproj" />
     <ProjectReference Include="..\PoTool.Core.Domain\PoTool.Core.Domain.csproj" />
-    <ProjectReference Include="..\PoTool.Client\PoTool.Client.csproj" />
     <ProjectReference Include="..\PoTool.Shared\PoTool.Shared.csproj" />
     <ProjectReference Include="..\PoTool.Integrations.Tfs\PoTool.Integrations.Tfs.csproj" />
   </ItemGroup>

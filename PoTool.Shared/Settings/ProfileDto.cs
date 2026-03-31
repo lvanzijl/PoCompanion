@@ -29,4 +29,10 @@ public sealed record ProfileDto(
     string? CustomPicturePath,
     DateTimeOffset CreatedAt,
     DateTimeOffset LastModified
-);
+)
+{
+    public ProfileDto()
+        : this(0, string.Empty, new List<int>(), ProfilePictureType.Default, 0, null, default, default)
+    {
+    }
+}

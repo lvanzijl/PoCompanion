@@ -306,7 +306,7 @@
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             var profileProducts = activeProfile != null
                 ? (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList()
-                : new List<PoTool.Client.ApiClient.ProductDto>();
+                : new List<ProductDto>();
 
             if (ProductId.HasValue)
                 _productName = profileProducts.FirstOrDefault(p => p.Id == ProductId.Value)?.Name;

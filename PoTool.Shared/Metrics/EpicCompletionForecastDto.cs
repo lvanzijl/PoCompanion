@@ -35,6 +35,11 @@ public sealed record EpicCompletionForecastDto(
     DateTimeOffset AnalysisTimestamp
 )
 {
+    public EpicCompletionForecastDto()
+        : this(0, string.Empty, string.Empty, 0, 0, 0, 0, 0, null, ForecastConfidence.Low, Array.Empty<SprintForecast>(), string.Empty, default)
+    {
+    }
+
     /// <summary>
     /// Canonical alias for completed canonical story-point scope.
     /// </summary>

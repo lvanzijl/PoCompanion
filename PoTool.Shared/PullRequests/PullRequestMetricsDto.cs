@@ -21,4 +21,10 @@ public sealed record PullRequestMetricsDto(
     int TotalLinesAdded,
     int TotalLinesDeleted,
     double AverageLinesPerFile
-);
+)
+{
+    public PullRequestMetricsDto()
+        : this(0, string.Empty, string.Empty, default, null, string.Empty, string.Empty, default, null, 0, 0, 0, 0, 0, 0, 0)
+    {
+    }
+}

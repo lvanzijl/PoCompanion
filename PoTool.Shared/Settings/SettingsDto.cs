@@ -7,4 +7,10 @@ public sealed record SettingsDto(
     int Id,
     int? ActiveProfileId,
     DateTimeOffset LastModified
-);
+)
+{
+    public SettingsDto()
+        : this(0, null, default)
+    {
+    }
+}

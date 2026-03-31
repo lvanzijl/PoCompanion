@@ -298,14 +298,9 @@
     
     private string GetAvailableFieldsSummary(WorkItemWithValidationDto bug)
     {
-        if (string.IsNullOrEmpty(bug.JsonPayload))
-        {
-            return "JsonPayload is empty";
-        }
-        
         try
         {
-            using var doc = System.Text.Json.JsonDocument.Parse(bug.JsonPayload);
+            using var doc = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(bug));
             var fieldNames = doc.RootElement.EnumerateObject().Select(p => p.Name).ToList();
             return string.Join(", ", fieldNames.Take(10)) + (fieldNames.Count > 10 ? $" ... ({fieldNames.Count} total)" : "");
         }

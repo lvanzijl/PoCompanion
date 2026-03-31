@@ -1,7 +1,7 @@
 using Microsoft.JSInterop;
 using Moq;
-using ClientWorkItemWithValidationDto = PoTool.Client.ApiClient.WorkItemWithValidationDto;
-using ClientValidationIssue = PoTool.Client.ApiClient.ValidationIssue;
+using ClientWorkItemWithValidationDto = PoTool.Shared.WorkItems.WorkItemWithValidationDto;
+using ClientValidationIssue = PoTool.Shared.WorkItems.ValidationIssue;
 using PoTool.Api.Repositories;
 using PoTool.Api.Services.MockData;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -131,7 +131,7 @@ public class WorkItemExplorerTests
                 Type = "Epic",
                 State = "Active",
                 ParentTfsId = null,
-                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+                ValidationIssues = new List<ValidationIssue>()
             },
             new ClientWorkItemWithValidationDto
             {
@@ -140,7 +140,7 @@ public class WorkItemExplorerTests
                 Type = "Feature",
                 State = "Active",
                 ParentTfsId = 100,
-                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+                ValidationIssues = new List<ValidationIssue>()
             },
             new ClientWorkItemWithValidationDto
             {
@@ -149,7 +149,7 @@ public class WorkItemExplorerTests
                 Type = "Epic",
                 State = "Active",
                 ParentTfsId = null,
-                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+                ValidationIssues = new List<ValidationIssue>()
             }
         };
 
@@ -207,7 +207,7 @@ public class WorkItemExplorerTests
                 Type = "Epic",
                 State = "Active",
                 ParentTfsId = null,
-                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+                ValidationIssues = new List<ValidationIssue>()
             },
             new ClientWorkItemWithValidationDto
             {
@@ -216,7 +216,7 @@ public class WorkItemExplorerTests
                 Type = "Feature",
                 State = "Active",
                 ParentTfsId = 888, // Parent doesn't exist
-                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+                ValidationIssues = new List<ValidationIssue>()
             }
         };
 
@@ -268,7 +268,7 @@ public class WorkItemExplorerTests
                 Type = "Epic",
                 State = "Active",
                 ParentTfsId = null,
-                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+                ValidationIssues = new List<ValidationIssue>()
             }
         };
 
@@ -311,7 +311,7 @@ public class WorkItemExplorerTests
                 Type = "Epic",
                 State = "Active",
                 ParentTfsId = null,
-                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+                ValidationIssues = new List<ValidationIssue>()
             },
             new ClientWorkItemWithValidationDto
             {
@@ -320,7 +320,7 @@ public class WorkItemExplorerTests
                 Type = "Feature",
                 State = "Active",
                 ParentTfsId = 100,
-                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+                ValidationIssues = new List<ValidationIssue>()
             }
         };
 
@@ -362,7 +362,7 @@ public class WorkItemExplorerTests
                 Type = "Goal",
                 State = "Active",
                 ParentTfsId = null, // Goals are always parentless
-                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+                ValidationIssues = new List<ValidationIssue>()
             },
             new ClientWorkItemWithValidationDto
             {
@@ -371,7 +371,7 @@ public class WorkItemExplorerTests
                 Type = "Epic",
                 State = "Active",
                 ParentTfsId = 1,
-                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+                ValidationIssues = new List<ValidationIssue>()
             },
             new ClientWorkItemWithValidationDto
             {
@@ -380,7 +380,7 @@ public class WorkItemExplorerTests
                 Type = "Feature",
                 State = "Active",
                 ParentTfsId = 2,
-                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+                ValidationIssues = new List<ValidationIssue>()
             },
             new ClientWorkItemWithValidationDto
             {
@@ -389,7 +389,7 @@ public class WorkItemExplorerTests
                 Type = "Epic",
                 State = "Active",
                 ParentTfsId = null, // Another root
-                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+                ValidationIssues = new List<ValidationIssue>()
             }
         };
 
@@ -450,7 +450,7 @@ public class WorkItemExplorerTests
                 Type = "Goal",
                 State = "Active",
                 ParentTfsId = null,
-                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+                ValidationIssues = new List<ValidationIssue>()
             },
             new ClientWorkItemWithValidationDto
             {
@@ -459,7 +459,7 @@ public class WorkItemExplorerTests
                 Type = "Epic",
                 State = "Active",
                 ParentTfsId = 1,
-                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+                ValidationIssues = new List<ValidationIssue>()
             },
             new ClientWorkItemWithValidationDto
             {
@@ -468,7 +468,7 @@ public class WorkItemExplorerTests
                 Type = "Feature",
                 State = "Active",
                 ParentTfsId = 2,
-                ValidationIssues = new List<PoTool.Client.ApiClient.ValidationIssue>()
+                ValidationIssues = new List<ValidationIssue>()
             }
         };
 

@@ -126,7 +126,8 @@ else if (!_isLoading && _healthData != null)
                 productOwnerId: null,
                 productIds,
                 areaPath,
-                maxIterations);
+                maxIterations,
+                CancellationToken.None);
 
             return response.Data;
         }

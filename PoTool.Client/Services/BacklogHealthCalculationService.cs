@@ -23,7 +23,7 @@ public class BacklogHealthCalculationService
     /// <returns>Health score from 0 to 100.</returns>
     public async Task<int> CalculateHealthScoreAsync(BacklogHealthDto iteration)
     {
-        var request = new ApiClient.CalculateHealthScoreRequest
+        var request = new CalculateHealthScoreRequest
         {
             TotalWorkItems = iteration.TotalWorkItems,
             WorkItemsWithoutEffort = iteration.WorkItemsWithoutEffort,

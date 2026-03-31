@@ -26,4 +26,10 @@ public sealed record WorkItemWithValidationDto(
     double? TimeCriticality = null,
     string? ProjectNumber = null,
     string? ProjectElement = null
-);
+)
+{
+    public WorkItemWithValidationDto()
+        : this(0, string.Empty, string.Empty, null, string.Empty, string.Empty, string.Empty, default, null, null, new List<ValidationIssue>())
+    {
+    }
+}

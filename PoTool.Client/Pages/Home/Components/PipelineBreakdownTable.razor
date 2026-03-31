@@ -107,7 +107,7 @@ else
 @code {
     /// <summary>Pipeline breakdown entries for one product, ordered by failure rate descending.</summary>
     [Parameter, EditorRequired]
-    public ICollection<PipelineBreakdownEntryDto> Entries { get; set; } = Array.Empty<PipelineBreakdownEntryDto>();
+    public IReadOnlyList<PipelineBreakdownEntryDto> Entries { get; set; } = Array.Empty<PipelineBreakdownEntryDto>();
 
     // ── Formatters ────────────────────────────────────────────────────────────
 
