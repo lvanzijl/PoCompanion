@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-03-31",
+    "type": "Fixed",
+    "title": "App shell and guarded APIs now share explicit route handling",
+    "impact": "Opening /, client-side workspace routes, SignalR setup paths, TFS validation endpoints, and build-quality APIs no longer fail route classification during startup, while unknown managed API routes still stay blocked until they are explicitly categorized.",
+    "area": "Home",
+    "link": "/"
+  },
+  {
     "date": "2026-03-29",
     "type": "Fixed",
     "title": "PR analytics now wait for cached sync state",

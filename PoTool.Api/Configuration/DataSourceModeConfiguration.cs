@@ -8,6 +8,12 @@ namespace PoTool.Api.Configuration;
 public static class DataSourceModeConfiguration
 {
     private const string WorkItemsRoutePrefix = "/api/workitems/";
+    private static readonly string[] MiddlewareManagedRoutePrefixes =
+    [
+        "/api",
+        "/health",
+        "/hubs"
+    ];
     public const string RouteIntentContextItemKey = "DataSourceMode.RouteIntent";
     public const string ResolvedModeContextItemKey = "DataSourceMode.ResolvedMode";
 
@@ -30,12 +36,18 @@ public static class DataSourceModeConfiguration
         // Settings and configuration
         "/api/settings",
         "/api/tfsconfig",
+        "/api/bugtriage",
+        "/api/healthcalculation",
+        "/api/roadmapsnapshots",
+        "/api/sprints",
         "/api/startup",
+        "/api/triagetags",
         
         // Profile and team management
         "/api/profiles",
         "/api/teams",
         "/api/products",
+        "/api/portfolio/snapshots",
         "/api/repositories",
 
         // Data source mode management
@@ -43,6 +55,9 @@ public static class DataSourceModeConfiguration
         
         // Cache sync control (writes to cache from TFS)
         "/api/cachesync",
+
+        // SignalR hub endpoints
+        "/hubs",
         
         // Health and diagnostics
         "/health"
@@ -72,6 +87,8 @@ public static class DataSourceModeConfiguration
         "/api/workitems/bug-severity-options",
 
         // TFS verification endpoints
+        "/api/tfsvalidate",
+        "/api/tfsverify",
         "/api/tfs/verify",
         "/api/tfs/validate"
     };
@@ -87,7 +104,8 @@ public static class DataSourceModeConfiguration
         "/api/pipelines",
         "/api/releaseplanning",
         "/api/filtering",
-        "/api/metrics"
+        "/api/metrics",
+        "/api/buildquality"
     };
 
     /// <summary>
@@ -95,30 +113,31 @@ public static class DataSourceModeConfiguration
     /// </summary>
     public static RouteIntent GetRouteIntent(string? path)
     {
-        if (string.IsNullOrEmpty(path))
+        var normalizedPath = NormalizePath(path);
+        if (normalizedPath is null)
         {
             return RouteIntent.Unknown;
         }
 
-        if (IsBlockedAmbiguousRoute(path))
+        if (IsBlockedAmbiguousRoute(normalizedPath))
         {
             return RouteIntent.BlockedAmbiguous;
         }
 
-        if (LiveModeAllowedExactRoutes.Contains(path) ||
+        if (LiveModeAllowedExactRoutes.Contains(normalizedPath) ||
             LiveModeAllowedRoutePrefixes.Any(route =>
-                path.StartsWith(route, StringComparison.OrdinalIgnoreCase)))
+                HasPathPrefix(normalizedPath, route)))
         {
             return RouteIntent.LiveAllowed;
         }
 
-        if (IsLiveAllowedWorkItemDetailRoute(path))
+        if (IsLiveAllowedWorkItemDetailRoute(normalizedPath))
         {
             return RouteIntent.LiveAllowed;
         }
 
         if (CacheModeRequiredRoutePrefixes.Any(route =>
-                path.StartsWith(route, StringComparison.OrdinalIgnoreCase)))
+                HasPathPrefix(normalizedPath, route)))
         {
             return RouteIntent.CacheOnlyAnalyticalRead;
         }
@@ -159,6 +178,20 @@ public static class DataSourceModeConfiguration
     public static bool IsWorkspaceRoute(string? path)
     {
         return RequiresCache(path);
+    }
+
+    /// <summary>
+    /// Returns whether the request path should bypass DataSourceModeMiddleware classification.
+    /// </summary>
+    public static bool ShouldBypassMiddleware(string? path)
+    {
+        var normalizedPath = NormalizePath(path);
+        if (normalizedPath is null)
+        {
+            return true;
+        }
+
+        return !MiddlewareManagedRoutePrefixes.Any(prefix => HasPathPrefix(normalizedPath, prefix));
     }
 
     /// <summary>
@@ -206,5 +239,40 @@ public static class DataSourceModeConfiguration
         var idSegmentLength = path.Length - WorkItemsRoutePrefix.Length - suffix.Length;
         var idSegment = path.AsSpan(WorkItemsRoutePrefix.Length, idSegmentLength);
         return int.TryParse(idSegment, out _);
+    }
+
+    /// <summary>
+    /// Matches only whole route segments so managed prefixes such as /api do not accidentally
+    /// classify unrelated paths like /apiary.
+    /// </summary>
+    private static bool HasPathPrefix(string path, string prefix)
+    {
+        return path.Equals(prefix, StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith($"{prefix}/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Normalizes request paths before classification so trailing slashes and missing leading
+    /// slashes do not create separate routing behaviors for the same endpoint.
+    /// </summary>
+    private static string? NormalizePath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        var normalizedPath = path.Trim();
+        if (!normalizedPath.StartsWith('/'))
+        {
+            normalizedPath = $"/{normalizedPath}";
+        }
+
+        if (normalizedPath.Length > 1)
+        {
+            normalizedPath = normalizedPath.TrimEnd('/');
+        }
+
+        return normalizedPath.Length == 0 ? "/" : normalizedPath;
     }
 }
