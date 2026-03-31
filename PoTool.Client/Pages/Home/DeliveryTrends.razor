@@ -445,12 +445,14 @@
             var response = await MetricsClient.GetSprintTrendMetricsAsync(
                 _profileId.Value,
                 sprintIds,
+                productIds: null,
                 recompute: false,
+                includeDetails: null,
                 CancellationToken.None);
 
-            if (response?.Success == true && response.Metrics != null)
+            if (response?.Data?.Metrics is not null)
             {
-                _trendMetrics = response.Metrics
+                _trendMetrics = response.Data.Metrics
                     .OrderBy(m => m.StartUtc ?? DateTimeOffset.MaxValue)
                     .ToList();
 

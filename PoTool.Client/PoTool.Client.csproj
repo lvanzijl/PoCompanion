@@ -5,7 +5,15 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NswagConfigFile>$(MSBuildProjectDirectory)/nswag.json</NswagConfigFile>
+    <NswagOpenApiSnapshotRelative>ApiClient/OpenApi/swagger.json</NswagOpenApiSnapshotRelative>
+    <NswagGeneratedOutputRelative>ApiClient/Generated/ApiClient.g.cs</NswagGeneratedOutputRelative>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="$(NswagGeneratedOutputRelative)" />
+    <Compile Include="$(NswagGeneratedOutputRelative)" Visible="false" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="FluentValidation" Version="11.11.0" />
@@ -23,10 +31,17 @@
     <ProjectReference Include="..\PoTool.Shared\PoTool.Shared.csproj" />
   </ItemGroup>
 
-  <!-- NSwag client generation -->
-  <Target Name="NSwag" BeforeTargets="CoreCompile" Condition="'$(Configuration)' == 'Debug' OR '$(GenerateApiClient)' == 'true'">
+  <Target Name="ValidateNswagGovernance" Condition="'$(GenerateApiClient)' == 'true'">
+    <Error Text="NSwag governance violation: missing canonical config file '$(NswagConfigFile)'." Condition="!Exists('$(NswagConfigFile)')" />
+    <Error Text="NSwag governance violation: missing OpenAPI snapshot '$(NswagOpenApiSnapshotRelative)'. Refresh the snapshot before generating the client." Condition="!Exists('$(MSBuildProjectDirectory)/$(NswagOpenApiSnapshotRelative)')" />
+    <Error Text="NSwag governance violation: generated client must be written to 'ApiClient/Generated/ApiClient.g.cs'." Condition="'$(NswagGeneratedOutputRelative)' != 'ApiClient/Generated/ApiClient.g.cs'" />
+  </Target>
+
+  <!-- NSwag client generation is explicit only. Invoke with /p:GenerateApiClient=true -->
+  <Target Name="NSwag" BeforeTargets="CoreCompile" DependsOnTargets="ValidateNswagGovernance" Condition="'$(GenerateApiClient)' == 'true'">
     <Message Text="Starting NSwag client generation with Net100 runtime..." Importance="high" />
-    <Exec Command="$(NSwagExe_Net100) run nswag.json /variables:InputSwaggerFile=swagger.json" ConsoleToMSBuild="true" ContinueOnError="true">
+    <MakeDir Directories="$(MSBuildProjectDirectory)/ApiClient/Generated" />
+    <Exec Command="$(NSwagExe_Net100) run $(NswagConfigFile) /variables:InputSwaggerFile=$(NswagOpenApiSnapshotRelative)" ConsoleToMSBuild="true" ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="NSwagExitCode" />
     </Exec>
     <Message Text="NSwag generation completed with exit code: $(NSwagExitCode)" Importance="high" />

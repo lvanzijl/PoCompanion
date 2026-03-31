@@ -60,12 +60,6 @@ public partial class PipelinesClient
         => ApiClientJsonSettings.Configure(settings);
 }
 
-public partial class PlanningClient
-{
-    static partial void UpdateJsonSerializerSettings(JsonSerializerOptions settings)
-        => ApiClientJsonSettings.Configure(settings);
-}
-
 public partial class ProductsClient
 {
     static partial void UpdateJsonSerializerSettings(JsonSerializerOptions settings)

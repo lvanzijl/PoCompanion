@@ -10,6 +10,9 @@ using PoTool.Shared.WorkItems;
 using BacklogHealthDto = PoTool.Client.ApiClient.BacklogHealthDto;
 using ProductDto = PoTool.Client.ApiClient.ProductDto;
 using SprintDto = PoTool.Client.ApiClient.SprintDto;
+using SharedFilterTimeSelectionDto = PoTool.Shared.Metrics.FilterTimeSelectionDto;
+using SharedFilterTimeSelectionModeDto = PoTool.Shared.Metrics.FilterTimeSelectionModeDto;
+using SharedValidationRuleGroupDto = PoTool.Shared.WorkItems.ValidationRuleGroupDto;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -29,7 +32,7 @@ public sealed class WorkspaceSignalServiceTests
                 "SI",
                 "Structural Integrity",
                 6,
-                [new ValidationRuleGroupDto("SI-1", 4), new ValidationRuleGroupDto("SI-3", 2)]),
+                [new SharedValidationRuleGroupDto("SI-1", 4), new SharedValidationRuleGroupDto("SI-3", 2)]),
             new ValidationCategoryTriageDto("RR", "Refinement Readiness", 1, []),
             new ValidationCategoryTriageDto("RC", "Refinement Completeness", 3, []),
             new ValidationCategoryTriageDto("EFF", "Missing Effort", 5, []));
@@ -305,7 +308,7 @@ public sealed class WorkspaceSignalServiceTests
                     IterationPaths = new FilterSelectionDto<string> { IsAll = true, Values = [] },
                     CreatedBys = new FilterSelectionDto<string> { IsAll = true, Values = [] },
                     Statuses = new FilterSelectionDto<string> { IsAll = true, Values = [] },
-                    Time = new FilterTimeSelectionDto { Mode = FilterTimeSelectionModeDto.MultiSprint, SprintIds = [1, 2] }
+                    Time = new SharedFilterTimeSelectionDto { Mode = SharedFilterTimeSelectionModeDto.MultiSprint, SprintIds = [1, 2] }
                 },
                 EffectiveFilter = new PoTool.Shared.PullRequests.PullRequestFilterContextDto
                 {
@@ -315,7 +318,7 @@ public sealed class WorkspaceSignalServiceTests
                     IterationPaths = new FilterSelectionDto<string> { IsAll = true, Values = [] },
                     CreatedBys = new FilterSelectionDto<string> { IsAll = true, Values = [] },
                     Statuses = new FilterSelectionDto<string> { IsAll = true, Values = [] },
-                    Time = new FilterTimeSelectionDto { Mode = FilterTimeSelectionModeDto.MultiSprint, SprintIds = [1, 2] }
+                    Time = new SharedFilterTimeSelectionDto { Mode = SharedFilterTimeSelectionModeDto.MultiSprint, SprintIds = [1, 2] }
                 },
                 InvalidFields = [],
                 ValidationMessages = []
@@ -438,7 +441,7 @@ public sealed class WorkspaceSignalServiceTests
             TeamIds = new FilterSelectionDto<int> { IsAll = false, Values = teamIds },
             AreaPaths = new FilterSelectionDto<string> { IsAll = true, Values = [] },
             IterationPaths = new FilterSelectionDto<string> { IsAll = true, Values = [] },
-            Time = new FilterTimeSelectionDto { Mode = FilterTimeSelectionModeDto.MultiSprint, SprintIds = [1, 2] }
+            Time = new SharedFilterTimeSelectionDto { Mode = SharedFilterTimeSelectionModeDto.MultiSprint, SprintIds = [1, 2] }
         };
 
     private static SprintTrendMetricsDto CreateSprintTrendMetric(
