@@ -8,7 +8,7 @@ public class FilterByValidationRequest
     /// <summary>
     /// IDs of work items with validation issues to include (along with their ancestors).
     /// </summary>
-    public required HashSet<int> TargetIds { get; set; }
+    public HashSet<int>? TargetIds { get; set; }
 }
 
 /// <summary>
