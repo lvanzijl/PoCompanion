@@ -52,7 +52,8 @@ public class BacklogHealthCalculationServiceClientTests
             .Setup(x => x.CalculateHealthScoreAsync(It.IsAny<CalculateHealthScoreRequest>()))
             .ReturnsAsync(new CalculateHealthScoreResponse
             {
-                HealthScore = 100
+                HealthScore = 100,
+                TotalIssues = 0
             });
 
         // Act
@@ -80,7 +81,8 @@ public class BacklogHealthCalculationServiceClientTests
             .Setup(x => x.CalculateHealthScoreAsync(It.IsAny<CalculateHealthScoreRequest>()))
             .ReturnsAsync(new CalculateHealthScoreResponse
             {
-                HealthScore = 100
+                HealthScore = 100,
+                TotalIssues = 0
             });
 
         // Act
@@ -104,7 +106,8 @@ public class BacklogHealthCalculationServiceClientTests
             .Setup(x => x.CalculateHealthScoreAsync(It.IsAny<CalculateHealthScoreRequest>()))
             .ReturnsAsync(new CalculateHealthScoreResponse
             {
-                HealthScore = 70
+                HealthScore = 70,
+                TotalIssues = 3
             });
 
         // Act
@@ -136,7 +139,8 @@ public class BacklogHealthCalculationServiceClientTests
             .Setup(x => x.CalculateHealthScoreAsync(It.IsAny<CalculateHealthScoreRequest>()))
             .ReturnsAsync(new CalculateHealthScoreResponse
             {
-                HealthScore = 0
+                HealthScore = 0,
+                TotalIssues = 10
             });
 
         // Act
@@ -160,7 +164,7 @@ public class BacklogHealthCalculationServiceClientTests
 
         _mockHealthCalculationClient
             .Setup(x => x.CalculateHealthScoreAsync(It.IsAny<CalculateHealthScoreRequest>()))
-            .ReturnsAsync(new CalculateHealthScoreResponse { HealthScore = 53 });
+            .ReturnsAsync(new CalculateHealthScoreResponse { HealthScore = 53, TotalIssues = 7 });
 
         // Act
         await _service.CalculateHealthScoreAsync(iteration);
@@ -173,5 +177,33 @@ public class BacklogHealthCalculationServiceClientTests
                 r.WorkItemsInProgressWithoutEffort == 2 &&
                 r.ParentProgressIssues == 1 &&
                 r.BlockedItems == 1)), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task CalculateHealthScoreDetailsAsync_ReturnsApiResponseIncludingTotalIssues()
+    {
+        // Arrange
+        var iteration = CreateHealthDto(
+            totalWorkItems: 12,
+            workItemsWithoutEffort: 2,
+            workItemsInProgressWithoutEffort: 1,
+            parentProgressIssues: 1,
+            blockedItems: 1
+        );
+
+        _mockHealthCalculationClient
+            .Setup(x => x.CalculateHealthScoreAsync(It.IsAny<CalculateHealthScoreRequest>()))
+            .ReturnsAsync(new CalculateHealthScoreResponse
+            {
+                HealthScore = 58,
+                TotalIssues = 5
+            });
+
+        // Act
+        var response = await _service.CalculateHealthScoreDetailsAsync(iteration);
+
+        // Assert
+        Assert.AreEqual(58, response.HealthScore);
+        Assert.AreEqual(5, response.TotalIssues);
     }
 }

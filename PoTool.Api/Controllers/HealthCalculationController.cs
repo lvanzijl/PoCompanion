@@ -34,6 +34,11 @@ public class HealthCalculationController : ControllerBase
     {
         try
         {
+            var totalIssues = request.WorkItemsWithoutEffort
+                + request.WorkItemsInProgressWithoutEffort
+                + request.ParentProgressIssues
+                + request.BlockedItems;
+
             var score = _calculator.CalculateHealthScore(
                 request.TotalWorkItems,
                 request.WorkItemsWithoutEffort,
@@ -44,7 +49,8 @@ public class HealthCalculationController : ControllerBase
 
             return Ok(new CalculateHealthScoreResponse
             {
-                HealthScore = score
+                HealthScore = score,
+                TotalIssues = totalIssues
             });
         }
         catch (Exception ex)
