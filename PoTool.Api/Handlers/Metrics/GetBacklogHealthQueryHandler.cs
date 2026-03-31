@@ -30,19 +30,6 @@ public sealed class GetBacklogHealthQueryHandler
         _logger = logger;
     }
 
-    public GetBacklogHealthQueryHandler(
-        IWorkItemReadProvider workItemReadProvider,
-        IProductRepository productRepository,
-        IMediator mediator,
-        IBacklogQualityAnalysisService backlogQualityAnalysisService,
-        ILogger<GetBacklogHealthQueryHandler> logger)
-        : this(
-            new SprintScopedWorkItemLoader(workItemReadProvider, productRepository, mediator),
-            backlogQualityAnalysisService,
-            logger)
-    {
-    }
-
     public async ValueTask<BacklogHealthDto?> Handle(
         GetBacklogHealthQuery query,
         CancellationToken cancellationToken)

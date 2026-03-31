@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using PoTool.Api.Handlers.Metrics;
 using PoTool.Api.Configuration;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services;
@@ -360,6 +361,60 @@ public class ServiceCollectionTests
         Assert.IsInstanceOfType<EfPipelineInsightsReadStore>(
             readStore,
             "Pipeline Insights handlers should resolve the EF-backed Pipeline Insights read store.");
+    }
+
+    [TestMethod]
+    public void DiActivatedAuditTargets_ExposeSinglePublicConstructor()
+    {
+        var types = new[]
+        {
+            typeof(GetBacklogHealthQueryHandler),
+            typeof(GetMultiIterationBacklogHealthQueryHandler),
+            typeof(GetSprintCapacityPlanQueryHandler),
+            typeof(GetSprintMetricsQueryHandler),
+            typeof(LiveWorkItemReadProvider),
+            typeof(LivePullRequestReadProvider),
+            typeof(LivePipelineReadProvider),
+            typeof(DataSourceAwareReadProviderFactory)
+        };
+
+        foreach (var type in types)
+        {
+            var publicConstructors = type.GetConstructors();
+            Assert.HasCount(
+                1,
+                publicConstructors,
+                $"{type.Name} should expose exactly one public constructor to keep DI activation unambiguous.");
+        }
+    }
+
+    [TestMethod]
+    public void AddPoToolApiServices_ResolvesAuditedDiActivationTargets()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+
+        services.AddLogging();
+        RegisterHostEnvironment(services);
+        services.AddDbContext<PoToolDbContext>(options =>
+            options.UseInMemoryDatabase("TestDbDiActivationAudit"));
+
+        services.AddPoToolApiServices(configuration, isDevelopment: true);
+
+        using var serviceProvider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateScopes = true
+        });
+        using var scope = serviceProvider.CreateScope();
+
+        Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<GetBacklogHealthQueryHandler>());
+        Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<GetMultiIterationBacklogHealthQueryHandler>());
+        Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<GetSprintCapacityPlanQueryHandler>());
+        Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<GetSprintMetricsQueryHandler>());
+        Assert.IsNotNull(scope.ServiceProvider.GetRequiredKeyedService<IWorkItemReadProvider>("Live"));
+        Assert.IsNotNull(scope.ServiceProvider.GetRequiredKeyedService<IPullRequestReadProvider>("Live"));
+        Assert.IsNotNull(scope.ServiceProvider.GetRequiredKeyedService<IPipelineReadProvider>("Live"));
+        Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<DataSourceAwareReadProviderFactory>());
     }
 
     [TestMethod]

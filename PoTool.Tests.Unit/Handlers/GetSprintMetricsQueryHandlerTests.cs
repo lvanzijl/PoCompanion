@@ -6,7 +6,7 @@ using Moq;
 using PoTool.Api.Handlers.Metrics;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
-using PoTool.Api.Repositories;
+using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.Estimation;
@@ -29,6 +29,7 @@ public sealed class GetSprintMetricsQueryHandlerTests
     private ISprintCompletionService _sprintCompletionService = null!;
     private ISprintFactService _sprintFactService = null!;
     private Mock<IMediator> _mediator = null!;
+    private Mock<IWorkItemReadProvider> _workItemReadProvider = null!;
     private GetSprintMetricsQueryHandler _handler = null!;
 
     [TestInitialize]
@@ -52,6 +53,7 @@ public sealed class GetSprintMetricsQueryHandlerTests
             new SprintSpilloverService(),
             new CanonicalStoryPointResolutionService());
         _mediator = new Mock<IMediator>();
+        _workItemReadProvider = new Mock<IWorkItemReadProvider>();
 
         _productRepository
             .Setup(repository => repository.GetAllProductsAsync(It.IsAny<CancellationToken>()))
@@ -66,19 +68,11 @@ public sealed class GetSprintMetricsQueryHandlerTests
                 (WorkItemType.Bug, "Active", PoTool.Shared.Settings.StateClassification.InProgress),
                 (WorkItemType.Task, "Resolved", PoTool.Shared.Settings.StateClassification.Done),
                 (WorkItemType.Task, "Active", PoTool.Shared.Settings.StateClassification.InProgress)));
+        _workItemReadProvider
+            .Setup(provider => provider.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
 
-        _handler = new GetSprintMetricsQueryHandler(
-            new WorkItemRepository(_context),
-            _productRepository.Object,
-            _sprintRepository.Object,
-            _stateClassificationService.Object,
-            _sprintCommitmentService,
-            _sprintScopeChangeService,
-            _sprintCompletionService,
-            _sprintFactService,
-            _mediator.Object,
-            _context,
-            NullLogger<GetSprintMetricsQueryHandler>.Instance);
+        _handler = CreateHandler();
     }
 
     [TestCleanup]
@@ -159,18 +153,11 @@ public sealed class GetSprintMetricsQueryHandlerTests
                 SpilloverStoryPoints: 0,
                 RemainingStoryPoints: 2));
 
-        var handler = new GetSprintMetricsQueryHandler(
-            new WorkItemRepository(_context),
-            _productRepository.Object,
-            _sprintRepository.Object,
-            _stateClassificationService.Object,
+        var handler = CreateHandler(
             commitmentService.Object,
             scopeChangeService.Object,
             completionService.Object,
-            sprintFactService.Object,
-            _mediator.Object,
-            _context,
-            NullLogger<GetSprintMetricsQueryHandler>.Instance);
+            sprintFactService.Object);
 
         var result = await handler.Handle(new GetSprintMetricsQuery(sprintPath), CancellationToken.None);
 
@@ -233,6 +220,61 @@ public sealed class GetSprintMetricsQueryHandlerTests
         });
 
         await _context.SaveChangesAsync();
+
+        _workItemReadProvider
+            .Setup(provider => provider.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildReadModelWorkItems());
+    }
+
+    private GetSprintMetricsQueryHandler CreateHandler(
+        ISprintCommitmentService? sprintCommitmentService = null,
+        ISprintScopeChangeService? sprintScopeChangeService = null,
+        ISprintCompletionService? sprintCompletionService = null,
+        ISprintFactService? sprintFactService = null)
+    {
+        return new GetSprintMetricsQueryHandler(
+            _sprintRepository.Object,
+            _stateClassificationService.Object,
+            sprintCommitmentService ?? _sprintCommitmentService,
+            sprintScopeChangeService ?? _sprintScopeChangeService,
+            sprintCompletionService ?? _sprintCompletionService,
+            sprintFactService ?? _sprintFactService,
+            new SprintScopedWorkItemLoader(
+                _workItemReadProvider.Object,
+                _productRepository.Object,
+                _mediator.Object),
+            _context,
+            NullLogger<GetSprintMetricsQueryHandler>.Instance);
+    }
+
+    private List<PoTool.Shared.WorkItems.WorkItemDto> BuildReadModelWorkItems()
+    {
+        return _context.WorkItems
+            .AsNoTracking()
+            .ToList()
+            .Select(entity => new PoTool.Shared.WorkItems.WorkItemDto(
+                TfsId: entity.TfsId,
+                Type: entity.Type,
+                Title: entity.Title,
+                ParentTfsId: entity.ParentTfsId,
+                AreaPath: entity.AreaPath,
+                IterationPath: entity.IterationPath,
+                State: entity.State,
+                RetrievedAt: entity.RetrievedAt,
+                Effort: entity.Effort,
+                Description: entity.Description,
+                CreatedDate: entity.CreatedDate,
+                ClosedDate: entity.ClosedDate,
+                Severity: entity.Severity,
+                Tags: entity.Tags,
+                BusinessValue: entity.BusinessValue,
+                BacklogPriority: entity.BacklogPriority,
+                StoryPoints: entity.StoryPoints,
+                TimeCriticality: entity.TimeCriticality,
+                ProjectNumber: entity.ProjectNumber,
+                ProjectElement: entity.ProjectElement,
+                ChangedDate: entity.TfsChangedDate))
+            .ToList();
     }
 
     private async Task SeedStateEventAsync(int workItemId, DateTimeOffset timestamp, string oldState, string newState)

@@ -63,31 +63,6 @@ public sealed class GetSprintMetricsQueryHandler : IQueryHandler<GetSprintMetric
         _logger = logger;
     }
 
-    public GetSprintMetricsQueryHandler(
-        IWorkItemRepository repository,
-        IProductRepository productRepository,
-        ISprintRepository sprintRepository,
-        IWorkItemStateClassificationService stateClassificationService,
-        ISprintCommitmentService sprintCommitmentService,
-        ISprintScopeChangeService sprintScopeChangeService,
-        ISprintCompletionService sprintCompletionService,
-        ISprintFactService sprintFactService,
-        IMediator mediator,
-        PoToolDbContext context,
-        ILogger<GetSprintMetricsQueryHandler> logger)
-        : this(
-            sprintRepository,
-            stateClassificationService,
-            sprintCommitmentService,
-            sprintScopeChangeService,
-            sprintCompletionService,
-            sprintFactService,
-            new SprintScopedWorkItemLoader(new RepositoryBackedWorkItemReadProvider(repository), productRepository, mediator),
-            context,
-            logger)
-    {
-    }
-
     public async ValueTask<SprintMetricsDto?> Handle(
         GetSprintMetricsQuery query,
         CancellationToken cancellationToken)

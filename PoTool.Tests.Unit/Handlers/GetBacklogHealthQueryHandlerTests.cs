@@ -44,9 +44,10 @@ public class GetBacklogHealthQueryHandlerTests
             .ReturnsAsync(CreateAnalysis());
 
         _handler = new GetBacklogHealthQueryHandler(
-            _mockProvider.Object,
-            _mockProductRepository.Object,
-            _mockMediator.Object,
+            new SprintScopedWorkItemLoader(
+                _mockProvider.Object,
+                _mockProductRepository.Object,
+                _mockMediator.Object),
             _mockBacklogQualityAnalysisService.Object,
             _mockLogger.Object);
     }

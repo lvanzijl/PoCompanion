@@ -112,10 +112,11 @@ public class GetMultiIterationBacklogHealthQueryHandlerMultiProductTests
             });
 
         _handler = new GetMultiIterationBacklogHealthQueryHandler(
-            _mockProvider.Object,
-            _mockProductRepository.Object,
+            new SprintScopedWorkItemLoader(
+                _mockProvider.Object,
+                _mockProductRepository.Object,
+                _mockMediator.Object),
             _mockSprintRepository.Object,
-            _mockMediator.Object,
             _mockBacklogQualityAnalysisService.Object,
             _mockLogger.Object);
     }
