@@ -119,6 +119,76 @@ public sealed class MetricsControllerSprintCanonicalFilterTests
         mediator.VerifyAll();
     }
 
+    [TestMethod]
+    public async Task GetBacklogHealth_WhenNoItemsMatch_ReturnsEmptyEnvelopeInsteadOf404()
+    {
+        await using var context = CreateContext();
+        context.Sprints.Add(new SprintEntity
+        {
+            Id = 42,
+            Name = "Sprint 42",
+            Path = "\\Project\\Sprint 42",
+            TeamId = 3,
+            StartDateUtc = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc),
+            EndDateUtc = new DateTime(2026, 2, 14, 0, 0, 0, DateTimeKind.Utc)
+        });
+        await context.SaveChangesAsync();
+
+        var mediator = new Mock<IMediator>(MockBehavior.Strict);
+        mediator
+            .Setup(service => service.Send(It.IsAny<GetBacklogHealthQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((BacklogHealthDto?)null);
+
+        var controller = CreateController(context, mediator.Object);
+
+        var result = await controller.GetBacklogHealth("\\Project\\Sprint 42", null, null, null, CancellationToken.None);
+
+        var ok = result.Result as OkObjectResult;
+        Assert.IsNotNull(ok);
+
+        var envelope = ok.Value as SprintQueryResponseDto<BacklogHealthDto>;
+        Assert.IsNotNull(envelope);
+        Assert.AreEqual("\\Project\\Sprint 42", envelope.Data.IterationPath);
+        Assert.AreEqual(0, envelope.Data.TotalWorkItems);
+        Assert.IsEmpty(envelope.Data.ValidationIssues);
+        mediator.VerifyAll();
+    }
+
+    [TestMethod]
+    public async Task GetSprintMetrics_WhenNoItemsMatch_ReturnsEmptyEnvelopeInsteadOf404()
+    {
+        await using var context = CreateContext();
+        context.Sprints.Add(new SprintEntity
+        {
+            Id = 42,
+            Name = "Sprint 42",
+            Path = "\\Project\\Sprint 42",
+            TeamId = 3,
+            StartDateUtc = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc),
+            EndDateUtc = new DateTime(2026, 2, 14, 0, 0, 0, DateTimeKind.Utc)
+        });
+        await context.SaveChangesAsync();
+
+        var mediator = new Mock<IMediator>(MockBehavior.Strict);
+        mediator
+            .Setup(service => service.Send(It.IsAny<GetSprintMetricsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SprintMetricsDto?)null);
+
+        var controller = CreateController(context, mediator.Object);
+
+        var result = await controller.GetSprintMetrics("\\Project\\Sprint 42", null, null, null, CancellationToken.None);
+
+        var ok = result.Result as OkObjectResult;
+        Assert.IsNotNull(ok);
+
+        var envelope = ok.Value as SprintQueryResponseDto<SprintMetricsDto>;
+        Assert.IsNotNull(envelope);
+        Assert.AreEqual("\\Project\\Sprint 42", envelope.Data.IterationPath);
+        Assert.AreEqual(0, envelope.Data.TotalWorkItemCount);
+        Assert.AreEqual(0, envelope.Data.CompletedStoryPoints);
+        mediator.VerifyAll();
+    }
+
     private static MetricsController CreateController(PoToolDbContext context, IMediator mediator)
     {
         var deliveryFilterService = new DeliveryFilterResolutionService(

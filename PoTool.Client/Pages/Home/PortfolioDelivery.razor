@@ -512,6 +512,10 @@
             ProfileService.SetCachedActiveProfileId(_profileId);
 
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
+            var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
+            _selectedTeamId = context.TeamId;
+            _fromSprintId = context.FromSprintId;
+            _toSprintId = context.ToSprintId;
 
             UpdateBreadcrumbs();
 
@@ -524,7 +528,12 @@
             if (_selectedTeamId.HasValue)
             {
                 await LoadSprintsAsync(_selectedTeamId.Value);
-                ApplyDefaultSprintWindow();
+                if (!_fromSprintId.HasValue || !_toSprintId.HasValue)
+                {
+                    ApplyDefaultSprintWindow();
+                }
+
+                UpdateContextUrl();
                 await LoadDeliveryDataAsync();
             }
         }
@@ -655,25 +664,44 @@
         {
             await LoadSprintsAsync(teamId.Value);
             ApplyDefaultSprintWindow();
+            UpdateContextUrl();
             await LoadDeliveryDataAsync();
+        }
+        else
+        {
+            UpdateContextUrl();
         }
     }
 
     private async Task OnFromSprintChangedAsync(int? sprintId)
     {
         _fromSprintId = sprintId;
+        UpdateContextUrl();
         await LoadDeliveryDataAsync();
     }
 
     private async Task OnToSprintChangedAsync(int? sprintId)
     {
         _toSprintId = sprintId;
+        UpdateContextUrl();
         await LoadDeliveryDataAsync();
     }
 
     // ── Navigation ───────────────────────────────────────────────────────────────
 
-    private void NavigateToDelivery() => NavigationManager.NavigateTo(WorkspaceRoutes.DeliveryWorkspace);
+    private void NavigateToDelivery() => NavigationManager.NavigateTo(
+        WorkspaceQueryContextHelper.BuildRoute(
+            WorkspaceRoutes.DeliveryWorkspace,
+            new WorkspaceQueryContext(TeamId: _selectedTeamId, FromSprintId: _fromSprintId, ToSprintId: _toSprintId)));
+
+    private void UpdateContextUrl()
+    {
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.PortfolioDelivery,
+                new WorkspaceQueryContext(TeamId: _selectedTeamId, FromSprintId: _fromSprintId, ToSprintId: _toSprintId)),
+            forceLoad: false);
+    }
 
     // ── Breadcrumbs ──────────────────────────────────────────────────────────────
 

@@ -554,12 +554,18 @@
     
     private void NavigateToPipelineInsights()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.PipelineInsights);
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.PipelineInsights,
+                new WorkspaceQueryContext(ProductId: ProductId, TeamId: _selectedTeamId)));
     }
     
     private void NavigateToPrDeliveryInsights()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.PrDeliveryInsights);
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.PrDeliveryInsights,
+                new WorkspaceQueryContext(ProductId: ProductId, TeamId: _selectedTeamId)));
     }
     
     private void NavigateToPortfolioProgress()
@@ -584,7 +590,10 @@
 
     private void NavigateToDelivery()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.DeliveryWorkspace);
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.DeliveryWorkspace,
+                new WorkspaceQueryContext(ProductId: ProductId, TeamId: _selectedTeamId)));
     }
 
     private void NavigateToBacklogOverview()
@@ -594,7 +603,10 @@
     
     private void ClearProductFilter()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.TrendsWorkspace);
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.TrendsWorkspace,
+                new WorkspaceQueryContext(TeamId: _selectedTeamId, FromSprintId: _selectedFromSprintId, ToSprintId: _selectedToSprintId)));
     }
     
     /// <summary>
@@ -768,6 +780,11 @@
         if (_selectedTeamId.HasValue)
         {
             queryParams.Add($"teamId={_selectedTeamId.Value}");
+        }
+
+        if (ProductId.HasValue)
+        {
+            queryParams.Add($"productId={ProductId.Value}");
         }
         
         if (_selectedFromSprintId.HasValue)

@@ -477,6 +477,18 @@
 
             var products = await ProductService.GetProductsByOwnerAsync(activeProfile.Id);
             _products = products.ToList();
+
+            var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
+            if (context.ProductId.HasValue && _products.Any(product => product.Id == context.ProductId.Value))
+            {
+                _selectedProductId = context.ProductId.Value;
+                await LoadBoardAsync(context.ProductId.Value);
+            }
+            else if (_products.Count == 1)
+            {
+                _selectedProductId = _products[0].Id;
+                await LoadBoardAsync(_products[0].Id);
+            }
         }
         catch (Exception ex)
         {
@@ -492,7 +504,21 @@
     private async Task OnProductChanged(int? productId)
     {
         _selectedProductId = productId;
-        if (productId == null) return;
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.PlanBoard,
+                new WorkspaceQueryContext(ProductId: productId)),
+            forceLoad: false);
+
+        if (productId == null)
+        {
+            _selectedProductRootIds = [];
+            _allWorkItems = new List<WorkItemDto>();
+            _sprintColumns = new List<SprintColumn>();
+            _candidateTree = new List<PlanBoardCandidateNode>();
+            _sprintItems = new Dictionary<string, List<SprintDragItem>>();
+            return;
+        }
 
         await LoadBoardAsync(productId.Value);
     }
@@ -947,7 +973,10 @@
         path.Replace('/', '\\').Trim();
 
     private void NavigateToPlanning() =>
-        NavigationManager.NavigateTo(WorkspaceRoutes.PlanningWorkspace);
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.PlanningWorkspace,
+                new WorkspaceQueryContext(ProductId: _selectedProductId)));
 
     private async Task LoadCapacityCalibrationAsync(List<SprintDto> allTeamSprints, int productId)
     {

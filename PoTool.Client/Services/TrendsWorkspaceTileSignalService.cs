@@ -1,4 +1,4 @@
-using PoTool.Client.ApiClient;
+using PoTool.Shared.BuildQuality;
 using PoTool.Shared.PullRequests;
 
 namespace PoTool.Client.Services;

@@ -1,5 +1,5 @@
-using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
+using PoTool.Shared.BuildQuality;
 using PoTool.Shared.PullRequests;
 
 namespace PoTool.Tests.Unit.Services;

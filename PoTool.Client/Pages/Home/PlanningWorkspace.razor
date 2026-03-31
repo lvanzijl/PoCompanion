@@ -1,7 +1,7 @@
 @page "/home/planning"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Models
-@inject NavigationManager NavigationManager
+@inherits WorkspaceBase
 
 <PageTitle>Planning - PO Companion</PageTitle>
 
@@ -101,6 +101,7 @@
 
     protected override void OnInitialized()
     {
+        ParseContextQueryParameters();
         _breadcrumbs = new List<BreadcrumbItem>
         {
             new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
@@ -110,36 +111,31 @@
 
     private void NavigateToProductRoadmaps()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.ProductRoadmaps);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.ProductRoadmaps}{BuildContextQuery()}");
     }
 
     private void NavigateToPlanBoard()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.PlanBoard);
-    }
-
-    private void NavigateToHome()
-    {
-        NavigationManager.NavigateTo(WorkspaceRoutes.Home);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanBoard}{BuildContextQuery()}");
     }
 
     private void NavigateToHealth()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.HealthWorkspace);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.HealthWorkspace}{BuildContextQuery()}");
     }
 
     private void NavigateToTrends()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.TrendsWorkspace);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.TrendsWorkspace}{BuildContextQuery()}");
     }
 
     private void NavigateToDelivery()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.DeliveryWorkspace);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.DeliveryWorkspace}{BuildContextQuery()}");
     }
 
     private void NavigateToBacklogOverview()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BacklogOverview);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BacklogOverview}{BuildContextQuery()}");
     }
 }

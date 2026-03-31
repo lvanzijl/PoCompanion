@@ -40,12 +40,12 @@ public partial class BuildQualityClient
 
         if (windowStartUtc != null)
         {
-            AppendQuery(urlBuilder_, "windowStartUtc", windowStartUtc.Value.UtcDateTime.ToString("s", System.Globalization.CultureInfo.InvariantCulture));
+            AppendQuery(urlBuilder_, "windowStartUtc", windowStartUtc.Value.ToUniversalTime().ToString("O", System.Globalization.CultureInfo.InvariantCulture));
         }
 
         if (windowEndUtc != null)
         {
-            AppendQuery(urlBuilder_, "windowEndUtc", windowEndUtc.Value.UtcDateTime.ToString("s", System.Globalization.CultureInfo.InvariantCulture));
+            AppendQuery(urlBuilder_, "windowEndUtc", windowEndUtc.Value.ToUniversalTime().ToString("O", System.Globalization.CultureInfo.InvariantCulture));
         }
 
         urlBuilder_.Length--;

@@ -55,8 +55,8 @@ public sealed class GetBuildQualityPipelineDetailQueryHandler
             SprintId = sprint.Id,
             SprintName = sprint.Name,
             TeamId = sprint.TeamId,
-            SprintStartUtc = sprint.StartDateUtc,
-            SprintEndUtc = sprint.EndDateUtc,
+            SprintStartUtc = ToUtcOffset(sprint.StartDateUtc),
+            SprintEndUtc = ToUtcOffset(sprint.EndDateUtc),
             ProductId = selectedProduct?.ProductId,
             RepositoryId = query.RepositoryId,
             RepositoryName = selectedRepository?.RepositoryName,
@@ -78,4 +78,9 @@ public sealed class GetBuildQualityPipelineDetailQueryHandler
             Result = _buildQualityProvider.Compute(Array.Empty<BuildQualityBuildFact>(), Array.Empty<BuildQualityTestRunFact>(), Array.Empty<BuildQualityCoverageFact>())
         };
     }
+
+    private static DateTimeOffset? ToUtcOffset(DateTime? value)
+        => value.HasValue
+            ? new DateTimeOffset(DateTime.SpecifyKind(value.Value, DateTimeKind.Utc))
+            : null;
 }
