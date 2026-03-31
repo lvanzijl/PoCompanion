@@ -27,6 +27,46 @@ public class DataSourceModeConfigurationTests
     }
 
     [TestMethod]
+    public void GetRouteIntent_TfsValidateRoute_IsLiveAllowed()
+    {
+        var intent = DataSourceModeConfiguration.GetRouteIntent("/api/tfsvalidate");
+
+        Assert.AreEqual(
+            DataSourceModeConfiguration.RouteIntent.LiveAllowed,
+            intent);
+    }
+
+    [TestMethod]
+    public void GetRouteIntent_BuildQualityRoute_IsCacheOnlyAnalytical()
+    {
+        var intent = DataSourceModeConfiguration.GetRouteIntent("/api/buildquality/rolling");
+
+        Assert.AreEqual(
+            DataSourceModeConfiguration.RouteIntent.CacheOnlyAnalyticalRead,
+            intent);
+    }
+
+    [TestMethod]
+    public void GetRouteIntent_BugTriageRoute_IsLiveAllowed()
+    {
+        var intent = DataSourceModeConfiguration.GetRouteIntent("/api/bugtriage/123");
+
+        Assert.AreEqual(
+            DataSourceModeConfiguration.RouteIntent.LiveAllowed,
+            intent);
+    }
+
+    [TestMethod]
+    public void GetRouteIntent_HubRoute_IsLiveAllowed()
+    {
+        var intent = DataSourceModeConfiguration.GetRouteIntent("/hubs/cachesync");
+
+        Assert.AreEqual(
+            DataSourceModeConfiguration.RouteIntent.LiveAllowed,
+            intent);
+    }
+
+    [TestMethod]
     public void GetRouteIntent_ExplicitLiveWorkItemDiscoveryRoute_WinsOverCachePrefix()
     {
         var intent = DataSourceModeConfiguration.GetRouteIntent("/api/workitems/area-paths/from-tfs");
@@ -107,6 +147,16 @@ public class DataSourceModeConfigurationTests
     }
 
     [TestMethod]
+    public void GetRouteIntent_NormalizesCaseAndTrailingSlash()
+    {
+        var intent = DataSourceModeConfiguration.GetRouteIntent("/API/BUGTRIAGE/");
+
+        Assert.AreEqual(
+            DataSourceModeConfiguration.RouteIntent.LiveAllowed,
+            intent);
+    }
+
+    [TestMethod]
     public void ResolveRouteIntentOrThrow_UnknownRoute_Throws()
     {
         try
@@ -118,5 +168,21 @@ public class DataSourceModeConfigurationTests
         {
             // Expected path
         }
+    }
+
+    [TestMethod]
+    public void ShouldBypassMiddleware_ClientAndDocsRoutes_ReturnsTrue()
+    {
+        Assert.IsTrue(DataSourceModeConfiguration.ShouldBypassMiddleware("/"));
+        Assert.IsTrue(DataSourceModeConfiguration.ShouldBypassMiddleware("/home/delivery"));
+        Assert.IsTrue(DataSourceModeConfiguration.ShouldBypassMiddleware("/swagger/index.html"));
+    }
+
+    [TestMethod]
+    public void ShouldBypassMiddleware_ApiHubAndHealthRoutes_ReturnsFalse()
+    {
+        Assert.IsFalse(DataSourceModeConfiguration.ShouldBypassMiddleware("/api/workitems"));
+        Assert.IsFalse(DataSourceModeConfiguration.ShouldBypassMiddleware("/hubs/cachesync"));
+        Assert.IsFalse(DataSourceModeConfiguration.ShouldBypassMiddleware("/health"));
     }
 }

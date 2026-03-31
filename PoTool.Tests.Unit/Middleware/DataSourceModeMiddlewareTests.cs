@@ -139,6 +139,24 @@ public class DataSourceModeMiddlewareTests
     }
 
     [TestMethod]
+    public async Task InvokeAsync_RootPath_BypassesClassificationAndCallsNext()
+    {
+        // Arrange
+        var context = CreateHttpContext("/");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+
+        // Assert
+        _mockModeProvider.Verify(p => p.SetCurrentMode(It.IsAny<DataSourceMode>()), Times.Never);
+        _mockProfileProvider.Verify(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()), Times.Never);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
     public async Task InvokeAsync_TfsConfigRoute_SetsLiveMode()
     {
         // Arrange
@@ -156,10 +174,46 @@ public class DataSourceModeMiddlewareTests
     }
 
     [TestMethod]
+    public async Task InvokeAsync_HubRoute_SetsLiveMode()
+    {
+        // Arrange
+        var context = CreateHttpContext("/hubs/cachesync");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+
+        // Assert
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Live), Times.Once);
+        _mockProfileProvider.Verify(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()), Times.Never);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
     public async Task InvokeAsync_LiveAllowedDiscoveryRoute_UnderWorkspacePrefix_SetsLiveMode()
     {
         // Arrange
         var context = CreateHttpContext("/api/workitems/area-paths/from-tfs");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+
+        // Assert
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Live), Times.Once);
+        _mockProfileProvider.Verify(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()), Times.Never);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_TfsValidateRoute_SetsLiveMode()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/tfsvalidate");
         var middleware = new DataSourceModeMiddleware(
             next: _ => { _nextCalled = true; return Task.CompletedTask; },
             logger: _mockLogger.Object);
@@ -287,6 +341,31 @@ public class DataSourceModeMiddlewareTests
     {
         // Arrange
         var context = CreateHttpContext("/api/metrics/multi-iteration-health");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        _mockProfileProvider
+            .Setup(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        _mockModeProvider
+            .Setup(p => p.GetModeAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DataSourceMode.Cache);
+
+        // Act
+        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+
+        // Assert
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Cache), Times.Once);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_BuildQualityRoute_WithCache_SetsCacheMode()
+    {
+        // Arrange
+        var context = CreateHttpContext("/api/buildquality/rolling");
         var middleware = new DataSourceModeMiddleware(
             next: _ => { _nextCalled = true; return Task.CompletedTask; },
             logger: _mockLogger.Object);

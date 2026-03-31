@@ -31,6 +31,13 @@ public sealed class DataSourceModeMiddleware
         ICurrentProfileProvider profileProvider)
     {
         var path = context.Request.Path.Value ?? string.Empty;
+        if (DataSourceModeConfiguration.ShouldBypassMiddleware(path))
+        {
+            _logger.LogDebug("Bypassing data source classification for non-managed route {Path}", path);
+            await _next(context);
+            return;
+        }
+
         DataSourceModeConfiguration.RouteIntent routeIntent;
 
         try
