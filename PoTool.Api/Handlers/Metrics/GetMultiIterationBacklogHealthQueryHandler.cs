@@ -37,21 +37,6 @@ public sealed class GetMultiIterationBacklogHealthQueryHandler
         _logger = logger;
     }
 
-    public GetMultiIterationBacklogHealthQueryHandler(
-        IWorkItemReadProvider workItemReadProvider,
-        IProductRepository productRepository,
-        ISprintRepository sprintRepository,
-        IMediator mediator,
-        IBacklogQualityAnalysisService backlogQualityAnalysisService,
-        ILogger<GetMultiIterationBacklogHealthQueryHandler> logger)
-        : this(
-            new SprintScopedWorkItemLoader(workItemReadProvider, productRepository, mediator),
-            sprintRepository,
-            backlogQualityAnalysisService,
-            logger)
-    {
-    }
-
     public async ValueTask<MultiIterationBacklogHealthDto> Handle(
         GetMultiIterationBacklogHealthQuery query,
         CancellationToken cancellationToken)

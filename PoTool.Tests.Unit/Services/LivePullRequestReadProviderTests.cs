@@ -30,7 +30,9 @@ public class LivePullRequestReadProviderTests
         _provider = new LivePullRequestReadProvider(
             _mockTfsClient.Object,
             _mockRepositoryConfigRepository.Object,
-            _mockLogger.Object);
+            _mockLogger.Object,
+            modeProvider: null,
+            httpContextAccessor: null);
     }
 
     [TestMethod]

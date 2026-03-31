@@ -26,17 +26,6 @@ public sealed class GetSprintCapacityPlanQueryHandler
         _logger = logger;
     }
 
-    public GetSprintCapacityPlanQueryHandler(
-        IWorkItemReadProvider workItemReadProvider,
-        IProductRepository productRepository,
-        IMediator mediator,
-        ILogger<GetSprintCapacityPlanQueryHandler> logger)
-        : this(
-            new SprintScopedWorkItemLoader(workItemReadProvider, productRepository, mediator),
-            logger)
-    {
-    }
-
     public async ValueTask<SprintCapacityPlanDto?> Handle(
         GetSprintCapacityPlanQuery query,
         CancellationToken cancellationToken)

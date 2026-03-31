@@ -23,14 +23,6 @@ public sealed class LivePullRequestReadProvider : IPullRequestReadProvider
     public LivePullRequestReadProvider(
         ITfsClient tfsClient,
         IRepositoryConfigRepository repositoryConfigRepository,
-        ILogger<LivePullRequestReadProvider> logger)
-        : this(tfsClient, repositoryConfigRepository, logger, null, null)
-    {
-    }
-
-    public LivePullRequestReadProvider(
-        ITfsClient tfsClient,
-        IRepositoryConfigRepository repositoryConfigRepository,
         ILogger<LivePullRequestReadProvider> logger,
         IDataSourceModeProvider? modeProvider,
         IHttpContextAccessor? httpContextAccessor)

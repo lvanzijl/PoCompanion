@@ -27,14 +27,6 @@ public sealed class DataSourceAwareReadProviderFactory
     public DataSourceAwareReadProviderFactory(
         IServiceProvider serviceProvider,
         IDataSourceModeProvider modeProvider,
-        ILogger<DataSourceAwareReadProviderFactory> logger)
-        : this(serviceProvider, modeProvider, logger, null)
-    {
-    }
-
-    public DataSourceAwareReadProviderFactory(
-        IServiceProvider serviceProvider,
-        IDataSourceModeProvider modeProvider,
         ILogger<DataSourceAwareReadProviderFactory> logger,
         IHttpContextAccessor? httpContextAccessor)
     {

@@ -28,15 +28,6 @@ public sealed class LivePipelineReadProvider : IPipelineReadProvider
         ITfsClient tfsClient,
         IProductRepository productRepository,
         IRepositoryConfigRepository repositoryConfigRepository,
-        ILogger<LivePipelineReadProvider> logger)
-        : this(tfsClient, productRepository, repositoryConfigRepository, logger, null, null)
-    {
-    }
-
-    public LivePipelineReadProvider(
-        ITfsClient tfsClient,
-        IProductRepository productRepository,
-        IRepositoryConfigRepository repositoryConfigRepository,
         ILogger<LivePipelineReadProvider> logger,
         IDataSourceModeProvider? modeProvider,
         IHttpContextAccessor? httpContextAccessor)

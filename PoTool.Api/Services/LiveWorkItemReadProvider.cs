@@ -23,14 +23,6 @@ public sealed class LiveWorkItemReadProvider : IWorkItemReadProvider
     public LiveWorkItemReadProvider(
         ITfsClient tfsClient,
         TfsConfigurationService configService,
-        ILogger<LiveWorkItemReadProvider> logger)
-        : this(tfsClient, configService, logger, null, null)
-    {
-    }
-
-    public LiveWorkItemReadProvider(
-        ITfsClient tfsClient,
-        TfsConfigurationService configService,
         ILogger<LiveWorkItemReadProvider> logger,
         IDataSourceModeProvider? modeProvider,
         IHttpContextAccessor? httpContextAccessor)
