@@ -12,6 +12,7 @@ using ProductDto = PoTool.Client.ApiClient.ProductDto;
 using SprintDto = PoTool.Client.ApiClient.SprintDto;
 using SharedFilterTimeSelectionDto = PoTool.Shared.Metrics.FilterTimeSelectionDto;
 using SharedFilterTimeSelectionModeDto = PoTool.Shared.Metrics.FilterTimeSelectionModeDto;
+using SharedSprintFilterContextDto = PoTool.Shared.Metrics.SprintFilterContextDto;
 using SharedValidationRuleGroupDto = PoTool.Shared.WorkItems.ValidationRuleGroupDto;
 
 namespace PoTool.Tests.Unit.Services;
@@ -434,7 +435,7 @@ public sealed class WorkspaceSignalServiceTests
             []);
     }
 
-    private static SprintFilterContextDto CreateSprintFilter(IReadOnlyList<int> productIds, IReadOnlyList<int> teamIds, bool isAllProducts = false)
+    private static SharedSprintFilterContextDto CreateSprintFilter(IReadOnlyList<int> productIds, IReadOnlyList<int> teamIds, bool isAllProducts = false)
         => new()
         {
             ProductIds = new FilterSelectionDto<int> { IsAll = isAllProducts, Values = productIds },
