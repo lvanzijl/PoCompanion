@@ -22,7 +22,7 @@ public sealed class TreeBuilderServiceTests
                 State = "New",
                 ValidationIssues = new List<ClientValidationIssue>
                 {
-                    new("RC-2", "Looks like a parent-progress issue", "Warning")
+                    new("Warning", "Looks like a parent-progress issue", "RC-2")
                 }
             }
         };
