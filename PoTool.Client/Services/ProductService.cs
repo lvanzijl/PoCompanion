@@ -1,4 +1,5 @@
 using PoTool.Client.ApiClient;
+using PoTool.Shared.Planning;
 using ProductPictureType = PoTool.Shared.Settings.ProductPictureType;
 
 namespace PoTool.Client.Services;
@@ -36,6 +37,14 @@ public class ProductService
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Gets persisted planning projections for roadmap epics in a product.
+    /// </summary>
+    public async Task<IReadOnlyList<PlanningEpicProjectionDto>> GetPlanningProjectionsAsync(int productId, CancellationToken cancellationToken = default)
+    {
+        return (await _productsClient.GetPlanningProjectionsAsync(productId, cancellationToken)).ToList();
     }
 
     /// <summary>

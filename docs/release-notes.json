@@ -2,6 +2,14 @@
   {
     "date": "2026-04-01",
     "type": "Changed",
+    "title": "Product roadmaps now show projected completion dates and simple sequence bars",
+    "impact": "Planning roadmaps now load persisted forecast projections per product, show each roadmap epic's projected completion date as the primary signal with paired sprint count as secondary context, highlight overdue epics with delay duration, and render a simple visual sequence bar per product lane without recalculating forecast logic in the UI.",
+    "area": "Planning",
+    "link": "/planning/product-roadmaps"
+  },
+  {
+    "date": "2026-04-01",
+    "type": "Changed",
     "title": "Planning now shows project-level overview signals",
     "impact": "Project-scoped planning routes now include a read-only overview page plus project summary bars on Plan Board and Product Roadmaps, showing planned versus unplanned PBIs, capacity-per-sprint, and imbalance or overcommit signals without changing write behavior.",
     "area": "Planning",

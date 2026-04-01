@@ -3350,6 +3350,51 @@
         }
       }
     },
+    "/api/Products/{productId}/planning-projections": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "Products_GetPlanningProjections",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlanningEpicProjectionDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Products/reorder": {
       "post": {
         "tags": [
@@ -3949,6 +3994,145 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SettingsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Projects": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "operationId": "Projects_GetProjects",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Projects/{alias}": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "operationId": "Projects_GetProject",
+        "parameters": [
+          {
+            "name": "alias",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Projects/{alias}/products": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "operationId": "Projects_GetProjectProducts",
+        "parameters": [
+          {
+            "name": "alias",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProductDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Projects/{alias}/planning-summary": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "operationId": "Projects_GetPlanningSummary",
+        "parameters": [
+          {
+            "name": "alias",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectPlanningSummaryDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -13249,6 +13433,49 @@
           3
         ]
       },
+      "PlanningEpicProjectionDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "epicId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "epicTitle": {
+            "type": "string"
+          },
+          "roadmapOrder": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sprintsRemaining": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "estimatedCompletionDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "confidence": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ForecastConfidence"
+              }
+            ]
+          },
+          "hasForecast": {
+            "type": "boolean"
+          },
+          "lastUpdated": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
       "CreateProductRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -13489,6 +13716,119 @@
             "type": "integer",
             "format": "int32",
             "nullable": true
+          }
+        }
+      },
+      "ProjectDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "alias": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "productIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "ProjectPlanningSummaryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "projectAlias": {
+            "type": "string"
+          },
+          "productCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalEpics": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPBIs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "plannedPBIs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unplannedPBIs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "plannedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "capacityPerSprint": {
+            "type": "number",
+            "format": "double"
+          },
+          "overcommitIndicator": {
+            "type": "boolean"
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectPlanningProductSummaryDto"
+            }
+          }
+        }
+      },
+      "ProjectPlanningProductSummaryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "epicCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPBIs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "plannedPBIs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unplannedPBIs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "plannedEffort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "capacityPerSprint": {
+            "type": "number",
+            "format": "double"
           }
         }
       },
