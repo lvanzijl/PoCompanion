@@ -247,37 +247,65 @@
                             }
                             else
                             {
-                                var timelineSegments = BuildTimelineSegments(lane);
+                                var timeline = BuildTimeline(lane);
 
-                                @if (timelineSegments.Count > 0)
-                                {
-                                    <MudPaper Outlined="true" Class="pa-3">
-                                        <MudText Typo="Typo.subtitle2">Projected sequence</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                            Visual-only sequencing based on persisted projected end dates.
-                                        </MudText>
+                                <MudPaper Outlined="true" Class="pa-3">
+                                    <MudText Typo="Typo.subtitle2">Projected timeline</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        Shared time axis with independent forecast ranges in roadmap order.
+                                    </MudText>
 
-                                        <MudStack Spacing="1" Class="mt-2">
-                                            @foreach (var segment in timelineSegments)
-                                            {
-                                                <MudStack Spacing="0">
-                                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                                        <MudText Typo="Typo.caption" Style="font-weight: 500;">
-                                                            #@segment.RoadmapOrder · @segment.Title
-                                                        </MudText>
-                                                        <MudText Typo="Typo.caption" Color="@(segment.IsDelayed ? Color.Error : Color.Secondary)">
-                                                            @segment.EndDate.LocalDateTime.ToString("dd MMM yyyy")
-                                                        </MudText>
-                                                    </MudStack>
-                                                    <div class="projection-timeline-track">
-                                                        <div class="@GetTimelineBarClass(segment)"
-                                                             style="@GetTimelineBarStyle(segment, timelineSegments)"></div>
-                                                    </div>
-                                                </MudStack>
-                                            }
+                                    @if (timeline.AxisStart.HasValue && timeline.AxisEnd.HasValue)
+                                    {
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mt-2">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @timeline.AxisStart.Value.LocalDateTime.ToString("dd MMM yyyy")
+                                            </MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @timeline.AxisEnd.Value.LocalDateTime.ToString("dd MMM yyyy")
+                                            </MudText>
                                         </MudStack>
-                                    </MudPaper>
-                                }
+                                    }
+
+                                    <MudStack Spacing="1" Class="mt-2">
+                                        @foreach (var row in timeline.Rows)
+                                        {
+                                            <MudStack Spacing="0">
+                                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                                    <MudText Typo="Typo.caption" Style="font-weight: 500;">
+                                                        #@row.RoadmapOrder · @row.Title
+                                                    </MudText>
+                                                    @if (row.EndDate.HasValue)
+                                                    {
+                                                        <MudText Typo="Typo.caption" Color="@(row.IsDelayed ? Color.Error : Color.Secondary)">
+                                                            @row.EndDate.Value.LocalDateTime.ToString("dd MMM yyyy")
+                                                        </MudText>
+                                                    }
+                                                    else
+                                                    {
+                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning">
+                                                            Forecast unavailable
+                                                        </MudChip>
+                                                    }
+                                                </MudStack>
+                                                <div class="projection-timeline-track">
+                                                    @if (row.HasTimelineBar)
+                                                    {
+                                                        <div class="@GetTimelineBarClass(row)"
+                                                             style="@GetTimelineBarStyle(row)"></div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="projection-timeline-missing">
+                                                            <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Small" Class="mr-1" />
+                                                            Missing forecast
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </MudStack>
+                                        }
+                                    </MudStack>
+                                </MudPaper>
 
                                 @foreach (var epic in lane.Epics)
                                 {
@@ -658,7 +686,7 @@
     .projection-timeline-track {
         position: relative;
         width: 100%;
-        height: 10px;
+        height: 14px;
         border-radius: 999px;
         background: rgba(255,255,255,0.08);
         overflow: hidden;
@@ -674,6 +702,20 @@
     }
     .projection-timeline-bar-delayed {
         background: var(--mud-palette-error);
+    }
+    .projection-timeline-bar-low-confidence {
+        opacity: 0.55;
+        border: 1px dashed rgba(255,255,255,0.9);
+        box-sizing: border-box;
+    }
+    .projection-timeline-missing {
+        display: flex;
+        align-items: center;
+        height: 100%;
+        padding: 0 8px;
+        color: var(--mud-palette-warning);
+        font-size: 0.75rem;
+        white-space: nowrap;
     }
 </style>
 
@@ -1346,14 +1388,6 @@
                 : null;
     }
 
-    private sealed record TimelineSegment(
-        int EpicId,
-        string Title,
-        int RoadmapOrder,
-        DateTimeOffset StartDate,
-        DateTimeOffset EndDate,
-        bool IsDelayed);
-
     private static Color GetSprintChipColor(int sprintsRemaining)
     {
         if (sprintsRemaining <= 3) return Color.Success;
@@ -1389,49 +1423,40 @@
     private static string GetEpicCardClass(RoadmapEpic epic)
         => epic.IsDelayed ? "roadmap-epic-card roadmap-epic-card-delayed" : "roadmap-epic-card";
 
-    private static IReadOnlyList<TimelineSegment> BuildTimelineSegments(ProductLane lane)
+    private static RoadmapTimelineModel BuildTimeline(ProductLane lane)
     {
-        var anchorDate = new DateTimeOffset(DateTime.UtcNow.Date, TimeSpan.Zero);
-        var segments = new List<TimelineSegment>();
-        var nextStart = anchorDate;
-
-        foreach (var epic in lane.Epics.Where(epic => epic.EstimatedCompletionDate.HasValue))
-        {
-            var estimatedEnd = new DateTimeOffset(epic.EstimatedCompletionDate!.Value.UtcDateTime.Date, TimeSpan.Zero);
-            var visualEnd = estimatedEnd < nextStart ? nextStart.AddDays(1) : estimatedEnd;
-
-            segments.Add(new TimelineSegment(
-                epic.TfsId,
-                epic.Title,
-                epic.OrderNumber,
-                nextStart,
-                visualEnd,
-                epic.IsDelayed));
-
-            nextStart = visualEnd;
-        }
-
-        return segments;
+        return RoadmapTimelineLayout.Build(
+            lane.Epics
+                .Select(epic => new RoadmapTimelineEpicInput(
+                    epic.TfsId,
+                    epic.Title,
+                    epic.OrderNumber,
+                    epic.EstimatedCompletionDate,
+                    epic.SprintsRemaining,
+                    epic.Confidence,
+                    epic.HasForecast,
+                    epic.IsDelayed))
+                .ToList());
     }
 
-    private static string GetTimelineBarClass(TimelineSegment segment)
-        => segment.IsDelayed ? "projection-timeline-bar projection-timeline-bar-delayed" : "projection-timeline-bar";
-
-    private static string GetTimelineBarStyle(TimelineSegment segment, IReadOnlyList<TimelineSegment> timelineSegments)
+    private static string GetTimelineBarClass(RoadmapTimelineRow row)
     {
-        if (timelineSegments.Count == 0)
+        var classes = new List<string> { "projection-timeline-bar" };
+        if (row.IsDelayed)
         {
-            return "left: 0%; width: 100%;";
+            classes.Add("projection-timeline-bar-delayed");
         }
 
-        var totalDays = Math.Max(1d, (timelineSegments[^1].EndDate - timelineSegments[0].StartDate).TotalDays);
-        var offsetDays = Math.Max(0d, (segment.StartDate - timelineSegments[0].StartDate).TotalDays);
-        var widthDays = Math.Max(1d, (segment.EndDate - segment.StartDate).TotalDays);
-        var left = offsetDays / totalDays * 100d;
-        var width = widthDays / totalDays * 100d;
+        if (row.IsLowConfidence)
+        {
+            classes.Add("projection-timeline-bar-low-confidence");
+        }
 
-        return $"left: {left:F2}%; width: {Math.Max(width, 2d):F2}%;";
+        return string.Join(" ", classes);
     }
+
+    private static string GetTimelineBarStyle(RoadmapTimelineRow row)
+        => $"left: {row.LeftPercent.GetValueOrDefault():F2}%; width: {Math.Max(row.WidthPercent.GetValueOrDefault(), 2d):F2}%;";
 
     private static string FormatDelayDuration(TimeSpan? delay)
     {
