@@ -137,6 +137,11 @@ public static class WorkspaceRoutes
     public const string ProductRoadmapEditor = "/planning/product-roadmaps/{0}";
 
     /// <summary>
+    /// Multi-product planning view route — cross-product timeline aligned to a shared axis.
+    /// </summary>
+    public const string MultiProductPlanning = "/planning/multi-product";
+
+    /// <summary>
     /// Plan Board route — operational sprint planning board for organizing PBIs and bugs into upcoming sprints.
     /// </summary>
     public const string PlanBoard = "/planning/plan-board";

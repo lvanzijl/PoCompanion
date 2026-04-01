@@ -67,7 +67,8 @@ public static class WorkspaceNavigationCatalog
             [
                 WorkspaceRoutes.PlanningWorkspace,
                 WorkspaceRoutes.ProductRoadmaps,
-                WorkspaceRoutes.PlanBoard
+                WorkspaceRoutes.PlanBoard,
+                WorkspaceRoutes.MultiProductPlanning
             ])
     ];
 

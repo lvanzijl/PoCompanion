@@ -45,6 +45,35 @@ public static class RoadmapTimelineLayout
         return new RoadmapTimelineModel(axisStart, axisEnd, positionedRows);
     }
 
+    /// <summary>
+    /// Builds a positioned timeline using an externally provided shared axis.
+    /// Use this when multiple product lanes must be aligned to the same time axis.
+    /// </summary>
+    public static RoadmapTimelineModel BuildWithSharedAxis(
+        IReadOnlyList<RoadmapTimelineEpicInput> epics,
+        DateTimeOffset axisStart,
+        DateTimeOffset axisEnd)
+    {
+        ArgumentNullException.ThrowIfNull(epics);
+
+        if (axisEnd <= axisStart)
+        {
+            axisEnd = axisStart.AddDays(1);
+        }
+
+        var rows = epics
+            .OrderBy(epic => epic.RoadmapOrder)
+            .Select(BuildRow)
+            .ToList();
+
+        var axisDays = Math.Max(1d, (axisEnd - axisStart).TotalDays);
+        var positionedRows = rows
+            .Select(row => PositionRow(row, axisStart, axisDays))
+            .ToList();
+
+        return new RoadmapTimelineModel(axisStart, axisEnd, positionedRows);
+    }
+
     private static RoadmapTimelineRow BuildRow(RoadmapTimelineEpicInput epic)
     {
         var hasTimelineBar = epic.HasForecast && epic.EstimatedCompletionDate.HasValue;

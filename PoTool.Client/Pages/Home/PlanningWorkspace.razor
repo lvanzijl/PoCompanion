@@ -69,6 +69,14 @@
                                         AriaLabel="Plan Board — Place upcoming work into target sprints"
                                         OnClick="NavigateToPlanBoard" />
                 </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <NavigationTileCard Title="Multi-Product Planning"
+                                        Subtitle="Align timelines across all products on a shared axis"
+                                        Icon="@Icons.Material.Filled.AccountTree"
+                                        IconColor="Color.Info"
+                                        AriaLabel="Multi-Product Planning — Align timelines across all products on a shared axis"
+                                        OnClick="NavigateToMultiProductPlanning" />
+                </MudItem>
             </MudGrid>
         </MudPaper>
 
@@ -146,6 +154,11 @@
         }
 
         NavigationManager.NavigateTo($"{WorkspaceRoutes.GetProjectPlanningOverview(ProjectAlias)}{BuildContextQuery()}");
+    }
+
+    private void NavigateToMultiProductPlanning()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.MultiProductPlanning}{BuildContextQuery()}");
     }
 
     private void NavigateToHealth()

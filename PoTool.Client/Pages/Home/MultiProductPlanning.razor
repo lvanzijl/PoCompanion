@@ -1,0 +1,489 @@
+@page "/planning/multi-product"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Models
+@using PoTool.Client.Services
+@using PoTool.Shared.Planning
+@using PoTool.Shared.Metrics
+@inject ProductService ProductService
+@inherits WorkspaceBase
+
+<PageTitle>Multi-Product Planning - PO Companion</PageTitle>
+
+@if (_isLoading)
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 mb-4">
+        <MudStack Spacing="2">
+            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="48px" />
+            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="180px" />
+            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="180px" />
+        </MudStack>
+    </MudContainer>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 mb-4">
+        <MudStack Spacing="3">
+            @* Header *@
+            <MudPaper Elevation="1" Class="pa-3">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudStack Spacing="1">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Primary" Size="Size.Large" />
+                            <MudText Typo="Typo.h5">Multi-Product Planning</MudText>
+                        </MudStack>
+                        <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            All products aligned to a shared time axis. End dates are authoritative; start dates are forecast-derived.
+                        </MudText>
+                    </MudStack>
+                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                   Icon="@Icons.Material.Filled.CalendarMonth"
+                                   OnClick="NavigateToPlanning">
+                        Planning
+                    </CompactButton>
+                </MudStack>
+            </MudPaper>
+
+            @if (_loadError != null)
+            {
+                <MudAlert Severity="Severity.Warning">@_loadError</MudAlert>
+            }
+
+            @if (_productLanes.Count == 0 && !_isLoading)
+            {
+                <MudPaper Elevation="1" Class="pa-4">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        No products with planning projections found. Ensure roadmap epics have forecast data.
+                    </MudText>
+                </MudPaper>
+            }
+            else
+            {
+                @* Global axis header *@
+                @if (_globalAxisStart.HasValue && _globalAxisEnd.HasValue)
+                {
+                    <MudPaper Elevation="0" Class="pa-2 multi-product-axis-header">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @_globalAxisStart.Value.LocalDateTime.ToString("dd MMM yyyy")
+                            </MudText>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.DateRange" Size="Size.Small" Color="Color.Secondary" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Global forecast axis</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @_globalAxisEnd.Value.LocalDateTime.ToString("dd MMM yyyy")
+                            </MudText>
+                        </MudStack>
+
+                        @* Pressure zone overlay row *@
+                        @if (_pressureZones.Count > 0)
+                        {
+                            <div class="multi-product-pressure-track" style="margin-top: 4px;">
+                                @foreach (var zone in _pressureZones)
+                                {
+                                    <MudTooltip Placement="Placement.Top" Arrow="true">
+                                        <ChildContent>
+                                            <div class="multi-product-pressure-zone"
+                                                 style="left: @zone.LeftPercent.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)%; width: @Math.Max(zone.WidthPercent, 1.5d).ToString("F2", System.Globalization.CultureInfo.InvariantCulture)%;"></div>
+                                        </ChildContent>
+                                        <TooltipContent>
+                                            <MudStack Spacing="1">
+                                                <MudText Typo="Typo.caption" Style="font-weight: 600;">Pressure zone</MudText>
+                                                <MudText Typo="Typo.caption">@zone.EpicCount epics ending within 14 days</MudText>
+                                            </MudStack>
+                                        </TooltipContent>
+                                    </MudTooltip>
+                                }
+                            </div>
+                        }
+                    </MudPaper>
+                }
+
+                @* Product lanes *@
+                @foreach (var lane in _productLanes)
+                {
+                    <MudPaper Elevation="1" Class="pa-3">
+                        <MudStack Spacing="1">
+                            @* Lane header *@
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudIcon Icon="@Icons.Material.Filled.Category" Size="Size.Small" Color="Color.Primary" />
+                                    <MudText Typo="Typo.subtitle2">@lane.ProductName</MudText>
+                                    @if (lane.DelayedCount > 0)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
+                                            @lane.DelayedCount delayed
+                                        </MudChip>
+                                    }
+                                    @if (lane.MissingForecastCount > 0)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                            @lane.MissingForecastCount without forecast
+                                        </MudChip>
+                                    }
+                                </MudStack>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @lane.Timeline.Rows.Count(r => r.HasTimelineBar) of @lane.Timeline.Rows.Count epic(s) projected
+                                </MudText>
+                            </MudStack>
+
+                            @* Epic rows *@
+                            <MudStack Spacing="1" Class="mt-1">
+                                @foreach (var row in lane.Timeline.Rows)
+                                {
+                                    <MudStack Spacing="0">
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                            <MudText Typo="Typo.caption" Style="font-weight: 500; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                #@row.RoadmapOrder · @row.Title
+                                            </MudText>
+                                            @if (row.EndDate.HasValue)
+                                            {
+                                                <MudText Typo="Typo.caption" Color="@(row.IsDelayed ? Color.Error : Color.Secondary)">
+                                                    @row.EndDate.Value.LocalDateTime.ToString("dd MMM yyyy")
+                                                </MudText>
+                                            }
+                                            else if (!row.HasTimelineBar)
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning">No forecast</MudChip>
+                                            }
+                                        </MudStack>
+                                        <div class="projection-timeline-track">
+                                            @if (row.HasTimelineBar)
+                                            {
+                                                <MudTooltip Placement="Placement.Top" Arrow="true">
+                                                    <ChildContent>
+                                                        <div class="@GetTimelineBarClass(row)"
+                                                             style="@GetTimelineBarStyle(row)">
+                                                            <div class="@GetTimelineEndMarkerClass(row)"></div>
+                                                        </div>
+                                                    </ChildContent>
+                                                    <TooltipContent>
+                                                        <MudStack Spacing="1" Style="font-size: 0.75rem; max-width: 220px;">
+                                                            <MudText Typo="Typo.caption" Style="font-weight: 600;">@row.EndDate!.Value.LocalDateTime.ToString("dd MMM yyyy")</MudText>
+                                                            <MudText Typo="Typo.caption">Projected completion (authoritative)</MudText>
+                                                            @if (row.IsLowConfidence)
+                                                            {
+                                                                <MudText Typo="Typo.caption" Color="Color.Warning">Low confidence forecast</MudText>
+                                                            }
+                                                            @if (row.IsDelayed)
+                                                            {
+                                                                <MudText Typo="Typo.caption" Color="Color.Error">Overdue — completion not yet recorded</MudText>
+                                                            }
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Style="font-style: italic;">
+                                                                Start is estimated from forecast, not actual data.
+                                                            </MudText>
+                                                        </MudStack>
+                                                    </TooltipContent>
+                                                </MudTooltip>
+                                            }
+                                            else
+                                            {
+                                                <div class="projection-timeline-missing">
+                                                    <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Small" Class="mr-1" />
+                                                    Missing forecast
+                                                </div>
+                                            }
+                                        </div>
+                                    </MudStack>
+                                }
+                            </MudStack>
+                        </MudStack>
+                    </MudPaper>
+                }
+            }
+        </MudStack>
+    </MudContainer>
+}
+
+<style>
+    .projection-timeline-track {
+        position: relative;
+        width: 100%;
+        height: 14px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.08);
+        overflow: hidden;
+        margin-top: 4px;
+    }
+    .projection-timeline-bar {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(to right, transparent 0%, var(--mud-palette-primary) 100%);
+        min-width: 8px;
+        overflow: visible;
+    }
+    .projection-timeline-bar-delayed {
+        background: linear-gradient(to right, transparent 0%, var(--mud-palette-error) 100%);
+    }
+    .projection-timeline-bar-low-confidence {
+        opacity: 0.45;
+    }
+    .projection-timeline-end-marker {
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: 4px;
+        height: 100%;
+        border-radius: 0 999px 999px 0;
+        background: var(--mud-palette-primary);
+    }
+    .projection-timeline-end-marker-delayed {
+        background: var(--mud-palette-error);
+    }
+    .projection-timeline-missing {
+        display: flex;
+        align-items: center;
+        height: 100%;
+        padding: 0 8px;
+        color: var(--mud-palette-warning);
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
+    .multi-product-axis-header {
+        background: rgba(255,255,255,0.04);
+        border-radius: 6px;
+    }
+    .multi-product-pressure-track {
+        position: relative;
+        width: 100%;
+        height: 8px;
+        background: rgba(255,255,255,0.04);
+        border-radius: 4px;
+        overflow: visible;
+    }
+    .multi-product-pressure-zone {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        background: rgba(255, 165, 0, 0.30);
+        border-radius: 4px;
+        border: 1px solid rgba(255, 165, 0, 0.55);
+        cursor: default;
+    }
+</style>
+
+@code {
+    private bool _isLoading = true;
+    private string? _loadError;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+    private List<ProductTimelineLane> _productLanes = new();
+    private DateTimeOffset? _globalAxisStart;
+    private DateTimeOffset? _globalAxisEnd;
+    private List<PressureZone> _pressureZones = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ParseContextQueryParameters();
+        _breadcrumbs =
+        [
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
+            new("Planning", WorkspaceRoutes.PlanningWorkspace, icon: Icons.Material.Filled.CalendarMonth),
+            new("Multi-Product", null, disabled: true, icon: Icons.Material.Filled.AccountTree)
+        ];
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _loadError = null;
+        StateHasChanged();
+
+        try
+        {
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                _loadError = "No active profile found. Select a profile to continue.";
+                return;
+            }
+
+            var products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            if (products.Count == 0)
+            {
+                return;
+            }
+
+            // Load projections in parallel for all products (read-only, no EF concurrency risk)
+            var projectionTasks = products
+                .Select(p => ProductService.GetPlanningProjectionsAsync(p.Id))
+                .ToList();
+            await Task.WhenAll(projectionTasks);
+
+            // Build per-product inputs
+            var productInputs = products
+                .Zip(projectionTasks, (product, task) => (product, projections: task.Result))
+                .ToList();
+
+            // Compute global axis: raw start/end from all projections
+            var allInputs = productInputs
+                .SelectMany(pi => pi.projections.Select(p => ToEpicInput(p)))
+                .ToList();
+
+            var globalModel = RoadmapTimelineLayout.Build(allInputs);
+            if (!globalModel.AxisStart.HasValue || !globalModel.AxisEnd.HasValue)
+            {
+                return;
+            }
+
+            _globalAxisStart = globalModel.AxisStart;
+            _globalAxisEnd = globalModel.AxisEnd;
+
+            // Build per-product lanes aligned to global axis
+            _productLanes = productInputs
+                .Select(pi =>
+                {
+                    var inputs = pi.projections.Select(p => ToEpicInput(p)).ToList();
+                    var timeline = inputs.Count > 0
+                        ? RoadmapTimelineLayout.BuildWithSharedAxis(inputs, _globalAxisStart!.Value, _globalAxisEnd!.Value)
+                        : new RoadmapTimelineModel(null, null, []);
+                    return new ProductTimelineLane(pi.product.Id, pi.product.Name, timeline);
+                })
+                .Where(lane => lane.Timeline.Rows.Count > 0)
+                .ToList();
+
+            // Compute pressure zones from all end dates on the global axis
+            _pressureZones = ComputePressureZones(
+                _productLanes.SelectMany(l => l.Timeline.Rows)
+                    .Where(r => r.HasTimelineBar && r.EndDate.HasValue)
+                    .Select(r => r.EndDate!.Value)
+                    .ToList(),
+                _globalAxisStart.Value,
+                _globalAxisEnd.Value);
+        }
+        catch (Exception ex)
+        {
+            _loadError = $"Failed to load planning data: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private static RoadmapTimelineEpicInput ToEpicInput(PlanningEpicProjectionDto projection)
+    {
+        var isDelayed = projection.EstimatedCompletionDate.HasValue
+            && DateTimeOffset.UtcNow.Date > projection.EstimatedCompletionDate.Value.Date;
+
+        return new RoadmapTimelineEpicInput(
+            projection.EpicId,
+            projection.EpicTitle,
+            projection.RoadmapOrder,
+            projection.EstimatedCompletionDate,
+            projection.SprintsRemaining,
+            projection.Confidence,
+            projection.HasForecast,
+            isDelayed);
+    }
+
+    private static List<PressureZone> ComputePressureZones(
+        IReadOnlyList<DateTimeOffset> endDates,
+        DateTimeOffset axisStart,
+        DateTimeOffset axisEnd)
+    {
+        if (endDates.Count < 3)
+        {
+            return [];
+        }
+
+        const int WindowDays = 14;
+        var axisDays = Math.Max(1d, (axisEnd - axisStart).TotalDays);
+        var sorted = endDates.OrderBy(d => d).ToList();
+        var zones = new List<PressureZone>();
+
+        // Sliding window: find date ranges where 3+ epics end within WindowDays
+        int left = 0;
+        for (int right = 0; right < sorted.Count; right++)
+        {
+            while ((sorted[right] - sorted[left]).TotalDays > WindowDays)
+            {
+                left++;
+            }
+
+            var count = right - left + 1;
+            if (count < 3)
+            {
+                continue;
+            }
+
+            var windowStart = sorted[left];
+            var windowEnd = sorted[right].AddDays(1);
+            var leftPercent = Math.Max(0d, (windowStart - axisStart).TotalDays / axisDays * 100d);
+            var rightPercent = Math.Min(100d, (windowEnd - axisStart).TotalDays / axisDays * 100d);
+            var widthPercent = Math.Max(0d, rightPercent - leftPercent);
+
+            zones.Add(new PressureZone(leftPercent, widthPercent, count));
+        }
+
+        // Merge overlapping zones
+        return MergeZones(zones);
+    }
+
+    private static List<PressureZone> MergeZones(List<PressureZone> zones)
+    {
+        if (zones.Count <= 1)
+        {
+            return zones;
+        }
+
+        var sorted = zones.OrderBy(z => z.LeftPercent).ToList();
+        var merged = new List<PressureZone> { sorted[0] };
+
+        for (int i = 1; i < sorted.Count; i++)
+        {
+            var prev = merged[^1];
+            var curr = sorted[i];
+            if (curr.LeftPercent <= prev.LeftPercent + prev.WidthPercent)
+            {
+                var newRight = Math.Max(prev.LeftPercent + prev.WidthPercent, curr.LeftPercent + curr.WidthPercent);
+                merged[^1] = new PressureZone(prev.LeftPercent, newRight - prev.LeftPercent, Math.Max(prev.EpicCount, curr.EpicCount));
+            }
+            else
+            {
+                merged.Add(curr);
+            }
+        }
+
+        return merged;
+    }
+
+    private void NavigateToPlanning()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.PlanningWorkspace);
+    }
+
+    private static string GetTimelineBarClass(RoadmapTimelineRow row)
+    {
+        var classes = new System.Text.StringBuilder("projection-timeline-bar");
+        if (row.IsDelayed)
+        {
+            classes.Append(" projection-timeline-bar-delayed");
+        }
+        if (row.IsLowConfidence)
+        {
+            classes.Append(" projection-timeline-bar-low-confidence");
+        }
+        return classes.ToString();
+    }
+
+    private static string GetTimelineBarStyle(RoadmapTimelineRow row)
+        => $"left: {row.LeftPercent.GetValueOrDefault():F2}%; width: {Math.Max(row.WidthPercent.GetValueOrDefault(), 2d):F2}%;";
+
+    private static string GetTimelineEndMarkerClass(RoadmapTimelineRow row)
+        => row.IsDelayed
+            ? "projection-timeline-end-marker projection-timeline-end-marker-delayed"
+            : "projection-timeline-end-marker";
+
+    private sealed record ProductTimelineLane(int ProductId, string ProductName, RoadmapTimelineModel Timeline)
+    {
+        public int DelayedCount => Timeline.Rows.Count(r => r.IsDelayed);
+        public int MissingForecastCount => Timeline.Rows.Count(r => r.IsForecastMissing);
+    }
+
+    private sealed record PressureZone(double LeftPercent, double WidthPercent, int EpicCount);
+}
