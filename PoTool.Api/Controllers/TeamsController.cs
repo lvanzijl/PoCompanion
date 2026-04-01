@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
+using PoTool.Api.Filters;
 using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Commands;
 using PoTool.Core.Settings.Queries;
@@ -137,6 +138,7 @@ public class TeamsController : ControllerBase
     /// </summary>
     [Obsolete("UNUSED: No client-side calls found. UI uses ArchiveTeam (soft delete) instead. See docs/reports/2026-03-30-cleanup-phase2-endpoint-usage-report.md section 4.1", error: true)]
     [HttpDelete("{id}")]
+    [AllowUntypedResponse]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteTeam(int id, CancellationToken cancellationToken)

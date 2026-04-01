@@ -1,6 +1,22 @@
 [
   {
     "date": "2026-03-31",
+    "type": "Changed",
+    "title": "Backlog health iteration cards now show counted issues",
+    "impact": "Backlog Health iteration cards now show the total number of issues counted in each health-score calculation, so product owners can see how many blocked, parent-progress, and missing-effort issues drove the score without leaving the current view.",
+    "area": "Trends",
+    "link": "/workspace/analysis"
+  },
+  {
+    "date": "2026-03-31",
+    "type": "Fixed",
+    "title": "Workspace pages now keep Build Quality, metrics, and active context stable",
+    "impact": "Health Overview and Sprint Delivery now load Build Quality data without client deserialization failures, no-data sprint and backlog analytics now return successful empty responses instead of 404s, and product/team/sprint context now stays attached while moving between Home, Health, Delivery, Trends, and Planning pages.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-03-31",
     "type": "Fixed",
     "title": "App shell and guarded APIs now share explicit route handling",
     "impact": "Opening /, client-side workspace routes, SignalR setup paths, TFS validation endpoints, and build-quality APIs no longer fail route classification during startup, while unknown managed API routes still stay blocked until they are explicitly categorized.",

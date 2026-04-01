@@ -6,6 +6,7 @@
 @using PoTool.Client.Services
 @using PoTool.Client.Models
 @using PoTool.Client.Pages.Home.Components
+@using SharedPipelineBuildQualityDto = PoTool.Shared.BuildQuality.PipelineBuildQualityDto
 @inject IProfileService ProfileService
 @inject IPipelinesClient PipelinesClient
 @inject IBuildQualityService BuildQualityService
@@ -588,8 +589,8 @@
     private string? _pipelineQualityErrorMessage;
     private bool _isDrawerBuildQualityLoading;
     private string? _drawerBuildQualityErrorMessage;
-    private PipelineBuildQualityDto? _drawerBuildQuality;
-    private Dictionary<int, PipelineBuildQualityDto> _pipelineBuildQualityByDefinition = new();
+    private SharedPipelineBuildQualityDto? _drawerBuildQuality;
+    private Dictionary<int, SharedPipelineBuildQualityDto> _pipelineBuildQualityByDefinition = new();
     private CancellationTokenSource? _pipelineQualityLoadCts;
 
     // ── Scatter state (per product) ──────────────────────────────────────
@@ -624,8 +625,28 @@
             var teams = await TeamService.GetAllTeamsAsync();
             _teams = teams.OrderBy(t => t.Name).ToList();
 
+            var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
+            _selectedTeamId = context.TeamId;
+            _selectedSprintId = context.SprintId;
+
+            if (_selectedTeamId.HasValue)
+            {
+                await LoadSprintsForTeamAsync(_selectedTeamId.Value);
+            }
+
+            if (_selectedTeamId.HasValue && !_selectedSprintId.HasValue && _sprints.Count > 0)
+            {
+                _selectedSprintId = SelectDefaultSprintId(_sprints);
+            }
+
+            if (_selectedSprintId.HasValue)
+            {
+                await LoadInsightsAsync();
+                return;
+            }
+
             // Auto-select team if only one is available
-            if (_teams.Count == 1)
+            if (!_selectedTeamId.HasValue && _teams.Count == 1)
             {
                 await OnTeamChanged(_teams[0].Id);
                 return;
@@ -687,12 +708,14 @@
             // Load data for the auto-selected sprint (if any)
             if (_selectedSprintId.HasValue)
             {
+                UpdateContextUrl();
                 StateHasChanged();
                 await LoadInsightsAsync();
                 return;
             }
         }
 
+        UpdateContextUrl();
         StateHasChanged();
     }
 
@@ -701,6 +724,7 @@
         _selectedSprintId = sprintId;
         _insightsData = null;
         _filterNotice = null;
+        UpdateContextUrl();
 
         if (sprintId.HasValue)
         {
@@ -922,6 +946,44 @@
     private void NavigateToHome()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.Home);
+    }
+
+    private async Task LoadSprintsForTeamAsync(int teamId)
+    {
+        var sprints = await SprintService.GetSprintsForTeamAsync(teamId);
+        _sprints = sprints
+            .Where(s => s.StartUtc.HasValue)
+            .OrderByDescending(s => s.StartUtc)
+            .ToList();
+    }
+
+    private static int? SelectDefaultSprintId(IReadOnlyList<SprintDto> sprints)
+    {
+        if (sprints.Count == 0)
+        {
+            return null;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var current = sprints.FirstOrDefault(s =>
+            s.StartUtc.HasValue && s.EndUtc.HasValue &&
+            s.StartUtc.Value <= now && s.EndUtc.Value >= now);
+
+        if (current is null)
+        {
+            current = sprints.FirstOrDefault(s => s.EndUtc.HasValue && s.EndUtc.Value <= now) ?? sprints[0];
+        }
+
+        return current.Id;
+    }
+
+    private void UpdateContextUrl()
+    {
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.PipelineInsights,
+                new WorkspaceQueryContext(TeamId: _selectedTeamId, SprintId: _selectedSprintId)),
+            forceLoad: false);
     }
 
     private async Task LoadPipelineBuildQualityAsync(int sprintId, PipelineInsightsDto data)

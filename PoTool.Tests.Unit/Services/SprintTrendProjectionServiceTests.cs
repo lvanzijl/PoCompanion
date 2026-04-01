@@ -15,6 +15,7 @@ using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
+using StateClassification = PoTool.Core.Domain.Models.StateClassification;
 
 namespace PoTool.Tests.Unit.Services;
 

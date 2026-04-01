@@ -2,8 +2,8 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Client.Models;
 using PoTool.Client.Services;
-using ProfileDto = PoTool.Client.ApiClient.ProfileDto;
-using SettingsDto = PoTool.Client.ApiClient.SettingsDto;
+using ProfileDto = PoTool.Shared.Settings.ProfileDto;
+using SettingsDto = PoTool.Shared.Settings.SettingsDto;
 using ProfilePictureType = PoTool.Shared.Settings.ProfilePictureType;
 
 namespace PoTool.Tests.Unit.Services;

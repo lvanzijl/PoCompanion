@@ -13,9 +13,9 @@ public sealed class PipelineBuildQualityDto
 
     public int? TeamId { get; set; }
 
-    public DateTime? SprintStartUtc { get; set; }
+    public DateTimeOffset? SprintStartUtc { get; set; }
 
-    public DateTime? SprintEndUtc { get; set; }
+    public DateTimeOffset? SprintEndUtc { get; set; }
 
     public int? ProductId { get; set; }
 

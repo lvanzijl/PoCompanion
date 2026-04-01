@@ -37,8 +37,8 @@ public sealed class GetBuildQualityRollingWindowQueryHandler
         return new BuildQualityPageDto
         {
             ProductOwnerId = query.ProductOwnerId,
-            WindowStartUtc = query.EffectiveFilter.RangeStartUtc?.UtcDateTime ?? default,
-            WindowEndUtc = query.EffectiveFilter.RangeEndUtc?.UtcDateTime ?? default,
+            WindowStartUtc = query.EffectiveFilter.RangeStartUtc ?? default,
+            WindowEndUtc = query.EffectiveFilter.RangeEndUtc ?? default,
             ProductIds = selection.ProductIds,
             DefaultBranches = selection.DefaultBranches,
             Summary = _buildQualityProvider.Compute(selection.Builds, selection.TestRuns, selection.Coverages),

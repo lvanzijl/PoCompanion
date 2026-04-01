@@ -122,7 +122,14 @@ else if (!_isLoading && _healthData != null)
     {
         try
         {
-            return await MetricsClient.GetMultiIterationBacklogHealthAsync(productIds, areaPath, maxIterations);
+            var response = await MetricsClient.GetMultiIterationBacklogHealthAsync(
+                productOwnerId: null,
+                productIds,
+                areaPath,
+                maxIterations,
+                CancellationToken.None);
+
+            return response.Data;
         }
         catch (Exception ex)
         {

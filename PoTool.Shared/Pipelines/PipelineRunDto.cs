@@ -16,7 +16,13 @@ public record PipelineRunDto(
     string? Branch,
     string? RequestedFor,
     DateTimeOffset RetrievedAt
-);
+)
+{
+    public PipelineRunDto()
+        : this(0, 0, string.Empty, null, null, null, PipelineRunResult.Unknown, PipelineRunTrigger.Unknown, null, null, null, default)
+    {
+    }
+}
 
 /// <summary>
 /// Result of a pipeline run.

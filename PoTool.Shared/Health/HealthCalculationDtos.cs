@@ -40,4 +40,9 @@ public class CalculateHealthScoreResponse
     /// Health score from 0 to 100.
     /// </summary>
     public required int HealthScore { get; set; }
+
+    /// <summary>
+    /// Total number of issues counted when calculating the health score.
+    /// </summary>
+    public required int TotalIssues { get; set; }
 }

@@ -5,6 +5,7 @@
 @using PoTool.Client.Models
 @using PoTool.Client.Services
 @using PoTool.Client.Pages.Home.Components
+@using SharedDeliveryBuildQualityDto = PoTool.Shared.BuildQuality.DeliveryBuildQualityDto
 @using PoTool.Shared.Metrics
 @using PoTool.Shared.WorkItems
 @implements IDisposable
@@ -964,7 +965,7 @@
     private int? _profileId;
     private List<BreadcrumbItem> _breadcrumbs = new();
     private TfsConfigDto? _tfsConfig;
-    private DeliveryBuildQualityDto? _sprintBuildQuality;
+    private SharedDeliveryBuildQualityDto? _sprintBuildQuality;
 
     private enum DrillDownLevel { Portfolio, Product, Epic, Feature }
     private DrillDownLevel _drillDownLevel = DrillDownLevel.Portfolio;

@@ -3,6 +3,7 @@ using Moq;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
 using PoTool.Client.Services;
+using PoTool.Shared.Settings;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -29,37 +30,37 @@ public class WorkItemVisibilityServiceTests
             { 
                 WorkItemType = "Epic", 
                 StateName = "Closed", 
-                Classification = PoTool.Client.ApiClient.StateClassification.Done 
+                Classification = StateClassification.Done 
             },
             new WorkItemStateClassificationDto 
             { 
                 WorkItemType = "Epic", 
                 StateName = "Active", 
-                Classification = PoTool.Client.ApiClient.StateClassification.InProgress 
+                Classification = StateClassification.InProgress 
             },
             new WorkItemStateClassificationDto 
             { 
                 WorkItemType = "Feature", 
                 StateName = "Closed", 
-                Classification = PoTool.Client.ApiClient.StateClassification.Done 
+                Classification = StateClassification.Done 
             },
             new WorkItemStateClassificationDto 
             { 
                 WorkItemType = "Feature", 
                 StateName = "Active", 
-                Classification = PoTool.Client.ApiClient.StateClassification.InProgress 
+                Classification = StateClassification.InProgress 
             },
             new WorkItemStateClassificationDto 
             { 
                 WorkItemType = "PBI", 
                 StateName = "Done", 
-                Classification = PoTool.Client.ApiClient.StateClassification.Done 
+                Classification = StateClassification.Done 
             },
             new WorkItemStateClassificationDto 
             { 
                 WorkItemType = "PBI", 
                 StateName = "Active", 
-                Classification = PoTool.Client.ApiClient.StateClassification.InProgress 
+                Classification = StateClassification.InProgress 
             }
         };
 

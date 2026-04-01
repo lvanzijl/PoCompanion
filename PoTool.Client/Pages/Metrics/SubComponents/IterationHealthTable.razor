@@ -1,5 +1,6 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Services
+@using PoTool.Shared.Health
 
 @* Grid of iteration health cards showing validation issues and metrics *@
 
@@ -88,6 +89,12 @@
                                     @iteration.BlockedItems
                                 </MudText>
                             </MudStack>
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2">Counted Issues</MudText>
+                                <MudText Typo="Typo.body1" Color="@(GetHealthSummary(iteration).TotalIssues > 0 ? Color.Warning : Color.Default)">
+                                    @GetHealthSummary(iteration).TotalIssues
+                                </MudText>
+                            </MudStack>
                             @if (iteration.InProgressAtIterationEnd > 0)
                             {
                                 <MudDivider />
@@ -133,26 +140,32 @@
     [Parameter]
     public List<BacklogHealthDto> Iterations { get; set; } = new();
 
-    private Dictionary<string, int> _healthScores = new();
+    private static readonly CalculateHealthScoreResponse PlaceholderHealthSummary = new()
+    {
+        HealthScore = 0,
+        TotalIssues = 0
+    };
+
+    private Dictionary<string, CalculateHealthScoreResponse> _healthSummaries = new();
 
     protected override async Task OnParametersSetAsync()
     {
         await base.OnParametersSetAsync();
         
         // Pre-calculate health scores for non-placeholder iterations only
-        _healthScores.Clear();
+        _healthSummaries.Clear();
         var index = 0;
         foreach (var iteration in Iterations)
         {
             // Skip placeholder sprints - use index as unique key since multiple placeholders have same name
             if (iteration.SprintName == "[undefined]")
             {
-                _healthScores[$"[undefined]_{index}"] = 0;
+                _healthSummaries[$"[undefined]_{index}"] = PlaceholderHealthSummary;
             }
             else
             {
-                var score = await HealthCalculationService.CalculateHealthScoreAsync(iteration);
-                _healthScores[iteration.SprintName] = score;
+                var summary = await HealthCalculationService.CalculateHealthScoreDetailsAsync(iteration);
+                _healthSummaries[iteration.SprintName] = summary;
             }
             index++;
         }
@@ -160,23 +173,28 @@
 
     private int GetHealthScore(BacklogHealthDto iteration)
     {
+        return GetHealthSummary(iteration).HealthScore;
+    }
+
+    private CalculateHealthScoreResponse GetHealthSummary(BacklogHealthDto iteration)
+    {
         // Try exact match first
-        if (_healthScores.TryGetValue(iteration.SprintName, out var score))
+        if (_healthSummaries.TryGetValue(iteration.SprintName, out var summary))
         {
-            return score;
+            return summary;
         }
         
         // For placeholders, find by index (fallback)
         if (iteration.SprintName == "[undefined]")
         {
             var index = Iterations.IndexOf(iteration);
-            if (index >= 0 && _healthScores.TryGetValue($"[undefined]_{index}", out var placeholderScore))
+            if (index >= 0 && _healthSummaries.TryGetValue($"[undefined]_{index}", out var placeholderSummary))
             {
-                return placeholderScore;
+                return placeholderSummary;
             }
         }
         
-        return 0;
+        return PlaceholderHealthSummary;
     }
 
     private Color GetSeverityColor(string severity)

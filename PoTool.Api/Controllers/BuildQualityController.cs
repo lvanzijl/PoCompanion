@@ -28,15 +28,15 @@ public sealed class BuildQualityController : ControllerBase
     [HttpGet("rolling")]
     public async Task<ActionResult<DeliveryQueryResponseDto<BuildQualityPageDto>>> GetRolling(
         [FromQuery] int productOwnerId,
-        [FromQuery] DateTime windowStartUtc,
-        [FromQuery] DateTime windowEndUtc,
+        [FromQuery] DateTimeOffset windowStartUtc,
+        [FromQuery] DateTimeOffset windowEndUtc,
         CancellationToken cancellationToken = default)
     {
         var resolution = await _deliveryFilterResolutionService.ResolveAsync(
             new DeliveryFilterBoundaryRequest(
                 ProductOwnerId: productOwnerId,
-                RangeStartUtc: new DateTimeOffset(DateTime.SpecifyKind(windowStartUtc, DateTimeKind.Utc)),
-                RangeEndUtc: new DateTimeOffset(DateTime.SpecifyKind(windowEndUtc, DateTimeKind.Utc))),
+                RangeStartUtc: windowStartUtc.ToUniversalTime(),
+                RangeEndUtc: windowEndUtc.ToUniversalTime()),
             nameof(GetRolling),
             cancellationToken);
 

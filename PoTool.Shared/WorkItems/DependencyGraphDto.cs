@@ -11,7 +11,13 @@ public sealed record DependencyGraphDto(
     IReadOnlyList<int> BlockedWorkItemIds,
     IReadOnlyList<CircularDependency> CircularDependencies,
     DateTimeOffset AnalysisTimestamp
-);
+)
+{
+    public DependencyGraphDto()
+        : this(Array.Empty<DependencyNode>(), Array.Empty<DependencyLink>(), Array.Empty<DependencyChain>(), Array.Empty<int>(), Array.Empty<CircularDependency>(), default)
+    {
+    }
+}
 
 /// <summary>
 /// Represents a circular dependency cycle in the work item graph.
@@ -19,7 +25,13 @@ public sealed record DependencyGraphDto(
 public sealed record CircularDependency(
     IReadOnlyList<int> CycleWorkItemIds,
     string Description
-);
+)
+{
+    public CircularDependency()
+        : this(Array.Empty<int>(), string.Empty)
+    {
+    }
+}
 
 /// <summary>
 /// A node in the dependency graph representing a work item.
@@ -33,7 +45,13 @@ public sealed record DependencyNode(
     int DependencyCount,
     int DependentCount,
     bool IsBlocking
-);
+)
+{
+    public DependencyNode()
+        : this(0, string.Empty, string.Empty, string.Empty, null, 0, 0, false)
+    {
+    }
+}
 
 /// <summary>
 /// A link between two work items in the dependency graph.
@@ -43,7 +61,13 @@ public sealed record DependencyLink(
     int TargetWorkItemId,
     DependencyLinkType LinkType,
     string Description
-);
+)
+{
+    public DependencyLink()
+        : this(0, 0, DependencyLinkType.RelatedTo, string.Empty)
+    {
+    }
+}
 
 /// <summary>
 /// A chain of dependencies forming a critical path.
@@ -53,7 +77,13 @@ public sealed record DependencyChain(
     int TotalEffort,
     int ChainLength,
     DependencyChainRisk RiskLevel
-);
+)
+{
+    public DependencyChain()
+        : this(Array.Empty<int>(), 0, 0, DependencyChainRisk.Low)
+    {
+    }
+}
 
 /// <summary>
 /// Type of dependency link between work items.

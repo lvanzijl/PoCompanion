@@ -13,9 +13,9 @@ public sealed class DeliveryBuildQualityDto
 
     public int? TeamId { get; set; }
 
-    public DateTime? SprintStartUtc { get; set; }
+    public DateTimeOffset? SprintStartUtc { get; set; }
 
-    public DateTime? SprintEndUtc { get; set; }
+    public DateTimeOffset? SprintEndUtc { get; set; }
 
     public IReadOnlyList<int> ProductIds { get; set; } = Array.Empty<int>();
 

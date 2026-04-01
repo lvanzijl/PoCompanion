@@ -29,7 +29,7 @@ public class WorkItemFilteringService
         HashSet<int> targetIds)
     {
         // Call API to get filtered IDs
-        var request = new ApiClient.FilterByValidationRequest { TargetIds = targetIds };
+        var request = new FilterByValidationRequest { TargetIds = targetIds };
         var response = await _filteringClient.FilterByValidationWithAncestorsAsync(request);
 
         // Return work items matching the filtered IDs
@@ -48,7 +48,7 @@ public class WorkItemFilteringService
         string filterId)
     {
         // Call API to get work item IDs by filter
-        var request = new ApiClient.GetWorkItemIdsByValidationFilterRequest { FilterId = filterId };
+        var request = new GetWorkItemIdsByValidationFilterRequest { FilterId = filterId };
         var response = await _filteringClient.GetWorkItemIdsByValidationFilterAsync(request);
         return response.WorkItemIds;
     }
@@ -64,7 +64,7 @@ public class WorkItemFilteringService
         string filterId)
     {
         // Call API to count work items by filter
-        var request = new ApiClient.CountWorkItemsByValidationFilterRequest { FilterId = filterId };
+        var request = new CountWorkItemsByValidationFilterRequest { FilterId = filterId };
         var response = await _filteringClient.CountWorkItemsByValidationFilterAsync(request);
         return response.Count;
     }
@@ -128,7 +128,7 @@ public class WorkItemFilteringService
         IEnumerable<WorkItemWithValidationDto> allWorkItems)
     {
         // Call API to check descendant status
-        var request = new ApiClient.IsDescendantOfGoalsRequest
+        var request = new IsDescendantOfGoalsRequest
         {
             WorkItemId = item.TfsId,
             GoalIds = goalIds
@@ -146,7 +146,7 @@ public class WorkItemFilteringService
     public async Task<HashSet<int>> FilterByGoalsAsync(List<int> goalIds)
     {
         // Call API to get filtered IDs in a single batch operation
-        var request = new ApiClient.FilterByGoalsRequest { GoalIds = goalIds };
+        var request = new FilterByGoalsRequest { GoalIds = goalIds };
         var response = await _filteringClient.FilterByGoalsAsync(request);
         return new HashSet<int>(response.WorkItemIds);
     }
@@ -162,7 +162,6 @@ public class WorkItemFilteringService
             AreaPath = item.AreaPath,
             IterationPath = item.IterationPath,
             State = item.State,
-            JsonPayload = item.JsonPayload,
             RetrievedAt = item.RetrievedAt,
             Effort = item.Effort
         };

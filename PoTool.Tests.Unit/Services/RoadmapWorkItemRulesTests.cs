@@ -1,5 +1,6 @@
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -69,7 +70,6 @@ public sealed class RoadmapWorkItemRulesTests
             AreaPath = "Area",
             IterationPath = "Iteration",
             State = "Active",
-            JsonPayload = "{}",
             RetrievedAt = DateTimeOffset.UtcNow,
         };
     }

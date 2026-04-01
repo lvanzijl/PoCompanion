@@ -114,7 +114,7 @@
             // Load products for the active profile
             var profileProducts = activeProfile != null
                 ? (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList()
-                : new List<PoTool.Client.ApiClient.ProductDto>();
+                : new List<ProductDto>();
 
             // Resolve product name for context chip
             if (ProductId.HasValue)

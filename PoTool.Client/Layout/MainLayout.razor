@@ -1,6 +1,7 @@
-﻿@using PoTool.Client.Components.Settings
+@using PoTool.Client.Components.Settings
 @using PoTool.Client.Components.Onboarding
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Helpers
 @using PoTool.Client.Services
 @using PoTool.Client.Models
 @inject IOnboardingService OnboardingService
@@ -113,7 +114,8 @@
 
     private void NavigateToHome()
     {
-        NavigationManager.NavigateTo("/home");
+        var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
+        NavigationManager.NavigateTo(WorkspaceQueryContextHelper.BuildRoute(WorkspaceRoutes.Home, context));
     }
 
     private async Task NavigateToWorkspaceAsync(string route)
@@ -124,7 +126,9 @@
             NavigationManager.NavigateTo($"{WorkspaceRoutes.Home}?noProfile=true");
             return;
         }
-        NavigationManager.NavigateTo(route);
+
+        var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
+        NavigationManager.NavigateTo(WorkspaceQueryContextHelper.BuildRoute(route, context));
     }
 
     private async Task OpenOnboardingWizard()

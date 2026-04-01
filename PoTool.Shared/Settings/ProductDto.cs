@@ -36,4 +36,10 @@ public sealed record ProductDto(
     List<int> TeamIds,
     List<RepositoryDto> Repositories,
     EstimationMode EstimationMode = EstimationMode.StoryPoints
-);
+)
+{
+    public ProductDto()
+        : this(0, null, string.Empty, new List<int>(), 0, ProductPictureType.Default, 0, null, default, default, null, new List<int>(), new List<RepositoryDto>())
+    {
+    }
+}

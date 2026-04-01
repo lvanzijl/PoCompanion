@@ -5,9 +5,6 @@ using PoTool.Shared.Health;
 using PoTool.Shared.Metrics;
 using PoTool.Shared.PullRequests;
 using PoTool.Shared.WorkItems;
-using BacklogHealthDto = PoTool.Client.ApiClient.BacklogHealthDto;
-using ProductDto = PoTool.Client.ApiClient.ProductDto;
-using SprintDto = PoTool.Client.ApiClient.SprintDto;
 
 namespace PoTool.Client.Services;
 

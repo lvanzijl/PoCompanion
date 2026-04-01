@@ -1,6 +1,7 @@
 @page "/home"
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @using PoTool.Client.Services
 @using PoTool.Shared.Metrics
@@ -311,6 +312,13 @@
 
             var syncTask = LoadSyncStatusAsync(_lifetimeCts.Token);
             await LoadProductsAsync(_lifetimeCts.Token);
+
+            var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
+            if (context.ProductId.HasValue && _products.Any(product => product.Id == context.ProductId.Value))
+            {
+                _selectedProductId = context.ProductId.Value;
+            }
+
             await RefreshContextDataAsync();
             await syncTask;
         }
@@ -626,6 +634,11 @@
         }
 
         _selectedProductId = productId;
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.Home,
+                new WorkspaceQueryContext(ProductId: productId)),
+            forceLoad: false);
         await RefreshContextDataAsync();
     }
 

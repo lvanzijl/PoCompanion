@@ -58,7 +58,7 @@ public class ProductService
             ProductOwnerId = productOwnerId,
             Name = name,
             BacklogRootWorkItemIds = backlogRootWorkItemIds,
-            PictureType = (ApiClient.ProductPictureType)pictureType,
+            PictureType = pictureType,
             DefaultPictureId = pictureId,
             CustomPicturePath = customPicturePath
         };
@@ -82,7 +82,7 @@ public class ProductService
         {
             Name = name,
             BacklogRootWorkItemIds = backlogRootWorkItemIds,
-            PictureType = pictureType.HasValue ? (ApiClient.ProductPictureType?)pictureType.Value : null,
+            PictureType = pictureType,
             DefaultPictureId = defaultPictureId,
             CustomPicturePath = customPicturePath
         };

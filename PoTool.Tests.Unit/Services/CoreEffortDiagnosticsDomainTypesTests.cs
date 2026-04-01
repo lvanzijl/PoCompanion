@@ -1,4 +1,6 @@
 using PoTool.Core.Metrics.EffortDiagnostics;
+using ConcentrationRiskLevel = PoTool.Core.Metrics.EffortDiagnostics.ConcentrationRiskLevel;
+using ImbalanceRiskLevel = PoTool.Core.Metrics.EffortDiagnostics.ImbalanceRiskLevel;
 
 namespace PoTool.Tests.Unit.Services;
 

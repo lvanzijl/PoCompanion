@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -23,10 +24,6 @@ public class BugInsightsCalculatorTests
         string? severity = null)
     {
         var created = createdDate ?? DateTimeOffset.UtcNow.AddDays(-30);
-        var jsonPayload = severity != null
-            ? $"{{\"Microsoft.VSTS.Common.Severity\":\"{severity}\"}}"
-            : "{}";
-
         return new WorkItemDto
         {
             TfsId = tfsId,
@@ -41,7 +38,7 @@ public class BugInsightsCalculatorTests
             Description = null,
             CreatedDate = created,
             ClosedDate = closedDate,
-            Severity = severity, // Populate typed Severity property
+            Severity = severity,
             Tags = null
         };
     }

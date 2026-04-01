@@ -7,9 +7,9 @@ public sealed class BuildQualityPageDto
 {
     public int ProductOwnerId { get; set; }
 
-    public DateTime WindowStartUtc { get; set; }
+    public DateTimeOffset WindowStartUtc { get; set; }
 
-    public DateTime WindowEndUtc { get; set; }
+    public DateTimeOffset WindowEndUtc { get; set; }
 
     public IReadOnlyList<int> ProductIds { get; set; } = Array.Empty<int>();
 

@@ -1,7 +1,7 @@
 @page "/home/delivery"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Models
-@inject NavigationManager NavigationManager
+@inherits WorkspaceBase
 
 <PageTitle>Delivery - PO Companion</PageTitle>
 
@@ -109,6 +109,7 @@
 
     protected override void OnInitialized()
     {
+        ParseContextQueryParameters();
         _breadcrumbs = new List<BreadcrumbItem>
         {
             new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
@@ -118,41 +119,36 @@
 
     private void NavigateToSprintDelivery()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.SprintDelivery);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.SprintDelivery}{BuildContextQuery()}");
     }
 
     private void NavigateToPortfolioDelivery()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.PortfolioDelivery);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.PortfolioDelivery}{BuildContextQuery()}");
     }
 
     private void NavigateToSprintExecution()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.SprintExecution);
-    }
-
-    private void NavigateToHome()
-    {
-        NavigationManager.NavigateTo(WorkspaceRoutes.Home);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.SprintExecution}{BuildContextQuery()}");
     }
 
     private void NavigateToHealth()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.HealthWorkspace);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.HealthWorkspace}{BuildContextQuery()}");
     }
 
     private void NavigateToTrends()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.TrendsWorkspace);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.TrendsWorkspace}{BuildContextQuery()}");
     }
 
     private void NavigateToPlanning()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.PlanningWorkspace);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanningWorkspace}{BuildContextQuery()}");
     }
 
     private void NavigateToBacklogOverview()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BacklogOverview);
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.BacklogOverview}{BuildContextQuery()}");
     }
 }

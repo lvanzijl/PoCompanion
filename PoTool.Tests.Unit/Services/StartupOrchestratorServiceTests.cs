@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Client.Services;
+using StartupReadinessDto = PoTool.Client.Services.StartupReadinessDto;
 
 using PoTool.Core.WorkItems;
 

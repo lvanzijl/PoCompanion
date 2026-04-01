@@ -95,7 +95,8 @@ public class MetricsController : ControllerBase
 
             if (metrics == null)
             {
-                return NotFound($"No work items found for sprint scope: {iterationPath ?? sprintId?.ToString() ?? "unknown"}");
+                var emptyMetrics = CreateEmptySprintMetricsDto(resolution, iterationPath, sprintId);
+                return Ok(SprintFilterResolutionService.ToResponse(emptyMetrics, resolution));
             }
 
             return Ok(SprintFilterResolutionService.ToResponse(metrics, resolution));
@@ -143,7 +144,8 @@ public class MetricsController : ControllerBase
 
             if (health == null)
             {
-                return NotFound($"No work items found for sprint scope: {iterationPath ?? sprintId?.ToString() ?? "unknown"}");
+                var emptyHealth = CreateEmptyBacklogHealthDto(resolution, iterationPath, sprintId);
+                return Ok(SprintFilterResolutionService.ToResponse(emptyHealth, resolution));
             }
 
             return Ok(SprintFilterResolutionService.ToResponse(health, resolution));
@@ -1027,5 +1029,65 @@ public class MetricsController : ControllerBase
             _logger.LogError(ex, "Error retrieving work item activity details for WorkItemId: {WorkItemId}", workItemId);
             return StatusCode(500, "Error retrieving work item activity details");
         }
+    }
+
+    private static SprintMetricsDto CreateEmptySprintMetricsDto(
+        SprintFilterResolution resolution,
+        string? iterationPath,
+        int? sprintId)
+    {
+        var effectiveIterationPath = resolution.EffectiveFilter.IterationPaths.FirstOrDefault()
+            ?? iterationPath
+            ?? (sprintId.HasValue ? $"Sprint {sprintId.Value}" : "Unknown sprint");
+
+        return new SprintMetricsDto(
+            IterationPath: effectiveIterationPath,
+            SprintName: ExtractSprintName(effectiveIterationPath, sprintId),
+            StartDate: resolution.EffectiveFilter.RangeStartUtc,
+            EndDate: resolution.EffectiveFilter.RangeEndUtc,
+            CompletedStoryPoints: 0,
+            PlannedStoryPoints: 0,
+            CompletedWorkItemCount: 0,
+            TotalWorkItemCount: 0,
+            CompletedPBIs: 0,
+            CompletedBugs: 0,
+            CompletedTasks: 0);
+    }
+
+    private static BacklogHealthDto CreateEmptyBacklogHealthDto(
+        SprintFilterResolution resolution,
+        string? iterationPath,
+        int? sprintId)
+    {
+        var effectiveIterationPath = resolution.EffectiveFilter.IterationPaths.FirstOrDefault()
+            ?? iterationPath
+            ?? (sprintId.HasValue ? $"Sprint {sprintId.Value}" : "Unknown sprint");
+
+        return new BacklogHealthDto(
+            IterationPath: effectiveIterationPath,
+            SprintName: ExtractSprintName(effectiveIterationPath, sprintId),
+            TotalWorkItems: 0,
+            WorkItemsWithoutEffort: 0,
+            WorkItemsInProgressWithoutEffort: 0,
+            ParentProgressIssues: 0,
+            BlockedItems: 0,
+            InProgressAtIterationEnd: 0,
+            IterationStart: resolution.EffectiveFilter.RangeStartUtc,
+            IterationEnd: resolution.EffectiveFilter.RangeEndUtc,
+            ValidationIssues: Array.Empty<ValidationIssueSummary>());
+    }
+
+    private static string ExtractSprintName(string iterationPath, int? sprintId)
+    {
+        if (!string.IsNullOrWhiteSpace(iterationPath))
+        {
+            var segments = iterationPath.Split('\\', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (segments.Length > 0)
+            {
+                return segments[^1];
+            }
+        }
+
+        return sprintId.HasValue ? $"Sprint {sprintId.Value}" : "Unknown sprint";
     }
 }

@@ -23,7 +23,18 @@ public class BacklogHealthCalculationService
     /// <returns>Health score from 0 to 100.</returns>
     public async Task<int> CalculateHealthScoreAsync(BacklogHealthDto iteration)
     {
-        var request = new ApiClient.CalculateHealthScoreRequest
+        var response = await CalculateHealthScoreDetailsAsync(iteration);
+        return response.HealthScore;
+    }
+
+    /// <summary>
+    /// Calculates the health score details for an iteration based on validation issues.
+    /// </summary>
+    /// <param name="iteration">Iteration health data.</param>
+    /// <returns>Health score response including counted issues.</returns>
+    public async Task<CalculateHealthScoreResponse> CalculateHealthScoreDetailsAsync(BacklogHealthDto iteration)
+    {
+        var request = new CalculateHealthScoreRequest
         {
             TotalWorkItems = iteration.TotalWorkItems,
             WorkItemsWithoutEffort = iteration.WorkItemsWithoutEffort,
@@ -32,8 +43,7 @@ public class BacklogHealthCalculationService
             BlockedItems = iteration.BlockedItems
         };
 
-        var response = await _healthCalculationClient.CalculateHealthScoreAsync(request);
-        return response.HealthScore;
+        return await _healthCalculationClient.CalculateHealthScoreAsync(request);
     }
 
     /// <summary>

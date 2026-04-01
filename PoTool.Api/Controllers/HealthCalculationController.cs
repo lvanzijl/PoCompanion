@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using PoTool.Api.Filters;
 using PoTool.Core.Health;
 using PoTool.Shared.Health;
 
@@ -29,11 +30,17 @@ public class HealthCalculationController : ControllerBase
     /// <param name="request">Health calculation request containing issue counts.</param>
     /// <returns>Health score from 0 to 100.</returns>
     [HttpPost("calculate-score")]
+    [EnforceObjectResultType(typeof(CalculateHealthScoreResponse))]
     public ActionResult<CalculateHealthScoreResponse> CalculateHealthScore(
         [FromBody] CalculateHealthScoreRequest request)
     {
         try
         {
+            var totalIssues = request.WorkItemsWithoutEffort
+                + request.WorkItemsInProgressWithoutEffort
+                + request.ParentProgressIssues
+                + request.BlockedItems;
+
             var score = _calculator.CalculateHealthScore(
                 request.TotalWorkItems,
                 request.WorkItemsWithoutEffort,
@@ -42,10 +49,13 @@ public class HealthCalculationController : ControllerBase
                 request.BlockedItems
             );
 
-            return Ok(new CalculateHealthScoreResponse
+            var response = new CalculateHealthScoreResponse
             {
-                HealthScore = score
-            });
+                HealthScore = score,
+                TotalIssues = totalIssues
+            };
+
+            return Ok(response);
         }
         catch (Exception ex)
         {

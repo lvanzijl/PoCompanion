@@ -113,14 +113,6 @@ builder.Services.AddScoped<IPipelinesClient>(sp =>
     return client;
 });
 
-builder.Services.AddScoped<IBuildQualityClient>(sp =>
-{
-    var httpClient = sp.GetRequiredService<HttpClient>();
-    var client = new BuildQualityClient(httpClient);
-    client.BaseUrl = apiBaseUrl;
-    return client;
-});
-
 builder.Services.AddScoped<IProductsClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();

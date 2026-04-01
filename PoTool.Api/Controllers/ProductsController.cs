@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
+using PoTool.Api.Filters;
 using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Commands;
 using PoTool.Core.Settings.Queries;
@@ -109,6 +110,7 @@ public class ProductsController : ControllerBase
     /// Deletes a product.
     /// </summary>
     [HttpDelete("{id}")]
+    [AllowUntypedResponse]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteProduct(int id, CancellationToken cancellationToken)
@@ -142,6 +144,7 @@ public class ProductsController : ControllerBase
     /// Links a team to a product.
     /// </summary>
     [HttpPost("{productId}/teams/{teamId}")]
+    [AllowUntypedResponse]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> LinkTeamToProduct(
@@ -163,6 +166,7 @@ public class ProductsController : ControllerBase
     /// Unlinks a team from a product.
     /// </summary>
     [HttpDelete("{productId}/teams/{teamId}")]
+    [AllowUntypedResponse]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UnlinkTeamFromProduct(
@@ -258,6 +262,7 @@ public class ProductsController : ControllerBase
     /// Deletes a repository configuration from a product.
     /// </summary>
     [HttpDelete("{productId}/repositories/{repositoryId}")]
+    [AllowUntypedResponse]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteRepository(

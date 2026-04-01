@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
 using PoTool.Client.Models;
+using PoTool.Shared.WorkItems;
 using System.Text.Json;
 using Moq;
 

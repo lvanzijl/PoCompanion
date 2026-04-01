@@ -52,8 +52,8 @@ public sealed class GetBuildQualitySprintQueryHandler
             SprintId = sprint.Id,
             SprintName = sprint.Name,
             TeamId = sprint.TeamId,
-            SprintStartUtc = sprint.StartDateUtc,
-            SprintEndUtc = sprint.EndDateUtc,
+            SprintStartUtc = ToUtcOffset(sprint.StartDateUtc),
+            SprintEndUtc = ToUtcOffset(sprint.EndDateUtc),
             ProductIds = selection.ProductIds,
             DefaultBranches = selection.DefaultBranches,
             Summary = _buildQualityProvider.Compute(selection.Builds, selection.TestRuns, selection.Coverages),
@@ -79,4 +79,9 @@ public sealed class GetBuildQualitySprintQueryHandler
             Summary = _buildQualityProvider.Compute(Array.Empty<BuildQualityBuildFact>(), Array.Empty<BuildQualityTestRunFact>(), Array.Empty<BuildQualityCoverageFact>())
         };
     }
+
+    private static DateTimeOffset? ToUtcOffset(DateTime? value)
+        => value.HasValue
+            ? new DateTimeOffset(DateTime.SpecifyKind(value.Value, DateTimeKind.Utc))
+            : null;
 }

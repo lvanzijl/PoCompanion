@@ -571,7 +571,7 @@
                 rangeEndUtc: null,
                 _includeArchivedSnapshots,
                 _compareToSnapshotId);
-            _signals = signalResponse.Signals;
+            _signals = signalResponse.Signals.ToArray();
 
             if (_compareToSnapshotId.HasValue
                 && _trend?.Snapshots.All(snapshot => snapshot.SnapshotId != _compareToSnapshotId.Value) == true)
