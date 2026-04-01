@@ -29,14 +29,6 @@ public sealed class EnforceObjectResultTypeAttribute : ResultFilterAttribute
             return;
         }
 
-        var actualType = value.GetType();
-        if (actualType == ExpectedType)
-        {
-            return;
-        }
-
-        throw new InvalidOperationException(
-            $"Response contract violation for '{context.ActionDescriptor.DisplayName ?? "unknown action"}'. " +
-            $"Expected exact payload type '{ExpectedType.FullName}' but got '{actualType.FullName}'.");
+        ObjectResultTypeContractValidator.EnsureCompatible(ExpectedType, value, context.ActionDescriptor.DisplayName);
     }
 }

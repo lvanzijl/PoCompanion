@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.EntityFrameworkCore;
+using PoTool.Api.Filters;
 using PoTool.Api.Hubs;
 using PoTool.Api.Persistence;
 using PoTool.Api.Repositories;
@@ -50,7 +51,10 @@ public static class ApiServiceCollectionExtensions
         Action<IServiceCollection, IConfiguration>? configureDatabase = null)
     {
         // Add controllers and OpenAPI
-        services.AddControllers();
+        services.AddControllers(options =>
+        {
+            options.Filters.Add(new EnforceSharedDtoActionResultContractFilter());
+        });
         services.AddOpenApi();
 
         // Add OpenAPI/Swagger support with NSwag
