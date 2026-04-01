@@ -14,25 +14,25 @@ The planning area currently consists of one navigation hub and two concrete plan
 
 | Route | File | Role |
 | --- | --- | --- |
-| `/home/planning` | `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/PlanningWorkspace.razor` | Lightweight planning hub that links to the roadmap and plan-board tools. |
-| `/planning/product-roadmaps` | `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/ProductRoadmaps.razor` | Read-only cross-product roadmap overview. |
-| `/planning/product-roadmaps/{productId}` | `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/ProductRoadmapEditor.razor` | Editable per-product roadmap planning surface for epics. |
-| `/planning/plan-board` | `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/PlanBoard.razor` | Operational sprint planning board for PBIs and bugs. |
+| `/home/planning` | `PoTool.Client/Pages/Home/PlanningWorkspace.razor` | Lightweight planning hub that links to the roadmap and plan-board tools. |
+| `/planning/product-roadmaps` | `PoTool.Client/Pages/Home/ProductRoadmaps.razor` | Read-only cross-product roadmap overview. |
+| `/planning/product-roadmaps/{productId}` | `PoTool.Client/Pages/Home/ProductRoadmapEditor.razor` | Editable per-product roadmap planning surface for epics. |
+| `/planning/plan-board` | `PoTool.Client/Pages/Home/PlanBoard.razor` | Operational sprint planning board for PBIs and bugs. |
 
-The route constants are centralized in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Models/WorkspaceRoutes.cs:118-132`, and the planning hub itself is intentionally static: it does not load planning data before the user chooses a destination (`PlanningWorkspace.razor:32-60`; `docs/architecture/navigation-map.md:357-370`).
+The route constants are centralized in `PoTool.Client/Models/WorkspaceRoutes.cs:118-132`, and the planning hub itself is intentionally static: it does not load planning data before the user chooses a destination (`PlanningWorkspace.razor:32-60`; `docs/architecture/navigation-map.md:357-370`).
 
 ### 1.2 Key UI components and helpers
 
 The current planning implementation is split between direct page logic and shared client helpers:
 
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Services/PlanBoardWorkItemRules.cs`
+- `PoTool.Client/Services/PlanBoardWorkItemRules.cs`
   - defines what can appear on the plan board
   - builds the candidate hierarchy
   - decides whether an item is already assigned to a visible sprint
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Services/RoadmapWorkItemRules.cs`
+- `PoTool.Client/Services/RoadmapWorkItemRules.cs`
   - identifies epics/objectives
   - interprets the `roadmap` tag used for roadmap membership
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Services/RoadmapEpicPriorityReorderPlanner.cs`
+- `PoTool.Client/Services/RoadmapEpicPriorityReorderPlanner.cs`
   - computes priority-preserving reorder writes for roadmap epics
 
 The roadmap page also exposes reporting and snapshot features, but those are read-only extras around the roadmap overview rather than alternative planning models (`ProductRoadmaps.razor:39-97`, `docs/architecture/navigation-map.md:523-526`).
@@ -100,7 +100,7 @@ Only the next three future sprints are surfaced in the board (`PlanBoard.razor:5
 
 ## 3. How planning behavior works
 
-## 3.1 Planning hub behavior
+### 3.1 Planning hub behavior
 
 `/home/planning` is a pure navigation workspace. It provides two entry points:
 
@@ -109,9 +109,9 @@ Only the next three future sprints are surfaced in the board (`PlanBoard.razor:5
 
 It also includes links outward to health, trends, backlog health, and delivery, but it does not perform any planning logic itself (`PlanningWorkspace.razor:32-95`).
 
-## 3.2 How items are assigned to sprints
+### 3.2 How items are assigned to sprints
 
-### Board loading
+#### Board loading
 
 When the plan board loads a product, it:
 
@@ -131,7 +131,7 @@ Implementation:
 - `PlanBoard.razor:636-675`
 - `PlanBoardWorkItemRules.cs:46-121`
 
-### Assignment interaction
+#### Assignment interaction
 
 Sprint assignment is explicit drag-and-drop or drag-move only:
 
@@ -143,7 +143,7 @@ The actual persisted value is the target sprint's `Path`, written as the work it
 
 There is no intermediate draft model. The board writes immediately and then reloads.
 
-## 3.3 How roadmap changes are persisted
+### 3.3 How roadmap changes are persisted
 
 Roadmap edits are also immediate-write operations:
 
@@ -161,7 +161,7 @@ Key implementation paths:
 
 If reordering cannot safely reuse existing priorities because priorities are missing, invalid, or duplicated, the editor first normalizes priorities to deterministic `1000.0` spacing and then retries (`ProductRoadmapEditor.razor:1061-1078`, `1144-1169`; `RoadmapEpicPriorityReorderPlanner.cs:21-91`).
 
-## 3.4 How changes are persisted to TFS
+### 3.4 How changes are persisted to TFS
 
 The client does not write directly from components with ad hoc `HttpClient` code. It goes through typed services:
 
@@ -192,11 +192,11 @@ Examples:
 
 For `IterationPath` and `BacklogPriority`, the handlers explicitly override the refreshed entity with the just-written value so the cache still reflects the intended new state even if TFS re-reads are temporarily stale (`UpdateWorkItemIterationPathCommandHandler.cs:41-66`, `UpdateWorkItemBacklogPriorityCommandHandler.cs:41-66`). The test coverage for iteration-path updates documents this behavior directly (`PoTool.Tests.Unit/Handlers/UpdateWorkItemIterationPathCommandHandlerTests.cs:49-155`).
 
-## 3.5 Manual or assisted planning
+### 3.5 Manual or assisted planning
 
 The current planning model is predominantly **manual with lightweight indicators**.
 
-### What is manual
+#### What is manual
 
 - Users choose the product.
 - Users drag items into sprints manually.
@@ -204,14 +204,14 @@ The current planning model is predominantly **manual with lightweight indicators
 - Users decide whether an epic belongs on the roadmap by tag membership.
 - Users must refresh from TFS manually when they want a fresh board snapshot (`PlanBoard.razor:36-42`, `606-633`).
 
-### What assistance exists
+#### What assistance exists
 
 - capacity visualization based on historical velocity (`PlanBoard.razor:168-207`, `1001-1030`)
 - warnings for overcommitment and missing estimates (`PlanBoard.razor:196-203`, `255-259`, `885-890`)
 - hierarchy aggregation so parent drag operations can place all eligible descendants (`PlanBoardWorkItemRules.cs:124-183`)
 - roadmap reorder recovery when priorities are malformed (`ProductRoadmapEditor.razor:1144-1169`)
 
-### What assistance does not exist
+#### What assistance does not exist
 
 There is no evidence of:
 
@@ -226,9 +226,9 @@ Capacity is advisory only; the UI warns when assigned points exceed historical c
 
 ## 4. Limitations in the current planning model
 
-## 4.1 What the current planning cannot express well
+### 4.1 What the current planning cannot express well
 
-### Multi-team planning
+#### Multi-team planning
 
 The plan board loads sprints from `product.TeamIds.First()` only (`PlanBoard.razor:564-575`). That means:
 
@@ -236,11 +236,11 @@ The plan board loads sprints from `product.TeamIds.First()` only (`PlanBoard.raz
 - team-specific planning trade-offs are hidden
 - the first team effectively becomes the planning authority for sprint selection
 
-### More than three planning horizons
+#### More than three planning horizons
 
 The board deliberately limits the planning horizon to the next three future sprints (`PlanBoard.razor:570-574`). Longer-range sprint sequencing is not visible in this surface.
 
-### Rich roadmap structure
+#### Rich roadmap structure
 
 The roadmap editor is an ordered epic list, not a full release model. It does not model:
 
@@ -250,7 +250,7 @@ The roadmap editor is an ordered epic list, not a full release model. It does no
 - alternative scenarios or draft plans
 - multiple parallel lanes per product beyond membership/order
 
-### Detailed intra-sprint planning
+#### Detailed intra-sprint planning
 
 Within a sprint column, the board shows assigned items but does not provide a richer model for:
 
@@ -259,7 +259,7 @@ Within a sprint column, the board shows assigned items but does not provide a ri
 - explicit dependency chains
 - splitting work across multiple sprints/teams
 
-### Drafting or approval workflows
+#### Drafting or approval workflows
 
 Both roadmap and sprint planning write directly to TFS-backed state. There is no explicit concept of:
 
@@ -270,9 +270,9 @@ Both roadmap and sprint planning write directly to TFS-backed state. There is no
 
 Snapshots exist for the roadmap overview, but not as a general planning draft workflow (`ProductRoadmaps.razor:77-97`; `docs/architecture/navigation-map.md:524-526`).
 
-## 4.2 Where users are likely to struggle
+### 4.2 Where users are likely to struggle
 
-### Products with more than one team
+#### Products with more than one team
 
 Because sprint planning uses the first team only, users in multi-team products are likely to struggle to understand:
 
@@ -280,33 +280,33 @@ Because sprint planning uses the first team only, users in multi-team products a
 - how to represent cross-team parallel execution
 - whether another team's capacity matters
 
-### Unestimated work
+#### Unestimated work
 
 The board allows items with no estimate to be planned and only flags them with a warning (`PlanBoard.razor:255-259`, `885-890`). Users can therefore create a plan that appears valid structurally but weakens the capacity signal.
 
-### Hidden assignment scope on parent drag
+#### Hidden assignment scope on parent drag
 
 Dragging an epic or feature plans all eligible descendant PBIs/bugs via `EligiblePbiIds` (`PlanBoardWorkItemRules.cs:141-143`, `166-167`, `265-267`). That is efficient, but the UI model can make it easy to underestimate how many underlying items are about to be reassigned.
 
-### Immediate-write behavior
+#### Immediate-write behavior
 
 Because edits persist immediately, users do not get a safe staging area for experimentation. Mistakes must be corrected by further writes rather than by discarding a draft.
 
-### Priority recovery and ordering edge cases
+#### Priority recovery and ordering edge cases
 
 Roadmap reordering depends on existing `BacklogPriority` quality. The editor contains recovery logic for missing/duplicate/invalid priorities, which is helpful, but it also reveals that roadmap ordering can become hard to reason about when TFS priorities are already inconsistent (`RoadmapEpicPriorityReorderPlanner.cs:48-69`; `ProductRoadmapEditor.razor:1144-1169`).
 
 ## 5. Implicit assumptions in the current design
 
-## 5.1 Single team over multiple teams
+### 5.1 Single team over multiple teams
 
 The implementation assumes sprint planning is effectively **single-team per product** because it always pulls sprints from the first team attached to the product (`PlanBoard.razor:567-569`).
 
-## 5.2 Sequential over parallel work
+### 5.2 Sequential over parallel work
 
 Roadmap planning assumes a single ordered backlog for epics inside a product. Sprint planning assumes one visible sequence of up to three sprint buckets. Neither surface expresses a richer model of concurrent streams, shared ownership, or parallel team tracks.
 
-## 5.3 Capacity awareness is present but lightweight
+### 5.3 Capacity awareness is present but lightweight
 
 Capacity awareness exists, but only as an advisory overlay:
 
@@ -316,7 +316,7 @@ Capacity awareness exists, but only as an advisory overlay:
 
 So capacity awareness is **present**, but it is **not a governing planner**.
 
-## 5.4 TFS as the source of truth
+### 5.4 TFS as the source of truth
 
 Both planning experiences assume TFS-backed fields are canonical:
 
@@ -326,7 +326,7 @@ Both planning experiences assume TFS-backed fields are canonical:
 
 The application cache is deliberately kept aligned with those TFS writes, but not treated as the primary source of truth (`UpdateWorkItemIterationPathCommandHandler.cs:41-66`; `UpdateWorkItemBacklogPriorityCommandHandler.cs:41-66`; `UpdateWorkItemTagsCommandHandler.cs:34-47`).
 
-## 5.5 Product-scoped planning
+### 5.5 Product-scoped planning
 
 Both planning surfaces center planning around a selected product. There is no current cross-product planning model for balancing a shared team or portfolio-wide sprint allocation from this workspace.
 
