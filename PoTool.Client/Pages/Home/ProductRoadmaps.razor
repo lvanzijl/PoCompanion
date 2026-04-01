@@ -291,8 +291,31 @@
                                                 <div class="projection-timeline-track">
                                                     @if (row.HasTimelineBar)
                                                     {
-                                                        <div class="@GetTimelineBarClass(row)"
-                                                             style="@GetTimelineBarStyle(row)"></div>
+                                                        <MudTooltip Placement="Placement.Top" Arrow="true">
+                                                            <ChildContent>
+                                                                <div class="@GetTimelineBarClass(row)"
+                                                                     style="@GetTimelineBarStyle(row)">
+                                                                    <div class="@GetTimelineEndMarkerClass(row)"></div>
+                                                                </div>
+                                                            </ChildContent>
+                                                            <TooltipContent>
+                                                                <MudStack Spacing="1" Style="font-size: 0.75rem; max-width: 220px;">
+                                                                    <MudText Typo="Typo.caption" Style="font-weight: 600;">@row.EndDate!.Value.LocalDateTime.ToString("dd MMM yyyy")</MudText>
+                                                                    <MudText Typo="Typo.caption">Projected completion (authoritative)</MudText>
+                                                                    @if (row.IsLowConfidence)
+                                                                    {
+                                                                        <MudText Typo="Typo.caption" Color="Color.Warning">Low confidence forecast</MudText>
+                                                                    }
+                                                                    @if (row.IsDelayed)
+                                                                    {
+                                                                        <MudText Typo="Typo.caption" Color="Color.Error">Overdue — completion not yet recorded</MudText>
+                                                                    }
+                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="font-style: italic;">
+                                                                        Start is estimated from forecast, not actual data.
+                                                                    </MudText>
+                                                                </MudStack>
+                                                            </TooltipContent>
+                                                        </MudTooltip>
                                                     }
                                                     else
                                                     {
@@ -697,16 +720,30 @@
         top: 0;
         height: 100%;
         border-radius: 999px;
-        background: var(--mud-palette-primary);
+        /* Option A: certainty gradient — solid at right (end-date) → fade toward left (derived start) */
+        background: linear-gradient(to right, transparent 0%, var(--mud-palette-primary) 100%);
         min-width: 8px;
+        overflow: visible;
     }
     .projection-timeline-bar-delayed {
-        background: var(--mud-palette-error);
+        /* Delayed: gradient ends in error colour; whole bar is NOT highlighted */
+        background: linear-gradient(to right, transparent 0%, var(--mud-palette-error) 100%);
     }
     .projection-timeline-bar-low-confidence {
-        opacity: 0.55;
-        border: 1px dashed rgba(255,255,255,0.9);
-        box-sizing: border-box;
+        /* Low confidence: reduce overall opacity; keep gradient shape */
+        opacity: 0.45;
+    }
+    .projection-timeline-end-marker {
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: 4px;
+        height: 100%;
+        border-radius: 0 999px 999px 0;
+        background: var(--mud-palette-primary);
+    }
+    .projection-timeline-end-marker-delayed {
+        background: var(--mud-palette-error);
     }
     .projection-timeline-missing {
         display: flex;
@@ -1457,6 +1494,11 @@
 
     private static string GetTimelineBarStyle(RoadmapTimelineRow row)
         => $"left: {row.LeftPercent.GetValueOrDefault():F2}%; width: {Math.Max(row.WidthPercent.GetValueOrDefault(), 2d):F2}%;";
+
+    private static string GetTimelineEndMarkerClass(RoadmapTimelineRow row)
+        => row.IsDelayed
+            ? "projection-timeline-end-marker projection-timeline-end-marker-delayed"
+            : "projection-timeline-end-marker";
 
     private static string FormatDelayDuration(TimeSpan? delay)
     {
