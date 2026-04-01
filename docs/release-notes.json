@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-04-01",
+    "type": "Changed",
+    "title": "Planning now supports project aliases and project-first selection",
+    "impact": "Plan Board and Product Roadmaps now accept project-alias URLs, show a project selector above the product context, and keep existing productId planning routes working for backward compatibility.",
+    "area": "Planning",
+    "link": "/home/planning"
+  },
+  {
     "date": "2026-03-31",
     "type": "Changed",
     "title": "Backlog health iteration cards now show counted issues",
