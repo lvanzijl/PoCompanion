@@ -42,6 +42,17 @@
             </MudStack>
 
             <MudGrid Spacing="2" Class="mt-1">
+                @if (!string.IsNullOrWhiteSpace(ProjectAlias))
+                {
+                    <MudItem xs="12" sm="6" md="4">
+                        <NavigationTileCard Title="Project Overview"
+                                            Subtitle="Review project-wide planning signals before drilling in"
+                                            Icon="@Icons.Material.Filled.FolderSpecial"
+                                            IconColor="Color.Info"
+                                            AriaLabel="Project Overview — Review project-wide planning signals before drilling in"
+                                            OnClick="NavigateToProjectOverview" />
+                    </MudItem>
+                }
                 <MudItem xs="12" sm="6" md="4">
                     <NavigationTileCard Title="Product Roadmaps"
                                         Subtitle="Review epic order before roadmap changes"
@@ -125,6 +136,16 @@
             : WorkspaceRoutes.GetProjectPlanBoard(ProjectAlias);
 
         NavigationManager.NavigateTo($"{route}{BuildContextQuery()}");
+    }
+
+    private void NavigateToProjectOverview()
+    {
+        if (string.IsNullOrWhiteSpace(ProjectAlias))
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.GetProjectPlanningOverview(ProjectAlias)}{BuildContextQuery()}");
     }
 
     private void NavigateToHealth()

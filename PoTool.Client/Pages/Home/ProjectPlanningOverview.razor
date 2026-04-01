@@ -1,0 +1,240 @@
+@page "/planning/{ProjectAliasRoute}/overview"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Helpers
+@using PoTool.Client.Models
+@using PoTool.Shared.Planning
+@inherits WorkspaceBase
+@inject ProjectService ProjectService
+
+<PageTitle>Project Planning Overview - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 mb-4">
+    <MudStack Spacing="3">
+        <MudPaper Elevation="1" Class="pa-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudStack Spacing="1">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.FolderSpecial" Color="Color.Primary" Size="Size.Large" />
+                        <MudText Typo="Typo.h4">Project Planning Overview</MudText>
+                    </MudStack>
+                    <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+                </MudStack>
+
+                <MudStack Row="true" Spacing="2">
+                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                   Icon="@Icons.Material.Filled.Map"
+                                   OnClick="NavigateToRoadmaps"
+                                   Disabled="@(_summary is null)">
+                        Roadmaps
+                    </CompactButton>
+                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                   Icon="@Icons.Material.Filled.ViewColumn"
+                                   OnClick="NavigateToPlanBoard"
+                                   Disabled="@(_summary is null)">
+                        Plan Board
+                    </CompactButton>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+
+        @if (_isLoading)
+        {
+            <LoadingIndicator IsLoading="true" />
+        }
+        else if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
+        }
+        else if (_summary is null)
+        {
+            <MudAlert Severity="Severity.Info">Project planning summary is unavailable.</MudAlert>
+        }
+        else
+        {
+            <MudPaper Elevation="1" Class="pa-4">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.overline" Color="Color.Secondary">Project context</MudText>
+                    <MudText Typo="Typo.h5">@_summary.ProjectAlias</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Read-only summary across @_summary.ProductCount product@(_summary.ProductCount == 1 ? "" : "s").
+                    </MudText>
+                </MudStack>
+
+                <MudGrid Spacing="2" Class="mt-2">
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Outlined="true" Class="pa-3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Roadmap epics</MudText>
+                            <MudText Typo="Typo.h5">@_summary.TotalEpics</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Outlined="true" Class="pa-3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Planned PBIs</MudText>
+                            <MudText Typo="Typo.h5">@_summary.PlannedPBIs / @_summary.TotalPBIs</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Outlined="true" Class="pa-3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Planned effort</MudText>
+                            <MudText Typo="Typo.h5">@_summary.PlannedEffort / @_summary.TotalEffort</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Outlined="true" Class="pa-3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Capacity / sprint</MudText>
+                            <MudText Typo="Typo.h5">@FormatCapacity(_summary.CapacityPerSprint)</MudText>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            <MudPaper Elevation="1" Class="pa-4">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.overline" Color="Color.Secondary">Detected risks</MudText>
+                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                        <MudChip T="string" Color="@GetRiskColor(HasProductImbalance())" Variant="Variant.Outlined">
+                            @GetProductImbalanceLabel()
+                        </MudChip>
+                        <MudChip T="string" Color="@GetRiskColor(HasPlanningGap())" Variant="Variant.Outlined">
+                            @GetPlanningGapLabel()
+                        </MudChip>
+                        <MudChip T="string" Color="@GetRiskColor(_summary.OvercommitIndicator)" Variant="Variant.Outlined">
+                            @(_summary.OvercommitIndicator ? "Overcommitted across visible sprint scope" : "Capacity window is within range")
+                        </MudChip>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+
+            <MudPaper Elevation="1" Class="pa-4">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.overline" Color="Color.Secondary">Product distribution</MudText>
+                    <MudTable Items="@_summary.Products" Dense="true" Hover="true" Elevation="0">
+                        <HeaderContent>
+                            <MudTh>Product</MudTh>
+                            <MudTh>Roadmap epics</MudTh>
+                            <MudTh>PBIs</MudTh>
+                            <MudTh>Planned</MudTh>
+                            <MudTh>Effort</MudTh>
+                            <MudTh>Capacity / sprint</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.ProductName</MudTd>
+                            <MudTd>@context.EpicCount</MudTd>
+                            <MudTd>@context.TotalPBIs</MudTd>
+                            <MudTd>@context.PlannedPBIs</MudTd>
+                            <MudTd>@context.PlannedEffort / @context.TotalEffort</MudTd>
+                            <MudTd>@FormatCapacity(context.CapacityPerSprint)</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudStack>
+            </MudPaper>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    [Parameter]
+    public string ProjectAliasRoute { get; set; } = string.Empty;
+
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private ProjectPlanningSummaryDto? _summary;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ParseContextQueryParameters();
+
+        if (!await EnsureProfileAsync())
+        {
+            return;
+        }
+
+        ProjectAlias = ProjectAliasRoute;
+        _breadcrumbs =
+        [
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
+            new("Planning", WorkspaceRoutes.PlanningWorkspace, icon: Icons.Material.Filled.CalendarMonth),
+            new("Overview", null, disabled: true, icon: Icons.Material.Filled.FolderSpecial)
+        ];
+
+        try
+        {
+            _summary = await ProjectService.GetPlanningSummaryAsync(ProjectAliasRoute);
+            if (_summary == null)
+            {
+                _errorMessage = "Project planning summary not found.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Could not load project planning summary: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void NavigateToRoadmaps()
+        => NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.GetProjectProductRoadmaps(ProjectAliasRoute),
+                new WorkspaceQueryContext(ProjectAliasRoute)));
+
+    private void NavigateToPlanBoard()
+        => NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.GetProjectPlanBoard(ProjectAliasRoute),
+                new WorkspaceQueryContext(ProjectAliasRoute)));
+
+    private bool HasProductImbalance()
+    {
+        if (_summary is null || _summary.TotalEffort <= 0 || _summary.Products.Count == 0)
+        {
+            return false;
+        }
+
+        var leadingEffort = _summary.Products.Max(static product => product.TotalEffort);
+        return leadingEffort / (double)_summary.TotalEffort > 0.6d;
+    }
+
+    private string GetProductImbalanceLabel()
+    {
+        if (_summary is null || _summary.Products.Count == 0)
+        {
+            return "Product balance unavailable";
+        }
+
+        var leadingProduct = _summary.Products.MaxBy(static product => product.TotalEffort);
+        if (leadingProduct == null || _summary.TotalEffort <= 0)
+        {
+            return "Product balance unavailable";
+        }
+
+        var share = leadingProduct.TotalEffort / (double)_summary.TotalEffort * 100d;
+        return HasProductImbalance()
+            ? $"{leadingProduct.ProductName} holds {share:F0}% of project effort"
+            : "Effort distribution is balanced";
+    }
+
+    private bool HasPlanningGap()
+        => _summary is { TotalPBIs: > 0 } && _summary.UnplannedPBIs / (double)_summary.TotalPBIs > 0.5d;
+
+    private string GetPlanningGapLabel()
+    {
+        if (_summary is null || _summary.TotalPBIs == 0)
+        {
+            return "Planning gap unavailable";
+        }
+
+        var ratio = _summary.UnplannedPBIs / (double)_summary.TotalPBIs * 100d;
+        return HasPlanningGap()
+            ? $"{ratio:F0}% of PBIs are still unplanned"
+            : $"{ratio:F0}% of PBIs are unplanned";
+    }
+
+    private static Color GetRiskColor(bool isRisk) => isRisk ? Color.Warning : Color.Success;
+
+    private static string FormatCapacity(double capacity) => capacity <= 0 ? "N/A" : $"{capacity:F1}";
+}

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using PoTool.Shared.Planning;
 
 namespace PoTool.Client.Services;
 
@@ -69,5 +70,28 @@ public class ProjectService
             cancellationToken);
 
         return products ?? [];
+    }
+
+    /// <summary>
+    /// Gets the read-only planning summary for a project resolved by alias or internal identifier.
+    /// </summary>
+    public async Task<ProjectPlanningSummaryDto?> GetPlanningSummaryAsync(string aliasOrId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(aliasOrId))
+        {
+            return null;
+        }
+
+        using var response = await _httpClient.GetAsync(
+            $"api/projects/{Uri.EscapeDataString(aliasOrId)}/planning-summary",
+            cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ProjectPlanningSummaryDto>(SerializerOptions, cancellationToken);
     }
 }

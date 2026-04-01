@@ -164,6 +164,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<SyncChangesSummaryService>();
         services.AddScoped<ExportConfigurationService>();
         services.AddScoped<ImportConfigurationService>();
+        services.AddScoped<ProjectPlanningSummaryService>();
         services.AddScoped<IBuildQualityReadStore, EfBuildQualityReadStore>();
         services.AddScoped<IBuildQualityProvider, BuildQualityProvider>();
         services.AddScoped<DeliveryFilterResolutionService>();

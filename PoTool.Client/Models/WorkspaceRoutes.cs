@@ -116,6 +116,11 @@ public static class WorkspaceRoutes
     public const string DependencyOverview = "/home/dependencies";
 
     /// <summary>
+    /// Project-scoped planning overview route.
+    /// </summary>
+    public const string ProjectPlanningOverview = "/planning/{0}/overview";
+
+    /// <summary>
     /// Product Roadmaps overview route — read-only roadmap view with horizontal product lanes.
     /// </summary>
     public const string ProductRoadmaps = "/planning/product-roadmaps";
@@ -260,6 +265,22 @@ public static class WorkspaceRoutes
         return string.Format(
             CultureInfo.InvariantCulture,
             ProjectProductRoadmaps,
+            Uri.EscapeDataString(projectAlias));
+    }
+
+    /// <summary>
+    /// Gets the project-scoped planning overview route.
+    /// </summary>
+    public static string GetProjectPlanningOverview(string projectAlias)
+    {
+        if (string.IsNullOrWhiteSpace(projectAlias))
+        {
+            return PlanningWorkspace;
+        }
+
+        return string.Format(
+            CultureInfo.InvariantCulture,
+            ProjectPlanningOverview,
             Uri.EscapeDataString(projectAlias));
     }
 

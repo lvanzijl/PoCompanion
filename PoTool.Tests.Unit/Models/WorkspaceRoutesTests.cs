@@ -69,4 +69,12 @@ public class WorkspaceRoutesTests
 
         Assert.AreEqual("/planning/payments-platform/plan-board", result);
     }
+
+    [TestMethod]
+    public void GetProjectPlanningOverview_ReturnsAliasScopedRoute()
+    {
+        var result = WorkspaceRoutes.GetProjectPlanningOverview("payments-platform");
+
+        Assert.AreEqual("/planning/payments-platform/overview", result);
+    }
 }

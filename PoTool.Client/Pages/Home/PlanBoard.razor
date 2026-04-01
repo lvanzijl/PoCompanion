@@ -4,6 +4,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Helpers
 @using PoTool.Client.Models
+@using PoTool.Shared.Planning
 @using PoTool.Shared.Metrics
 @inject IProfileService ProfileService
 @inject ProductService ProductService
@@ -48,6 +49,15 @@
                            OnClick="NavigateToPlanning">
                     Planning
                 </MudButton>
+                @if (!string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
+                {
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Info"
+                               StartIcon="@Icons.Material.Filled.FolderSpecial"
+                               OnClick="NavigateToOverview">
+                        Overview
+                    </MudButton>
+                }
             </MudStack>
         </MudStack>
     </MudPaper>
@@ -110,6 +120,52 @@
             }
         </MudStack>
     </MudPaper>
+
+    @if (_projectPlanningSummary is not null)
+    {
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Spacing="2">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.overline" Color="Color.Secondary">Project planning summary</MudText>
+                        <MudText Typo="Typo.h6">@_projectPlanningSummary.ProjectAlias</MudText>
+                    </MudStack>
+                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                        <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info">
+                            @_projectPlanningSummary.PlannedPBIs planned · @_projectPlanningSummary.UnplannedPBIs unplanned
+                        </MudChip>
+                        <MudChip T="string" Variant="Variant.Outlined" Color="@GetProjectRiskColor(HasPlanningGap())">
+                            @GetPlanningGapLabel()
+                        </MudChip>
+                        <MudChip T="string" Variant="Variant.Outlined" Color="@GetProjectRiskColor(_projectPlanningSummary.OvercommitIndicator)">
+                            @(_projectPlanningSummary.OvercommitIndicator ? "Overcommitted across products" : "Capacity window within range")
+                        </MudChip>
+                    </MudStack>
+                </MudStack>
+
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudPaper Outlined="true" Class="pa-3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Planned effort</MudText>
+                            <MudText Typo="Typo.h6">@_projectPlanningSummary.PlannedEffort / @_projectPlanningSummary.TotalEffort</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudPaper Outlined="true" Class="pa-3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Capacity / sprint</MudText>
+                            <MudText Typo="Typo.h6">@FormatCapacity(_projectPlanningSummary.CapacityPerSprint)</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudPaper Outlined="true" Class="pa-3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Product imbalance</MudText>
+                            <MudText Typo="Typo.h6">@GetProductImbalanceLabel()</MudText>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            </MudStack>
+        </MudPaper>
+    }
 
     @* Board Content *@
     @if (_selectedProductId == null)
@@ -461,6 +517,7 @@
     private List<ProjectDto> _projects = new();
     private List<ProductDto> _allProducts = new();
     private List<ProductDto> _products = new();
+    private ProjectPlanningSummaryDto? _projectPlanningSummary;
     private string? _selectedProjectRouteKey;
     private int? _selectedProductId;
     private bool _isLoadingProjects = true;
@@ -517,6 +574,7 @@
             var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
             ResolveInitialProjectSelection(context);
             ApplyProjectFilter();
+            await LoadProjectPlanningSummaryAsync();
 
             if (context.ProductId.HasValue && _products.Any(product => product.Id == context.ProductId.Value))
             {
@@ -545,6 +603,7 @@
     {
         _selectedProjectRouteKey = string.IsNullOrWhiteSpace(projectRouteKey) ? null : projectRouteKey;
         ApplyProjectFilter();
+        await LoadProjectPlanningSummaryAsync();
 
         if (_selectedProductId.HasValue && !_products.Any(product => product.Id == _selectedProductId.Value))
         {
@@ -658,6 +717,7 @@
         {
             var refreshedCount = await WorkItemService.RefreshWorkItemsByRootIdsFromTfsAsync(_selectedProductRootIds);
             await LoadBoardAsync(_selectedProductId.Value);
+            await LoadProjectPlanningSummaryAsync();
 
             var label = refreshedCount == 1 ? "1 work item" : $"{refreshedCount} work items";
             Snackbar.Add($"Refreshed {label} from TFS.", Severity.Success);
@@ -1020,6 +1080,19 @@
                 WorkspaceRoutes.PlanningWorkspace,
                 new WorkspaceQueryContext(_selectedProjectRouteKey, _selectedProductId)));
 
+    private void NavigateToOverview()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.GetProjectPlanningOverview(_selectedProjectRouteKey),
+                new WorkspaceQueryContext(_selectedProjectRouteKey, _selectedProductId)));
+    }
+
     private async Task<List<ProjectDto>> LoadAvailableProjectsAsync(IReadOnlyCollection<ProductDto> products)
     {
         var productIds = products.Select(product => product.Id).ToHashSet();
@@ -1052,6 +1125,13 @@
         _products = selectedProject == null
             ? _allProducts
             : _allProducts.Where(product => selectedProject.ProductIds.Contains(product.Id)).ToList();
+    }
+
+    private async Task LoadProjectPlanningSummaryAsync()
+    {
+        _projectPlanningSummary = string.IsNullOrWhiteSpace(_selectedProjectRouteKey)
+            ? null
+            : await ProjectService.GetPlanningSummaryAsync(_selectedProjectRouteKey);
     }
 
     private async Task NavigateToCurrentScopeAsync(int? productId, bool loadBoard)
@@ -1103,6 +1183,46 @@
         => string.Equals(project.Name, project.Alias, StringComparison.OrdinalIgnoreCase)
             ? project.Name
             : $"{project.Name} ({project.Alias})";
+
+    private bool HasPlanningGap()
+        => _projectPlanningSummary is { TotalPBIs: > 0 } &&
+           _projectPlanningSummary.UnplannedPBIs / (double)_projectPlanningSummary.TotalPBIs > 0.5d;
+
+    private string GetPlanningGapLabel()
+    {
+        if (_projectPlanningSummary is null || _projectPlanningSummary.TotalPBIs == 0)
+        {
+            return "Planning gap unavailable";
+        }
+
+        var ratio = _projectPlanningSummary.UnplannedPBIs / (double)_projectPlanningSummary.TotalPBIs * 100d;
+        return HasPlanningGap()
+            ? $"{ratio:F0}% of PBIs are unplanned"
+            : $"{ratio:F0}% unplanned";
+    }
+
+    private string GetProductImbalanceLabel()
+    {
+        if (_projectPlanningSummary is null || _projectPlanningSummary.TotalEffort <= 0 || _projectPlanningSummary.Products.Count == 0)
+        {
+            return "N/A";
+        }
+
+        var leadingProduct = _projectPlanningSummary.Products.MaxBy(static product => product.TotalEffort);
+        if (leadingProduct == null)
+        {
+            return "N/A";
+        }
+
+        var share = leadingProduct.TotalEffort / (double)_projectPlanningSummary.TotalEffort * 100d;
+        return share > 60d
+            ? $"{leadingProduct.ProductName} {share:F0}%"
+            : "Balanced";
+    }
+
+    private static string FormatCapacity(double capacity) => capacity <= 0 ? "N/A" : $"{capacity:F1}";
+
+    private static Color GetProjectRiskColor(bool isRisk) => isRisk ? Color.Warning : Color.Success;
 
     private async Task LoadCapacityCalibrationAsync(List<SprintDto> allTeamSprints, int productId)
     {

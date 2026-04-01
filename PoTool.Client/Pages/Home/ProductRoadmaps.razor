@@ -3,6 +3,7 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Helpers
+@using PoTool.Client.Models
 @using PoTool.Shared.Contracts
 @using PoTool.Shared.Planning
 @using PoTool.Shared.WorkItems
@@ -104,6 +105,15 @@
                            OnClick="NavigateToHome">
                     Home
                 </MudButton>
+                @if (!string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
+                {
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Info"
+                               StartIcon="@Icons.Material.Filled.FolderSpecial"
+                               OnClick="NavigateToOverview">
+                        Overview
+                    </MudButton>
+                }
             </MudStack>
         </MudStack>
     </MudPaper>
@@ -144,6 +154,46 @@
                 }
             </MudStack>
         </MudPaper>
+
+        @if (_projectPlanningSummary is not null)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudStack Spacing="2">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.overline" Color="Color.Secondary">Project roadmap summary</MudText>
+                            <MudText Typo="Typo.h6">@_projectPlanningSummary.ProjectAlias</MudText>
+                        </MudStack>
+                        <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                            <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info">
+                                @_projectPlanningSummary.TotalEpics roadmap epics
+                            </MudChip>
+                            <MudChip T="string" Variant="Variant.Outlined" Color="@GetRoadmapRiskColor(HasRoadmapDominance())">
+                                @GetRoadmapDominanceLabel()
+                            </MudChip>
+                        </MudStack>
+                    </MudStack>
+
+                    <MudGrid Spacing="2">
+                        @foreach (var productSummary in _projectPlanningSummary.Products.OrderByDescending(product => product.EpicCount).ThenBy(product => product.ProductName))
+                        {
+                            var epicShare = _projectPlanningSummary.TotalEpics == 0
+                                ? 0
+                                : productSummary.EpicCount / (double)_projectPlanningSummary.TotalEpics * 100d;
+
+                            <MudItem xs="12" sm="6" md="4">
+                                <MudPaper Outlined="true" Class="pa-3">
+                                    <MudText Typo="Typo.subtitle2">@productSummary.ProductName</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @productSummary.EpicCount epic@(productSummary.EpicCount == 1 ? "" : "s") · @epicShare:F0% of project roadmap
+                                    </MudText>
+                                </MudPaper>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudStack>
+            </MudPaper>
+        }
 
         @* Horizontal Scrollable Product Lanes *@
         <div style="overflow-x: auto; padding-bottom: 16px;">
@@ -568,6 +618,7 @@
     private List<ProductDto> _products = new();
     private List<ProjectDto> _projects = new();
     private string? _selectedProjectRouteKey;
+    private ProjectPlanningSummaryDto? _projectPlanningSummary;
     private TfsConfigDto? _tfsConfig;
     private readonly IReadOnlyList<PromptTemplateOption> _promptTemplates = RoadmapReportingService.GetAvailableTemplates();
 
@@ -599,6 +650,7 @@
             _projects = await LoadAvailableProjectsAsync(_allProducts);
             ResolveInitialProjectSelection();
             ApplyProjectFilter();
+            await LoadProjectPlanningSummaryAsync();
 
             // Build lanes with roadmap epics, ordered by Objective BacklogPriority
             await BuildProductLanesAsync();
@@ -812,6 +864,7 @@
             _allProducts = (await ProductService.GetProductsByOwnerAsync(_profileId!.Value)).ToList();
             _projects = await LoadAvailableProjectsAsync(_allProducts);
             ApplyProjectFilter();
+            await LoadProjectPlanningSummaryAsync();
             await BuildProductLanesAsync();
 
             Snackbar.Add("Product order updated in TFS.", Severity.Success);
@@ -871,6 +924,19 @@
                 new WorkspaceQueryContext(_selectedProjectRouteKey, productId)));
     }
 
+    private void NavigateToOverview()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.GetProjectPlanningOverview(_selectedProjectRouteKey),
+                new WorkspaceQueryContext(_selectedProjectRouteKey)));
+    }
+
     private async Task<List<ProjectDto>> LoadAvailableProjectsAsync(IReadOnlyCollection<ProductDto> products)
     {
         var productIds = products.Select(product => product.Id).ToHashSet();
@@ -906,10 +972,18 @@
             : _allProducts.Where(product => selectedProject.ProductIds.Contains(product.Id)).ToList();
     }
 
+    private async Task LoadProjectPlanningSummaryAsync()
+    {
+        _projectPlanningSummary = string.IsNullOrWhiteSpace(_selectedProjectRouteKey)
+            ? null
+            : await ProjectService.GetPlanningSummaryAsync(_selectedProjectRouteKey);
+    }
+
     private async Task OnProjectChanged(string? projectRouteKey)
     {
         _selectedProjectRouteKey = string.IsNullOrWhiteSpace(projectRouteKey) ? null : projectRouteKey;
         ApplyProjectFilter();
+        await LoadProjectPlanningSummaryAsync();
         await BuildProductLanesAsync();
 
         var route = string.IsNullOrWhiteSpace(_selectedProjectRouteKey)
@@ -939,6 +1013,38 @@
         => string.Equals(project.Name, project.Alias, StringComparison.OrdinalIgnoreCase)
             ? project.Name
             : $"{project.Name} ({project.Alias})";
+
+    private bool HasRoadmapDominance()
+    {
+        if (_projectPlanningSummary is null || _projectPlanningSummary.TotalEpics <= 0 || _projectPlanningSummary.Products.Count == 0)
+        {
+            return false;
+        }
+
+        var leadingEpicCount = _projectPlanningSummary.Products.Max(static product => product.EpicCount);
+        return leadingEpicCount / (double)_projectPlanningSummary.TotalEpics > 0.6d;
+    }
+
+    private string GetRoadmapDominanceLabel()
+    {
+        if (_projectPlanningSummary is null || _projectPlanningSummary.Products.Count == 0 || _projectPlanningSummary.TotalEpics <= 0)
+        {
+            return "Roadmap balance unavailable";
+        }
+
+        var leadingProduct = _projectPlanningSummary.Products.MaxBy(static product => product.EpicCount);
+        if (leadingProduct == null)
+        {
+            return "Roadmap balance unavailable";
+        }
+
+        var share = leadingProduct.EpicCount / (double)_projectPlanningSummary.TotalEpics * 100d;
+        return HasRoadmapDominance()
+            ? $"{leadingProduct.ProductName} dominates with {share:F0}% of roadmap epics"
+            : "Roadmap epics are distributed across products";
+    }
+
+    private static Color GetRoadmapRiskColor(bool isRisk) => isRisk ? Color.Warning : Color.Success;
 
     private IReadOnlyList<RoadmapProductEntry> BuildReportEntries()
     {

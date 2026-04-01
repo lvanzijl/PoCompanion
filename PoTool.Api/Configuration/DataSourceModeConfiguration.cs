@@ -125,6 +125,11 @@ public static class DataSourceModeConfiguration
             return RouteIntent.BlockedAmbiguous;
         }
 
+        if (IsCacheOnlyProjectPlanningSummaryRoute(normalizedPath))
+        {
+            return RouteIntent.CacheOnlyAnalyticalRead;
+        }
+
         if (LiveModeAllowedExactRoutes.Contains(normalizedPath) ||
             LiveModeAllowedRoutePrefixes.Any(route =>
                 HasPathPrefix(normalizedPath, route)))
@@ -226,6 +231,22 @@ public static class DataSourceModeConfiguration
             || IsWorkItemDetailRoute(path, "/backlog-priority")
             || IsWorkItemDetailRoute(path, "/iteration-path")
             || IsWorkItemDetailRoute(path, "/revisions");
+    }
+
+    private static bool IsCacheOnlyProjectPlanningSummaryRoute(string path)
+    {
+        const string prefix = "/api/projects/";
+        const string suffix = "/planning-summary";
+
+        if (!path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+            !path.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) ||
+            path.Length <= prefix.Length + suffix.Length)
+        {
+            return false;
+        }
+
+        var aliasSegmentLength = path.Length - prefix.Length - suffix.Length;
+        return aliasSegmentLength > 0;
     }
 
     private static bool IsWorkItemDetailRoute(string path, string suffix)

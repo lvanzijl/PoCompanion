@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
+using PoTool.Shared.Planning;
 using PoTool.Core.Settings.Queries;
 using PoTool.Shared.Settings;
 
@@ -56,5 +57,22 @@ public class ProjectsController : ControllerBase
     {
         var products = await _mediator.Send(new GetProjectProductsQuery(alias), cancellationToken);
         return Ok(products);
+    }
+
+    /// <summary>
+    /// Gets a read-only planning summary for a project resolved by alias or internal identifier.
+    /// </summary>
+    [HttpGet("{alias}/planning-summary")]
+    [ProducesResponseType(typeof(ProjectPlanningSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ProjectPlanningSummaryDto>> GetPlanningSummary(string alias, CancellationToken cancellationToken)
+    {
+        var summary = await _mediator.Send(new GetProjectPlanningSummaryQuery(alias), cancellationToken);
+        if (summary == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(summary);
     }
 }
