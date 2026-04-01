@@ -1,4 +1,5 @@
 using PoTool.Core.Domain.Forecasting.Models;
+using PoTool.Core.Domain.Forecasting.Components.DeliveryForecast;
 using PoTool.Core.Domain.Forecasting.Services;
 
 namespace PoTool.Tests.Unit.Services;
@@ -6,6 +7,35 @@ namespace PoTool.Tests.Unit.Services;
 [TestClass]
 public sealed class ForecastingDomainServicesTests
 {
+    [TestMethod]
+    public void DeliveryForecastProjector_Project_PreservesProjectionSemantics()
+    {
+        IDeliveryForecastProjector projector = new DeliveryForecastProjector();
+
+        var result = projector.Project(
+            workItemId: 42,
+            workItemType: "Epic",
+            totalScopeStoryPoints: 26,
+            completedScopeStoryPoints: 5,
+            historicalSprints:
+            [
+                new HistoricalVelocitySample("Sprint 1", new DateTimeOffset(2026, 1, 14, 0, 0, 0, TimeSpan.Zero), 10),
+                new HistoricalVelocitySample("Sprint 2", new DateTimeOffset(2026, 1, 28, 0, 0, 0, TimeSpan.Zero), 10),
+                new HistoricalVelocitySample("Sprint 3", new DateTimeOffset(2026, 2, 11, 0, 0, 0, TimeSpan.Zero), 10)
+            ],
+            lastUpdated: new DateTimeOffset(2026, 4, 1, 0, 0, 0, TimeSpan.Zero));
+
+        Assert.AreEqual(42, result.WorkItemId);
+        Assert.AreEqual("Epic", result.WorkItemType);
+        Assert.AreEqual(21d, result.RemainingScopeStoryPoints, 0.001);
+        Assert.AreEqual(10d, result.EstimatedVelocity, 0.001);
+        Assert.AreEqual(3, result.SprintsRemaining);
+        Assert.AreEqual(ForecastConfidenceLevel.Medium, result.Confidence);
+        Assert.AreEqual(new DateTimeOffset(2026, 3, 25, 0, 0, 0, TimeSpan.Zero), result.EstimatedCompletionDate);
+        Assert.AreEqual(new DateTimeOffset(2026, 4, 1, 0, 0, 0, TimeSpan.Zero), result.LastUpdated);
+        Assert.HasCount(3, result.ForecastByDate);
+    }
+
     [TestMethod]
     public void CompletionForecastService_Forecast_PreservesProjectionSemantics()
     {

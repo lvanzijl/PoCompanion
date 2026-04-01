@@ -217,6 +217,11 @@ public class PoToolDbContext : DbContext
     public DbSet<PortfolioFlowProjectionEntity> PortfolioFlowProjections => Set<PortfolioFlowProjectionEntity>();
 
     /// <summary>
+    /// Persisted forecast projections for Epic and Feature work items.
+    /// </summary>
+    public DbSet<ForecastProjectionEntity> ForecastProjections => Set<ForecastProjectionEntity>();
+
+    /// <summary>
     /// Durable CDC portfolio snapshot headers.
     /// </summary>
     public DbSet<PortfolioSnapshotEntity> PortfolioSnapshots => Set<PortfolioSnapshotEntity>();
@@ -738,6 +743,15 @@ public class PoToolDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ForecastProjectionEntity>(entity =>
+        {
+            entity.HasKey(e => e.WorkItemId);
+            entity.Property(e => e.WorkItemId).ValueGeneratedNever();
+            entity.HasIndex(e => e.WorkItemType);
+            entity.Property(e => e.WorkItemType).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Confidence).HasMaxLength(20).IsRequired();
         });
 
         modelBuilder.Entity<PortfolioSnapshotEntity>(entity =>

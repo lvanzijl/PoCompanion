@@ -23,6 +23,7 @@ using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.BacklogQuality.Services;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Estimation;
+using PoTool.Core.Domain.Forecasting.Components.DeliveryForecast;
 using PoTool.Core.Domain.Forecasting.Services;
 using PoTool.Core.Domain.EffortPlanning;
 using PoTool.Core.Domain.Hierarchy;
@@ -188,6 +189,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<WorkItemRelationshipSnapshotStage>();
         services.AddScoped<WorkItemResolutionSyncStage>();
         services.AddScoped<SprintTrendProjectionSyncStage>();
+        services.AddScoped<ForecastProjectionSyncStage>();
         services.AddScoped<PullRequestSyncStage>();
         services.AddScoped<PipelineSyncStage>();
         services.AddScoped<ValidationComputeStage>();
@@ -321,6 +323,8 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<PortfolioComparisonQueryService>();
         services.AddScoped<PortfolioTrendQueryService>();
         services.AddScoped<PortfolioDecisionSignalQueryService>();
+        services.AddScoped<ForecastProjectionMaterializationService>();
+        services.AddSingleton<IDeliveryForecastProjector, DeliveryForecastProjector>();
         services.AddSingleton<ICompletionForecastService, CompletionForecastService>();
         services.AddSingleton<IVelocityCalibrationService, VelocityCalibrationService>();
         services.AddSingleton<IEffortTrendForecastService, EffortTrendForecastService>();

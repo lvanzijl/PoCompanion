@@ -48,18 +48,21 @@ The audited forecasting logic now executes inside `PoTool.Core.Domain/Domain/For
 Confirmed CDC-owned implementations:
 
 - completion forecast formulas in `PoTool.Core.Domain/Domain/Forecasting/Services/CompletionForecastService.cs`
+- delivery-forecast projection formulas in `PoTool.Core.Domain/Domain/Forecasting/DeliveryForecast/DeliveryForecastProjector.cs`
 - velocity percentile and predictability calibration in `PoTool.Core.Domain/Domain/Forecasting/Services/VelocityCalibrationService.cs`
 - effort-trend slope, volatility, and forward extrapolation in `PoTool.Core.Domain/Domain/Forecasting/Services/EffortTrendForecastService.cs`
 - canonical forecasting models in:
   - `PoTool.Core.Domain/Domain/Forecasting/Models/DeliveryForecast.cs`
   - `PoTool.Core.Domain/Domain/Forecasting/Models/CompletionProjection.cs`
+  - `PoTool.Core.Domain/Domain/Forecasting/DeliveryForecast/ForecastProjection.cs`
   - `PoTool.Core.Domain/Domain/Forecasting/Models/VelocityCalibration.cs`
   - `PoTool.Core.Domain/Domain/Forecasting/Models/EffortDistributionAnalysis.cs`
 
 Observed ownership after extraction:
 
 - forecast calculations execute in the CDC services
-- handlers prepare inputs, call forecasting services, and map results to DTOs
+- projection materialization loads canonical inputs, calls the Forecasting CDC, and persists read models
+- handlers read persisted forecast projections and map them to DTOs
 - statistical primitives remain shared through `PoTool.Shared/Statistics/PercentileMath.cs` and `PoTool.Core.Domain/Domain/Statistics/StatisticsMath.cs`
 - no forecast calculations remain in handlers, UI calculators, or API services
 
@@ -68,10 +71,15 @@ Observed ownership after extraction:
 The following stay outside the Forecasting CDC by design:
 
 - `PoTool.Api/Handlers/Metrics/GetEpicCompletionForecastQueryHandler.cs`
-  - loads scoped work items
-  - loads historical sprint metrics
-  - calls `ICompletionForecastService`
-  - maps the result to `EpicCompletionForecastDto`
+  - reads persisted `ForecastProjectionEntity` rows
+  - selects the requested velocity-window variant
+  - maps the stored projection to `EpicCompletionForecastDto`
+- `PoTool.Api/Services/ForecastProjectionMaterializationService.cs`
+  - loads canonical work item snapshots, hierarchy state, and sprint history inputs
+  - calls the `DeliveryForecastProjector` inside the Forecasting CDC
+  - persists `ForecastProjectionEntity` rows for Epic and Feature work items
+- `PoTool.Api/Services/Sync/ForecastProjectionSyncStage.cs`
+  - refreshes persisted forecast projections during the sync pipeline
 - `PoTool.Api/Handlers/Metrics/GetCapacityCalibrationQueryHandler.cs`
   - loads persisted sprint projections
   - calls `IVelocityCalibrationService`
@@ -95,7 +103,8 @@ These remaining responsibilities are orchestration or presentation, not ownershi
 Confirmed:
 
 - forecasting formulas live in `PoTool.Core.Domain/Domain/Forecasting`
-- `CompletionForecastService` owns average-velocity completion forecasting and projected sprint outputs
+- `CompletionForecastService` remains a compatibility adapter over the delivery-forecast projector
+- `DeliveryForecastProjector` owns average-velocity completion forecasting and projected sprint outputs
 - `VelocityCalibrationService` owns percentile velocity bands and predictability ratios
 - `EffortTrendForecastService` owns slope calculation, standard deviation usage, and forward effort forecasts
 
@@ -103,9 +112,8 @@ Confirmed:
 
 Confirmed in `PoTool.Api`:
 
-- handlers load data from repositories, EF, or mediator queries
-- handlers call the forecasting services through interfaces
-- handlers map CDC outputs to transport DTOs
+- materialization loads canonical inputs from EF, calls the Forecasting CDC, and persists the resulting read models
+- handlers read persisted forecast projections and map stored variants to transport DTOs
 - no handler re-implements percentile, completion, confidence, or extrapolation formulas inline
 
 ### Phase 3 — duplication removal verification
@@ -123,7 +131,7 @@ Classification: **none blocking**
 
 Observed notes:
 
-1. `GetEpicCompletionForecastQueryHandler` still owns the data-loading policy for which sprint metrics are fetched, but the forecast formula itself is delegated to `ICompletionForecastService`. This is orchestration, not duplicated forecasting math.
+1. `ForecastProjectionMaterializationService` depends on persisted sprint trend projections for historical velocity input, so stale sprint projections can still make forecast projections stale until the sync pipeline refreshes both stages.
 2. UI code still contains risk-threshold labeling based on returned forecast DTOs. This is presentation logic and does not duplicate CDC formulas.
 
 No remaining issue blocks exclusive CDC ownership of forecasting formulas.
@@ -158,4 +166,4 @@ These tests protect:
 
 **Forecasting CDC ready**
 
-The forecasting formulas are now owned exclusively by the Forecasting CDC under `PoTool.Core.Domain/Domain/Forecasting`. API handlers are limited to loading inputs, calling forecasting services, and mapping outputs, while UI code only consumes the resulting DTOs for presentation.
+The forecasting formulas are now owned exclusively by the Forecasting CDC under `PoTool.Core.Domain/Domain/Forecasting`. API materialization services load canonical inputs, persist `ForecastProjectionEntity` read models, and API handlers now read those persisted projections without recomputing forecasts, while UI code only consumes the resulting DTOs for presentation.

@@ -24,14 +24,16 @@ public sealed class ForecastingCdcSummaryDocumentTests
         StringAssert.Contains(report, "## Final verdict");
 
         StringAssert.Contains(report, "PoTool.Core.Domain/Domain/Forecasting/Services/CompletionForecastService.cs");
+        StringAssert.Contains(report, "PoTool.Core.Domain/Domain/Forecasting/DeliveryForecast/DeliveryForecastProjector.cs");
         StringAssert.Contains(report, "PoTool.Core.Domain/Domain/Forecasting/Services/VelocityCalibrationService.cs");
         StringAssert.Contains(report, "PoTool.Core.Domain/Domain/Forecasting/Services/EffortTrendForecastService.cs");
         StringAssert.Contains(report, "PoTool.Api/Handlers/Metrics/GetEpicCompletionForecastQueryHandler.cs");
+        StringAssert.Contains(report, "PoTool.Api/Services/ForecastProjectionMaterializationService.cs");
         StringAssert.Contains(report, "PoTool.Api/Handlers/Metrics/GetCapacityCalibrationQueryHandler.cs");
         StringAssert.Contains(report, "PoTool.Api/Handlers/Metrics/GetEffortDistributionTrendQueryHandler.cs");
         StringAssert.Contains(report, "no forecast calculations remain in handlers, UI calculators, or API services");
         StringAssert.Contains(report, "Classification: **none blocking**");
-        StringAssert.Contains(report, "handlers prepare inputs, call forecasting services, and map results to DTOs");
+        StringAssert.Contains(report, "handlers read persisted forecast projections and map them to DTOs");
         StringAssert.Contains(report, "Forecasting CDC ready");
     }
 
