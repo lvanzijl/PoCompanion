@@ -185,7 +185,7 @@
                                 <MudPaper Outlined="true" Class="pa-3">
                                     <MudText Typo="Typo.subtitle2">@productSummary.ProductName</MudText>
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                        @productSummary.EpicCount epic@(productSummary.EpicCount == 1 ? "" : "s") · @epicShare:F0% of project roadmap
+                                        @productSummary.EpicCount epic@(productSummary.EpicCount == 1 ? "" : "s") · @(epicShare.ToString("F0"))% of project roadmap
                                     </MudText>
                                 </MudPaper>
                             </MudItem>
