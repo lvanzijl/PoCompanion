@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
+using PoTool.Api.Filters;
 using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Commands;
 using PoTool.Core.Settings.Queries;
@@ -124,6 +125,7 @@ public class ProfilesController : ControllerBase
     /// Deletes a profile.
     /// </summary>
     [HttpDelete("{id}")]
+    [AllowUntypedResponse]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteProfile(int id, CancellationToken cancellationToken)

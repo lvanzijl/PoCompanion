@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using PoTool.Api.Filters;
 using PoTool.Api.Services;
 using PoTool.Shared.Planning;
 
@@ -64,6 +65,7 @@ public class RoadmapSnapshotsController : ControllerBase
     /// Deletes a roadmap snapshot.
     /// </summary>
     [HttpDelete("{id}")]
+    [AllowUntypedResponse]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteSnapshot(

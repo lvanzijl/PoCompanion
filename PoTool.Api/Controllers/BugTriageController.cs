@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using PoTool.Api.Filters;
 using PoTool.Api.Services;
 using PoTool.Shared.BugTriage;
 
@@ -73,6 +74,7 @@ public class BugTriageController : ControllerBase
     /// Records that a bug was first seen in the triage UI.
     /// </summary>
     [HttpPost("first-seen")]
+    [AllowUntypedResponse]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> RecordFirstSeen(
         [FromQuery] int bugId,

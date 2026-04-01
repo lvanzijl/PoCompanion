@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
+using PoTool.Api.Filters;
 using PoTool.Shared.Health;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Queries;
@@ -227,6 +228,7 @@ public class WorkItemsController : ControllerBase
     /// <param name="tfsId">The TFS work item ID to refresh.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpPost("{tfsId:int}/refresh-from-tfs")]
+    [AllowUntypedResponse]
     public async Task<IActionResult> RefreshFromTfs(int tfsId, CancellationToken cancellationToken)
     {
         try
@@ -317,6 +319,7 @@ public class WorkItemsController : ControllerBase
     /// <param name="request">The new backlog priority value.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpPost("{tfsId:int}/backlog-priority")]
+    [AllowUntypedResponse]
     public async Task<IActionResult> UpdateBacklogPriority(int tfsId, [FromBody] UpdateBacklogPriorityRequest request, CancellationToken cancellationToken)
     {
         try
@@ -341,6 +344,7 @@ public class WorkItemsController : ControllerBase
     /// <param name="request">The new iteration path.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpPost("{tfsId:int}/iteration-path")]
+    [AllowUntypedResponse]
     public async Task<IActionResult> UpdateIterationPath(int tfsId, [FromBody] UpdateIterationPathRequest request, CancellationToken cancellationToken)
     {
         try
