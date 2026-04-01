@@ -6,11 +6,13 @@
 @using PoTool.Client.Models
 @using PoTool.Shared.Contracts
 @using PoTool.Shared.Planning
+@using PoTool.Shared.Settings
 @using PoTool.Shared.WorkItems
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject ProjectService ProjectService
 @inject WorkItemService WorkItemService
+@inject SprintService SprintService
 @inject TfsConfigService TfsConfigService
 @inject RoadmapReportingService RoadmapReporting
 @inject RoadmapSnapshotService SnapshotService
@@ -254,6 +256,15 @@
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">
                                         Shared time axis with independent forecast ranges in roadmap order.
                                     </MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @lane.SprintCadence.TooltipText
+                                    </MudText>
+                                    @if (lane.SprintCadence.UsesDefaultDuration)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning" Class="mt-2">
+                                            Using default sprint duration
+                                        </MudChip>
+                                    }
 
                                     @if (timeline.AxisStart.HasValue && timeline.AxisEnd.HasValue)
                                     {
@@ -293,7 +304,7 @@
                                                     {
                                                         <MudTooltip Placement="Placement.Top" Arrow="true">
                                                             <ChildContent>
-                                                                <div class="@GetTimelineBarClass(row)"
+                                                                <div class="@GetTimelineBarClass(row, lane.SprintCadence)"
                                                                      style="@GetTimelineBarStyle(row)">
                                                                     <div class="@GetTimelineEndMarkerClass(row)"></div>
                                                                 </div>
@@ -305,6 +316,15 @@
                                                                     @if (row.IsLowConfidence)
                                                                     {
                                                                         <MudText Typo="Typo.caption" Color="Color.Warning">Low confidence forecast</MudText>
+                                                                    }
+                                                                    @if (lane.SprintCadence.UsesFallback)
+                                                                    {
+                                                                        <MudText Typo="Typo.caption" Color="Color.Warning">Sprint cadence fallback in use</MudText>
+                                                                    }
+                                                                    <MudText Typo="Typo.caption">@lane.SprintCadence.TooltipText</MudText>
+                                                                    @if (lane.SprintCadence.UsesDefaultDuration)
+                                                                    {
+                                                                        <MudText Typo="Typo.caption" Color="Color.Warning">Using default sprint duration</MudText>
                                                                     }
                                                                     @if (row.IsDelayed)
                                                                     {
@@ -896,14 +916,16 @@
 
                     // Load persisted planning projections and dependency signals in parallel for all roadmap epics
                     var epicTfsIds = lane.Epics.Select(e => e.TfsId).ToList();
-                    var dependencyTask = AnalyticsService.LoadDependencySignalsAsync(epicTfsIds);
-                    var projectionTask = ProductService.GetPlanningProjectionsAsync(product.Id);
-                    await Task.WhenAll(dependencyTask, projectionTask);
+                     var dependencyTask = AnalyticsService.LoadDependencySignalsAsync(epicTfsIds);
+                     var projectionTask = ProductService.GetPlanningProjectionsAsync(product.Id);
+                     var sprintCadenceTask = ResolveSprintCadenceAsync(product);
+                     await Task.WhenAll(dependencyTask, projectionTask, sprintCadenceTask);
 
-                    var epicIdsWithDependencies = dependencyTask.Result;
-                    var projectionsByEpicId = projectionTask.Result.ToDictionary(projection => projection.EpicId);
-                    foreach (var epic in lane.Epics)
-                    {
+                     var epicIdsWithDependencies = dependencyTask.Result;
+                     var projectionsByEpicId = projectionTask.Result.ToDictionary(projection => projection.EpicId);
+                     lane.SprintCadence = sprintCadenceTask.Result;
+                     foreach (var epic in lane.Epics)
+                     {
                         epic.HasDependencies = epicIdsWithDependencies.Contains(epic.TfsId);
 
                         if (projectionsByEpicId.TryGetValue(epic.TfsId, out var projection))
@@ -1382,6 +1404,7 @@
         public int ObjectiveTfsId { get; set; }
         public double? ObjectiveBacklogPriority { get; set; }
         public List<RoadmapEpic> Epics { get; set; } = new();
+        public SprintCadenceInfo SprintCadence { get; set; } = SprintCadenceResolver.Resolve([]);
     }
 
     /// <summary>
@@ -1473,10 +1496,11 @@
                     epic.Confidence,
                     epic.HasForecast,
                     epic.IsDelayed))
-                .ToList());
+                .ToList(),
+            new RoadmapTimelineBuildOptions(lane.SprintCadence.DurationDays));
     }
 
-    private static string GetTimelineBarClass(RoadmapTimelineRow row)
+    private static string GetTimelineBarClass(RoadmapTimelineRow row, SprintCadenceInfo sprintCadence)
     {
         var classes = new List<string> { "projection-timeline-bar" };
         if (row.IsDelayed)
@@ -1484,7 +1508,7 @@
             classes.Add("projection-timeline-bar-delayed");
         }
 
-        if (row.IsLowConfidence)
+        if (row.IsLowConfidence || sprintCadence.UsesFallback)
         {
             classes.Add("projection-timeline-bar-low-confidence");
         }
@@ -1509,5 +1533,24 @@
 
         var days = Math.Max(1, (int)Math.Ceiling(delay.Value.TotalDays));
         return days == 1 ? "1 day" : $"{days} days";
+    }
+
+    private async Task<SprintCadenceInfo> ResolveSprintCadenceAsync(ProductDto product)
+    {
+        if (product.TeamIds.Count == 0)
+        {
+            return SprintCadenceResolver.Resolve([]);
+        }
+
+        try
+        {
+            var sprints = (await SprintService.GetSprintsForTeamAsync(product.TeamIds.First())).ToList();
+            return SprintCadenceResolver.Resolve(sprints);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Falling back to default sprint cadence for product {ProductId}", product.Id);
+            return SprintCadenceResolver.Resolve([]);
+        }
     }
 }

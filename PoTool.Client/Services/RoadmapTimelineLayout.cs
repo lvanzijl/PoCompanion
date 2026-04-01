@@ -7,18 +7,17 @@ namespace PoTool.Client.Services;
 /// </summary>
 public static class RoadmapTimelineLayout
 {
-    private const int SprintDurationDays = 14;
-    private const int DefaultForecastWindowDays = SprintDurationDays * 2;
-
     public static RoadmapTimelineModel Build(
         IReadOnlyList<RoadmapTimelineEpicInput> epics,
+        RoadmapTimelineBuildOptions options,
         DateTimeOffset? now = null)
     {
         ArgumentNullException.ThrowIfNull(epics);
+        ArgumentNullException.ThrowIfNull(options);
 
         var rows = epics
             .OrderBy(epic => epic.RoadmapOrder)
-            .Select(BuildRow)
+            .Select(epic => BuildRow(epic, options))
             .ToList();
 
         var visibleBars = rows
@@ -52,9 +51,11 @@ public static class RoadmapTimelineLayout
     public static RoadmapTimelineModel BuildWithSharedAxis(
         IReadOnlyList<RoadmapTimelineEpicInput> epics,
         DateTimeOffset axisStart,
-        DateTimeOffset axisEnd)
+        DateTimeOffset axisEnd,
+        RoadmapTimelineBuildOptions options)
     {
         ArgumentNullException.ThrowIfNull(epics);
+        ArgumentNullException.ThrowIfNull(options);
 
         if (axisEnd <= axisStart)
         {
@@ -63,7 +64,7 @@ public static class RoadmapTimelineLayout
 
         var rows = epics
             .OrderBy(epic => epic.RoadmapOrder)
-            .Select(BuildRow)
+            .Select(epic => BuildRow(epic, options))
             .ToList();
 
         var axisDays = Math.Max(1d, (axisEnd - axisStart).TotalDays);
@@ -74,7 +75,7 @@ public static class RoadmapTimelineLayout
         return new RoadmapTimelineModel(axisStart, axisEnd, positionedRows);
     }
 
-    private static RoadmapTimelineRow BuildRow(RoadmapTimelineEpicInput epic)
+    private static RoadmapTimelineRow BuildRow(RoadmapTimelineEpicInput epic, RoadmapTimelineBuildOptions options)
     {
         var hasTimelineBar = epic.HasForecast && epic.EstimatedCompletionDate.HasValue;
         if (!hasTimelineBar)
@@ -95,8 +96,8 @@ public static class RoadmapTimelineLayout
 
         var endDate = NormalizeDateToUtcMidnight(epic.EstimatedCompletionDate!.Value);
         var durationDays = epic.SprintsRemaining.HasValue
-            ? Math.Max(0, epic.SprintsRemaining.Value) * SprintDurationDays
-            : DefaultForecastWindowDays;
+            ? Math.Max(0d, epic.SprintsRemaining.Value * options.SprintDurationDays)
+            : Math.Max(options.SprintDurationDays * 2d, options.SprintDurationDays);
         var startDate = endDate.AddDays(-durationDays);
 
         if (startDate > endDate)
@@ -171,3 +172,5 @@ public sealed record RoadmapTimelineModel(
     DateTimeOffset? AxisStart,
     DateTimeOffset? AxisEnd,
     IReadOnlyList<RoadmapTimelineRow> Rows);
+
+public sealed record RoadmapTimelineBuildOptions(double SprintDurationDays);

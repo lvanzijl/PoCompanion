@@ -6,6 +6,8 @@ namespace PoTool.Tests.Unit.Services;
 [TestClass]
 public sealed class RoadmapTimelineLayoutTests
 {
+    private static readonly RoadmapTimelineBuildOptions DefaultOptions = new(14d);
+
     [TestMethod]
     public void Build_UsesIndependentAxisAcrossEpics()
     {
@@ -13,7 +15,8 @@ public sealed class RoadmapTimelineLayoutTests
             [
                 new RoadmapTimelineEpicInput(1, "Epic A", 1, new DateTimeOffset(2026, 4, 15, 0, 0, 0, TimeSpan.Zero), 2, ForecastConfidence.High, true, false),
                 new RoadmapTimelineEpicInput(2, "Epic B", 2, new DateTimeOffset(2026, 4, 10, 0, 0, 0, TimeSpan.Zero), 1, ForecastConfidence.High, true, false)
-            ]);
+            ],
+            DefaultOptions);
 
         Assert.IsNotNull(timeline.AxisStart);
         Assert.IsNotNull(timeline.AxisEnd);
@@ -30,7 +33,8 @@ public sealed class RoadmapTimelineLayoutTests
         var timeline = RoadmapTimelineLayout.Build(
             [
                 new RoadmapTimelineEpicInput(1, "Epic A", 1, new DateTimeOffset(2026, 5, 1, 0, 0, 0, TimeSpan.Zero), null, ForecastConfidence.High, true, false)
-            ]);
+            ],
+            DefaultOptions);
 
         Assert.AreEqual(new DateTimeOffset(2026, 4, 3, 0, 0, 0, TimeSpan.Zero), timeline.Rows[0].StartDate);
         Assert.AreEqual(new DateTimeOffset(2026, 5, 1, 0, 0, 0, TimeSpan.Zero), timeline.Rows[0].EndDate);
@@ -43,7 +47,8 @@ public sealed class RoadmapTimelineLayoutTests
             [
                 new RoadmapTimelineEpicInput(1, "Low Confidence", 1, new DateTimeOffset(2026, 5, 1, 0, 0, 0, TimeSpan.Zero), 1, ForecastConfidence.Low, true, true),
                 new RoadmapTimelineEpicInput(2, "Missing", 2, null, null, null, false, false)
-            ]);
+            ],
+            DefaultOptions);
 
         Assert.IsTrue(timeline.Rows[0].HasTimelineBar);
         Assert.IsTrue(timeline.Rows[0].IsLowConfidence);
