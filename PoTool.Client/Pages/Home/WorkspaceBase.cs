@@ -23,6 +23,11 @@ public abstract class WorkspaceBase : ComponentBase
     protected ISnackbar Snackbar { get; set; } = default!;
 
     /// <summary>
+    /// Project alias for context propagation (parsed from URL).
+    /// </summary>
+    protected string? ProjectAlias { get; set; }
+
+    /// <summary>
     /// Product ID for context propagation (parsed from URL).
     /// </summary>
     protected int? ProductId { get; set; }
@@ -54,6 +59,7 @@ public abstract class WorkspaceBase : ComponentBase
     protected virtual void ParseContextQueryParameters()
     {
         var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
+        ProjectAlias = context.ProjectAlias;
         ProductId = context.ProductId;
         TeamId = context.TeamId;
         SprintId = context.SprintId;
@@ -69,7 +75,7 @@ public abstract class WorkspaceBase : ComponentBase
     /// <returns>Query string starting with "?" or empty string if no parameters</returns>
     protected string BuildContextQuery(string? additionalParams = null)
         => WorkspaceQueryContextHelper.BuildQueryString(
-            new WorkspaceQueryContext(ProductId, TeamId, SprintId, FromSprintId, ToSprintId),
+            new WorkspaceQueryContext(ProjectAlias, ProductId, TeamId, SprintId, FromSprintId, ToSprintId),
             additionalParams);
     
     /// <summary>
@@ -97,6 +103,6 @@ public abstract class WorkspaceBase : ComponentBase
         NavigationManager.NavigateTo(
             WorkspaceQueryContextHelper.BuildRoute(
                 WorkspaceRoutes.Home,
-                new WorkspaceQueryContext(ProductId, TeamId, SprintId, FromSprintId, ToSprintId)));
+                new WorkspaceQueryContext(ProjectAlias, ProductId, TeamId, SprintId, FromSprintId, ToSprintId)));
     }
 }

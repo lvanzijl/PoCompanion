@@ -97,6 +97,11 @@ public class ProductOwnerCacheStateEntity
     public DateTimeOffset? SprintTrendProjectionAsOfUtc { get; set; }
 
     /// <summary>
+    /// Timestamp of the last forecast projection computation.
+    /// </summary>
+    public DateTimeOffset? ForecastProjectionAsOfUtc { get; set; }
+
+    /// <summary>
     /// Watermark for activity ingestion based on work item updates.
     /// </summary>
     public DateTimeOffset? ActivityEventWatermark { get; set; }

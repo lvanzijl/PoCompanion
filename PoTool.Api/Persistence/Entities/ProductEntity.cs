@@ -28,6 +28,13 @@ public class ProductEntity
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
+    /// Foreign key to the project that owns the product.
+    /// </summary>
+    [Required]
+    [MaxLength(64)]
+    public string ProjectId { get; set; } = string.Empty;
+
+    /// <summary>
     /// Explicit ordering of products within a Product Owner's list.
     /// </summary>
     public int Order { get; set; } = 0;
@@ -77,6 +84,11 @@ public class ProductEntity
     /// Null if product is orphaned.
     /// </summary>
     public virtual ProfileEntity? ProductOwner { get; set; }
+
+    /// <summary>
+    /// Navigation property to the project that owns this product.
+    /// </summary>
+    public virtual ProjectEntity? Project { get; set; }
 
     /// <summary>
     /// Navigation property to linked teams (many-to-many).

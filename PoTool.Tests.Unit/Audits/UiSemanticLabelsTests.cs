@@ -22,9 +22,15 @@ public sealed class UiSemanticLabelsTests
         var productRoadmaps = File.ReadAllText(Path.Combine(repositoryRoot, "PoTool.Client", "Pages", "Home", "ProductRoadmaps.razor"));
         StringAssert.Contains(productRoadmaps, "Delivered Story Points:");
         StringAssert.Contains(productRoadmaps, "Remaining Story Points:");
+        StringAssert.Contains(productRoadmaps, "Projected timeline");
+        StringAssert.Contains(productRoadmaps, "Shared time axis with independent forecast ranges in roadmap order.");
+        StringAssert.Contains(productRoadmaps, "Missing forecast");
+        StringAssert.Contains(productRoadmaps, "Forecast updated");
         StringAssert.Contains(productRoadmaps, "epic.TotalStoryPoints");
         StringAssert.Contains(productRoadmaps, "epic.DeliveredStoryPoints");
         StringAssert.Contains(productRoadmaps, "epic.RemainingStoryPoints");
+        Assert.DoesNotContain(productRoadmaps, "Epic exceeds velocity");
+        Assert.DoesNotContain(productRoadmaps, "Visual-only sequencing based on persisted projected end dates.");
         Assert.DoesNotContain(productRoadmaps, "epic.TotalEffort");
         Assert.DoesNotContain(productRoadmaps, "epic.DeliveredEffort");
         Assert.DoesNotContain(productRoadmaps, "epic.RemainingEffort");

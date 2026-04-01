@@ -1,0 +1,766 @@
+@page "/planning/multi-product"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Models
+@using PoTool.Client.Services
+@using PoTool.Shared.Planning
+@using PoTool.Shared.Metrics
+@using PoTool.Shared.Settings
+@inject ProductService ProductService
+@inject SprintService SprintService
+@inherits WorkspaceBase
+
+<PageTitle>Multi-Product Planning - PO Companion</PageTitle>
+
+@if (_isLoading)
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 mb-4">
+        <MudStack Spacing="2">
+            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="48px" />
+            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="180px" />
+            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="180px" />
+        </MudStack>
+    </MudContainer>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 mb-4">
+        <MudStack Spacing="3">
+            @* Header *@
+            <MudPaper Elevation="1" Class="pa-3">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudStack Spacing="1">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Primary" Size="Size.Large" />
+                            <MudText Typo="Typo.h5">Multi-Product Planning</MudText>
+                        </MudStack>
+                        <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            All products aligned to a shared time axis. End dates are authoritative; start dates are forecast-derived.
+                        </MudText>
+                    </MudStack>
+                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                   Icon="@Icons.Material.Filled.CalendarMonth"
+                                   OnClick="NavigateToPlanning">
+                        Planning
+                    </CompactButton>
+                </MudStack>
+            </MudPaper>
+
+            @if (_availableProducts.Count > 0)
+            {
+                <MudPaper Elevation="1" Class="pa-3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Wrap="Wrap.Wrap">
+                        <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Color="Color.Primary" />
+                        <MudSelect T="int"
+                                   Label="Products"
+                                   Dense="true"
+                                   Variant="Variant.Outlined"
+                                   MultiSelection="true"
+                                   SelectedValues="_selectedProductIds"
+                                   SelectedValuesChanged="OnSelectedProductsChanged"
+                                   Style="min-width: 320px;">
+                            @foreach (var product in _availableProducts)
+                            {
+                                <MudSelectItem T="int" Value="@product.ProductId">@product.ProductName</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudSwitch T="bool"
+                                   Value="_showClusters"
+                                   ValueChanged="OnShowClustersChanged"
+                                   Color="Color.Primary">
+                            Show clusters
+                        </MudSwitch>
+                        <MudSwitch T="bool"
+                                   Value="_showCapacityCollisions"
+                                   ValueChanged="OnShowCapacityCollisionsChanged"
+                                   Color="Color.Primary">
+                            Show capacity collisions
+                        </MudSwitch>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @_productLanes.Count selected product(s)
+                        </MudText>
+                    </MudStack>
+                </MudPaper>
+            }
+
+            @if (_loadError != null)
+            {
+                <MudAlert Severity="Severity.Warning">@_loadError</MudAlert>
+            }
+
+            @if (_productLanes.Count == 0 && !_isLoading)
+            {
+                <MudPaper Elevation="1" Class="pa-4">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        No products with planning projections found. Ensure roadmap epics have forecast data.
+                    </MudText>
+                </MudPaper>
+            }
+            else
+            {
+                @* Global axis header *@
+                @if (_globalAxisStart.HasValue && _globalAxisEnd.HasValue)
+                {
+                    <MudPaper Elevation="0" Class="pa-2 multi-product-axis-header">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @_globalAxisStart.Value.LocalDateTime.ToString("dd MMM yyyy")
+                            </MudText>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.DateRange" Size="Size.Small" Color="Color.Secondary" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Global forecast axis</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @_globalAxisEnd.Value.LocalDateTime.ToString("dd MMM yyyy")
+                            </MudText>
+                        </MudStack>
+
+                        @* Pressure zone overlay row *@
+                        @if (_showClusters && _pressureZones.Count > 0)
+                        {
+                            <div class="multi-product-pressure-track" style="margin-top: 4px;">
+                                @foreach (var zone in _pressureZones)
+                                {
+                                    <MudTooltip Placement="Placement.Top" Arrow="true">
+                                        <ChildContent>
+                                            <div class="multi-product-pressure-zone"
+                                                 style="left: @zone.LeftPercent.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)%; width: @Math.Max(zone.WidthPercent, 1.5d).ToString("F2", System.Globalization.CultureInfo.InvariantCulture)%;"></div>
+                                        </ChildContent>
+                                        <TooltipContent>
+                                            <MudStack Spacing="1">
+                                                <MudText Typo="Typo.caption" Style="font-weight: 600;">Pressure zone</MudText>
+                                                <MudText Typo="Typo.caption">@zone.EpicCount epics ending within 14 days</MudText>
+                                            </MudStack>
+                                        </TooltipContent>
+                                    </MudTooltip>
+                                }
+                            </div>
+                        }
+
+                        @if (_showCapacityCollisions && _capacityCollisionWindows.Count > 0)
+                        {
+                            <div class="multi-product-collision-track" style="margin-top: 6px;">
+                                @foreach (var collision in _capacityCollisionWindows)
+                                {
+                                    <MudTooltip Placement="Placement.Top" Arrow="true">
+                                        <ChildContent>
+                                            <div class="multi-product-collision-zone"
+                                                 style="left: @collision.LeftPercent.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)%; width: @Math.Max(collision.WidthPercent, 1.5d).ToString("F2", System.Globalization.CultureInfo.InvariantCulture)%;"
+                                                 aria-label="Capacity collision hint">
+                                                <MudIcon Icon="@Icons.Material.Filled.Groups"
+                                                         Size="Size.Small"
+                                                         Class="multi-product-collision-icon" />
+                                            </div>
+                                        </ChildContent>
+                                        <TooltipContent>
+                                            <MudStack Spacing="1">
+                                                <MudText Typo="Typo.caption" Style="font-weight: 600;">Capacity collision hint</MudText>
+                                                <MudText Typo="Typo.caption">@collision.EpicIds.Count overlapping epics share @collision.SharedTeamIds.Count team(s)</MudText>
+                                                <MudText Typo="Typo.caption">Products: @string.Join(", ", collision.ProductNames)</MudText>
+                                                <MudText Typo="Typo.caption">Teams: @string.Join(", ", collision.SharedTeamIds.Select(FormatTeamLabel))</MudText>
+                                            </MudStack>
+                                        </TooltipContent>
+                                    </MudTooltip>
+                                }
+                            </div>
+                        }
+                    </MudPaper>
+                }
+
+                @* Product lanes *@
+                @foreach (var lane in _productLanes)
+                {
+                    <MudPaper Elevation="1" Class="pa-3">
+                        <MudStack Spacing="1">
+                            @* Lane header *@
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudIcon Icon="@Icons.Material.Filled.Category" Size="Size.Small" Color="Color.Primary" />
+                                    <MudText Typo="Typo.subtitle2">@lane.ProductName</MudText>
+                                    @if (lane.DelayedCount > 0)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
+                                            @lane.DelayedCount delayed
+                                        </MudChip>
+                                    }
+                                    @if (lane.MissingForecastCount > 0)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                            @lane.MissingForecastCount without forecast
+                                        </MudChip>
+                                    }
+                                    @if (lane.SprintCadence.UsesDefaultDuration)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                            Using default sprint duration
+                                        </MudChip>
+                                    }
+                                </MudStack>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @lane.Timeline.Rows.Count(r => r.HasTimelineBar) of @lane.Timeline.Rows.Count epic(s) projected
+                                </MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@lane.SprintCadence.TooltipText</MudText>
+
+                            @* Epic rows *@
+                            <MudStack Spacing="1" Class="mt-1">
+                                @foreach (var row in lane.Timeline.Rows)
+                                {
+                                    <MudStack Spacing="0">
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                            <MudText Typo="Typo.caption" Style="font-weight: 500; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                #@row.RoadmapOrder · @row.Title
+                                            </MudText>
+                                            @if (_showCapacityCollisions && TryGetEpicCollisionHint(row.EpicId, out var collisionHint))
+                                            {
+                                                <MudTooltip Placement="Placement.Top" Arrow="true">
+                                                    <ChildContent>
+                                                        <MudIcon Icon="@Icons.Material.Filled.Groups"
+                                                                 Size="Size.Small"
+                                                                 Color="Color.Info"
+                                                                 Class="multi-product-row-hint" />
+                                                    </ChildContent>
+                                                    <TooltipContent>
+                                                        <MudStack Spacing="1">
+                                                            <MudText Typo="Typo.caption" Style="font-weight: 600;">Capacity collision hint</MudText>
+                                                            <MudText Typo="Typo.caption">May compete with other work on same team(s).</MudText>
+                                                            <MudText Typo="Typo.caption">Products: @string.Join(", ", collisionHint.ProductNames)</MudText>
+                                                            <MudText Typo="Typo.caption">Teams: @string.Join(", ", collisionHint.SharedTeamIds.Select(FormatTeamLabel))</MudText>
+                                                        </MudStack>
+                                                    </TooltipContent>
+                                                </MudTooltip>
+                                            }
+                                            @if (row.EndDate.HasValue)
+                                            {
+                                                <MudText Typo="Typo.caption" Color="@(row.IsDelayed ? Color.Error : Color.Secondary)">
+                                                    @row.EndDate.Value.LocalDateTime.ToString("dd MMM yyyy")
+                                                </MudText>
+                                            }
+                                            else if (!row.HasTimelineBar)
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning">No forecast</MudChip>
+                                            }
+                                        </MudStack>
+                                        <div class="projection-timeline-track">
+                                            @if (row.HasTimelineBar)
+                                            {
+                                                <MudTooltip Placement="Placement.Top" Arrow="true">
+                                                    <ChildContent>
+                                                        <div class="@GetTimelineBarClass(row, lane.SprintCadence)"
+                                                             style="@GetTimelineBarStyle(row)">
+                                                            <div class="@GetTimelineEndMarkerClass(row)"></div>
+                                                        </div>
+                                                    </ChildContent>
+                                                    <TooltipContent>
+                                                        <MudStack Spacing="1" Style="font-size: 0.75rem; max-width: 220px;">
+                                                            <MudText Typo="Typo.caption" Style="font-weight: 600;">@row.EndDate!.Value.LocalDateTime.ToString("dd MMM yyyy")</MudText>
+                                                            <MudText Typo="Typo.caption">Projected completion (authoritative)</MudText>
+                                                            @if (row.IsLowConfidence)
+                                                            {
+                                                                <MudText Typo="Typo.caption" Color="Color.Warning">Low confidence forecast</MudText>
+                                                            }
+                                                            @if (lane.SprintCadence.UsesFallback)
+                                                            {
+                                                                <MudText Typo="Typo.caption" Color="Color.Warning">Sprint cadence fallback in use</MudText>
+                                                            }
+                                                            <MudText Typo="Typo.caption">@lane.SprintCadence.TooltipText</MudText>
+                                                            @if (lane.SprintCadence.UsesDefaultDuration)
+                                                            {
+                                                                <MudText Typo="Typo.caption" Color="Color.Warning">Using default sprint duration</MudText>
+                                                            }
+                                                            @if (row.IsDelayed)
+                                                            {
+                                                                <MudText Typo="Typo.caption" Color="Color.Error">Overdue — completion not yet recorded</MudText>
+                                                            }
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Style="font-style: italic;">
+                                                                Start is estimated from forecast, not actual data.
+                                                            </MudText>
+                                                        </MudStack>
+                                                    </TooltipContent>
+                                                </MudTooltip>
+                                            }
+                                            else
+                                            {
+                                                <div class="projection-timeline-missing">
+                                                    <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Small" Class="mr-1" />
+                                                    Missing forecast
+                                                </div>
+                                            }
+                                        </div>
+                                    </MudStack>
+                                }
+                            </MudStack>
+                        </MudStack>
+                    </MudPaper>
+                }
+            }
+        </MudStack>
+    </MudContainer>
+}
+
+<style>
+    .projection-timeline-track {
+        position: relative;
+        width: 100%;
+        height: 14px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.08);
+        overflow: hidden;
+        margin-top: 4px;
+    }
+    .projection-timeline-bar {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(to right, transparent 0%, var(--mud-palette-primary) 100%);
+        min-width: 8px;
+        overflow: visible;
+    }
+    .projection-timeline-bar-delayed {
+        background: linear-gradient(to right, transparent 0%, var(--mud-palette-error) 100%);
+    }
+    .projection-timeline-bar-low-confidence {
+        opacity: 0.45;
+    }
+    .projection-timeline-end-marker {
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: 4px;
+        height: 100%;
+        border-radius: 0 999px 999px 0;
+        background: var(--mud-palette-primary);
+    }
+    .projection-timeline-end-marker-delayed {
+        background: var(--mud-palette-error);
+    }
+    .projection-timeline-missing {
+        display: flex;
+        align-items: center;
+        height: 100%;
+        padding: 0 8px;
+        color: var(--mud-palette-warning);
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
+    .multi-product-axis-header {
+        background: rgba(255,255,255,0.04);
+        border-radius: 6px;
+    }
+    .multi-product-pressure-track {
+        position: relative;
+        width: 100%;
+        height: 8px;
+        background: rgba(255,255,255,0.04);
+        border-radius: 4px;
+        overflow: visible;
+    }
+    .multi-product-pressure-zone {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        background: rgba(255, 165, 0, 0.30);
+        border-radius: 4px;
+        border: 1px solid rgba(255, 165, 0, 0.55);
+        cursor: default;
+    }
+    .multi-product-collision-track {
+        position: relative;
+        width: 100%;
+        height: 12px;
+        background: rgba(255,255,255,0.04);
+        border-radius: 4px;
+        overflow: visible;
+    }
+    .multi-product-collision-zone {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        background: rgba(99, 102, 241, 0.28);
+        border-radius: 4px;
+        border: 1px solid rgba(129, 140, 248, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: default;
+    }
+    .multi-product-collision-icon {
+        color: rgba(224, 231, 255, 0.95);
+        pointer-events: none;
+    }
+    .multi-product-row-hint {
+        margin-left: 4px;
+        margin-right: auto;
+    }
+</style>
+
+@code {
+    private bool _isLoading = true;
+    private string? _loadError;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+    private List<LoadedProductPlanning> _availableProducts = new();
+    private List<ProductTimelineLane> _productLanes = new();
+    private DateTimeOffset? _globalAxisStart;
+    private DateTimeOffset? _globalAxisEnd;
+    private List<PressureZone> _pressureZones = new();
+    private List<CapacityCollisionWindow> _capacityCollisionWindows = new();
+    private Dictionary<int, EpicCollisionHint> _epicCollisionHints = new();
+    private HashSet<int> _selectedProductIds = new();
+    private bool _showClusters = true;
+    private bool _showCapacityCollisions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ParseContextQueryParameters();
+        _breadcrumbs =
+        [
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
+            new("Planning", WorkspaceRoutes.PlanningWorkspace, icon: Icons.Material.Filled.CalendarMonth),
+            new("Multi-Product", null, disabled: true, icon: Icons.Material.Filled.AccountTree)
+        ];
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _loadError = null;
+        StateHasChanged();
+
+        try
+        {
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            if (activeProfile == null)
+            {
+                _loadError = "No active profile found. Select a profile to continue.";
+                return;
+            }
+
+            var products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            if (products.Count == 0)
+            {
+                _availableProducts = [];
+                return;
+            }
+
+            // Load projections in parallel for all products (read-only, no EF concurrency risk)
+            var productTasks = products
+                .Select(async product => new
+                {
+                    Product = product,
+                    Projections = (await ProductService.GetPlanningProjectionsAsync(product.Id)).ToList(),
+                    SprintCadence = await ResolveSprintCadenceAsync(product)
+                })
+                .ToList();
+            _availableProducts = (await Task.WhenAll(productTasks))
+                .Select(input => new LoadedProductPlanning(
+                    input.Product.Id,
+                    input.Product.Name,
+                    input.Product.TeamIds,
+                    input.Projections,
+                    input.SprintCadence))
+                .ToList();
+
+            _selectedProductIds = _availableProducts
+                .Select(product => product.ProductId)
+                .ToHashSet();
+
+            RebuildVisibleLanes();
+        }
+        catch (Exception ex)
+        {
+            _loadError = $"Failed to load planning data: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void RebuildVisibleLanes()
+    {
+        var selectedProducts = _availableProducts
+            .Where(product => _selectedProductIds.Contains(product.ProductId))
+            .ToList();
+
+        var preliminaryLanes = selectedProducts
+            .Select(BuildUnalignedLane)
+            .Where(lane => lane.Timeline.AxisStart.HasValue && lane.Timeline.AxisEnd.HasValue)
+            .ToList();
+
+        if (preliminaryLanes.Count == 0)
+        {
+            _productLanes = [];
+            _pressureZones = [];
+            _capacityCollisionWindows = [];
+            _epicCollisionHints = new();
+            _globalAxisStart = null;
+            _globalAxisEnd = null;
+            return;
+        }
+
+        _globalAxisStart = preliminaryLanes.Min(lane => lane.Timeline.AxisStart!.Value);
+        _globalAxisEnd = preliminaryLanes.Max(lane => lane.Timeline.AxisEnd!.Value);
+
+        _productLanes = selectedProducts
+            .Select(product => BuildAlignedLane(product, _globalAxisStart.Value, _globalAxisEnd.Value))
+            .Where(lane => lane.Timeline.Rows.Count > 0)
+            .ToList();
+
+        _pressureZones = ComputePressureZones(
+            _productLanes.SelectMany(lane => lane.Timeline.Rows)
+                .Where(row => row.HasTimelineBar && row.EndDate.HasValue)
+                .Select(row => row.EndDate!.Value)
+                .ToList(),
+            _globalAxisStart.Value,
+            _globalAxisEnd.Value);
+
+        _capacityCollisionWindows = CapacityCollisionHintDetector.Build(
+            _productLanes.SelectMany(lane => lane.Timeline.Rows
+                    .Where(row => row.HasTimelineBar && row.StartDate.HasValue && row.EndDate.HasValue)
+                    .Select(row => new CapacityCollisionEpicInput(
+                        row.EpicId,
+                        lane.ProductName,
+                        lane.TeamIds,
+                        row.StartDate!.Value,
+                        row.EndDate!.Value)))
+                .ToList(),
+            _globalAxisStart.Value,
+            _globalAxisEnd.Value)
+            .ToList();
+
+        _epicCollisionHints = BuildEpicCollisionHints(_capacityCollisionWindows);
+    }
+
+    private static ProductTimelineLane BuildUnalignedLane(LoadedProductPlanning product)
+    {
+        var epicInputs = product.Projections.Select(ToEpicInput).ToList();
+        var timeline = epicInputs.Count > 0
+            ? RoadmapTimelineLayout.Build(
+                epicInputs,
+                new RoadmapTimelineBuildOptions(product.SprintCadence.DurationDays))
+            : new RoadmapTimelineModel(null, null, []);
+
+        return new ProductTimelineLane(product.ProductId, product.ProductName, product.TeamIds, product.SprintCadence, timeline);
+    }
+
+    private static ProductTimelineLane BuildAlignedLane(
+        LoadedProductPlanning product,
+        DateTimeOffset axisStart,
+        DateTimeOffset axisEnd)
+    {
+        var epicInputs = product.Projections.Select(ToEpicInput).ToList();
+        var timeline = epicInputs.Count > 0
+            ? RoadmapTimelineLayout.BuildWithSharedAxis(
+                epicInputs,
+                axisStart,
+                axisEnd,
+                new RoadmapTimelineBuildOptions(product.SprintCadence.DurationDays))
+            : new RoadmapTimelineModel(null, null, []);
+
+        return new ProductTimelineLane(product.ProductId, product.ProductName, product.TeamIds, product.SprintCadence, timeline);
+    }
+
+    private static RoadmapTimelineEpicInput ToEpicInput(PlanningEpicProjectionDto projection)
+    {
+        var isDelayed = projection.EstimatedCompletionDate.HasValue
+            && DateTimeOffset.UtcNow.Date > projection.EstimatedCompletionDate.Value.Date;
+
+        return new RoadmapTimelineEpicInput(
+            projection.EpicId,
+            projection.EpicTitle,
+            projection.RoadmapOrder,
+            projection.EstimatedCompletionDate,
+            projection.SprintsRemaining,
+            projection.Confidence,
+            projection.HasForecast,
+            isDelayed);
+    }
+
+    private static List<PressureZone> ComputePressureZones(
+        IReadOnlyList<DateTimeOffset> endDates,
+        DateTimeOffset axisStart,
+        DateTimeOffset axisEnd)
+    {
+        if (endDates.Count < 3)
+        {
+            return [];
+        }
+
+        const int WindowDays = 14;
+        var axisDays = Math.Max(1d, (axisEnd - axisStart).TotalDays);
+        var sorted = endDates.OrderBy(d => d).ToList();
+        var zones = new List<PressureZone>();
+
+        // Sliding window: find date ranges where 3+ epics end within WindowDays
+        int left = 0;
+        for (int right = 0; right < sorted.Count; right++)
+        {
+            while ((sorted[right] - sorted[left]).TotalDays > WindowDays)
+            {
+                left++;
+            }
+
+            var count = right - left + 1;
+            if (count < 3)
+            {
+                continue;
+            }
+
+            var windowStart = sorted[left];
+            var windowEnd = sorted[right].AddDays(1);
+            var leftPercent = Math.Max(0d, (windowStart - axisStart).TotalDays / axisDays * 100d);
+            var rightPercent = Math.Min(100d, (windowEnd - axisStart).TotalDays / axisDays * 100d);
+            var widthPercent = Math.Max(0d, rightPercent - leftPercent);
+
+            zones.Add(new PressureZone(leftPercent, widthPercent, count));
+        }
+
+        // Merge overlapping zones
+        return MergeZones(zones);
+    }
+
+    private static List<PressureZone> MergeZones(List<PressureZone> zones)
+    {
+        if (zones.Count <= 1)
+        {
+            return zones;
+        }
+
+        var sorted = zones.OrderBy(z => z.LeftPercent).ToList();
+        var merged = new List<PressureZone> { sorted[0] };
+
+        for (int i = 1; i < sorted.Count; i++)
+        {
+            var prev = merged[^1];
+            var curr = sorted[i];
+            if (curr.LeftPercent <= prev.LeftPercent + prev.WidthPercent)
+            {
+                var newRight = Math.Max(prev.LeftPercent + prev.WidthPercent, curr.LeftPercent + curr.WidthPercent);
+                merged[^1] = new PressureZone(prev.LeftPercent, newRight - prev.LeftPercent, Math.Max(prev.EpicCount, curr.EpicCount));
+            }
+            else
+            {
+                merged.Add(curr);
+            }
+        }
+
+        return merged;
+    }
+
+    private void NavigateToPlanning()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.PlanningWorkspace);
+    }
+
+    private Task OnSelectedProductsChanged(IEnumerable<int> productIds)
+    {
+        var selectedIds = productIds.ToHashSet();
+        if (selectedIds.Count == 0)
+        {
+            selectedIds = _availableProducts
+                .Select(product => product.ProductId)
+                .ToHashSet();
+        }
+
+        _selectedProductIds = selectedIds;
+        RebuildVisibleLanes();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnShowClustersChanged(bool value)
+    {
+        _showClusters = value;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnShowCapacityCollisionsChanged(bool value)
+    {
+        _showCapacityCollisions = value;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task<SprintCadenceInfo> ResolveSprintCadenceAsync(ProductDto product)
+    {
+        if (product.TeamIds.Count == 0)
+        {
+            return SprintCadenceResolver.Resolve([]);
+        }
+
+        try
+        {
+            var sprints = (await SprintService.GetSprintsForTeamAsync(product.TeamIds.First())).ToList();
+            return SprintCadenceResolver.Resolve(sprints);
+        }
+        catch
+        {
+            return SprintCadenceResolver.Resolve([]);
+        }
+    }
+
+    private static string GetTimelineBarClass(RoadmapTimelineRow row, SprintCadenceInfo sprintCadence)
+    {
+        var classes = new System.Text.StringBuilder("projection-timeline-bar");
+        if (row.IsDelayed)
+        {
+            classes.Append(" projection-timeline-bar-delayed");
+        }
+        if (row.IsLowConfidence || sprintCadence.UsesFallback)
+        {
+            classes.Append(" projection-timeline-bar-low-confidence");
+        }
+        return classes.ToString();
+    }
+
+    private static string GetTimelineBarStyle(RoadmapTimelineRow row)
+        => $"left: {row.LeftPercent.GetValueOrDefault():F2}%; width: {Math.Max(row.WidthPercent.GetValueOrDefault(), 2d):F2}%;";
+
+    private static string GetTimelineEndMarkerClass(RoadmapTimelineRow row)
+        => row.IsDelayed
+            ? "projection-timeline-end-marker projection-timeline-end-marker-delayed"
+            : "projection-timeline-end-marker";
+
+    private bool TryGetEpicCollisionHint(int epicId, out EpicCollisionHint collisionHint)
+        => _epicCollisionHints.TryGetValue(epicId, out collisionHint!);
+
+    private static string FormatTeamLabel(int teamId) => $"Team {teamId}";
+
+    private static Dictionary<int, EpicCollisionHint> BuildEpicCollisionHints(IReadOnlyList<CapacityCollisionWindow> collisions)
+    {
+        return collisions
+            .SelectMany(collision => collision.EpicIds.Select(epicId => new { epicId, collision }))
+            .GroupBy(entry => entry.epicId)
+            .ToDictionary(
+                group => group.Key,
+                group => new EpicCollisionHint(
+                    group.SelectMany(entry => entry.collision.ProductNames)
+                        .Distinct(StringComparer.Ordinal)
+                        .OrderBy(name => name, StringComparer.Ordinal)
+                        .ToList(),
+                    group.SelectMany(entry => entry.collision.SharedTeamIds)
+                        .Distinct()
+                        .OrderBy(teamId => teamId)
+                        .ToList()));
+    }
+
+    private sealed record ProductTimelineLane(int ProductId, string ProductName, IReadOnlyList<int> TeamIds, SprintCadenceInfo SprintCadence, RoadmapTimelineModel Timeline)
+    {
+        public int DelayedCount => Timeline.Rows.Count(r => r.IsDelayed);
+        public int MissingForecastCount => Timeline.Rows.Count(r => r.IsForecastMissing);
+    }
+
+    private sealed record LoadedProductPlanning(
+        int ProductId,
+        string ProductName,
+        IReadOnlyList<int> TeamIds,
+        List<PlanningEpicProjectionDto> Projections,
+        SprintCadenceInfo SprintCadence);
+
+    private sealed record EpicCollisionHint(
+        IReadOnlyList<string> ProductNames,
+        IReadOnlyList<int> SharedTeamIds);
+
+    private sealed record PressureZone(double LeftPercent, double WidthPercent, int EpicCount);
+}

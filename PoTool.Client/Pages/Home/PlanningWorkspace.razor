@@ -42,6 +42,17 @@
             </MudStack>
 
             <MudGrid Spacing="2" Class="mt-1">
+                @if (!string.IsNullOrWhiteSpace(ProjectAlias))
+                {
+                    <MudItem xs="12" sm="6" md="4">
+                        <NavigationTileCard Title="Project Overview"
+                                            Subtitle="Review project-wide planning signals before drilling in"
+                                            Icon="@Icons.Material.Filled.FolderSpecial"
+                                            IconColor="Color.Info"
+                                            AriaLabel="Project Overview — Review project-wide planning signals before drilling in"
+                                            OnClick="NavigateToProjectOverview" />
+                    </MudItem>
+                }
                 <MudItem xs="12" sm="6" md="4">
                     <NavigationTileCard Title="Product Roadmaps"
                                         Subtitle="Review epic order before roadmap changes"
@@ -57,6 +68,14 @@
                                         IconColor="Color.Info"
                                         AriaLabel="Plan Board — Place upcoming work into target sprints"
                                         OnClick="NavigateToPlanBoard" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <NavigationTileCard Title="Multi-Product Planning"
+                                        Subtitle="Align timelines across all products on a shared axis"
+                                        Icon="@Icons.Material.Filled.AccountTree"
+                                        IconColor="Color.Info"
+                                        AriaLabel="Multi-Product Planning — Align timelines across all products on a shared axis"
+                                        OnClick="NavigateToMultiProductPlanning" />
                 </MudItem>
             </MudGrid>
         </MudPaper>
@@ -111,12 +130,35 @@
 
     private void NavigateToProductRoadmaps()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.ProductRoadmaps}{BuildContextQuery()}");
+        var route = string.IsNullOrWhiteSpace(ProjectAlias)
+            ? WorkspaceRoutes.ProductRoadmaps
+            : WorkspaceRoutes.GetProjectProductRoadmaps(ProjectAlias);
+
+        NavigationManager.NavigateTo($"{route}{BuildContextQuery()}");
     }
 
     private void NavigateToPlanBoard()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanBoard}{BuildContextQuery()}");
+        var route = string.IsNullOrWhiteSpace(ProjectAlias)
+            ? WorkspaceRoutes.PlanBoard
+            : WorkspaceRoutes.GetProjectPlanBoard(ProjectAlias);
+
+        NavigationManager.NavigateTo($"{route}{BuildContextQuery()}");
+    }
+
+    private void NavigateToProjectOverview()
+    {
+        if (string.IsNullOrWhiteSpace(ProjectAlias))
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.GetProjectPlanningOverview(ProjectAlias)}{BuildContextQuery()}");
+    }
+
+    private void NavigateToMultiProductPlanning()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.MultiProductPlanning}{BuildContextQuery()}");
     }
 
     private void NavigateToHealth()

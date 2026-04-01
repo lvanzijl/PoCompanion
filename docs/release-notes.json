@@ -1,5 +1,53 @@
 [
   {
+    "date": "2026-04-02",
+    "type": "Changed",
+    "title": "Planning now highlights likely cross-product team collisions",
+    "impact": "Multi-Product Planning can now show optional capacity collision hints when overlapping epic windows across selected products involve the same mapped teams, adding a non-blocking shared-axis signal without calculating overload or changing forecasts.",
+    "area": "Planning",
+    "link": "/planning/multi-product"
+  },
+  {
+    "date": "2026-04-02",
+    "type": "Changed",
+    "title": "Planning now shows multi-product timelines on one shared axis",
+    "impact": "Multi-Product Planning now lets product owners compare selected products on one shared time axis, toggle cross-product end-date clusters, and see delayed or missing-forecast signals per product without adding new backend planning logic.",
+    "area": "Planning",
+    "link": "/planning/multi-product"
+  },
+  {
+    "date": "2026-04-02",
+    "type": "Changed",
+    "title": "Planning timelines now use real sprint cadence per product",
+    "impact": "Product Roadmaps and Multi-Product Planning now derive epic start ranges from each product team's recent sprint history instead of assuming a fixed 14-day sprint, while still falling back to the current sprint or a default duration when no usable sprint history exists.",
+    "area": "Planning",
+    "link": "/home/planning"
+  },
+  {
+    "date": "2026-04-01",
+    "type": "Changed",
+    "title": "Product roadmaps now show projected completion dates and simple sequence bars",
+    "impact": "Planning roadmaps now load persisted forecast projections per product, show each roadmap epic's projected completion date as the primary signal with paired sprint count as secondary context, highlight overdue epics with delay duration, and render each roadmap epic independently on a shared per-product timeline axis so overlaps and gaps stay visible without recalculating forecast logic in the UI.",
+    "area": "Planning",
+    "link": "/planning/product-roadmaps"
+  },
+  {
+    "date": "2026-04-01",
+    "type": "Changed",
+    "title": "Planning now shows project-level overview signals",
+    "impact": "Project-scoped planning routes now include a read-only overview page plus project summary bars on Plan Board and Product Roadmaps, showing planned versus unplanned PBIs, capacity-per-sprint, and imbalance or overcommit signals without changing write behavior.",
+    "area": "Planning",
+    "link": "/planning/project-alpha/overview"
+  },
+  {
+    "date": "2026-04-01",
+    "type": "Changed",
+    "title": "Planning now supports project aliases and project-first selection",
+    "impact": "Plan Board and Product Roadmaps now accept project-alias URLs, show a project selector above the product context, and keep existing productId planning routes working for backward compatibility.",
+    "area": "Planning",
+    "link": "/home/planning"
+  },
+  {
     "date": "2026-03-31",
     "type": "Changed",
     "title": "Backlog health iteration cards now show counted issues",

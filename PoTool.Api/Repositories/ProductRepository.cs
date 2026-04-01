@@ -103,6 +103,20 @@ public class ProductRepository : IProductRepository
             LastModified = DateTimeOffset.UtcNow
         };
 
+        var projectAlias = await ProjectAliasGenerator.GenerateUniqueAliasAsync(
+            name,
+            candidate => _context.Projects.AnyAsync(project => project.Alias == candidate, cancellationToken));
+
+        var project = new ProjectEntity
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            Alias = projectAlias,
+            Name = name
+        };
+
+        _context.Projects.Add(project);
+        entity.ProjectId = project.Id;
+
         _context.Products.Add(entity);
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -146,6 +160,7 @@ public class ProductRepository : IProductRepository
         }
 
         entity.Name = name;
+        await UpdateDefaultProjectNameAsync(entity, name, cancellationToken);
 
         // Replace backlog roots
         _context.ProductBacklogRoots.RemoveRange(entity.BacklogRoots);
@@ -348,7 +363,7 @@ public class ProductRepository : IProductRepository
         return entities.Select(MapToDto);
     }
 
-    private static ProductDto MapToDto(ProductEntity entity)
+    internal static ProductDto MapToDto(ProductEntity entity)
     {
         var teamIds = entity.ProductTeamLinks?.Select(l => l.TeamId).ToList() ?? new List<int>();
         var repositories = entity.Repositories?.Select(r => new RepositoryDto(
@@ -375,5 +390,27 @@ public class ProductRepository : IProductRepository
             repositories,
             (EstimationMode)entity.EstimationMode
         );
+    }
+
+    private async Task UpdateDefaultProjectNameAsync(ProductEntity entity, string productName, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(entity.ProjectId))
+        {
+            return;
+        }
+
+        var project = await _context.Projects
+            .Include(candidate => candidate.Products)
+            .FirstOrDefaultAsync(candidate => candidate.Id == entity.ProjectId, cancellationToken);
+
+        if (project == null)
+        {
+            return;
+        }
+
+        if (project.Products.Count == 1 && project.Products.Single().Id == entity.Id)
+        {
+            project.Name = productName;
+        }
     }
 }

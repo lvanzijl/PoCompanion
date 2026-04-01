@@ -356,6 +356,41 @@ namespace PoTool.Api.Migrations
                     b.ToTable("EpicPlacements");
                 });
 
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.ForecastProjectionEntity", b =>
+                {
+                    b.Property<int>("WorkItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Confidence")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("EstimatedCompletionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("LastUpdated")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProjectionVariantsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SprintsRemaining")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("WorkItemType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("WorkItemId");
+
+                    b.HasIndex("WorkItemType");
+
+                    b.ToTable("ForecastProjections");
+                });
+
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.IterationLineEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -704,9 +739,16 @@ namespace PoTool.Api.Migrations
                     b.Property<int?>("ProductOwnerId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ProductOwnerId");
+
+                    b.HasIndex("ProjectId");
 
                     b.ToTable("Products");
                 });
@@ -722,6 +764,9 @@ namespace PoTool.Api.Migrations
 
                     b.Property<string>("CurrentSyncStage")
                         .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("ForecastProjectionAsOfUtc")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset?>("LastAttemptSync")
@@ -839,6 +884,30 @@ namespace PoTool.Api.Migrations
                     b.HasIndex("Name");
 
                     b.ToTable("Profiles");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.ProjectEntity", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Alias")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Alias")
+                        .IsUnique();
+
+                    b.ToTable("Projects");
                 });
 
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.PullRequestCommentEntity", b =>
@@ -1899,7 +1968,15 @@ namespace PoTool.Api.Migrations
                         .HasForeignKey("ProductOwnerId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("PoTool.Api.Persistence.Entities.ProjectEntity", "Project")
+                        .WithMany("Products")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("ProductOwner");
+
+                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.ProductOwnerCacheStateEntity", b =>
@@ -2030,6 +2107,11 @@ namespace PoTool.Api.Migrations
                 });
 
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.ProfileEntity", b =>
+                {
+                    b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.ProjectEntity", b =>
                 {
                     b.Navigation("Products");
                 });

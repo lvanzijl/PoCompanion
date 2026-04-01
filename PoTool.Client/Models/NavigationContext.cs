@@ -79,6 +79,11 @@ public record Scope
     public int? ProfileId { get; init; }
 
     /// <summary>
+    /// Optional project alias for project-scoped routing and filtering.
+    /// </summary>
+    public string? ProjectAlias { get; init; }
+
+    /// <summary>
     /// The product ID (required for Product/Team scope).
     /// </summary>
     public int? ProductId { get; init; }

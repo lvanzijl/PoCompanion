@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
 using PoTool.Api.Filters;
+using PoTool.Shared.Planning;
 using PoTool.Shared.Settings;
 using PoTool.Core.Settings.Commands;
 using PoTool.Core.Settings.Queries;
@@ -50,6 +51,25 @@ public class ProductsController : ControllerBase
         }
 
         return Ok(product);
+    }
+
+    /// <summary>
+    /// Gets persisted planning projections for roadmap epics in a product.
+    /// </summary>
+    [HttpGet("{productId:int}/planning-projections")]
+    [ProducesResponseType(typeof(IReadOnlyList<PlanningEpicProjectionDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<PlanningEpicProjectionDto>>> GetPlanningProjections(
+        int productId,
+        CancellationToken cancellationToken)
+    {
+        var projections = await _mediator.Send(new GetProductPlanningProjectionsQuery(productId), cancellationToken);
+        if (projections == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(projections);
     }
 
     /// <summary>

@@ -1,12 +1,18 @@
 @page "/planning/product-roadmaps"
+@page "/planning/{RouteProjectAlias}/product-roadmaps"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
+@using PoTool.Client.Models
 @using PoTool.Shared.Contracts
 @using PoTool.Shared.Planning
+@using PoTool.Shared.Settings
 @using PoTool.Shared.WorkItems
 @inject IProfileService ProfileService
 @inject ProductService ProductService
+@inject ProjectService ProjectService
 @inject WorkItemService WorkItemService
+@inject SprintService SprintService
 @inject TfsConfigService TfsConfigService
 @inject RoadmapReportingService RoadmapReporting
 @inject RoadmapSnapshotService SnapshotService
@@ -101,6 +107,15 @@
                            OnClick="NavigateToHome">
                     Home
                 </MudButton>
+                @if (!string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
+                {
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Info"
+                               StartIcon="@Icons.Material.Filled.FolderSpecial"
+                               OnClick="NavigateToOverview">
+                        Overview
+                    </MudButton>
+                }
             </MudStack>
         </MudStack>
     </MudPaper>
@@ -111,6 +126,77 @@
     }
     else
     {
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.Folder" Color="Color.Primary" />
+                <MudText Typo="Typo.subtitle1">Project:</MudText>
+                @if (_isLoadingProjects)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                }
+                else if (_projects.Count == 0)
+                {
+                    <MudText Color="Color.Secondary">No projects available.</MudText>
+                }
+                else
+                {
+                    <MudSelect T="string"
+                               Value="_selectedProjectRouteKey"
+                               ValueChanged="OnProjectChanged"
+                               Variant="Variant.Outlined"
+                               Dense="true"
+                               Style="max-width: 420px;"
+                               Disabled="_isReordering">
+                        <MudSelectItem T="string" Value="@string.Empty">All projects</MudSelectItem>
+                        @foreach (var project in _projects)
+                        {
+                            <MudSelectItem T="string" Value="@project.Alias">@FormatProjectLabel(project)</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+            </MudStack>
+        </MudPaper>
+
+        @if (_projectPlanningSummary is not null)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudStack Spacing="2">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.overline" Color="Color.Secondary">Project roadmap summary</MudText>
+                            <MudText Typo="Typo.h6">@_projectPlanningSummary.ProjectAlias</MudText>
+                        </MudStack>
+                        <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                            <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info">
+                                @_projectPlanningSummary.TotalEpics roadmap epics
+                            </MudChip>
+                            <MudChip T="string" Variant="Variant.Outlined" Color="@GetRoadmapRiskColor(HasRoadmapDominance())">
+                                @GetRoadmapDominanceLabel()
+                            </MudChip>
+                        </MudStack>
+                    </MudStack>
+
+                    <MudGrid Spacing="2">
+                        @foreach (var productSummary in _projectPlanningSummary.Products.OrderByDescending(product => product.EpicCount).ThenBy(product => product.ProductName))
+                        {
+                            var epicShare = _projectPlanningSummary.TotalEpics == 0
+                                ? 0
+                                : productSummary.EpicCount / (double)_projectPlanningSummary.TotalEpics * 100d;
+
+                            <MudItem xs="12" sm="6" md="4">
+                                <MudPaper Outlined="true" Class="pa-3">
+                                    <MudText Typo="Typo.subtitle2">@productSummary.ProductName</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @productSummary.EpicCount epic@(productSummary.EpicCount == 1 ? "" : "s") · @(epicShare.ToString("F0"))% of project roadmap
+                                    </MudText>
+                                </MudPaper>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudStack>
+            </MudPaper>
+        }
+
         @* Horizontal Scrollable Product Lanes *@
         <div style="overflow-x: auto; padding-bottom: 16px;">
             <div style="display: flex; gap: 16px; min-width: max-content;">
@@ -163,9 +249,110 @@
                             }
                             else
                             {
+                                var timeline = BuildTimeline(lane);
+
+                                <MudPaper Outlined="true" Class="pa-3">
+                                    <MudText Typo="Typo.subtitle2">Projected timeline</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        Shared time axis with independent forecast ranges in roadmap order.
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @lane.SprintCadence.TooltipText
+                                    </MudText>
+                                    @if (lane.SprintCadence.UsesDefaultDuration)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning" Class="mt-2">
+                                            Using default sprint duration
+                                        </MudChip>
+                                    }
+
+                                    @if (timeline.AxisStart.HasValue && timeline.AxisEnd.HasValue)
+                                    {
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mt-2">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @timeline.AxisStart.Value.LocalDateTime.ToString("dd MMM yyyy")
+                                            </MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @timeline.AxisEnd.Value.LocalDateTime.ToString("dd MMM yyyy")
+                                            </MudText>
+                                        </MudStack>
+                                    }
+
+                                    <MudStack Spacing="1" Class="mt-2">
+                                        @foreach (var row in timeline.Rows)
+                                        {
+                                            <MudStack Spacing="0">
+                                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                                    <MudText Typo="Typo.caption" Style="font-weight: 500;">
+                                                        #@row.RoadmapOrder · @row.Title
+                                                    </MudText>
+                                                    @if (row.EndDate.HasValue)
+                                                    {
+                                                        <MudText Typo="Typo.caption" Color="@(row.IsDelayed ? Color.Error : Color.Secondary)">
+                                                            @row.EndDate.Value.LocalDateTime.ToString("dd MMM yyyy")
+                                                        </MudText>
+                                                    }
+                                                    else
+                                                    {
+                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning">
+                                                            Forecast unavailable
+                                                        </MudChip>
+                                                    }
+                                                </MudStack>
+                                                <div class="projection-timeline-track">
+                                                    @if (row.HasTimelineBar)
+                                                    {
+                                                        <MudTooltip Placement="Placement.Top" Arrow="true">
+                                                            <ChildContent>
+                                                                <div class="@GetTimelineBarClass(row, lane.SprintCadence)"
+                                                                     style="@GetTimelineBarStyle(row)">
+                                                                    <div class="@GetTimelineEndMarkerClass(row)"></div>
+                                                                </div>
+                                                            </ChildContent>
+                                                            <TooltipContent>
+                                                                <MudStack Spacing="1" Style="font-size: 0.75rem; max-width: 220px;">
+                                                                    <MudText Typo="Typo.caption" Style="font-weight: 600;">@row.EndDate!.Value.LocalDateTime.ToString("dd MMM yyyy")</MudText>
+                                                                    <MudText Typo="Typo.caption">Projected completion (authoritative)</MudText>
+                                                                    @if (row.IsLowConfidence)
+                                                                    {
+                                                                        <MudText Typo="Typo.caption" Color="Color.Warning">Low confidence forecast</MudText>
+                                                                    }
+                                                                    @if (lane.SprintCadence.UsesFallback)
+                                                                    {
+                                                                        <MudText Typo="Typo.caption" Color="Color.Warning">Sprint cadence fallback in use</MudText>
+                                                                    }
+                                                                    <MudText Typo="Typo.caption">@lane.SprintCadence.TooltipText</MudText>
+                                                                    @if (lane.SprintCadence.UsesDefaultDuration)
+                                                                    {
+                                                                        <MudText Typo="Typo.caption" Color="Color.Warning">Using default sprint duration</MudText>
+                                                                    }
+                                                                    @if (row.IsDelayed)
+                                                                    {
+                                                                        <MudText Typo="Typo.caption" Color="Color.Error">Overdue — completion not yet recorded</MudText>
+                                                                    }
+                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="font-style: italic;">
+                                                                        Start is estimated from forecast, not actual data.
+                                                                    </MudText>
+                                                                </MudStack>
+                                                            </TooltipContent>
+                                                        </MudTooltip>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="projection-timeline-missing">
+                                                            <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Small" Class="mr-1" />
+                                                            Missing forecast
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </MudStack>
+                                        }
+                                    </MudStack>
+                                </MudPaper>
+
                                 @foreach (var epic in lane.Epics)
                                 {
-                                    <MudCard Elevation="1" Class="roadmap-epic-card">
+                                    <MudCard Elevation="1" Class="@GetEpicCardClass(epic)">
                                         <MudCardContent Class="pa-3">
                                             <MudStack Spacing="1">
                                                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
@@ -220,10 +407,22 @@
                                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
                                                         PBIs: @epic.PbiCount
                                                     </MudChip>
-                                                    @if (epic.SprintsRemaining.HasValue)
+                                                    @if (epic.HasForecast && epic.EstimatedCompletionDate.HasValue)
                                                     {
-                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@GetSprintChipColor(epic.SprintsRemaining.Value)">
-                                                            ~@epic.SprintsRemaining sprints
+                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@GetForecastDateChipColor(epic)">
+                                                            @epic.EstimatedCompletionDate.Value.LocalDateTime.ToString("dd MMM yyyy")
+                                                        </MudChip>
+                                                        @if (epic.SprintsRemaining.HasValue)
+                                                        {
+                                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@GetSprintChipColor(epic.SprintsRemaining.Value)">
+                                                                ~@epic.SprintsRemaining sprints
+                                                            </MudChip>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
+                                                            Forecast unavailable
                                                         </MudChip>
                                                     }
                                                 </MudStack>
@@ -233,12 +432,6 @@
                                                 {
                                                     <MudText Typo="Typo.caption" Color="Color.Info">
                                                         <MudIcon Icon="@Icons.Material.Filled.Link" Size="Size.Small" Class="mr-1" />Has dependencies
-                                                    </MudText>
-                                                }
-                                                @if (epic.ExceedsVelocity)
-                                                {
-                                                    <MudText Typo="Typo.caption" Color="Color.Warning">
-                                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" />Epic exceeds velocity
                                                     </MudText>
                                                 }
                                                 @if (epic.HasRefinementBlockers)
@@ -251,6 +444,12 @@
                                                 {
                                                     <MudText Typo="Typo.caption" Color="Color.Warning">
                                                         <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" />Validation issues
+                                                    </MudText>
+                                                }
+                                                @if (epic.IsDelayed)
+                                                {
+                                                    <MudText Typo="Typo.caption" Color="Color.Error">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Class="mr-1" />Delayed by @FormatDelayDuration(epic.DelayDuration)
                                                     </MudText>
                                                 }
 
@@ -272,6 +471,12 @@
                                                     {
                                                         <MudText Typo="Typo.caption" Color="@GetConfidenceColor(epic.Confidence.Value)">
                                                             @epic.Confidence.Value confidence
+                                                        </MudText>
+                                                    }
+                                                    @if (epic.HasForecast && epic.LastUpdated.HasValue)
+                                                    {
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                            Forecast updated @epic.LastUpdated.Value.LocalDateTime.ToString("dd MMM yyyy")
                                                         </MudText>
                                                     }
                                                 </MudStack>
@@ -518,15 +723,74 @@
     .roadmap-epic-card:hover {
         box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
     }
+    .roadmap-epic-card-delayed {
+        border-left-color: var(--mud-palette-error) !important;
+    }
+    .projection-timeline-track {
+        position: relative;
+        width: 100%;
+        height: 14px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.08);
+        overflow: hidden;
+        margin-top: 4px;
+    }
+    .projection-timeline-bar {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        border-radius: 999px;
+        /* Option A: certainty gradient — solid at right (end-date) → fade toward left (derived start) */
+        background: linear-gradient(to right, transparent 0%, var(--mud-palette-primary) 100%);
+        min-width: 8px;
+        overflow: visible;
+    }
+    .projection-timeline-bar-delayed {
+        /* Delayed: gradient ends in error colour; whole bar is NOT highlighted */
+        background: linear-gradient(to right, transparent 0%, var(--mud-palette-error) 100%);
+    }
+    .projection-timeline-bar-low-confidence {
+        /* Low confidence: reduce overall opacity; keep gradient shape */
+        opacity: 0.45;
+    }
+    .projection-timeline-end-marker {
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: 4px;
+        height: 100%;
+        border-radius: 0 999px 999px 0;
+        background: var(--mud-palette-primary);
+    }
+    .projection-timeline-end-marker-delayed {
+        background: var(--mud-palette-error);
+    }
+    .projection-timeline-missing {
+        display: flex;
+        align-items: center;
+        height: 100%;
+        padding: 0 8px;
+        color: var(--mud-palette-warning);
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
 </style>
 
 @code {
+    [Parameter]
+    public string? RouteProjectAlias { get; set; }
+
     private bool _isLoading = true;
     private bool _isReordering = false;
+    private bool _isLoadingProjects = true;
     private int? _profileId;
     private List<BreadcrumbItem> _breadcrumbs = new();
     private List<ProductLane> _productLanes = new();
+    private List<ProductDto> _allProducts = new();
     private List<ProductDto> _products = new();
+    private List<ProjectDto> _projects = new();
+    private string? _selectedProjectRouteKey;
+    private ProjectPlanningSummaryDto? _projectPlanningSummary;
     private TfsConfigDto? _tfsConfig;
     private readonly IReadOnlyList<PromptTemplateOption> _promptTemplates = RoadmapReportingService.GetAvailableTemplates();
 
@@ -554,8 +818,11 @@
 
             _tfsConfig = await TfsConfigService.GetConfigAsync();
 
-            // Load products (initial ordering will be determined by Objective BacklogPriority)
-            _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            _allProducts = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            _projects = await LoadAvailableProjectsAsync(_allProducts);
+            ResolveInitialProjectSelection();
+            ApplyProjectFilter();
+            await LoadProjectPlanningSummaryAsync();
 
             // Build lanes with roadmap epics, ordered by Objective BacklogPriority
             await BuildProductLanesAsync();
@@ -568,6 +835,7 @@
         }
         finally
         {
+            _isLoadingProjects = false;
             _isLoading = false;
         }
     }
@@ -631,6 +899,7 @@
                             Title = epic.Title,
                             OrderNumber = orderNumber++,
                             TfsUrl = BuildTfsUrl(epic.TfsId),
+                            State = epic.State,
                             TotalStoryPoints = localAnalytics.TotalStoryPoints,
                             DeliveredStoryPoints = localAnalytics.DeliveredStoryPoints,
                             RemainingStoryPoints = localAnalytics.RemainingStoryPoints,
@@ -645,27 +914,34 @@
                         });
                     }
 
-                    // Load forecast data and dependency signals in parallel for all roadmap epics
+                    // Load persisted planning projections and dependency signals in parallel for all roadmap epics
                     var epicTfsIds = lane.Epics.Select(e => e.TfsId).ToList();
-                    var dependencyTask = AnalyticsService.LoadDependencySignalsAsync(epicTfsIds);
-                    var forecastTasks = lane.Epics
-                        .Select(async epic =>
-                        {
-                            var forecast = await AnalyticsService.LoadForecastAsync(epic.TfsId);
-                            if (forecast != null)
-                            {
-                                epic.SprintsRemaining = forecast.SprintsRemaining;
-                                epic.ExceedsVelocity = forecast.ExceedsVelocity;
-                                epic.Confidence = forecast.Confidence;
-                            }
-                        });
-                    await Task.WhenAll(forecastTasks.Append(dependencyTask));
+                     var dependencyTask = AnalyticsService.LoadDependencySignalsAsync(epicTfsIds);
+                     var projectionTask = ProductService.GetPlanningProjectionsAsync(product.Id);
+                     var sprintCadenceTask = ResolveSprintCadenceAsync(product);
+                     await Task.WhenAll(dependencyTask, projectionTask, sprintCadenceTask);
 
-                    var epicIdsWithDependencies = dependencyTask.Result;
-                    foreach (var epic in lane.Epics)
-                    {
+                     var epicIdsWithDependencies = dependencyTask.Result;
+                     var projectionsByEpicId = projectionTask.Result.ToDictionary(projection => projection.EpicId);
+                     lane.SprintCadence = sprintCadenceTask.Result;
+                     foreach (var epic in lane.Epics)
+                     {
                         epic.HasDependencies = epicIdsWithDependencies.Contains(epic.TfsId);
+
+                        if (projectionsByEpicId.TryGetValue(epic.TfsId, out var projection))
+                        {
+                            epic.OrderNumber = projection.RoadmapOrder;
+                            epic.HasForecast = projection.HasForecast;
+                            epic.SprintsRemaining = projection.SprintsRemaining;
+                            epic.EstimatedCompletionDate = projection.EstimatedCompletionDate;
+                            epic.Confidence = projection.Confidence;
+                            epic.LastUpdated = projection.LastUpdated;
+                        }
                     }
+
+                    lane.Epics = lane.Epics
+                        .OrderBy(epic => epic.OrderNumber)
+                        .ToList();
                 }
                 catch (Exception ex)
                 {
@@ -765,7 +1041,10 @@
             }
 
             // Rebuild lanes from cache (which was refreshed by the API calls)
-            _products = (await ProductService.GetProductsByOwnerAsync(_profileId!.Value)).ToList();
+            _allProducts = (await ProductService.GetProductsByOwnerAsync(_profileId!.Value)).ToList();
+            _projects = await LoadAvailableProjectsAsync(_allProducts);
+            ApplyProjectFilter();
+            await LoadProjectPlanningSummaryAsync();
             await BuildProductLanesAsync();
 
             Snackbar.Add("Product order updated in TFS.", Severity.Success);
@@ -792,23 +1071,160 @@
 
     private void NavigateToHome()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.Home);
+        var currentContext = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.Home,
+                currentContext with { ProjectAlias = _selectedProjectRouteKey }));
     }
 
     private void NavigateToPlanning()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.PlanningWorkspace);
+        var currentContext = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.PlanningWorkspace,
+                currentContext with { ProjectAlias = _selectedProjectRouteKey }));
     }
 
     private void NavigateToHealth()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.HealthWorkspace);
+        var currentContext = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.HealthWorkspace,
+                currentContext with { ProjectAlias = _selectedProjectRouteKey }));
     }
 
     private void NavigateToRoadmapEditor(int productId)
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.GetProductRoadmapEditor(productId));
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.GetProductRoadmapEditor(productId),
+                new WorkspaceQueryContext(_selectedProjectRouteKey, productId)));
     }
+
+    private void NavigateToOverview()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.GetProjectPlanningOverview(_selectedProjectRouteKey),
+                new WorkspaceQueryContext(_selectedProjectRouteKey)));
+    }
+
+    private async Task<List<ProjectDto>> LoadAvailableProjectsAsync(IReadOnlyCollection<ProductDto> products)
+    {
+        var productIds = products.Select(product => product.Id).ToHashSet();
+        var projects = await ProjectService.GetAllProjectsAsync();
+
+        return projects
+            .Where(project => project.ProductIds.Any(productIds.Contains))
+            .OrderBy(project => project.Name)
+            .ToList();
+    }
+
+    private void ResolveInitialProjectSelection()
+    {
+        var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
+        var requestedProjectKey = string.IsNullOrWhiteSpace(RouteProjectAlias)
+            ? context.ProjectAlias
+            : RouteProjectAlias;
+
+        var selectedProject = ResolveProject(requestedProjectKey);
+        if (selectedProject == null && context.ProductId.HasValue)
+        {
+            selectedProject = _projects.FirstOrDefault(project => project.ProductIds.Contains(context.ProductId.Value));
+        }
+
+        _selectedProjectRouteKey = selectedProject?.Alias;
+    }
+
+    private void ApplyProjectFilter()
+    {
+        var selectedProject = ResolveProject(_selectedProjectRouteKey);
+        _products = selectedProject == null
+            ? _allProducts
+            : _allProducts.Where(product => selectedProject.ProductIds.Contains(product.Id)).ToList();
+    }
+
+    private async Task LoadProjectPlanningSummaryAsync()
+    {
+        _projectPlanningSummary = string.IsNullOrWhiteSpace(_selectedProjectRouteKey)
+            ? null
+            : await ProjectService.GetPlanningSummaryAsync(_selectedProjectRouteKey);
+    }
+
+    private async Task OnProjectChanged(string? projectRouteKey)
+    {
+        _selectedProjectRouteKey = string.IsNullOrWhiteSpace(projectRouteKey) ? null : projectRouteKey;
+        ApplyProjectFilter();
+        await LoadProjectPlanningSummaryAsync();
+        await BuildProductLanesAsync();
+
+        var route = string.IsNullOrWhiteSpace(_selectedProjectRouteKey)
+            ? WorkspaceRoutes.ProductRoadmaps
+            : WorkspaceRoutes.GetProjectProductRoadmaps(_selectedProjectRouteKey);
+
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                route,
+                new WorkspaceQueryContext(ProjectAlias: _selectedProjectRouteKey)),
+            forceLoad: false);
+    }
+
+    private ProjectDto? ResolveProject(string? projectRouteKey)
+    {
+        if (string.IsNullOrWhiteSpace(projectRouteKey))
+        {
+            return null;
+        }
+
+        return _projects.FirstOrDefault(project =>
+            string.Equals(project.Alias, projectRouteKey, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(project.Id, projectRouteKey, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string FormatProjectLabel(ProjectDto project)
+        => string.Equals(project.Name, project.Alias, StringComparison.OrdinalIgnoreCase)
+            ? project.Name
+            : $"{project.Name} ({project.Alias})";
+
+    private bool HasRoadmapDominance()
+    {
+        if (_projectPlanningSummary is null || _projectPlanningSummary.TotalEpics <= 0 || _projectPlanningSummary.Products.Count == 0)
+        {
+            return false;
+        }
+
+        var leadingEpicCount = _projectPlanningSummary.Products.Max(static product => product.EpicCount);
+        return leadingEpicCount / (double)_projectPlanningSummary.TotalEpics > 0.6d;
+    }
+
+    private string GetRoadmapDominanceLabel()
+    {
+        if (_projectPlanningSummary is null || _projectPlanningSummary.Products.Count == 0 || _projectPlanningSummary.TotalEpics <= 0)
+        {
+            return "Roadmap balance unavailable";
+        }
+
+        var leadingProduct = _projectPlanningSummary.Products.MaxBy(static product => product.EpicCount);
+        if (leadingProduct == null)
+        {
+            return "Roadmap balance unavailable";
+        }
+
+        var share = leadingProduct.EpicCount / (double)_projectPlanningSummary.TotalEpics * 100d;
+        return HasRoadmapDominance()
+            ? $"{leadingProduct.ProductName} dominates with {share:F0}% of roadmap epics"
+            : "Roadmap epics are distributed across products";
+    }
+
+    private static Color GetRoadmapRiskColor(bool isRisk) => isRisk ? Color.Warning : Color.Success;
 
     private IReadOnlyList<RoadmapProductEntry> BuildReportEntries()
     {
@@ -988,6 +1404,7 @@
         public int ObjectiveTfsId { get; set; }
         public double? ObjectiveBacklogPriority { get; set; }
         public List<RoadmapEpic> Epics { get; set; } = new();
+        public SprintCadenceInfo SprintCadence { get; set; } = SprintCadenceResolver.Resolve([]);
     }
 
     /// <summary>
@@ -1004,16 +1421,31 @@
         public int TotalStoryPoints { get; set; }
         public int DeliveredStoryPoints { get; set; }
         public int RemainingStoryPoints { get; set; }
+        public string State { get; set; } = string.Empty;
         public int ProgressPercent { get; set; }
         public bool HasDependencies { get; set; }
         public int PbiCount { get; set; }
+        public bool HasForecast { get; set; }
         public int? SprintsRemaining { get; set; }
-        public bool ExceedsVelocity { get; set; }
+        public DateTimeOffset? EstimatedCompletionDate { get; set; }
         public ForecastConfidence? Confidence { get; set; }
+        public DateTimeOffset? LastUpdated { get; set; }
         public int? EpicAgeDays { get; set; }
         public int? LastActivityDays { get; set; }
         public bool HasRefinementBlockers { get; set; }
         public bool HasValidationIssues { get; set; }
+        public bool IsDone =>
+            State.Equals("Closed", StringComparison.OrdinalIgnoreCase)
+            || State.Equals("Done", StringComparison.OrdinalIgnoreCase)
+            || State.Equals("Removed", StringComparison.OrdinalIgnoreCase);
+        public bool IsDelayed =>
+            !IsDone
+            && EstimatedCompletionDate.HasValue
+            && DateTimeOffset.UtcNow.Date > EstimatedCompletionDate.Value.Date;
+        public TimeSpan? DelayDuration =>
+            IsDelayed && EstimatedCompletionDate.HasValue
+                ? DateTimeOffset.UtcNow.Date - EstimatedCompletionDate.Value.Date
+                : null;
     }
 
     private static Color GetSprintChipColor(int sprintsRemaining)
@@ -1022,6 +1454,9 @@
         if (sprintsRemaining <= 6) return Color.Warning;
         return Color.Error;
     }
+
+    private static Color GetForecastDateChipColor(RoadmapEpic epic)
+        => epic.IsDelayed ? Color.Error : Color.Primary;
 
     private static Color GetProgressColor(int progressPercent)
     {
@@ -1044,4 +1479,78 @@
         ForecastConfidence.Low => Color.Error,
         _ => Color.Default
     };
+
+    private static string GetEpicCardClass(RoadmapEpic epic)
+        => epic.IsDelayed ? "roadmap-epic-card roadmap-epic-card-delayed" : "roadmap-epic-card";
+
+    private static RoadmapTimelineModel BuildTimeline(ProductLane lane)
+    {
+        return RoadmapTimelineLayout.Build(
+            lane.Epics
+                .Select(epic => new RoadmapTimelineEpicInput(
+                    epic.TfsId,
+                    epic.Title,
+                    epic.OrderNumber,
+                    epic.EstimatedCompletionDate,
+                    epic.SprintsRemaining,
+                    epic.Confidence,
+                    epic.HasForecast,
+                    epic.IsDelayed))
+                .ToList(),
+            new RoadmapTimelineBuildOptions(lane.SprintCadence.DurationDays));
+    }
+
+    private static string GetTimelineBarClass(RoadmapTimelineRow row, SprintCadenceInfo sprintCadence)
+    {
+        var classes = new List<string> { "projection-timeline-bar" };
+        if (row.IsDelayed)
+        {
+            classes.Add("projection-timeline-bar-delayed");
+        }
+
+        if (row.IsLowConfidence || sprintCadence.UsesFallback)
+        {
+            classes.Add("projection-timeline-bar-low-confidence");
+        }
+
+        return string.Join(" ", classes);
+    }
+
+    private static string GetTimelineBarStyle(RoadmapTimelineRow row)
+        => $"left: {row.LeftPercent.GetValueOrDefault():F2}%; width: {Math.Max(row.WidthPercent.GetValueOrDefault(), 2d):F2}%;";
+
+    private static string GetTimelineEndMarkerClass(RoadmapTimelineRow row)
+        => row.IsDelayed
+            ? "projection-timeline-end-marker projection-timeline-end-marker-delayed"
+            : "projection-timeline-end-marker";
+
+    private static string FormatDelayDuration(TimeSpan? delay)
+    {
+        if (!delay.HasValue)
+        {
+            return "0 days";
+        }
+
+        var days = Math.Max(1, (int)Math.Ceiling(delay.Value.TotalDays));
+        return days == 1 ? "1 day" : $"{days} days";
+    }
+
+    private async Task<SprintCadenceInfo> ResolveSprintCadenceAsync(ProductDto product)
+    {
+        if (product.TeamIds.Count == 0)
+        {
+            return SprintCadenceResolver.Resolve([]);
+        }
+
+        try
+        {
+            var sprints = (await SprintService.GetSprintsForTeamAsync(product.TeamIds.First())).ToList();
+            return SprintCadenceResolver.Resolve(sprints);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Falling back to default sprint cadence for product {ProductId}", product.Id);
+            return SprintCadenceResolver.Resolve([]);
+        }
+    }
 }
