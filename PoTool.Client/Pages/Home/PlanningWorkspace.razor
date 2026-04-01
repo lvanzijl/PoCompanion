@@ -111,12 +111,20 @@
 
     private void NavigateToProductRoadmaps()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.ProductRoadmaps}{BuildContextQuery()}");
+        var route = string.IsNullOrWhiteSpace(ProjectAlias)
+            ? WorkspaceRoutes.ProductRoadmaps
+            : WorkspaceRoutes.GetProjectProductRoadmaps(ProjectAlias);
+
+        NavigationManager.NavigateTo($"{route}{BuildContextQuery()}");
     }
 
     private void NavigateToPlanBoard()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.PlanBoard}{BuildContextQuery()}");
+        var route = string.IsNullOrWhiteSpace(ProjectAlias)
+            ? WorkspaceRoutes.PlanBoard
+            : WorkspaceRoutes.GetProjectPlanBoard(ProjectAlias);
+
+        NavigationManager.NavigateTo($"{route}{BuildContextQuery()}");
     }
 
     private void NavigateToHealth()

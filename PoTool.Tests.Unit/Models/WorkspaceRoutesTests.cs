@@ -53,4 +53,20 @@ public class WorkspaceRoutesTests
 
         Assert.AreEqual("/planning/product-roadmaps/42", result);
     }
+
+    [TestMethod]
+    public void GetProjectProductRoadmaps_ReturnsAliasScopedRoute()
+    {
+        var result = WorkspaceRoutes.GetProjectProductRoadmaps("payments-platform");
+
+        Assert.AreEqual("/planning/payments-platform/product-roadmaps", result);
+    }
+
+    [TestMethod]
+    public void GetProjectPlanBoard_ReturnsAliasScopedRoute()
+    {
+        var result = WorkspaceRoutes.GetProjectPlanBoard("payments-platform");
+
+        Assert.AreEqual("/planning/payments-platform/plan-board", result);
+    }
 }

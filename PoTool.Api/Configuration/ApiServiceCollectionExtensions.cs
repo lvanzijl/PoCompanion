@@ -153,6 +153,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IReleasePlanningRepository, ReleasePlanningRepository>();
         services.AddScoped<IPipelineRepository, Repositories.PipelineRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<ISprintRepository, SprintRepository>();
         services.AddScoped<IRepositoryConfigRepository, Repositories.RepositoryRepository>();

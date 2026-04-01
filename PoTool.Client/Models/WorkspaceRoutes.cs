@@ -121,6 +121,11 @@ public static class WorkspaceRoutes
     public const string ProductRoadmaps = "/planning/product-roadmaps";
 
     /// <summary>
+    /// Project-scoped Product Roadmaps overview route.
+    /// </summary>
+    public const string ProjectProductRoadmaps = "/planning/{0}/product-roadmaps";
+
+    /// <summary>
     /// Product Roadmap Editor route base — per-product roadmap editor with add/remove/reorder/edit capabilities.
     /// Append "/{productId}" to navigate to a specific product's editor.
     /// </summary>
@@ -130,6 +135,11 @@ public static class WorkspaceRoutes
     /// Plan Board route — operational sprint planning board for organizing PBIs and bugs into upcoming sprints.
     /// </summary>
     public const string PlanBoard = "/planning/plan-board";
+
+    /// <summary>
+    /// Project-scoped Plan Board route.
+    /// </summary>
+    public const string ProjectPlanBoard = "/planning/{0}/plan-board";
 
     /// <summary>
     /// Sprint Trend route - shows sprint-based revision metrics.
@@ -235,5 +245,37 @@ public static class WorkspaceRoutes
     public static string GetProductRoadmapEditor(int productId)
     {
         return string.Format(CultureInfo.InvariantCulture, ProductRoadmapEditor, productId);
+    }
+
+    /// <summary>
+    /// Gets the project-scoped product roadmaps route.
+    /// </summary>
+    public static string GetProjectProductRoadmaps(string projectAlias)
+    {
+        if (string.IsNullOrWhiteSpace(projectAlias))
+        {
+            return ProductRoadmaps;
+        }
+
+        return string.Format(
+            CultureInfo.InvariantCulture,
+            ProjectProductRoadmaps,
+            Uri.EscapeDataString(projectAlias));
+    }
+
+    /// <summary>
+    /// Gets the project-scoped plan board route.
+    /// </summary>
+    public static string GetProjectPlanBoard(string projectAlias)
+    {
+        if (string.IsNullOrWhiteSpace(projectAlias))
+        {
+            return PlanBoard;
+        }
+
+        return string.Format(
+            CultureInfo.InvariantCulture,
+            ProjectPlanBoard,
+            Uri.EscapeDataString(projectAlias));
     }
 }

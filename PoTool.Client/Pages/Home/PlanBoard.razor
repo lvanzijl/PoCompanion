@@ -1,4 +1,5 @@
 @page "/planning/plan-board"
+@page "/planning/{RouteProjectAlias}/plan-board"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Helpers
@@ -6,6 +7,7 @@
 @using PoTool.Shared.Metrics
 @inject IProfileService ProfileService
 @inject ProductService ProductService
+@inject ProjectService ProjectService
 @inject WorkItemService WorkItemService
 @inject SprintService SprintService
 @inject IMetricsClient MetricsClient
@@ -53,6 +55,33 @@
     @* Product Selector *@
     <MudPaper Elevation="2" Class="pa-4 mb-4">
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudIcon Icon="@Icons.Material.Filled.Folder" Color="Color.Primary" />
+            <MudText Typo="Typo.subtitle1">Project:</MudText>
+            @if (_isLoadingProjects)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            }
+            else if (_projects.Count == 0)
+            {
+                <MudText Color="Color.Secondary">No projects available.</MudText>
+            }
+            else
+            {
+                <MudSelect T="string"
+                           Value="_selectedProjectRouteKey"
+                           ValueChanged="OnProjectChanged"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Style="max-width: 340px;"
+                           Disabled="_isBusy">
+                    <MudSelectItem T="string" Value="@string.Empty">All projects</MudSelectItem>
+                    @foreach (var project in _projects)
+                    {
+                        <MudSelectItem T="string" Value="@project.Alias">@FormatProjectLabel(project)</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
             <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" />
             <MudText Typo="Typo.subtitle1">Product:</MudText>
             @if (_isLoadingProducts)
@@ -61,7 +90,7 @@
             }
             else if (_products.Count == 0)
             {
-                <MudText Color="Color.Secondary">No products available. Configure products in Settings.</MudText>
+                <MudText Color="Color.Secondary">No products available for the selected project.</MudText>
             }
             else
             {
@@ -422,12 +451,19 @@
 </style>
 
 @code {
+    [Parameter]
+    public string? RouteProjectAlias { get; set; }
+
     private const string BacklogZone = "backlog";
     private const int HistoricalSprintsForCalibration = 6;
 
     private List<BreadcrumbItem> _breadcrumbs = new();
+    private List<ProjectDto> _projects = new();
+    private List<ProductDto> _allProducts = new();
     private List<ProductDto> _products = new();
+    private string? _selectedProjectRouteKey;
     private int? _selectedProductId;
+    private bool _isLoadingProjects = true;
     private bool _isLoadingProducts = true;
     private bool _isLoadingBoard;
     private bool _isBusy;
@@ -475,10 +511,13 @@
             ProfileService.SetCachedActiveProfileId(activeProfile.Id);
             _activeProfileId = activeProfile.Id;
 
-            var products = await ProductService.GetProductsByOwnerAsync(activeProfile.Id);
-            _products = products.ToList();
+            _allProducts = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            _projects = await LoadAvailableProjectsAsync(_allProducts);
 
             var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
+            ResolveInitialProjectSelection(context);
+            ApplyProjectFilter();
+
             if (context.ProductId.HasValue && _products.Any(product => product.Id == context.ProductId.Value))
             {
                 _selectedProductId = context.ProductId.Value;
@@ -497,30 +536,33 @@
         }
         finally
         {
+            _isLoadingProjects = false;
             _isLoadingProducts = false;
         }
+    }
+
+    private async Task OnProjectChanged(string? projectRouteKey)
+    {
+        _selectedProjectRouteKey = string.IsNullOrWhiteSpace(projectRouteKey) ? null : projectRouteKey;
+        ApplyProjectFilter();
+
+        if (_selectedProductId.HasValue && !_products.Any(product => product.Id == _selectedProductId.Value))
+        {
+            _selectedProductId = null;
+        }
+
+        if (!_selectedProductId.HasValue && _products.Count == 1)
+        {
+            _selectedProductId = _products[0].Id;
+        }
+
+        await NavigateToCurrentScopeAsync(_selectedProductId, loadBoard: _selectedProductId.HasValue);
     }
 
     private async Task OnProductChanged(int? productId)
     {
         _selectedProductId = productId;
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.PlanBoard,
-                new WorkspaceQueryContext(ProductId: productId)),
-            forceLoad: false);
-
-        if (productId == null)
-        {
-            _selectedProductRootIds = [];
-            _allWorkItems = new List<WorkItemDto>();
-            _sprintColumns = new List<SprintColumn>();
-            _candidateTree = new List<PlanBoardCandidateNode>();
-            _sprintItems = new Dictionary<string, List<SprintDragItem>>();
-            return;
-        }
-
-        await LoadBoardAsync(productId.Value);
+        await NavigateToCurrentScopeAsync(productId, loadBoard: productId.HasValue);
     }
 
     private async Task LoadBoardAsync(int productId)
@@ -976,7 +1018,91 @@
         NavigationManager.NavigateTo(
             WorkspaceQueryContextHelper.BuildRoute(
                 WorkspaceRoutes.PlanningWorkspace,
-                new WorkspaceQueryContext(ProductId: _selectedProductId)));
+                new WorkspaceQueryContext(_selectedProjectRouteKey, _selectedProductId)));
+
+    private async Task<List<ProjectDto>> LoadAvailableProjectsAsync(IReadOnlyCollection<ProductDto> products)
+    {
+        var productIds = products.Select(product => product.Id).ToHashSet();
+        var projects = await ProjectService.GetAllProjectsAsync();
+
+        return projects
+            .Where(project => project.ProductIds.Any(productIds.Contains))
+            .OrderBy(project => project.Name)
+            .ToList();
+    }
+
+    private void ResolveInitialProjectSelection(WorkspaceQueryContext context)
+    {
+        var requestedProjectKey = string.IsNullOrWhiteSpace(RouteProjectAlias)
+            ? context.ProjectAlias
+            : RouteProjectAlias;
+
+        var selectedProject = ResolveProject(requestedProjectKey);
+        if (selectedProject == null && context.ProductId.HasValue)
+        {
+            selectedProject = _projects.FirstOrDefault(project => project.ProductIds.Contains(context.ProductId.Value));
+        }
+
+        _selectedProjectRouteKey = selectedProject?.Alias;
+    }
+
+    private void ApplyProjectFilter()
+    {
+        var selectedProject = ResolveProject(_selectedProjectRouteKey);
+        _products = selectedProject == null
+            ? _allProducts
+            : _allProducts.Where(product => selectedProject.ProductIds.Contains(product.Id)).ToList();
+    }
+
+    private async Task NavigateToCurrentScopeAsync(int? productId, bool loadBoard)
+    {
+        var route = string.IsNullOrWhiteSpace(_selectedProjectRouteKey)
+            ? WorkspaceRoutes.PlanBoard
+            : WorkspaceRoutes.GetProjectPlanBoard(_selectedProjectRouteKey);
+
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                route,
+                new WorkspaceQueryContext(_selectedProjectRouteKey, productId)),
+            forceLoad: false);
+
+        if (productId == null)
+        {
+            ClearBoard();
+            return;
+        }
+
+        if (loadBoard)
+        {
+            await LoadBoardAsync(productId.Value);
+        }
+    }
+
+    private void ClearBoard()
+    {
+        _selectedProductRootIds = [];
+        _allWorkItems = new List<WorkItemDto>();
+        _sprintColumns = new List<SprintColumn>();
+        _candidateTree = new List<PlanBoardCandidateNode>();
+        _sprintItems = new Dictionary<string, List<SprintDragItem>>();
+    }
+
+    private ProjectDto? ResolveProject(string? projectRouteKey)
+    {
+        if (string.IsNullOrWhiteSpace(projectRouteKey))
+        {
+            return null;
+        }
+
+        return _projects.FirstOrDefault(project =>
+            string.Equals(project.Alias, projectRouteKey, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(project.Id, projectRouteKey, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string FormatProjectLabel(ProjectDto project)
+        => string.Equals(project.Name, project.Alias, StringComparison.OrdinalIgnoreCase)
+            ? project.Name
+            : $"{project.Name} ({project.Alias})";
 
     private async Task LoadCapacityCalibrationAsync(List<SprintDto> allTeamSprints, int productId)
     {

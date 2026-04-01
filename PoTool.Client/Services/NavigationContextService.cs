@@ -179,6 +179,11 @@ public class NavigationContextService : INavigationContextService
         {
             parameters.Add($"productId={context.Scope.ProductId.Value}");
         }
+
+        if (!string.IsNullOrWhiteSpace(context.Scope.ProjectAlias))
+        {
+            parameters.Add($"projectAlias={HttpUtility.UrlEncode(context.Scope.ProjectAlias)}");
+        }
         
         if (context.Scope.TeamId.HasValue)
         {
@@ -227,6 +232,7 @@ public class NavigationContextService : INavigationContextService
                 scopeLevel = ScopeLevel.Portfolio;
             }
             
+            var projectAlias = query["projectAlias"];
             int? productId = int.TryParse(query["productId"], out var pid) ? pid : null;
             int? teamId = int.TryParse(query["teamId"], out var tid) ? tid : null;
             
@@ -245,6 +251,7 @@ public class NavigationContextService : INavigationContextService
                 {
                     Level = scopeLevel,
                     ProfileId = _profileService.GetActiveProfileId(),
+                    ProjectAlias = projectAlias,
                     ProductId = productId,
                     TeamId = teamId
                 },

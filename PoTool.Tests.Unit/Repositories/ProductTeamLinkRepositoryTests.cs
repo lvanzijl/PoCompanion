@@ -16,6 +16,7 @@ public class ProductTeamLinkRepositoryTests
 {
     private PoToolDbContext _context = null!;
     private ProductRepository _productRepository = null!;
+    private ProjectRepository _projectRepository = null!;
     private TeamRepository _teamRepository = null!;
     private ProfileRepository _profileRepository = null!;
 
@@ -35,6 +36,7 @@ public class ProductTeamLinkRepositoryTests
         _context.Database.EnsureCreated();
 
         _productRepository = new ProductRepository(_context);
+        _projectRepository = new ProjectRepository(_context);
         _teamRepository = new TeamRepository(_context);
         _profileRepository = new ProfileRepository(_context);
     }
@@ -203,5 +205,59 @@ public class ProductTeamLinkRepositoryTests
         var persisted = await _productRepository.GetProductByIdAsync(created.Id);
         Assert.IsNotNull(persisted);
         Assert.AreEqual(EstimationMode.Mixed, persisted.EstimationMode);
+    }
+
+    [TestMethod]
+    public async Task CreateProductAsync_CreatesDefaultProjectWithAliasAndAssociation()
+    {
+        var profile = await _profileRepository.CreateProfileAsync("Test Owner", new List<int>());
+
+        var created = await _productRepository.CreateProductAsync(
+            productOwnerId: profile.Id,
+            name: "Payments Platform",
+            backlogRootWorkItemIds: new List<int> { 42 },
+            pictureType: ProductPictureType.Default,
+            defaultPictureId: 0,
+            customPicturePath: null);
+
+        var projects = (await _projectRepository.GetAllProjectsAsync()).ToList();
+        Assert.HasCount(1, projects);
+        Assert.AreEqual("payments-platform", projects[0].Alias);
+        CollectionAssert.AreEqual(new List<int> { created.Id }, projects[0].ProductIds);
+
+        var projectProducts = (await _projectRepository.GetProjectProductsAsync("payments-platform")).ToList();
+        Assert.HasCount(1, projectProducts);
+        Assert.AreEqual(created.Id, projectProducts[0].Id);
+    }
+
+    [TestMethod]
+    public async Task CreateProductAsync_WhenAliasesCollide_GeneratesUniqueProjectAliases()
+    {
+        var profile = await _profileRepository.CreateProfileAsync("Test Owner", new List<int>());
+
+        await _productRepository.CreateProductAsync(
+            productOwnerId: profile.Id,
+            name: "Payments Platform",
+            backlogRootWorkItemIds: new List<int> { 1 },
+            pictureType: ProductPictureType.Default,
+            defaultPictureId: 0,
+            customPicturePath: null);
+
+        await _productRepository.CreateProductAsync(
+            productOwnerId: profile.Id,
+            name: "Payments Platform",
+            backlogRootWorkItemIds: new List<int> { 2 },
+            pictureType: ProductPictureType.Default,
+            defaultPictureId: 0,
+            customPicturePath: null);
+
+        var aliases = (await _projectRepository.GetAllProjectsAsync())
+            .Select(project => project.Alias)
+            .OrderBy(alias => alias)
+            .ToList();
+
+        CollectionAssert.AreEqual(
+            new List<string> { "payments-platform", "payments-platform-2" },
+            aliases);
     }
 }

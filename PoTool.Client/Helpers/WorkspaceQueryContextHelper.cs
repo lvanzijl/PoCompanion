@@ -3,6 +3,7 @@ using System.Web;
 namespace PoTool.Client.Helpers;
 
 public sealed record WorkspaceQueryContext(
+    string? ProjectAlias = null,
     int? ProductId = null,
     int? TeamId = null,
     int? SprintId = null,
@@ -24,6 +25,7 @@ public static class WorkspaceQueryContextHelper
 
         var queryParams = HttpUtility.ParseQueryString(absoluteUri.Query);
         return new WorkspaceQueryContext(
+            ProjectAlias: queryParams["projectAlias"],
             ProductId: ParseNullableInt(queryParams["productId"]),
             TeamId: ParseNullableInt(queryParams["teamId"]),
             SprintId: ParseNullableInt(queryParams["sprintId"]),
@@ -35,6 +37,7 @@ public static class WorkspaceQueryContextHelper
     {
         var parameters = new List<string>();
 
+        AppendString(parameters, "projectAlias", context.ProjectAlias);
         AppendInt(parameters, "productId", context.ProductId);
         AppendInt(parameters, "teamId", context.TeamId);
         AppendInt(parameters, "sprintId", context.SprintId);
@@ -62,6 +65,14 @@ public static class WorkspaceQueryContextHelper
         if (value.HasValue)
         {
             parameters.Add($"{key}={value.Value}");
+        }
+    }
+
+    private static void AppendString(ICollection<string> parameters, string key, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            parameters.Add($"{key}={HttpUtility.UrlEncode(value)}");
         }
     }
 }

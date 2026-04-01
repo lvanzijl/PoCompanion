@@ -117,6 +117,11 @@ public class PoToolDbContext : DbContext
     public DbSet<ProductEntity> Products => Set<ProductEntity>();
 
     /// <summary>
+    /// Projects that group products for planning context.
+    /// </summary>
+    public DbSet<ProjectEntity> Projects => Set<ProjectEntity>();
+
+    /// <summary>
     /// Teams that can work on products.
     /// </summary>
     public DbSet<TeamEntity> Teams => Set<TeamEntity>();
@@ -256,6 +261,36 @@ public class PoToolDbContext : DbContext
             // NOTE: ProtectedPat property removed - PAT stored client-side now
             entity.Property(e => e.Url).HasMaxLength(1024).IsRequired();
             entity.Property(e => e.Project).HasMaxLength(256);
+        });
+
+        modelBuilder.Entity<ProjectEntity>(entity =>
+        {
+            entity.HasIndex(e => e.Alias)
+                .IsUnique();
+
+            entity.Property(e => e.Id)
+                .HasMaxLength(64)
+                .IsRequired();
+
+            entity.Property(e => e.Alias)
+                .HasMaxLength(128)
+                .IsRequired();
+
+            entity.Property(e => e.Name)
+                .HasMaxLength(200)
+                .IsRequired();
+        });
+
+        modelBuilder.Entity<ProductEntity>(entity =>
+        {
+            entity.Property(e => e.ProjectId)
+                .HasMaxLength(64)
+                .IsRequired();
+
+            entity.HasOne(e => e.Project)
+                .WithMany(e => e.Products)
+                .HasForeignKey(e => e.ProjectId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<SettingsEntity>(entity =>
