@@ -57,6 +57,16 @@ public class DataSourceModeConfigurationTests
     }
 
     [TestMethod]
+    public void GetRouteIntent_ProjectsRoute_IsLiveAllowed()
+    {
+        var intent = DataSourceModeConfiguration.GetRouteIntent("/api/projects/payments-platform/products");
+
+        Assert.AreEqual(
+            DataSourceModeConfiguration.RouteIntent.LiveAllowed,
+            intent);
+    }
+
+    [TestMethod]
     public void GetRouteIntent_HubRoute_IsLiveAllowed()
     {
         var intent = DataSourceModeConfiguration.GetRouteIntent("/hubs/cachesync");

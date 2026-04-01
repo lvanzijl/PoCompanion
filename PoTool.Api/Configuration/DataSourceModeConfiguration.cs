@@ -47,6 +47,7 @@ public static class DataSourceModeConfiguration
         "/api/profiles",
         "/api/teams",
         "/api/products",
+        "/api/projects",
         "/api/portfolio/snapshots",
         "/api/repositories",
 
