@@ -2,6 +2,14 @@
   {
     "date": "2026-04-02",
     "type": "Changed",
+    "title": "Planning now shows multi-product timelines on one shared axis",
+    "impact": "Multi-Product Planning now lets product owners compare selected products on one shared time axis, toggle cross-product end-date clusters, and see delayed or missing-forecast signals per product without adding new backend planning logic.",
+    "area": "Planning",
+    "link": "/planning/multi-product"
+  },
+  {
+    "date": "2026-04-02",
+    "type": "Changed",
     "title": "Planning timelines now use real sprint cadence per product",
     "impact": "Product Roadmaps and Multi-Product Planning now derive epic start ranges from each product team's recent sprint history instead of assuming a fixed 14-day sprint, while still falling back to the current sprint or a default duration when no usable sprint history exists.",
     "area": "Planning",

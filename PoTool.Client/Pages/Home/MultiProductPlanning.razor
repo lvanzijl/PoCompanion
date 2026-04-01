@@ -46,6 +46,37 @@ else
                 </MudStack>
             </MudPaper>
 
+            @if (_availableProducts.Count > 0)
+            {
+                <MudPaper Elevation="1" Class="pa-3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Wrap="Wrap.Wrap">
+                        <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Color="Color.Primary" />
+                        <MudSelect T="int"
+                                   Label="Products"
+                                   Dense="true"
+                                   Variant="Variant.Outlined"
+                                   MultiSelection="true"
+                                   SelectedValues="_selectedProductIds"
+                                   SelectedValuesChanged="OnSelectedProductsChanged"
+                                   Style="min-width: 320px;">
+                            @foreach (var product in _availableProducts)
+                            {
+                                <MudSelectItem T="int" Value="@product.ProductId">@product.ProductName</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudSwitch T="bool"
+                                   Value="_showClusters"
+                                   ValueChanged="OnShowClustersChanged"
+                                   Color="Color.Primary">
+                            Show clusters
+                        </MudSwitch>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @_productLanes.Count selected product(s)
+                        </MudText>
+                    </MudStack>
+                </MudPaper>
+            }
+
             @if (_loadError != null)
             {
                 <MudAlert Severity="Severity.Warning">@_loadError</MudAlert>
@@ -79,7 +110,7 @@ else
                         </MudStack>
 
                         @* Pressure zone overlay row *@
-                        @if (_pressureZones.Count > 0)
+                        @if (_showClusters && _pressureZones.Count > 0)
                         {
                             <div class="multi-product-pressure-track" style="margin-top: 4px;">
                                 @foreach (var zone in _pressureZones)
@@ -287,10 +318,13 @@ else
     private bool _isLoading = true;
     private string? _loadError;
     private List<BreadcrumbItem> _breadcrumbs = new();
+    private List<LoadedProductPlanning> _availableProducts = new();
     private List<ProductTimelineLane> _productLanes = new();
     private DateTimeOffset? _globalAxisStart;
     private DateTimeOffset? _globalAxisEnd;
     private List<PressureZone> _pressureZones = new();
+    private HashSet<int> _selectedProductIds = new();
+    private bool _showClusters = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -323,6 +357,7 @@ else
             var products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
             if (products.Count == 0)
             {
+                _availableProducts = [];
                 return;
             }
 
@@ -335,55 +370,19 @@ else
                     SprintCadence = await ResolveSprintCadenceAsync(product)
                 })
                 .ToList();
-            var productInputs = await Task.WhenAll(productTasks);
-
-            var preliminaryLanes = productInputs
-                .Select(input =>
-                {
-                    var epicInputs = input.Projections.Select(ToEpicInput).ToList();
-                    var timeline = epicInputs.Count > 0
-                        ? RoadmapTimelineLayout.Build(
-                            epicInputs,
-                            new RoadmapTimelineBuildOptions(input.SprintCadence.DurationDays))
-                        : new RoadmapTimelineModel(null, null, []);
-                    return new ProductTimelineLane(input.Product.Id, input.Product.Name, input.SprintCadence, timeline);
-                })
-                .Where(lane => lane.Timeline.AxisStart.HasValue && lane.Timeline.AxisEnd.HasValue)
+            _availableProducts = (await Task.WhenAll(productTasks))
+                .Select(input => new LoadedProductPlanning(
+                    input.Product.Id,
+                    input.Product.Name,
+                    input.Projections,
+                    input.SprintCadence))
                 .ToList();
 
-            if (preliminaryLanes.Count == 0)
-            {
-                return;
-            }
+            _selectedProductIds = _availableProducts
+                .Select(product => product.ProductId)
+                .ToHashSet();
 
-            _globalAxisStart = preliminaryLanes.Min(lane => lane.Timeline.AxisStart!.Value);
-            _globalAxisEnd = preliminaryLanes.Max(lane => lane.Timeline.AxisEnd!.Value);
-
-            // Build per-product lanes aligned to global axis
-            _productLanes = productInputs
-                .Select(input =>
-                {
-                    var inputs = input.Projections.Select(ToEpicInput).ToList();
-                    var timeline = inputs.Count > 0
-                        ? RoadmapTimelineLayout.BuildWithSharedAxis(
-                            inputs,
-                            _globalAxisStart!.Value,
-                            _globalAxisEnd!.Value,
-                            new RoadmapTimelineBuildOptions(input.SprintCadence.DurationDays))
-                        : new RoadmapTimelineModel(null, null, []);
-                    return new ProductTimelineLane(input.Product.Id, input.Product.Name, input.SprintCadence, timeline);
-                })
-                .Where(lane => lane.Timeline.Rows.Count > 0)
-                .ToList();
-
-            // Compute pressure zones from all end dates on the global axis
-            _pressureZones = ComputePressureZones(
-                _productLanes.SelectMany(l => l.Timeline.Rows)
-                    .Where(r => r.HasTimelineBar && r.EndDate.HasValue)
-                    .Select(r => r.EndDate!.Value)
-                    .ToList(),
-                _globalAxisStart.Value,
-                _globalAxisEnd.Value);
+            RebuildVisibleLanes();
         }
         catch (Exception ex)
         {
@@ -393,6 +392,72 @@ else
         {
             _isLoading = false;
         }
+    }
+
+    private void RebuildVisibleLanes()
+    {
+        var selectedProducts = _availableProducts
+            .Where(product => _selectedProductIds.Contains(product.ProductId))
+            .ToList();
+
+        var preliminaryLanes = selectedProducts
+            .Select(BuildUnalignedLane)
+            .Where(lane => lane.Timeline.AxisStart.HasValue && lane.Timeline.AxisEnd.HasValue)
+            .ToList();
+
+        if (preliminaryLanes.Count == 0)
+        {
+            _productLanes = [];
+            _pressureZones = [];
+            _globalAxisStart = null;
+            _globalAxisEnd = null;
+            return;
+        }
+
+        _globalAxisStart = preliminaryLanes.Min(lane => lane.Timeline.AxisStart!.Value);
+        _globalAxisEnd = preliminaryLanes.Max(lane => lane.Timeline.AxisEnd!.Value);
+
+        _productLanes = selectedProducts
+            .Select(product => BuildAlignedLane(product, _globalAxisStart.Value, _globalAxisEnd.Value))
+            .Where(lane => lane.Timeline.Rows.Count > 0)
+            .ToList();
+
+        _pressureZones = ComputePressureZones(
+            _productLanes.SelectMany(lane => lane.Timeline.Rows)
+                .Where(row => row.HasTimelineBar && row.EndDate.HasValue)
+                .Select(row => row.EndDate!.Value)
+                .ToList(),
+            _globalAxisStart.Value,
+            _globalAxisEnd.Value);
+    }
+
+    private static ProductTimelineLane BuildUnalignedLane(LoadedProductPlanning product)
+    {
+        var epicInputs = product.Projections.Select(ToEpicInput).ToList();
+        var timeline = epicInputs.Count > 0
+            ? RoadmapTimelineLayout.Build(
+                epicInputs,
+                new RoadmapTimelineBuildOptions(product.SprintCadence.DurationDays))
+            : new RoadmapTimelineModel(null, null, []);
+
+        return new ProductTimelineLane(product.ProductId, product.ProductName, product.SprintCadence, timeline);
+    }
+
+    private static ProductTimelineLane BuildAlignedLane(
+        LoadedProductPlanning product,
+        DateTimeOffset axisStart,
+        DateTimeOffset axisEnd)
+    {
+        var epicInputs = product.Projections.Select(ToEpicInput).ToList();
+        var timeline = epicInputs.Count > 0
+            ? RoadmapTimelineLayout.BuildWithSharedAxis(
+                epicInputs,
+                axisStart,
+                axisEnd,
+                new RoadmapTimelineBuildOptions(product.SprintCadence.DurationDays))
+            : new RoadmapTimelineModel(null, null, []);
+
+        return new ProductTimelineLane(product.ProductId, product.ProductName, product.SprintCadence, timeline);
     }
 
     private static RoadmapTimelineEpicInput ToEpicInput(PlanningEpicProjectionDto projection)
@@ -487,6 +552,27 @@ else
         NavigationManager.NavigateTo(WorkspaceRoutes.PlanningWorkspace);
     }
 
+    private Task OnSelectedProductsChanged(IEnumerable<int> productIds)
+    {
+        var selectedIds = productIds.ToHashSet();
+        if (selectedIds.Count == 0)
+        {
+            selectedIds = _availableProducts
+                .Select(product => product.ProductId)
+                .ToHashSet();
+        }
+
+        _selectedProductIds = selectedIds;
+        RebuildVisibleLanes();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnShowClustersChanged(bool value)
+    {
+        _showClusters = value;
+        return InvokeAsync(StateHasChanged);
+    }
+
     private async Task<SprintCadenceInfo> ResolveSprintCadenceAsync(ProductDto product)
     {
         if (product.TeamIds.Count == 0)
@@ -532,6 +618,12 @@ else
         public int DelayedCount => Timeline.Rows.Count(r => r.IsDelayed);
         public int MissingForecastCount => Timeline.Rows.Count(r => r.IsForecastMissing);
     }
+
+    private sealed record LoadedProductPlanning(
+        int ProductId,
+        string ProductName,
+        List<PlanningEpicProjectionDto> Projections,
+        SprintCadenceInfo SprintCadence);
 
     private sealed record PressureZone(double LeftPercent, double WidthPercent, int EpicCount);
 }
