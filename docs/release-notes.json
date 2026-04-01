@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-04-02",
+    "type": "Changed",
+    "title": "Planning timelines now use real sprint cadence per product",
+    "impact": "Product Roadmaps and Multi-Product Planning now derive epic start ranges from each product team's recent sprint history instead of assuming a fixed 14-day sprint, while still falling back to the current sprint or a default duration when no usable sprint history exists.",
+    "area": "Planning",
+    "link": "/home/planning"
+  },
+  {
     "date": "2026-04-01",
     "type": "Changed",
     "title": "Product roadmaps now show projected completion dates and simple sequence bars",
