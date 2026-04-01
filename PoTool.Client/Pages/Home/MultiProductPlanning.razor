@@ -70,6 +70,12 @@ else
                                    Color="Color.Primary">
                             Show clusters
                         </MudSwitch>
+                        <MudSwitch T="bool"
+                                   Value="_showCapacityCollisions"
+                                   ValueChanged="OnShowCapacityCollisionsChanged"
+                                   Color="Color.Primary">
+                            Show capacity collisions
+                        </MudSwitch>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
                             @_productLanes.Count selected product(s)
                         </MudText>
@@ -130,6 +136,34 @@ else
                                 }
                             </div>
                         }
+
+                        @if (_showCapacityCollisions && _capacityCollisionWindows.Count > 0)
+                        {
+                            <div class="multi-product-collision-track" style="margin-top: 6px;">
+                                @foreach (var collision in _capacityCollisionWindows)
+                                {
+                                    <MudTooltip Placement="Placement.Top" Arrow="true">
+                                        <ChildContent>
+                                            <div class="multi-product-collision-zone"
+                                                 style="left: @collision.LeftPercent.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)%; width: @Math.Max(collision.WidthPercent, 1.5d).ToString("F2", System.Globalization.CultureInfo.InvariantCulture)%;"
+                                                 aria-label="Capacity collision hint">
+                                                <MudIcon Icon="@Icons.Material.Filled.Groups"
+                                                         Size="Size.Small"
+                                                         Class="multi-product-collision-icon" />
+                                            </div>
+                                        </ChildContent>
+                                        <TooltipContent>
+                                            <MudStack Spacing="1">
+                                                <MudText Typo="Typo.caption" Style="font-weight: 600;">Capacity collision hint</MudText>
+                                                <MudText Typo="Typo.caption">@collision.EpicIds.Count overlapping epics share @collision.SharedTeamIds.Count team(s)</MudText>
+                                                <MudText Typo="Typo.caption">Products: @string.Join(", ", collision.ProductNames)</MudText>
+                                                <MudText Typo="Typo.caption">Teams: @string.Join(", ", collision.SharedTeamIds.Select(FormatTeamLabel))</MudText>
+                                            </MudStack>
+                                        </TooltipContent>
+                                    </MudTooltip>
+                                }
+                            </div>
+                        }
                     </MudPaper>
                 }
 
@@ -177,6 +211,25 @@ else
                                             <MudText Typo="Typo.caption" Style="font-weight: 500; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                                 #@row.RoadmapOrder · @row.Title
                                             </MudText>
+                                            @if (_showCapacityCollisions && TryGetEpicCollisionHint(row.EpicId, out var collisionHint))
+                                            {
+                                                <MudTooltip Placement="Placement.Top" Arrow="true">
+                                                    <ChildContent>
+                                                        <MudIcon Icon="@Icons.Material.Filled.Groups"
+                                                                 Size="Size.Small"
+                                                                 Color="Color.Info"
+                                                                 Class="multi-product-row-hint" />
+                                                    </ChildContent>
+                                                    <TooltipContent>
+                                                        <MudStack Spacing="1">
+                                                            <MudText Typo="Typo.caption" Style="font-weight: 600;">Capacity collision hint</MudText>
+                                                            <MudText Typo="Typo.caption">May compete with other work on same team(s).</MudText>
+                                                            <MudText Typo="Typo.caption">Products: @string.Join(", ", collisionHint.ProductNames)</MudText>
+                                                            <MudText Typo="Typo.caption">Teams: @string.Join(", ", collisionHint.SharedTeamIds.Select(FormatTeamLabel))</MudText>
+                                                        </MudStack>
+                                                    </TooltipContent>
+                                                </MudTooltip>
+                                            }
                                             @if (row.EndDate.HasValue)
                                             {
                                                 <MudText Typo="Typo.caption" Color="@(row.IsDelayed ? Color.Error : Color.Secondary)">
@@ -312,6 +365,34 @@ else
         border: 1px solid rgba(255, 165, 0, 0.55);
         cursor: default;
     }
+    .multi-product-collision-track {
+        position: relative;
+        width: 100%;
+        height: 12px;
+        background: rgba(255,255,255,0.04);
+        border-radius: 4px;
+        overflow: visible;
+    }
+    .multi-product-collision-zone {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        background: rgba(99, 102, 241, 0.28);
+        border-radius: 4px;
+        border: 1px solid rgba(129, 140, 248, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: default;
+    }
+    .multi-product-collision-icon {
+        color: rgba(224, 231, 255, 0.95);
+        pointer-events: none;
+    }
+    .multi-product-row-hint {
+        margin-left: 4px;
+        margin-right: auto;
+    }
 </style>
 
 @code {
@@ -323,8 +404,11 @@ else
     private DateTimeOffset? _globalAxisStart;
     private DateTimeOffset? _globalAxisEnd;
     private List<PressureZone> _pressureZones = new();
+    private List<CapacityCollisionWindow> _capacityCollisionWindows = new();
+    private Dictionary<int, EpicCollisionHint> _epicCollisionHints = new();
     private HashSet<int> _selectedProductIds = new();
     private bool _showClusters = true;
+    private bool _showCapacityCollisions;
 
     protected override async Task OnInitializedAsync()
     {
@@ -374,6 +458,7 @@ else
                 .Select(input => new LoadedProductPlanning(
                     input.Product.Id,
                     input.Product.Name,
+                    input.Product.TeamIds,
                     input.Projections,
                     input.SprintCadence))
                 .ToList();
@@ -409,6 +494,8 @@ else
         {
             _productLanes = [];
             _pressureZones = [];
+            _capacityCollisionWindows = [];
+            _epicCollisionHints = new();
             _globalAxisStart = null;
             _globalAxisEnd = null;
             return;
@@ -429,6 +516,22 @@ else
                 .ToList(),
             _globalAxisStart.Value,
             _globalAxisEnd.Value);
+
+        _capacityCollisionWindows = CapacityCollisionHintDetector.Build(
+            _productLanes.SelectMany(lane => lane.Timeline.Rows
+                    .Where(row => row.HasTimelineBar && row.StartDate.HasValue && row.EndDate.HasValue)
+                    .Select(row => new CapacityCollisionEpicInput(
+                        row.EpicId,
+                        lane.ProductName,
+                        lane.TeamIds,
+                        row.StartDate!.Value,
+                        row.EndDate!.Value)))
+                .ToList(),
+            _globalAxisStart.Value,
+            _globalAxisEnd.Value)
+            .ToList();
+
+        _epicCollisionHints = BuildEpicCollisionHints(_capacityCollisionWindows);
     }
 
     private static ProductTimelineLane BuildUnalignedLane(LoadedProductPlanning product)
@@ -440,7 +543,7 @@ else
                 new RoadmapTimelineBuildOptions(product.SprintCadence.DurationDays))
             : new RoadmapTimelineModel(null, null, []);
 
-        return new ProductTimelineLane(product.ProductId, product.ProductName, product.SprintCadence, timeline);
+        return new ProductTimelineLane(product.ProductId, product.ProductName, product.TeamIds, product.SprintCadence, timeline);
     }
 
     private static ProductTimelineLane BuildAlignedLane(
@@ -457,7 +560,7 @@ else
                 new RoadmapTimelineBuildOptions(product.SprintCadence.DurationDays))
             : new RoadmapTimelineModel(null, null, []);
 
-        return new ProductTimelineLane(product.ProductId, product.ProductName, product.SprintCadence, timeline);
+        return new ProductTimelineLane(product.ProductId, product.ProductName, product.TeamIds, product.SprintCadence, timeline);
     }
 
     private static RoadmapTimelineEpicInput ToEpicInput(PlanningEpicProjectionDto projection)
@@ -573,6 +676,12 @@ else
         return InvokeAsync(StateHasChanged);
     }
 
+    private Task OnShowCapacityCollisionsChanged(bool value)
+    {
+        _showCapacityCollisions = value;
+        return InvokeAsync(StateHasChanged);
+    }
+
     private async Task<SprintCadenceInfo> ResolveSprintCadenceAsync(ProductDto product)
     {
         if (product.TeamIds.Count == 0)
@@ -613,7 +722,30 @@ else
             ? "projection-timeline-end-marker projection-timeline-end-marker-delayed"
             : "projection-timeline-end-marker";
 
-    private sealed record ProductTimelineLane(int ProductId, string ProductName, SprintCadenceInfo SprintCadence, RoadmapTimelineModel Timeline)
+    private bool TryGetEpicCollisionHint(int epicId, out EpicCollisionHint collisionHint)
+        => _epicCollisionHints.TryGetValue(epicId, out collisionHint!);
+
+    private static string FormatTeamLabel(int teamId) => $"Team {teamId}";
+
+    private static Dictionary<int, EpicCollisionHint> BuildEpicCollisionHints(IReadOnlyList<CapacityCollisionWindow> collisions)
+    {
+        return collisions
+            .SelectMany(collision => collision.EpicIds.Select(epicId => new { epicId, collision }))
+            .GroupBy(entry => entry.epicId)
+            .ToDictionary(
+                group => group.Key,
+                group => new EpicCollisionHint(
+                    group.SelectMany(entry => entry.collision.ProductNames)
+                        .Distinct(StringComparer.Ordinal)
+                        .OrderBy(name => name, StringComparer.Ordinal)
+                        .ToList(),
+                    group.SelectMany(entry => entry.collision.SharedTeamIds)
+                        .Distinct()
+                        .OrderBy(teamId => teamId)
+                        .ToList()));
+    }
+
+    private sealed record ProductTimelineLane(int ProductId, string ProductName, IReadOnlyList<int> TeamIds, SprintCadenceInfo SprintCadence, RoadmapTimelineModel Timeline)
     {
         public int DelayedCount => Timeline.Rows.Count(r => r.IsDelayed);
         public int MissingForecastCount => Timeline.Rows.Count(r => r.IsForecastMissing);
@@ -622,8 +754,13 @@ else
     private sealed record LoadedProductPlanning(
         int ProductId,
         string ProductName,
+        IReadOnlyList<int> TeamIds,
         List<PlanningEpicProjectionDto> Projections,
         SprintCadenceInfo SprintCadence);
+
+    private sealed record EpicCollisionHint(
+        IReadOnlyList<string> ProductNames,
+        IReadOnlyList<int> SharedTeamIds);
 
     private sealed record PressureZone(double LeftPercent, double WidthPercent, int EpicCount);
 }
