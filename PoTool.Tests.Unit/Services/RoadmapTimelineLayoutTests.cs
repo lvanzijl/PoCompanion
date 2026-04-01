@@ -17,10 +17,11 @@ public sealed class RoadmapTimelineLayoutTests
 
         Assert.IsNotNull(timeline.AxisStart);
         Assert.IsNotNull(timeline.AxisEnd);
-        Assert.AreEqual(new DateTimeOffset(2026, 3, 27, 0, 0, 0, TimeSpan.Zero), timeline.AxisStart.Value);
+        Assert.AreEqual(new DateTimeOffset(2026, 3, 18, 0, 0, 0, TimeSpan.Zero), timeline.AxisStart.Value);
         Assert.AreEqual(new DateTimeOffset(2026, 4, 15, 0, 0, 0, TimeSpan.Zero), timeline.AxisEnd.Value);
         Assert.AreEqual(0d, timeline.Rows[0].LeftPercent.GetValueOrDefault(), 0.001d);
-        Assert.AreEqual(0d, timeline.Rows[1].LeftPercent.GetValueOrDefault(), 0.001d, "Earlier forecasts should start independently, not after previous roadmap rows.");
+        Assert.AreEqual(new DateTimeOffset(2026, 3, 27, 0, 0, 0, TimeSpan.Zero), timeline.Rows[1].StartDate);
+        Assert.IsLessThan(50d, timeline.Rows[1].LeftPercent.GetValueOrDefault(), "Independent positioning should reflect the epic's own forecast window instead of chaining after the previous row.");
     }
 
     [TestMethod]
