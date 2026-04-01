@@ -64,7 +64,7 @@ public static class RoadmapTimelineLayout
                 true);
         }
 
-        var endDate = NormalizeDate(epic.EstimatedCompletionDate!.Value);
+        var endDate = NormalizeDateToUtcMidnight(epic.EstimatedCompletionDate!.Value);
         var durationDays = epic.SprintsRemaining.HasValue
             ? Math.Max(0, epic.SprintsRemaining.Value) * SprintDurationDays
             : DefaultForecastWindowDays;
@@ -111,7 +111,7 @@ public static class RoadmapTimelineLayout
         };
     }
 
-    private static DateTimeOffset NormalizeDate(DateTimeOffset value)
+    private static DateTimeOffset NormalizeDateToUtcMidnight(DateTimeOffset value)
         => new(value.UtcDateTime.Date, TimeSpan.Zero);
 }
 
