@@ -494,7 +494,9 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
 
             if (addedGroupSnapshot)
             {
-        await context.SaveChangesAsync(cancellationToken);
+                await context.SaveChangesAsync(cancellationToken);
+            }
+        }
     }
 
     private async Task SaveChangesWithDiagnosticsAsync(
@@ -563,8 +565,6 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
         {
             throw new InvalidOperationException(
                 $"Mock seeding cannot create product-team links for product '{product.Name}' because no seeded teams matched its backlog roots.");
-        }
-    }
         }
     }
 

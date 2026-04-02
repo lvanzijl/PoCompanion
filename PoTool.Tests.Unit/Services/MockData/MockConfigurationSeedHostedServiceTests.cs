@@ -214,7 +214,7 @@ public sealed class MockConfigurationSeedHostedServiceTests
         Assert.HasCount(6, products, "Expected SQLite seeding to create the mock products.");
         Assert.IsTrue(products.All(product => product.ProjectId == project.Id), "Each seeded product should reference the seeded mock project.");
         Assert.IsTrue(products.All(product => product.Project?.Id == project.Id), "Each seeded product should materialize the seeded mock project.");
-        Assert.IsTrue(productTeamLinks.Count > 0, "Expected seeded product-team links to exist under SQLite.");
+        Assert.IsNotEmpty(productTeamLinks, "Expected seeded product-team links to exist under SQLite.");
     }
 
     private static PortfolioReadModelStateService CreateStateService(PoToolDbContext context)
