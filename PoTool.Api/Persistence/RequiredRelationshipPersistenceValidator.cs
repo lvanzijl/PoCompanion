@@ -1,20 +1,41 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
-using PoTool.Api.Persistence;
 
-namespace PoTool.Api.Services.MockData;
+namespace PoTool.Api.Persistence;
 
 /// <summary>
-/// Enforces the startup seeding contract before persistence so required parents and foreign keys
-/// are resolved before SQLite rejects the change set.
+/// Enforces the repository-wide persistence contract before EF Core writes to the database.
+/// Required dependent relationships must be fully resolved through explicit foreign keys or
+/// tracked parent navigations before persistence starts.
 /// </summary>
-internal static class StartupSeedRelationshipValidator
+internal static class RequiredRelationshipPersistenceValidator
 {
-    public static async Task ValidatePendingRequiredRelationshipsAsync(
+    public static void ValidatePendingRequiredRelationships(
+        PoToolDbContext context,
+        string operation)
+    {
+        ValidatePendingRequiredRelationshipsCore(
+            context,
+            operation,
+            resolvePrincipal: (entityType, keyValues) => context.Find(entityType.ClrType, keyValues));
+    }
+
+    public static Task ValidatePendingRequiredRelationshipsAsync(
         PoToolDbContext context,
         string operation,
         CancellationToken cancellationToken)
+    {
+        return ValidatePendingRequiredRelationshipsCore(
+            context,
+            operation,
+            resolvePrincipal: (entityType, keyValues) => context.FindAsync(entityType.ClrType, keyValues, cancellationToken).AsTask());
+    }
+
+    private static async Task ValidatePendingRequiredRelationshipsCore(
+        PoToolDbContext context,
+        string operation,
+        Func<IEntityType, object?[], object?> resolvePrincipal)
     {
         var pendingEntries = context.ChangeTracker.Entries()
             .Where(entry => entry.State is EntityState.Added or EntityState.Modified)
@@ -36,7 +57,7 @@ internal static class StartupSeedRelationshipValidator
                 if (HasMissingForeignKeyValue(foreignKey.Properties, foreignKeyValues))
                 {
                     throw new InvalidOperationException(
-                        $"Startup seeding validation failed while {operation}: entity '{entry.Metadata.ClrType.Name}' is missing required foreign key '{FormatPropertyList(foreignKey.Properties)}' for parent '{foreignKey.PrincipalEntityType.ClrType.Name}'.");
+                        $"Persistence contract validation failed while {operation}: entity '{entry.Metadata.ClrType.Name}' is missing required foreign key '{FormatPropertyList(foreignKey.Properties)}' for parent '{foreignKey.PrincipalEntityType.ClrType.Name}'.");
                 }
 
                 if (FindTrackedPrincipal(context, foreignKey, foreignKeyValues) is not null)
@@ -44,15 +65,16 @@ internal static class StartupSeedRelationshipValidator
                     continue;
                 }
 
-                var principal = await context.FindAsync(
-                    foreignKey.PrincipalEntityType.ClrType,
-                    foreignKeyValues,
-                    cancellationToken);
+                var resolvedPrincipal = resolvePrincipal(foreignKey.PrincipalEntityType, foreignKeyValues);
+                if (resolvedPrincipal is Task<object?> principalTask)
+                {
+                    resolvedPrincipal = await principalTask;
+                }
 
-                if (principal is null)
+                if (resolvedPrincipal is null)
                 {
                     throw new InvalidOperationException(
-                        $"Startup seeding validation failed while {operation}: entity '{entry.Metadata.ClrType.Name}' references missing parent '{foreignKey.PrincipalEntityType.ClrType.Name}' via '{FormatPropertyList(foreignKey.Properties)}' = {FormatValues(foreignKeyValues)}.");
+                        $"Persistence contract validation failed while {operation}: entity '{entry.Metadata.ClrType.Name}' references missing parent '{foreignKey.PrincipalEntityType.ClrType.Name}' via '{FormatPropertyList(foreignKey.Properties)}' = {FormatValues(foreignKeyValues)}.");
                 }
             }
         }

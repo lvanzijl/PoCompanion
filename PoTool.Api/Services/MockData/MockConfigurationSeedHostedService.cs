@@ -602,10 +602,6 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
     {
         try
         {
-            await StartupSeedRelationshipValidator.ValidatePendingRequiredRelationshipsAsync(
-                context,
-                operation,
-                cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException)
