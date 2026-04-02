@@ -18,7 +18,7 @@ public sealed class CacheStateResponseService
     public async Task<DataStateResponseDto<T>> ExecuteAsync<T>(
         Func<CancellationToken, Task<T?>> loadAsync,
         Func<T?, bool> isEmpty,
-        string? emptyReason,
+        string emptyReason,
         string failureReason,
         CancellationToken cancellationToken = default)
     {

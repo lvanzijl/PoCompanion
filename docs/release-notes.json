@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-04-02",
+    "type": "Changed",
+    "title": "Cache-backed direct-entry pages now render explicit sync states",
+    "impact": "Bug Detail, Bugs Triage, Validation Triage, Validation Queue, Validation Fix, Sprint Activity, and Portfolio Flow now render explicit syncing, empty, available, or failed states instead of discovering cache readiness through HTTP errors or recovery-first UX.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-02",
     "type": "Fixed",
     "title": "Direct-entry bug and validation routes now guide missing context safely",
     "impact": "Opening Bug Detail, Validation Queue, or Validation Fix directly without the right URL context no longer shows raw parameter or transport errors; each route now explains what is missing or invalid and points back to the correct recovery page.",

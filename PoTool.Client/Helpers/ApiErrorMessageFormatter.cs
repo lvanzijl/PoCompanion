@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using PoTool.Client.ApiClient;
+using PoTool.Shared.DataState;
 
 namespace PoTool.Client.Helpers;
 
@@ -93,7 +94,7 @@ internal static class ApiErrorMessageFormatter
             }
 
             var title = titleElement.GetString();
-            return string.Equals(title, "Cache not ready", StringComparison.OrdinalIgnoreCase);
+            return string.Equals(title, DataStateContract.CacheNotReadyTitle, StringComparison.OrdinalIgnoreCase);
         }
         catch (JsonException)
         {

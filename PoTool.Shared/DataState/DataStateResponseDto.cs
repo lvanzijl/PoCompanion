@@ -1,5 +1,10 @@
 namespace PoTool.Shared.DataState;
 
+public static class DataStateContract
+{
+    public const string CacheNotReadyTitle = "Cache not ready";
+}
+
 /// <summary>
 /// Explicit data-availability states for cache-backed reads.
 /// </summary>

@@ -136,7 +136,7 @@ public sealed class DataSourceModeMiddleware
         var problem = new ProblemDetails
         {
             Status = StatusCodes.Status409Conflict,
-            Title = "Cache not ready",
+            Title = PoTool.Shared.DataState.DataStateContract.CacheNotReadyTitle,
             Detail = detail
         };
 
