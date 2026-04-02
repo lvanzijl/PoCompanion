@@ -228,6 +228,13 @@ Run the same gate entry points used by CI:
 
 Each script writes TRX, console logs, and failing-test summaries under `/tmp/po-test-gates/...` by default.
 
+## Branch protection handoff
+
+Repository admins should configure branch protection using the exact CI job names, not just the workflow name.
+
+- Handoff instructions: `/home/runner/work/PoCompanion/PoCompanion/docs/analysis/2026-04-02-branch-protection-handoff.md`
+- Operational hardening report: `/home/runner/work/PoCompanion/PoCompanion/docs/analysis/2026-04-02-operational-enforcement-hardening.md`
+
 For issues with the exploratory tests workflow:
 
 1. Check the workflow logs in the Actions tab
