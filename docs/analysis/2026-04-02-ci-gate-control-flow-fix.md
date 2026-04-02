@@ -110,6 +110,12 @@ Results observed:
 - forced Governance gate-local failure (invalid baseline path): **fail** with exit code `1`
 - Core Gate still passed when run separately after the forced API/Governance gate-local failures
 
+GitHub Actions trigger evidence:
+
+- Pushing commit `7c32f9a52ee296d96f17b5862ceaf43ce7bf21c8` triggered workflow run `23924620326`
+- GitHub accepted the workflow definition and created the `Build and Test Gates` run
+- That hosted run is currently **waiting approval from a maintainer in PR #1482**, so job-level hosted execution could not complete from this sandbox session
+
 Independence confirmed in repository validation:
 
 1. **Core-owned pre-check failure scenario**
@@ -147,4 +153,4 @@ Artifact evidence:
 
 - A future workflow edit could reintroduce hidden blocking behavior by adding a failing validation step before a gate runner step in multiple jobs.
 - Any new repository-wide validation must be explicitly assigned to one gate, not duplicated across all gates as a pre-run blocker.
-- Real GitHub Actions verification still depends on the next workflow run after this change, but the repository control flow is now explicit and gate-owned.
+- Hosted GitHub Actions confirmation still depends on maintainer approval of run `23924620326`; until that approval happens, only repository-level and local validation are available from this sandbox session.
