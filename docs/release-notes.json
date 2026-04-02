@@ -2,6 +2,14 @@
   {
     "date": "2026-04-02",
     "type": "Fixed",
+    "title": "Direct-entry bug and validation routes now guide missing context safely",
+    "impact": "Opening Bug Detail, Validation Queue, or Validation Fix directly without the right URL context no longer shows raw parameter or transport errors; each route now explains what is missing or invalid and points back to the correct recovery page.",
+    "area": "Health",
+    "link": "/home/validation-triage"
+  },
+  {
+    "date": "2026-04-02",
+    "type": "Fixed",
     "title": "Targeted direct routes now fail safely instead of crashing",
     "impact": "Directly opening Bugs Triage, Sprint Activity, and Portfolio Progress no longer triggers the Blazor crash screen or raw server exception text; the routes now either load normally or show clear recovery states when cache-backed data is unavailable.",
     "area": "Home",
