@@ -37,7 +37,7 @@ def main() -> int:
             f"# {gate_name} failing test summary\n\n"
             f"- TRX directory: `{trx_directory}`\n"
             f"- Warning: TRX file was not produced.\n")
-        return 0
+        return 1
 
     total = 0
     passed = 0

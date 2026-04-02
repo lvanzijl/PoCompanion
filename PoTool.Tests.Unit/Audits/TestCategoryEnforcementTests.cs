@@ -1,83 +1,136 @@
+using System.Text.RegularExpressions;
+
 namespace PoTool.Tests.Unit.Audits;
 
 [TestCategory("Governance")]
 [TestClass]
-public sealed class TestCategoryEnforcementTests
+public sealed partial class TestCategoryEnforcementTests
 {
+    private static readonly string[] GovernedFolders =
+    [
+        "PoTool.Tests.Unit/Audits",
+        "PoTool.Tests.Unit/Architecture"
+    ];
+
+    private static readonly Regex TestClassRegex = TestClassDeclarationRegex();
+    private static readonly Regex TestMethodRegex = TestMethodDeclarationRegex();
+    private static readonly Regex TestCategoryRegex = TestCategoryDeclarationRegex();
+
     [TestMethod]
     public void GovernanceFolders_AllTestClassesDeclareGovernanceCategory()
     {
-        var repositoryRoot = GetRepositoryRoot();
-        var violations = new List<string>();
+        var violations = LoadTestClasses()
+            .Where(static testClass => testClass.IsInGovernedFolder)
+            .Where(static testClass => !testClass.Categories.Contains("Governance", StringComparer.Ordinal))
+            .Select(static testClass => testClass.RelativePath)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(static path => path, StringComparer.Ordinal)
+            .ToArray();
 
-        foreach (var relativeFolder in new[] { "PoTool.Tests.Unit/Audits", "PoTool.Tests.Unit/Architecture" })
-        {
-            var folder = Path.Combine(repositoryRoot, relativeFolder);
-            foreach (var path in Directory.EnumerateFiles(folder, "*.cs", SearchOption.AllDirectories))
-            {
-                var content = File.ReadAllText(path);
-                if (!content.Contains("[TestClass]", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                if (!content.Contains("[TestCategory(\"Governance\")]", StringComparison.Ordinal))
-                {
-                    violations.Add(Path.GetRelativePath(repositoryRoot, path).Replace('\\', '/'));
-                }
-            }
-        }
-
-        Assert.IsFalse(
-            violations.Any(),
-            "Test classes under Audits/** and Architecture/** must declare [TestCategory(\"Governance\")] so they cannot leak into the core gate." +
-            Environment.NewLine +
-            string.Join(Environment.NewLine, violations));
+        AssertViolations(
+            violations,
+            "Test classes under Audits/** and Architecture/** must declare [TestCategory(\"Governance\")] so they cannot leak into the core gate.");
     }
 
     [TestMethod]
-    public void NswagGovernanceTests_DeclareApiContractCategory()
+    public void GovernanceNamingPatterns_DeclareGovernanceCategory_EvenOutsideGovernedFolders()
     {
-        var repositoryRoot = GetRepositoryRoot();
-        var path = Path.Combine(repositoryRoot, "PoTool.Tests.Unit", "Audits", "NswagGovernanceTests.cs");
-        var content = File.ReadAllText(path);
+        var violations = LoadTestClasses()
+            .Where(static testClass => testClass.IsGovernanceStyleClass)
+            .Where(static testClass => !testClass.Categories.Contains("Governance", StringComparer.Ordinal))
+            .Select(static testClass => $"{testClass.RelativePath} ({testClass.ClassName})")
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(static path => path, StringComparer.Ordinal)
+            .ToArray();
 
-        StringAssert.Contains(content, "[TestCategory(\"Governance\")]");
-        StringAssert.Contains(content, "[TestCategory(\"ApiContract\")]");
+        AssertViolations(
+            violations,
+            "Governance-style test classes (*AuditTests, *GovernanceTests, *ArchitectureGuardTests) must declare [TestCategory(\"Governance\")] even when they are added outside the governed folders.");
     }
 
     [TestMethod]
-    public void GovernanceFolders_DoNotRelyOnMissingCategories()
+    public void ApiContractTests_DeclareApiContractCategory()
+    {
+        var violations = LoadTestClasses()
+            .Where(static testClass => testClass.IsApiContractClass)
+            .Where(static testClass => !testClass.Categories.Contains("ApiContract", StringComparer.Ordinal))
+            .Select(static testClass => $"{testClass.RelativePath} ({testClass.ClassName})")
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(static path => path, StringComparer.Ordinal)
+            .ToArray();
+
+        AssertViolations(
+            violations,
+            "API contract test classes must declare [TestCategory(\"ApiContract\")] so contract drift remains intentionally enforceable.");
+    }
+
+    [TestMethod]
+    public void GovernedFolders_DoNotRelyOnMissingCategories()
+    {
+        var violations = LoadTestClasses()
+            .Where(static testClass => testClass.IsInGovernedFolder)
+            .Where(static testClass => !testClass.Categories.Contains("Governance", StringComparer.Ordinal))
+            .Select(static testClass => $"{testClass.RelativePath} ({testClass.ClassName})")
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(static path => path, StringComparer.Ordinal)
+            .ToArray();
+
+        AssertViolations(
+            violations,
+            "Governance-folder tests must be explicitly categorized and must not rely on folder placement alone.");
+    }
+
+    private static IReadOnlyList<TestClassMetadata> LoadTestClasses()
     {
         var repositoryRoot = GetRepositoryRoot();
-        var violations = new List<string>();
+        var testsRoot = Path.Combine(repositoryRoot, "PoTool.Tests.Unit");
+        var results = new List<TestClassMetadata>();
 
-        foreach (var relativeFolder in new[] { "PoTool.Tests.Unit/Audits", "PoTool.Tests.Unit/Architecture" })
+        foreach (var path in Directory.EnumerateFiles(testsRoot, "*.cs", SearchOption.AllDirectories))
         {
-            var folder = Path.Combine(repositoryRoot, relativeFolder);
-            foreach (var path in Directory.EnumerateFiles(folder, "*.cs", SearchOption.AllDirectories))
+            var content = File.ReadAllText(path);
+            if (!content.Contains("[TestClass]", StringComparison.Ordinal) ||
+                !TestMethodRegex.IsMatch(content))
             {
-                var content = File.ReadAllText(path);
-                if (!content.Contains("[TestMethod]", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                var hasGovernanceCategory = content.Contains("[TestCategory(\"Governance\")]", StringComparison.Ordinal);
-                var hasTestClass = content.Contains("[TestClass]", StringComparison.Ordinal);
-                if (!hasGovernanceCategory || !hasTestClass)
-                {
-                    violations.Add(Path.GetRelativePath(repositoryRoot, path).Replace('\\', '/'));
-                }
+                continue;
             }
+
+            var relativePath = Path.GetRelativePath(repositoryRoot, path).Replace('\\', '/');
+            var isInGovernedFolder = GovernedFolders.Any(folder => relativePath.StartsWith(folder, StringComparison.Ordinal));
+            var className = TestClassRegex.Match(content).Groups["name"].Value;
+            var categories = TestCategoryRegex.Matches(content)
+                .Select(static match => match.Groups["category"].Value)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+
+            results.Add(new TestClassMetadata(
+                relativePath,
+                className,
+                categories,
+                isInGovernedFolder,
+                IsGovernanceStyleClassName(className),
+                IsApiContractClassName(className)));
         }
 
-        Assert.IsFalse(
-            violations.Any(),
-            "Governance-folder tests must be explicitly categorized and must not rely on folder placement alone." +
-            Environment.NewLine +
-            string.Join(Environment.NewLine, violations));
+        return results;
     }
+
+    private static void AssertViolations(IReadOnlyCollection<string> violations, string message)
+    {
+        Assert.IsEmpty(
+            violations,
+            message + Environment.NewLine + string.Join(Environment.NewLine, violations));
+    }
+
+    private static bool IsGovernanceStyleClassName(string className) =>
+        className.EndsWith("AuditTests", StringComparison.Ordinal) ||
+        className.EndsWith("GovernanceTests", StringComparison.Ordinal) ||
+        className.EndsWith("ArchitectureGuardTests", StringComparison.Ordinal);
+
+    private static bool IsApiContractClassName(string className) =>
+        className.Contains("ApiContract", StringComparison.Ordinal) ||
+        (className.Contains("Nswag", StringComparison.Ordinal) &&
+         className.EndsWith("GovernanceTests", StringComparison.Ordinal));
 
     private static string GetRepositoryRoot()
     {
@@ -95,4 +148,21 @@ public sealed class TestCategoryEnforcementTests
 
         throw new DirectoryNotFoundException("Could not locate the repository root containing PoTool.sln.");
     }
+
+    [GeneratedRegex(@"class\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)", RegexOptions.CultureInvariant)]
+    private static partial Regex TestClassDeclarationRegex();
+
+    [GeneratedRegex(@"\[(?:Data)?TestMethod\]", RegexOptions.CultureInvariant)]
+    private static partial Regex TestMethodDeclarationRegex();
+
+    [GeneratedRegex(@"\[TestCategory\(""(?<category>[^""]+)""\)\]", RegexOptions.CultureInvariant)]
+    private static partial Regex TestCategoryDeclarationRegex();
+
+    private sealed record TestClassMetadata(
+        string RelativePath,
+        string ClassName,
+        IReadOnlyCollection<string> Categories,
+        bool IsInGovernedFolder,
+        bool IsGovernanceStyleClass,
+        bool IsApiContractClass);
 }

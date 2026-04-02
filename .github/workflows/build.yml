@@ -32,7 +32,7 @@ jobs:
       - name: Check sync-over-async patterns
         run: ./.github/scripts/check-sync-over-async.sh
 
-      - name: Core gate
+      - name: Run Core Gate
         env:
           GATE_RUN_ID: ${{ github.run_id }}
         run: ./.github/scripts/run-core-gate.sh "${{ runner.temp }}/core-gate"
@@ -43,6 +43,7 @@ jobs:
         with:
           name: core-gate-${{ github.run_id }}
           path: ${{ runner.temp }}/core-gate
+          if-no-files-found: error
 
   api-contract-gate:
     name: API Contract Gate
@@ -68,7 +69,7 @@ jobs:
       - name: Check sync-over-async patterns
         run: ./.github/scripts/check-sync-over-async.sh
 
-      - name: API Contract gate
+      - name: Run API Contract Gate
         env:
           GATE_RUN_ID: ${{ github.run_id }}
         run: ./.github/scripts/run-api-contract-gate.sh "${{ runner.temp }}/api-contract-gate"
@@ -79,6 +80,7 @@ jobs:
         with:
           name: api-contract-gate-${{ github.run_id }}
           path: ${{ runner.temp }}/api-contract-gate
+          if-no-files-found: error
 
   governance-gate:
     name: Governance Gate
@@ -104,7 +106,7 @@ jobs:
       - name: Check sync-over-async patterns
         run: ./.github/scripts/check-sync-over-async.sh
 
-      - name: Governance gate
+      - name: Run Governance Gate
         env:
           GATE_RUN_ID: ${{ github.run_id }}
         run: ./.github/scripts/run-governance-gate.sh "${{ runner.temp }}/governance-gate"
@@ -115,3 +117,4 @@ jobs:
         with:
           name: governance-gate-${{ github.run_id }}
           path: ${{ runner.temp }}/governance-gate
+          if-no-files-found: error
