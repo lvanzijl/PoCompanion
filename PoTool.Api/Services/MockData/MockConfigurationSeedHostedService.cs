@@ -10,6 +10,8 @@ namespace PoTool.Api.Services.MockData;
 
 /// <summary>
 /// Seeds a minimal but realistic mock configuration so mock mode is immediately usable.
+/// Startup seeding must remain dependency-ordered, assign required foreign keys explicitly,
+/// and pass SQLite-backed relational validation before commit.
 /// </summary>
 public sealed class MockConfigurationSeedHostedService : IHostedService
 {
@@ -92,36 +94,24 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
         var mockDataFacade = scope.ServiceProvider.GetRequiredService<BattleshipMockDataFacade>();
-
-        var hasProfiles = await context.Profiles.AnyAsync(cancellationToken);
-        var hasProducts = await context.Products.AnyAsync(cancellationToken);
-        var hasTeams = await context.Teams.AnyAsync(cancellationToken);
-
         var now = DateTimeOffset.UtcNow;
+        var hierarchy = mockDataFacade.GetMockHierarchy();
+        var seedPlan = BuildSeedPlan(hierarchy);
 
-        if (!hasProfiles && !hasProducts && !hasTeams)
-        {
-            var hierarchy = mockDataFacade.GetMockHierarchy();
-            var goals = hierarchy
-                .Where(item => item.Type.Equals(WorkItemType.Goal, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(item => item.TfsId)
-                .ToList();
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
 
-            if (goals.Count == 0)
-            {
-                _logger.LogWarning("Mock mode configuration seeding skipped because no goal roots were generated.");
-                return;
-            }
+        var project = await EnsureMockProjectAsync(context, cancellationToken);
+        var teamsByAreaPath = await EnsureMockTeamsAsync(context, seedPlan.Teams, now, cancellationToken);
+        await EnsureMockProfilesAndProductsAsync(context, seedPlan, project, teamsByAreaPath, now, cancellationToken);
+        await SaveChangesWithDiagnosticsAsync(
+            context,
+            cancellationToken,
+            "persisting mock core configuration");
 
-            var project = await EnsureMockProjectAsync(context, cancellationToken);
-            var teams = await SeedTeamsAsync(context, hierarchy, now, cancellationToken);
-            await SeedProfilesAndProductsAsync(context, hierarchy, goals, teams, project, now, cancellationToken);
-        }
-
-        await EnsureMockRepositoriesAsync(context, now, cancellationToken);
-        await EnsureMockTfsConfigurationAsync(context, cancellationToken);
-        await EnsureActiveProfileAsync(context, cancellationToken);
-        await EnsureMockPortfolioSnapshotsAsync(context, mockDataFacade.GetMockHierarchy(), cancellationToken);
+        await EnsureMockTfsConfigurationAsync(context, now, cancellationToken);
+        await EnsureActiveProfileAsync(context, seedPlan.ActiveProfileName, cancellationToken);
+        await EnsureMockPortfolioSnapshotsAsync(context, seedPlan.ActiveProfileName, hierarchy, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         _logger.LogInformation(
             "Seeded mock configuration with {ProfileCount} profiles, {ProductCount} products, {TeamCount} teams, {RepositoryCount} repositories, and {SnapshotCount} portfolio snapshots.",
@@ -134,6 +124,145 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
+    private static MockSeedPlan BuildSeedPlan(
+        IReadOnlyCollection<PoTool.Shared.WorkItems.WorkItemDto> hierarchy)
+    {
+        var goals = hierarchy
+            .Where(item => item.Type.Equals(WorkItemType.Goal, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(item => item.TfsId)
+            .ToList();
+
+        if (goals.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "Mock configuration seeding cannot start because the generated hierarchy does not contain any goal roots.");
+        }
+
+        var teams = hierarchy
+            .Where(item => item.Type.Equals(WorkItemType.Epic, StringComparison.OrdinalIgnoreCase))
+            .Select(item => item.AreaPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .Select((areaPath, index) => new MockTeamPlan(
+                areaPath.Split('\\', StringSplitOptions.RemoveEmptyEntries).Last(),
+                areaPath,
+                (index * 3) % 24,
+                $"mock-team-{index + 1:D2}"))
+            .ToList();
+
+        if (teams.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "Mock configuration seeding cannot start because the generated hierarchy does not expose any epic team area paths.");
+        }
+
+        var teamAreaPaths = teams
+            .Select(team => team.AreaPath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var profilePlans = ProfileSeeds
+            .Select(profileSeed => BuildProfilePlan(profileSeed, goals, hierarchy, teamAreaPaths))
+            .ToList();
+
+        return new MockSeedPlan(
+            teams,
+            profilePlans,
+            profilePlans[0].Name);
+    }
+
+    private static MockProfilePlan BuildProfilePlan(
+        MockProfileSeed profileSeed,
+        IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto> goals,
+        IReadOnlyCollection<PoTool.Shared.WorkItems.WorkItemDto> hierarchy,
+        IReadOnlySet<string> teamAreaPaths)
+    {
+        var ownedGoalIds = profileSeed.Products
+            .SelectMany(product => product.GoalIndexes)
+            .Distinct()
+            .Select(index => ResolveGoalId(goals, profileSeed.Name, index))
+            .ToList();
+
+        var products = profileSeed.Products
+            .Select((productSeed, productOrder) => BuildProductPlan(
+                profileSeed,
+                productSeed,
+                productOrder,
+                goals,
+                hierarchy,
+                teamAreaPaths))
+            .ToList();
+
+        return new MockProfilePlan(
+            profileSeed.Name,
+            profileSeed.DefaultPictureId,
+            ownedGoalIds,
+            products);
+    }
+
+    private static MockProductPlan BuildProductPlan(
+        MockProfileSeed profileSeed,
+        MockProductSeed productSeed,
+        int productOrder,
+        IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto> goals,
+        IReadOnlyCollection<PoTool.Shared.WorkItems.WorkItemDto> hierarchy,
+        IReadOnlySet<string> teamAreaPaths)
+    {
+        var rootIds = productSeed.GoalIndexes
+            .Select(index => ResolveGoalId(goals, profileSeed.Name, index))
+            .ToList();
+
+        var descendants = WorkItemHierarchyHelper.FilterDescendants(rootIds, hierarchy)
+            .ToList();
+
+        if (descendants.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Mock configuration seeding cannot create product '{productSeed.Name}' because its backlog roots do not resolve to any hierarchy descendants.");
+        }
+
+        var relevantAreaPaths = descendants
+            .Select(item => item.AreaPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(teamAreaPaths.Contains)
+            .OrderBy(areaPath => areaPath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (relevantAreaPaths.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Mock configuration seeding cannot create product '{productSeed.Name}' because no seeded teams match its hierarchy descendants.");
+        }
+
+        var repositoryNames = MockDevOpsSeedCatalog.GetRepositoryNamesForProduct(productSeed.Name);
+        if (repositoryNames.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Mock configuration seeding cannot create product '{productSeed.Name}' because no deterministic repositories are registered for it.");
+        }
+
+        return new MockProductPlan(
+            productSeed.Name,
+            productSeed.DefaultPictureId,
+            productOrder,
+            rootIds,
+            relevantAreaPaths,
+            repositoryNames);
+    }
+
+    private static int ResolveGoalId(
+        IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto> goals,
+        string profileName,
+        int goalIndex)
+    {
+        if (goalIndex < 0 || goalIndex >= goals.Count)
+        {
+            throw new InvalidOperationException(
+                $"Mock configuration seeding cannot resolve goal index '{goalIndex}' for profile '{profileName}' because the generated hierarchy only contains {goals.Count} goals.");
+        }
+
+        return goals[goalIndex].TfsId;
+    }
+
     private async Task<ProjectEntity> EnsureMockProjectAsync(
         PoToolDbContext context,
         CancellationToken cancellationToken)
@@ -145,251 +274,212 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
                 project.Name == MockProjectName,
                 cancellationToken);
 
-        if (existingProject != null)
+        if (existingProject == null)
         {
-            return existingProject;
+            existingProject = new ProjectEntity
+            {
+                Id = MockProjectId
+            };
+            context.Projects.Add(existingProject);
         }
 
-        var project = new ProjectEntity
-        {
-            Id = MockProjectId,
-            Alias = MockProjectAlias,
-            Name = MockProjectName
-        };
-
-        context.Projects.Add(project);
-        await SaveChangesWithDiagnosticsAsync(
-            context,
-            cancellationToken,
-            $"creating mock project '{MockProjectName}'");
-        return project;
+        existingProject.Alias = MockProjectAlias;
+        existingProject.Name = MockProjectName;
+        return existingProject;
     }
 
-    private static async Task EnsureMockTfsConfigurationAsync(
+    private async Task EnsureMockTfsConfigurationAsync(
         PoToolDbContext context,
+        DateTimeOffset now,
         CancellationToken cancellationToken)
     {
         var existingConfig = await context.TfsConfigs
             .OrderByDescending(item => item.UpdatedAtUtc)
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (existingConfig != null)
+        if (existingConfig == null)
         {
-            return;
+            context.TfsConfigs.Add(new TfsConfigEntity
+            {
+                Url = MockOrganizationUrl,
+                Project = MockProjectName,
+                DefaultAreaPath = MockProjectName,
+                UseDefaultCredentials = true,
+                TimeoutSeconds = 30,
+                ApiVersion = "7.0",
+                LastValidated = now,
+                CreatedAt = now,
+                UpdatedAt = now,
+                UpdatedAtUtc = now.UtcDateTime
+            });
+        }
+        else
+        {
+            existingConfig.Url = MockOrganizationUrl;
+            existingConfig.Project = MockProjectName;
+            existingConfig.DefaultAreaPath = MockProjectName;
+            existingConfig.UseDefaultCredentials = true;
+            existingConfig.TimeoutSeconds = 30;
+            existingConfig.ApiVersion = "7.0";
+            existingConfig.LastValidated = now;
+            existingConfig.UpdatedAt = now;
+            existingConfig.UpdatedAtUtc = now.UtcDateTime;
         }
 
-        var now = DateTimeOffset.UtcNow;
-        context.TfsConfigs.Add(new TfsConfigEntity
-        {
-            Url = MockOrganizationUrl,
-            Project = MockProjectName,
-            DefaultAreaPath = MockProjectName,
-            UseDefaultCredentials = true,
-            TimeoutSeconds = 30,
-            ApiVersion = "7.0",
-            LastValidated = now,
-            CreatedAt = now,
-            UpdatedAt = now,
-            UpdatedAtUtc = now.UtcDateTime
-        });
-
-        await context.SaveChangesAsync(cancellationToken);
-    }
-
-    private async Task<List<TeamEntity>> SeedTeamsAsync(
-        PoToolDbContext context,
-        IReadOnlyCollection<PoTool.Shared.WorkItems.WorkItemDto> hierarchy,
-        DateTimeOffset now,
-        CancellationToken cancellationToken)
-    {
-        var teamAreaPaths = hierarchy
-            .Where(item => item.Type.Equals(WorkItemType.Epic, StringComparison.OrdinalIgnoreCase))
-            .Select(item => item.AreaPath)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        var teams = teamAreaPaths
-            .Select((areaPath, index) => new TeamEntity
-            {
-                Name = areaPath.Split('\\', StringSplitOptions.RemoveEmptyEntries).Last(),
-                TeamAreaPath = areaPath,
-                PictureType = (int)TeamPictureType.Default,
-                DefaultPictureId = (index * 3) % 24,
-                ProjectName = MockProjectName,
-                TfsTeamId = $"mock-team-{index + 1:D2}",
-                TfsTeamName = areaPath.Split('\\', StringSplitOptions.RemoveEmptyEntries).Last(),
-                CreatedAt = now,
-                LastModified = now
-            })
-            .ToList();
-
-        context.Teams.AddRange(teams);
         await SaveChangesWithDiagnosticsAsync(
             context,
             cancellationToken,
-            "creating mock teams");
-        return teams;
+            "persisting mock TFS configuration");
     }
 
-    private async Task SeedProfilesAndProductsAsync(
+    private async Task<Dictionary<string, TeamEntity>> EnsureMockTeamsAsync(
         PoToolDbContext context,
-        IReadOnlyCollection<PoTool.Shared.WorkItems.WorkItemDto> hierarchy,
-        IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto> goals,
-        IReadOnlyCollection<TeamEntity> teams,
-        ProjectEntity project,
+        IReadOnlyList<MockTeamPlan> teamPlans,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        var teamByAreaPath = teams.ToDictionary(team => team.TeamAreaPath, StringComparer.OrdinalIgnoreCase);
+        var expectedAreaPaths = teamPlans
+            .Select(team => team.AreaPath)
+            .ToList();
 
-        foreach (var profileSeed in ProfileSeeds)
-        {
-            var ownedGoalIds = profileSeed.Products
-                .SelectMany(product => product.GoalIndexes)
-                .Distinct()
-                .Select(index => goals[index].TfsId)
-                .ToList();
-
-            var profile = new ProfileEntity
-            {
-                Name = profileSeed.Name,
-                GoalIds = string.Join(",", ownedGoalIds),
-                PictureType = (int)ProfilePictureType.Default,
-                DefaultPictureId = profileSeed.DefaultPictureId,
-                CreatedAt = now,
-                LastModified = now
-            };
-
-            context.Profiles.Add(profile);
-            await SaveChangesWithDiagnosticsAsync(
-                context,
-                cancellationToken,
-                $"creating mock profile '{profile.Name}'");
-
-            for (var productOrder = 0; productOrder < profileSeed.Products.Length; productOrder++)
-            {
-                var productSeed = profileSeed.Products[productOrder];
-                var rootIds = productSeed.GoalIndexes
-                    .Select(index => goals[index].TfsId)
-                    .ToList();
-
-                var product = new ProductEntity
-                {
-                    ProductOwnerId = profile.Id,
-                    ProjectId = project.Id,
-                    Name = productSeed.Name,
-                    Order = productOrder,
-                    PictureType = (int)ProductPictureType.Default,
-                    DefaultPictureId = productSeed.DefaultPictureId,
-                    EstimationMode = (int)Shared.Settings.EstimationMode.StoryPoints,
-                    CreatedAt = now,
-                    LastModified = now
-                };
-
-                context.Products.Add(product);
-                await SaveChangesWithDiagnosticsAsync(
-                    context,
-                    cancellationToken,
-                    $"creating mock product '{product.Name}' for profile '{profile.Name}'");
-
-                context.ProductBacklogRoots.AddRange(rootIds.Select(rootId => new ProductBacklogRootEntity
-                {
-                    ProductId = product.Id,
-                    WorkItemTfsId = rootId
-                }));
-
-                var relevantAreaPaths = WorkItemHierarchyHelper.FilterDescendants(rootIds, hierarchy)
-                    .Select(item => item.AreaPath)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .Where(teamByAreaPath.ContainsKey)
-                    .ToList();
-
-                ValidateProductSeedDependencies(product, project, relevantAreaPaths);
-
-                context.ProductTeamLinks.AddRange(relevantAreaPaths.Select(areaPath => new ProductTeamLinkEntity
-                {
-                    ProductId = product.Id,
-                    TeamId = teamByAreaPath[areaPath].Id
-                }));
-
-                await SaveChangesWithDiagnosticsAsync(
-                    context,
-                    cancellationToken,
-                    $"creating backlog roots and team links for product '{product.Name}'");
-            }
-        }
-    }
-
-    private async Task EnsureMockRepositoriesAsync(
-        PoToolDbContext context,
-        DateTimeOffset now,
-        CancellationToken cancellationToken)
-    {
-        var products = await context.Products
-            .OrderBy(product => product.Id)
+        var existingTeams = await context.Teams
+            .Where(team => expectedAreaPaths.Contains(team.TeamAreaPath))
             .ToListAsync(cancellationToken);
 
-        if (products.Count == 0)
+        EnsureNoDuplicateEntities(
+            existingTeams,
+            team => team.TeamAreaPath,
+            "mock teams",
+            "TeamAreaPath");
+
+        var teamsByAreaPath = existingTeams.ToDictionary(team => team.TeamAreaPath, StringComparer.OrdinalIgnoreCase);
+        foreach (var teamPlan in teamPlans)
         {
-            return;
-        }
-
-        var existingRepositories = await context.Repositories
-            .ToListAsync(cancellationToken);
-
-        var existingByProduct = existingRepositories
-            .GroupBy(repository => repository.ProductId)
-            .ToDictionary(
-                group => group.Key,
-                group => group.Select(repository => repository.Name).ToHashSet(StringComparer.OrdinalIgnoreCase));
-
-        var repositoriesToAdd = new List<RepositoryEntity>();
-
-        foreach (var product in products)
-        {
-            var targetRepositories = MockDevOpsSeedCatalog.GetRepositoryNamesForProduct(product.Name);
-            if (targetRepositories.Count == 0)
+            if (!teamsByAreaPath.TryGetValue(teamPlan.AreaPath, out var team))
             {
-                continue;
-            }
-
-            existingByProduct.TryGetValue(product.Id, out var existingNames);
-
-            repositoriesToAdd.AddRange(targetRepositories
-                .Where(repositoryName => existingNames == null || !existingNames.Contains(repositoryName))
-                .Select(repositoryName => new RepositoryEntity
+                team = new TeamEntity
                 {
-                    ProductId = product.Id,
-                    Name = repositoryName,
+                    TeamAreaPath = teamPlan.AreaPath,
                     CreatedAt = now
-                }));
+                };
+                context.Teams.Add(team);
+                teamsByAreaPath.Add(teamPlan.AreaPath, team);
+            }
+
+            team.Name = teamPlan.Name;
+            team.PictureType = (int)TeamPictureType.Default;
+            team.DefaultPictureId = teamPlan.DefaultPictureId;
+            team.ProjectName = MockProjectName;
+            team.TfsTeamId = teamPlan.TfsTeamId;
+            team.TfsTeamName = teamPlan.Name;
+            team.LastModified = now;
         }
 
-        if (repositoriesToAdd.Count == 0)
+        return teamsByAreaPath;
+    }
+
+    private async Task EnsureMockProfilesAndProductsAsync(
+        PoToolDbContext context,
+        MockSeedPlan seedPlan,
+        ProjectEntity project,
+        IReadOnlyDictionary<string, TeamEntity> teamsByAreaPath,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var profileNames = seedPlan.Profiles
+            .Select(profile => profile.Name)
+            .ToList();
+        var productNames = seedPlan.Profiles
+            .SelectMany(profile => profile.Products)
+            .Select(product => product.Name)
+            .ToList();
+
+        var existingProfiles = await context.Profiles
+            .Include(profile => profile.Products)
+            .Where(profile => profileNames.Contains(profile.Name))
+            .ToListAsync(cancellationToken);
+        var existingProducts = await context.Products
+            .Include(product => product.BacklogRoots)
+            .Include(product => product.ProductTeamLinks)
+            .Include(product => product.Repositories)
+            .Where(product => product.ProjectId == MockProjectId && productNames.Contains(product.Name))
+            .ToListAsync(cancellationToken);
+
+        EnsureNoDuplicateEntities(
+            existingProfiles,
+            profile => profile.Name,
+            "mock profiles",
+            "Name");
+        EnsureNoDuplicateEntities(
+            existingProducts,
+            product => product.Name,
+            "mock products",
+            "Name");
+
+        var profilesByName = existingProfiles.ToDictionary(profile => profile.Name, StringComparer.OrdinalIgnoreCase);
+        var productsByName = existingProducts.ToDictionary(product => product.Name, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var profilePlan in seedPlan.Profiles)
         {
-            return;
-        }
+            if (!profilesByName.TryGetValue(profilePlan.Name, out var profile))
+            {
+                profile = new ProfileEntity
+                {
+                    Name = profilePlan.Name,
+                    CreatedAt = now
+                };
+                context.Profiles.Add(profile);
+                profilesByName.Add(profilePlan.Name, profile);
+            }
 
-        context.Repositories.AddRange(repositoriesToAdd);
-        await SaveChangesWithDiagnosticsAsync(
-            context,
-            cancellationToken,
-            "creating mock repositories");
+            profile.GoalIds = string.Join(",", profilePlan.OwnedGoalIds);
+            profile.PictureType = (int)ProfilePictureType.Default;
+            profile.DefaultPictureId = profilePlan.DefaultPictureId;
+            profile.LastModified = now;
+
+            foreach (var productPlan in profilePlan.Products)
+            {
+                if (!productsByName.TryGetValue(productPlan.Name, out var product))
+                {
+                    product = new ProductEntity
+                    {
+                        Name = productPlan.Name,
+                        CreatedAt = now
+                    };
+                    context.Products.Add(product);
+                    productsByName.Add(productPlan.Name, product);
+                }
+
+                product.ProductOwner = profile;
+                product.Project = project;
+                product.Order = productPlan.Order;
+                product.PictureType = (int)ProductPictureType.Default;
+                product.DefaultPictureId = productPlan.DefaultPictureId;
+                product.EstimationMode = (int)Shared.Settings.EstimationMode.StoryPoints;
+                product.LastModified = now;
+
+                ValidateProductSeedDependencies(product, project, productPlan.TeamAreaPaths);
+                ReconcileBacklogRoots(product, productPlan.RootIds);
+                ReconcileProductTeamLinks(product, productPlan.TeamAreaPaths, teamsByAreaPath);
+                ReconcileRepositories(product, productPlan.RepositoryNames, now);
+            }
+        }
     }
 
     private async Task EnsureActiveProfileAsync(
         PoToolDbContext context,
+        string activeProfileName,
         CancellationToken cancellationToken)
     {
-        var firstProfileId = await context.Profiles
-            .OrderBy(profile => profile.Id)
+        var activeProfileId = await context.Profiles
+            .Where(profile => profile.Name == activeProfileName)
             .Select(profile => (int?)profile.Id)
-            .FirstOrDefaultAsync(cancellationToken);
+            .SingleOrDefaultAsync(cancellationToken);
 
-        if (!firstProfileId.HasValue)
+        if (!activeProfileId.HasValue)
         {
-            return;
+            throw new InvalidOperationException(
+                $"Mock configuration seeding cannot set the active profile because profile '{activeProfileName}' does not exist.");
         }
 
         var settings = await context.Settings
@@ -400,13 +490,13 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
         {
             context.Settings.Add(new SettingsEntity
             {
-                ActiveProfileId = firstProfileId,
+                ActiveProfileId = activeProfileId,
                 LastModified = DateTimeOffset.UtcNow
             });
         }
-        else if (settings.ActiveProfileId == null)
+        else if (settings.ActiveProfileId != activeProfileId)
         {
-            settings.ActiveProfileId = firstProfileId;
+            settings.ActiveProfileId = activeProfileId;
             settings.LastModified = DateTimeOffset.UtcNow;
         }
         else
@@ -420,19 +510,21 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
             "setting active mock profile");
     }
 
-    private static async Task EnsureMockPortfolioSnapshotsAsync(
+    private async Task EnsureMockPortfolioSnapshotsAsync(
         PoToolDbContext context,
+        string activeProfileName,
         IReadOnlyCollection<PoTool.Shared.WorkItems.WorkItemDto> hierarchy,
         CancellationToken cancellationToken)
     {
         var targetProfileId = await context.Profiles
-            .OrderBy(profile => profile.Id)
+            .Where(profile => profile.Name == activeProfileName)
             .Select(profile => (int?)profile.Id)
-            .FirstOrDefaultAsync(cancellationToken);
+            .SingleOrDefaultAsync(cancellationToken);
 
         if (!targetProfileId.HasValue)
         {
-            return;
+            throw new InvalidOperationException(
+                $"Mock configuration seeding cannot create portfolio snapshots because profile '{activeProfileName}' does not exist.");
         }
 
         var targetProducts = await context.Products
@@ -466,10 +558,9 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
         var existingKeySet = existingKeys.ToHashSet();
         var mapper = new PortfolioSnapshotPersistenceMapper();
 
+        var snapshotsToAdd = new List<PortfolioSnapshotEntity>();
         foreach (var timelineEntry in PortfolioSnapshotTimeline)
         {
-            var addedGroupSnapshot = false;
-
             foreach (var plan in plans)
             {
                 var key = new MockPortfolioSnapshotKey(plan.ProductId, timelineEntry.TimestampUtc, timelineEntry.Source);
@@ -481,7 +572,7 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
                 var snapshot = new PortfolioSnapshot(
                     new DateTimeOffset(timelineEntry.TimestampUtc, TimeSpan.Zero),
                     BuildPortfolioSnapshotItems(plan, timelineEntry.Stage));
-                context.PortfolioSnapshots.Add(
+                snapshotsToAdd.Add(
                     mapper.ToEntity(
                         plan.ProductId,
                         timelineEntry.Source,
@@ -489,14 +580,19 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
                         isArchived: false,
                         snapshot));
                 existingKeySet.Add(key);
-                addedGroupSnapshot = true;
-            }
-
-            if (addedGroupSnapshot)
-            {
-                await context.SaveChangesAsync(cancellationToken);
             }
         }
+
+        if (snapshotsToAdd.Count == 0)
+        {
+            return;
+        }
+
+        context.PortfolioSnapshots.AddRange(snapshotsToAdd);
+        await SaveChangesWithDiagnosticsAsync(
+            context,
+            cancellationToken,
+            "persisting mock portfolio snapshots");
     }
 
     private async Task SaveChangesWithDiagnosticsAsync(
@@ -506,9 +602,13 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
     {
         try
         {
+            await StartupSeedRelationshipValidator.ValidatePendingRequiredRelationshipsAsync(
+                context,
+                operation,
+                cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateException ex)
+        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException)
         {
             var trackedEntries = context.ChangeTracker.Entries()
                 .Where(entry => entry.State is EntityState.Added or EntityState.Modified)
@@ -555,7 +655,8 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
                 $"Mock seeding cannot create product '{product.Name}' because the mock project ID is missing.");
         }
 
-        if (!string.Equals(product.ProjectId, project.Id, StringComparison.Ordinal))
+        if (!string.Equals(product.ProjectId, project.Id, StringComparison.Ordinal)
+            && !ReferenceEquals(product.Project, project))
         {
             throw new InvalidOperationException(
                 $"Mock seeding cannot create product '{product.Name}' because Product.ProjectId '{product.ProjectId}' does not match project '{project.Id}'.");
@@ -565,6 +666,141 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
         {
             throw new InvalidOperationException(
                 $"Mock seeding cannot create product-team links for product '{product.Name}' because no seeded teams matched its backlog roots.");
+        }
+    }
+
+    private static void ReconcileBacklogRoots(
+        ProductEntity product,
+        IReadOnlyCollection<int> rootIds)
+    {
+        var targetRootIds = rootIds.ToHashSet();
+        var existingRootIds = product.BacklogRoots
+            .Select(root => root.WorkItemTfsId)
+            .ToHashSet();
+
+        foreach (var root in product.BacklogRoots.Where(root => !targetRootIds.Contains(root.WorkItemTfsId)).ToList())
+        {
+            product.BacklogRoots.Remove(root);
+        }
+
+        foreach (var rootId in targetRootIds.Where(rootId => !existingRootIds.Contains(rootId)))
+        {
+            product.BacklogRoots.Add(new ProductBacklogRootEntity
+            {
+                Product = product,
+                WorkItemTfsId = rootId
+            });
+        }
+    }
+
+    private static void ReconcileProductTeamLinks(
+        ProductEntity product,
+        IReadOnlyCollection<string> teamAreaPaths,
+        IReadOnlyDictionary<string, TeamEntity> teamsByAreaPath)
+    {
+        var targetTrackedTeams = teamAreaPaths
+            .Select(areaPath =>
+            {
+                if (!teamsByAreaPath.TryGetValue(areaPath, out var team))
+                {
+                    throw new InvalidOperationException(
+                        $"Mock configuration seeding cannot create product-team links for product '{product.Name}' because team area path '{areaPath}' was not resolved.");
+                }
+
+                return team;
+            })
+            .ToList();
+
+        var targetResolvedTeamIds = targetTrackedTeams
+            .Where(team => team.Id != 0)
+            .Select(team => team.Id)
+            .ToHashSet();
+        var targetPendingTeams = targetTrackedTeams
+            .Where(team => team.Id == 0)
+            .ToHashSet();
+
+        foreach (var link in product.ProductTeamLinks
+                     .Where(link =>
+                         (link.TeamId != 0 && !targetResolvedTeamIds.Contains(link.TeamId))
+                         || (link.TeamId == 0 && link.Team is not null && !targetPendingTeams.Contains(link.Team)))
+                     .ToList())
+        {
+            product.ProductTeamLinks.Remove(link);
+        }
+
+        var existingResolvedTeamIds = product.ProductTeamLinks
+            .Where(link => link.TeamId != 0)
+            .Select(link => link.TeamId)
+            .ToHashSet();
+        var existingPendingTeams = product.ProductTeamLinks
+            .Where(link => link.TeamId == 0 && link.Team is not null)
+            .Select(link => link.Team)
+            .ToHashSet();
+
+        foreach (var team in targetTrackedTeams.Where(team => team.Id != 0 && !existingResolvedTeamIds.Contains(team.Id)))
+        {
+            product.ProductTeamLinks.Add(new ProductTeamLinkEntity
+            {
+                Product = product,
+                Team = team
+            });
+        }
+
+        foreach (var team in targetTrackedTeams.Where(team => team.Id == 0 && !existingPendingTeams.Contains(team)))
+        {
+            product.ProductTeamLinks.Add(new ProductTeamLinkEntity
+            {
+                Product = product,
+                Team = team
+            });
+        }
+    }
+
+    private static void ReconcileRepositories(
+        ProductEntity product,
+        IReadOnlyCollection<string> repositoryNames,
+        DateTimeOffset now)
+    {
+        var targetRepositoryNames = repositoryNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var existingRepositoryNames = product.Repositories
+            .Select(repository => repository.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var repository in product.Repositories
+                     .Where(repository => !targetRepositoryNames.Contains(repository.Name))
+                     .ToList())
+        {
+            product.Repositories.Remove(repository);
+        }
+
+        foreach (var repositoryName in targetRepositoryNames.Where(repositoryName => !existingRepositoryNames.Contains(repositoryName)))
+        {
+            product.Repositories.Add(new RepositoryEntity
+            {
+                Product = product,
+                Name = repositoryName,
+                CreatedAt = now
+            });
+        }
+    }
+
+    private static void EnsureNoDuplicateEntities<TEntity>(
+        IEnumerable<TEntity> entities,
+        Func<TEntity, string> keySelector,
+        string entityDescription,
+        string propertyName)
+    {
+        var duplicateKey = entities
+            .GroupBy(keySelector, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+        if (!string.IsNullOrWhiteSpace(duplicateKey))
+        {
+            throw new InvalidOperationException(
+                $"Mock configuration seeding cannot continue because duplicate {entityDescription} were found for {propertyName} '{duplicateKey}'.");
         }
     }
 
@@ -755,10 +991,35 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
         int DefaultPictureId,
         MockProductSeed[] Products);
 
+    private sealed record MockSeedPlan(
+        IReadOnlyList<MockTeamPlan> Teams,
+        IReadOnlyList<MockProfilePlan> Profiles,
+        string ActiveProfileName);
+
+    private sealed record MockTeamPlan(
+        string Name,
+        string AreaPath,
+        int DefaultPictureId,
+        string TfsTeamId);
+
+    private sealed record MockProfilePlan(
+        string Name,
+        int DefaultPictureId,
+        IReadOnlyList<int> OwnedGoalIds,
+        IReadOnlyList<MockProductPlan> Products);
+
     private sealed record MockProductSeed(
         string Name,
         int[] GoalIndexes,
         int DefaultPictureId);
+
+    private sealed record MockProductPlan(
+        string Name,
+        int DefaultPictureId,
+        int Order,
+        IReadOnlyList<int> RootIds,
+        IReadOnlyList<string> TeamAreaPaths,
+        IReadOnlyList<string> RepositoryNames);
 
     private sealed record MockPortfolioPlan(
         int ProductId,
