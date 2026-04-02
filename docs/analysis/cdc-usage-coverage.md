@@ -84,7 +84,7 @@ Classification key:
 
 | Handler | Service dependencies | Calculator dependencies | Calculation origin | Classification |
 | --- | --- | --- | --- | --- |
-| `GetEpicCompletionForecastQueryHandler` | `IWorkItemRepository`, `IProductRepository`, `IMediator`, `IWorkItemStateClassificationService`, `IHierarchyRollupService` | `ICompletionForecastService` | Total and completed scope come from `IHierarchyRollupService.RollupCanonicalScope(...)`; forecast projection comes from `ICompletionForecastService.Forecast(...)`. Historical velocity is loaded indirectly by chaining `GetSprintMetricsQuery`, which now reads sprint totals from the CDC-owned sprint fact seam. | `CDC compliant` |
+| `GetEpicCompletionForecastQueryHandler` | `PoToolDbContext` | none | The handler reads persisted `ForecastProjectionEntity` rows, selects the requested stored projection variant, and maps the persisted forecast contract to `EpicCompletionForecastDto`. Forecast math now happens upstream in the projection materialization path rather than in the query handler. | `CDC compliant` |
 | `GetCapacityCalibrationQueryHandler` | `PoToolDbContext` | `IVelocityCalibrationService` | The handler reads `SprintMetricsProjectionEntity` rows and delegates percentile and predictability math to `IVelocityCalibrationService.Calibrate(...)`. | `CDC compliant` |
 | `GetEffortDistributionTrendQueryHandler` | `IWorkItemRepository`, `IProductRepository`, `IMediator` | `IEffortTrendForecastService` | Forecast slope, volatility, and confidence bands come from `IEffortTrendForecastService.Analyze(...)` in the Forecasting CDC. The handler limits itself to loading, optional filtering, and DTO mapping. | `CDC compliant` |
 
@@ -130,8 +130,8 @@ Handlers that are fully powered by CDC outputs or CDC-owned domain services:
   - feature and epic rollups come from `ComputeFeatureProgressAsync(...)` and `ComputeEpicProgressAsync(...)`
   - handler work is retrieval, staleness detection, and DTO assembly
 - `GetEpicCompletionForecastQueryHandler`
-  - scope rollups come from `IHierarchyRollupService.RollupCanonicalScope(...)`
-  - forecast projection comes from `ICompletionForecastService.Forecast(...)`
+  - reads persisted `ForecastProjectionEntity` rows from `PoToolDbContext`
+  - selects the requested stored forecast variant through `SelectVariant(...)`
   - no local forecast math is implemented in the handler
 - `GetCapacityCalibrationQueryHandler`
   - reads `SprintMetricsProjectionEntity` rows
@@ -201,7 +201,7 @@ These seams are acceptable adapters because the formulas themselves are no longe
 - **Adopt the CDC sprint fact result as the canonical sprint-total seam**
   - completed for: `GetSprintMetricsQueryHandler` and `GetSprintExecutionQueryHandler`
   - new seam: `ISprintFactService.BuildSprintFactResult(...)` returning `SprintFactResult`
-  - follow-up consumer: keep the velocity-sampling path used by `GetEpicCompletionForecastQueryHandler` aligned to this seam
+  - follow-up consumer: keep the forecast projection materialization path aligned to this seam before projections are persisted
 - **Promote portfolio summary rollups into CDC-backed outputs**
   - completed for: `GetPortfolioProgressTrendQueryHandler` and `GetPortfolioDeliveryQueryHandler`
   - new seams: `IPortfolioFlowSummaryService.BuildTrend(...)` and `IPortfolioDeliverySummaryService.BuildSummary(...)`

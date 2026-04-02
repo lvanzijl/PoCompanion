@@ -3,6 +3,7 @@ using PoTool.Core.Domain.Cdc.Sprints;
 
 namespace PoTool.Tests.Unit.Architecture;
 
+[TestCategory("Governance")]
 [TestClass]
 public sealed class HexagonBoundaryTests
 {

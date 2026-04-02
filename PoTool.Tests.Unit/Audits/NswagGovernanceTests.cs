@@ -3,6 +3,8 @@ using System.Xml.Linq;
 
 namespace PoTool.Tests.Unit.Audits;
 
+[TestCategory("Governance")]
+[TestCategory("ApiContract")]
 [TestClass]
 public sealed class NswagGovernanceTests
 {
@@ -89,7 +91,8 @@ public sealed class NswagGovernanceTests
                 "ApiClient.PipelineFilters.cs",
                 "ApiClient.PortfolioConsumption.cs",
                 "ApiClient.PullRequestFilters.cs",
-                "ApiClient.SprintFilters.cs"
+                "ApiClient.SprintFilters.cs",
+                "BugTriageClientServiceCollectionExtensions.cs"
             },
             rootFiles);
     }

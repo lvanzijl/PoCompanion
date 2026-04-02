@@ -1,5 +1,6 @@
 namespace PoTool.Tests.Unit.Audits;
 
+[TestCategory("Governance")]
 [TestClass]
 public sealed class CdcUsageCoverageDocumentTests
 {
@@ -82,9 +83,9 @@ public sealed class CdcUsageCoverageDocumentTests
 
         StringAssert.Contains(sprintTrend, "ComputeFeatureProgressAsync");
         StringAssert.Contains(sprintTrend, "ComputeEpicProgressAsync");
-        StringAssert.Contains(epicForecast, "_completionForecastService.Forecast");
-        StringAssert.Contains(epicForecast, "new GetSprintMetricsQuery(");
-        StringAssert.Contains(epicForecast, "new SprintEffectiveFilter(");
+        StringAssert.Contains(epicForecast, "_context.ForecastProjections");
+        StringAssert.Contains(epicForecast, "SelectVariant(");
+        StringAssert.Contains(epicForecast, "MapConfidence(");
         StringAssert.Contains(capacityCalibration, "_context.SprintMetricsProjections");
         StringAssert.Contains(capacityCalibration, "_velocityCalibrationService.Calibrate");
 
@@ -109,6 +110,7 @@ public sealed class CdcUsageCoverageDocumentTests
         var sprintTrendProjection = ReadRepositoryFile(repositoryRoot, "PoTool.Api/Services/SprintTrendProjectionService.cs");
         var portfolioFlowProjection = ReadRepositoryFile(repositoryRoot, "PoTool.Api/Services/PortfolioFlowProjectionService.cs");
         var completionForecastService = ReadRepositoryFile(repositoryRoot, "PoTool.Core.Domain/Domain/Forecasting/Services/CompletionForecastService.cs");
+        var deliveryForecastProjector = ReadRepositoryFile(repositoryRoot, "PoTool.Core.Domain/Domain/Forecasting/DeliveryForecast/DeliveryForecastProjector.cs");
         var velocityCalibrationService = ReadRepositoryFile(repositoryRoot, "PoTool.Core.Domain/Domain/Forecasting/Services/VelocityCalibrationService.cs");
         var effortTrendForecastService = ReadRepositoryFile(repositoryRoot, "PoTool.Core.Domain/Domain/Forecasting/Services/EffortTrendForecastService.cs");
         var effortDiagnosticsAnalyzer = ReadRepositoryFile(repositoryRoot, "PoTool.Core/Metrics/EffortDiagnostics/EffortDiagnosticsAnalyzer.cs");
@@ -120,7 +122,8 @@ public sealed class CdcUsageCoverageDocumentTests
         StringAssert.Contains(portfolioFlowProjection, "StockStoryPoints");
         StringAssert.Contains(portfolioFlowProjection, "ThroughputStoryPoints");
 
-        StringAssert.Contains(completionForecastService, "historicalSprints.Average");
+        StringAssert.Contains(completionForecastService, "_projector.Project(");
+        StringAssert.Contains(deliveryForecastProjector, "historicalSprints.Average");
         StringAssert.Contains(velocityCalibrationService, "PercentileMath.LinearInterpolation");
         StringAssert.Contains(effortTrendForecastService, "CalculateLinearRegressionSlope");
         StringAssert.Contains(effortDiagnosticsAnalyzer, "DomainImbalanceCanonicalRules");

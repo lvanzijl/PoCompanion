@@ -5,6 +5,7 @@ using PoTool.Integrations.Tfs.Clients;
 
 namespace PoTool.Tests.Unit.Architecture;
 
+[TestCategory("Governance")]
 [TestClass]
 public class TfsAccessBoundaryArchitectureTests
 {

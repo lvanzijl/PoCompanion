@@ -4,6 +4,7 @@ using PoTool.Api.Configuration;
 
 namespace PoTool.Tests.Unit.Audits;
 
+[TestCategory("Governance")]
 [TestClass]
 public sealed class MiddlewareContractAuditTests
 {

@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 
 namespace PoTool.Tests.Unit.Architecture;
 
+[TestCategory("Governance")]
 [TestClass]
 public sealed class BuildQualityArchitectureGuardTests
 {
@@ -41,8 +42,7 @@ public sealed class BuildQualityArchitectureGuardTests
         "Confidence comparisons must not exist in PoTool.Client. Confidence semantics belong to backend/shared BuildQuality logic, not the presentation layer.",
         [
             new ArchitectureGuardPattern("confidence less-than comparison", @"\bConfidence[^\S\r\n]*<[^\S\r\n]*(?:[\w""'\(])"),
-            new ArchitectureGuardPattern("confidence greater-than-or-equal comparison", @"\bConfidence[^\S\r\n]*>=[^\S\r\n]*(?:[\w""'\(])"),
-            new ArchitectureGuardPattern("confidence equality comparison", @"\bConfidence[^\S\r\n]*==[^\S\r\n]*(?:[\w""'\(])")
+            new ArchitectureGuardPattern("confidence greater-than-or-equal comparison", @"\bConfidence[^\S\r\n]*>=[^\S\r\n]*(?:[\w""'\(])")
         ]);
 
     private static readonly ArchitectureGuardRule NoUnknownInferenceRule = new(

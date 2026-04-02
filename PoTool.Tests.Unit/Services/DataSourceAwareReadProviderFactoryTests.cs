@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Api.Services;
@@ -26,6 +27,7 @@ public class DataSourceAwareReadProviderFactoryTests
         services.AddScoped<IDataSourceModeProvider>(_ => mockModeProvider.Object);
 
         services.AddLogging();
+        services.AddHttpContextAccessor();
         services.AddScoped<DataSourceAwareReadProviderFactory>();
 
         using var serviceProvider = services.BuildServiceProvider();
@@ -52,6 +54,7 @@ public class DataSourceAwareReadProviderFactoryTests
         services.AddScoped<IDataSourceModeProvider>(_ => mockModeProvider.Object);
 
         services.AddLogging();
+        services.AddHttpContextAccessor();
         services.AddScoped<DataSourceAwareReadProviderFactory>();
 
         using var serviceProvider = services.BuildServiceProvider();

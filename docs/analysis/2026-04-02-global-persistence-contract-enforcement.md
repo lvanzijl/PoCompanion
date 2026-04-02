@@ -1,3 +1,5 @@
+> **NOTE:** This document captures historical context around persistence-contract rollout and includes legacy terminology for traceability.
+
 # Global Persistence Contract Enforcement
 
 ## Summary

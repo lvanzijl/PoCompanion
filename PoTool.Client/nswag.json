@@ -144,6 +144,8 @@
         "CreateRoadmapSnapshotRequest",
         "CreateRowRequest",
         "CreateTriageTagRequest",
+        "DataStateDto",
+        "DataStateResponseDto",
         "DeliveryBuildQualityDto",
         "DeliveryFilterContextDto",
         "DeliveryQueryResponseDto",

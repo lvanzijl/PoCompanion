@@ -1,5 +1,6 @@
 namespace PoTool.Tests.Unit.Audits;
 
+[TestCategory("Governance")]
 [TestClass]
 public sealed class UiSemanticLabelsTests
 {
@@ -12,9 +13,9 @@ public sealed class UiSemanticLabelsTests
         StringAssert.Contains(forecastPanel, "Total Story Points");
         StringAssert.Contains(forecastPanel, "Delivered Story Points");
         StringAssert.Contains(forecastPanel, "Remaining Story Points");
-        StringAssert.Contains(forecastPanel, "_forecastData.TotalStoryPoints");
-        StringAssert.Contains(forecastPanel, "_forecastData.DeliveredStoryPoints");
-        StringAssert.Contains(forecastPanel, "_forecastData.RemainingStoryPoints");
+        StringAssert.Contains(forecastPanel, "forecast.TotalStoryPoints");
+        StringAssert.Contains(forecastPanel, "forecast.DeliveredStoryPoints");
+        StringAssert.Contains(forecastPanel, "forecast.RemainingStoryPoints");
         Assert.DoesNotContain(forecastPanel, "_forecastData.TotalEffort");
         Assert.DoesNotContain(forecastPanel, "_forecastData.CompletedEffort");
         Assert.DoesNotContain(forecastPanel, "_forecastData.RemainingEffort");

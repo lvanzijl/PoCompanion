@@ -1,3 +1,5 @@
+> **NOTE:** This document captures historical context around seed hardening and includes legacy terminology for traceability.
+
 # Global Seeding Contract Hardening
 
 ## Summary

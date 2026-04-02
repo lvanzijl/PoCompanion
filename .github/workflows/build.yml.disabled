@@ -32,8 +32,11 @@ jobs:
       - name: Check sync-over-async patterns
         run: ./.github/scripts/check-sync-over-async.sh
 
-      - name: Test
-        run: dotnet test PoTool.sln --configuration Release --no-build --verbosity normal --filter "TestCategory!=AutomatedExploratory"
+      - name: Core gate
+        run: dotnet test PoTool.sln --configuration Release --no-build --verbosity normal --filter "TestCategory!=Governance&TestCategory!=AutomatedExploratory"
+
+      - name: Governance gate
+        run: dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --configuration Release --no-build --verbosity normal --filter "TestCategory=Governance"
 
       - name: Publish
         run: dotnet publish PoTool.Api/PoTool.Api.csproj --configuration Release --no-build --output ./publish
