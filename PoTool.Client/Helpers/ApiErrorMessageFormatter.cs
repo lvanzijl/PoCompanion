@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http;
 using System.Text.Json;
 using PoTool.Client.ApiClient;
 
@@ -30,6 +32,21 @@ internal static class ApiErrorMessageFormatter
         return "Bugs triage could not be loaded right now. Try again later.";
     }
 
+    public static string ForBugDetail(ApiException exception)
+    {
+        if (exception.StatusCode == 404)
+        {
+            return "That bug could not be found. Open Bug Insights to pick a valid bug.";
+        }
+
+        if (exception.StatusCode == 409 && HasCacheNotReadyProblem(exception.Response))
+        {
+            return "Bug details are unavailable until cached data is ready. Run a successful sync for the active profile and try again.";
+        }
+
+        return "Bug details could not be loaded right now. Try again later.";
+    }
+
     public static string ForPortfolioFlow(ApiException exception)
     {
         if (exception.StatusCode == 409 && HasCacheNotReadyProblem(exception.Response))
@@ -49,6 +66,16 @@ internal static class ApiErrorMessageFormatter
 
         return "Portfolio history could not be loaded right now. Try again later.";
     }
+
+    public static string ForValidationQueue(HttpRequestException exception)
+        => exception.StatusCode == HttpStatusCode.Conflict
+            ? "Validation queue data is unavailable until cached data is ready. Run a successful sync for the active profile and try again."
+            : "Validation queue data could not be loaded right now. Try again later.";
+
+    public static string ForValidationFix(HttpRequestException exception)
+        => exception.StatusCode == HttpStatusCode.Conflict
+            ? "Validation fix data is unavailable until cached data is ready. Run a successful sync for the active profile and try again."
+            : "Validation fix data could not be loaded right now. Try again later.";
 
     private static bool HasCacheNotReadyProblem(string? responseBody)
     {

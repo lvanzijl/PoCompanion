@@ -1,6 +1,7 @@
 @page "/home/validation-fix"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @using PoTool.Shared.WorkItems
 @using System.Web
@@ -52,6 +53,15 @@
     @if (_isLoading)
     {
         <LoadingIndicator IsLoading="true" />
+    }
+    else if (_recoveryMessage != null)
+    {
+        <GuidedRecoveryPanel Title="@_recoveryTitle"
+                             Message="@_recoveryMessage"
+                             PrimaryActionLabel="@_recoveryPrimaryActionLabel"
+                             PrimaryAction="@_recoveryPrimaryAction"
+                             SecondaryActionLabel="Home"
+                             SecondaryAction="NavigateToHome" />
     }
     else if (_loadError != null)
     {
@@ -273,6 +283,10 @@
     private bool _isRefreshing;
     private string? _refreshError;
     private int[]? _productIds;
+    private string? _recoveryTitle;
+    private string? _recoveryMessage;
+    private string? _recoveryPrimaryActionLabel;
+    private EventCallback _recoveryPrimaryAction;
 
     /// <summary>The current work item being reviewed in the session.</summary>
     private ValidationFixItemDto? CurrentItem =>
@@ -286,17 +300,16 @@
 
             var uri = new Uri(NavigationManager.Uri);
             var queryParams = HttpUtility.ParseQueryString(uri.Query);
-            _categoryKey = queryParams["category"] ?? string.Empty;
-            _ruleId = queryParams["ruleId"] ?? string.Empty;
-
-            if (string.IsNullOrWhiteSpace(_categoryKey))
+            if (!ValidationRouteContextHelper.TryNormalizeCategory(queryParams["category"], out _categoryKey))
             {
-                _loadError = "Missing required query parameter: category";
+                SetFixRecoveryForCategory(queryParams["category"]);
+                UpdateBreadcrumbs();
                 return;
             }
-            if (string.IsNullOrWhiteSpace(_ruleId))
+            if (!ValidationRouteContextHelper.TryNormalizeRuleForCategory(queryParams["ruleId"], _categoryKey, out _ruleId))
             {
-                _loadError = "Missing required query parameter: ruleId";
+                SetFixRecoveryForRule(queryParams["ruleId"]);
+                UpdateBreadcrumbs();
                 return;
             }
 
@@ -323,10 +336,19 @@
             _activeItems = _session?.Items.ToList() ?? new();
             UpdateBreadcrumbs();
         }
+        catch (HttpRequestException ex)
+        {
+            SetRecovery(
+                "Fix session unavailable",
+                ApiErrorMessageFormatter.ForValidationFix(ex),
+                "Back to Queue",
+                NavigateToQueue);
+            UpdateBreadcrumbs();
+        }
         catch (Exception ex)
         {
-            _loadError = $"Failed to load fix session: {ex.Message}";
-            Console.WriteLine($"[ValidationFix] {_loadError}");
+            _loadError = "Validation fix data could not be loaded right now. Try again later.";
+            Console.WriteLine($"[ValidationFix] {ex}");
         }
         finally
         {
@@ -342,8 +364,11 @@
             new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
             new("Health", WorkspaceRoutes.HealthWorkspace, icon: Icons.Material.Filled.HealthAndSafety),
             new("Validation Triage", WorkspaceRoutes.ValidationTriage, icon: Icons.Material.Filled.FactCheck),
-            new($"{categoryLabel} Queue",
-                $"{WorkspaceRoutes.ValidationQueue}{BuildContextQuery($"category={Uri.EscapeDataString(_categoryKey)}")}",
+            new(string.IsNullOrWhiteSpace(categoryLabel) ? "Queue" : $"{categoryLabel} Queue",
+                string.IsNullOrWhiteSpace(_categoryKey)
+                    ? null
+                    : $"{WorkspaceRoutes.ValidationQueue}{BuildContextQuery($"category={Uri.EscapeDataString(_categoryKey)}")}",
+                disabled: string.IsNullOrWhiteSpace(_categoryKey),
                 icon: Icons.Material.Filled.Queue),
             new("Fix Session", null, disabled: true, icon: Icons.Material.Filled.Build)
         };
@@ -421,13 +446,70 @@
 
     private void NavigateToQueue()
     {
+        if (string.IsNullOrWhiteSpace(_categoryKey))
+        {
+            NavigateToTriage();
+            return;
+        }
+
         NavigationManager.NavigateTo(
             $"{WorkspaceRoutes.ValidationQueue}{BuildContextQuery($"category={Uri.EscapeDataString(_categoryKey)}")}");
+    }
+
+    private void NavigateToTriage()
+    {
+        NavigationManager.NavigateTo($"{WorkspaceRoutes.ValidationTriage}{BuildContextQuery()}");
     }
 
     private void ClearProductFilter()
     {
         NavigationManager.NavigateTo(
             $"{WorkspaceRoutes.ValidationFix}?category={Uri.EscapeDataString(_categoryKey)}&ruleId={Uri.EscapeDataString(_ruleId)}");
+    }
+
+    private void SetFixRecoveryForCategory(string? rawCategory)
+    {
+        if (string.IsNullOrWhiteSpace(rawCategory))
+        {
+            SetRecovery(
+                "Validation category missing",
+                "This fix session needs a validation category. Open Validation Triage to choose a category first.",
+                "Go to Validation Triage",
+                NavigateToTriage);
+            return;
+        }
+
+        SetRecovery(
+            "Unknown validation category",
+            "The category in the URL is not recognised. Open Validation Triage to choose a valid category.",
+            "Go to Validation Triage",
+            NavigateToTriage);
+    }
+
+    private void SetFixRecoveryForRule(string? rawRuleId)
+    {
+        if (string.IsNullOrWhiteSpace(rawRuleId))
+        {
+            SetRecovery(
+                "Validation rule missing",
+                "This fix session needs a rule ID. Open the queue for this category and start a fix session from there.",
+                "Back to Queue",
+                NavigateToQueue);
+            return;
+        }
+
+        SetRecovery(
+            "Unknown validation rule",
+            "The rule in the URL is invalid for this category. Open the queue and start a valid fix session.",
+            "Back to Queue",
+            NavigateToQueue);
+    }
+
+    private void SetRecovery(string title, string message, string primaryActionLabel, Action primaryAction)
+    {
+        _recoveryTitle = title;
+        _recoveryMessage = message;
+        _recoveryPrimaryActionLabel = primaryActionLabel;
+        _recoveryPrimaryAction = EventCallback.Factory.Create(this, primaryAction);
     }
 }
