@@ -1,5 +1,6 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Helpers
 @using PoTool.Client.Services
 @using PoTool.Shared.Metrics
 @inject IMetricsClient MetricsClient
@@ -581,9 +582,13 @@
 
             RebuildComparisonViewState();
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
-            _errorMessage = $"Unable to load CDC portfolio data: {ex.Message}";
+            _errorMessage = ApiErrorMessageFormatter.ForPortfolioHistory(ex);
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Portfolio history could not be loaded right now. Try again later.";
         }
         finally
         {

@@ -48,7 +48,7 @@ public static class DataSourceModeConfiguration
         "/api/teams",
         "/api/products",
         "/api/projects",
-        "/api/portfolio/snapshots",
+        "/api/portfolio",
         "/api/repositories",
 
         // Data source mode management

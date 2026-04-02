@@ -647,10 +647,15 @@
                 await LoadTrendDataAsync();
             }
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
-            _errorMessage = ex.Message;
-            Snackbar.Add($"Error loading portfolio flow: {ex.Message}", Severity.Error);
+            _errorMessage = ApiErrorMessageFormatter.ForPortfolioFlow(ex);
+            Snackbar.Add(_errorMessage, Severity.Error);
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Portfolio flow could not be loaded right now. Try again later.";
+            Snackbar.Add(_errorMessage, Severity.Error);
         }
         finally
         {
@@ -795,7 +800,10 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Failed to load portfolio flow: {ex.Message}", Severity.Warning);
+            var message = ex is ApiException apiException
+                ? ApiErrorMessageFormatter.ForPortfolioFlow(apiException)
+                : "Portfolio flow could not be loaded right now. Try again later.";
+            Snackbar.Add(message, Severity.Warning);
             _filterNotice = null;
         }
         finally

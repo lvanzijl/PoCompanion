@@ -244,6 +244,12 @@
 
         try
         {
+            if (WorkItemId <= 0)
+            {
+                _errorMessage = "Select a valid work item to view sprint activity.";
+                return;
+            }
+
             ParseQueryParameters();
 
             var productOwnerId = _productOwnerId;
@@ -276,9 +282,15 @@
                 _summary = BuildSummary(processed);
             }
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
-            _errorMessage = $"Failed to load activity details: {ex.Message}";
+            _errorMessage = ApiErrorMessageFormatter.ForSprintActivity(ex);
+            _filterNotice = null;
+            Snackbar.Add(_errorMessage, Severity.Error);
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Sprint activity could not be loaded right now. Try again later.";
             _filterNotice = null;
             Snackbar.Add(_errorMessage, Severity.Error);
         }
