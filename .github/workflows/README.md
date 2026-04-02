@@ -4,10 +4,14 @@ This repository contains several GitHub Actions workflows for continuous integra
 
 ## Workflows
 
-### 1. Build and Publish (`build.yml`)
-- **Trigger:** Push to `main` branch or pull requests
-- **Purpose:** Build and publish the PoTool application
-- **Outputs:** Published artifacts in the Actions artifacts section
+### 1. Build and Test Gates (`build.yml`)
+- **Trigger:** Pull requests to all branches; pushes to `main` and `release/**`
+- **Purpose:** Enforce repository test governance through explicit CI gates
+- **Jobs:**
+  - `Core Gate`
+  - `API Contract Gate`
+  - `Governance Gate`
+- **Outputs:** Per-job TRX results, full console logs, and failing-test summaries in the Actions artifacts section
 
 ### 2. Release (`release.yml`)
 - **Trigger:** Version tags (e.g., `v1.0.0`)
@@ -211,6 +215,18 @@ Example badge:
 6. ✅ Document any known issues in test results
 
 ### Support
+
+## Local gate commands
+
+Run the same gate entry points used by CI:
+
+```bash
+./.github/scripts/run-core-gate.sh
+./.github/scripts/run-api-contract-gate.sh
+./.github/scripts/run-governance-gate.sh
+```
+
+Each script writes TRX, console logs, and failing-test summaries under `/tmp/po-test-gates/...` by default.
 
 For issues with the exploratory tests workflow:
 
