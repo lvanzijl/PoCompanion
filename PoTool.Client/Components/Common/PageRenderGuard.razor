@@ -1,0 +1,70 @@
+@using PoTool.Client.Helpers
+@using PoTool.Client.Services
+@inject ErrorMessageService ErrorMessageService
+
+<ErrorBoundary @ref="_errorBoundary">
+    <ChildContent>
+        @ChildContent
+    </ChildContent>
+    <ErrorContent Context="exception">
+        <ErrorDisplay ErrorResponse="@CreateErrorResponse(exception)"
+                      ShowTechnicalDetails="false"
+                      Dismissible="false">
+            <Actions>
+                @if (RetryAction.HasDelegate)
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               OnClick="RecoverAsync">
+                        @RetryText
+                    </MudButton>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(RecoveryHref) && !string.IsNullOrWhiteSpace(RecoveryText))
+                {
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Default"
+                               Href="@RecoveryHref">
+                        @RecoveryText
+                    </MudButton>
+                }
+            </Actions>
+        </ErrorDisplay>
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    private ErrorBoundary? _errorBoundary;
+
+    [Parameter, EditorRequired]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public string Context { get; set; } = "This page";
+
+    [Parameter]
+    public string? RecoveryHref { get; set; }
+
+    [Parameter]
+    public string? RecoveryText { get; set; }
+
+    [Parameter]
+    public EventCallback RetryAction { get; set; }
+
+    [Parameter]
+    public string RetryText { get; set; } = "Retry";
+
+    private ErrorResponse CreateErrorResponse(Exception exception)
+    {
+        var response = RouteStateGuard.CreateSafeErrorResponse(ErrorMessageService, exception, Context);
+        response.UserMessage = $"{Context} couldn't be displayed.";
+        response.Suggestion ??= "Try the suggested recovery action.";
+        return response;
+    }
+
+    private async Task RecoverAsync()
+    {
+        _errorBoundary?.Recover();
+        await RetryAction.InvokeAsync();
+    }
+}

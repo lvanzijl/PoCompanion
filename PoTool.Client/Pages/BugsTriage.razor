@@ -6,20 +6,24 @@
 @using PoTool.Client.Components.BugTriage
 @using PoTool.Shared.BugTriage
 @using MudBlazor
+@using PoTool.Client.Helpers
+@using PoTool.Client.Pages.Home
 @inject WorkItemService WorkItemService
 @inject IBugTriageClient BugTriageClient
 @inject BugTreeBuilderService TreeBuilderService
 @inject TriageTagService TriageTagService
-@inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject IJSRuntime JS
-@inject ISnackbar Snackbar
 @inject ILogger<BugsTriage> Logger
-@inject NavigationManager NavigationManager
+@inherits WorkspaceBase
 @implements IAsyncDisposable
 
 <PageTitle>Bugs Triage</PageTitle>
 
+<PageRenderGuard Context="Bug triage"
+                 RecoveryHref="@BuildContextRoute(WorkspaceRoutes.BugOverview)"
+                 RecoveryText="Open Bug Insights"
+                 RetryAction="LoadBugsAsync">
 <div class="bugs-triage-page">
     <div class="bugs-triage-toolbar">
         <MudStack Spacing="0" Style="flex: 1;">
@@ -43,7 +47,7 @@
         <MudButton Variant="Variant.Outlined"
                    Color="Color.Default"
                    StartIcon="@Icons.Material.Filled.Home"
-                   OnClick="@(() => NavigationManager.NavigateTo("/home"))">
+                   OnClick="NavigateToHome">
             Home
         </MudButton>
     </div>
@@ -55,11 +59,25 @@
             <MudText Typo="Typo.body2" Class="mt-2">Loading bugs...</MudText>
         </div>
     }
-    else if (_errorMessage != null)
+    else if (_errorResponse != null)
     {
-        <MudAlert Severity="Severity.Error" Class="ma-4" CloseIcon="true" CloseIconClicked="ClearError">
-            @_errorMessage
-        </MudAlert>
+        <ErrorDisplay ErrorResponse="@_errorResponse"
+                      ShowTechnicalDetails="false"
+                      Class="ma-4"
+                      OnDismiss="ClearError">
+            <Actions>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="LoadBugsAsync">
+                    Retry
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           Href="@BuildContextRoute(WorkspaceRoutes.BugOverview)">
+                    Open Bug Insights
+                </MudButton>
+            </Actions>
+        </ErrorDisplay>
     }
     else if (!_bugs.Any())
     {
@@ -152,10 +170,11 @@
         </div>
     }
 </div>
+</PageRenderGuard>
 
 @code {
     private bool _isLoading = true;
-    private string? _errorMessage;
+    private ErrorResponse? _errorResponse;
     private List<WorkItemWithValidationDto> _bugs = new();
     private HashSet<int> _untriagedBugIds = new();
     private int _untriagedCount => _untriagedBugIds.Count;
@@ -178,6 +197,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ParseContextQueryParameters();
         await LoadExpandedStateAsync();
         await LoadEnabledTagsAsync();
         await LoadBugsAsync();
@@ -186,22 +206,31 @@
     private async Task LoadBugsAsync()
     {
         _isLoading = true;
-        _errorMessage = null;
+        _errorResponse = null;
 
         try
         {
+            if (!await EnsureProfileAsync())
+            {
+                _bugs = [];
+                return;
+            }
+
             // Get products for the active profile
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             if (activeProfile == null)
             {
-                _errorMessage = "No active profile selected. Please select a profile first.";
-                _bugs = new List<WorkItemWithValidationDto>();
-                _isLoading = false;
+                _errorResponse = RouteStateGuard.CreateMissingSelectionError(
+                    "An active profile",
+                    "Select a profile before opening bug triage.");
+                _bugs = [];
                 return;
             }
 
             var profileProducts = await ProductService.GetProductsByOwnerAsync(activeProfile.Id);
-            var productIds = profileProducts.Select(p => p.Id).ToArray();
+            var productIds = ProductId.HasValue
+                ? [ProductId.Value]
+                : profileProducts.Select(p => p.Id).ToArray();
 
             Logger.LogInformation("Loading bugs for {Count} products", productIds.Length);
 
@@ -234,8 +263,8 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to load bugs");
-            _errorMessage = $"Failed to load bugs: {ex.Message}";
-            _bugs = new List<WorkItemWithValidationDto>();
+            _errorResponse = RouteStateGuard.CreateSafeErrorResponse(ErrorMessageService, ex, "Bug triage");
+            _bugs = [];
         }
         finally
         {
@@ -603,7 +632,7 @@
 
     private void ClearError()
     {
-        _errorMessage = null;
+        _errorResponse = null;
     }
 
     public async ValueTask DisposeAsync()

@@ -9,6 +9,16 @@ namespace PoTool.Client.Models;
 /// </summary>
 public static class ValidationCategoryMeta
 {
+    public static bool IsSupported(string? categoryKey)
+    {
+        if (string.IsNullOrWhiteSpace(categoryKey))
+        {
+            return false;
+        }
+
+        return categoryKey.ToUpperInvariant() is "SI" or "RR" or "RC" or "EFF";
+    }
+
     /// <summary>Returns the MudBlazor icon string for a category key.</summary>
     public static string GetIcon(string categoryKey) => categoryKey.ToUpperInvariant() switch
     {

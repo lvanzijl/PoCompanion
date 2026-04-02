@@ -1,6 +1,7 @@
 @page "/home/validation-fix"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @using PoTool.Shared.WorkItems
 @using System.Web
@@ -53,9 +54,32 @@
     {
         <LoadingIndicator IsLoading="true" />
     }
-    else if (_loadError != null)
+    else if (_missingContextError != null)
     {
-        <MudAlert Severity="Severity.Error" Class="mb-4">@_loadError</MudAlert>
+        <GuidedRecoveryState Title="Choose a validation queue first"
+                             Message="@_missingContextError.UserMessage"
+                             AdditionalInfo="@_missingContextError.Suggestion"
+                             PrimaryActionText="Open Validation Triage"
+                             PrimaryActionHref="@BuildContextRoute(WorkspaceRoutes.ValidationTriage)"
+                             SecondaryActionText="Go home"
+                             SecondaryActionHref="@BuildContextRoute(WorkspaceRoutes.Home)" />
+    }
+    else if (_errorResponse != null)
+    {
+        <ErrorDisplay ErrorResponse="@_errorResponse" ShowTechnicalDetails="false" Dismissible="false">
+            <Actions>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="LoadAsync">
+                    Retry
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           Href="@BuildContextRoute(WorkspaceRoutes.ValidationTriage)">
+                    Validation Triage
+                </MudButton>
+            </Actions>
+        </ErrorDisplay>
     }
     else if (_session != null)
     {
@@ -260,7 +284,8 @@
 
 @code {
     private bool _isLoading = true;
-    private string? _loadError;
+    private ErrorResponse? _errorResponse;
+    private ErrorResponse? _missingContextError;
     private string? _productName;
     private string _categoryKey = string.Empty;
     private string _ruleId = string.Empty;
@@ -279,24 +304,40 @@
         _activeItems.Count > 0 ? _activeItems[_currentIndex] : null;
 
     protected override async Task OnInitializedAsync()
+        => await LoadAsync();
+
+    private async Task LoadAsync()
     {
+        _isLoading = true;
+        _errorResponse = null;
+        _missingContextError = null;
+
         try
         {
             ParseContextQueryParameters();
 
-            var uri = new Uri(NavigationManager.Uri);
-            var queryParams = HttpUtility.ParseQueryString(uri.Query);
-            _categoryKey = queryParams["category"] ?? string.Empty;
-            _ruleId = queryParams["ruleId"] ?? string.Empty;
-
-            if (string.IsNullOrWhiteSpace(_categoryKey))
+            var queryParams = GetQueryParameters();
+            if (!RouteStateGuard.TryGetRequiredQueryValue(queryParams, "category", out _categoryKey))
             {
-                _loadError = "Missing required query parameter: category";
+                _missingContextError = RouteStateGuard.CreateMissingQueryParameterError(
+                    "category",
+                    "Open Validation Triage and choose a queue before starting a fix session.");
                 return;
             }
-            if (string.IsNullOrWhiteSpace(_ruleId))
+
+            if (!ValidationCategoryMeta.IsSupported(_categoryKey))
             {
-                _loadError = "Missing required query parameter: ruleId";
+                _missingContextError = RouteStateGuard.CreateInvalidQueryParameterError(
+                    "category",
+                    "Choose a supported category from Validation Triage.");
+                return;
+            }
+
+            if (!RouteStateGuard.TryGetRequiredQueryValue(queryParams, "ruleId", out _ruleId))
+            {
+                _missingContextError = RouteStateGuard.CreateMissingQueryParameterError(
+                    "ruleId",
+                    "Open a validation queue and start a fix session from one of its rules.");
                 return;
             }
 
@@ -325,8 +366,7 @@
         }
         catch (Exception ex)
         {
-            _loadError = $"Failed to load fix session: {ex.Message}";
-            Console.WriteLine($"[ValidationFix] {_loadError}");
+            _errorResponse = RouteStateGuard.CreateSafeErrorResponse(ErrorMessageService, ex, "Validation fix session");
         }
         finally
         {
@@ -339,9 +379,9 @@
         var categoryLabel = _session?.CategoryLabel ?? _categoryKey;
         _breadcrumbs = new List<BreadcrumbItem>
         {
-            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
-            new("Health", WorkspaceRoutes.HealthWorkspace, icon: Icons.Material.Filled.HealthAndSafety),
-            new("Validation Triage", WorkspaceRoutes.ValidationTriage, icon: Icons.Material.Filled.FactCheck),
+            new("Home", BuildContextRoute(WorkspaceRoutes.Home), icon: Icons.Material.Filled.Home),
+            new("Health", BuildContextRoute(WorkspaceRoutes.HealthWorkspace), icon: Icons.Material.Filled.HealthAndSafety),
+            new("Validation Triage", BuildContextRoute(WorkspaceRoutes.ValidationTriage), icon: Icons.Material.Filled.FactCheck),
             new($"{categoryLabel} Queue",
                 $"{WorkspaceRoutes.ValidationQueue}{BuildContextQuery($"category={Uri.EscapeDataString(_categoryKey)}")}",
                 icon: Icons.Material.Filled.Queue),
@@ -427,7 +467,8 @@
 
     private void ClearProductFilter()
     {
-        NavigationManager.NavigateTo(
-            $"{WorkspaceRoutes.ValidationFix}?category={Uri.EscapeDataString(_categoryKey)}&ruleId={Uri.EscapeDataString(_ruleId)}");
+        NavigationManager.NavigateTo(BuildContextRoute(
+            WorkspaceRoutes.ValidationFix,
+            $"category={Uri.EscapeDataString(_categoryKey)}&ruleId={Uri.EscapeDataString(_ruleId)}"));
     }
 }

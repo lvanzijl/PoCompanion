@@ -1,3 +1,4 @@
+using System.Collections.Specialized;
 using System.Web;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -21,6 +22,9 @@ public abstract class WorkspaceBase : ComponentBase
     
     [Inject]
     protected ISnackbar Snackbar { get; set; } = default!;
+
+    [Inject]
+    protected ErrorMessageService ErrorMessageService { get; set; } = default!;
 
     /// <summary>
     /// Project alias for context propagation (parsed from URL).
@@ -67,6 +71,12 @@ public abstract class WorkspaceBase : ComponentBase
         ToSprintId = context.ToSprintId;
     }
 
+    protected NameValueCollection GetQueryParameters()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        return HttpUtility.ParseQueryString(uri.Query);
+    }
+
     /// <summary>
     /// Builds a query string that includes context parameters (productId, teamId)
     /// along with any additional parameters.
@@ -77,6 +87,17 @@ public abstract class WorkspaceBase : ComponentBase
         => WorkspaceQueryContextHelper.BuildQueryString(
             new WorkspaceQueryContext(ProjectAlias, ProductId, TeamId, SprintId, FromSprintId, ToSprintId),
             additionalParams);
+
+    protected string BuildContextRoute(string route, string? additionalParams = null)
+        => WorkspaceQueryContextHelper.BuildRoute(
+            route,
+            new WorkspaceQueryContext(ProjectAlias, ProductId, TeamId, SprintId, FromSprintId, ToSprintId),
+            additionalParams);
+
+    protected void ReplaceCurrentRoute(string route, string? additionalParams = null)
+    {
+        NavigationManager.NavigateTo(BuildContextRoute(route, additionalParams), replace: true);
+    }
     
     /// <summary>
     /// Checks if the user has a valid profile selected and redirects to home if not.
@@ -100,9 +121,6 @@ public abstract class WorkspaceBase : ComponentBase
     /// </summary>
     protected void NavigateToHome()
     {
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.Home,
-                new WorkspaceQueryContext(ProjectAlias, ProductId, TeamId, SprintId, FromSprintId, ToSprintId)));
+        NavigationManager.NavigateTo(BuildContextRoute(WorkspaceRoutes.Home));
     }
 }

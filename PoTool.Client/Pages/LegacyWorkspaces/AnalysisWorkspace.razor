@@ -74,7 +74,6 @@
     }
     else
     {
-        @* Mode Switcher Tabs *@
         <MudPaper Elevation="1" Class="pa-2 mb-4">
             <MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined">
                 <MudButton Variant="@GetModeVariant("health")" OnClick='() => SwitchMode("health")' StartIcon="@Icons.Material.Filled.HealthAndSafety">Health</MudButton>
@@ -86,131 +85,33 @@
             </MudButtonGroup>
         </MudPaper>
 
-        @* Mode Content *@
-        @if (_currentMode == "health")
-        {
-            <MudPaper Elevation="2" Class="pa-4 mb-4">
-                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                    <MudText Typo="Typo.h5">
-                        <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Class="mr-2" />
-                        Backlog Health Analysis
-                    </MudText>
-                    <MudButton Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward" Href="/backlog-health">
-                        Full Dashboard
-                    </MudButton>
-                </MudStack>
-                
-                @* Embedded Backlog Health Panel *@
-                <BacklogHealthPanel MaxIterations="5" />
-            </MudPaper>
-        }
-        else if (_currentMode == "effort")
-        {
-            <MudPaper Elevation="2" Class="pa-4 mb-4">
-                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                    <MudText Typo="Typo.h5">
-                        <MudIcon Icon="@Icons.Material.Filled.Timer" Class="mr-2" />
-                        Effort Distribution Analysis
-                    </MudText>
-                    <MudButton Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward" Href="/effort-distribution">
-                        Full Dashboard
-                    </MudButton>
-                </MudStack>
-                
-                @* Embedded Effort Distribution Panel *@
-                <EffortDistributionPanel MaxIterations="6" />
-            </MudPaper>
-        }
-        else if (_currentMode == "flow")
-        {
-            <MudPaper Elevation="2" Class="pa-4 mb-4">
-                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                    <MudText Typo="Typo.h5">
-                        <MudIcon Icon="@Icons.Material.Filled.MergeType" Class="mr-2" />
-                        Flow Analysis
-                    </MudText>
-                    <MudStack Row="true" Spacing="1">
-                        <MudButton Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward" Href="/pr-insights">
-                            PR Dashboard
-                        </MudButton>
-                        <MudButton Variant="Variant.Text" Color="Color.Secondary" EndIcon="@Icons.Material.Filled.ArrowForward" Href="/pipeline-insights">
-                            Pipelines
-                        </MudButton>
-                    </MudStack>
-                </MudStack>
-                
-                @* Embedded Flow Panel *@
-                <FlowPanel />
-            </MudPaper>
-        }
-        else if (_currentMode == "forecast")
-        {
-            <MudPaper Elevation="2" Class="pa-4 mb-4">
-                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                    <MudText Typo="Typo.h5">
-                        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="mr-2" />
-                        Forecast Analysis
-                    </MudText>
-                    <MudButton Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward" Href="/epic-forecast">
-                        Full Forecast
-                    </MudButton>
-                </MudStack>
-                
-                @* Embedded Forecast Panel *@
-                <ForecastPanel />
-            </MudPaper>
-        }
-        else if (_currentMode == "dependencies")
-        {
-            <MudPaper Elevation="2" Class="pa-4 mb-4">
-                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                    <MudText Typo="Typo.h5">
-                        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="mr-2" />
-                        Dependency Analysis
-                    </MudText>
-                    <MudButton Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward" Href="/dependency-graph">
-                        Full Graph
-                    </MudButton>
-                </MudStack>
-                
-                @* Embedded Dependencies Panel *@
-                <DependenciesPanel />
-            </MudPaper>
-        }
-        else if (_currentMode == "timeline")
-        {
-            <MudPaper Elevation="2" Class="pa-4 mb-4">
-                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                    <MudText Typo="Typo.h5">
-                        <MudIcon Icon="@Icons.Material.Filled.Timeline" Class="mr-2" />
-                        Timeline Analysis
-                    </MudText>
-                    <MudButton Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward" Href="/state-timeline">
-                        Full Timeline
-                    </MudButton>
-                </MudStack>
-                
-                @* Embedded Timeline Panel *@
-                <TimelinePanel />
-            </MudPaper>
-        }
+        <GuidedRecoveryState Title="This legacy analysis route has been retired"
+                             Message="@GetModeMessage()"
+                             AdditionalInfo="Use the modern workspaces below. They support direct URL entry and safer recovery when context is missing."
+                             PrimaryActionText="@GetPrimaryActionText()"
+                             PrimaryActionHref="@GetPrimaryActionHref()"
+                             SecondaryActionText="Open Delivery"
+                             SecondaryActionHref="@WorkspaceRoutes.DeliveryWorkspace"
+                             Severity="Severity.Info" />
 
-        @* Cross-Workspace Actions *@
         <MudPaper Elevation="2" Class="pa-4 mt-4">
             <MudText Typo="Typo.h6" Class="mb-3">
                 <MudIcon Icon="@Icons.Material.Filled.Bolt" Class="mr-2" />
-                Actions
+                Modern workspaces
             </MudText>
-            
+
             <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
-                <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Filled.CalendarMonth" OnClick="NavigateToPlanning">
-                    Plan
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.HealthAndSafety" Href="@WorkspaceRoutes.HealthWorkspace">
+                    Health
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Filled.Insights" Href="@WorkspaceRoutes.TrendsWorkspace">
+                    Trends
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Success" StartIcon="@Icons.Material.Filled.CalendarMonth" Href="@WorkspaceRoutes.PlanningWorkspace">
+                    Planning
                 </MudButton>
                 <MudButton Variant="Variant.Outlined" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Share" OnClick="NavigateToCommunication">
-                    Share
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Inventory2" OnClick="NavigateToProduct">
-                    Product Workspace
+                    Communication
                 </MudButton>
             </MudStack>
         </MudPaper>
@@ -281,13 +182,16 @@
     
     private void SetModeFromParameter()
     {
-        if (!string.IsNullOrEmpty(Mode))
+        var candidateMode = !string.IsNullOrEmpty(Mode)
+            ? Mode
+            : _currentContext?.Mode;
+
+        if (!string.IsNullOrWhiteSpace(candidateMode))
         {
-            _currentMode = Mode.ToLowerInvariant();
-        }
-        else if (!string.IsNullOrEmpty(_currentContext?.Mode))
-        {
-            _currentMode = _currentContext.Mode.ToLowerInvariant();
+            var normalizedMode = candidateMode.ToLowerInvariant();
+            _currentMode = normalizedMode is "health" or "effort" or "flow" or "forecast" or "dependencies" or "timeline"
+                ? normalizedMode
+                : "health";
         }
         else
         {
@@ -382,4 +286,30 @@
         
         await NavigationContextService.NavigateWithContextAsync(WorkspaceRoutes.ProductWorkspace, newContext);
     }
+
+    private string GetModeMessage() => _currentMode switch
+    {
+        "effort" => "Effort analysis now lives in the Health and Trends workspaces, where empty and partial data states are handled safely.",
+        "flow" => "Flow analysis has moved to the Trends workspace, which gives safer direct-entry behavior for PR and pipeline insights.",
+        "forecast" => "Forecast review now belongs in Planning and Product Roadmaps, which provide explicit empty and no-context states.",
+        "dependencies" => "Dependency analysis is available from Planning through the dedicated dependency overview flow.",
+        "timeline" => "Timeline analysis is no longer available from this legacy route. Use the modern Health and Trends workspaces instead.",
+        _ => "This legacy analysis screen could render broken charts and undefined values on direct entry, so it now guides you to the modern workspaces."
+    };
+
+    private string GetPrimaryActionText() => _currentMode switch
+    {
+        "forecast" => "Open Planning",
+        "dependencies" => "Open Planning",
+        _ => "Open Health"
+    };
+
+    private string GetPrimaryActionHref() => _currentMode switch
+    {
+        "forecast" => WorkspaceRoutes.PlanningWorkspace,
+        "dependencies" => WorkspaceRoutes.PlanningWorkspace,
+        "flow" => WorkspaceRoutes.TrendsWorkspace,
+        "timeline" => WorkspaceRoutes.TrendsWorkspace,
+        _ => WorkspaceRoutes.HealthWorkspace
+    };
 }

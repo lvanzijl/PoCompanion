@@ -1,10 +1,12 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Helpers
 @using PoTool.Client.Services
 @using PoTool.Shared.Metrics
 @inject IMetricsClient MetricsClient
 @inject IProfileService ProfileService
 @inject ProductService ProductService
+@inject ErrorMessageService ErrorMessageService
 
 <MudPaper Elevation="2" Class="pa-4 mt-4">
     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
@@ -27,9 +29,17 @@
     {
         <LoadingIndicator IsLoading="true" />
     }
-    else if (!string.IsNullOrWhiteSpace(_errorMessage))
+    else if (_errorResponse != null)
     {
-        <MudAlert Severity="Severity.Error" Class="mb-3">@_errorMessage</MudAlert>
+        <ErrorDisplay ErrorResponse="@_errorResponse" ShowTechnicalDetails="false" Dismissible="false" Class="mb-3">
+            <Actions>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="LoadAsync">
+                    Retry
+                </MudButton>
+            </Actions>
+        </ErrorDisplay>
     }
     else
     {
@@ -455,7 +465,7 @@
 
 @code {
     private bool _isLoading = true;
-    private string? _errorMessage;
+    private ErrorResponse? _errorResponse;
     private int? _profileId;
     private int? _productId;
     private string? _projectNumber;
@@ -499,14 +509,16 @@
     private async Task LoadAsync()
     {
         _isLoading = true;
-        _errorMessage = null;
+        _errorResponse = null;
 
         try
         {
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             if (activeProfile is null)
             {
-                _errorMessage = "Select an active profile to load portfolio snapshot data.";
+                _errorResponse = RouteStateGuard.CreateMissingSelectionError(
+                    "An active profile",
+                    "Select a profile before opening portfolio history.");
                 return;
             }
 
@@ -583,7 +595,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Unable to load CDC portfolio data: {ex.Message}";
+            _errorResponse = RouteStateGuard.CreateSafeErrorResponse(ErrorMessageService, ex, "Portfolio history");
         }
         finally
         {

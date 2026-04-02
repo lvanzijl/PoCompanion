@@ -1,4 +1,11 @@
-﻿<CascadingValue Value="@_errorBoundary">
+﻿@using PoTool.Client.Components.Common
+@using PoTool.Client.Services
+@using PoTool.Client.Helpers
+@using PoTool.Client.Models
+@inject ErrorMessageService ErrorMessageService
+@inject NavigationManager NavigationManager
+
+<CascadingValue Value="@_errorBoundary">
     <ErrorBoundary @ref="_errorBoundary">
         <ChildContent>
             <Router AppAssembly="@typeof(App).Assembly" NotFoundPage="@typeof(Pages.NotFound)">
@@ -9,19 +16,24 @@
             </Router>
         </ChildContent>
         <ErrorContent Context="exception">
-            <div class="error-boundary-container">
-                <div class="error-boundary-content">
-                    <h1>⚠️ An error occurred</h1>
-                    <p class="error-message">@exception.Message</p>
-                    <details class="error-details">
-                        <summary>Technical Details</summary>
-                        <pre>@exception.ToString()</pre>
-                    </details>
-                    <button class="btn-retry" @onclick="@(() => _errorBoundary?.Recover())">
-                        Try again
-                    </button>
-                </div>
-            </div>
+            <MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+                <ErrorDisplay ErrorResponse="@CreateErrorResponse(exception)"
+                              ShowTechnicalDetails="false"
+                              Dismissible="false">
+                    <Actions>
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   OnClick="RecoverCurrentPage">
+                            Try again
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Default"
+                                   Href="@WorkspaceRoutes.Home">
+                            Home
+                        </MudButton>
+                    </Actions>
+                </ErrorDisplay>
+            </MudContainer>
         </ErrorContent>
     </ErrorBoundary>
 </CascadingValue>
@@ -33,5 +45,19 @@
     {
         // Reset error boundary on navigation
         _errorBoundary?.Recover();
+    }
+
+    private ErrorResponse CreateErrorResponse(Exception exception)
+    {
+        var response = RouteStateGuard.CreateSafeErrorResponse(ErrorMessageService, exception, "This page");
+        response.UserMessage = "This page couldn't be displayed.";
+        response.Suggestion ??= "Retry the page or return to Home.";
+        return response;
+    }
+
+    private void RecoverCurrentPage()
+    {
+        _errorBoundary?.Recover();
+        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
     }
 }

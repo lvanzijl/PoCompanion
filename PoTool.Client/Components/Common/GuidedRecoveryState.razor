@@ -1,0 +1,70 @@
+<EmptyStateDisplay Title="@Title"
+                   Message="@Message"
+                   AdditionalInfo="@AdditionalInfo"
+                   Severity="@Severity"
+                   Class="@Class">
+    @if (!string.IsNullOrWhiteSpace(PrimaryActionHref) && !string.IsNullOrWhiteSpace(PrimaryActionText))
+    {
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Href="@PrimaryActionHref">
+            @PrimaryActionText
+        </MudButton>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(SecondaryActionHref) && !string.IsNullOrWhiteSpace(SecondaryActionText))
+    {
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Default"
+                   Href="@SecondaryActionHref">
+            @SecondaryActionText
+        </MudButton>
+    }
+
+    @if (RetryAction.HasDelegate)
+    {
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Default"
+                   OnClick="HandleRetryAsync">
+            @RetryText
+        </MudButton>
+    }
+</EmptyStateDisplay>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Message { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? AdditionalInfo { get; set; }
+
+    [Parameter]
+    public string? PrimaryActionText { get; set; }
+
+    [Parameter]
+    public string? PrimaryActionHref { get; set; }
+
+    [Parameter]
+    public string? SecondaryActionText { get; set; }
+
+    [Parameter]
+    public string? SecondaryActionHref { get; set; }
+
+    [Parameter]
+    public EventCallback RetryAction { get; set; }
+
+    [Parameter]
+    public string RetryText { get; set; } = "Retry";
+
+    [Parameter]
+    public Severity Severity { get; set; } = Severity.Warning;
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    private Task HandleRetryAsync()
+        => RetryAction.InvokeAsync();
+}

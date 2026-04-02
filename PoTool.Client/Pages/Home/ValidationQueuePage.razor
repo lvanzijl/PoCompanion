@@ -1,6 +1,7 @@
 @page "/home/validation-queue"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Shared.WorkItems
 @using System.Web
 @inherits WorkspaceBase
@@ -52,9 +53,32 @@
     {
         <LoadingIndicator IsLoading="true" />
     }
-    else if (_loadError != null)
+    else if (_missingContextError != null)
     {
-        <MudAlert Severity="Severity.Error" Class="mb-4">@_loadError</MudAlert>
+        <GuidedRecoveryState Title="Choose a validation category"
+                             Message="@_missingContextError.UserMessage"
+                             AdditionalInfo="@_missingContextError.Suggestion"
+                             PrimaryActionText="Open Validation Triage"
+                             PrimaryActionHref="@BuildContextRoute(WorkspaceRoutes.ValidationTriage)"
+                             SecondaryActionText="Go home"
+                             SecondaryActionHref="@BuildContextRoute(WorkspaceRoutes.Home)" />
+    }
+    else if (_errorResponse != null)
+    {
+        <ErrorDisplay ErrorResponse="@_errorResponse" ShowTechnicalDetails="false" Dismissible="false">
+            <Actions>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="LoadAsync">
+                    Retry
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           Href="@BuildContextRoute(WorkspaceRoutes.ValidationTriage)">
+                    Validation Triage
+                </MudButton>
+            </Actions>
+        </ErrorDisplay>
     }
     else if (_queue != null)
     {
@@ -149,26 +173,42 @@
 
 @code {
     private bool _isLoading = true;
-    private string? _loadError;
+    private ErrorResponse? _errorResponse;
+    private ErrorResponse? _missingContextError;
     private string? _productName;
     private string _categoryKey = string.Empty;
     private ValidationQueueDto? _queue;
     private List<BreadcrumbItem> _breadcrumbs = new();
 
     protected override async Task OnInitializedAsync()
+        => await LoadAsync();
+
+    private async Task LoadAsync()
     {
+        _isLoading = true;
+        _errorResponse = null;
+        _missingContextError = null;
+
         try
         {
             ParseContextQueryParameters();
 
-            // Read the required 'category' query parameter
-            var uri = new Uri(NavigationManager.Uri);
-            var queryParams = HttpUtility.ParseQueryString(uri.Query);
-            _categoryKey = queryParams["category"] ?? string.Empty;
-
-            if (string.IsNullOrWhiteSpace(_categoryKey))
+            var queryParams = GetQueryParameters();
+            if (!RouteStateGuard.TryGetRequiredQueryValue(queryParams, "category", out _categoryKey))
             {
-                _loadError = "Missing required query parameter: category";
+                _missingContextError = RouteStateGuard.CreateMissingQueryParameterError(
+                    "category",
+                    "Open Validation Triage and choose a category to review.");
+                _queue = null;
+                return;
+            }
+
+            if (!ValidationCategoryMeta.IsSupported(_categoryKey))
+            {
+                _missingContextError = RouteStateGuard.CreateInvalidQueryParameterError(
+                    "category",
+                    "Choose a supported category from Validation Triage.");
+                _queue = null;
                 return;
             }
 
@@ -205,8 +245,7 @@
         }
         catch (Exception ex)
         {
-            _loadError = $"Failed to load validation queue: {ex.Message}";
-            Console.WriteLine($"[ValidationQueue] {_loadError}");
+            _errorResponse = RouteStateGuard.CreateSafeErrorResponse(ErrorMessageService, ex, "Validation queue");
         }
         finally
         {
@@ -219,9 +258,9 @@
         var categoryLabel = _queue?.CategoryLabel ?? _categoryKey;
         _breadcrumbs = new List<BreadcrumbItem>
         {
-            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
-            new("Health", WorkspaceRoutes.HealthWorkspace, icon: Icons.Material.Filled.HealthAndSafety),
-            new("Validation Triage", WorkspaceRoutes.ValidationTriage, icon: Icons.Material.Filled.FactCheck),
+            new("Home", BuildContextRoute(WorkspaceRoutes.Home), icon: Icons.Material.Filled.Home),
+            new("Health", BuildContextRoute(WorkspaceRoutes.HealthWorkspace), icon: Icons.Material.Filled.HealthAndSafety),
+            new("Validation Triage", BuildContextRoute(WorkspaceRoutes.ValidationTriage), icon: Icons.Material.Filled.FactCheck),
             new($"{categoryLabel} Queue", null, disabled: true, icon: Icons.Material.Filled.Queue)
         };
     }
@@ -239,6 +278,8 @@
 
     private void ClearProductFilter()
     {
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.ValidationQueue}?category={Uri.EscapeDataString(_categoryKey)}");
+        NavigationManager.NavigateTo(BuildContextRoute(
+            WorkspaceRoutes.ValidationQueue,
+            $"category={Uri.EscapeDataString(_categoryKey)}"));
     }
 }

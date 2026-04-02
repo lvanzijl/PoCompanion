@@ -1,10 +1,10 @@
 @page "/home/bugs/detail"
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Helpers
 @using System.Web
-@inject INavigationContextService NavigationContextService
-@inject IProfileService ProfileService
-@inject NavigationManager NavigationManager
-@inject ISnackbar Snackbar
+@inject WorkItemService WorkItemService
+@inject ProductService ProductService
+@inherits WorkspaceBase
 
 <PageTitle>Bug Detail - PO Companion</PageTitle>
 
@@ -50,11 +50,32 @@
     {
         <LoadingIndicator IsLoading="true" />
     }
-    else if (!_bugId.HasValue)
+    else if (_missingContextError != null)
     {
-        <MudAlert Severity="Severity.Warning">
-            No bug ID specified. Please select a bug from the <MudLink Href="@WorkspaceRoutes.BugOverview">Bug Overview</MudLink>.
-        </MudAlert>
+        <GuidedRecoveryState Title="Choose a bug first"
+                             Message="@_missingContextError.UserMessage"
+                             AdditionalInfo="@_missingContextError.Suggestion"
+                             PrimaryActionText="Open Bug Insights"
+                             PrimaryActionHref="@BuildContextRoute(WorkspaceRoutes.BugOverview)"
+                             SecondaryActionText="Go home"
+                             SecondaryActionHref="@BuildContextRoute(WorkspaceRoutes.Home)" />
+    }
+    else if (_errorResponse != null)
+    {
+        <ErrorDisplay ErrorResponse="@_errorResponse" ShowTechnicalDetails="false" Dismissible="false">
+            <Actions>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Href="@BuildContextRoute(WorkspaceRoutes.BugOverview)">
+                    Open Bug Insights
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           Href="@BuildContextRoute(WorkspaceRoutes.Home)">
+                    Home
+                </MudButton>
+            </Actions>
+        </ErrorDisplay>
     }
     else
     {
@@ -144,6 +165,10 @@
     private bool _isLoading = true;
     private int? _profileId;
     private List<BreadcrumbItem> _breadcrumbs = new();
+    private ErrorResponse? _errorResponse;
+    private ErrorResponse? _missingContextError;
+    private const string UnknownSeverityLabel = "Unknown";
+    private const string MissingDescriptionLabel = "No description available.";
     
     // Bug data
     private int? _bugId;
@@ -157,10 +182,19 @@
     {
         try
         {
+            ParseContextQueryParameters();
+
+            if (!await EnsureProfileAsync())
+            {
+                return;
+            }
+
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             if (activeProfile == null)
             {
-                NavigationManager.NavigateTo($"{WorkspaceRoutes.Profiles}?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}");
+                _errorResponse = RouteStateGuard.CreateMissingSelectionError(
+                    "An active profile",
+                    "Select a profile before opening bug details.");
                 return;
             }
             
@@ -168,12 +202,21 @@
             ProfileService.SetCachedActiveProfileId(_profileId);
             
             ParseQueryParameters();
-            LoadBugData();
+            if (!_bugId.HasValue)
+            {
+                _missingContextError = RouteStateGuard.CreateMissingQueryParameterError(
+                    "bugId",
+                    "Open Bug Insights and choose a bug to see its details.");
+                UpdateBreadcrumbs();
+                return;
+            }
+
+            await LoadBugDataAsync(activeProfile.Id);
             UpdateBreadcrumbs();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+            _errorResponse = RouteStateGuard.CreateSafeErrorResponse(ErrorMessageService, ex, "Bug details");
         }
         finally
         {
@@ -193,51 +236,60 @@
         }
     }
     
-    private void LoadBugData()
+    private async Task LoadBugDataAsync(int activeProfileId)
     {
         if (!_bugId.HasValue) return;
-        
-        // Sample data - in real implementation, would load from backend
-        _bugTitle = "Sample Bug Title";
-        _bugState = "Active";
-        _bugSeverity = "High";
-        _bugDescription = "This is a sample bug description. In the real implementation, this would be loaded from the backend based on the bug ID.";
-        _bugTags = "ui, regression";
+
+        var profileProducts = await ProductService.GetProductsByOwnerAsync(activeProfileId);
+        var productIds = profileProducts.Select(product => product.Id).ToArray();
+        var bug = await WorkItemService.GetByTfsIdWithValidationAsync(_bugId.Value, productIds);
+
+        if (bug == null || !bug.Type.Equals("Bug", StringComparison.OrdinalIgnoreCase))
+        {
+            _errorResponse = RouteStateGuard.CreateNotFoundError(
+                $"Bug #{_bugId.Value}",
+                "Return to Bug Insights and choose a bug from the current profile.");
+            return;
+        }
+
+        _bugTitle = bug.Title;
+        _bugState = bug.State;
+        _bugSeverity = bug.Severity ?? UnknownSeverityLabel;
+        _bugDescription = string.IsNullOrWhiteSpace(bug.Description) ? MissingDescriptionLabel : bug.Description;
+        _bugTags = bug.Tags ?? string.Empty;
     }
     
     private void UpdateBreadcrumbs()
     {
         _breadcrumbs = new List<BreadcrumbItem>
         {
-            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
-            new("Bug Overview", WorkspaceRoutes.BugOverview, icon: Icons.Material.Filled.BugReport),
-            new($"Bug #{_bugId}", null, disabled: true)
+            new("Home", BuildContextRoute(WorkspaceRoutes.Home), icon: Icons.Material.Filled.Home),
+            new("Bug Overview", BuildContextRoute(WorkspaceRoutes.BugOverview), icon: Icons.Material.Filled.BugReport),
+            new(_bugId.HasValue ? $"Bug #{_bugId}" : "Bug Detail", null, disabled: true)
         };
     }
     
     private void NavigateBack()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BugOverview);
-    }
-    
-    private void NavigateToHome()
-    {
-        NavigationManager.NavigateTo(WorkspaceRoutes.Home);
+        NavigationManager.NavigateTo(BuildContextRoute(WorkspaceRoutes.BugOverview));
     }
     
     private void NavigateToBugOverview()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.BugOverview);
+        NavigationManager.NavigateTo(BuildContextRoute(WorkspaceRoutes.BugOverview));
     }
     
     private void NavigateToHealth()
     {
-        NavigationManager.NavigateTo(WorkspaceRoutes.HealthWorkspace);
+        NavigationManager.NavigateTo(BuildContextRoute(WorkspaceRoutes.HealthWorkspace));
     }
     
-    private void CancelChanges()
+    private async Task CancelChanges()
     {
-        LoadBugData();
+        if (_profileId.HasValue)
+        {
+            await LoadBugDataAsync(_profileId.Value);
+        }
         Snackbar.Add("Changes cancelled", Severity.Info);
     }
     

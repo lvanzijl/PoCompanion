@@ -100,6 +100,7 @@ public static class DataSourceModeConfiguration
     /// </summary>
     public static readonly HashSet<string> CacheModeRequiredRoutePrefixes = new(StringComparer.OrdinalIgnoreCase)
     {
+        "/api/portfolio",
         "/api/workitems",
         "/api/pullrequests",
         "/api/pipelines",

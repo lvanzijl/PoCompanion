@@ -7,9 +7,7 @@
 @using PoTool.Shared.Metrics
 @using System.Web
 @inject IMetricsClient MetricsClient
-@inject IProfileService ProfileService
-@inject NavigationManager NavigationManager
-@inject ISnackbar Snackbar
+@inherits WorkspaceBase
 
 <PageTitle>Sprint Activity - PO Companion</PageTitle>
 
@@ -36,13 +34,32 @@
     {
         <LoadingIndicator IsLoading="true" />
     }
-    else if (!string.IsNullOrEmpty(_errorMessage))
+    else if (_errorResponse != null)
     {
-        <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
+        <ErrorDisplay ErrorResponse="@_errorResponse" ShowTechnicalDetails="false" Dismissible="false">
+            <Actions>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="ReloadAsync">
+                    Retry
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           Href="@BuildContextRoute(WorkspaceRoutes.SprintDelivery)">
+                    Sprint Delivery
+                </MudButton>
+            </Actions>
+        </ErrorDisplay>
     }
     else if (_details == null)
     {
-        <MudAlert Severity="Severity.Warning">No activity details available for this work item.</MudAlert>
+        <GuidedRecoveryState Title="Activity details unavailable"
+                             Message="@_notFoundError.UserMessage"
+                             AdditionalInfo="@_notFoundError.Suggestion"
+                             PrimaryActionText="Back to Sprint Delivery"
+                             PrimaryActionHref="@BuildContextRoute(WorkspaceRoutes.SprintDelivery)"
+                             SecondaryActionText="Go home"
+                             SecondaryActionHref="@BuildContextRoute(WorkspaceRoutes.Home)" />
     }
     else
     {
@@ -203,7 +220,10 @@
     public int WorkItemId { get; set; }
 
     private bool _isLoading = true;
-    private string? _errorMessage;
+    private ErrorResponse? _errorResponse;
+    private ErrorResponse _notFoundError = RouteStateGuard.CreateNotFoundError(
+        "This activity drill-down",
+        "Return to Sprint Delivery and choose a work item with recorded activity.");
     private WorkItemActivityDetailsDto? _details;
     private CanonicalFilterNoticeModel? _filterNotice;
     private List<BreadcrumbItem> _breadcrumbs = new();
@@ -233,29 +253,55 @@
     };
 
     protected override async Task OnInitializedAsync()
+        => await ReloadAsync();
+
+    private async Task ReloadAsync()
     {
+        _isLoading = true;
+        _errorResponse = null;
+        _details = null;
+        _filterNotice = null;
+        _processedGroups = [];
+        _summary = new ActivitySummary();
+
         _breadcrumbs =
         [
-            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
-            new("Delivery", WorkspaceRoutes.DeliveryWorkspace, icon: Icons.Material.Filled.Inventory2),
-            new("Sprint Delivery", WorkspaceRoutes.SprintDelivery, icon: Icons.Material.Filled.RunCircle),
+            new("Home", BuildContextRoute(WorkspaceRoutes.Home), icon: Icons.Material.Filled.Home),
+            new("Delivery", BuildContextRoute(WorkspaceRoutes.DeliveryWorkspace), icon: Icons.Material.Filled.Inventory2),
+            new("Sprint Delivery", BuildContextRoute(WorkspaceRoutes.SprintDelivery), icon: Icons.Material.Filled.RunCircle),
             new($"Activity #{WorkItemId}", null, disabled: true, icon: Icons.Material.Filled.History)
         ];
 
         try
         {
+            ParseContextQueryParameters();
             ParseQueryParameters();
+
+            if (WorkItemId <= 0)
+            {
+                _errorResponse = RouteStateGuard.CreateInvalidQueryParameterError(
+                    "workItemId",
+                    "Open Sprint Delivery and choose a valid activity drill-down.");
+                return;
+            }
 
             var productOwnerId = _productOwnerId;
             if (!productOwnerId.HasValue)
             {
+                if (!await EnsureProfileAsync())
+                {
+                    return;
+                }
+
                 var activeProfile = await ProfileService.GetActiveProfileAsync();
                 productOwnerId = activeProfile?.Id;
             }
 
             if (!productOwnerId.HasValue)
             {
-                _errorMessage = "No active profile found.";
+                _errorResponse = RouteStateGuard.CreateMissingSelectionError(
+                    "An active profile",
+                    "Select a profile before opening sprint activity details.");
                 return;
             }
 
@@ -278,9 +324,8 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to load activity details: {ex.Message}";
+            _errorResponse = RouteStateGuard.CreateSafeErrorResponse(ErrorMessageService, ex, "Sprint activity details");
             _filterNotice = null;
-            Snackbar.Add(_errorMessage, Severity.Error);
         }
         finally
         {
@@ -472,12 +517,8 @@
 
     private void NavigateBack()
     {
-        var url = WorkspaceRoutes.SprintDelivery;
-        if (_returnView == "zoom")
-        {
-            url += "?view=zoom";
-        }
-        NavigationManager.NavigateTo(url);
+        var additionalParams = _returnView == "zoom" ? "view=zoom" : null;
+        NavigationManager.NavigateTo(BuildContextRoute(WorkspaceRoutes.SprintDelivery, additionalParams));
     }
 
     private void ParseQueryParameters()
