@@ -1,7 +1,6 @@
 using PoTool.Api.Configuration;
 using PoTool.Api.Exceptions;
 using PoTool.Core.Configuration;
-using PoTool.Core.Contracts;
 
 namespace PoTool.Api.Middleware;
 
@@ -82,10 +81,4 @@ public sealed class DataSourceModeMiddleware
             path);
         await _next(context);
     }
-
-    public Task InvokeAsync(
-        HttpContext context,
-        IDataSourceModeProvider modeProvider,
-        ICurrentProfileProvider _)
-        => InvokeAsync(context, modeProvider);
 }
