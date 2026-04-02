@@ -1,0 +1,61 @@
+<MudPaper Elevation="1" Class="pa-6">
+    <MudStack AlignItems="AlignItems.Center" Spacing="3">
+        <MudAlert Severity="@Severity" Variant="Variant.Filled" Dense="true">
+            @Title
+        </MudAlert>
+
+        <MudText Typo="Typo.body1" Align="Align.Center" Class="guided-recovery-message">
+            @Message
+        </MudText>
+
+        @if (HasActions)
+        {
+            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap" Justify="Justify.Center">
+                @if (HasPrimaryAction)
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               OnClick="PrimaryAction">
+                        @PrimaryActionLabel
+                    </MudButton>
+                }
+
+                @if (HasSecondaryAction)
+                {
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Default"
+                               OnClick="SecondaryAction">
+                        @SecondaryActionLabel
+                    </MudButton>
+                }
+            </MudStack>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Message { get; set; } = string.Empty;
+
+    [Parameter]
+    public Severity Severity { get; set; } = Severity.Warning;
+
+    [Parameter]
+    public string? PrimaryActionLabel { get; set; }
+
+    [Parameter]
+    public EventCallback PrimaryAction { get; set; }
+
+    [Parameter]
+    public string? SecondaryActionLabel { get; set; }
+
+    [Parameter]
+    public EventCallback SecondaryAction { get; set; }
+
+    private bool HasPrimaryAction => !string.IsNullOrWhiteSpace(PrimaryActionLabel) && PrimaryAction.HasDelegate;
+    private bool HasSecondaryAction => !string.IsNullOrWhiteSpace(SecondaryActionLabel) && SecondaryAction.HasDelegate;
+    private bool HasActions => HasPrimaryAction || HasSecondaryAction;
+}

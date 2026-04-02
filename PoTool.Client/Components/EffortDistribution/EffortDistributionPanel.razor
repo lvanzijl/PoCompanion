@@ -1,169 +1,147 @@
-@using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Models
 @using PoTool.Client.Services
-@inject IMetricsClient MetricsClient
-@inject ErrorMessageService ErrorMessageService
-@inject ISnackbar Snackbar
+@inject MetricsStateService MetricsStateService
 
 @* Effort Distribution Panel - Reusable component for embedding effort distribution data into workspaces *@
 
-<LoadingIndicator IsLoading="@_isLoading" />
+<DataStateView TData="EffortDistributionDto"
+               State="@_distributionState"
+               IsLoading="@_isLoading"
+               EmptyTitle="No Effort Distribution Data Available"
+               EmptyMessage="No work items found to analyze. Please sync work items first."
+               NotReadyTitle="Effort distribution is syncing"
+               NotReadyMessage="Effort distribution data will load once the cache is ready."
+               FailedTitle="Effort distribution failed to load">
+    <ChildContent Context="distributionData">
+        <MudGrid Class="mb-4">
+            <MetricSummaryCard Label="Total Effort"
+                               Value="@distributionData.TotalEffort.ToString()"
+                               Icon="@Icons.Material.Filled.Assignment"
+                               IconColor="Color.Primary" />
+            <MetricSummaryCard Label="Area Paths"
+                               Value="@distributionData.EffortByArea.Count.ToString()"
+                               Icon="@Icons.Material.Filled.FolderOpen"
+                               IconColor="Color.Info" />
+            <MetricSummaryCard Label="Iterations"
+                               Value="@distributionData.EffortByIteration.Count.ToString()"
+                               Icon="@Icons.Material.Filled.CalendarMonth"
+                               IconColor="Color.Success" />
+            <MetricSummaryCard Label="Avg Utilization"
+                               Value="@($"{GetAverageUtilization(distributionData):F0}%")"
+                               Icon="@Icons.Material.Filled.Speed"
+                               IconColor="@GetUtilizationColor(distributionData)" />
+        </MudGrid>
 
-@if (!_isLoading && _distributionData == null)
-{
-    <EmptyStateDisplay Title="No Effort Distribution Data Available"
-                      Message="No work items found to analyze. Please sync work items first." />
-}
-else if (!_isLoading && _distributionData != null)
-{
-    <ErrorDisplay ErrorResponse="@_errorResponse" 
-                  Class="mb-4"
-                  OnDismiss="ClearError" />
-
-    @* Summary Cards *@
-    <MudGrid Class="mb-4">
-        <MetricSummaryCard Label="Total Effort"
-                          Value="@_distributionData.TotalEffort.ToString()"
-                          Icon="@Icons.Material.Filled.Assignment"
-                          IconColor="Color.Primary" />
-        
-        <MetricSummaryCard Label="Area Paths"
-                          Value="@_distributionData.EffortByArea.Count.ToString()"
-                          Icon="@Icons.Material.Filled.FolderOpen"
-                          IconColor="Color.Info" />
-        
-        <MetricSummaryCard Label="Iterations"
-                          Value="@_distributionData.EffortByIteration.Count.ToString()"
-                          Icon="@Icons.Material.Filled.CalendarMonth"
-                          IconColor="Color.Success" />
-        
-        <MetricSummaryCard Label="Avg Utilization"
-                          Value="@($"{GetAverageUtilization()}%")"
-                          Icon="@Icons.Material.Filled.Speed"
-                          IconColor="@GetUtilizationColor()" />
-    </MudGrid>
-
-    @* Heat Map (Compact) *@
-    @if (_distributionData.HeatMapData.Any())
-    {
-        <MudPaper Elevation="1" Class="pa-4 mb-4">
-            <MudText Typo="Typo.h6" GutterBottom="true">Effort Heat Map</MudText>
-            <MudSimpleTable Dense="true" Hover="true" Bordered="true" Style="overflow-x: auto; max-height: 300px;">
-                <thead>
-                    <tr>
-                        <th>Area Path</th>
-                        @foreach (var iteration in _distributionData.EffortByIteration.Take(5))
-                        {
-                            <th class="text-center">@iteration.SprintName</th>
-                        }
-                        <th class="text-center">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var areaPath in _distributionData.EffortByArea.Take(5))
-                    {
+        @if (distributionData.HeatMapData.Any())
+        {
+            <MudPaper Elevation="1" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" GutterBottom="true">Effort Heat Map</MudText>
+                <MudSimpleTable Dense="true" Hover="true" Bordered="true" Style="overflow-x: auto; max-height: 300px;">
+                    <thead>
                         <tr>
-                            <td><strong>@GetShortAreaPath(areaPath.AreaPath)</strong></td>
-                            @foreach (var iteration in _distributionData.EffortByIteration.Take(5))
+                            <th>Area Path</th>
+                            @foreach (var iteration in distributionData.EffortByIteration.Take(5))
                             {
-                                var cell = _distributionData.HeatMapData
-                                    .FirstOrDefault(c => c.AreaPath == areaPath.AreaPath && c.IterationPath == iteration.IterationPath);
-                                <td class="text-center" style="@GetHeatMapCellStyle(cell)">
-                                    @if (cell != null && cell.Effort > 0)
-                                    {
-                                        <strong>@cell.Effort</strong>
-                                    }
-                                    else
-                                    {
-                                        <span>-</span>
-                                    }
-                                </td>
+                                <th class="text-center">@iteration.SprintName</th>
                             }
-                            <td class="text-center"><strong>@areaPath.TotalEffort</strong></td>
+                            <th class="text-center">Total</th>
                         </tr>
-                    }
-                </tbody>
-            </MudSimpleTable>
+                    </thead>
+                    <tbody>
+                        @foreach (var areaPath in distributionData.EffortByArea.Take(5))
+                        {
+                            <tr>
+                                <td><strong>@GetShortAreaPath(areaPath.AreaPath)</strong></td>
+                                @foreach (var iteration in distributionData.EffortByIteration.Take(5))
+                                {
+                                    var cell = distributionData.HeatMapData
+                                        .FirstOrDefault(c => c.AreaPath == areaPath.AreaPath && c.IterationPath == iteration.IterationPath);
+                                    <td class="text-center" style="@GetHeatMapCellStyle(cell)">
+                                        @if (cell != null && cell.Effort > 0)
+                                        {
+                                            <strong>@cell.Effort</strong>
+                                        }
+                                        else
+                                        {
+                                            <span>-</span>
+                                        }
+                                    </td>
+                                }
+                                <td class="text-center"><strong>@areaPath.TotalEffort</strong></td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudPaper>
+        }
+
+        <MudPaper Elevation="1" Class="pa-4 mb-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                <MudText Typo="Typo.h6">Effort by Iteration</MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                               Color="Color.Primary"
+                               OnClick="LoadDataAsync"
+                               Disabled="@_isLoading" />
+            </MudStack>
+            <MudChart ChartType="ChartType.Bar"
+                      Width="100%"
+                      Height="250px"
+                      ChartSeries="@GetIterationChartData(distributionData)"
+                      XAxisLabels="@GetIterationLabels(distributionData)"
+                      ChartOptions="@_chartOptions">
+            </MudChart>
         </MudPaper>
-    }
 
-    @* Effort by Iteration Chart *@
-    <MudPaper Elevation="1" Class="pa-4 mb-4">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
-            <MudText Typo="Typo.h6">Effort by Iteration</MudText>
-            <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
-                          Color="Color.Primary" 
-                          OnClick="LoadDataAsync"
-                          Disabled="@_isLoading" />
-        </MudStack>
-        <MudChart ChartType="ChartType.Bar" 
-                  Width="100%" 
-                  Height="250px"
-                  ChartSeries="@GetIterationChartData()" 
-                  XAxisLabels="@GetIterationLabels()"
-                  ChartOptions="@_chartOptions">
-        </MudChart>
-    </MudPaper>
-
-    @* Utilization Summary Table *@
-    <MudPaper Elevation="1" Class="pa-4">
-        <MudText Typo="Typo.h6" GutterBottom="true">Iteration Utilization</MudText>
-        <MudTable Items="@_distributionData.EffortByIteration.Take(5)" Dense="true" Hover="true">
-            <HeaderContent>
-                <MudTh>Sprint</MudTh>
-                <MudTh class="text-right">Effort</MudTh>
-                <MudTh class="text-right">Utilization</MudTh>
-                <MudTh>Status</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Sprint">@context.SprintName</MudTd>
-                <MudTd DataLabel="Effort" class="text-right">@context.TotalEffort</MudTd>
-                <MudTd DataLabel="Utilization" class="text-right">@context.UtilizationPercentage.ToString("F0")%</MudTd>
-                <MudTd DataLabel="Status">
-                    @if (context.UtilizationPercentage > 100)
-                    {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Error">Over</MudChip>
-                    }
-                    else if (context.UtilizationPercentage > 90)
-                    {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">High</MudChip>
-                    }
-                    else if (context.UtilizationPercentage > 70)
-                    {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Success">OK</MudChip>
-                    }
-                    else
-                    {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info">Low</MudChip>
-                    }
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
-    </MudPaper>
-}
+        <MudPaper Elevation="1" Class="pa-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Iteration Utilization</MudText>
+            <MudTable Items="@distributionData.EffortByIteration.Take(5)" Dense="true" Hover="true">
+                <HeaderContent>
+                    <MudTh>Sprint</MudTh>
+                    <MudTh class="text-right">Effort</MudTh>
+                    <MudTh class="text-right">Utilization</MudTh>
+                    <MudTh>Status</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Sprint">@context.SprintName</MudTd>
+                    <MudTd DataLabel="Effort" class="text-right">@context.TotalEffort</MudTd>
+                    <MudTd DataLabel="Utilization" class="text-right">@context.UtilizationPercentage.ToString("F0")%</MudTd>
+                    <MudTd DataLabel="Status">
+                        @if (context.UtilizationPercentage > 100)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error">Over</MudChip>
+                        }
+                        else if (context.UtilizationPercentage > 90)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">High</MudChip>
+                        }
+                        else if (context.UtilizationPercentage > 70)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success">OK</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">Low</MudChip>
+                        }
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+    </ChildContent>
+</DataStateView>
 
 @code {
-    /// <summary>
-    /// Optional area path to filter effort data.
-    /// </summary>
     [Parameter]
     public string? AreaPath { get; set; }
-    
-    /// <summary>
-    /// Maximum number of iterations to display. Default is 10.
-    /// </summary>
+
     [Parameter]
     public int MaxIterations { get; set; } = 10;
-    
-    /// <summary>
-    /// Default capacity per iteration for utilization calculation.
-    /// </summary>
+
     [Parameter]
     public int? DefaultCapacity { get; set; } = 40;
 
     private bool _isLoading = true;
-    private EffortDistributionDto? _distributionData;
-    private ErrorResponse? _errorResponse;
+    private DataStateViewModel<EffortDistributionDto> _distributionState = DataStateViewModel<EffortDistributionDto>.NotRequested();
 
     private ChartOptions _chartOptions = new()
     {
@@ -185,46 +163,29 @@ else if (!_isLoading && _distributionData != null)
     private async Task LoadDataAsync()
     {
         _isLoading = true;
+        _distributionState = DataStateViewModel<EffortDistributionDto>.Loading();
         StateHasChanged();
 
-        try
-        {
-            ClearError();
-            _distributionData = await MetricsClient.GetEffortDistributionAsync(
-                areaPathFilter: AreaPath, 
-                maxIterations: MaxIterations, 
-                defaultCapacity: DefaultCapacity);
-        }
-        catch (Exception ex)
-        {
-            ShowError(ex, "Error loading effort distribution data");
-        }
-        finally
-        {
-            _isLoading = false;
-            StateHasChanged();
-        }
-    }
-
-    private void ShowError(Exception ex, string context)
-    {
-        _errorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        var response = await MetricsStateService.GetEffortDistributionStateAsync(
+            AreaPath,
+            MaxIterations,
+            DefaultCapacity,
+            CancellationToken.None);
+        _distributionState = DataStateViewModel<EffortDistributionDto>.FromResponse(
+            response,
+            "Effort distribution data could not be loaded right now.");
+        _isLoading = false;
         StateHasChanged();
     }
 
-    private void ClearError()
-    {
-        _errorResponse = null;
-    }
-
-    private string GetShortAreaPath(string areaPath)
+    private static string GetShortAreaPath(string areaPath)
     {
         if (string.IsNullOrEmpty(areaPath)) return areaPath;
         var parts = areaPath.Split('\\');
         return parts.Length > 1 ? string.Join("\\", parts.Skip(Math.Max(0, parts.Length - 2))) : areaPath;
     }
 
-    private string GetHeatMapCellStyle(EffortHeatMapCell? cell)
+    private static string GetHeatMapCellStyle(EffortHeatMapCell? cell)
     {
         if (cell == null || cell.Effort == 0)
             return "background-color: transparent;";
@@ -236,39 +197,32 @@ else if (!_isLoading && _distributionData != null)
         return $"background-color: rgba({r},{g},{b},0.7); color: white;";
     }
 
-    private double GetAverageUtilization()
-    {
-        if (_distributionData == null || !_distributionData.EffortByIteration.Any())
-            return 0;
-        return _distributionData.EffortByIteration.Average(i => i.UtilizationPercentage);
-    }
+    private static double GetAverageUtilization(EffortDistributionDto distributionData)
+        => !distributionData.EffortByIteration.Any()
+            ? 0
+            : distributionData.EffortByIteration.Average(i => i.UtilizationPercentage);
 
-    private Color GetUtilizationColor()
+    private static Color GetUtilizationColor(EffortDistributionDto distributionData)
     {
-        var avg = GetAverageUtilization();
+        var avg = GetAverageUtilization(distributionData);
         return avg > 100 ? Color.Error :
                avg > 90 ? Color.Warning :
                avg > 70 ? Color.Success :
                Color.Info;
     }
 
-    private List<ChartSeries> GetIterationChartData()
+    private static List<ChartSeries> GetIterationChartData(EffortDistributionDto distributionData)
     {
-        if (_distributionData == null) return new List<ChartSeries>();
-        
-        return new List<ChartSeries>
-        {
+        return
+        [
             new ChartSeries
             {
                 Name = "Effort",
-                Data = _distributionData.EffortByIteration.Take(6).Select(i => (double)i.TotalEffort).ToArray()
+                Data = distributionData.EffortByIteration.Take(6).Select(i => (double)i.TotalEffort).ToArray()
             }
-        };
+        ];
     }
 
-    private string[] GetIterationLabels()
-    {
-        if (_distributionData == null) return Array.Empty<string>();
-        return _distributionData.EffortByIteration.Take(6).Select(i => i.SprintName).ToArray();
-    }
+    private static string[] GetIterationLabels(EffortDistributionDto distributionData)
+        => distributionData.EffortByIteration.Take(6).Select(i => i.SprintName).ToArray();
 }

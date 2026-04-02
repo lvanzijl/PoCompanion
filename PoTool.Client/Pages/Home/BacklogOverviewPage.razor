@@ -444,8 +444,8 @@
         }
 
         // Load SI count from validation triage (product-scoped)
-        var summary = await WorkItemService.GetValidationTriageSummaryAsync(new[] { productId });
-        _siIssueCount = summary?.StructuralIntegrity.TotalItemCount ?? 0;
+        var summaryResponse = await WorkItemService.GetValidationTriageSummaryStateAsync(new[] { productId });
+        _siIssueCount = summaryResponse?.Data?.StructuralIntegrity.TotalItemCount ?? 0;
     }
 
     private void UpdateBreadcrumbs()

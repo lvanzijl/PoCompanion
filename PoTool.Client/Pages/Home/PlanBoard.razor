@@ -4,6 +4,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Helpers
 @using PoTool.Client.Models
+@using PoTool.Shared.DataState
 @using PoTool.Shared.Planning
 @using PoTool.Shared.Metrics
 @inject IProfileService ProfileService
@@ -11,7 +12,7 @@
 @inject ProjectService ProjectService
 @inject WorkItemService WorkItemService
 @inject SprintService SprintService
-@inject IMetricsClient MetricsClient
+@inject MetricsStateService MetricsStateService
 @inject StateClassificationService StateClassificationService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -183,6 +184,24 @@
     else if (_isLoadingBoard)
     {
         <LoadingIndicator IsLoading="true" />
+    }
+    else if (_boardState.State == DataStateDto.NotReady)
+    {
+        <DataStatePanel State="@_boardState.State"
+                        Title="Plan Board is syncing"
+                        Message="@(_boardState.Reason ?? "Plan Board data will load once the cache is ready.")"
+                        ProductOwnerId="@_activeProfileId" />
+    }
+    else if (_boardState.State == DataStateDto.Failed)
+    {
+        <DataStatePanel State="@_boardState.State"
+                        Title="Plan Board failed to load"
+                        Message="@(_boardState.Reason ?? "Plan Board data could not be loaded right now.")" />
+    }
+    else if (_boardState.State == DataStateDto.Empty)
+    {
+        <EmptyStateDisplay Title="No plan board data available"
+                           Message="@(_boardState.Reason ?? "No work items are available for the selected product.")" />
     }
     else
     {
@@ -534,6 +553,8 @@
     // Cached full hierarchy
     private List<WorkItemDto> _allWorkItems = new();
     private HashSet<(string type, string state)> _doneOrRemovedStates = new();
+    private DataStateViewModel<IReadOnlyList<WorkItemDto>> _boardState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.NotRequested();
+    private DataStateViewModel<DeliveryQueryResponseDto<CapacityCalibrationDto>> _capacityCalibrationState = DataStateViewModel<DeliveryQueryResponseDto<CapacityCalibrationDto>>.NotRequested();
 
     // Drag state
     private PlanBoardCandidateNode? _draggedNode;
@@ -627,6 +648,7 @@
     private async Task LoadBoardAsync(int productId)
     {
         _isLoadingBoard = true;
+        _boardState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.Loading();
         StateHasChanged();
 
         try
@@ -655,11 +677,28 @@
                 _sprintColumns = new List<SprintColumn>();
                 _candidateTree = new List<PlanBoardCandidateNode>();
                 _sprintItems = new Dictionary<string, List<SprintDragItem>>();
+                _boardState = new DataStateViewModel<IReadOnlyList<WorkItemDto>>(
+                    DataStateDto.Empty,
+                    Data: Array.Empty<WorkItemDto>(),
+                    Reason: "This product has no configured backlog root work items.");
                 return;
             }
 
             _selectedProductRootIds = product.BacklogRootWorkItemIds.ToArray();
-            var workItems = (await WorkItemService.GetByRootIdsAsync(product.BacklogRootWorkItemIds.ToArray())).ToList();
+            var boardResponse = await WorkItemService.GetByRootIdsStateAsync(product.BacklogRootWorkItemIds.ToArray());
+            _boardState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.FromResponse(
+                boardResponse,
+                "Plan Board data could not be loaded right now.");
+            if (_boardState.State != DataStateDto.Available || _boardState.Data is null)
+            {
+                _allWorkItems = [];
+                _sprintColumns = [];
+                _candidateTree = [];
+                _sprintItems = [];
+                return;
+            }
+
+            var workItems = _boardState.Data.ToList();
             _allWorkItems = workItems;
 
             // Load sprints for the product's first team
@@ -695,7 +734,13 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading plan board for product {ProductId}", productId);
-            Snackbar.Add($"Error loading board: {ex.Message}", Severity.Error);
+            _boardState = new DataStateViewModel<IReadOnlyList<WorkItemDto>>(
+                DataStateDto.Failed,
+                Reason: "Plan Board data could not be loaded right now.");
+            _allWorkItems = [];
+            _sprintColumns = [];
+            _candidateTree = [];
+            _sprintItems = [];
         }
         finally
         {
@@ -725,7 +770,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error refreshing plan board from TFS for product {ProductId}", _selectedProductId.Value);
-            Snackbar.Add($"Error refreshing board from TFS: {ex.Message}", Severity.Error);
+            Snackbar.Add("Error refreshing board from TFS.", Severity.Error);
         }
         finally
         {
@@ -870,7 +915,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error planning items from node {TfsId} into sprint {Sprint}", node.TfsId, targetSprint.Name);
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            Snackbar.Add("Could not plan the selected items into that sprint.", Severity.Error);
             if (_selectedProductId.HasValue)
                 await LoadBoardAsync(_selectedProductId.Value);
         }
@@ -907,7 +952,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error moving sprint item {TfsId}", item.TfsId);
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            Snackbar.Add("Could not move the item to the selected sprint.", Severity.Error);
         }
         finally
         {
@@ -1239,27 +1284,31 @@
         {
             _sprintCapacity = null;
             _capacityCalibrationFilterMetadata = null;
+            _capacityCalibrationState = new DataStateViewModel<DeliveryQueryResponseDto<CapacityCalibrationDto>>(
+                DataStateDto.Empty,
+                Reason: "No completed sprints are available for calibration.");
             return;
         }
 
-        try
+        _capacityCalibrationState = DataStateViewModel<DeliveryQueryResponseDto<CapacityCalibrationDto>>.Loading();
+        var calibrationResponse = await MetricsStateService.GetCapacityCalibrationStateAsync(
+            _activeProfileId.Value,
+            completedSprintIds,
+            new[] { productId },
+            CancellationToken.None);
+        _capacityCalibrationState = DataStateViewModel<DeliveryQueryResponseDto<CapacityCalibrationDto>>.FromResponse(
+            calibrationResponse,
+            "Capacity calibration data could not be loaded right now.");
+        if (_capacityCalibrationState.State == DataStateDto.Available && _capacityCalibrationState.Data is not null)
         {
-            var calibrationResponse = await MetricsClient.GetCapacityCalibrationEnvelopeAsync(
-                _activeProfileId.Value,
-                completedSprintIds,
-                new[] { productId },
-                CancellationToken.None);
-            _capacityCalibrationFilterMetadata = CanonicalClientResponseFactory.Create(calibrationResponse).FilterMetadata;
-            var calibration = calibrationResponse.Data;
-
+            _capacityCalibrationFilterMetadata = CanonicalClientResponseFactory.Create(_capacityCalibrationState.Data).FilterMetadata;
+            var calibration = _capacityCalibrationState.Data.Data;
             _sprintCapacity = calibration.MedianVelocity > 0 ? calibration.MedianVelocity : null;
+            return;
         }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Could not load capacity calibration data");
-            _capacityCalibrationFilterMetadata = null;
-            _sprintCapacity = null;
-        }
+
+        _capacityCalibrationFilterMetadata = null;
+        _sprintCapacity = null;
     }
 
     private SprintCapacityState GetSprintCapacityState(string zoneId)

@@ -1,6 +1,7 @@
 @page "/home/bugs"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Models
 @using PoTool.Client.Services
 @using PoTool.Client.Pages.Home.Components
 @using System.Web
@@ -51,25 +52,15 @@
     {
         <LoadingIndicator IsLoading="true" />
     }
-    else if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _errorMessage = null)">
-            @_errorMessage
-            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@LoadBugDataAsync" Class="ml-2">
-                Retry
-            </MudButton>
-        </MudAlert>
-    }
     else
     {
-        @* Team & Product Selectors *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Spacing="3">
                 <MudText Typo="Typo.h6">
                     <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Class="mr-2" />
                     Filters
                 </MudText>
-                
+
                 <MudGrid Spacing="2">
                     <MudItem xs="12" sm="6">
                         <MudSelect T="int?"
@@ -85,7 +76,7 @@
                             }
                         </MudSelect>
                     </MudItem>
-                    
+
                     <MudItem xs="12" sm="6">
                         <MudSelect T="int?"
                                    Value="_selectedProductId"
@@ -104,98 +95,87 @@
             </MudStack>
         </MudPaper>
 
-        @* Metrics Grid *@
-        <MudGrid Spacing="3">
-            @* Total Open Bugs *@
-            <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="Total Open Bugs"
-                           Result="_totalOpenBugs"
-                           ValueFormat="MetricValueFormat.Count"
-                           ItemLabel="bugs"
-                           IsLoading="_metricsLoading" />
-            </MudItem>
+        <DataStateView TData="IReadOnlyList<WorkItemDto>"
+                       State="@_bugState"
+                       IsLoading="@_metricsLoading"
+                       ProductOwnerId="@_profileId"
+                       EmptyTitle="No bug data available"
+                       EmptyMessage="No bug data found for the selected team/product and time range."
+                       NotReadyTitle="Bug insights are syncing"
+                       NotReadyMessage="Bug insights will load once the cache is ready."
+                       FailedTitle="Bug insights failed to load">
+            <ChildContent Context="bugs">
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" sm="6" md="4">
+                        <MetricCard Title="Total Open Bugs"
+                                   Result="_totalOpenBugs"
+                                   ValueFormat="MetricValueFormat.Count"
+                                   ItemLabel="bugs"
+                                   IsLoading="_metricsLoading" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MetricCard Title="Bugs Created (Last 6 Months)"
+                                   Result="_bugsCreated"
+                                   ValueFormat="MetricValueFormat.Count"
+                                   ItemLabel="bugs"
+                                   IsLoading="_metricsLoading" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MetricCard Title="Bugs Resolved (Last 6 Months)"
+                                   Result="_bugsResolved"
+                                   ValueFormat="MetricValueFormat.Count"
+                                   ItemLabel="bugs"
+                                   IsLoading="_metricsLoading" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MetricCard Title="Bug Resolution Time"
+                                   Result="_resolutionTime"
+                                   ValueFormat="MetricValueFormat.Hours"
+                                   ItemLabel="bugs"
+                                   IsLoading="_metricsLoading" />
+                    </MudItem>
+                </MudGrid>
 
-            @* Bugs Created Per Period *@
-            <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="Bugs Created (Last 6 Months)"
-                           Result="_bugsCreated"
-                           ValueFormat="MetricValueFormat.Count"
-                           ItemLabel="bugs"
-                           IsLoading="_metricsLoading" />
-            </MudItem>
+                <MudPaper Elevation="2" Class="pa-4 mt-3">
+                    <MudStack Spacing="3">
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.PieChart" Class="mr-2" />
+                            Bugs by Severity Distribution
+                        </MudText>
 
-            @* Bugs Resolved Per Period *@
-            <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="Bugs Resolved (Last 6 Months)"
-                           Result="_bugsResolved"
-                           ValueFormat="MetricValueFormat.Count"
-                           ItemLabel="bugs"
-                           IsLoading="_metricsLoading" />
-            </MudItem>
-
-            @* Bug Resolution Time *@
-            <MudItem xs="12" sm="6" md="4">
-                <MetricCard Title="Bug Resolution Time"
-                           Result="_resolutionTime"
-                           ValueFormat="MetricValueFormat.Hours"
-                           ItemLabel="bugs"
-                           IsLoading="_metricsLoading" />
-            </MudItem>
-        </MudGrid>
-
-        @* Bugs by Severity Distribution *@
-        <MudPaper Elevation="2" Class="pa-4 mt-3">
-            <MudStack Spacing="3">
-                <MudText Typo="Typo.h6">
-                    <MudIcon Icon="@Icons.Material.Filled.PieChart" Class="mr-2" />
-                    Bugs by Severity Distribution
-                </MudText>
-                
-                @if (_metricsLoading)
-                {
-                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="200px" />
-                }
-                else if (_severityDistribution.Count == 0)
-                {
-                    <MudAlert Severity="Severity.Info">
-                        No severity data available.
-                    </MudAlert>
-                }
-                else
-                {
-                    <MudStack Spacing="2">
-                        @foreach (var (severity, data) in _severityDistribution)
+                        @if (_severityDistribution.Count == 0)
                         {
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudChip T="string" 
-                                         Size="Size.Small" 
-                                         Color="@GetSeverityColor(severity)"
-                                         Style="min-width: 120px;">
-                                    @severity
-                                </MudChip>
-                                <MudProgressLinear Color="@GetSeverityColor(severity)" 
-                                                  Value="@data.Percentage" 
-                                                  Size="Size.Large"
-                                                  Class="flex-grow-1" />
-                                <MudText Typo="Typo.body2" Style="min-width: 100px;">
-                                    @data.Count (@($"{data.Percentage:F1}") %)
-                                </MudText>
+                            <MudAlert Severity="Severity.Info">
+                                No severity data available.
+                            </MudAlert>
+                        }
+                        else
+                        {
+                            <MudStack Spacing="2">
+                                @foreach (var (severity, data) in _severityDistribution)
+                                {
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudChip T="string"
+                                                 Size="Size.Small"
+                                                 Color="@GetSeverityColor(severity)"
+                                                 Style="min-width: 120px;">
+                                            @severity
+                                        </MudChip>
+                                        <MudProgressLinear Color="@GetSeverityColor(severity)"
+                                                           Value="@data.Percentage"
+                                                           Size="Size.Large"
+                                                           Class="flex-grow-1" />
+                                        <MudText Typo="Typo.body2" Style="min-width: 100px;">
+                                            @data.Count (@($"{data.Percentage:F1}") %)
+                                        </MudText>
+                                    </MudStack>
+                                }
                             </MudStack>
                         }
                     </MudStack>
-                }
-            </MudStack>
-        </MudPaper>
-
-        @* Empty State *@
-        @if (_allBugs.Count == 0 && !_metricsLoading)
-        {
-            <MudPaper Elevation="2" Class="pa-6 mt-4">
-                <MudAlert Severity="Severity.Info">
-                    No bug data found for the selected team/product and time range.
-                </MudAlert>
-            </MudPaper>
-        }
+                </MudPaper>
+            </ChildContent>
+        </DataStateView>
 
         @* Suggestion 6: Prominent "Go to Triage" contextual action panel *@
         <MudPaper Elevation="2" Class="pa-4 mt-4">
@@ -256,6 +236,7 @@
     
     // Time window (6 months by default)
     private readonly DateTimeOffset _fromDate = DateTimeOffset.UtcNow.AddMonths(-6);
+    private DataStateViewModel<IReadOnlyList<WorkItemDto>> _bugState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.NotRequested();
     
     protected override async Task OnInitializedAsync()
     {
@@ -283,10 +264,10 @@
             
             UpdateBreadcrumbs();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _errorMessage = ex.Message;
-            Snackbar.Add($"Error loading bug insights: {ex.Message}", Severity.Error);
+            _errorMessage = "Bug insights could not be loaded right now. Try again later.";
+            Snackbar.Add(_errorMessage, Severity.Error);
         }
         finally
         {
@@ -317,80 +298,58 @@
     private async Task LoadBugDataAsync()
     {
         _metricsLoading = true;
-        _errorMessage = null;
+        _bugState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.Loading();
         StateHasChanged();
-        
-        try
+
+        var response = await WorkItemService.GetAllStateAsync();
+        var bugState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.FromResponse(
+            response,
+            "Bug data could not be loaded right now.");
+
+        if (bugState.State == PoTool.Shared.DataState.DataStateDto.Available && bugState.Data is not null)
         {
-            // Load all work items
-            var allWorkItems = await WorkItemService.GetAllAsync();
-            
-            // Filter to bugs only
-            var bugs = allWorkItems.Where(wi => wi.Type.Equals("Bug", StringComparison.OrdinalIgnoreCase)).ToList();
-            
-            // Apply product filter if selected
+            var bugs = bugState.Data.Where(wi => wi.Type.Equals("Bug", StringComparison.OrdinalIgnoreCase)).ToList();
+
             if (_selectedProductId.HasValue)
             {
-                // Find the selected product to get its team links
                 var selectedProduct = _products.FirstOrDefault(p => p.Id == _selectedProductId.Value);
                 if (selectedProduct != null && selectedProduct.TeamIds.Any())
                 {
-                    // Get area paths for teams linked to this product
                     var linkedTeams = _teams.Where(t => selectedProduct.TeamIds.Contains(t.Id)).ToList();
                     var teamAreaPaths = linkedTeams.Select(t => t.TeamAreaPath).ToHashSet(StringComparer.OrdinalIgnoreCase);
-                    
-                    // Filter bugs by area path matching team area paths
-                    bugs = bugs.Where(b => 
-                        teamAreaPaths.Any(path => 
-                            b.AreaPath?.StartsWith(path, StringComparison.OrdinalIgnoreCase) == true
-                        )
-                    ).ToList();
+                    bugs = bugs.Where(b => teamAreaPaths.Any(path => b.AreaPath?.StartsWith(path, StringComparison.OrdinalIgnoreCase) == true)).ToList();
                 }
-                else if (selectedProduct == null)
-                {
-                    // Product not found, show no bugs
-                    bugs = new List<WorkItemDto>();
-                }
-                // If product has no teams, show no bugs
                 else
                 {
-                    bugs = new List<WorkItemDto>();
+                    bugs = [];
                 }
             }
-            
-            // Apply team filter if selected (and no product filter, or additional filtering)
+
             if (_selectedTeamId.HasValue)
             {
                 var selectedTeam = _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value);
-                if (selectedTeam != null)
-                {
-                    // Filter bugs by area path matching the team's area path
-                    bugs = bugs.Where(b => 
-                        b.AreaPath?.StartsWith(selectedTeam.TeamAreaPath, StringComparison.OrdinalIgnoreCase) == true
-                    ).ToList();
-                }
-                else
-                {
-                    // Team not found, show no bugs
-                    bugs = new List<WorkItemDto>();
-                }
+                bugs = selectedTeam is null
+                    ? []
+                    : bugs.Where(b => b.AreaPath?.StartsWith(selectedTeam.TeamAreaPath, StringComparison.OrdinalIgnoreCase) == true).ToList();
             }
-            
+
             _allBugs = bugs;
-            
-            // Calculate metrics
             CalculateMetrics();
+            _bugState = bugState with { Data = bugs };
         }
-        catch (Exception ex)
+        else
         {
-            _errorMessage = $"Failed to load bug data: {ex.Message}";
-            Snackbar.Add(_errorMessage, Severity.Error);
+            _allBugs = [];
+            _severityDistribution = new();
+            _totalOpenBugs = null;
+            _bugsCreated = null;
+            _bugsResolved = null;
+            _resolutionTime = null;
+            _bugState = bugState;
         }
-        finally
-        {
-            _metricsLoading = false;
-            StateHasChanged();
-        }
+
+        _metricsLoading = false;
+        StateHasChanged();
     }
     
     private void CalculateMetrics()

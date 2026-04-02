@@ -1,0 +1,70 @@
+@typeparam TData
+@using PoTool.Client.Models
+@using PoTool.Shared.DataState
+
+@if (IsLoading || State.State == DataStateDto.Loading)
+{
+    <LoadingIndicator IsLoading="true" />
+}
+else if (State.State == DataStateDto.NotReady)
+{
+    <DataStatePanel State="DataStateDto.NotReady"
+                    Title="@NotReadyTitle"
+                    Message="@(State.Reason ?? NotReadyMessage)"
+                    ProductOwnerId="@ProductOwnerId" />
+}
+else if (State.State == DataStateDto.Failed)
+{
+    <DataStatePanel State="DataStateDto.Failed"
+                    Title="@FailedTitle"
+                    Message="@(State.Reason ?? FailedMessage)"
+                    ProductOwnerId="@ProductOwnerId" />
+}
+else if (State.State == DataStateDto.Empty)
+{
+    <EmptyStateDisplay Title="@EmptyTitle"
+                      Message="@(State.Reason ?? EmptyMessage)" />
+}
+else if (State.State == DataStateDto.Available && State.Data is not null)
+{
+    @ChildContent(State.Data)
+}
+else
+{
+    @NotRequestedContent
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public DataStateViewModel<TData> State { get; set; } = DataStateViewModel<TData>.NotRequested();
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment<TData> ChildContent { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment? NotRequestedContent { get; set; }
+
+    [Parameter]
+    public int? ProductOwnerId { get; set; }
+
+    [Parameter]
+    public string NotReadyTitle { get; set; } = "Data is syncing";
+
+    [Parameter]
+    public string NotReadyMessage { get; set; } = "Cached data is still loading for this view.";
+
+    [Parameter]
+    public string FailedTitle { get; set; } = "Data failed to load";
+
+    [Parameter]
+    public string FailedMessage { get; set; } = "The requested data could not be loaded right now.";
+
+    [Parameter]
+    public string EmptyTitle { get; set; } = "No data available";
+
+    [Parameter]
+    public string EmptyMessage { get; set; } = "No data is available for the current selection.";
+}

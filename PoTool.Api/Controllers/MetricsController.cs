@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
 using PoTool.Api.Services;
+using PoTool.Shared.DataState;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
 
@@ -16,17 +17,20 @@ namespace PoTool.Api.Controllers;
 public class MetricsController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly CacheStateResponseService _cacheStateResponseService;
     private readonly DeliveryFilterResolutionService _deliveryFilterResolutionService;
     private readonly SprintFilterResolutionService _sprintFilterResolutionService;
     private readonly ILogger<MetricsController> _logger;
 
     public MetricsController(
         IMediator mediator,
+        CacheStateResponseService cacheStateResponseService,
         DeliveryFilterResolutionService deliveryFilterResolutionService,
         SprintFilterResolutionService sprintFilterResolutionService,
         ILogger<MetricsController> logger)
     {
         _mediator = mediator;
+        _cacheStateResponseService = cacheStateResponseService;
         _deliveryFilterResolutionService = deliveryFilterResolutionService;
         _sprintFilterResolutionService = sprintFilterResolutionService;
         _logger = logger;
@@ -830,6 +834,7 @@ public class MetricsController : ControllerBase
         }
     }
 
+
     /// <summary>
     /// Gets capacity calibration metrics (velocity distribution + predictability) for a selected sprint range.
     /// Returns median/P25/P75 velocity, median predictability, and outlier sprint names.
@@ -1030,6 +1035,7 @@ public class MetricsController : ControllerBase
             return StatusCode(500, "Error retrieving work item activity details");
         }
     }
+
 
     private static SprintMetricsDto CreateEmptySprintMetricsDto(
         SprintFilterResolution resolution,

@@ -1,51 +1,43 @@
-@using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Models
 @using PoTool.Client.Services
 @using PoTool.Client.Pages.Metrics.SubComponents
-@inject IMetricsClient MetricsClient
+@inject MetricsStateService MetricsStateService
 @inject BacklogHealthCalculationService HealthCalculationService
-@inject ErrorMessageService ErrorMessageService
-@inject ISnackbar Snackbar
 
 @* Backlog Health Panel - Reusable component for embedding backlog health data into workspaces *@
 
-<LoadingIndicator IsLoading="@_isLoading" />
+<DataStateView TData="MultiIterationBacklogHealthDto"
+               State="@_healthState"
+               IsLoading="@_isLoading"
+               EmptyTitle="No Backlog Health Data Available"
+               EmptyMessage="No work items found to analyze. Please sync work items first."
+               NotReadyTitle="Backlog health is syncing"
+               NotReadyMessage="Backlog health data will load once the cache is ready."
+               FailedTitle="Backlog health failed to load">
+    <ChildContent Context="healthData">
+        <BacklogHealthTrendCard TrendSummary="@healthData.Trend.Summary"
+                               IterationCount="@healthData.IterationHealth.Count"
+                               TotalWorkItems="@healthData.TotalWorkItems"
+                               TotalIssues="@healthData.TotalIssues"
+                               EffortTrend="@healthData.Trend.EffortTrend"
+                               ValidationTrend="@healthData.Trend.ValidationTrend"
+                               BlockerTrend="@healthData.Trend.BlockerTrend" />
 
-@if (!_isLoading && (_healthData == null || !_healthData.IterationHealth.Any()))
-{
-    <EmptyStateDisplay Title="No Backlog Health Data Available"
-                      Message="No work items found to analyze. Please sync work items first." />
-}
-else if (!_isLoading && _healthData != null)
-{
-    <ErrorDisplay ErrorResponse="@_errorResponse" 
-                  Class="mb-4"
-                  OnDismiss="ClearError" />
+        <IterationHealthTable Iterations="@healthData.IterationHealth.Take(3).ToList()" />
 
-    @* Trend Summary Card *@
-    <BacklogHealthTrendCard TrendSummary="@_healthData.Trend.Summary"
-                           IterationCount="@_healthData.IterationHealth.Count"
-                           TotalWorkItems="@_healthData.TotalWorkItems"
-                           TotalIssues="@_healthData.TotalIssues"
-                           EffortTrend="@_healthData.Trend.EffortTrend"
-                           ValidationTrend="@_healthData.Trend.ValidationTrend"
-                           BlockerTrend="@_healthData.Trend.BlockerTrend" />
-
-    @* Iteration Health Table - Show only current + 2 future (first 3 iterations) *@
-    <IterationHealthTable Iterations="@_healthData.IterationHealth.Take(3).ToList()" />
-
-    @* Comparison Chart - Show all 6 iterations for Issue Comparison window *@
-    <MudPaper Elevation="1" Class="pa-4 mt-4">
-        <MudText Typo="Typo.h6" GutterBottom="true">Issue Comparison Across Iterations</MudText>
-        <MudChart ChartType="ChartType.Bar" 
-                  Width="100%" 
-                  Height="300px"
-                  ChartSeries="@GetComparisonData()" 
-                  XAxisLabels="@GetIterationLabels()"
-                  ChartOptions="@_chartOptions">
-        </MudChart>
-    </MudPaper>
-}
+        <MudPaper Elevation="1" Class="pa-4 mt-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Issue Comparison Across Iterations</MudText>
+            <MudChart ChartType="ChartType.Bar"
+                      Width="100%"
+                      Height="300px"
+                      ChartSeries="@GetComparisonData(healthData)"
+                      XAxisLabels="@GetIterationLabels(healthData)"
+                      ChartOptions="@_chartOptions">
+            </MudChart>
+        </MudPaper>
+    </ChildContent>
+</DataStateView>
 
 @code {
     /// <summary>
@@ -67,8 +59,7 @@ else if (!_isLoading && _healthData != null)
     public int MaxIterations { get; set; } = 5;
 
     private bool _isLoading = true;
-    private MultiIterationBacklogHealthDto? _healthData;
-    private ErrorResponse? _errorResponse;
+    private DataStateViewModel<MultiIterationBacklogHealthDto> _healthState = DataStateViewModel<MultiIterationBacklogHealthDto>.NotRequested();
 
     private ChartOptions _chartOptions = new()
     {
@@ -91,72 +82,45 @@ else if (!_isLoading && _healthData != null)
     private async Task LoadDataAsync()
     {
         _isLoading = true;
+        _healthState = DataStateViewModel<MultiIterationBacklogHealthDto>.Loading();
         StateHasChanged();
 
-        try
-        {
-            ClearError();
-            
-            var productIds = ProductIds?.ToArray();
-            
-            _healthData = await GetMultiIterationBacklogHealthAsync(
-                productIds, 
-                AreaPath, 
-                MaxIterations);
-        }
-        catch (Exception ex)
-        {
-            ShowError(ex, "Error loading backlog health data");
-        }
-        finally
-        {
-            _isLoading = false;
-            StateHasChanged();
-        }
-    }
+        var response = await MetricsStateService.GetMultiIterationBacklogHealthStateAsync(
+            productOwnerId: null,
+            ProductIds?.ToArray(),
+            AreaPath,
+            MaxIterations,
+            CancellationToken.None);
 
-    private async Task<MultiIterationBacklogHealthDto?> GetMultiIterationBacklogHealthAsync(
-        int[]? productIds,
-        string? areaPath,
-        int maxIterations)
-    {
-        try
-        {
-            var response = await MetricsClient.GetMultiIterationBacklogHealthAsync(
-                productOwnerId: null,
-                productIds,
-                areaPath,
-                maxIterations,
-                CancellationToken.None);
+        var envelopeState = DataStateViewModel<SprintQueryResponseDto<MultiIterationBacklogHealthDto>>.FromResponse(
+            response,
+            "Backlog health data could not be loaded right now.");
 
-            return response.Data;
-        }
-        catch (Exception ex)
+        _healthState = envelopeState.State switch
         {
-            throw new Exception($"Failed to retrieve backlog health data: {ex.Message}", ex);
-        }
-    }
+            PoTool.Shared.DataState.DataStateDto.Available when envelopeState.Data?.Data is not null
+                => new DataStateViewModel<MultiIterationBacklogHealthDto>(
+                    envelopeState.State,
+                    envelopeState.Data.Data,
+                    envelopeState.Reason,
+                    envelopeState.RetryAfterSeconds),
+            _ => new DataStateViewModel<MultiIterationBacklogHealthDto>(
+                envelopeState.State,
+                Reason: envelopeState.Reason,
+                RetryAfterSeconds: envelopeState.RetryAfterSeconds)
+        };
 
-    private void ShowError(Exception ex, string context)
-    {
-        _errorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+        _isLoading = false;
         StateHasChanged();
     }
 
-    private void ClearError()
+    private List<ChartSeries> GetComparisonData(MultiIterationBacklogHealthDto healthData)
     {
-        _errorResponse = null;
+        return HealthCalculationService.GenerateComparisonChartData(healthData);
     }
 
-    private List<ChartSeries> GetComparisonData()
+    private string[] GetIterationLabels(MultiIterationBacklogHealthDto healthData)
     {
-        if (_healthData == null) return new List<ChartSeries>();
-        return HealthCalculationService.GenerateComparisonChartData(_healthData);
-    }
-
-    private string[] GetIterationLabels()
-    {
-        if (_healthData == null) return Array.Empty<string>();
-        return HealthCalculationService.GetIterationLabels(_healthData);
+        return HealthCalculationService.GetIterationLabels(healthData);
     }
 }

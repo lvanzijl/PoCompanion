@@ -1,8 +1,7 @@
-@using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Models
 @using PoTool.Client.Services
-@inject IMetricsClient MetricsClient
-@inject ErrorMessageService ErrorMessageService
+@inject MetricsStateService MetricsStateService
 
 @* Forecast Panel - Reusable component for embedding epic forecast into workspaces *@
 
@@ -35,95 +34,97 @@
 
 <LoadingIndicator IsLoading="@_isLoading" />
 
-@if (!_isLoading && _forecastData != null)
-{
-    <ErrorDisplay ErrorResponse="@_errorResponse" 
-                  Class="mb-4"
-                  OnDismiss="ClearError" />
-
-    @* Epic Summary Card *@
-    <MudCard Elevation="2" Class="mb-4">
-        <MudCardContent>
-            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                <div>
-                    <MudText Typo="Typo.h6">@_forecastData.Title</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        ID: @_forecastData.EpicId | Type: @_forecastData.Type | Area: @_forecastData.AreaPath
-                    </MudText>
-                </div>
-                <MudChip T="string" Size="Size.Medium" Color="@GetConfidenceColor(_forecastData.Confidence)">
-                    @_forecastData.Confidence Confidence
-                </MudChip>
-            </MudStack>
-        </MudCardContent>
-    </MudCard>
-
-    @* Progress Summary *@
-    <MudGrid Class="mb-4">
-        <MetricSummaryCard Label="Total Story Points"
-                          Value="@_forecastData.TotalStoryPoints.ToString()"
-                          Icon="@Icons.Material.Filled.Flag"
-                          IconColor="Color.Primary" />
-        
-        <MetricSummaryCard Label="Delivered Story Points"
-                          Value="@_forecastData.DeliveredStoryPoints.ToString()"
-                          Icon="@Icons.Material.Filled.CheckCircle"
-                          IconColor="Color.Success" />
-        
-        <MetricSummaryCard Label="Remaining Story Points"
-                          Value="@_forecastData.RemainingStoryPoints.ToString()"
-                          Icon="@Icons.Material.Filled.Schedule"
-                          IconColor="Color.Warning" />
-        
-        <MetricSummaryCard Label="Est. Velocity"
-                          Value="@_forecastData.EstimatedVelocity.ToString("F1")"
-                          Icon="@Icons.Material.Filled.Speed"
-                          IconColor="Color.Info" />
-    </MudGrid>
-
-    @* Forecast Summary *@
-    <MudPaper Elevation="1" Class="pa-4">
-        <MudText Typo="Typo.h6" GutterBottom="true">Forecast Summary</MudText>
-        <MudSimpleTable Dense="true" Hover="true">
-            <thead>
-                <tr>
-                    <th>Metric</th>
-                    <th>Value</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><strong>Sprints Remaining</strong></td>
-                    <td>@_forecastData.SprintsRemaining</td>
-                </tr>
-                <tr>
-                    <td><strong>Estimated Completion</strong></td>
-                    <td>
-                        @if (_forecastData.EstimatedCompletionDate.HasValue)
-                        {
-                            @_forecastData.EstimatedCompletionDate.Value.LocalDateTime.ToString("MMM dd, yyyy")
-                        }
-                        else
-                        {
-                            <span>TBD</span>
-                        }
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong>Confidence</strong></td>
-                    <td>
-                        <MudChip T="string" Size="Size.Small" Color="@GetConfidenceColor(_forecastData.Confidence)">
-                            @_forecastData.Confidence
-                        </MudChip>
-                    </td>
-                </tr>
-            </tbody>
-        </MudSimpleTable>
-    </MudPaper>
-}
-else if (!_isLoading && !_hasAttemptedLoad)
+@if (!_hasAttemptedLoad)
 {
     <MudAlert Severity="Severity.Info">Enter an Epic or Feature ID and click Calculate to see forecast.</MudAlert>
+}
+else
+{
+    <DataStateView TData="EpicCompletionForecastDto"
+                   State="@_forecastState"
+                   IsLoading="@_isLoading"
+                   EmptyTitle="No forecast data available"
+                   EmptyMessage="No forecast data is available for this epic or feature."
+                   NotReadyTitle="Forecast is syncing"
+                   NotReadyMessage="Forecast data will load once the cache is ready."
+                   FailedTitle="Forecast failed to load">
+        <ChildContent Context="forecast">
+            @* Epic Summary Card *@
+            <MudCard Elevation="2" Class="mb-4">
+                <MudCardContent>
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <div>
+                            <MudText Typo="Typo.h6">@forecast.Title</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                ID: @forecast.EpicId | Type: @forecast.Type | Area: @forecast.AreaPath
+                            </MudText>
+                        </div>
+                        <MudChip T="string" Size="Size.Medium" Color="@GetConfidenceColor(forecast.Confidence)">
+                            @forecast.Confidence Confidence
+                        </MudChip>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+
+            <MudGrid Class="mb-4">
+                <MetricSummaryCard Label="Total Story Points"
+                                   Value="@forecast.TotalStoryPoints.ToString()"
+                                   Icon="@Icons.Material.Filled.Flag"
+                                   IconColor="Color.Primary" />
+                <MetricSummaryCard Label="Delivered Story Points"
+                                   Value="@forecast.DeliveredStoryPoints.ToString()"
+                                   Icon="@Icons.Material.Filled.CheckCircle"
+                                   IconColor="Color.Success" />
+                <MetricSummaryCard Label="Remaining Story Points"
+                                   Value="@forecast.RemainingStoryPoints.ToString()"
+                                   Icon="@Icons.Material.Filled.Schedule"
+                                   IconColor="Color.Warning" />
+                <MetricSummaryCard Label="Est. Velocity"
+                                   Value="@forecast.EstimatedVelocity.ToString("F1")"
+                                   Icon="@Icons.Material.Filled.Speed"
+                                   IconColor="Color.Info" />
+            </MudGrid>
+
+            <MudPaper Elevation="1" Class="pa-4">
+                <MudText Typo="Typo.h6" GutterBottom="true">Forecast Summary</MudText>
+                <MudSimpleTable Dense="true" Hover="true">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Sprints Remaining</strong></td>
+                            <td>@forecast.SprintsRemaining</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Estimated Completion</strong></td>
+                            <td>
+                                @if (forecast.EstimatedCompletionDate.HasValue)
+                                {
+                                    @forecast.EstimatedCompletionDate.Value.LocalDateTime.ToString("MMM dd, yyyy")
+                                }
+                                else
+                                {
+                                    <span>TBD</span>
+                                }
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Confidence</strong></td>
+                            <td>
+                                <MudChip T="string" Size="Size.Small" Color="@GetConfidenceColor(forecast.Confidence)">
+                                    @forecast.Confidence
+                                </MudChip>
+                            </td>
+                        </tr>
+                    </tbody>
+                </MudSimpleTable>
+            </MudPaper>
+        </ChildContent>
+    </DataStateView>
 }
 
 @code {
@@ -134,8 +135,7 @@ else if (!_isLoading && !_hasAttemptedLoad)
     private bool _hasAttemptedLoad = false;
     private int? _selectedEpicId;
     private int _maxSprintsForVelocity = 6;
-    private EpicCompletionForecastDto? _forecastData;
-    private ErrorResponse? _errorResponse;
+    private DataStateViewModel<EpicCompletionForecastDto> _forecastState = DataStateViewModel<EpicCompletionForecastDto>.NotRequested();
 
     protected override async Task OnInitializedAsync()
     {
@@ -153,25 +153,19 @@ else if (!_isLoading && !_hasAttemptedLoad)
 
         _isLoading = true;
         _hasAttemptedLoad = true;
+        _forecastState = DataStateViewModel<EpicCompletionForecastDto>.Loading();
         StateHasChanged();
 
-        try
-        {
-            ClearError();
-            _forecastData = await MetricsClient.GetEpicForecastAsync(_selectedEpicId.Value, _maxSprintsForVelocity);
-        }
-        catch (Exception ex)
-        {
-            _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error loading forecast");
-        }
-        finally
-        {
-            _isLoading = false;
-            StateHasChanged();
-        }
+        var response = await MetricsStateService.GetEpicForecastStateAsync(
+            _selectedEpicId.Value,
+            _maxSprintsForVelocity,
+            CancellationToken.None);
+        _forecastState = DataStateViewModel<EpicCompletionForecastDto>.FromResponse(
+            response,
+            "Forecast data could not be loaded right now.");
+        _isLoading = false;
+        StateHasChanged();
     }
-
-    private void ClearError() => _errorResponse = null;
 
     private Color GetConfidenceColor(ForecastConfidence confidence)
     {

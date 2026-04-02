@@ -1,5 +1,7 @@
+@using PoTool.Client.Components.Common
 @using PoTool.Client.Services
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Models
 @inject WorkItemService WorkItemService
 
 <MudDialog>
@@ -15,46 +17,50 @@
             <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
             <MudText Typo="Typo.body2" Class="mt-2">Loading Objectives...</MudText>
         }
-        else if (_availableObjectives.Count == 0)
-        {
-            <MudAlert Severity="Severity.Info">
-                No Objectives available to add as lanes. All Objectives may already be added or no Objectives exist in the current Program Increment.
-            </MudAlert>
-        }
         else
         {
-            <MudStack Spacing="3">
-                <MudText Typo="Typo.body2">
-                    Select an Objective to add as a lane on the Release Planning Board.
-                </MudText>
+            <DataStateView TData="IReadOnlyList<WorkItemDto>"
+                           State="@_objectiveState"
+                           EmptyTitle="No Objectives available"
+                           EmptyMessage="All Objectives may already be added or no Objectives exist in the current Program Increment."
+                           NotReadyTitle="Objectives are syncing"
+                           NotReadyMessage="Objective data will load once the cache is ready."
+                           FailedTitle="Objectives failed to load">
+                <ChildContent Context="objectives">
+                    <MudStack Spacing="3">
+                        <MudText Typo="Typo.body2">
+                            Select an Objective to add as a lane on the Release Planning Board.
+                        </MudText>
 
-                <MudSelect T="int?" 
-                           @bind-Value="_selectedObjectiveId" 
-                           Label="Objective"
-                           Variant="Variant.Outlined"
-                           Required="true"
-                           Placeholder="Select an Objective">
-                    @foreach (var objective in _availableObjectives)
-                    {
-                        <MudSelectItem Value="@((int?)objective.TfsId)">
-                            @objective.Title
-                        </MudSelectItem>
-                    }
-                </MudSelect>
+                        <MudSelect T="int?"
+                                   @bind-Value="_selectedObjectiveId"
+                                   Label="Objective"
+                                   Variant="Variant.Outlined"
+                                   Required="true"
+                                   Placeholder="Select an Objective">
+                            @foreach (var objective in objectives)
+                            {
+                                <MudSelectItem Value="@((int?)objective.TfsId)">
+                                    @objective.Title
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
 
-                @if (_selectedObjectiveId.HasValue)
-                {
-                    var selectedObj = _availableObjectives.FirstOrDefault(o => o.TfsId == _selectedObjectiveId.Value);
-                    if (selectedObj != null)
-                    {
-                        <MudAlert Severity="Severity.Info" Dense="true">
-                            <MudText Typo="Typo.body2">
-                                This will add a lane for <strong>@selectedObj.Title</strong> to the planning board.
-                            </MudText>
-                        </MudAlert>
-                    }
-                }
-            </MudStack>
+                        @if (_selectedObjectiveId.HasValue)
+                        {
+                            var selectedObj = objectives.FirstOrDefault(o => o.TfsId == _selectedObjectiveId.Value);
+                            if (selectedObj != null)
+                            {
+                                <MudAlert Severity="Severity.Info" Dense="true">
+                                    <MudText Typo="Typo.body2">
+                                        This will add a lane for <strong>@selectedObj.Title</strong> to the planning board.
+                                    </MudText>
+                                </MudAlert>
+                            }
+                        }
+                    </MudStack>
+                </ChildContent>
+            </DataStateView>
         }
     </DialogContent>
     <DialogActions>
@@ -77,6 +83,7 @@
     public IReadOnlyList<int> ExistingObjectiveIds { get; set; } = [];
 
     private List<WorkItemDto> _availableObjectives = new();
+    private DataStateViewModel<IReadOnlyList<WorkItemDto>> _objectiveState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.NotRequested();
     private int? _selectedObjectiveId;
     private bool _isLoading = true;
     private bool _isAdding;
@@ -89,24 +96,29 @@
     private async Task LoadAvailableObjectivesAsync()
     {
         _isLoading = true;
+        _objectiveState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.Loading();
         StateHasChanged();
 
-        try
-        {
-            var allWorkItems = await WorkItemService.GetAllAsync();
-            
-            // Filter for Objectives that are not already on the board
-            _availableObjectives = allWorkItems
-                .Where(w => w.Type.Equals("Objective", StringComparison.OrdinalIgnoreCase))
-                .Where(w => !ExistingObjectiveIds.Contains(w.TfsId))
-                .OrderBy(w => w.Title)
-                .ToList();
-        }
-        finally
-        {
-            _isLoading = false;
-            StateHasChanged();
-        }
+        var response = await WorkItemService.GetAllStateAsync();
+        var state = DataStateViewModel<IReadOnlyList<WorkItemDto>>.FromResponse(
+            response,
+            "Objective data could not be loaded right now.");
+
+        _objectiveState = state.State == PoTool.Shared.DataState.DataStateDto.Available
+            ? state with
+            {
+                Data = state.Data?
+                    .Where(w => w.Type.Equals("Objective", StringComparison.OrdinalIgnoreCase))
+                    .Where(w => !ExistingObjectiveIds.Contains(w.TfsId))
+                    .OrderBy(w => w.Title)
+                    .ToList() ?? new List<WorkItemDto>()
+            }
+            : state;
+
+        _availableObjectives = _objectiveState.Data?.ToList() ?? [];
+
+        _isLoading = false;
+        StateHasChanged();
     }
 
     private void Cancel()

@@ -48,7 +48,7 @@ public static class DataSourceModeConfiguration
         "/api/teams",
         "/api/products",
         "/api/projects",
-        "/api/portfolio/snapshots",
+        "/api/portfolio",
         "/api/repositories",
 
         // Data source mode management
@@ -109,6 +109,15 @@ public static class DataSourceModeConfiguration
         "/api/buildquality"
     };
 
+    public static readonly HashSet<string> CacheModeRequiredExactRoutes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "/api/portfolio/progress",
+        "/api/portfolio/snapshots",
+        "/api/portfolio/comparison",
+        "/api/portfolio/trends",
+        "/api/portfolio/signals"
+    };
+
     /// <summary>
     /// Resolves the route intent for the current request path.
     /// </summary>
@@ -126,6 +135,11 @@ public static class DataSourceModeConfiguration
         }
 
         if (IsCacheOnlyProjectPlanningSummaryRoute(normalizedPath))
+        {
+            return RouteIntent.CacheOnlyAnalyticalRead;
+        }
+
+        if (CacheModeRequiredExactRoutes.Contains(normalizedPath))
         {
             return RouteIntent.CacheOnlyAnalyticalRead;
         }

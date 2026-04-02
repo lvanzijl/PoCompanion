@@ -6,8 +6,10 @@ using Moq;
 using PoTool.Api.Controllers;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services;
+using PoTool.Core.Contracts;
 using PoTool.Core.Metrics.Commands;
 using PoTool.Core.Metrics.Queries;
+using PoTool.Shared.Settings;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Tests.Unit.Controllers;
@@ -27,8 +29,23 @@ public sealed class MetricsControllerPortfolioReadTests
         var sprintFilterResolutionService = new SprintFilterResolutionService(
             context,
             NullLogger<SprintFilterResolutionService>.Instance);
+        var cacheStateRepository = new Mock<ICacheStateRepository>();
+        cacheStateRepository
+            .Setup(repository => repository.GetCacheStateAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CacheStateDto
+            {
+                ProductOwnerId = 1,
+                SyncStatus = CacheSyncStatusDto.Success,
+                LastSuccessfulSync = DateTimeOffset.UtcNow
+            });
+        var currentProfileProvider = new Mock<ICurrentProfileProvider>();
+        currentProfileProvider
+            .Setup(provider => provider.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+        var cacheReadinessStateService = new CacheReadinessStateService(currentProfileProvider.Object, cacheStateRepository.Object);
+        var cacheStateResponseService = new CacheStateResponseService(cacheReadinessStateService, NullLogger<CacheStateResponseService>.Instance);
 
-        return new MetricsController(mediator, deliveryFilterResolutionService, sprintFilterResolutionService, NullLogger<MetricsController>.Instance);
+        return new MetricsController(mediator, cacheStateResponseService, deliveryFilterResolutionService, sprintFilterResolutionService, NullLogger<MetricsController>.Instance);
     }
 
     [TestMethod]

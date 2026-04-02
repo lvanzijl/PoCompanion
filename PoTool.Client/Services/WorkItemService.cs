@@ -1,6 +1,7 @@
 using PoTool.Client.ApiClient;
 using System.Net.Http.Json;
 using System.Text.Json;
+using PoTool.Shared.DataState;
 using PoTool.Shared.Health;
 using SharedWorkItemDto = PoTool.Shared.WorkItems.WorkItemDto;
 using SharedValidateWorkItemResponse = PoTool.Shared.WorkItems.ValidateWorkItemResponse;
@@ -29,6 +30,7 @@ public class WorkItemService
     private const string ValidationTriageEndpoint = "/api/workitems/validation-triage";
     private const string ValidationQueueEndpoint = "/api/workitems/validation-queue";
     private const string ValidationFixEndpoint = "/api/workitems/validation-fix";
+    private const string WorkItemEndpoint = "/api/workitems";
 
     // JSON options for case-insensitive deserialization of API responses
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -57,6 +59,13 @@ public class WorkItemService
         return await _client.GetAllAsync();
     }
 
+    public async Task<DataStateResponseDto<IReadOnlyList<WorkItemDto>>?> GetAllStateAsync(
+        CancellationToken cancellationToken = default)
+        => await _httpClient.GetFromJsonAsync<DataStateResponseDto<IReadOnlyList<WorkItemDto>>>(
+            WorkItemEndpoint,
+            _jsonOptions,
+            cancellationToken);
+
     /// <summary>
     /// Gets filtered work items.
     /// </summary>
@@ -72,6 +81,12 @@ public class WorkItemService
     {
         return await _client.GetByTfsIdAsync(tfsId);
     }
+
+    public async Task<DataStateResponseDto<WorkItemDto>?> GetByTfsIdStateAsync(int tfsId, CancellationToken cancellationToken = default)
+        => await _httpClient.GetFromJsonAsync<DataStateResponseDto<WorkItemDto>>(
+            $"{WorkItemEndpoint}/{tfsId}",
+            _jsonOptions,
+            cancellationToken);
 
     /// <summary>
     /// Gets a specific work item with validation by TFS ID from cache.
@@ -186,6 +201,22 @@ public class WorkItemService
         return await _client.GetAllWithValidationAsync(productIdsParam, cancellationToken);
     }
 
+    public async Task<DataStateResponseDto<IReadOnlyList<WorkItemWithValidationDto>>?> GetAllWithValidationStateAsync(
+        int[]? productIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        var url = "/api/workitems/validated";
+        if (productIds != null && productIds.Length > 0)
+        {
+            url += $"?productIds={string.Join(",", productIds)}";
+        }
+
+        return await _httpClient.GetFromJsonAsync<DataStateResponseDto<IReadOnlyList<WorkItemWithValidationDto>>>(
+            url,
+            _jsonOptions,
+            cancellationToken);
+    }
+
     /// <summary>
     /// Gets the grouped validation triage summary used by the Validation Triage page.
     /// Returns per-category item counts and top rule groups (SI, RR, RC, EFF).
@@ -204,6 +235,22 @@ public class WorkItemService
         var response = await _httpClient.GetAsync(url, cancellationToken);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<SharedValidationTriageSummaryDto>(_jsonOptions, cancellationToken);
+    }
+
+    public async Task<DataStateResponseDto<SharedValidationTriageSummaryDto>?> GetValidationTriageSummaryStateAsync(
+        int[]? productIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        var url = ValidationTriageEndpoint;
+        if (productIds != null && productIds.Length > 0)
+        {
+            url += $"?productIds={string.Join(",", productIds)}";
+        }
+
+        return await _httpClient.GetFromJsonAsync<DataStateResponseDto<SharedValidationTriageSummaryDto>>(
+            url,
+            _jsonOptions,
+            cancellationToken);
     }
 
     /// <summary>
@@ -243,6 +290,23 @@ public class WorkItemService
         return await response.Content.ReadFromJsonAsync<SharedValidationQueueDto>(_jsonOptions);
     }
 
+    public async Task<DataStateResponseDto<SharedValidationQueueDto>?> GetValidationQueueStateAsync(
+        string categoryKey,
+        int[]? productIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"{ValidationQueueEndpoint}?category={Uri.EscapeDataString(categoryKey)}";
+        if (productIds != null && productIds.Length > 0)
+        {
+            url += $"&productIds={string.Join(",", productIds)}";
+        }
+
+        return await _httpClient.GetFromJsonAsync<DataStateResponseDto<SharedValidationQueueDto>>(
+            url,
+            _jsonOptions,
+            cancellationToken);
+    }
+
     /// <summary>
     /// Gets the validation fix session for a specific rule.
     /// Returns all work items that violate the rule, ordered by TFS ID.
@@ -263,6 +327,24 @@ public class WorkItemService
         var response = await _httpClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<SharedValidationFixSessionDto>(_jsonOptions);
+    }
+
+    public async Task<DataStateResponseDto<SharedValidationFixSessionDto>?> GetValidationFixSessionStateAsync(
+        string ruleId,
+        string categoryKey,
+        int[]? productIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"{ValidationFixEndpoint}?ruleId={Uri.EscapeDataString(ruleId)}&category={Uri.EscapeDataString(categoryKey)}";
+        if (productIds != null && productIds.Length > 0)
+        {
+            url += $"&productIds={string.Join(",", productIds)}";
+        }
+
+        return await _httpClient.GetFromJsonAsync<DataStateResponseDto<SharedValidationFixSessionDto>>(
+            url,
+            _jsonOptions,
+            cancellationToken);
     }
 
     /// <summary>
@@ -433,6 +515,29 @@ public class WorkItemService
 
         var workItems = await response.Content.ReadFromJsonAsync<IEnumerable<WorkItemDto>>(_jsonOptions);
         return workItems ?? Enumerable.Empty<WorkItemDto>();
+    }
+
+    public async Task<DataStateResponseDto<IReadOnlyList<WorkItemDto>>?> GetByRootIdsStateAsync(
+        int[] rootIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (rootIds == null || rootIds.Length == 0)
+        {
+            return new DataStateResponseDto<IReadOnlyList<WorkItemDto>>
+            {
+                State = DataStateDto.Empty,
+                Data = Array.Empty<WorkItemDto>(),
+                Reason = "No root work items were provided."
+            };
+        }
+
+        var rootIdsParam = string.Join(",", rootIds);
+        var url = $"{ByRootIdsEndpoint}?rootIds={rootIdsParam}";
+
+        return await _httpClient.GetFromJsonAsync<DataStateResponseDto<IReadOnlyList<WorkItemDto>>>(
+            url,
+            _jsonOptions,
+            cancellationToken);
     }
 
     /// <summary>

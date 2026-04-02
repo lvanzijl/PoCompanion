@@ -1,7 +1,8 @@
 @page "/home/validation-triage"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.Validation
-@using PoTool.Client.ApiClient
+@using PoTool.Client.Models
+@using PoTool.Shared.DataState
 @using PoTool.Shared.WorkItems
 @inherits WorkspaceBase
 @inject WorkItemService WorkItemService
@@ -52,6 +53,19 @@
     {
         <LoadingIndicator IsLoading="true" />
     }
+    else if (_dataState.State == DataStateDto.NotReady)
+    {
+        <DataStatePanel State="@_dataState.State"
+                        Title="Validation triage is syncing"
+                        Message="@(_dataState.Reason ?? "Validation data will load automatically after the active profile cache is ready.")"
+                        ProductOwnerId="@_profileId" />
+    }
+    else if (_dataState.State == DataStateDto.Failed)
+    {
+        <DataStatePanel State="@_dataState.State"
+                        Title="Validation triage failed to load"
+                        Message="@(_dataState.Reason ?? "Validation triage could not be loaded right now.")" />
+    }
     else if (_loadError != null)
     {
         <MudAlert Severity="Severity.Error" Class="mb-4">@_loadError</MudAlert>
@@ -95,8 +109,10 @@
     private bool _isLoading = true;
     private string? _loadError;
     private string? _productName;
+    private int? _profileId;
     private ValidationTriageSummaryDto? _summary;
     private List<BreadcrumbItem> _breadcrumbs = new();
+    private DataStateViewModel<ValidationTriageSummaryDto> _dataState = DataStateViewModel<ValidationTriageSummaryDto>.NotRequested();
 
     protected override async Task OnInitializedAsync()
     {
@@ -110,6 +126,7 @@
             }
 
             var activeProfile = await ProfileService.GetActiveProfileAsync();
+            _profileId = activeProfile?.Id;
 
             // Load products for the active profile
             var profileProducts = activeProfile != null
@@ -134,13 +151,16 @@
                 productIds = null;
             }
 
-            _summary = await WorkItemService.GetValidationTriageSummaryAsync(productIds);
+            _dataState = DataStateViewModel<ValidationTriageSummaryDto>.Loading();
+            var response = await WorkItemService.GetValidationTriageSummaryStateAsync(productIds);
+            _dataState = DataStateViewModel<ValidationTriageSummaryDto>.FromResponse(response, "Validation triage could not be loaded right now.");
+            _summary = _dataState.Data;
             UpdateBreadcrumbs();
         }
         catch (Exception ex)
         {
-            _loadError = $"Failed to load validation triage data: {ex.Message}";
-            Console.WriteLine($"[ValidationTriage] {_loadError}");
+            _loadError = "Validation triage could not be loaded right now. Try again later.";
+            Console.WriteLine($"[ValidationTriage] {ex}");
         }
         finally
         {

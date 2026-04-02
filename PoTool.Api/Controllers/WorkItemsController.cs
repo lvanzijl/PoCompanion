@@ -1,7 +1,9 @@
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
 using PoTool.Api.Filters;
+using PoTool.Api.Services;
 using PoTool.Shared.Health;
+using PoTool.Shared.DataState;
 using PoTool.Shared.WorkItems;
 using PoTool.Core.WorkItems.Queries;
 using PoTool.Core.WorkItems.Commands;
@@ -17,13 +19,16 @@ namespace PoTool.Api.Controllers;
 public class WorkItemsController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly CacheStateResponseService _cacheStateResponseService;
     private readonly ILogger<WorkItemsController> _logger;
 
     public WorkItemsController(
         IMediator mediator,
+        CacheStateResponseService cacheStateResponseService,
         ILogger<WorkItemsController> logger)
     {
         _mediator = mediator;
+        _cacheStateResponseService = cacheStateResponseService;
         _logger = logger;
     }
 
@@ -123,6 +128,7 @@ public class WorkItemsController : ControllerBase
         }
     }
 
+
     /// <summary>
     /// Gets a grouped validation triage summary for the Validation Triage page.
     /// Returns per-category item counts and top rule groups (SI, RR, RC, EFF).
@@ -182,6 +188,7 @@ public class WorkItemsController : ControllerBase
         }
     }
 
+
     /// <summary>
     /// Gets the validation fix session for a specific rule.
     /// Returns all work items that violate the rule, ordered by TFS ID.
@@ -220,6 +227,7 @@ public class WorkItemsController : ControllerBase
             return StatusCode(500, "Error retrieving validation fix session");
         }
     }
+
 
     /// <summary>
     /// Re-fetches a work item from TFS and updates the local DB cache.
@@ -406,6 +414,7 @@ public class WorkItemsController : ControllerBase
             return StatusCode(500, "Error retrieving work item");
         }
     }
+
 
     /// <summary>
     /// Validates a work item by ID directly from TFS (bypasses cache).

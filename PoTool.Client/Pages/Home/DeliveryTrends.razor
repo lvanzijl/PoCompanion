@@ -1,13 +1,14 @@
 @page "/home/trends/delivery"
 @using PoTool.Client.Components.Analytical
 @using PoTool.Client.Components.Common
-@using PoTool.Client.ApiClient
 @using PoTool.Client.Services
 @using PoTool.Client.Pages.Home.Components
+@using PoTool.Client.Models
+@using PoTool.Shared.DataState
 @using PoTool.Shared.Metrics
 @using System.Web
 @inject IProfileService ProfileService
-@inject IMetricsClient MetricsClient
+@inject MetricsStateService MetricsStateService
 @inject ProductService ProductService
 @inject TeamService TeamService
 @inject SprintService SprintService
@@ -47,6 +48,14 @@
     @if (_isLoading)
     {
         <LoadingIndicator IsLoading="true" />
+    }
+    else if (_dataState.State == DataStateDto.NotReady)
+    {
+        <DataStatePanel State="@_dataState.State" Title="Delivery trends are syncing" Message="@(_dataState.Reason ?? "Delivery trends will load once the cache is ready.")" ProductOwnerId="@_profileId" />
+    }
+    else if (_dataState.State == DataStateDto.Failed)
+    {
+        <DataStatePanel State="@_dataState.State" Title="Delivery trends failed to load" Message="@(_dataState.Reason ?? "Delivery trends could not be loaded right now.")" />
     }
     else if (!string.IsNullOrEmpty(_errorMessage))
     {
@@ -319,6 +328,7 @@
 
     // Trend data
     private List<SprintTrendMetricsDto> _trendMetrics = new();
+    private DataStateViewModel<SprintQueryResponseDto<GetSprintTrendMetricsResponse>> _dataState = DataStateViewModel<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>.NotRequested();
     private string[] _trendXAxisLabels = Array.Empty<string>();
 
     // Chart series
@@ -442,26 +452,27 @@
             if (sprintIds.Count == 0)
                 return;
 
-            var response = await MetricsClient.GetSprintTrendMetricsEnvelopeAsync(
-                _profileId.Value,
-                sprintIds,
-                productIds: null,
-                recompute: false,
-                includeDetails: null,
-                CancellationToken.None);
-
-            if (response?.Data?.Metrics is not null)
+            _dataState = DataStateViewModel<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>.Loading();
+            var response = await MetricsStateService.GetSprintTrendMetricsStateAsync(_profileId.Value, sprintIds, _selectedProductId, _selectedTeamId, CancellationToken.None);
+            _dataState = DataStateViewModel<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>.FromResponse(response, "Delivery trends could not be loaded right now.");
+            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
             {
-                _trendMetrics = response.Data.Metrics
+                _trendMetrics.Clear();
+                return;
+            }
+
+            if (_dataState.Data?.Data?.Metrics is not null)
+            {
+                _trendMetrics = _dataState.Data.Data.Metrics
                     .OrderBy(m => m.StartUtc ?? DateTimeOffset.MaxValue)
                     .ToList();
 
                 BuildTrendCharts();
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Snackbar.Add($"Error loading delivery metrics: {ex.Message}", Severity.Warning);
+            Snackbar.Add("Delivery trends could not be loaded right now. Try again later.", Severity.Warning);
         }
         finally
         {

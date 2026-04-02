@@ -1,8 +1,12 @@
 @page "/home/bugs/detail"
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Helpers
+@using PoTool.Client.Models
+@using PoTool.Shared.DataState
+@using PoTool.Shared.WorkItems
 @using System.Web
-@inject INavigationContextService NavigationContextService
 @inject IProfileService ProfileService
+@inject WorkItemService WorkItemService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -50,11 +54,27 @@
     {
         <LoadingIndicator IsLoading="true" />
     }
-    else if (!_bugId.HasValue)
+    else if (_recoveryMessage != null)
     {
-        <MudAlert Severity="Severity.Warning">
-            No bug ID specified. Please select a bug from the <MudLink Href="@WorkspaceRoutes.BugOverview">Bug Overview</MudLink>.
-        </MudAlert>
+        <GuidedRecoveryPanel Title="@_recoveryTitle"
+                             Message="@_recoveryMessage"
+                             PrimaryActionLabel="@_recoveryPrimaryActionLabel"
+                             PrimaryAction="@_recoveryPrimaryAction"
+                             SecondaryActionLabel="Home"
+                             SecondaryAction="NavigateToHome" />
+    }
+    else if (_dataState.State == DataStateDto.NotReady)
+    {
+        <DataStatePanel State="@_dataState.State"
+                        Title="Bug details are syncing"
+                        Message="@(_dataState.Reason ?? "Bug details will be available after the active profile cache finishes syncing.")"
+                        ProductOwnerId="@_profileId" />
+    }
+    else if (_dataState.State == DataStateDto.Failed)
+    {
+        <DataStatePanel State="@_dataState.State"
+                        Title="Bug details failed to load"
+                        Message="@(_dataState.Reason ?? "Bug details could not be loaded right now.")" />
     }
     else
     {
@@ -80,37 +100,20 @@
             <MudTextField Label="Description" Lines="4" Value="@_bugDescription" ReadOnly="true" Variant="Variant.Outlined" Class="mb-2" FullWidth="true" />
         </MudPaper>
 
-        @* Editable Fields Section *@
+        @* Bug Actions *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudText Typo="Typo.h5" Class="mb-3">
-                <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2" />
-                Editable Fields
+                <MudIcon Icon="@Icons.Material.Filled.BuildCircle" Class="mr-2" />
+                Bug Actions
             </MudText>
             
             <MudAlert Severity="Severity.Info" Class="mb-3">
-                These are the end-station edits available for this bug.
+                This detail page is read-only. Use Bugs Triage to change severity or triage-related fields for this bug.
             </MudAlert>
             
-            <MudGrid>
-                <MudItem xs="12" md="6">
-                    <MudSelect T="string" Label="Severity" @bind-Value="_bugSeverity" Variant="Variant.Outlined" Class="mb-2">
-                        <MudSelectItem Value="@("Critical")">Critical</MudSelectItem>
-                        <MudSelectItem Value="@("High")">High</MudSelectItem>
-                        <MudSelectItem Value="@("Medium")">Medium</MudSelectItem>
-                        <MudSelectItem Value="@("Low")">Low</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" md="6">
-                    <MudTextField Label="Tags" @bind-Value="_bugTags" Variant="Variant.Outlined" Placeholder="Enter tags separated by commas" Class="mb-2" />
-                </MudItem>
-            </MudGrid>
-            
             <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd" Class="mt-4">
-                <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="CancelChanges">
-                    Cancel
-                </MudButton>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveChanges">
-                    Save Changes
+                <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="NavigateToBugTriage">
+                    Open Bugs Triage
                 </MudButton>
             </MudStack>
         </MudPaper>
@@ -144,14 +147,19 @@
     private bool _isLoading = true;
     private int? _profileId;
     private List<BreadcrumbItem> _breadcrumbs = new();
+    private string? _recoveryTitle;
+    private string? _recoveryMessage;
+    private string? _recoveryPrimaryActionLabel;
+    private EventCallback _recoveryPrimaryAction;
+    private DataStateViewModel<WorkItemDto> _dataState = DataStateViewModel<WorkItemDto>.NotRequested();
     
     // Bug data
     private int? _bugId;
+    private WorkItemDto? _bug;
     private string _bugTitle = string.Empty;
     private string _bugState = string.Empty;
     private string _bugSeverity = string.Empty;
     private string _bugDescription = string.Empty;
-    private string _bugTags = string.Empty;
     
     protected override async Task OnInitializedAsync()
     {
@@ -167,13 +175,20 @@
             _profileId = activeProfile.Id;
             ProfileService.SetCachedActiveProfileId(_profileId);
             
-            ParseQueryParameters();
-            LoadBugData();
+            if (!TryParseBugId())
+            {
+                UpdateBreadcrumbs();
+                return;
+            }
+
+            await LoadBugDataAsync();
             UpdateBreadcrumbs();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+            _dataState = new DataStateViewModel<WorkItemDto>(DataStateDto.Failed, Reason: "Bug details could not be loaded right now.");
+            Snackbar.Add($"Error loading bug detail: {ex.Message}", Severity.Error);
+            UpdateBreadcrumbs();
         }
         finally
         {
@@ -181,28 +196,74 @@
         }
     }
     
-    private void ParseQueryParameters()
+    private bool TryParseBugId()
     {
         var uri = new Uri(NavigationManager.Uri);
         var queryParams = HttpUtility.ParseQueryString(uri.Query);
         
-        var bugId = queryParams["bugId"];
-        if (!string.IsNullOrEmpty(bugId))
+        var rawBugId = queryParams["bugId"];
+        if (string.IsNullOrWhiteSpace(rawBugId))
         {
-            _bugId = int.TryParse(bugId, out var id) ? id : null;
+            SetRecovery(
+                "Bug context missing",
+                "This page needs a bug ID. Open Bug Insights to select a bug first.",
+                "Go to Bug Insights",
+                NavigateToBugOverview);
+            return false;
         }
+
+        if (!int.TryParse(rawBugId, out var bugId) || bugId <= 0)
+        {
+            SetRecovery(
+                "Invalid bug ID",
+                "The bug ID in the URL is invalid. Open Bug Insights to select a valid bug.",
+                "Go to Bug Insights",
+                NavigateToBugOverview);
+            return false;
+        }
+
+        _bugId = bugId;
+        return true;
     }
     
-    private void LoadBugData()
+    private async Task LoadBugDataAsync()
     {
-        if (!_bugId.HasValue) return;
-        
-        // Sample data - in real implementation, would load from backend
-        _bugTitle = "Sample Bug Title";
-        _bugState = "Active";
-        _bugSeverity = "High";
-        _bugDescription = "This is a sample bug description. In the real implementation, this would be loaded from the backend based on the bug ID.";
-        _bugTags = "ui, regression";
+        if (!_bugId.HasValue)
+        {
+            return;
+        }
+
+        _dataState = DataStateViewModel<WorkItemDto>.Loading();
+        var response = await WorkItemService.GetByTfsIdStateAsync(_bugId.Value);
+        _dataState = DataStateViewModel<WorkItemDto>.FromResponse(response, "Bug details could not be loaded right now.");
+
+        if (_dataState.State == DataStateDto.Empty || _dataState.Data is null)
+        {
+            SetRecovery(
+                "Bug not found",
+                "No bug matched this URL. Open Bug Insights to choose a valid bug.",
+                "Go to Bug Insights",
+                NavigateToBugOverview);
+            return;
+        }
+
+        _bug = _dataState.Data;
+        if (!_bug.Type.Equals("Bug", StringComparison.OrdinalIgnoreCase))
+        {
+            SetRecovery(
+                "Bug not found",
+                "No bug matched this URL. Open Bug Insights to choose a valid bug.",
+                "Go to Bug Insights",
+                NavigateToBugOverview);
+            return;
+        }
+
+        _bugTitle = _bug.Title;
+        _bugState = _bug.State;
+        _bugSeverity = _bug.Severity ?? "Unknown";
+        _bugDescription = string.IsNullOrWhiteSpace(_bug.Description)
+            ? "No description is available for this bug."
+            : _bug.Description;
     }
     
     private void UpdateBreadcrumbs()
@@ -211,7 +272,7 @@
         {
             new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
             new("Bug Overview", WorkspaceRoutes.BugOverview, icon: Icons.Material.Filled.BugReport),
-            new($"Bug #{_bugId}", null, disabled: true)
+            new(_bugId.HasValue ? $"Bug #{_bugId}" : "Bug Detail", null, disabled: true)
         };
     }
     
@@ -229,21 +290,23 @@
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.BugOverview);
     }
+
+    private void NavigateToBugTriage()
+    {
+        NavigationManager.NavigateTo(WorkspaceRoutes.BugTriage);
+    }
     
     private void NavigateToHealth()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.HealthWorkspace);
     }
     
-    private void CancelChanges()
+    private void SetRecovery(string title, string message, string primaryActionLabel, Action primaryAction)
     {
-        LoadBugData();
-        Snackbar.Add("Changes cancelled", Severity.Info);
-    }
-    
-    private void SaveChanges()
-    {
-        // In real implementation, would save to backend
-        Snackbar.Add("Changes saved successfully", Severity.Success);
+        _dataState = DataStateViewModel<WorkItemDto>.NotRequested();
+        _recoveryTitle = title;
+        _recoveryMessage = message;
+        _recoveryPrimaryActionLabel = primaryActionLabel;
+        _recoveryPrimaryAction = EventCallback.Factory.Create(this, primaryAction);
     }
 }
