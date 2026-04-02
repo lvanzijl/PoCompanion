@@ -1,15 +1,15 @@
 @page "/home/delivery/execution"
 @using PoTool.Client.Components.Common
-@using PoTool.Client.ApiClient
 @using PoTool.Client.Helpers
 @using PoTool.Client.Services
 @using PoTool.Client.Models
+@using PoTool.Shared.DataState
 @using PoTool.Shared.Metrics
 @inject IProfileService ProfileService
 @inject TeamService TeamService
 @inject SprintService SprintService
 @inject ProductService ProductService
-@inject IMetricsClient MetricsClient
+@inject MetricsStateService MetricsStateService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -130,6 +130,14 @@
     @if (_executionLoading)
     {
         <MudProgressLinear Indeterminate="true" Color="Color.Info" Class="mb-2" />
+    }
+    else if (_dataState.State == DataStateDto.NotReady)
+    {
+        <DataStatePanel State="@_dataState.State" Title="Sprint execution is syncing" Message="@(_dataState.Reason ?? "Sprint execution data will load once the cache is ready.")" ProductOwnerId="@_profileId" />
+    }
+    else if (_dataState.State == DataStateDto.Failed)
+    {
+        <DataStatePanel State="@_dataState.State" Title="Sprint execution failed to load" Message="@(_dataState.Reason ?? "Sprint execution data could not be loaded right now.")" />
     }
 
     @if (_sprints.Count == 0 && !_isLoading)
@@ -438,6 +446,7 @@
     private int? _selectedSprintId;
     private int? _selectedProductId;
     private SprintExecutionDto? _data;
+    private DataStateViewModel<SprintQueryResponseDto<SprintExecutionDto>> _dataState = DataStateViewModel<SprintQueryResponseDto<SprintExecutionDto>>.NotRequested();
     private CanonicalFilterNoticeModel? _filterNotice;
     private bool _isLoading;
     private bool _executionLoading;
@@ -560,18 +569,27 @@
             _data = null;
             StateHasChanged();
 
-            var result = await MetricsClient.GetSprintExecutionEnvelopeAsync(
+            _dataState = DataStateViewModel<SprintQueryResponseDto<SprintExecutionDto>>.Loading();
+            var result = await MetricsStateService.GetSprintExecutionStateAsync(
                 _profileId.Value,
                 _selectedSprintId.Value,
                 _selectedProductId,
                 CancellationToken.None);
+            _dataState = DataStateViewModel<SprintQueryResponseDto<SprintExecutionDto>>.FromResponse(result, "Sprint execution data could not be loaded right now.");
+            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            {
+                _data = null;
+                _filterNotice = null;
+                return;
+            }
 
-            _filterNotice = CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(result).FilterMetadata);
-            _data = result.Data.HasData ? result.Data : null;
+            var envelope = _dataState.Data;
+            _filterNotice = envelope is null ? null : CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(envelope).FilterMetadata);
+            _data = envelope?.Data.HasData == true ? envelope.Data : null;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Snackbar.Add($"Error loading sprint execution data: {ex.Message}", Severity.Error);
+            Snackbar.Add("Sprint execution data could not be loaded right now. Try again later.", Severity.Error);
             _data = null;
             _filterNotice = null;
         }

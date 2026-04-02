@@ -5,10 +5,11 @@
 @using PoTool.Client.Helpers
 @using PoTool.Client.Services
 @using PoTool.Client.Models
+@using PoTool.Shared.DataState
 @using PoTool.Client.Pages.Home.Components
 @using SharedPipelineBuildQualityDto = PoTool.Shared.BuildQuality.PipelineBuildQualityDto
 @inject IProfileService ProfileService
-@inject IPipelinesClient PipelinesClient
+@inject PipelineStateService PipelineStateService
 @inject IBuildQualityService BuildQualityService
 @inject TeamService TeamService
 @inject SprintService SprintService
@@ -160,6 +161,14 @@
     @if (_isLoading)
     {
         <LoadingIndicator IsLoading="true" />
+    }
+    else if (_dataState.State == DataStateDto.NotReady)
+    {
+        <DataStatePanel State="@_dataState.State" Title="Pipeline insights are syncing" Message="@(_dataState.Reason ?? "Pipeline insights will load once the cache is ready.")" ProductOwnerId="@_activeProfileId" />
+    }
+    else if (_dataState.State == DataStateDto.Failed)
+    {
+        <DataStatePanel State="@_dataState.State" Title="Pipeline insights failed to load" Message="@(_dataState.Reason ?? "Pipeline insights could not be loaded right now.")" />
     }
     else if (!string.IsNullOrEmpty(_errorMessage))
     {
@@ -586,6 +595,7 @@
 
     private PipelineInsightsDto? _insightsData;
     private CanonicalFilterNoticeModel? _filterNotice;
+    private DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>> _dataState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.NotRequested();
     private string? _pipelineQualityErrorMessage;
     private bool _isDrawerBuildQualityLoading;
     private string? _drawerBuildQualityErrorMessage;
@@ -756,14 +766,24 @@
 
         try
         {
-            var response = await PipelinesClient.GetInsightsEnvelopeAsync(
-                productOwnerId:              _activeProfileId.Value,
-                sprintId:                    _selectedSprintId.Value,
-                includePartiallySucceeded:   _includePartiallySucceeded,
-                includeCanceled:             _includeCanceled,
-                cancellationToken:           CancellationToken.None);
-            _filterNotice = CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(response).FilterMetadata);
-            _insightsData = response.Data;
+            _dataState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.Loading();
+            var response = await PipelineStateService.GetInsightsStateAsync(
+                _activeProfileId.Value,
+                _selectedSprintId.Value,
+                _includePartiallySucceeded,
+                _includeCanceled,
+                CancellationToken.None);
+            _dataState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.FromResponse(response, "Pipeline insights could not be loaded right now.");
+            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            {
+                _filterNotice = null;
+                _insightsData = null;
+                return;
+            }
+
+            var envelope = _dataState.Data;
+            _filterNotice = envelope is null ? null : CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(envelope).FilterMetadata);
+            _insightsData = envelope?.Data;
 
             _prevIncludePartial   = _includePartiallySucceeded;
             _prevIncludeCanceled  = _includeCanceled;
@@ -778,9 +798,9 @@
                 _ = LoadPipelineBuildQualityAsync(_selectedSprintId.Value, _insightsData);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _errorMessage = $"Error loading pipeline insights: {ex.Message}";
+            _errorMessage = "Pipeline insights could not be loaded right now. Try again later.";
         }
         finally
         {

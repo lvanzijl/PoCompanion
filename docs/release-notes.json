@@ -2,6 +2,14 @@
   {
     "date": "2026-04-02",
     "type": "Changed",
+    "title": "Cache-backed analytics now use one explicit data-state contract",
+    "impact": "Cache-backed analytical reads now use the canonical route plus an explicit DataState contract instead of mixing raw routes, /state routes, and middleware cache-not-ready transport errors. Several analytics pages now render syncing and failure states from that single contract.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-02",
+    "type": "Changed",
     "title": "Cache-backed direct-entry pages now render explicit sync states",
     "impact": "Bug Detail, Bugs Triage, Validation Triage, Validation Queue, Validation Fix, Sprint Activity, and Portfolio Flow now render explicit syncing, empty, available, or failed states instead of discovering cache readiness through HTTP errors or recovery-first UX.",
     "area": "Home",

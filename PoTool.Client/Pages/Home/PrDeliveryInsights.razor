@@ -5,10 +5,11 @@
 @using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @using PoTool.Client.Services
+@using PoTool.Shared.DataState
 @using PoTool.Shared.PullRequests
 @using System.Web
 @inject IProfileService ProfileService
-@inject IPullRequestsClient PullRequestsClient
+@inject PullRequestStateService PullRequestStateService
 @inject TeamService TeamService
 @inject SprintService SprintService
 @inject NavigationManager NavigationManager
@@ -116,6 +117,14 @@
     @if (_isLoading)
     {
         <LoadingIndicator IsLoading="true" />
+    }
+    else if (_dataState.State == DataStateDto.NotReady)
+    {
+        <DataStatePanel State="@_dataState.State" Title="PR delivery insights are syncing" Message="@(_dataState.Reason ?? "PR delivery insights will load once the cache is ready.")" ProductOwnerId="@_profileId" />
+    }
+    else if (_dataState.State == DataStateDto.Failed)
+    {
+        <DataStatePanel State="@_dataState.State" Title="PR delivery insights failed to load" Message="@(_dataState.Reason ?? "PR delivery insights could not be loaded right now.")" />
     }
     else if (!string.IsNullOrEmpty(_errorMessage))
     {
@@ -741,8 +750,10 @@
     private List<SprintDto> _sprints = new();
 
     // Data
+    private int? _profileId;
     private PrDeliveryInsightsDto? _data;
     private CanonicalFilterNoticeModel? _filterNotice;
+    private DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>> _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.NotRequested();
 
     // Drawer
     private bool _prDrawerOpen;
@@ -759,7 +770,8 @@
     {
         try
         {
-            await ProfileService.GetActiveProfileAsync();
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            _profileId = activeProfile?.Id;
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
 
             // Default: last 6 months
@@ -784,9 +796,9 @@
 
             UpdateBreadcrumbs();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _errorMessage = ex.Message;
+            _errorMessage = "PR delivery insights could not be loaded right now. Try again later.";
         }
         finally
         {
@@ -823,29 +835,28 @@
                 ? new DateTimeOffset(_toDate.Value.AddDays(1).AddSeconds(-1), TimeSpan.Zero)
                 : DateTimeOffset.UtcNow;
 
-            var response = await PullRequestsClient.GetDeliveryInsightsEnvelopeAsync(
-                teamId:   _selectedTeamId,
-                sprintId: _selectedSprintId,
-                fromDate: from,
-                toDate:   to,
-                System.Threading.CancellationToken.None);
+            _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.Loading();
+            var response = await PullRequestStateService.GetDeliveryInsightsStateAsync(_profileId!.Value, _selectedSprintId, _selectedTeamId, CancellationToken.None);
+            _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.FromResponse(response, "PR delivery insights could not be loaded right now.");
+            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            {
+                _data = null;
+                _filterNotice = null;
+                return;
+            }
 
-            _filterNotice = CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(response).FilterMetadata);
-            _data = response.Data;
+            var envelope = _dataState.Data;
+            _filterNotice = envelope is null ? null : CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(envelope).FilterMetadata);
+            _data = envelope?.Data;
 
             if (_data != null)
             {
                 _filterExpanded = false;
             }
         }
-        catch (ApiException ex) when (ex.StatusCode == 404)
+        catch (Exception)
         {
-            _data = null;
-            _filterNotice = null;
-        }
-        catch (Exception ex)
-        {
-            _errorMessage = $"Error loading PR delivery insights: {ex.Message}";
+            _errorMessage = "PR delivery insights could not be loaded right now. Try again later.";
         }
     }
 
