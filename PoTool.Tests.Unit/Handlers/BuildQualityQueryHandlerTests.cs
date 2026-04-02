@@ -444,27 +444,14 @@ public sealed class BuildQualityQueryHandlerTests
             LastModified = DateTimeOffset.UtcNow
         });
 
+        PersistenceTestGraph.EnsureProject(_context);
         _context.Products.AddRange(
-            new ProductEntity
-            {
-                Id = 1,
-                ProductOwnerId = 1,
-                Name = "Product A",
-                CreatedAt = DateTimeOffset.UtcNow,
-                LastModified = DateTimeOffset.UtcNow
-            },
-            new ProductEntity
-            {
-                Id = 2,
-                ProductOwnerId = 1,
-                Name = "Product B",
-                CreatedAt = DateTimeOffset.UtcNow,
-                LastModified = DateTimeOffset.UtcNow
-            });
+            PersistenceTestGraph.CreateProduct(1, "Product A", 1),
+            PersistenceTestGraph.CreateProduct(2, "Product B", 1));
 
         _context.Repositories.AddRange(
-            new RepositoryEntity { Id = 10, ProductId = 1, Name = "Repo A", CreatedAt = DateTimeOffset.UtcNow },
-            new RepositoryEntity { Id = 20, ProductId = 2, Name = "Repo B", CreatedAt = DateTimeOffset.UtcNow });
+            PersistenceTestGraph.CreateRepository(10, 1, "Repo A"),
+            PersistenceTestGraph.CreateRepository(20, 2, "Repo B"));
 
         _context.Teams.Add(new TeamEntity
         {

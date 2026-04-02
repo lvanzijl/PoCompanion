@@ -166,13 +166,15 @@ public sealed class GetCapacityCalibrationQueryHandlerTests
 
     private ProductEntity SeedProduct(int id, int ownerId)
     {
-        var product = new ProductEntity { Id = id, Name = $"Product {id}", ProductOwnerId = ownerId };
+        PersistenceTestGraph.EnsureProject(_context);
+        var product = PersistenceTestGraph.CreateProduct(id, $"Product {id}", ownerId);
         _context.Products.Add(product);
         return product;
     }
 
     private SprintEntity SeedSprint(int id, string name)
     {
+        PersistenceTestGraph.EnsureTeam(_context, 1);
         var sprint = new SprintEntity { Id = id, Name = name, TeamId = 1 };
         _context.Sprints.Add(sprint);
         return sprint;

@@ -56,8 +56,9 @@ public sealed class GetPortfolioDeliveryQueryHandlerTests
         await _context.SaveChangesAsync();
 
         var sprint = CreateSprint(team.Id, 101, "Sprint 1", new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
-        var productA = new ProductEntity { ProductOwnerId = owner.Id, Name = "Product A" };
-        var productB = new ProductEntity { ProductOwnerId = owner.Id, Name = "Product B" };
+        PersistenceTestGraph.EnsureProject(_context);
+        var productA = new ProductEntity { ProductOwnerId = owner.Id, ProjectId = PersistenceTestGraph.DefaultProjectId, Name = "Product A" };
+        var productB = new ProductEntity { ProductOwnerId = owner.Id, ProjectId = PersistenceTestGraph.DefaultProjectId, Name = "Product B" };
 
         _context.Sprints.Add(sprint);
         _context.Products.AddRange(productA, productB);

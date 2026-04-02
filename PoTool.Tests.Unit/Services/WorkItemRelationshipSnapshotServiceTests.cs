@@ -8,6 +8,7 @@ using PoTool.Api.Services;
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.WorkItems;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -103,6 +104,7 @@ public class WorkItemRelationshipSnapshotServiceTests
     {
         await using var scope = provider.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        PersistenceTestGraph.EnsureProject(context);
 
         context.Profiles.Add(new ProfileEntity
         {
@@ -114,6 +116,7 @@ public class WorkItemRelationshipSnapshotServiceTests
                 {
                     Id = 1,
                     ProductOwnerId = TestProductOwnerId,
+                    ProjectId = PersistenceTestGraph.DefaultProjectId,
                     Name = "Product A",
                     BacklogRoots = [new ProductBacklogRootEntity { ProductId = 1, WorkItemTfsId = 100 }]
                 }

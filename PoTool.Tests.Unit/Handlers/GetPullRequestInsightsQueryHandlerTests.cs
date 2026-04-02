@@ -9,6 +9,7 @@ using PoTool.Api.Services;
 using PoTool.Core.Filters;
 using PoTool.Core.PullRequests.Filters;
 using PoTool.Core.PullRequests.Queries;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Handlers;
 
@@ -155,10 +156,12 @@ public class GetPullRequestInsightsQueryHandlerTests
             Name         = $"Team {teamId}",
             TeamAreaPath = $@"Area\{teamId}"
         });
+        PersistenceTestGraph.EnsureProject(_context);
         _context.Products.Add(new ProductEntity
         {
             Id             = productId,
             Name           = $"Product {productId}",
+            ProjectId      = PersistenceTestGraph.DefaultProjectId,
             ProductOwnerId = 1
         });
         _context.ProductTeamLinks.Add(new ProductTeamLinkEntity

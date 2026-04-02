@@ -8,6 +8,7 @@ using PoTool.Api.Services.Configuration;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -217,9 +218,11 @@ public sealed class ImportConfigurationServiceTests
             Name = "Old Team",
             TeamAreaPath = "Old\\Team"
         });
+        PersistenceTestGraph.EnsureProject(_dbContext);
         _dbContext.Products.Add(new ProductEntity
         {
-            Name = "Old Product"
+            Name = "Old Product",
+            ProjectId = PersistenceTestGraph.DefaultProjectId
         });
         _dbContext.TriageTags.Add(new TriageTagEntity
         {

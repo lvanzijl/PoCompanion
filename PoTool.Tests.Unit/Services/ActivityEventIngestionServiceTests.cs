@@ -8,6 +8,7 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -22,6 +23,7 @@ public class ActivityEventIngestionServiceTests
             .Options;
 
         await using var dbContext = new PoToolDbContext(options);
+        PersistenceTestGraph.EnsureProfile(dbContext, 1, "PO 1");
         dbContext.WorkItems.Add(new WorkItemEntity
         {
             TfsId = 101,
@@ -34,10 +36,7 @@ public class ActivityEventIngestionServiceTests
             TfsChangedDate = DateTimeOffset.UtcNow,
             TfsChangedDateUtc = DateTime.UtcNow
         });
-        dbContext.ProductOwnerCacheStates.Add(new ProductOwnerCacheStateEntity
-        {
-            ProductOwnerId = 1
-        });
+        dbContext.ProductOwnerCacheStates.Add(PersistenceTestGraph.CreateCacheState(1));
         await dbContext.SaveChangesAsync();
 
         var now = DateTimeOffset.UtcNow;
@@ -83,6 +82,7 @@ public class ActivityEventIngestionServiceTests
             .Options;
 
         await using var dbContext = new PoToolDbContext(options);
+        PersistenceTestGraph.EnsureProfile(dbContext, 1, "PO 1");
         dbContext.WorkItems.Add(new WorkItemEntity
         {
             TfsId = 202,
@@ -95,10 +95,7 @@ public class ActivityEventIngestionServiceTests
             TfsChangedDate = DateTimeOffset.UtcNow,
             TfsChangedDateUtc = DateTime.UtcNow
         });
-        dbContext.ProductOwnerCacheStates.Add(new ProductOwnerCacheStateEntity
-        {
-            ProductOwnerId = 1
-        });
+        dbContext.ProductOwnerCacheStates.Add(PersistenceTestGraph.CreateCacheState(1));
         await dbContext.SaveChangesAsync();
 
         var now = DateTimeOffset.UtcNow;
@@ -149,6 +146,7 @@ public class ActivityEventIngestionServiceTests
             .Options;
 
         await using var dbContext = new PoToolDbContext(options);
+        PersistenceTestGraph.EnsureProfile(dbContext, 1, "PO 1");
         dbContext.WorkItems.Add(new WorkItemEntity
         {
             TfsId = 303,
@@ -161,10 +159,7 @@ public class ActivityEventIngestionServiceTests
             TfsChangedDate = DateTimeOffset.UtcNow,
             TfsChangedDateUtc = DateTime.UtcNow
         });
-        dbContext.ProductOwnerCacheStates.Add(new ProductOwnerCacheStateEntity
-        {
-            ProductOwnerId = 1
-        });
+        dbContext.ProductOwnerCacheStates.Add(PersistenceTestGraph.CreateCacheState(1));
         await dbContext.SaveChangesAsync();
 
         var revisedDate = DateTimeOffset.UtcNow;
@@ -207,6 +202,7 @@ public class ActivityEventIngestionServiceTests
             .Options;
 
         await using var dbContext = new PoToolDbContext(options);
+        PersistenceTestGraph.EnsureProfile(dbContext, 1, "PO 1");
         dbContext.WorkItems.Add(new WorkItemEntity
         {
             TfsId = 404,
@@ -219,10 +215,7 @@ public class ActivityEventIngestionServiceTests
             TfsChangedDate = DateTimeOffset.UtcNow,
             TfsChangedDateUtc = DateTime.UtcNow
         });
-        dbContext.ProductOwnerCacheStates.Add(new ProductOwnerCacheStateEntity
-        {
-            ProductOwnerId = 1
-        });
+        dbContext.ProductOwnerCacheStates.Add(PersistenceTestGraph.CreateCacheState(1));
         await dbContext.SaveChangesAsync();
 
         var revisedDate = DateTimeOffset.UtcNow;

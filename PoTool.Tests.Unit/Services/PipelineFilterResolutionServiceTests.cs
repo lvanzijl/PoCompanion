@@ -4,6 +4,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Filters;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -14,12 +15,14 @@ public sealed class PipelineFilterResolutionServiceTests
     public async Task ResolveAsync_ProductOwnerScopeResolvesProductsRepositoriesAndSprintWindow()
     {
         await using var context = CreateContext();
+        PersistenceTestGraph.EnsureProject(context);
+        PersistenceTestGraph.EnsureTeam(context, 3);
         context.Products.AddRange(
-            new ProductEntity { Id = 100, ProductOwnerId = 7, Name = "Product 100" },
-            new ProductEntity { Id = 200, ProductOwnerId = 7, Name = "Product 200" });
+            PersistenceTestGraph.CreateProduct(100, "Product 100", 7),
+            PersistenceTestGraph.CreateProduct(200, "Product 200", 7));
         context.Repositories.AddRange(
-            new RepositoryEntity { Id = 1, ProductId = 100, Name = "Repo-A", CreatedAt = DateTimeOffset.UtcNow },
-            new RepositoryEntity { Id = 2, ProductId = 200, Name = "Repo-B", CreatedAt = DateTimeOffset.UtcNow });
+            PersistenceTestGraph.CreateRepository(1, 100, "Repo-A"),
+            PersistenceTestGraph.CreateRepository(2, 200, "Repo-B"));
         context.PipelineDefinitions.AddRange(
             new PipelineDefinitionEntity
             {
@@ -97,14 +100,9 @@ public sealed class PipelineFilterResolutionServiceTests
     public async Task ResolveAsync_RequestedRepositoryIds_UseStableIdsInsteadOfRepositoryNames()
     {
         await using var context = CreateContext();
-        context.Products.Add(new ProductEntity { Id = 100, ProductOwnerId = 7, Name = "Product 100" });
-        context.Repositories.Add(new RepositoryEntity
-        {
-            Id = 1,
-            ProductId = 100,
-            Name = "Renamed Repo",
-            CreatedAt = DateTimeOffset.UtcNow
-        });
+        PersistenceTestGraph.EnsureProject(context);
+        context.Products.Add(PersistenceTestGraph.CreateProduct(100, "Product 100", 7));
+        context.Repositories.Add(PersistenceTestGraph.CreateRepository(1, 100, "Renamed Repo"));
         context.PipelineDefinitions.Add(new PipelineDefinitionEntity
         {
             Id = 1,
@@ -159,7 +157,7 @@ public sealed class PipelineFilterResolutionServiceTests
     {
         await using var context = CreateContext();
         SeedScopedProductsAndPipelines(context);
-        context.Products.Add(new ProductEntity { Id = 300, ProductOwnerId = 9, Name = "Product 300" });
+        context.Products.Add(PersistenceTestGraph.CreateProduct(300, "Product 300", 9));
         await context.SaveChangesAsync();
 
         var service = new PipelineFilterResolutionService(
@@ -181,7 +179,7 @@ public sealed class PipelineFilterResolutionServiceTests
     {
         await using var context = CreateContext();
         SeedScopedProductsAndPipelines(context);
-        context.Products.Add(new ProductEntity { Id = 300, ProductOwnerId = 9, Name = "Product 300" });
+        context.Products.Add(PersistenceTestGraph.CreateProduct(300, "Product 300", 9));
         await context.SaveChangesAsync();
 
         var service = new PipelineFilterResolutionService(
@@ -220,12 +218,14 @@ public sealed class PipelineFilterResolutionServiceTests
 
     private static void SeedScopedProductsAndPipelines(PoToolDbContext context)
     {
+        PersistenceTestGraph.EnsureProject(context);
+        PersistenceTestGraph.EnsureTeam(context, 3);
         context.Products.AddRange(
-            new ProductEntity { Id = 100, ProductOwnerId = 7, Name = "Product 100" },
-            new ProductEntity { Id = 200, ProductOwnerId = 7, Name = "Product 200" });
+            PersistenceTestGraph.CreateProduct(100, "Product 100", 7),
+            PersistenceTestGraph.CreateProduct(200, "Product 200", 7));
         context.Repositories.AddRange(
-            new RepositoryEntity { Id = 1, ProductId = 100, Name = "Repo-A", CreatedAt = DateTimeOffset.UtcNow },
-            new RepositoryEntity { Id = 2, ProductId = 200, Name = "Repo-B", CreatedAt = DateTimeOffset.UtcNow });
+            PersistenceTestGraph.CreateRepository(1, 100, "Repo-A"),
+            PersistenceTestGraph.CreateRepository(2, 200, "Repo-B"));
         context.PipelineDefinitions.AddRange(
             new PipelineDefinitionEntity
             {

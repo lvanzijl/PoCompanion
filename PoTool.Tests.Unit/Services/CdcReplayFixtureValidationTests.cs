@@ -21,6 +21,7 @@ using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.WorkItems;
 using PoTool.Core.Domain.WorkItems;
 using PoTool.Shared.Settings;
+using PoTool.Tests.Unit.TestSupport;
 using DomainStateClassification = PoTool.Core.Domain.Models.StateClassification;
 
 namespace PoTool.Tests.Unit.Services;
@@ -446,9 +447,11 @@ public sealed class CdcReplayFixtureValidationTests
                 var product = new ProductEntity
                 {
                     ProductOwnerId = productOwner.Id,
+                    ProjectId = PersistenceTestGraph.DefaultProjectId,
                     Name = "Replay Product",
                     BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 300 } }
                 };
+                PersistenceTestGraph.EnsureProject(context);
                 context.Products.Add(product);
                 await context.SaveChangesAsync();
                 productId = product.Id;

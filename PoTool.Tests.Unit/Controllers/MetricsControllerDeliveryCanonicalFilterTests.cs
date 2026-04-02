@@ -11,6 +11,7 @@ using PoTool.Core.Contracts;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Settings;
 using PoTool.Shared.Metrics;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Controllers;
 
@@ -21,7 +22,9 @@ public sealed class MetricsControllerDeliveryCanonicalFilterTests
     public async Task GetPortfolioProgressTrend_WrapsResponseWithCanonicalFilterMetadata()
     {
         await using var context = CreateContext();
-        context.Products.Add(new ProductEntity { Id = 100, ProductOwnerId = 7, Name = "Product 100" });
+        PersistenceTestGraph.EnsureProject(context);
+        PersistenceTestGraph.EnsureTeam(context, 3);
+        context.Products.Add(PersistenceTestGraph.CreateProduct(100, "Product 100", 7));
         context.Sprints.Add(new SprintEntity
         {
             Id = 42,

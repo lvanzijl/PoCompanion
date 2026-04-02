@@ -7,6 +7,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Services;
 using PoTool.Core.Domain.Portfolio;
 using PoTool.Core.WorkItems;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -171,11 +172,14 @@ public class WorkItemResolutionServiceTests
         await using (var scope = provider.CreateAsyncScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+            PersistenceTestGraph.EnsureProfile(context, TestProductOwnerId, "PO");
+            PersistenceTestGraph.EnsureProject(context);
 
             context.Products.Add(new ProductEntity
             {
                 Id = 1,
                 ProductOwnerId = TestProductOwnerId,
+                ProjectId = PersistenceTestGraph.DefaultProjectId,
                 Name = "Product A",
                 BacklogRoots = [new ProductBacklogRootEntity { ProductId = 1, WorkItemTfsId = 100 }]
             });
@@ -248,11 +252,14 @@ public class WorkItemResolutionServiceTests
         await using (var scope = provider.CreateAsyncScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+            PersistenceTestGraph.EnsureProfile(context, TestProductOwnerId, "PO");
+            PersistenceTestGraph.EnsureProject(context);
 
             context.Products.Add(new ProductEntity
             {
                 Id = 1,
                 ProductOwnerId = TestProductOwnerId,
+                ProjectId = PersistenceTestGraph.DefaultProjectId,
                 Name = "Product A",
                 BacklogRoots = [new ProductBacklogRootEntity { ProductId = 1, WorkItemTfsId = 100 }]
             });
@@ -293,11 +300,14 @@ public class WorkItemResolutionServiceTests
         await using (var scope = provider.CreateAsyncScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+            PersistenceTestGraph.EnsureProfile(context, TestProductOwnerId, "PO");
+            PersistenceTestGraph.EnsureProject(context);
 
             context.Products.Add(new ProductEntity
             {
                 Id = 1,
                 ProductOwnerId = TestProductOwnerId,
+                ProjectId = PersistenceTestGraph.DefaultProjectId,
                 Name = "Product A",
                 BacklogRoots = [new ProductBacklogRootEntity { ProductId = 1, WorkItemTfsId = 100 }]
             });
@@ -344,6 +354,7 @@ public class WorkItemResolutionServiceTests
         await using (var setupContext = new PoToolDbContext(options))
         {
             await setupContext.Database.EnsureCreatedAsync();
+            PersistenceTestGraph.EnsureProject(setupContext);
 
             setupContext.Profiles.Add(new ProfileEntity
             {
@@ -355,6 +366,7 @@ public class WorkItemResolutionServiceTests
                     {
                         Id = 1,
                         ProductOwnerId = TestProductOwnerId,
+                        ProjectId = PersistenceTestGraph.DefaultProjectId,
                         Name = "Product A",
                         BacklogRoots = [new ProductBacklogRootEntity { ProductId = 1, WorkItemTfsId = 100 }]
                     }
@@ -433,12 +445,15 @@ public class WorkItemResolutionServiceTests
     {
         await using var scope = provider.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        PersistenceTestGraph.EnsureProfile(context, TestProductOwnerId, "PO");
+        PersistenceTestGraph.EnsureProject(context);
 
         context.Products.AddRange(
             new ProductEntity
             {
                 Id = 1,
                 ProductOwnerId = TestProductOwnerId,
+                ProjectId = PersistenceTestGraph.DefaultProjectId,
                 Name = "Product A",
                 BacklogRoots = [new ProductBacklogRootEntity { ProductId = 1, WorkItemTfsId = 100 }]
             },
@@ -446,6 +461,7 @@ public class WorkItemResolutionServiceTests
             {
                 Id = 2,
                 ProductOwnerId = TestProductOwnerId,
+                ProjectId = PersistenceTestGraph.DefaultProjectId,
                 Name = "Product B",
                 BacklogRoots = [new ProductBacklogRootEntity { ProductId = 2, WorkItemTfsId = 200 }]
             });

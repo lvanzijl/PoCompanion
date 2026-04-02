@@ -27,8 +27,9 @@ public sealed class GetPortfolioProgressTrendQueryHandlerTests
         await context.SaveChangesAsync();
 
         var sprint = CreateSprint(team.Id, 101, "Sprint 1", new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
-        var productA = new ProductEntity { ProductOwnerId = owner.Id, Name = "Product A" };
-        var productB = new ProductEntity { ProductOwnerId = owner.Id, Name = "Product B" };
+        PersistenceTestGraph.EnsureProject(context);
+        var productA = new ProductEntity { ProductOwnerId = owner.Id, ProjectId = PersistenceTestGraph.DefaultProjectId, Name = "Product A" };
+        var productB = new ProductEntity { ProductOwnerId = owner.Id, ProjectId = PersistenceTestGraph.DefaultProjectId, Name = "Product B" };
 
         context.Sprints.Add(sprint);
         context.Products.AddRange(productA, productB);
@@ -144,8 +145,9 @@ public sealed class GetPortfolioProgressTrendQueryHandlerTests
 
         var sprint1 = CreateSprint(team.Id, 101, "Sprint 1", new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         var sprint2 = CreateSprint(team.Id, 102, "Sprint 2", new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc));
-        var productA = new ProductEntity { ProductOwnerId = owner.Id, Name = "Product A" };
-        var productB = new ProductEntity { ProductOwnerId = owner.Id, Name = "Product B" };
+        PersistenceTestGraph.EnsureProject(context);
+        var productA = new ProductEntity { ProductOwnerId = owner.Id, ProjectId = PersistenceTestGraph.DefaultProjectId, Name = "Product A" };
+        var productB = new ProductEntity { ProductOwnerId = owner.Id, ProjectId = PersistenceTestGraph.DefaultProjectId, Name = "Product B" };
 
         context.Sprints.AddRange(sprint1, sprint2);
         context.Products.AddRange(productA, productB);

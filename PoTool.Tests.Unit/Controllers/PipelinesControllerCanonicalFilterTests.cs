@@ -9,6 +9,7 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Pipelines.Queries;
 using PoTool.Shared.Pipelines;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Controllers;
 
@@ -19,13 +20,9 @@ public sealed class PipelinesControllerCanonicalFilterTests
     public async Task GetMetrics_WrapsResponseWithCanonicalFilterMetadata()
     {
         await using var context = CreateContext();
-        context.Repositories.Add(new RepositoryEntity
-        {
-            Id = 1,
-            ProductId = 100,
-            Name = "Repo-A",
-            CreatedAt = DateTimeOffset.UtcNow
-        });
+        PersistenceTestGraph.EnsureProject(context);
+        context.Products.Add(PersistenceTestGraph.CreateProduct(100, "Product 100", 7));
+        context.Repositories.Add(PersistenceTestGraph.CreateRepository(1, 100, "Repo-A"));
         context.PipelineDefinitions.Add(new PipelineDefinitionEntity
         {
             Id = 1,

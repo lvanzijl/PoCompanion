@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
+using PoTool.Tests.Unit.TestSupport;
 using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
@@ -55,7 +56,8 @@ public sealed class EfWorkItemQueryTests
     [TestMethod]
     public async Task GetWorkItemsForListingAsync_WithProductIds_ReturnsHierarchyScopedItems()
     {
-        _context.Products.Add(new ProductEntity { Id = 1, Name = "Product 1" });
+        PersistenceTestGraph.EnsureProject(_context);
+        _context.Products.Add(PersistenceTestGraph.CreateProduct(1, "Product 1"));
         _context.ProductBacklogRoots.Add(new ProductBacklogRootEntity { ProductId = 1, WorkItemTfsId = 100 });
         _context.WorkItems.AddRange(
             CreateEntity(100, null, "Area\\One", WorkItemType.Epic),
@@ -71,7 +73,8 @@ public sealed class EfWorkItemQueryTests
     [TestMethod]
     public async Task GetGoalsForListingAsync_FiltersGoalsInsideConfiguredRootScope()
     {
-        _context.Products.Add(new ProductEntity { Id = 1, Name = "Product 1" });
+        PersistenceTestGraph.EnsureProject(_context);
+        _context.Products.Add(PersistenceTestGraph.CreateProduct(1, "Product 1"));
         _context.ProductBacklogRoots.Add(new ProductBacklogRootEntity { ProductId = 1, WorkItemTfsId = 100 });
         _context.WorkItems.AddRange(
             CreateEntity(100, null, "Area\\One", WorkItemType.Goal),

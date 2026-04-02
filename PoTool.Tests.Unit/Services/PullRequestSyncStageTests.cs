@@ -7,6 +7,7 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services.Sync;
 using PoTool.Core.Contracts;
 using PoTool.Shared.PullRequests;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -153,10 +154,12 @@ public class PullRequestSyncStageTests
 
         await using var dbContext = new PoToolDbContext(options);
 
+        PersistenceTestGraph.EnsureProject(dbContext);
         dbContext.Products.Add(new ProductEntity
         {
             Id = 42,
             Name = "Product 42",
+            ProjectId = PersistenceTestGraph.DefaultProjectId,
             ProductOwnerId = 1
         });
         dbContext.Repositories.Add(new RepositoryEntity

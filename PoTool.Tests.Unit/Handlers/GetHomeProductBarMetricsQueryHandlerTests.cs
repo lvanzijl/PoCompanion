@@ -106,23 +106,10 @@ public class GetHomeProductBarMetricsQueryHandlerTests
             Name = "PO"
         });
 
+        PersistenceTestGraph.EnsureProject(_context);
         _context.Products.AddRange(
-            new ProductEntity
-            {
-                Id = productAId,
-                ProductOwnerId = productOwnerId,
-                Name = "Alpha",
-                CreatedAt = now,
-                LastModified = now
-            },
-            new ProductEntity
-            {
-                Id = productBId,
-                ProductOwnerId = productOwnerId,
-                Name = "Beta",
-                CreatedAt = now,
-                LastModified = now
-            });
+            PersistenceTestGraph.CreateProduct(productAId, "Alpha", productOwnerId),
+            PersistenceTestGraph.CreateProduct(productBId, "Beta", productOwnerId));
 
         _context.Teams.AddRange(
             new TeamEntity { Id = teamAId, Name = "Team Alpha", TeamAreaPath = "Area/Alpha" },

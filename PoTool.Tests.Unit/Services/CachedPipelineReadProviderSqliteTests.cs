@@ -6,6 +6,7 @@ using Moq;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -176,23 +177,13 @@ public sealed class CachedPipelineReadProviderSqliteTests
 
         if (!await _dbContext.Products.AnyAsync(product => product.Id == 1))
         {
-            _dbContext.Products.Add(new ProductEntity
-            {
-                Id = 1,
-                Name = "Product 1",
-                ProductOwnerId = 1
-            });
+            PersistenceTestGraph.EnsureProject(_dbContext);
+            _dbContext.Products.Add(PersistenceTestGraph.CreateProduct(1, "Product 1", 1));
         }
 
         if (!await _dbContext.Repositories.AnyAsync(repository => repository.Id == pipelineDefinitionId))
         {
-            _dbContext.Repositories.Add(new RepositoryEntity
-            {
-                Id = pipelineDefinitionId,
-                ProductId = 1,
-                Name = $"Repo-{pipelineDefinitionId}",
-                CreatedAt = DateTimeOffset.UtcNow
-            });
+            _dbContext.Repositories.Add(PersistenceTestGraph.CreateRepository(pipelineDefinitionId, 1, $"Repo-{pipelineDefinitionId}"));
         }
 
         _dbContext.PipelineDefinitions.Add(new PipelineDefinitionEntity

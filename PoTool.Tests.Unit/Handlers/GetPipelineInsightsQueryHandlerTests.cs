@@ -11,6 +11,7 @@ using PoTool.Core.Filters;
 using PoTool.Core.Pipelines.Filters;
 using PoTool.Core.Pipelines.Queries;
 using PoTool.Shared.Pipelines;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Handlers;
 
@@ -66,8 +67,9 @@ public class GetPipelineInsightsQueryHandlerTests
     {
         var profile = new ProfileEntity { Id = seed, Name = $"PO {seed}" };
         var team    = new TeamEntity    { Id = seed, Name = $"Team {seed}", TeamAreaPath = $"Area/{seed}" };
-        var product = new ProductEntity { Id = seed, Name = $"Product {seed}", ProductOwnerId = seed };
-        var repo    = new RepositoryEntity { Id = seed, ProductId = seed, Name = $"Repo {seed}" };
+        PersistenceTestGraph.EnsureProject(_context);
+        var product = PersistenceTestGraph.CreateProduct(seed, $"Product {seed}", seed);
+        var repo    = PersistenceTestGraph.CreateRepository(seed, seed, $"Repo {seed}");
         var pipeDef = new PipelineDefinitionEntity
         {
             Id = seed,
@@ -84,6 +86,7 @@ public class GetPipelineInsightsQueryHandlerTests
         {
             Id = seed,
             TeamId = seed,
+            Team = team,
             Path = $"\\Sprint\\{seed}",
             Name = $"Sprint {seed}",
             StartUtc     = new DateTimeOffset(SprintStart),
@@ -97,6 +100,7 @@ public class GetPipelineInsightsQueryHandlerTests
         {
             Id = seed + 1000,
             TeamId = seed,
+            Team = team,
             Path = $"\\Sprint\\prev{seed}",
             Name = $"Sprint prev{seed}",
             StartUtc     = new DateTimeOffset(PrevStart),
@@ -392,6 +396,7 @@ public class GetPipelineInsightsQueryHandlerTests
         int profileId = 20;
         _context.Profiles.Add(new ProfileEntity { Id = profileId, Name = "PO20" });
         _context.Teams.Add(new TeamEntity { Id = 20, Name = "Team20", TeamAreaPath = "A" });
+        PersistenceTestGraph.EnsureProject(_context);
         var sprint = new SprintEntity
         {
             Id = 20, TeamId = 20, Path = "\\S\\20", Name = "S20",
@@ -468,8 +473,9 @@ public class GetPipelineInsightsQueryHandlerTests
         int profileId = 40;
         _context.Profiles.Add(new ProfileEntity { Id = profileId, Name = "PO40" });
         _context.Teams.Add(new TeamEntity { Id = 40, Name = "Team40", TeamAreaPath = "X" });
-        var product = new ProductEntity { Id = 40, Name = "Product40", ProductOwnerId = profileId };
-        var repo    = new RepositoryEntity { Id = 40, ProductId = 40, Name = "Repo40" };
+        PersistenceTestGraph.EnsureProject(_context);
+        var product = PersistenceTestGraph.CreateProduct(40, "Product40", profileId);
+        var repo    = PersistenceTestGraph.CreateRepository(40, 40, "Repo40");
         var pipe    = new PipelineDefinitionEntity
         {
             Id = 40, PipelineDefinitionId = 400, ProductId = 40, RepositoryId = 40,
@@ -547,8 +553,9 @@ public class GetPipelineInsightsQueryHandlerTests
 
     private void SeedProductAndPipeline(int id, int profileId, int teamId, int pipelineDbId, string pipelineName)
     {
-        _context.Products.Add(new ProductEntity { Id = id, Name = $"Product {id}", ProductOwnerId = profileId });
-        _context.Repositories.Add(new RepositoryEntity { Id = id, ProductId = id, Name = $"Repo {id}" });
+        PersistenceTestGraph.EnsureProject(_context);
+        _context.Products.Add(PersistenceTestGraph.CreateProduct(id, $"Product {id}", profileId));
+        _context.Repositories.Add(PersistenceTestGraph.CreateRepository(id, id, $"Repo {id}"));
         _context.PipelineDefinitions.Add(new PipelineDefinitionEntity
         {
             Id = pipelineDbId,
@@ -632,8 +639,9 @@ public class GetPipelineInsightsScatterPointTests
     {
         _context.Profiles.Add(new ProfileEntity { Id = seed, Name = $"PO {seed}" });
         _context.Teams.Add(new TeamEntity { Id = seed, Name = $"Team {seed}", TeamAreaPath = $"A/{seed}" });
-        _context.Products.Add(new ProductEntity { Id = seed, Name = $"Prod {seed}", ProductOwnerId = seed });
-        _context.Repositories.Add(new RepositoryEntity { Id = seed, ProductId = seed, Name = $"Repo {seed}" });
+        PersistenceTestGraph.EnsureProject(_context);
+        _context.Products.Add(PersistenceTestGraph.CreateProduct(seed, $"Prod {seed}", seed));
+        _context.Repositories.Add(PersistenceTestGraph.CreateRepository(seed, seed, $"Repo {seed}"));
         _context.PipelineDefinitions.Add(new PipelineDefinitionEntity
         {
             Id = seed, PipelineDefinitionId = seed * 10, ProductId = seed,
@@ -848,8 +856,9 @@ public class GetPipelineInsightsBreakdownTests
     {
         _context.Profiles.Add(new ProfileEntity { Id = seed, Name = $"PO {seed}" });
         _context.Teams.Add(new TeamEntity { Id = seed, Name = $"Team {seed}", TeamAreaPath = $"A/{seed}" });
-        _context.Products.Add(new ProductEntity { Id = seed, Name = $"Prod {seed}", ProductOwnerId = seed });
-        _context.Repositories.Add(new RepositoryEntity { Id = seed, ProductId = seed, Name = $"Repo {seed}" });
+        PersistenceTestGraph.EnsureProject(_context);
+        _context.Products.Add(PersistenceTestGraph.CreateProduct(seed, $"Prod {seed}", seed));
+        _context.Repositories.Add(PersistenceTestGraph.CreateRepository(seed, seed, $"Repo {seed}"));
         _context.PipelineDefinitions.Add(new PipelineDefinitionEntity
         {
             Id = seed, PipelineDefinitionId = seed * 10, ProductId = seed,
@@ -972,9 +981,10 @@ public class GetPipelineInsightsBreakdownTests
         var seed2 = 401;
         _context.Profiles.Add(new ProfileEntity { Id = seed1, Name = $"PO {seed1}" });
         _context.Teams.Add(new TeamEntity { Id = seed1, Name = $"Team {seed1}", TeamAreaPath = $"A/{seed1}" });
-        _context.Products.Add(new ProductEntity { Id = seed1, Name = $"Prod {seed1}", ProductOwnerId = seed1 });
-        _context.Repositories.Add(new RepositoryEntity { Id = seed1, ProductId = seed1, Name = $"Repo {seed1}" });
-        _context.Repositories.Add(new RepositoryEntity { Id = seed2, ProductId = seed1, Name = $"Repo {seed2}" });
+        PersistenceTestGraph.EnsureProject(_context);
+        _context.Products.Add(PersistenceTestGraph.CreateProduct(seed1, $"Prod {seed1}", seed1));
+        _context.Repositories.Add(PersistenceTestGraph.CreateRepository(seed1, seed1, $"Repo {seed1}"));
+        _context.Repositories.Add(PersistenceTestGraph.CreateRepository(seed2, seed1, $"Repo {seed2}"));
         _context.PipelineDefinitions.Add(new PipelineDefinitionEntity
         {
             Id = seed1, PipelineDefinitionId = seed1 * 10, ProductId = seed1,
