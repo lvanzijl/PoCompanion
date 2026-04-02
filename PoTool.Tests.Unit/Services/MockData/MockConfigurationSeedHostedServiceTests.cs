@@ -20,7 +20,7 @@ public sealed class MockConfigurationSeedHostedServiceTests
     [TestMethod]
     public async Task StartAsync_WhenDatabaseIsEmpty_SeedsUsableMockConfiguration()
     {
-        await using var provider = CreateInMemoryServiceProvider();
+        await using var provider = await CreateSqliteServiceProviderAsync();
         var service = provider.GetRequiredService<MockConfigurationSeedHostedService>();
 
         await service.StartAsync(CancellationToken.None);
@@ -84,7 +84,7 @@ public sealed class MockConfigurationSeedHostedServiceTests
     [TestMethod]
     public async Task StartAsync_WhenCalledTwice_DoesNotDuplicateMockConfiguration()
     {
-        await using var provider = CreateInMemoryServiceProvider();
+        await using var provider = await CreateSqliteServiceProviderAsync();
         var service = provider.GetRequiredService<MockConfigurationSeedHostedService>();
 
         await service.StartAsync(CancellationToken.None);
@@ -110,7 +110,7 @@ public sealed class MockConfigurationSeedHostedServiceTests
     [TestMethod]
     public async Task StartAsync_SeedsOrderedPortfolioHistoryForActiveProfile()
     {
-        await using var provider = CreateInMemoryServiceProvider();
+        await using var provider = await CreateSqliteServiceProviderAsync();
         var service = provider.GetRequiredService<MockConfigurationSeedHostedService>();
 
         await service.StartAsync(CancellationToken.None);
@@ -299,18 +299,6 @@ public sealed class MockConfigurationSeedHostedServiceTests
                 new PortfolioSnapshotPersistenceMapper(),
                 NullLogger<PortfolioSnapshotSelectionService>.Instance),
             new ProductAggregationService());
-
-    private static ServiceProvider CreateInMemoryServiceProvider()
-    {
-        var services = new ServiceCollection();
-        var databaseName = $"mock-seed-{Guid.NewGuid()}";
-        services.AddLogging();
-        services.AddDbContext<PoToolDbContext>(options =>
-            options.UseInMemoryDatabase(databaseName));
-        ConfigureCommonServices(services);
-
-        return services.BuildServiceProvider();
-    }
 
     private static ServiceProvider CreateSqliteServiceProvider(SqliteConnection connection)
     {
