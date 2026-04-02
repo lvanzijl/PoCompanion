@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      GATE_OUTPUT_DIR: ${{ runner.temp }}/core-gate
 
     steps:
       - name: Checkout repository
@@ -32,17 +34,21 @@ jobs:
       - name: Check sync-over-async patterns
         run: ./.github/scripts/check-sync-over-async.sh
 
+      - name: Prepare Core Gate artifact directory
+        run: mkdir -p "$GATE_OUTPUT_DIR"
+
       - name: Run Core Gate
+        id: run_core_gate
         env:
           GATE_RUN_ID: ${{ github.run_id }}
-        run: ./.github/scripts/run-core-gate.sh "${{ runner.temp }}/core-gate"
+        run: ./.github/scripts/run-core-gate.sh "$GATE_OUTPUT_DIR"
 
       - name: Upload Core Gate artifacts
-        if: always()
+        if: ${{ always() && steps.run_core_gate.outcome != 'skipped' }}
         uses: actions/upload-artifact@v4
         with:
           name: core-gate-${{ github.run_id }}
-          path: ${{ runner.temp }}/core-gate
+          path: ${{ env.GATE_OUTPUT_DIR }}
           if-no-files-found: error
 
   api-contract-gate:
@@ -50,6 +56,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      GATE_OUTPUT_DIR: ${{ runner.temp }}/api-contract-gate
 
     steps:
       - name: Checkout repository
@@ -69,17 +77,21 @@ jobs:
       - name: Check sync-over-async patterns
         run: ./.github/scripts/check-sync-over-async.sh
 
+      - name: Prepare API Contract Gate artifact directory
+        run: mkdir -p "$GATE_OUTPUT_DIR"
+
       - name: Run API Contract Gate
+        id: run_api_contract_gate
         env:
           GATE_RUN_ID: ${{ github.run_id }}
-        run: ./.github/scripts/run-api-contract-gate.sh "${{ runner.temp }}/api-contract-gate"
+        run: ./.github/scripts/run-api-contract-gate.sh "$GATE_OUTPUT_DIR"
 
       - name: Upload API Contract Gate artifacts
-        if: always()
+        if: ${{ always() && steps.run_api_contract_gate.outcome != 'skipped' }}
         uses: actions/upload-artifact@v4
         with:
           name: api-contract-gate-${{ github.run_id }}
-          path: ${{ runner.temp }}/api-contract-gate
+          path: ${{ env.GATE_OUTPUT_DIR }}
           if-no-files-found: error
 
   governance-gate:
@@ -87,6 +99,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      GATE_OUTPUT_DIR: ${{ runner.temp }}/governance-gate
 
     steps:
       - name: Checkout repository
@@ -106,15 +120,19 @@ jobs:
       - name: Check sync-over-async patterns
         run: ./.github/scripts/check-sync-over-async.sh
 
+      - name: Prepare Governance Gate artifact directory
+        run: mkdir -p "$GATE_OUTPUT_DIR"
+
       - name: Run Governance Gate
+        id: run_governance_gate
         env:
           GATE_RUN_ID: ${{ github.run_id }}
-        run: ./.github/scripts/run-governance-gate.sh "${{ runner.temp }}/governance-gate"
+        run: ./.github/scripts/run-governance-gate.sh "$GATE_OUTPUT_DIR"
 
       - name: Upload Governance Gate artifacts
-        if: always()
+        if: ${{ always() && steps.run_governance_gate.outcome != 'skipped' }}
         uses: actions/upload-artifact@v4
         with:
           name: governance-gate-${{ github.run_id }}
-          path: ${{ runner.temp }}/governance-gate
+          path: ${{ env.GATE_OUTPUT_DIR }}
           if-no-files-found: error

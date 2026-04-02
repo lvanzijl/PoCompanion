@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-output_dir="${1:-/tmp/po-test-gates/api-contract-gate}"
+
+if [[ $# -ne 1 || -z "${1:-}" ]]; then
+  echo "Usage: run-api-contract-gate.sh <output-dir>" >&2
+  exit 2
+fi
+
+output_dir="$1"
 cd "$repo_root"
 ./.github/scripts/run-test-gate.sh \
   "API Contract Gate" \

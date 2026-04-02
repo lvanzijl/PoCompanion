@@ -11,6 +11,12 @@ test_target="$2"
 test_filter="$3"
 output_dir="$4"
 baseline_json="${5:-}"
+
+if [[ -z "$output_dir" ]]; then
+  echo "run-test-gate.sh requires a non-empty output directory for gate '$gate_name'." >&2
+  exit 2
+fi
+
 run_token="${GATE_RUN_ID:-local-$(date -u +%Y%m%dT%H%M%SZ)}"
 slug="$(echo "$gate_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/-\\+/-/g; s/^-//; s/-$//')"
 
@@ -33,7 +39,10 @@ dotnet test "$test_target" \
 test_exit=${PIPESTATUS[0]}
 set -e
 
-python3 ./.github/scripts/summarize-trx.py "$output_dir" "$trx_prefix" "$gate_name" "$summary_md_path" "$summary_json_path"
+if ! python3 ./.github/scripts/summarize-trx.py "$output_dir" "$trx_prefix" "$gate_name" "$summary_md_path" "$summary_json_path"; then
+  echo "Gate '$gate_name' could not summarize TRX output. Expected files matching '$output_dir/${trx_prefix}*.trx' in '$output_dir'." >&2
+  exit 1
+fi
 
 if [[ -n "$baseline_json" ]]; then
   set +e

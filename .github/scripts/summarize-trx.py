@@ -22,6 +22,12 @@ def main() -> int:
     trx_paths = sorted(trx_directory.glob(f"{trx_prefix}*.trx"))
 
     if not trx_paths:
+        expected_pattern = trx_directory / f"{trx_prefix}*.trx"
+        message = (
+            f"{gate_name}: expected TRX files matching '{expected_pattern}' in output directory "
+            f"'{trx_directory}', but none were produced."
+        )
+        print(message, file=sys.stderr)
         payload = {
             "gateName": gate_name,
             "trxFiles": [],
@@ -30,13 +36,14 @@ def main() -> int:
             "passed": 0,
             "failed": 0,
             "notExecuted": 0,
-            "warning": "TRX file was not produced."
+            "warning": message
         }
         summary_json_path.write_text(json.dumps(payload, indent=2) + "\n")
         summary_md_path.write_text(
             f"# {gate_name} failing test summary\n\n"
             f"- TRX directory: `{trx_directory}`\n"
-            f"- Warning: TRX file was not produced.\n")
+            f"- Expected pattern: `{expected_pattern}`\n"
+            f"- Warning: {message}\n")
         return 1
 
     total = 0

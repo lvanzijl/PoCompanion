@@ -221,12 +221,12 @@ Example badge:
 Run the same gate entry points used by CI:
 
 ```bash
-./.github/scripts/run-core-gate.sh
-./.github/scripts/run-api-contract-gate.sh
-./.github/scripts/run-governance-gate.sh
+./.github/scripts/run-core-gate.sh /tmp/po-test-gates/core-gate
+./.github/scripts/run-api-contract-gate.sh /tmp/po-test-gates/api-contract-gate
+./.github/scripts/run-governance-gate.sh /tmp/po-test-gates/governance-gate
 ```
 
-Each script writes TRX, console logs, and failing-test summaries under `/tmp/po-test-gates/...` by default.
+Each script requires an explicit output directory and writes TRX, console logs, and failing-test summaries into that exact directory.
 
 ## Branch protection handoff
 
