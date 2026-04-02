@@ -105,13 +105,7 @@ builder.Services.AddScoped<IMetricsClient>(sp =>
     return client;
 });
 
-builder.Services.AddScoped<IBugTriageClient>(sp =>
-{
-    var httpClient = sp.GetRequiredService<HttpClient>();
-    var client = new BugTriageClient(httpClient);
-    client.BaseUrl = apiBaseUrl;
-    return client;
-});
+builder.Services.AddBugTriageClient(apiBaseUrl);
 
 builder.Services.AddScoped<IPipelinesClient>(sp =>
 {

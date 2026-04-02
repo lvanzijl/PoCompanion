@@ -1,4 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.Extensions.DependencyInjection;
+using PoTool.Client.ApiClient;
 
 namespace PoTool.Tests.Unit.Configuration;
 
@@ -6,15 +8,19 @@ namespace PoTool.Tests.Unit.Configuration;
 public class ClientProgramRegistrationTests
 {
     [TestMethod]
-    public void ClientProgram_RegistersBugTriageClientInterface()
+    public void AddBugTriageClient_RegistersResolvableBugTriageClient()
     {
-        var repositoryRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var programPath = Path.Combine(repositoryRoot, "PoTool.Client", "Program.cs");
-        var programText = File.ReadAllText(programPath);
+        var services = new ServiceCollection();
+        services.AddScoped(_ => new HttpClient());
 
-        StringAssert.Contains(
-            programText,
-            "builder.Services.AddScoped<IBugTriageClient>",
-            "Bugs Triage route requires IBugTriageClient to be registered for direct page activation.");
+        services.AddBugTriageClient("http://localhost:5291");
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        var client = scope.ServiceProvider.GetService<IBugTriageClient>();
+
+        Assert.IsNotNull(client, "Bugs Triage route requires IBugTriageClient to resolve from DI.");
+        Assert.IsInstanceOfType<BugTriageClient>(client, "IBugTriageClient should resolve to the generated BugTriageClient.");
     }
 }

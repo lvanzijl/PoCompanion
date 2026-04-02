@@ -30,9 +30,9 @@
 - Why it was allowed to fail: `PoTool.Client/Program.cs` registered the concrete `BugTriageClient` JSON settings partial, but never registered the generated `IBugTriageClient` service used by the page.
 
 **Fix applied**
-- Added `IBugTriageClient` registration in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Program.cs`.
-- Added a focused regression test in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Configuration/ClientProgramRegistrationTests.cs`.
-- Replaced raw API exception text in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/BugsTriage.razor` with a safe recovery message via `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Helpers/ApiErrorMessageFormatter.cs`.
+- Added `IBugTriageClient` registration in `PoTool.Client/Program.cs`.
+- Added a focused runtime DI regression test in `PoTool.Tests.Unit/Configuration/ClientProgramRegistrationTests.cs`.
+- Replaced raw API exception text in `PoTool.Client/Pages/BugsTriage.razor` with a safe recovery message via `PoTool.Client/Helpers/ApiErrorMessageFormatter.cs`.
 
 **Result**
 - New behavior: direct navigation renders the page shell and shows a clear recovery message when cache-backed work-item data is unavailable.
@@ -54,8 +54,8 @@
 - Why it was allowed to fail: the page assumed backend failures could be shown directly to the user instead of translating known HTTP failures into product-level states.
 
 **Fix applied**
-- Added a local route-parameter guard for invalid `WorkItemId` values in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/SprintTrendActivity.razor`.
-- Added targeted `ApiException` handling there and mapped cache-not-ready / not-found failures to safe messages through `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Helpers/ApiErrorMessageFormatter.cs`.
+- Added a local route-parameter guard for invalid `WorkItemId` values in `PoTool.Client/Pages/Home/SprintTrendActivity.razor`.
+- Added targeted `ApiException` handling there and mapped cache-not-ready / not-found failures to safe messages through `PoTool.Client/Helpers/ApiErrorMessageFormatter.cs`.
 
 **Result**
 - New behavior: the route opens directly and shows a clear recovery state instead of raw exception text.
@@ -77,12 +77,12 @@
 - Why it was allowed to fail: only `/api/portfolio/snapshots` had been explicitly classified, while sibling portfolio read endpoints used by the same route were left unclassified.
 
 **Fix applied**
-- Broadened live-allowed route classification from `/api/portfolio/snapshots` to `/api/portfolio` in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Configuration/DataSourceModeConfiguration.cs`.
-- Added a regression test in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Configuration/DataSourceModeConfigurationTests.cs`.
+- Broadened live-allowed route classification from `/api/portfolio/snapshots` to `/api/portfolio` in `PoTool.Api/Configuration/DataSourceModeConfiguration.cs`.
+- Added a regression test in `PoTool.Tests.Unit/Configuration/DataSourceModeConfigurationTests.cs`.
 - Replaced raw API exception text with safe messages in:
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/PortfolioProgressPage.razor`
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/Components/PortfolioCdcReadOnlyPanel.razor`
-- Reused `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Helpers/ApiErrorMessageFormatter.cs` for localized error translation.
+  - `PoTool.Client/Pages/Home/PortfolioProgressPage.razor`
+  - `PoTool.Client/Pages/Home/Components/PortfolioCdcReadOnlyPanel.razor`
+- Reused `PoTool.Client/Helpers/ApiErrorMessageFormatter.cs` for localized error translation.
 
 **Result**
 - New behavior: the page opens directly, no longer throws route-classification server errors, and now renders a valid no-data/history-empty state.
@@ -100,16 +100,17 @@
 ---
 
 ## 4. Files changed
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Program.cs` — registered `IBugTriageClient`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Helpers/ApiErrorMessageFormatter.cs` — added shared local error-message translation for targeted routes
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/BugsTriage.razor` — replaced raw API error text with safe bugs-triage recovery state
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/SprintTrendActivity.razor` — added invalid-ID guard and safe activity error handling
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/PortfolioProgressPage.razor` — replaced raw portfolio-flow exception text
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/Components/PortfolioCdcReadOnlyPanel.razor` — replaced raw CDC history exception text
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Configuration/DataSourceModeConfiguration.cs` — classified `/api/portfolio/*` routes consistently
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Configuration/DataSourceModeConfigurationTests.cs` — added portfolio route classification regression coverage
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Configuration/ClientProgramRegistrationTests.cs` — added bug-triage DI registration regression coverage
-- `/home/runner/work/PoCompanion/PoCompanion/docs/reports/2026-04-02-batch1-hard-crash-fixes-report.md` — task report
+- `PoTool.Api/Configuration/DataSourceModeConfiguration.cs` — classified `/api/portfolio/*` routes consistently
+- `PoTool.Client/ApiClient/BugTriageClientServiceCollectionExtensions.cs` — centralized bug-triage client registration for runtime DI coverage
+- `PoTool.Client/Helpers/ApiErrorMessageFormatter.cs` — added shared local error-message translation for targeted routes
+- `PoTool.Client/Pages/BugsTriage.razor` — replaced raw API error text with safe bugs-triage recovery state
+- `PoTool.Client/Pages/Home/Components/PortfolioCdcReadOnlyPanel.razor` — replaced raw CDC history exception text
+- `PoTool.Client/Pages/Home/PortfolioProgressPage.razor` — replaced raw portfolio-flow exception text
+- `PoTool.Client/Pages/Home/SprintTrendActivity.razor` — added invalid-ID guard and safe activity error handling
+- `PoTool.Client/Program.cs` — used shared bug-triage client registration
+- `PoTool.Tests.Unit/Configuration/ClientProgramRegistrationTests.cs` — added bug-triage runtime DI regression coverage
+- `PoTool.Tests.Unit/Configuration/DataSourceModeConfigurationTests.cs` — added portfolio route classification regression coverage
+- `docs/reports/2026-04-02-batch1-hard-crash-fixes-report.md` — task report
 
 ---
 
