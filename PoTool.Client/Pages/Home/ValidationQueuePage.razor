@@ -177,9 +177,10 @@
 
             var uri = new Uri(NavigationManager.Uri);
             var queryParams = HttpUtility.ParseQueryString(uri.Query);
-            if (!ValidationRouteContextHelper.TryNormalizeCategory(queryParams["category"], out _categoryKey))
+            var rawCategory = queryParams["category"];
+            if (!ValidationRouteContextHelper.TryNormalizeCategory(rawCategory, out _categoryKey))
             {
-                SetQueueRecovery(queryParams["category"]);
+                SetQueueRecovery(rawCategory);
                 UpdateBreadcrumbs();
                 return;
             }

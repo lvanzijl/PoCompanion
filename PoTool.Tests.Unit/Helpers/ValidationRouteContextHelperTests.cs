@@ -25,7 +25,7 @@ public class ValidationRouteContextHelperTests
     }
 
     [TestMethod]
-    public void TryNormalizeRuleForCategory_KnownRuleInCategory_NormalizesCase()
+    public void TryNormalizeRuleForCategory_KnownUiCategoryRule_NormalizesCase()
     {
         var result = ValidationRouteContextHelper.TryNormalizeRuleForCategory("rc-2", "EFF", out var ruleId);
 
@@ -34,9 +34,18 @@ public class ValidationRouteContextHelperTests
     }
 
     [TestMethod]
-    public void TryNormalizeRuleForCategory_RuleInWrongCategory_ReturnsFalse()
+    public void TryNormalizeRuleForCategory_RuleInWrongUiCategory_ReturnsFalse()
     {
         var result = ValidationRouteContextHelper.TryNormalizeRuleForCategory("RC-2", "RC", out var ruleId);
+
+        Assert.IsFalse(result);
+        Assert.AreEqual(string.Empty, ruleId);
+    }
+
+    [TestMethod]
+    public void TryNormalizeRuleForCategory_UnrelatedRuleInWrongCategory_ReturnsFalse()
+    {
+        var result = ValidationRouteContextHelper.TryNormalizeRuleForCategory("SI-1", "EFF", out var ruleId);
 
         Assert.IsFalse(result);
         Assert.AreEqual(string.Empty, ruleId);

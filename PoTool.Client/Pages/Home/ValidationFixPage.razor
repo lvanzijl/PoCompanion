@@ -300,15 +300,17 @@
 
             var uri = new Uri(NavigationManager.Uri);
             var queryParams = HttpUtility.ParseQueryString(uri.Query);
-            if (!ValidationRouteContextHelper.TryNormalizeCategory(queryParams["category"], out _categoryKey))
+            var rawCategory = queryParams["category"];
+            var rawRuleId = queryParams["ruleId"];
+            if (!ValidationRouteContextHelper.TryNormalizeCategory(rawCategory, out _categoryKey))
             {
-                SetFixRecoveryForCategory(queryParams["category"]);
+                SetFixRecoveryForCategory(rawCategory);
                 UpdateBreadcrumbs();
                 return;
             }
-            if (!ValidationRouteContextHelper.TryNormalizeRuleForCategory(queryParams["ruleId"], _categoryKey, out _ruleId))
+            if (!ValidationRouteContextHelper.TryNormalizeRuleForCategory(rawRuleId, _categoryKey, out _ruleId))
             {
-                SetFixRecoveryForRule(queryParams["ruleId"]);
+                SetFixRecoveryForRule(rawRuleId);
                 UpdateBreadcrumbs();
                 return;
             }
@@ -364,6 +366,7 @@
             new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
             new("Health", WorkspaceRoutes.HealthWorkspace, icon: Icons.Material.Filled.HealthAndSafety),
             new("Validation Triage", WorkspaceRoutes.ValidationTriage, icon: Icons.Material.Filled.FactCheck),
+            // Recovery states can render breadcrumbs before category validation succeeds.
             new(string.IsNullOrWhiteSpace(categoryLabel) ? "Queue" : $"{categoryLabel} Queue",
                 string.IsNullOrWhiteSpace(_categoryKey)
                     ? null
