@@ -1,0 +1,2038 @@
+[
+  {
+    "name": "home",
+    "route": "/home",
+    "finalUrl": "http://localhost:5292/home",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home.png",
+    "status": "ok",
+    "title": "Home - PO Companion",
+    "headings": [
+      "Product Owner Dashboard"
+    ],
+    "snippet": "Health Delivery Trends Planning Product Owner Dashboard ALL PRODUCTS INCIDENT RESPONSE CONTROL CREW SAFETY OPERATIONS Context metrics unavailable. Last sync: 4/2/2026 1:51 PM Sync What's new since sync Workspaces Health Signal unavailable. Delivery Signal unavailable. Trends Loading signal\u2026 Planning Signal unavailable. Quick Actions Validation Triage Bug Triage",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "What's new since sync",
+        "href": "/home/changes"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "sync-gate",
+    "route": "/sync-gate",
+    "finalUrl": "http://localhost:5292/sync-gate",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/sync-gate.png",
+    "status": "ok",
+    "title": "Preparing Workspace - PO Companion",
+    "headings": [
+      "Preparing Your Workspace"
+    ],
+    "snippet": "Health Delivery Trends Planning Preparing Your Workspace Loading work items and data for Commander Elena Marquez. This may take a moment... SyncWorkItemRelationships",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "onboarding",
+    "route": "/onboarding",
+    "finalUrl": "http://localhost:5292/onboarding",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/onboarding.png",
+    "status": "ok",
+    "title": "PoTool.Client",
+    "headings": [
+      "Configure Azure DevOps Connection"
+    ],
+    "snippet": "Configure Azure DevOps Connection Configure Azure DevOps Connection Organization URL The URL of your Azure DevOps organization Project Name Enter project name manually (could not load projects) Authentication: Uses Windows credentials (NTLM) of the current user. No additional configuration required. Effective configuration summary Activity source: not configured Save You can configure these settings now or skip and do it later from the Configuration page. Import existing configuration If you already exported your setup from another environment, import it here. The wizard validates the file automatically, asks before replacing existing configuration, and then continues with the imported profiles and settings. Select your exported JSON file and start the import. Validation happens automatically as part of the import flow. Import existing configuration Skip Wizard Next } Health Delivery Trends Planning",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "profiles",
+    "route": "/profiles",
+    "finalUrl": "http://localhost:5292/profiles",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/profiles.png",
+    "status": "ok",
+    "title": "Profiles Home",
+    "headings": [
+      "Who's using PO Companion?"
+    ],
+    "snippet": "Health Delivery Trends Planning Who's using PO Companion? Commander Elena Marquez Add Profile What's New Manage Teams",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "settings",
+    "route": "/settings",
+    "finalUrl": "http://localhost:5292/settings",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/settings.png",
+    "status": "ok",
+    "title": "Settings",
+    "headings": [
+      "Cache Status",
+      "Settings"
+    ],
+    "snippet": "Health Delivery Trends Planning Settings Cache Status Cache Management TFS / Azure DevOps Import / Export Work Item States Triage Tags Getting Started Cache Status Cache Status Syncing... ComputeSprintTrends CANCEL",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "settings-teams",
+    "route": "/settings/teams",
+    "finalUrl": "http://localhost:5292/settings/teams",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/settings-teams.png",
+    "status": "ok",
+    "title": "Manage Teams",
+    "headings": [
+      "Manage Teams"
+    ],
+    "snippet": "Health Delivery Trends Planning Manage Teams Show Archived Add Team Communication Systems Area Path: \\Battleship Systems\\Shared Services\\Communication Systems Crew Safety Area Path: \\Battleship Systems\\Incident Response\\Crew Safety DevOps & Infrastructure Area Path: \\Battleship Systems\\Shared Services\\DevOps & Infrastructure Emergency Protocols Area Path: \\Battleship Systems\\Incident Response\\Emergency Protocols Hull Integrity Area Path: \\Battleship Systems\\Damage Control\\Hull Integrity Medical Response Area Path: \\Battleship Systems\\Incident Response\\Medical Response Repair Coordination Area Path: \\Battleship Systems\\Damage Control\\Repair Coordination Resource Management Area Path: \\Battleship Systems\\Damage Control\\Resource Management",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "settings-products",
+    "route": "/settings/products",
+    "finalUrl": "http://localhost:5292/settings/products",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/settings-products.png",
+    "status": "ok",
+    "title": "Manage Products",
+    "headings": [
+      "Manage Products"
+    ],
+    "snippet": "Health Delivery Trends Planning Manage Products Manage all products across all Product Owners Show Only Orphans Add Product Crew Safety Operations Work Item: 8033 Owner: Product Owner #1 | 1 team(s) linked Incident Response Control Work Items: 1000, 14671 Owner: Product Owner #1 | 2 team(s) linked",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "settings-workitem-states",
+    "route": "/settings/workitem-states",
+    "finalUrl": "http://localhost:5292/settings/workitem-states",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/settings-workitem-states.png",
+    "status": "ok",
+    "title": "Work Item States",
+    "headings": [
+      "Work Item State Classification"
+    ],
+    "snippet": "Health Delivery Trends Planning Work Item State Classification Configure how TFS work item states map to the system's canonical lifecycle states. Each state must be classified as: \u2022 New: Work has not started yet \u2022 In Progress: Work is actively being done \u2022 Done: Work is complete and delivered \u2022 Removed: Work was cancelled or intentionally discarded Currently using default state classifications. Save your changes to create custom classifications. goal Proposed New In Progress Done Removed Active New In Progress Done Removed Completed New In Progress Done Removed Removed New In Progress Done Removed Objective Proposed New In Progress Done Removed Active New In Progress Done Removed Completed New In Progress Done Removed Removed New In Progress Done Removed Epic New New In Progress Done Removed Active New In Progress Done Removed Resolved New In Progress Done Removed Closed New In Progress Done Removed Removed New In Progress Done Removed Feature New New In Progress Done Removed Active New In Progress Done Removed Resolved New In Progress Done Removed Closed New In Progress Done Removed Removed New In Progress Done Removed Product Backlog Item New New In Progress Done Removed Approved",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)",
+      "info: info: PoTool.Client.Pages.Settings.WorkItemStates[0]\n      Loaded 7 work item types with 32 state classifications (IsDefault: True)"
+    ]
+  },
+  {
+    "name": "settings-manage-product-owner",
+    "route": "/settings/productowner/1",
+    "finalUrl": "http://localhost:5292/settings/productowner/1",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/settings-manage-product-owner.png",
+    "status": "ok",
+    "title": "Manage Product Owner",
+    "headings": [
+      "Commander Elena Marquez",
+      "Products"
+    ],
+    "snippet": "Health Delivery Trends Planning Commander Elena Marquez Product Owner | 2 Product(s) Edit Profile Back to Profiles Products Add Product Incident Response Control 2 team(s) linked Crew Safety Operations 1 team(s) linked",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "settings-edit-product-owner",
+    "route": "/settings/productowner/edit/1",
+    "finalUrl": "http://localhost:5292/settings/productowner/edit/1",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/settings-edit-product-owner.png",
+    "status": "ok",
+    "title": "Edit Product Owner",
+    "headings": [
+      "Edit Product Owner"
+    ],
+    "snippet": "Health Delivery Trends Planning Edit Product Owner Back Product Owner Name e.g., 'John Smith', 'Jane Doe' Goals (Optional) Click to open and select multiple goals using checkboxes Product Owner Picture Current Selection Image 3 Choose from 64 images: Custom image upload coming soon! Update Product Owner Cancel Delete Product Owner",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "workitems",
+    "route": "/workitems",
+    "finalUrl": "http://localhost:5292/workitems",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/workitems.png",
+    "status": "ok",
+    "title": "Work Item Explorer",
+    "headings": [
+      "Work Item Explorer"
+    ],
+    "snippet": "Health Delivery Trends Planning Work Item Explorer Select All Validation History APPLY FILTERS Validation Filters: Structural Integrity (0) Refinement Readiness (0) Refinement Completeness (0)Select All COLUMNS CLEAR TREE STATE No work items found Click \"Full Sync\" to retrieve work items from Azure DevOps, or check your filter settings.",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "log: [WorkItemExplorer] Loading work items for 2 products: 1, 2",
+      "log: [WorkItemExplorer] Error loading work items: Could not deserialize the response body stream as System.Collections.Generic.ICollection`1[[PoTool.Shared.WorkItems.WorkItemWithValidationDto, PoTool.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]].",
+      "log: ",
+      "log: Status: 200",
+      "log: Response: ",
+      "log: ",
+      "log: [WorkItemExplorer] Stack trace:    at PoTool.Client.ApiClient.WorkItemsClient.<ReadObjectResponseAsync>d__87`1[[System.Collections.Generic.ICollection`1[[PoTool.Shared.WorkItems.WorkItemWithValidationDto, PoTool.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]].MoveNext() in /home/runner/work/PoCompanion/PoCompanion/PoTool.Client/ApiClient/Generated/ApiClient.g.cs:line 21107",
+      "log:    at PoTool.Client.ApiClient.WorkItemsClient.GetAllWithValidationAsync(String productIds, CancellationToken cancellationToken) in /home/runner/work/PoCompanion/PoCompanion/PoTool.Client/ApiClient/Generated/ApiClient.g.cs:line 18573",
+      "log:    at PoTool.Client.Services.WorkItemService.GetAllWithValidationAsync(Int32[] productIds) in /home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Services/WorkItemService.cs:line 184",
+      "log:    at PoTool.Client.Components.WorkItems.WorkItemExplorer.LoadWorkItems() in /home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/WorkItems/WorkItemExplorer.razor:line 275"
+    ]
+  },
+  {
+    "name": "bugs-triage",
+    "route": "/bugs-triage",
+    "finalUrl": "http://localhost:5292/bugs-triage",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/bugs-triage.png",
+    "status": "ok",
+    "title": "Bugs Triage",
+    "headings": [
+      "Bugs Triage"
+    ],
+    "snippet": "Health Delivery Trends Planning Bugs Triage 304 bugs total | 304 untriaged Home / Bug Triage HOME Id Title State New / Untriaged (304) 16535 Automated Incident Command Coordination Component showing incorrect data Committed 16531 Automated Incident Command Coordination Component not triggering alerts Done 16483 Real-Time Incident Command Coordination Component causing performance degradation Removed 16477 Real-Time Incident Command Coordination Component showing incorrect data New 16472 Real-Time Incident Command Coordination Component not triggering alerts Done 16433 Multi-Sensor Incident Command Coordination Component showing incorrect data Committed 16430 Multi-Sensor Incident Command Coordination Component not triggering alerts Approved 16401 Integrated Incident Command Coordination Component not triggering alerts New 16355 Enhanced Incident Command Coordination Component causing performance degradation New 16351 Enhanced Incident Command Coordination Component showing incorrect data Approved 16345 Enhanced Incident Command Coordination Component not triggering alerts New 16309 Automated Incident Command Coordination Component showing incorrect data New 16303 Automated Incident",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Bug Triage",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)",
+      "info: info: PoTool.Client.Pages.BugsTriage[0]\n      Loaded 0 enabled triage tags",
+      "info: info: PoTool.Client.Pages.BugsTriage[0]\n      Loading bugs for 2 products",
+      "info: info: PoTool.Client.Pages.BugsTriage[0]\n      Loaded 304 bugs",
+      "info: info: PoTool.Client.Pages.BugsTriage[0]\n      Found 304 untriaged bugs"
+    ]
+  },
+  {
+    "name": "legacy",
+    "route": "/legacy",
+    "finalUrl": "http://localhost:5292/legacy",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/legacy.png",
+    "status": "ok",
+    "title": "PO Companion - Classic Navigation",
+    "headings": [
+      "What would you like to do?",
+      "Overzien",
+      "Begrijpen",
+      "Plannen",
+      "Delen",
+      "6743",
+      "0"
+    ],
+    "snippet": "Health Delivery Trends Planning What would you like to do? Choose your intent to get started Overzien Build context and choose scope \"What am I looking at?\" Begrijpen Analyze, diagnose, reflect \"Why is this happening?\" Plannen Structure and look ahead \"What should happen next?\" Delen Communicate and export \"Who needs to know?\" SWITCH PROFILE Cache Status Synced 6743 Work Items 0 Pull Requests 0 Pipelines Last synced: 4/2/2026 1:55 PM CLEAR CACHE UPDATE",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "workspace-product",
+    "route": "/workspace/product",
+    "finalUrl": "http://localhost:5292/workspace/product",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/workspace-product.png",
+    "status": "ok",
+    "title": "Product Workspace - PO Companion",
+    "headings": [
+      "Portfolio Overview",
+      "Navigate",
+      "Quick Links"
+    ],
+    "snippet": "Health Delivery Trends Planning Portfolio Overview Landing / Product Workspace Overzien LANDING Select Product 2 products available Navigate Analyze Deep dive into health issues Plan Release planning board Team View Velocity & sprint metrics Share Export & communicate Quick Links BACKLOG HEALTH VELOCITY DASHBOARD RELEASE PLANNING EPIC FORECAST PR INSIGHTS",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Landing",
+        "href": "/legacy"
+      },
+      {
+        "text": "Product Workspace",
+        "href": "#"
+      },
+      {
+        "text": "Backlog Health",
+        "href": "/backlog-health"
+      },
+      {
+        "text": "Velocity Dashboard",
+        "href": "/velocity"
+      },
+      {
+        "text": "Release Planning",
+        "href": "/release-planning"
+      },
+      {
+        "text": "Epic Forecast",
+        "href": "/epic-forecast"
+      },
+      {
+        "text": "PR Insights",
+        "href": "/pr-insights"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "workspace-team",
+    "route": "/workspace/team",
+    "finalUrl": "http://localhost:5292/workspace/team",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/workspace-team.png",
+    "status": "ok",
+    "title": "Team Workspace - PO Companion",
+    "headings": [
+      "Crew Safety",
+      "Sprint Navigation",
+      "Team Actions",
+      "Team Velocity"
+    ],
+    "snippet": "Health Delivery Trends Planning Crew Safety Landing / Product / Team Workspace / Crew Safety Team Scope LANDING Crew Safety Select Team 2 teams available Sprint Navigation Current Sprint HISTORICAL CURRENT SPRINT FUTURE Team Actions Velocity Team velocity trends Analyze Team health insights Plan Sprint planning Share Export team data Team Velocity FULL DASHBOARD Velocity and predictability signals are now available in Sprint Trend (Calibration panel \u2014 enable advanced mode) and Planning (Capacity Confidence block). Related Dashboards STATE TIMELINE BACKLOG HEALTH",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Landing",
+        "href": "/legacy"
+      },
+      {
+        "text": "Product",
+        "href": "/workspace/product"
+      },
+      {
+        "text": "Team Workspace",
+        "href": "#"
+      },
+      {
+        "text": "Crew Safety",
+        "href": "#"
+      },
+      {
+        "text": "Full Dashboard",
+        "href": "/velocity"
+      },
+      {
+        "text": "Sprint Trend",
+        "href": "/home/sprint-trend"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "State Timeline",
+        "href": "/state-timeline"
+      },
+      {
+        "text": "Backlog Health",
+        "href": "/backlog-health"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "workspace-analysis",
+    "route": "/workspace/analysis",
+    "finalUrl": "http://localhost:5292/workspace/analysis",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/workspace-analysis.png",
+    "status": "ok",
+    "title": "PoTool.Client",
+    "headings": [
+      "\u26a0\ufe0f An error occurred"
+    ],
+    "snippet": "\u26a0\ufe0f An error occurred net_http_message_not_success_statuscode_reason, 404, Not Found Technical Details Try again",
+    "links": [
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)",
+      "error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "error: fail: Microsoft.AspNetCore.Components.Web.ErrorBoundary[0]\n      System.Net.Http.HttpRequestException: net_http_message_not_success_statuscode_reason, 404, Not Found\n         at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()\n         at System.Net.Http.Json.HttpClientJsonExtensions.<<FromJsonAsyncCore>g__Core|12_0>d`2[[PoTool.Shared.DataState.DataStateResponseDto`1[[PoTool.Shared.Metrics.SprintQueryResponseDto`1[[PoTool.Shared.Metrics.MultiIterationBacklogHealthDto, PoTool.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], PoTool.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], PoTool.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null],[System.Text.Json.JsonSerializerOptions, System.Text.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51]].MoveNext()\n         at PoTool.Client.Components.BacklogHealth.BacklogHealthPanel.LoadDataAsync() in /home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/BacklogHealth/BacklogHealthPanel.razor:line 88\n         at PoTool.Client.Components.BacklogHealth.BacklogHealthPanel.OnInitializedAsync() in /home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/BacklogHealth/BacklogHealthPanel.razor:line 73\n         at Microsoft.AspNetCore.Components.ComponentBase.RunInitAndSetParametersAsync()\n         at Microsoft.AspNetCore.Components.RenderTree.Renderer.GetErrorHandledTask(Task taskToHandle, ComponentState owningComponentState)\nSystem.Net.Http.HttpRequestException: net_http_message_not_success_statuscode_reason, 404, Not Found\n   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()\n   at System.Net.Http.Json.HttpClientJsonExtensions.<<FromJsonAsyncCore>g__Core|12_0>d`2[[PoTool.Shared.DataState.DataStateResponseDto`1[[PoTool.Shared.Metrics.SprintQueryResponseDto`1[[PoTool.Shared.Metrics.MultiIterationBacklogHealthDto, PoTool.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], PoTool.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]], PoTool.Shared, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null],[System.Text.Json.JsonSerializerOptions, System.Text.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51]].MoveNext()\n   at PoTool.Client.Components.BacklogHealth.BacklogHealthPanel.LoadDataAsync() in /home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/BacklogHealth/BacklogHealthPanel.razor:line 88\n   at PoTool.Client.Components.BacklogHealth.BacklogHealthPanel.OnInitializedAsync() in /home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/BacklogHealth/BacklogHealthPanel.razor:line 73\n   at Microsoft.AspNetCore.Components.ComponentBase.RunInitAndSetParametersAsync()\n   at Microsoft.AspNetCore.Components.RenderTree.Renderer.GetErrorHandledTask(Task taskToHandle, ComponentState owningComponentState)"
+    ]
+  },
+  {
+    "name": "workspace-communication",
+    "route": "/workspace/communication",
+    "finalUrl": "http://localhost:5292/workspace/communication",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/workspace-communication.png",
+    "status": "ok",
+    "title": "Communication Workspace - PO Companion",
+    "headings": [
+      "Communication Workspace",
+      "Report Template",
+      "Context Summary",
+      "Export & Share"
+    ],
+    "snippet": "Health Delivery Trends Planning Communication Workspace Landing / Communication Delen LANDING Report Template Status Report Sprint/iteration status summary Health Summary Backlog health overview Planning Summary Release planning snapshot Context Summary REFRESH Intent Delen Scope Level Portfolio Time Horizon Current Source Direct Report Preview \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 STATUS REPORT \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 Generated: 2026-04-02 13:56 Intent: Delen Scope: Portfolio Time Period: Current \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 This report was generated from PO Companion. Export & Share Copy to Clipboard Copy formatted report Copy Deep Link Shareable URL with context Export Markdown Copy as Markdown format Email Report Open in email client Other Workspaces PRODUCT TEAM ANALYZE PLAN",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Landing",
+        "href": "/legacy"
+      },
+      {
+        "text": "Communication",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-health",
+    "route": "/home/health",
+    "finalUrl": "http://localhost:5292/home/health",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-health.png",
+    "status": "ok",
+    "title": "Health - PO Companion",
+    "headings": [
+      "Health",
+      "Choose a health view"
+    ],
+    "snippet": "Health Delivery Trends Planning Health Home / Health Home Health hub Choose a health view Start from the health hub, then open the Build Quality overview, validation triage, or backlog health detail you need. Overview Review the current Build Quality summary Validation Triage Review structural and refinement issues Backlog Health Open backlog readiness and refinement detail Other workspaces Need a different lens? Move to delivery, trends, or planning without loading health data first. Delivery Trends (Past) Planning (Future)",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Health",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-health-overview",
+    "route": "/home/health/overview",
+    "finalUrl": "http://localhost:5292/home/health/overview",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-health-overview.png",
+    "status": "ok",
+    "title": "Overview - PO Companion",
+    "headings": [
+      "Overview"
+    ],
+    "snippet": "Health Delivery Trends Planning Overview Build Quality overview for the active Product Owner. Home / Health / Overview Last 30 days Back to Health Home Build Quality overview unavailable right now: JsonRequiredPropertiesMissing, PoTool.Shared.Metrics.DeliveryQueryResponseDto`1[PoTool.Shared.BuildQuality.BuildQualityPageDto], 'RequestedFilter', 'EffectiveFilter', 'InvalidFields', 'ValidationMessages' Retry",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Overview",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-backlog-health",
+    "route": "/home/health/backlog-health",
+    "finalUrl": "http://localhost:5292/home/health/backlog-health",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-backlog-health.png",
+    "status": "ok",
+    "title": "Backlog Health - PO Companion",
+    "headings": [
+      "Backlog Health"
+    ],
+    "snippet": "Health Delivery Trends Planning Backlog Health Home / Health / Backlog Health Product Back to Health Home Select a product to view its backlog health.",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Backlog Health",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-validation-triage",
+    "route": "/home/validation-triage",
+    "finalUrl": "http://localhost:5292/home/validation-triage",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-validation-triage.png",
+    "status": "ok",
+    "title": "Validation Triage - PO Companion",
+    "headings": [
+      "Validation Triage"
+    ],
+    "snippet": "Health Delivery Trends Planning Validation Triage Home / Health / Validation Triage HEALTH HOME Click Open queue to review and fix items in each category. Structural Integrity 1410 items Top rule groups: Parent in New state has InProgress or Done descendants 1273 Parent in Done state has unfinished descendants 112 Parent in Removed state has non-Removed descendants 25 OPEN QUEUE Refinement Readiness 5 items Top rule groups: Feature description is empty or too short 3 Epic must have at least one Feature child 2 OPEN QUEUE Refinement Completeness 18 items Top rule groups: PBI description is empty 17 Feature has no children (PBIs) 1 OPEN QUEUE Missing Effort 177 items Top rule groups: Work item must have effort estimate 177 OPEN QUEUE",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Validation Triage",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-validation-queue",
+    "route": "/home/validation-queue",
+    "finalUrl": "http://localhost:5292/home/validation-queue",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-validation-queue.png",
+    "status": "ok",
+    "title": "Validation Queue - PO Companion",
+    "headings": [
+      "Validation Queue"
+    ],
+    "snippet": "Health Delivery Trends Planning Validation Queue Home / Health / Validation Triage / Queue VALIDATION TRIAGE HOME Validation category missing This page needs a validation category. Open Validation Triage to choose one. GO TO VALIDATION TRIAGE HOME",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Validation Triage",
+        "href": "/home/validation-triage"
+      },
+      {
+        "text": "Queue",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-validation-fix",
+    "route": "/home/validation-fix",
+    "finalUrl": "http://localhost:5292/home/validation-fix",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-validation-fix.png",
+    "status": "ok",
+    "title": "Fix Session - PO Companion",
+    "headings": [
+      "Fix Session"
+    ],
+    "snippet": "Health Delivery Trends Planning Fix Session Home / Health / Validation Triage / Queue / Fix Session BACK TO QUEUE HOME Validation category missing This fix session needs a validation category. Open Validation Triage to choose a category first. GO TO VALIDATION TRIAGE HOME",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Validation Triage",
+        "href": "/home/validation-triage"
+      },
+      {
+        "text": "Queue",
+        "href": "#"
+      },
+      {
+        "text": "Fix Session",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-dependencies",
+    "route": "/home/dependencies",
+    "finalUrl": "http://localhost:5292/home/dependencies",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-dependencies.png",
+    "status": "ok",
+    "title": "Dependency Overview - PO Companion",
+    "headings": [
+      "Dependency Overview",
+      "Epic Dependencies"
+    ],
+    "snippet": "Health Delivery Trends Planning Dependency Overview Read-only Home / Planning (Future) / Dependencies HOME Read-only view. Dependencies are insight-only in this navigation. For full dependency management, use the Dependency Graph. Epic Dependencies FULL GRAPH Dependency Graph Filters Area Path Filter Work Item IDs (comma-separated) Work Item Types (e.g., Epic,Feature) LOAD GRAPH Enter filters and click Load Graph to analyze dependencies. Navigation PLANNING (FUTURE) HEALTH",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Planning (Future)",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Dependencies",
+        "href": "#"
+      },
+      {
+        "text": "Dependency Graph",
+        "href": "/dependency-graph"
+      },
+      {
+        "text": "Full Graph",
+        "href": "/dependency-graph"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-delivery",
+    "route": "/home/delivery",
+    "finalUrl": "http://localhost:5292/home/delivery",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-delivery.png",
+    "status": "ok",
+    "title": "Delivery - PO Companion",
+    "headings": [
+      "Delivery",
+      "Choose a delivery view"
+    ],
+    "snippet": "Health Delivery Trends Planning Delivery Home / Delivery Home Delivery hub Choose a delivery view Open the view that best explains what landed, where it landed, or what shifted during the sprint. Sprint Delivery Check what landed in the latest sprint Portfolio Delivery Compare delivered work across products Sprint Execution Investigate churn inside the sprint Other workspaces Need a different lens? Jump to the adjacent workspace without leaving the hub. Backlog Health Health Trends (Past) Planning (Future)",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Delivery",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-delivery-execution",
+    "route": "/home/delivery/execution",
+    "finalUrl": "http://localhost:5292/home/delivery/execution",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-delivery-execution.png",
+    "status": "ok",
+    "title": "Sprint Execution - PO Companion",
+    "headings": [
+      "Sprint Execution"
+    ],
+    "snippet": "Health Delivery Trends Planning Sprint Execution Home / Delivery / Sprint Execution BACK TO DELIVERY Internal sprint diagnostics \u2014 scope changes, completion order, and starved work detection Communication Systems All Products No sprints found. Select a team to view sprint execution data.",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Sprint Execution",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-delivery-portfolio",
+    "route": "/home/delivery/portfolio",
+    "finalUrl": "http://localhost:5292/home/delivery/portfolio?teamId=7",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-delivery-portfolio.png",
+    "status": "ok",
+    "title": "Portfolio Delivery - PO Companion",
+    "headings": [
+      "Portfolio Delivery"
+    ],
+    "snippet": "Health Delivery Trends Planning Portfolio Delivery Home / Delivery / Portfolio Delivery BACK TO DELIVERY Communication Systems SCOPE\u2026 Select a team to load sprints.",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Portfolio Delivery",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-delivery-sprint",
+    "route": "/home/delivery/sprint",
+    "finalUrl": "http://localhost:5292/home/delivery/sprint",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-delivery-sprint.png",
+    "status": "ok",
+    "title": "Sprint Delivery - PO Companion",
+    "headings": [
+      "Sprint Delivery",
+      "Sprint 11"
+    ],
+    "snippet": "Health Delivery Trends Planning Sprint Delivery Stakeholder sprint delivery report \u2014 what was delivered during this sprint Home / Delivery / Sprint Delivery BACK TO DELIVERY HOME Sprint Navigation Sprint 11 Mar 26 \u2014 Apr 9, 2026 Build Quality Build Quality unavailable right now: JsonRequiredPropertiesMissing, PoTool.Shared.Metrics.DeliveryQueryResponseDto`1[PoTool.Shared.BuildQuality.DeliveryBuildQualityDto], 'RequestedFilter', 'EffectiveFilter', 'InvalidFields', 'ValidationMessages' RETRY All Products \u2014 Sprint Summary Product Delivery \u2014 click a product to drill down",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Sprint Delivery",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-changes",
+    "route": "/home/changes",
+    "finalUrl": "http://localhost:5292/home/changes",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-changes.png",
+    "status": "ok",
+    "title": "What's New Since Last Sync - PO Companion",
+    "headings": [
+      "What's New Since Last Sync",
+      "0"
+    ],
+    "snippet": "Health Delivery Trends Planning What's New Since Last Sync Home / What's New Since Last Sync HOME Showing changes between 4/2/2026 1:51 PM and 4/2/2026 1:55 PM 0 Bugs Opened 0 Bugs Closed 0 Items with Issues 0 Sprints Completed Bugs Opened (0) No bugs were opened in this sync window. Bugs Closed (0) No bugs were closed in this sync window. Work Items with Validation Issues (0) No recently changed work items have validation issues. Sprint Completions (0) No sprints ended during this sync window.",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "What's New Since Last Sync",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-bugs",
+    "route": "/home/bugs",
+    "finalUrl": "http://localhost:5292/home/bugs",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-bugs.png",
+    "status": "ok",
+    "title": "Bug Insights - PO Companion",
+    "headings": [
+      "Bug Insights",
+      "220.0",
+      "289.0",
+      "64.0",
+      "26.2d"
+    ],
+    "snippet": "Health Delivery Trends Planning Bug Insights Home / Bug Insights BUG TRIAGE HOME Filters Team Product Total Open Bugs 220.0 75th percentile: \u2014 304 bugs Bugs Created (Last 6 Months) 289.0 75th percentile: \u2014 304 bugs Bugs Resolved (Last 6 Months) 64.0 75th percentile: \u2014 304 bugs Bug Resolution Time 26.2d 75th percentile: 47.8d 64 bugs (100.0 % coverage) Bugs by Severity Distribution Critical 33 (10.9 %) High 76 (25.0 %) Medium 118 (38.8 %) Low 77 (25.3 %) Ready to triage? 304 open bugs need triage attention GO TO TRIAGE",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Bug Insights",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-bugs-detail",
+    "route": "/home/bugs/detail",
+    "finalUrl": "http://localhost:5292/home/bugs/detail",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-bugs-detail.png",
+    "status": "ok",
+    "title": "Bug Detail - PO Companion",
+    "headings": [
+      "Bug Detail"
+    ],
+    "snippet": "Health Delivery Trends Planning Bug Detail Home / Bug Overview / Bug Detail BACK HOME Bug context missing This page needs a bug ID. Open Bug Insights to select a bug first. GO TO BUG INSIGHTS HOME",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Bug Overview",
+        "href": "/home/bugs"
+      },
+      {
+        "text": "Bug Detail",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-pull-requests",
+    "route": "/home/pull-requests",
+    "finalUrl": "http://localhost:5292/home/pull-requests",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-pull-requests.png",
+    "status": "ok",
+    "title": "Pull Request Insights - PO Companion",
+    "headings": [
+      "Pull Request Insights",
+      "0",
+      "0%",
+      "\u2014"
+    ],
+    "snippet": "Health Delivery Trends Planning Pull Request Insights Home / Trends (Past) / Pull Request Insights HOME Context Team All Repositories Repository (optional) Summary 0 Total PRs 0% Merge Rate 0% Abandon Rate 0% Rework Rate \u2014 Median Lifetime \u2014 P90 Lifetime PR Scatter \u2014 Lifetime vs. Creation Date X: PR creation date | Y: PR lifetime | Color: outcome | Shape: repository 0h 12h 1d 1d 2d Lifetime (h) No PR data for the selected period \u25cf Merged (clean) \u25cf Merged (rework) \u25cf Abandoned No pull request data found for the selected filters and date range. Try expanding the date range or selecting a different team. PR Detail",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Trends (Past)",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Pull Request Insights",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-pr-delivery-insights",
+    "route": "/home/pr-delivery-insights",
+    "finalUrl": "http://localhost:5292/home/pr-delivery-insights",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-pr-delivery-insights.png",
+    "status": "ok",
+    "title": "PR Delivery Insights - PO Companion",
+    "headings": [
+      "PR Delivery Insights",
+      "0"
+    ],
+    "snippet": "Health Delivery Trends Planning PR Delivery Insights Home / Trends (Past) / PR Delivery Insights HOME Context Team PR Classification Summary 0 Delivery PRs 0% 0 Bug PRs 0% 0 Disturbance PRs 0% 0 Unmapped PRs 0% Total: 0 PRs in scope PR Lifetime Scatter X: PR creation date | Y: PR lifetime | Color: outcome | Shape: Epic 0h 12h 1d 1d 2d Lifetime (h) No PR data for the selected period PR Detail",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Trends (Past)",
+        "href": "/home/trends"
+      },
+      {
+        "text": "PR Delivery Insights",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-pipeline-insights",
+    "route": "/home/pipeline-insights",
+    "finalUrl": "http://localhost:5292/home/pipeline-insights",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-pipeline-insights.png",
+    "status": "ok",
+    "title": "Pipeline Insights - PO Companion",
+    "headings": [
+      "Pipeline Insights"
+    ],
+    "snippet": "Health Delivery Trends Planning Pipeline Insights Home / Trends (Past) / Pipeline Insights HOME Filters Team Sprint Include partial success Include canceled SLO duration (min) Optional horizontal SLO line on scatter Select a team and sprint to view pipeline health Data is read from the local cache \u2014 no live TFS calls. Build Summary",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Trends (Past)",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Pipeline Insights",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-trends",
+    "route": "/home/trends",
+    "finalUrl": "http://localhost:5292/home/trends",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-trends.png",
+    "status": "ok",
+    "title": "Trends (Past) - PO Companion",
+    "headings": [
+      "Trends (Past)",
+      "Trend Signals"
+    ],
+    "snippet": "Health Delivery Trends Planning Trends (Past) Home / Trends (Past) Team Last 6 Months (Default) Home Trend Signals Structural behavior over time \u2014 click to explore details Bug Trend Bug patterns over time Decreasing PR Trend Pull request insights Read-only Pipeline Insights PO-first sprint stability per product No data Read-only PR Delivery Insights PR classification by Epic/Feature hierarchy Read-only Portfolio Progress Strategic progress over sprint range Delivery Trends PBI & effort throughput over time Note: Bug trend chart shows last 6 months (Decision #3: 6 month time horizon). PRs and Pipelines are insight-only. Bugs may navigate to editable detail. Interaction: Hover to highlight, click to filter by that period (Decision #12). Bug Trend (Last 6 Months) Total Fixed Added 49 Nov 86 Dec 146 Jan 196 Feb 220 Mar 220 Apr Navigate to Other Workspaces Backlog Health Health Delivery Planning (Future)",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Trends (Past)",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-trends-delivery",
+    "route": "/home/trends/delivery",
+    "finalUrl": "http://localhost:5292/home/trends/delivery",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-trends-delivery.png",
+    "status": "ok",
+    "title": "Delivery Trends - PO Companion",
+    "headings": [
+      "Delivery Trends"
+    ],
+    "snippet": "Delivery trends could not be loaded right now. Try again later. Health Delivery Trends Planning Delivery Trends Home / Trends (Past) / Delivery Trends BACK TO TRENDS HOME Sprint Range Team Product Sprint 11 End sprint Sprints to show Showing Sprint 10 \u2013 Sprint 11 No delivery data available for the selected sprint range.",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Trends (Past)",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Delivery Trends",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)",
+      "error: Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ]
+  },
+  {
+    "name": "home-portfolio-progress",
+    "route": "/home/portfolio-progress",
+    "finalUrl": "http://localhost:5292/home/portfolio-progress",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-portfolio-progress.png",
+    "status": "ok",
+    "title": "Portfolio Flow - PO Companion",
+    "headings": [
+      "Portfolio Flow Trend"
+    ],
+    "snippet": "Health Delivery Trends Planning Portfolio Flow Trend Home / Trends / Portfolio Progress BACK TO TRENDS All Products Communication Systems SCOPE\u2026 Select a sprint range to view portfolio progress data. CDC Portfolio History View REFRESH Product Project Work Package Lifecycle Default Sort None Group Last 6 History Compare to Include archived history Decision signal No dominant signal in the selected history. Persisted CDC history is available, but no priority signal stands out for immediate action. Trend Overview No persisted history is available for the selected scope. Changed Work Packages No changed work packages detected for the selected comparison baseline. Stable Work Packages (0 unchanged) No stable work packages are available for the selected comparison baseline. Project trends No project-level changes detected in selected history. Current snapshot No snapshot rows available. Snapshot comparison No changed comparison rows available.",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Portfolio Progress",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "home-planning",
+    "route": "/home/planning",
+    "finalUrl": "http://localhost:5292/home/planning",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/home-planning.png",
+    "status": "ok",
+    "title": "Planning - PO Companion",
+    "headings": [
+      "Planning",
+      "Choose a planning view"
+    ],
+    "snippet": "Health Delivery Trends Planning Planning Home / Planning Home Planning hub Choose a planning view Open the workspace that helps you sequence roadmap decisions or place work into upcoming sprints. Product Roadmaps Review epic order before roadmap changes Plan Board Place upcoming work into target sprints Multi-Product Planning Align timelines across all products on a shared axis Other workspaces Switch to delivery, trends, or health when you need a different decision context. Backlog Health Health Trends (Past) Delivery",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Planning",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "planning-plan-board",
+    "route": "/planning/plan-board",
+    "finalUrl": "http://localhost:5292/planning/plan-board",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/planning-plan-board.png",
+    "status": "ok",
+    "title": "Plan Board - PO Companion",
+    "headings": [
+      "Plan Board"
+    ],
+    "snippet": "Health Delivery Trends Planning Plan Board Home / Planning / Plan Board REFRESH FROM TFS PLANNING Project: Product: Select a product to start planning Choose a product from the selector above to load its PBIs and bugs into the planning board.",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Plan Board",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "planning-multi-product",
+    "route": "/planning/multi-product",
+    "finalUrl": "http://localhost:5292/planning/multi-product",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/planning-multi-product.png",
+    "status": "ok",
+    "title": "Multi-Product Planning - PO Companion",
+    "headings": [
+      "Multi-Product Planning"
+    ],
+    "snippet": "Health Delivery Trends Planning Multi-Product Planning Home / Planning / Multi-Product All products aligned to a shared time axis. End dates are authoritative; start dates are forecast-derived. Planning Products Show clusters Show capacity collisions 0 selected product(s) No products with planning projections found. Ensure roadmap epics have forecast data.",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Multi-Product",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "planning-product-roadmaps",
+    "route": "/planning/product-roadmaps",
+    "finalUrl": "http://localhost:5292/planning/product-roadmaps",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/planning-product-roadmaps.png",
+    "status": "ok",
+    "title": "Product Roadmaps - PO Companion",
+    "headings": [
+      "Product Roadmaps"
+    ],
+    "snippet": "Error loading epics for Incident Response Control: DeserializeUnableToConvertValue, System.Collections.Generic.IEnumerable`1[PoTool.Shared.WorkItems.WorkItemDto] Path: $ | LineNumber: 0 | BytePositionInLine: 1. Error loading epics for Crew Safety Operations: DeserializeUnableToConvertValue, System.Collections.Generic.IEnumerable`1[PoTool.Shared.WorkItems.WorkItemDto] Path: $ | LineNumber: 0 | BytePositionInLine: 1. Health Delivery Trends Planning Product Roadmaps Read-only Home / Planning (Future) / Product Roadmaps REPORTING SNAPSHOTS HOME Project: Incident Response Control 0 roadmap epics EDIT ROADMAP No roadmap epics found for this product. Crew Safety Operations 0 roadmap epics EDIT ROADMAP No roadmap epics found for this product. Navigation PLANNING (FUTURE) HEALTH",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Home",
+        "href": "/home"
+      },
+      {
+        "text": "Planning (Future)",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Product Roadmaps",
+        "href": "#"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  },
+  {
+    "name": "planning-product-roadmap-editor",
+    "route": "/planning/product-roadmaps/1",
+    "finalUrl": "http://localhost:5292/planning/product-roadmaps/1",
+    "screenshot": "docs/analysis/assets/2026-04-02-ux-full-scan/planning-product-roadmap-editor.png",
+    "status": "ok",
+    "title": "Product Roadmap Editor - PO Companion",
+    "headings": [
+      "Product Roadmap \u2013 Incident Response Control"
+    ],
+    "snippet": "Error loading roadmap data: DeserializeUnableToConvertValue, System.Collections.Generic.IEnumerable`1[PoTool.Shared.WorkItems.WorkItemDto] Path: $ | LineNumber: 0 | BytePositionInLine: 1. Health Delivery Trends Planning Product Roadmap \u2013 Incident Response Control ALL ROADMAPS HOME Roadmap Epics Epics: 0 No roadmap defined. Drag epics here or click \"Add to Roadmap\" to build your product roadmap. Available Epics 0 No available epics for this product.",
+    "links": [
+      {
+        "text": "Health",
+        "href": "/home/health"
+      },
+      {
+        "text": "Delivery",
+        "href": "/home/delivery"
+      },
+      {
+        "text": "Trends",
+        "href": "/home/trends"
+      },
+      {
+        "text": "Planning",
+        "href": "/home/planning"
+      },
+      {
+        "text": "Reload",
+        "href": "."
+      }
+    ],
+    "consoleMessages": [
+      "error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED",
+      "log: Cleared caches: []",
+      "info: Debugging hotkey: Shift+Alt+D (when application has focus)"
+    ]
+  }
+]
