@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-04-02",
+    "type": "Fixed",
+    "title": "Targeted direct routes now fail safely instead of crashing",
+    "impact": "Directly opening Bugs Triage, Sprint Activity, and Portfolio Progress no longer triggers the Blazor crash screen or raw server exception text; the routes now either load normally or show clear recovery states when cache-backed data is unavailable.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-02",
     "type": "Changed",
     "title": "Planning now highlights likely cross-product team collisions",
     "impact": "Multi-Product Planning can now show optional capacity collision hints when overlapping epic windows across selected products involve the same mapped teams, adding a non-blocking shared-axis signal without calculating overload or changing forecasts.",
