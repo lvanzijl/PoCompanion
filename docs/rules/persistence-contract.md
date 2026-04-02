@@ -1,6 +1,6 @@
 # Persistence contract
 
-This document mirrors the authoritative persistence contract in `/home/runner/work/PoCompanion/PoCompanion/.github/copilot-instructions.md`.
+This document mirrors the authoritative persistence contract in `.github/copilot-instructions.md`.
 
 ## Rules
 
