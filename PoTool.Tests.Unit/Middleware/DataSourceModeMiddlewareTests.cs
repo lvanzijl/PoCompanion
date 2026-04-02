@@ -120,6 +120,21 @@ public class DataSourceModeMiddlewareTests
     }
 
     [TestMethod]
+    public async Task InvokeAsync_CacheStateAwareRoute_SetsCacheModeWithoutBlocking()
+    {
+        var context = CreateHttpContext("/api/workitems/state/validation-queue");
+        var middleware = new DataSourceModeMiddleware(
+            next: _ => { _nextCalled = true; return Task.CompletedTask; },
+            logger: _mockLogger.Object);
+
+        await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
+
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Cache), Times.Once);
+        _mockProfileProvider.Verify(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()), Times.Never);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
     public async Task InvokeAsync_SettingsRoute_SetsLiveMode()
     {
         // Arrange

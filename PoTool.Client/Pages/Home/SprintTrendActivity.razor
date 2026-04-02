@@ -1,12 +1,12 @@
 @page "/home/sprint-trend/activity/{WorkItemId:int}"
 @page "/home/delivery/sprint/activity/{WorkItemId:int}"
 @using PoTool.Client.Components.Common
-@using PoTool.Client.ApiClient
 @using PoTool.Client.Helpers
 @using PoTool.Client.Models
+@using PoTool.Shared.DataState
 @using PoTool.Shared.Metrics
 @using System.Web
-@inject IMetricsClient MetricsClient
+@inject MetricsStateService MetricsStateService
 @inject IProfileService ProfileService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -35,6 +35,19 @@
     @if (_isLoading)
     {
         <LoadingIndicator IsLoading="true" />
+    }
+    else if (_dataState.State == DataStateDto.NotReady)
+    {
+        <DataStatePanel State="@_dataState.State"
+                        Title="Sprint activity is syncing"
+                        Message="@(_dataState.Reason ?? "Sprint activity will load automatically after cache warming completes.")"
+                        ProductOwnerId="@_productOwnerId" />
+    }
+    else if (_dataState.State == DataStateDto.Failed)
+    {
+        <DataStatePanel State="@_dataState.State"
+                        Title="Sprint activity failed to load"
+                        Message="@(_dataState.Reason ?? "Sprint activity could not be loaded right now.")" />
     }
     else if (!string.IsNullOrEmpty(_errorMessage))
     {
@@ -213,6 +226,7 @@
     private string? _returnView;
     private List<WorkItemActivityGroup> _processedGroups = new();
     private ActivitySummary _summary = new();
+    private DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>> _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.NotRequested();
 
     // Fields that, when appearing together at the same timestamp, indicate a creation event.
     private static readonly HashSet<string> CreationIndicatorFields = new(StringComparer.OrdinalIgnoreCase)
@@ -265,13 +279,26 @@
                 return;
             }
 
-            var envelope = await MetricsClient.GetWorkItemActivityDetailsEnvelopeAsync(
+            _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.Loading();
+            var response = await MetricsStateService.GetWorkItemActivityDetailsStateAsync(
                 WorkItemId,
                 productOwnerId.Value,
                 null,
                 _periodStartUtc,
                 _periodEndUtc,
                 CancellationToken.None);
+            _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.FromResponse(response, "Sprint activity could not be loaded right now.");
+            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            {
+                return;
+            }
+
+            var envelope = _dataState.Data;
+            if (envelope is null)
+            {
+                return;
+            }
+
             _filterNotice = CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(envelope).FilterMetadata);
             _details = envelope.Data;
 
@@ -281,12 +308,6 @@
                 _processedGroups = GroupByWorkItem(processed);
                 _summary = BuildSummary(processed);
             }
-        }
-        catch (ApiException ex)
-        {
-            _errorMessage = ApiErrorMessageFormatter.ForSprintActivity(ex);
-            _filterNotice = null;
-            Snackbar.Add(_errorMessage, Severity.Error);
         }
         catch (Exception)
         {

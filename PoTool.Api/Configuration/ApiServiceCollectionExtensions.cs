@@ -161,6 +161,8 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<ICacheStateRepository, CacheStateRepository>();
 
         // Register Cache Management Service (insights, granular reset, validation)
+        services.AddScoped<CacheReadinessStateService>();
+        services.AddScoped<CacheStateResponseService>();
         services.AddScoped<CacheManagementService>();
         services.AddScoped<SyncChangesSummaryService>();
         services.AddScoped<ExportConfigurationService>();

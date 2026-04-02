@@ -149,6 +149,7 @@ builder.Services.AddScoped<IRoadmapSnapshotsClient>(sp =>
 
 // Register client services
 builder.Services.AddScoped<WorkItemService>();
+builder.Services.AddScoped<MetricsStateService>();
 builder.Services.AddScoped<WorkItemLoadCoordinatorService>();
 builder.Services.AddScoped<PullRequestService>();
 builder.Services.AddScoped<PipelineService>();

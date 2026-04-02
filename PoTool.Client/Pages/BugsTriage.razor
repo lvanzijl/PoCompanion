@@ -5,6 +5,7 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Components.BugTriage
 @using PoTool.Client.Helpers
+@using PoTool.Shared.DataState
 @using PoTool.Shared.BugTriage
 @using MudBlazor
 @inject WorkItemService WorkItemService
@@ -55,6 +56,19 @@
             <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
             <MudText Typo="Typo.body2" Class="mt-2">Loading bugs...</MudText>
         </div>
+    }
+    else if (_dataState.State == DataStateDto.NotReady)
+    {
+        <DataStatePanel State="@_dataState.State"
+                        Title="Bug triage is syncing"
+                        Message="@(_dataState.Reason ?? "Bug triage data will load automatically after cache warming completes.")"
+                        ProductOwnerId="@_profileId" />
+    }
+    else if (_dataState.State == DataStateDto.Failed)
+    {
+        <DataStatePanel State="@_dataState.State"
+                        Title="Bug triage failed to load"
+                        Message="@(_dataState.Reason ?? "Bug triage data could not be loaded right now.")" />
     }
     else if (_errorMessage != null)
     {
@@ -157,6 +171,7 @@
 @code {
     private bool _isLoading = true;
     private string? _errorMessage;
+    private int? _profileId;
     private List<WorkItemWithValidationDto> _bugs = new();
     private HashSet<int> _untriagedBugIds = new();
     private int _untriagedCount => _untriagedBugIds.Count;
@@ -176,6 +191,7 @@
         new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
         new("Bug Triage", null, disabled: true, icon: Icons.Material.Filled.BugReport)
     };
+    private DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>> _dataState = DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.NotRequested();
 
     protected override async Task OnInitializedAsync()
     {
@@ -201,13 +217,24 @@
                 return;
             }
 
+            _profileId = activeProfile.Id;
+
             var profileProducts = await ProductService.GetProductsByOwnerAsync(activeProfile.Id);
             var productIds = profileProducts.Select(p => p.Id).ToArray();
 
             Logger.LogInformation("Loading bugs for {Count} products", productIds.Length);
 
-            // Load all work items
-            var allWorkItems = (await WorkItemService.GetAllWithValidationAsync(productIds)).ToList();
+            _dataState = DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.Loading();
+            var response = await WorkItemService.GetAllWithValidationStateAsync(productIds);
+            _dataState = DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.FromResponse(response, "Bug triage data could not be loaded right now.");
+
+            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            {
+                _bugs = new List<WorkItemWithValidationDto>();
+                return;
+            }
+
+            var allWorkItems = (_dataState.Data ?? Array.Empty<WorkItemWithValidationDto>()).ToList();
             
             // Filter to bugs only
             _bugs = allWorkItems
@@ -231,12 +258,6 @@
             }
 
             ApplyFilters();
-        }
-        catch (ApiException ex)
-        {
-            Logger.LogError(ex, "Failed to load bugs");
-            _errorMessage = ApiErrorMessageFormatter.ForBugsTriage(ex);
-            _bugs = new List<WorkItemWithValidationDto>();
         }
         catch (Exception ex)
         {

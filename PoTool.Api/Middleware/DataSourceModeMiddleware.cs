@@ -109,6 +109,17 @@ public sealed class DataSourceModeMiddleware
             return;
         }
 
+        if (routeIntent == DataSourceModeConfiguration.RouteIntent.CacheStateAwareRead)
+        {
+            context.Items[DataSourceModeConfiguration.ResolvedModeContextItemKey] = DataSourceMode.Cache;
+            modeProvider.SetCurrentMode(DataSourceMode.Cache);
+            _logger.LogInformation(
+                "[DataSourceMode] Route={Route} Mode=CacheStateAware Provider=Cache",
+                path);
+            await _next(context);
+            return;
+        }
+
         context.Items[DataSourceModeConfiguration.ResolvedModeContextItemKey] = DataSourceMode.Live;
         modeProvider.SetCurrentMode(DataSourceMode.Live);
         _logger.LogInformation(

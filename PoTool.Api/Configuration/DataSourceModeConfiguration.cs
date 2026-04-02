@@ -22,7 +22,8 @@ public static class DataSourceModeConfiguration
         Unknown = 0,
         LiveAllowed = 1,
         CacheOnlyAnalyticalRead = 2,
-        BlockedAmbiguous = 3
+        BlockedAmbiguous = 3,
+        CacheStateAwareRead = 4
     }
 
     /// <summary>
@@ -130,6 +131,12 @@ public static class DataSourceModeConfiguration
             return RouteIntent.CacheOnlyAnalyticalRead;
         }
 
+        if (IsCacheStateAwareWorkItemRoute(normalizedPath) ||
+            IsCacheStateAwareMetricsRoute(normalizedPath))
+        {
+            return RouteIntent.CacheStateAwareRead;
+        }
+
         if (LiveModeAllowedExactRoutes.Contains(normalizedPath) ||
             LiveModeAllowedRoutePrefixes.Any(route =>
                 HasPathPrefix(normalizedPath, route)))
@@ -167,7 +174,8 @@ public static class DataSourceModeConfiguration
     /// </summary>
     public static bool RequiresCache(string? path)
     {
-        return GetRouteIntent(path) == RouteIntent.CacheOnlyAnalyticalRead;
+        var intent = GetRouteIntent(path);
+        return intent is RouteIntent.CacheOnlyAnalyticalRead or RouteIntent.CacheStateAwareRead;
     }
 
     /// <summary>
@@ -231,6 +239,17 @@ public static class DataSourceModeConfiguration
             || IsWorkItemDetailRoute(path, "/backlog-priority")
             || IsWorkItemDetailRoute(path, "/iteration-path")
             || IsWorkItemDetailRoute(path, "/revisions");
+    }
+
+    private static bool IsCacheStateAwareWorkItemRoute(string path)
+    {
+        return HasPathPrefix(path, "/api/workitems/state");
+    }
+
+    private static bool IsCacheStateAwareMetricsRoute(string path)
+    {
+        return HasPathPrefix(path, "/api/metrics/state/work-item-activity")
+            || HasPathPrefix(path, "/api/metrics/state/portfolio-progress-trend");
     }
 
     private static bool IsCacheOnlyProjectPlanningSummaryRoute(string path)

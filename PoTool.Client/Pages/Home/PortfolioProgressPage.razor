@@ -4,7 +4,9 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Helpers
 @using PoTool.Client.Services
+@using PoTool.Client.Models
 @using PoTool.Client.Pages.Home.Components
+@using PoTool.Shared.DataState
 @using PoTool.Shared.Metrics
 @using System.Web
 @inject IProfileService ProfileService
@@ -12,6 +14,7 @@
 @inject SprintService SprintService
 @inject ProductService ProductService
 @inject IMetricsClient MetricsClient
+@inject MetricsStateService MetricsStateService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -39,6 +42,19 @@
     @if (_isLoading)
     {
         <LoadingIndicator IsLoading="true" />
+    }
+    else if (_dataState.State == DataStateDto.NotReady)
+    {
+        <DataStatePanel State="@_dataState.State"
+                        Title="Portfolio flow is syncing"
+                        Message="@(_dataState.Reason ?? "Portfolio flow data will load automatically after cache warming completes.")"
+                        ProductOwnerId="@_profileId" />
+    }
+    else if (_dataState.State == DataStateDto.Failed)
+    {
+        <DataStatePanel State="@_dataState.State"
+                        Title="Portfolio flow failed to load"
+                        Message="@(_dataState.Reason ?? "Portfolio flow could not be loaded right now.")" />
     }
     else if (!string.IsNullOrEmpty(_errorMessage))
     {
@@ -548,6 +564,7 @@
 
     // Trend data
     private PortfolioProgressTrendDto? _trendData;
+    private DataStateViewModel<DeliveryQueryResponseDto<PortfolioProgressTrendDto>> _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>.NotRequested();
     private CanonicalFilterNoticeModel? _filterNotice;
 
     // Net focus toggle — default ON (show Net only in Combined Flow)
@@ -646,11 +663,6 @@
                 // Auto-load trend data with defaults
                 await LoadTrendDataAsync();
             }
-        }
-        catch (ApiException ex)
-        {
-            _errorMessage = ApiErrorMessageFormatter.ForPortfolioFlow(ex);
-            Snackbar.Add(_errorMessage, Severity.Error);
         }
         catch (Exception)
         {
@@ -785,25 +797,39 @@
                 ? new[] { _selectedProductId.Value }
                 : null;
 
-            var response = await MetricsClient.GetPortfolioProgressTrendEnvelopeAsync(
+            _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>.Loading();
+            var response = await MetricsStateService.GetPortfolioProgressTrendStateAsync(
                 _profileId.Value,
                 sprintIds,
                 productFilter,
                 CancellationToken.None);
-            _filterNotice = CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(response).FilterMetadata);
-            _trendData = response.Data;
+            _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>.FromResponse(response, "Portfolio flow could not be loaded right now.");
+            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            {
+                _filterNotice = null;
+                _trendData = null;
+                return;
+            }
+
+            var envelope = _dataState.Data;
+            if (envelope is null)
+            {
+                _filterNotice = null;
+                _trendData = null;
+                return;
+            }
+
+            _filterNotice = CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(envelope).FilterMetadata);
+            _trendData = envelope.Data;
 
             if (_trendData != null)
             {
                 BuildChartData(_trendData);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            var message = ex is ApiException apiException
-                ? ApiErrorMessageFormatter.ForPortfolioFlow(apiException)
-                : "Portfolio flow could not be loaded right now. Try again later.";
-            Snackbar.Add(message, Severity.Warning);
+            Snackbar.Add("Portfolio flow could not be loaded right now. Try again later.", Severity.Warning);
             _filterNotice = null;
         }
         finally

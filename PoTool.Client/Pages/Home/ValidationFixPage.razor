@@ -1,8 +1,8 @@
 @page "/home/validation-fix"
 @using PoTool.Client.Components.Common
-@using PoTool.Client.ApiClient
 @using PoTool.Client.Helpers
 @using PoTool.Client.Models
+@using PoTool.Shared.DataState
 @using PoTool.Shared.WorkItems
 @using System.Web
 @inherits WorkspaceBase
@@ -62,6 +62,19 @@
                              PrimaryAction="@_recoveryPrimaryAction"
                              SecondaryActionLabel="Home"
                              SecondaryAction="NavigateToHome" />
+    }
+    else if (_dataState.State == DataStateDto.NotReady)
+    {
+        <DataStatePanel State="@_dataState.State"
+                        Title="Validation fix session is syncing"
+                        Message="@(_dataState.Reason ?? "Validation fix data will load automatically after cache warming completes.")"
+                        ProductOwnerId="@_profileId" />
+    }
+    else if (_dataState.State == DataStateDto.Failed)
+    {
+        <DataStatePanel State="@_dataState.State"
+                        Title="Validation fix session failed to load"
+                        Message="@(_dataState.Reason ?? "Validation fix data could not be loaded right now.")" />
     }
     else if (_loadError != null)
     {
@@ -271,6 +284,7 @@
 @code {
     private bool _isLoading = true;
     private string? _loadError;
+    private int? _profileId;
     private string? _productName;
     private string _categoryKey = string.Empty;
     private string _ruleId = string.Empty;
@@ -287,6 +301,7 @@
     private string? _recoveryMessage;
     private string? _recoveryPrimaryActionLabel;
     private EventCallback _recoveryPrimaryAction;
+    private DataStateViewModel<ValidationFixSessionDto> _dataState = DataStateViewModel<ValidationFixSessionDto>.NotRequested();
 
     /// <summary>The current work item being reviewed in the session.</summary>
     private ValidationFixItemDto? CurrentItem =>
@@ -319,6 +334,7 @@
                 return;
 
             var activeProfile = await ProfileService.GetActiveProfileAsync();
+            _profileId = activeProfile?.Id;
             var profileProducts = activeProfile != null
                 ? (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList()
                 : new List<ProductDto>();
@@ -334,17 +350,11 @@
                 productIds = null;
 
             _productIds = productIds;
-            _session = await WorkItemService.GetValidationFixSessionAsync(_ruleId, _categoryKey, productIds);
+            _dataState = DataStateViewModel<ValidationFixSessionDto>.Loading();
+            var response = await WorkItemService.GetValidationFixSessionStateAsync(_ruleId, _categoryKey, productIds);
+            _dataState = DataStateViewModel<ValidationFixSessionDto>.FromResponse(response, "Validation fix data could not be loaded right now.");
+            _session = _dataState.Data;
             _activeItems = _session?.Items.ToList() ?? new();
-            UpdateBreadcrumbs();
-        }
-        catch (HttpRequestException ex)
-        {
-            SetRecovery(
-                "Fix session unavailable",
-                ApiErrorMessageFormatter.ForValidationFix(ex),
-                "Back to Queue",
-                NavigateToQueue);
             UpdateBreadcrumbs();
         }
         catch (Exception ex)
