@@ -30,7 +30,7 @@ public class WorkItemService
     private const string ValidationTriageEndpoint = "/api/workitems/validation-triage";
     private const string ValidationQueueEndpoint = "/api/workitems/validation-queue";
     private const string ValidationFixEndpoint = "/api/workitems/validation-fix";
-    private const string WorkItemStateEndpoint = "/api/workitems/state";
+    private const string WorkItemEndpoint = "/api/workitems";
 
     // JSON options for case-insensitive deserialization of API responses
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -77,7 +77,7 @@ public class WorkItemService
 
     public async Task<DataStateResponseDto<WorkItemDto>?> GetByTfsIdStateAsync(int tfsId, CancellationToken cancellationToken = default)
         => await _httpClient.GetFromJsonAsync<DataStateResponseDto<WorkItemDto>>(
-            $"{WorkItemStateEndpoint}/{tfsId}",
+            $"{WorkItemEndpoint}/{tfsId}",
             _jsonOptions,
             cancellationToken);
 
@@ -198,7 +198,7 @@ public class WorkItemService
         int[]? productIds = null,
         CancellationToken cancellationToken = default)
     {
-        var url = "/api/workitems/state/validated";
+        var url = "/api/workitems/validated";
         if (productIds != null && productIds.Length > 0)
         {
             url += $"?productIds={string.Join(",", productIds)}";
@@ -234,7 +234,7 @@ public class WorkItemService
         int[]? productIds = null,
         CancellationToken cancellationToken = default)
     {
-        var url = "/api/workitems/state/validation-triage";
+        var url = ValidationTriageEndpoint;
         if (productIds != null && productIds.Length > 0)
         {
             url += $"?productIds={string.Join(",", productIds)}";
@@ -288,7 +288,7 @@ public class WorkItemService
         int[]? productIds = null,
         CancellationToken cancellationToken = default)
     {
-        var url = $"/api/workitems/state/validation-queue?category={Uri.EscapeDataString(categoryKey)}";
+        var url = $"{ValidationQueueEndpoint}?category={Uri.EscapeDataString(categoryKey)}";
         if (productIds != null && productIds.Length > 0)
         {
             url += $"&productIds={string.Join(",", productIds)}";
@@ -328,7 +328,7 @@ public class WorkItemService
         int[]? productIds = null,
         CancellationToken cancellationToken = default)
     {
-        var url = $"/api/workitems/state/validation-fix?ruleId={Uri.EscapeDataString(ruleId)}&category={Uri.EscapeDataString(categoryKey)}";
+        var url = $"{ValidationFixEndpoint}?ruleId={Uri.EscapeDataString(ruleId)}&category={Uri.EscapeDataString(categoryKey)}";
         if (productIds != null && productIds.Length > 0)
         {
             url += $"&productIds={string.Join(",", productIds)}";

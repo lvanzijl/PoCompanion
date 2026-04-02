@@ -834,42 +834,6 @@ public class MetricsController : ControllerBase
         }
     }
 
-    [HttpGet("state/portfolio-progress-trend")]
-    public async Task<ActionResult<DataStateResponseDto<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>>> GetPortfolioProgressTrendState(
-        [FromQuery][Required] int productOwnerId,
-        [FromQuery][Required] int[] sprintIds,
-        [FromQuery] int[]? productIds = null,
-        CancellationToken cancellationToken = default)
-    {
-        if (sprintIds.Length == 0)
-        {
-            return BadRequest("At least one sprint ID is required");
-        }
-
-        var response = await _cacheStateResponseService.ExecuteAsync(
-            async ct =>
-            {
-                var resolution = await _deliveryFilterResolutionService.ResolveAsync(
-                    new DeliveryFilterBoundaryRequest(productOwnerId, productIds, SprintIds: sprintIds),
-                    nameof(GetPortfolioProgressTrendState),
-                    ct);
-
-                var result = await _mediator.Send(new GetPortfolioProgressTrendQuery(resolution.EffectiveFilter), ct);
-                var trend = result ?? new PortfolioProgressTrendDto
-                {
-                    Sprints = Array.Empty<PortfolioSprintProgressDto>(),
-                    Summary = new PortfolioProgressSummaryDto()
-                };
-
-                return DeliveryFilterResolutionService.ToResponse(trend, resolution);
-            },
-            envelope => envelope?.Data?.Sprints.Count == 0,
-            "No portfolio flow trend data is available for the selected sprint range.",
-            "Portfolio flow could not be loaded right now.",
-            cancellationToken);
-
-        return Ok(response);
-    }
 
     /// <summary>
     /// Gets capacity calibration metrics (velocity distribution + predictability) for a selected sprint range.
@@ -1072,47 +1036,6 @@ public class MetricsController : ControllerBase
         }
     }
 
-    [HttpGet("state/work-item-activity/{workItemId:int}")]
-    public async Task<ActionResult<DataStateResponseDto<SprintQueryResponseDto<WorkItemActivityDetailsDto>>>> GetWorkItemActivityDetailsState(
-        int workItemId,
-        [FromQuery][Required] int productOwnerId,
-        [FromQuery] int? sprintId = null,
-        [FromQuery] DateTimeOffset? periodStartUtc = null,
-        [FromQuery] DateTimeOffset? periodEndUtc = null,
-        CancellationToken cancellationToken = default)
-    {
-        var response = await _cacheStateResponseService.ExecuteAsync<SprintQueryResponseDto<WorkItemActivityDetailsDto>>(
-            async ct =>
-            {
-                var resolution = await _sprintFilterResolutionService.ResolveAsync(
-                    new SprintFilterBoundaryRequest(
-                        ProductOwnerId: productOwnerId,
-                        SprintId: sprintId,
-                        RangeStartUtc: periodStartUtc,
-                        RangeEndUtc: periodEndUtc),
-                    nameof(GetWorkItemActivityDetailsState),
-                    ct);
-
-                var details = await _mediator.Send(new GetWorkItemActivityDetailsQuery(productOwnerId, workItemId, resolution.EffectiveFilter), ct)
-                    ?? new WorkItemActivityDetailsDto
-                    {
-                        WorkItemId = workItemId,
-                        WorkItemTitle = $"Work item #{workItemId}",
-                        WorkItemType = "Work Item",
-                        PeriodStartUtc = periodStartUtc,
-                        PeriodEndUtc = periodEndUtc,
-                        Activities = Array.Empty<WorkItemActivityEntryDto>()
-                    };
-
-                return SprintFilterResolutionService.ToResponse(details, resolution);
-            },
-            envelope => envelope?.Data is null || envelope.Data.Activities.Count == 0,
-            "No activity details are available for this work item.",
-            "Sprint activity could not be loaded right now.",
-            cancellationToken);
-
-        return Ok(response);
-    }
 
     private static SprintMetricsDto CreateEmptySprintMetricsDto(
         SprintFilterResolution resolution,

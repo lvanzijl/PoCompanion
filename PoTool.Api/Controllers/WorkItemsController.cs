@@ -128,49 +128,6 @@ public class WorkItemsController : ControllerBase
         }
     }
 
-    [HttpGet("state/validated")]
-    public async Task<ActionResult<DataStateResponseDto<IReadOnlyList<WorkItemWithValidationDto>>>> GetAllWithValidationState(
-        [FromQuery] string? productIds = null,
-        CancellationToken cancellationToken = default)
-    {
-        if (!TryParseProductIds(productIds, out var productIdArray, out var badRequest))
-        {
-            return badRequest!;
-        }
-
-        var response = await _cacheStateResponseService.ExecuteAsync<IReadOnlyList<WorkItemWithValidationDto>>(
-            async ct => (await _mediator.Send(new GetAllWorkItemsWithValidationQuery(productIdArray), ct)).ToList(),
-            workItems => workItems is null || workItems.Count == 0,
-            "No cached bug data is available for the active profile.",
-            "Bug triage data could not be loaded right now.",
-            cancellationToken);
-
-        return Ok(response);
-    }
-
-    [HttpGet("state/validation-triage")]
-    public async Task<ActionResult<DataStateResponseDto<ValidationTriageSummaryDto>>> GetValidationTriageState(
-        [FromQuery] string? productIds = null,
-        CancellationToken cancellationToken = default)
-    {
-        if (!TryParseProductIds(productIds, out var productIdArray, out var badRequest))
-        {
-            return badRequest!;
-        }
-
-        var response = await _cacheStateResponseService.ExecuteAsync(
-            async ct =>
-            {
-                ValidationTriageSummaryDto? summary = await _mediator.Send(new GetValidationTriageSummaryQuery(productIdArray), ct);
-                return summary;
-            },
-            summary => summary is null,
-            "No validation categories are available yet.",
-            "Validation triage data could not be loaded right now.",
-            cancellationToken);
-
-        return Ok(response);
-    }
 
     /// <summary>
     /// Gets a grouped validation triage summary for the Validation Triage page.
@@ -231,35 +188,6 @@ public class WorkItemsController : ControllerBase
         }
     }
 
-    [HttpGet("state/validation-queue")]
-    public async Task<ActionResult<DataStateResponseDto<ValidationQueueDto>>> GetValidationQueueState(
-        [FromQuery] string category,
-        [FromQuery] string? productIds = null,
-        CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(category))
-        {
-            return BadRequest("category query parameter is required.");
-        }
-
-        if (!TryParseProductIds(productIds, out var productIdArray, out var badRequest))
-        {
-            return badRequest!;
-        }
-
-        var response = await _cacheStateResponseService.ExecuteAsync(
-            async ct =>
-            {
-                ValidationQueueDto? queue = await _mediator.Send(new GetValidationQueueQuery(category, productIdArray), ct);
-                return queue;
-            },
-            queue => queue is null,
-            "No validation queue data is available for this category yet.",
-            "Validation queue data could not be loaded right now.",
-            cancellationToken);
-
-        return Ok(response);
-    }
 
     /// <summary>
     /// Gets the validation fix session for a specific rule.
@@ -300,41 +228,6 @@ public class WorkItemsController : ControllerBase
         }
     }
 
-    [HttpGet("state/validation-fix")]
-    public async Task<ActionResult<DataStateResponseDto<ValidationFixSessionDto>>> GetValidationFixSessionState(
-        [FromQuery] string ruleId,
-        [FromQuery] string category,
-        [FromQuery] string? productIds = null,
-        CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(ruleId))
-        {
-            return BadRequest("ruleId query parameter is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(category))
-        {
-            return BadRequest("category query parameter is required.");
-        }
-
-        if (!TryParseProductIds(productIds, out var productIdArray, out var badRequest))
-        {
-            return badRequest!;
-        }
-
-        var response = await _cacheStateResponseService.ExecuteAsync(
-            async ct =>
-            {
-                ValidationFixSessionDto? session = await _mediator.Send(new GetValidationFixSessionQuery(ruleId, category, productIdArray), ct);
-                return session;
-            },
-            session => session is null,
-            "No validation fix data is available for this rule yet.",
-            "Validation fix data could not be loaded right now.",
-            cancellationToken);
-
-        return Ok(response);
-    }
 
     /// <summary>
     /// Re-fetches a work item from TFS and updates the local DB cache.
@@ -522,20 +415,6 @@ public class WorkItemsController : ControllerBase
         }
     }
 
-    [HttpGet("state/{tfsId:int}")]
-    public async Task<ActionResult<DataStateResponseDto<WorkItemDto>>> GetByTfsIdState(
-        int tfsId,
-        CancellationToken cancellationToken)
-    {
-        var response = await _cacheStateResponseService.ExecuteAsync(
-            ct => _mediator.Send(new GetWorkItemByIdQuery(tfsId), ct).AsTask(),
-            workItem => workItem is null,
-            "No cached work item matches this identifier.",
-            "Work item detail could not be loaded right now.",
-            cancellationToken);
-
-        return Ok(response);
-    }
 
     /// <summary>
     /// Validates a work item by ID directly from TFS (bypasses cache).

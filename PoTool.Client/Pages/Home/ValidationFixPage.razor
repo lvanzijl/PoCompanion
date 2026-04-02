@@ -433,7 +433,8 @@
             }
 
             // Reload the fix session to reflect the updated state
-            var updated = await WorkItemService.GetValidationFixSessionAsync(_ruleId, _categoryKey, _productIds);
+            var updatedResponse = await WorkItemService.GetValidationFixSessionStateAsync(_ruleId, _categoryKey, _productIds);
+            var updated = updatedResponse?.Data;
             if (updated != null)
             {
                 _session = updated;

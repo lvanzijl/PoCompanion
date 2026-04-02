@@ -1,9 +1,10 @@
-@using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Helpers
+@using PoTool.Client.Models
 @using PoTool.Client.Services
+@using PoTool.Shared.DataState
 @using PoTool.Shared.Metrics
-@inject IMetricsClient MetricsClient
+@inject MetricsStateService MetricsStateService
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 
@@ -27,6 +28,19 @@
     @if (_isLoading)
     {
         <LoadingIndicator IsLoading="true" />
+    }
+    else if (_dataState.State == DataStateDto.NotReady)
+    {
+        <DataStatePanel State="@_dataState.State"
+                        Title="Portfolio history is syncing"
+                        Message="@(_dataState.Reason ?? "Portfolio history will load after cached portfolio snapshots are ready.")"
+                        ProductOwnerId="@_profileId" />
+    }
+    else if (_dataState.State == DataStateDto.Failed)
+    {
+        <DataStatePanel State="@_dataState.State"
+                        Title="Portfolio history failed to load"
+                        Message="@(_dataState.Reason ?? "Portfolio history could not be loaded right now.")" />
     }
     else if (!string.IsNullOrWhiteSpace(_errorMessage))
     {
@@ -478,6 +492,7 @@
     private IReadOnlyList<PortfolioComparisonItemDto> _changedWorkPackageItems = Array.Empty<PortfolioComparisonItemDto>();
     private IReadOnlyList<PortfolioSnapshotItemDto> _stableWorkPackageItems = Array.Empty<PortfolioSnapshotItemDto>();
     private IReadOnlyList<PortfolioComparisonItemDto> _changedComparisonItems = Array.Empty<PortfolioComparisonItemDto>();
+    private DataStateViewModel<object> _dataState = DataStateViewModel<object>.NotRequested();
 
     private sealed record PrimarySignalDisplay(
         string Title,
@@ -513,8 +528,26 @@
 
             _profileId = activeProfile.Id;
             _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            _dataState = DataStateViewModel<object>.Loading();
+            var progressResponse = await MetricsStateService.GetPortfolioProgressStateAsync(
+                activeProfile.Id,
+                _productId,
+                NullIfWhiteSpace(_projectNumber),
+                NullIfWhiteSpace(_workPackage),
+                _lifecycleState,
+                _sortBy,
+                _sortDirection,
+                _groupBy);
+            _dataState = progressResponse is null
+                ? new DataStateViewModel<object>(DataStateDto.Failed, Reason: "Portfolio history could not be loaded right now.")
+                : new DataStateViewModel<object>(progressResponse.State, progressResponse.Data, progressResponse.Reason, progressResponse.RetryAfterSeconds);
+            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            {
+                return;
+            }
 
-            _progress = await MetricsClient.GetPortfolioProgressAsync(
+            _progress = progressResponse?.Data;
+            var snapshotResponse = await MetricsStateService.GetPortfolioSnapshotsStateAsync(
                 activeProfile.Id,
                 _productId,
                 NullIfWhiteSpace(_projectNumber),
@@ -523,16 +556,8 @@
                 _sortBy,
                 _sortDirection,
                 _groupBy);
-            _snapshot = await MetricsClient.GetPortfolioSnapshotsAsync(
-                activeProfile.Id,
-                _productId,
-                NullIfWhiteSpace(_projectNumber),
-                NullIfWhiteSpace(_workPackage),
-                _lifecycleState,
-                _sortBy,
-                _sortDirection,
-                _groupBy);
-            _comparison = await MetricsClient.GetPortfolioComparisonAsync(
+            _snapshot = snapshotResponse?.Data;
+            var comparisonResponse = await MetricsStateService.GetPortfolioComparisonStateAsync(
                 activeProfile.Id,
                 _productId,
                 NullIfWhiteSpace(_projectNumber),
@@ -545,7 +570,8 @@
                 rangeEndUtc: null,
                 _includeArchivedSnapshots,
                 _compareToSnapshotId);
-            _trend = await MetricsClient.GetPortfolioTrendsAsync(
+            _comparison = comparisonResponse?.Data;
+            var trendResponse = await MetricsStateService.GetPortfolioTrendsStateAsync(
                 activeProfile.Id,
                 _productId,
                 NullIfWhiteSpace(_projectNumber),
@@ -558,7 +584,8 @@
                 rangeStartUtc: null,
                 rangeEndUtc: null,
                 _includeArchivedSnapshots);
-            var signalResponse = await MetricsClient.GetPortfolioSignalsAsync(
+            _trend = trendResponse?.Data;
+            var signalResponse = await MetricsStateService.GetPortfolioSignalsStateAsync(
                 activeProfile.Id,
                 _productId,
                 NullIfWhiteSpace(_projectNumber),
@@ -572,7 +599,7 @@
                 rangeEndUtc: null,
                 _includeArchivedSnapshots,
                 _compareToSnapshotId);
-            _signals = signalResponse.Signals.ToArray();
+            _signals = signalResponse?.Data?.Signals.ToArray() ?? Array.Empty<PortfolioDecisionSignalDto>();
 
             if (_compareToSnapshotId.HasValue
                 && _trend?.Snapshots.All(snapshot => snapshot.SnapshotId != _compareToSnapshotId.Value) == true)
@@ -581,10 +608,6 @@
             }
 
             RebuildComparisonViewState();
-        }
-        catch (ApiException ex)
-        {
-            _errorMessage = ApiErrorMessageFormatter.ForPortfolioHistory(ex);
         }
         catch (Exception)
         {

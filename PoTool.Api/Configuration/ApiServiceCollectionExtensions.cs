@@ -54,6 +54,7 @@ public static class ApiServiceCollectionExtensions
         // Add controllers and OpenAPI
         services.AddControllers(options =>
         {
+            options.Filters.Add<CacheBackedDataStateContractFilter>();
             options.Filters.Add(new EnforceSharedDtoActionResultContractFilter());
         });
         services.AddOpenApi();
@@ -159,6 +160,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<ISprintRepository, SprintRepository>();
         services.AddScoped<IRepositoryConfigRepository, Repositories.RepositoryRepository>();
         services.AddScoped<ICacheStateRepository, CacheStateRepository>();
+        services.AddScoped<CacheBackedDataStateContractFilter>();
 
         // Register Cache Management Service (insights, granular reset, validation)
         services.AddScoped<CacheReadinessStateService>();

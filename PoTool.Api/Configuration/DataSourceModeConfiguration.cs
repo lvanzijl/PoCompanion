@@ -22,8 +22,7 @@ public static class DataSourceModeConfiguration
         Unknown = 0,
         LiveAllowed = 1,
         CacheOnlyAnalyticalRead = 2,
-        BlockedAmbiguous = 3,
-        CacheStateAwareRead = 4
+        BlockedAmbiguous = 3
     }
 
     /// <summary>
@@ -110,6 +109,15 @@ public static class DataSourceModeConfiguration
         "/api/buildquality"
     };
 
+    public static readonly HashSet<string> CacheModeRequiredExactRoutes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "/api/portfolio/progress",
+        "/api/portfolio/snapshots",
+        "/api/portfolio/comparison",
+        "/api/portfolio/trends",
+        "/api/portfolio/signals"
+    };
+
     /// <summary>
     /// Resolves the route intent for the current request path.
     /// </summary>
@@ -131,10 +139,9 @@ public static class DataSourceModeConfiguration
             return RouteIntent.CacheOnlyAnalyticalRead;
         }
 
-        if (IsCacheStateAwareWorkItemRoute(normalizedPath) ||
-            IsCacheStateAwareMetricsRoute(normalizedPath))
+        if (CacheModeRequiredExactRoutes.Contains(normalizedPath))
         {
-            return RouteIntent.CacheStateAwareRead;
+            return RouteIntent.CacheOnlyAnalyticalRead;
         }
 
         if (LiveModeAllowedExactRoutes.Contains(normalizedPath) ||
@@ -174,8 +181,7 @@ public static class DataSourceModeConfiguration
     /// </summary>
     public static bool RequiresCache(string? path)
     {
-        var intent = GetRouteIntent(path);
-        return intent is RouteIntent.CacheOnlyAnalyticalRead or RouteIntent.CacheStateAwareRead;
+        return GetRouteIntent(path) == RouteIntent.CacheOnlyAnalyticalRead;
     }
 
     /// <summary>
@@ -239,17 +245,6 @@ public static class DataSourceModeConfiguration
             || IsWorkItemDetailRoute(path, "/backlog-priority")
             || IsWorkItemDetailRoute(path, "/iteration-path")
             || IsWorkItemDetailRoute(path, "/revisions");
-    }
-
-    private static bool IsCacheStateAwareWorkItemRoute(string path)
-    {
-        return HasPathPrefix(path, "/api/workitems/state");
-    }
-
-    private static bool IsCacheStateAwareMetricsRoute(string path)
-    {
-        return HasPathPrefix(path, "/api/metrics/state/work-item-activity")
-            || HasPathPrefix(path, "/api/metrics/state/portfolio-progress-trend");
     }
 
     private static bool IsCacheOnlyProjectPlanningSummaryRoute(string path)

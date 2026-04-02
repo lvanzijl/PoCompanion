@@ -68,7 +68,7 @@ public class DataSourceModeMiddlewareTests
     }
 
     [TestMethod]
-    public async Task InvokeAsync_CacheOnlyRoute_WithoutCache_ReturnsConflictAndDoesNotCallNext()
+    public async Task InvokeAsync_CacheOnlyRoute_WithoutCache_SetsCacheModeAndCallsNext()
     {
         // Arrange
         var context = CreateHttpContext("/api/pullrequests");
@@ -76,27 +76,17 @@ public class DataSourceModeMiddlewareTests
             next: _ => { _nextCalled = true; return Task.CompletedTask; },
             logger: _mockLogger.Object);
 
-        _mockProfileProvider
-            .Setup(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
-
-        _mockModeProvider
-            .Setup(p => p.GetModeAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(DataSourceMode.Live);
-
         // Act
         await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
 
         // Assert
-        Assert.AreEqual(StatusCodes.Status409Conflict, context.Response.StatusCode);
-        _mockModeProvider.Verify(p => p.SetCurrentMode(It.IsAny<DataSourceMode>()), Times.Never);
-        Assert.IsFalse(_nextCalled);
-        var body = await ReadResponseBodyAsync(context);
-        StringAssert.Contains(body, "Cache not ready");
+        Assert.AreEqual(StatusCodes.Status200OK, context.Response.StatusCode);
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Cache), Times.Once);
+        Assert.IsTrue(_nextCalled);
     }
 
     [TestMethod]
-    public async Task InvokeAsync_CacheOnlyRoute_NoActiveProfile_ReturnsConflictAndDoesNotCallNext()
+    public async Task InvokeAsync_CacheOnlyRoute_NoActiveProfile_StillSetsCacheModeAndCallsNext()
     {
         // Arrange
         var context = CreateHttpContext("/api/pipelines");
@@ -104,25 +94,19 @@ public class DataSourceModeMiddlewareTests
             next: _ => { _nextCalled = true; return Task.CompletedTask; },
             logger: _mockLogger.Object);
 
-        _mockProfileProvider
-            .Setup(p => p.GetCurrentProductOwnerIdAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync((int?)null);
-
         // Act
         await middleware.InvokeAsync(context, _mockModeProvider.Object, _mockProfileProvider.Object);
 
         // Assert
-        Assert.AreEqual(StatusCodes.Status409Conflict, context.Response.StatusCode);
-        _mockModeProvider.Verify(p => p.SetCurrentMode(It.IsAny<DataSourceMode>()), Times.Never);
-        Assert.IsFalse(_nextCalled);
-        var body = await ReadResponseBodyAsync(context);
-        StringAssert.Contains(body, "active profile");
+        Assert.AreEqual(StatusCodes.Status200OK, context.Response.StatusCode);
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Cache), Times.Once);
+        Assert.IsTrue(_nextCalled);
     }
 
     [TestMethod]
     public async Task InvokeAsync_CacheStateAwareRoute_SetsCacheModeWithoutBlocking()
     {
-        var context = CreateHttpContext("/api/workitems/state/validation-queue");
+        var context = CreateHttpContext("/api/workitems/validation-queue");
         var middleware = new DataSourceModeMiddleware(
             next: _ => { _nextCalled = true; return Task.CompletedTask; },
             logger: _mockLogger.Object);
