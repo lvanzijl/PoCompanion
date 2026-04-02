@@ -18,7 +18,9 @@ internal static class RequiredRelationshipPersistenceValidator
         ValidatePendingRequiredRelationshipsCore(
             context,
             operation,
-            resolvePrincipal: (entityType, keyValues) => context.Find(entityType.ClrType, keyValues));
+            resolvePrincipal: (entityType, keyValues) => context.Find(entityType.ClrType, keyValues))
+            .GetAwaiter()
+            .GetResult();
     }
 
     public static Task ValidatePendingRequiredRelationshipsAsync(

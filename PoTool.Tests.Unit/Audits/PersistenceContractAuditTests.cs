@@ -48,7 +48,7 @@ public sealed class PersistenceContractAuditTests
 
         StringAssert.Contains(source, "Global persistence contract");
         StringAssert.Contains(source, "required foreign keys");
-        StringAssert.Contains(source, "validation before persistence");
+        StringAssert.Contains(source, "Validation before persistence is mandatory");
     }
 
     private static string GetRepositoryRoot()

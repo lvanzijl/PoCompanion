@@ -49,7 +49,7 @@ public sealed class PersistenceRelationshipContractTests
             CreatedAt = DateTimeOffset.UtcNow
         });
 
-        var ex = Assert.ThrowsException<InvalidOperationException>(() => context.SaveChanges());
+        var ex = Assert.ThrowsExactly<InvalidOperationException>(() => context.SaveChanges());
 
         StringAssert.Contains(ex.Message, "RepositoryEntity");
         StringAssert.Contains(ex.Message, "ProductId");
@@ -67,7 +67,7 @@ public sealed class PersistenceRelationshipContractTests
             CreatedAt = DateTimeOffset.UtcNow
         });
 
-        var ex = await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => context.SaveChangesAsync());
+        var ex = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => context.SaveChangesAsync());
 
         StringAssert.Contains(ex.Message, "RepositoryEntity");
         StringAssert.Contains(ex.Message, "missing parent 'ProductEntity'");
@@ -349,11 +349,14 @@ public sealed class PersistenceRelationshipContractTests
 
         foreach (var (relationship, coveredBy) in RequiredForeignKeyCoverageManifest)
         {
-            Assert.IsTrue(coveredBy.Length > 0, $"Coverage manifest entry '{relationship}' must reference at least one test.");
+            Assert.IsNotEmpty(coveredBy, $"Coverage manifest entry '{relationship}' must reference at least one test.");
 
             foreach (var testName in coveredBy)
             {
-                Assert.IsTrue(testMethods.Contains(testName), $"Coverage manifest entry '{relationship}' references unknown test '{testName}'.");
+                if (!testMethods.Contains(testName))
+                {
+                    Assert.Fail($"Coverage manifest entry '{relationship}' references unknown test '{testName}'.");
+                }
             }
         }
     }
