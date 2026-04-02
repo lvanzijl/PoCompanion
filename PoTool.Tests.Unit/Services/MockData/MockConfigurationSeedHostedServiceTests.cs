@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -17,7 +18,7 @@ public sealed class MockConfigurationSeedHostedServiceTests
     [TestMethod]
     public async Task StartAsync_WhenDatabaseIsEmpty_SeedsUsableMockConfiguration()
     {
-        await using var provider = CreateServiceProvider();
+        await using var provider = CreateInMemoryServiceProvider();
         var service = provider.GetRequiredService<MockConfigurationSeedHostedService>();
 
         await service.StartAsync(CancellationToken.None);
@@ -81,7 +82,7 @@ public sealed class MockConfigurationSeedHostedServiceTests
     [TestMethod]
     public async Task StartAsync_WhenCalledTwice_DoesNotDuplicateMockConfiguration()
     {
-        await using var provider = CreateServiceProvider();
+        await using var provider = CreateInMemoryServiceProvider();
         var service = provider.GetRequiredService<MockConfigurationSeedHostedService>();
 
         await service.StartAsync(CancellationToken.None);
@@ -107,7 +108,7 @@ public sealed class MockConfigurationSeedHostedServiceTests
     [TestMethod]
     public async Task StartAsync_SeedsOrderedPortfolioHistoryForActiveProfile()
     {
-        await using var provider = CreateServiceProvider();
+        await using var provider = CreateInMemoryServiceProvider();
         var service = provider.GetRequiredService<MockConfigurationSeedHostedService>();
 
         await service.StartAsync(CancellationToken.None);
@@ -180,6 +181,42 @@ public sealed class MockConfigurationSeedHostedServiceTests
             "The latest snapshot should show active work packages at full completion.");
     }
 
+    [TestMethod]
+    public async Task StartAsync_WhenUsingSqlite_SeedsMockConfigurationWithoutForeignKeyViolations()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var provider = CreateSqliteServiceProvider(connection);
+
+        await using (var setupScope = provider.CreateAsyncScope())
+        {
+            var setupContext = setupScope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+            await setupContext.Database.EnsureCreatedAsync();
+        }
+
+        var service = provider.GetRequiredService<MockConfigurationSeedHostedService>();
+        await service.StartAsync(CancellationToken.None);
+
+        await using var scope = provider.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+
+        var project = await context.Projects.SingleAsync();
+        var products = await context.Products
+            .Include(product => product.Project)
+            .Include(product => product.ProductTeamLinks)
+            .OrderBy(product => product.Id)
+            .ToListAsync();
+        var productTeamLinks = await context.ProductTeamLinks.ToListAsync();
+
+        Assert.AreEqual("mock-project-battleship-systems", project.Id);
+        Assert.AreEqual("battleship-systems", project.Alias);
+        Assert.AreEqual("Battleship Systems", project.Name);
+        Assert.HasCount(6, products, "Expected SQLite seeding to create the mock products.");
+        Assert.IsTrue(products.All(product => product.ProjectId == project.Id), "Each seeded product should reference the seeded mock project.");
+        Assert.IsTrue(products.All(product => product.Project?.Id == project.Id), "Each seeded product should materialize the seeded mock project.");
+        Assert.IsTrue(productTeamLinks.Count > 0, "Expected seeded product-team links to exist under SQLite.");
+    }
+
     private static PortfolioReadModelStateService CreateStateService(PoToolDbContext context)
         => new(
             context,
@@ -189,13 +226,30 @@ public sealed class MockConfigurationSeedHostedServiceTests
                 NullLogger<PortfolioSnapshotSelectionService>.Instance),
             new ProductAggregationService());
 
-    private static ServiceProvider CreateServiceProvider()
+    private static ServiceProvider CreateInMemoryServiceProvider()
     {
         var services = new ServiceCollection();
         var databaseName = $"mock-seed-{Guid.NewGuid()}";
         services.AddLogging();
         services.AddDbContext<PoToolDbContext>(options =>
             options.UseInMemoryDatabase(databaseName));
+        ConfigureCommonServices(services);
+
+        return services.BuildServiceProvider();
+    }
+
+    private static ServiceProvider CreateSqliteServiceProvider(SqliteConnection connection)
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddDbContext<PoToolDbContext>(options => options.UseSqlite(connection));
+        ConfigureCommonServices(services);
+
+        return services.BuildServiceProvider();
+    }
+
+    private static void ConfigureCommonServices(IServiceCollection services)
+    {
         services.AddSingleton<BattleshipWorkItemGenerator>();
         services.AddSingleton<BattleshipDependencyGenerator>();
         services.AddSingleton<BattleshipPullRequestGenerator>();
@@ -203,7 +257,5 @@ public sealed class MockConfigurationSeedHostedServiceTests
         services.AddSingleton<MockDataValidator>();
         services.AddSingleton<BattleshipMockDataFacade>();
         services.AddSingleton<MockConfigurationSeedHostedService>();
-
-        return services.BuildServiceProvider();
     }
 }

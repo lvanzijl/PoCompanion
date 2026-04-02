@@ -13,6 +13,8 @@ namespace PoTool.Api.Services.MockData;
 /// </summary>
 public sealed class MockConfigurationSeedHostedService : IHostedService
 {
+    private const string MockProjectId = "mock-project-battleship-systems";
+    private const string MockProjectAlias = "battleship-systems";
     private const string MockOrganizationUrl = "https://dev.azure.com/mock";
     private const string MockProjectName = "Battleship Systems";
 
@@ -111,8 +113,9 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
                 return;
             }
 
+            var project = await EnsureMockProjectAsync(context, cancellationToken);
             var teams = await SeedTeamsAsync(context, hierarchy, now, cancellationToken);
-            await SeedProfilesAndProductsAsync(context, hierarchy, goals, teams, now, cancellationToken);
+            await SeedProfilesAndProductsAsync(context, hierarchy, goals, teams, project, now, cancellationToken);
         }
 
         await EnsureMockRepositoriesAsync(context, now, cancellationToken);
@@ -130,6 +133,37 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    private async Task<ProjectEntity> EnsureMockProjectAsync(
+        PoToolDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var existingProject = await context.Projects
+            .FirstOrDefaultAsync(project =>
+                project.Id == MockProjectId ||
+                project.Alias == MockProjectAlias ||
+                project.Name == MockProjectName,
+                cancellationToken);
+
+        if (existingProject != null)
+        {
+            return existingProject;
+        }
+
+        var project = new ProjectEntity
+        {
+            Id = MockProjectId,
+            Alias = MockProjectAlias,
+            Name = MockProjectName
+        };
+
+        context.Projects.Add(project);
+        await SaveChangesWithDiagnosticsAsync(
+            context,
+            cancellationToken,
+            $"creating mock project '{MockProjectName}'");
+        return project;
+    }
 
     private static async Task EnsureMockTfsConfigurationAsync(
         PoToolDbContext context,
@@ -162,7 +196,7 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    private static async Task<List<TeamEntity>> SeedTeamsAsync(
+    private async Task<List<TeamEntity>> SeedTeamsAsync(
         PoToolDbContext context,
         IReadOnlyCollection<PoTool.Shared.WorkItems.WorkItemDto> hierarchy,
         DateTimeOffset now,
@@ -191,15 +225,19 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
             .ToList();
 
         context.Teams.AddRange(teams);
-        await context.SaveChangesAsync(cancellationToken);
+        await SaveChangesWithDiagnosticsAsync(
+            context,
+            cancellationToken,
+            "creating mock teams");
         return teams;
     }
 
-    private static async Task SeedProfilesAndProductsAsync(
+    private async Task SeedProfilesAndProductsAsync(
         PoToolDbContext context,
         IReadOnlyCollection<PoTool.Shared.WorkItems.WorkItemDto> hierarchy,
         IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto> goals,
         IReadOnlyCollection<TeamEntity> teams,
+        ProjectEntity project,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
@@ -224,7 +262,10 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
             };
 
             context.Profiles.Add(profile);
-            await context.SaveChangesAsync(cancellationToken);
+            await SaveChangesWithDiagnosticsAsync(
+                context,
+                cancellationToken,
+                $"creating mock profile '{profile.Name}'");
 
             for (var productOrder = 0; productOrder < profileSeed.Products.Length; productOrder++)
             {
@@ -236,6 +277,7 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
                 var product = new ProductEntity
                 {
                     ProductOwnerId = profile.Id,
+                    ProjectId = project.Id,
                     Name = productSeed.Name,
                     Order = productOrder,
                     PictureType = (int)ProductPictureType.Default,
@@ -246,7 +288,10 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
                 };
 
                 context.Products.Add(product);
-                await context.SaveChangesAsync(cancellationToken);
+                await SaveChangesWithDiagnosticsAsync(
+                    context,
+                    cancellationToken,
+                    $"creating mock product '{product.Name}' for profile '{profile.Name}'");
 
                 context.ProductBacklogRoots.AddRange(rootIds.Select(rootId => new ProductBacklogRootEntity
                 {
@@ -260,18 +305,23 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
                     .Where(teamByAreaPath.ContainsKey)
                     .ToList();
 
+                ValidateProductSeedDependencies(product, project, relevantAreaPaths);
+
                 context.ProductTeamLinks.AddRange(relevantAreaPaths.Select(areaPath => new ProductTeamLinkEntity
                 {
                     ProductId = product.Id,
                     TeamId = teamByAreaPath[areaPath].Id
                 }));
 
-                await context.SaveChangesAsync(cancellationToken);
+                await SaveChangesWithDiagnosticsAsync(
+                    context,
+                    cancellationToken,
+                    $"creating backlog roots and team links for product '{product.Name}'");
             }
         }
     }
 
-    private static async Task EnsureMockRepositoriesAsync(
+    private async Task EnsureMockRepositoriesAsync(
         PoToolDbContext context,
         DateTimeOffset now,
         CancellationToken cancellationToken)
@@ -322,10 +372,13 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
         }
 
         context.Repositories.AddRange(repositoriesToAdd);
-        await context.SaveChangesAsync(cancellationToken);
+        await SaveChangesWithDiagnosticsAsync(
+            context,
+            cancellationToken,
+            "creating mock repositories");
     }
 
-    private static async Task EnsureActiveProfileAsync(
+    private async Task EnsureActiveProfileAsync(
         PoToolDbContext context,
         CancellationToken cancellationToken)
     {
@@ -361,7 +414,10 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
             return;
         }
 
-        await context.SaveChangesAsync(cancellationToken);
+        await SaveChangesWithDiagnosticsAsync(
+            context,
+            cancellationToken,
+            "setting active mock profile");
     }
 
     private static async Task EnsureMockPortfolioSnapshotsAsync(
@@ -438,8 +494,77 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
 
             if (addedGroupSnapshot)
             {
-                await context.SaveChangesAsync(cancellationToken);
-            }
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task SaveChangesWithDiagnosticsAsync(
+        PoToolDbContext context,
+        CancellationToken cancellationToken,
+        string operation)
+    {
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex)
+        {
+            var trackedEntries = context.ChangeTracker.Entries()
+                .Where(entry => entry.State is EntityState.Added or EntityState.Modified)
+                .Select(entry =>
+                {
+                    var properties = entry.Properties
+                        .Select(property => $"{property.Metadata.Name}={FormatPropertyValue(property.CurrentValue)}")
+                        .ToArray();
+
+                    return $"{entry.Entity.GetType().Name} [{string.Join(", ", properties)}]";
+                })
+                .ToArray();
+
+            _logger.LogError(
+                ex,
+                "Mock configuration seeding failed while {Operation}. Pending entities: {PendingEntities}",
+                operation,
+                trackedEntries.Length == 0 ? "none" : string.Join(" | ", trackedEntries));
+
+            throw;
+        }
+    }
+
+    private static string FormatPropertyValue(object? value)
+    {
+        return value switch
+        {
+            null => "null",
+            string text when string.IsNullOrWhiteSpace(text) => "\"\"",
+            DateTime dateTime => dateTime.ToString("O"),
+            DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("O"),
+            _ => value.ToString() ?? string.Empty
+        };
+    }
+
+    private static void ValidateProductSeedDependencies(
+        ProductEntity product,
+        ProjectEntity project,
+        IReadOnlyCollection<string> relevantAreaPaths)
+    {
+        if (string.IsNullOrWhiteSpace(project.Id))
+        {
+            throw new InvalidOperationException(
+                $"Mock seeding cannot create product '{product.Name}' because the mock project ID is missing.");
+        }
+
+        if (!string.Equals(product.ProjectId, project.Id, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Mock seeding cannot create product '{product.Name}' because Product.ProjectId '{product.ProjectId}' does not match project '{project.Id}'.");
+        }
+
+        if (relevantAreaPaths.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Mock seeding cannot create product-team links for product '{product.Name}' because no seeded teams matched its backlog roots.");
+        }
+    }
         }
     }
 
