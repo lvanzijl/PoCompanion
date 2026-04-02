@@ -3,6 +3,7 @@
 @using PoTool.Client.Pages.Home.Components
 @using PoTool.Client.Helpers
 @using PoTool.Client.Models
+@using PoTool.Shared.DataState
 @using PoTool.Shared.Settings
 @using System.Web
 @using PoTool.Client.ApiClient
@@ -13,7 +14,7 @@
 @inject StateClassificationService StateClassificationService
 @inject TeamService TeamService
 @inject SprintService SprintService
-@inject IPullRequestsClient PullRequestsClient
+@inject PullRequestStateService PullRequestStateService
 @inject IBuildQualityService BuildQualityService
 
 @* 
@@ -337,6 +338,8 @@
     private CanonicalFilterMetadata? _prTrendFilterMetadata;
     private CanonicalFilterMetadata? _pipelineSignalFilterMetadata;
     private CancellationTokenSource? _tileSignalLoadCts;
+    private DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>> _bugTrendState = DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.NotRequested();
+    private DataStateViewModel<PullRequestQueryResponseDto<GetPrSprintTrendsResponse>> _prTrendState = DataStateViewModel<PullRequestQueryResponseDto<GetPrSprintTrendsResponse>>.NotRequested();
     
     protected override async Task OnInitializedAsync()
     {
@@ -374,9 +377,9 @@
             UpdateBreadcrumbs();
             StartDynamicTileSignalLoad();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+            Snackbar.Add("Trends could not be loaded right now.", Severity.Error);
         }
         finally
         {
@@ -412,10 +415,6 @@
         catch (OperationCanceledException)
         {
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Trend tile signal load failed: {ex.Message}");
-        }
         finally
         {
             if (!cancellationToken.IsCancellationRequested)
@@ -438,85 +437,74 @@
     /// </summary>
     private async Task LoadBugTrendDataAsync()
     {
-        try
+        _bugTrendState = DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.Loading();
+        var response = await WorkItemService.GetAllWithValidationStateAsync(cancellationToken: CancellationToken.None);
+        _bugTrendState = DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.FromResponse(
+            response,
+            "Bug trend data is unavailable right now.");
+
+        if (_bugTrendState.State != DataStateDto.Available || _bugTrendState.Data is null)
         {
-            var workItems = await WorkItemService.GetAllWithValidationAsync();
-            var bugs = workItems.Where(wi => wi.Type?.Equals("Bug", StringComparison.OrdinalIgnoreCase) == true).ToList();
-            
-            // Get state classifications for determining "Done" state
-            var classifications = await StateClassificationService.GetClassificationsAsync();
-            
-            // Build lookup dictionary for O(1) state classification lookups
-            var classificationLookup = classifications.Classifications
-                .Where(c => c.WorkItemType.Equals("Bug", StringComparison.OrdinalIgnoreCase))
-                .ToDictionary(
-                    c => c.StateName,
-                    c => c.Classification,
-                    StringComparer.OrdinalIgnoreCase);
-            
             _bugTrendTotal = new Dictionary<string, int>();
             _bugTrendFixed = new Dictionary<string, int>();
             _bugTrendAdded = new Dictionary<string, int>();
-            
-            // Calculate number of months to process based on date range
-            var monthsCount = CalculateMonthsBetween(_fromDate.DateTime, _toDate.DateTime);
-            
-            // Process each month in the date range
-            for (var i = monthsCount - 1; i >= 0; i--)
-            {
-                var monthDate = _toDate.DateTime.AddMonths(-i);
-                var periodKey = monthDate.ToString("yyyy-MM");
-                var monthStart = new DateTime(monthDate.Year, monthDate.Month, 1);
-                var nextMonthStart = monthStart.AddMonths(1);
-                
-                // Series 3: Bugs Added - bugs created in this month (accurate)
-                var addedCount = bugs.Count(b =>
-                {
-                    var effectiveDate = b.CreatedDate ?? DateTimeOffset.MinValue;
-                    return effectiveDate >= monthStart && effectiveDate < nextMonthStart;
-                });
-                _bugTrendAdded[periodKey] = addedCount;
-                
-                // Series 2: Bugs Fixed - bugs in "Done" state created before/during this month
-                // Note: This is an approximation as we don't track state transition history.
-                // Without state history, we show bugs currently in "Done" state as a rough indicator.
-                // See docs/bug_trend_followups.md for improvement plan.
-                var fixedCount = bugs.Count(b =>
-                {
-                    var effectiveDate = b.CreatedDate ?? DateTimeOffset.MinValue;
-                    var createdBeforeOrDuringMonth = effectiveDate < nextMonthStart && effectiveDate > DateTimeOffset.MinValue;
-                    
-                    if (!createdBeforeOrDuringMonth)
-                        return false;
-                    
-                    classificationLookup.TryGetValue(b.State, out var classification);
-                    return classification == PoTool.Shared.Settings.StateClassification.Done;
-                });
-                _bugTrendFixed[periodKey] = fixedCount;
-                
-                // Series 1: Total Bugs - bugs open at month-end (approximate using current state)
-                // Count bugs created before/during this month that are NOT in "Done" or "Removed" state
-                var totalCount = bugs.Count(b =>
-                {
-                    var effectiveDate = b.CreatedDate ?? DateTimeOffset.MinValue;
-                    var createdBeforeOrDuringMonth = effectiveDate < nextMonthStart && effectiveDate > DateTimeOffset.MinValue;
-                    
-                    if (!createdBeforeOrDuringMonth)
-                        return false;
-                    
-                    classificationLookup.TryGetValue(b.State, out var classification);
-                    
-                    // Exclude bugs in "Done" or "Removed" state
-                    return classification != PoTool.Shared.Settings.StateClassification.Done &&
-                           classification != PoTool.Shared.Settings.StateClassification.Removed;
-                });
-                _bugTrendTotal[periodKey] = totalCount;
-            }
+            _bugTrendSignal = TrendTileSignal.WithFallback(StatusTileSignal.NoData(
+                _bugTrendState.Reason ?? "Bug trend data is unavailable right now."));
+            return;
         }
-        catch (Exception ex)
+
+        var bugs = _bugTrendState.Data.Where(wi => wi.Type?.Equals("Bug", StringComparison.OrdinalIgnoreCase) == true).ToList();
+        var classifications = await StateClassificationService.GetClassificationsAsync();
+        var classificationLookup = classifications.Classifications
+            .Where(c => c.WorkItemType.Equals("Bug", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(
+                c => c.StateName,
+                c => c.Classification,
+                StringComparer.OrdinalIgnoreCase);
+
+        _bugTrendTotal = new Dictionary<string, int>();
+        _bugTrendFixed = new Dictionary<string, int>();
+        _bugTrendAdded = new Dictionary<string, int>();
+
+        var monthsCount = CalculateMonthsBetween(_fromDate.DateTime, _toDate.DateTime);
+        for (var i = monthsCount - 1; i >= 0; i--)
         {
-            Console.WriteLine($"Failed to load bug trend data: {ex.Message}");
-            // Keep empty dictionaries on failure
+            var monthDate = _toDate.DateTime.AddMonths(-i);
+            var periodKey = monthDate.ToString("yyyy-MM");
+            var monthStart = new DateTime(monthDate.Year, monthDate.Month, 1);
+            var nextMonthStart = monthStart.AddMonths(1);
+
+            var addedCount = bugs.Count(b =>
+            {
+                var effectiveDate = b.CreatedDate ?? DateTimeOffset.MinValue;
+                return effectiveDate >= monthStart && effectiveDate < nextMonthStart;
+            });
+            _bugTrendAdded[periodKey] = addedCount;
+
+            var fixedCount = bugs.Count(b =>
+            {
+                var effectiveDate = b.CreatedDate ?? DateTimeOffset.MinValue;
+                var createdBeforeOrDuringMonth = effectiveDate < nextMonthStart && effectiveDate > DateTimeOffset.MinValue;
+                if (!createdBeforeOrDuringMonth)
+                    return false;
+
+                classificationLookup.TryGetValue(b.State, out var classification);
+                return classification == PoTool.Shared.Settings.StateClassification.Done;
+            });
+            _bugTrendFixed[periodKey] = fixedCount;
+
+            var totalCount = bugs.Count(b =>
+            {
+                var effectiveDate = b.CreatedDate ?? DateTimeOffset.MinValue;
+                var createdBeforeOrDuringMonth = effectiveDate < nextMonthStart && effectiveDate > DateTimeOffset.MinValue;
+                if (!createdBeforeOrDuringMonth)
+                    return false;
+
+                classificationLookup.TryGetValue(b.State, out var classification);
+                return classification != PoTool.Shared.Settings.StateClassification.Done &&
+                       classification != PoTool.Shared.Settings.StateClassification.Removed;
+            });
+            _bugTrendTotal[periodKey] = totalCount;
         }
 
         _bugTrendSignal = TrendsWorkspaceTileSignalService.GetBugTrendSignal(_bugTrendAdded);
@@ -648,9 +636,9 @@
         {
             _sprints = (await SprintService.GetSprintsForTeamAsync(teamId)).ToList();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Snackbar.Add($"Error loading sprints: {ex.Message}", Severity.Warning);
+            Snackbar.Add("Sprints could not be loaded right now.", Severity.Warning);
             _sprints = new List<SprintDto>();
         }
     }
@@ -694,25 +682,29 @@
                 return;
             }
 
-            var response = await PullRequestsClient.GetSprintTrendsEnvelopeAsync(
+            _prTrendState = DataStateViewModel<PullRequestQueryResponseDto<GetPrSprintTrendsResponse>>.Loading();
+            var response = await PullRequestStateService.GetSprintTrendsStateAsync(
                 selectedSprintIds,
                 productIds: null,
                 teamId: _selectedTeamId,
                 cancellationToken);
-            _prTrendFilterMetadata = CanonicalClientResponseFactory.Create(response).FilterMetadata;
+            _prTrendState = DataStateViewModel<PullRequestQueryResponseDto<GetPrSprintTrendsResponse>>.FromResponse(
+                response,
+                "PR trend data is unavailable right now.");
+            if (_prTrendState.State != DataStateDto.Available || _prTrendState.Data is null)
+            {
+                _prTrendFilterMetadata = null;
+                _prTrendSignal = TrendTileSignal.WithFallback(StatusTileSignal.NoData(
+                    _prTrendState.Reason ?? "PR trend data is unavailable right now."));
+                return;
+            }
 
+            _prTrendFilterMetadata = CanonicalClientResponseFactory.Create(_prTrendState.Data).FilterMetadata;
             _prTrendSignal = TrendsWorkspaceTileSignalService.GetPrTrendSignal(
-                response?.Data?.Success == true ? response.Data.Sprints : null);
+                _prTrendState.Data.Data?.Success == true ? _prTrendState.Data.Data.Sprints : null);
         }
         catch (OperationCanceledException)
         {
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"PR slope badge load failed: {ex.Message}");
-            _prTrendFilterMetadata = null;
-            _prTrendSignal = TrendTileSignal.WithFallback(
-                StatusTileSignal.NoData("PR trend data is unavailable right now."));
         }
     }
 
@@ -738,9 +730,8 @@
         catch (OperationCanceledException)
         {
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"Pipeline signal load failed: {ex.Message}");
             _pipelineSignalFilterMetadata = null;
             _pipelineSignal = StatusTileSignal.NoData("Pipeline signal is unavailable right now.");
         }

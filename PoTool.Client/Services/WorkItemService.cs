@@ -59,6 +59,13 @@ public class WorkItemService
         return await _client.GetAllAsync();
     }
 
+    public async Task<DataStateResponseDto<IReadOnlyList<WorkItemDto>>?> GetAllStateAsync(
+        CancellationToken cancellationToken = default)
+        => await _httpClient.GetFromJsonAsync<DataStateResponseDto<IReadOnlyList<WorkItemDto>>>(
+            WorkItemEndpoint,
+            _jsonOptions,
+            cancellationToken);
+
     /// <summary>
     /// Gets filtered work items.
     /// </summary>
@@ -508,6 +515,29 @@ public class WorkItemService
 
         var workItems = await response.Content.ReadFromJsonAsync<IEnumerable<WorkItemDto>>(_jsonOptions);
         return workItems ?? Enumerable.Empty<WorkItemDto>();
+    }
+
+    public async Task<DataStateResponseDto<IReadOnlyList<WorkItemDto>>?> GetByRootIdsStateAsync(
+        int[] rootIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (rootIds == null || rootIds.Length == 0)
+        {
+            return new DataStateResponseDto<IReadOnlyList<WorkItemDto>>
+            {
+                State = DataStateDto.Empty,
+                Data = Array.Empty<WorkItemDto>(),
+                Reason = "No root work items were provided."
+            };
+        }
+
+        var rootIdsParam = string.Join(",", rootIds);
+        var url = $"{ByRootIdsEndpoint}?rootIds={rootIdsParam}";
+
+        return await _httpClient.GetFromJsonAsync<DataStateResponseDto<IReadOnlyList<WorkItemDto>>>(
+            url,
+            _jsonOptions,
+            cancellationToken);
     }
 
     /// <summary>

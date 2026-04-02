@@ -41,24 +41,52 @@ public sealed class PullRequestStateService
                 ("teamId", teamId)),
             cancellationToken);
 
+    public Task<DataStateResponseDto<PullRequestQueryResponseDto<GetPrSprintTrendsResponse>>?> GetSprintTrendsStateAsync(
+        IEnumerable<int> sprintIds,
+        IEnumerable<int>? productIds,
+        int? teamId,
+        CancellationToken cancellationToken = default)
+        => GetAsync<PullRequestQueryResponseDto<GetPrSprintTrendsResponse>>(
+            BuildUrl(
+                "/api/pullrequests/sprint-trends",
+                ("sprintIds", sprintIds),
+                ("productIds", productIds),
+                ("teamId", teamId)),
+            cancellationToken);
+
     private Task<DataStateResponseDto<T>?> GetAsync<T>(string url, CancellationToken cancellationToken)
         => _httpClient.GetFromJsonAsync<DataStateResponseDto<T>>(url, cancellationToken);
 
     private static string BuildUrl(string path, params (string Key, object? Value)[] parameters)
     {
-        var query = parameters
-            .Where(item =>
+        var query = new List<string>();
+
+        foreach (var (key, value) in parameters)
+        {
+            if (value is null)
             {
-                if (item.Value is null)
+                continue;
+            }
+
+            if (value is string text)
+            {
+                if (!string.IsNullOrWhiteSpace(text))
                 {
-                    return false;
+                    query.Add($"{Uri.EscapeDataString(key)}={Uri.EscapeDataString(text)}");
                 }
 
-                return item.Value is not string text || !string.IsNullOrWhiteSpace(text);
-            })
-            .Select(item => $"{Uri.EscapeDataString(item.Key)}={Uri.EscapeDataString(item.Value!.ToString()!)}");
+                continue;
+            }
 
-        var materialized = query.ToList();
-        return materialized.Count == 0 ? path : $"{path}?{string.Join("&", materialized)}";
+            if (value is IEnumerable<int> intValues && value is not string)
+            {
+                query.AddRange(intValues.Select(item => $"{Uri.EscapeDataString(key)}={item}"));
+                continue;
+            }
+
+            query.Add($"{Uri.EscapeDataString(key)}={Uri.EscapeDataString(value.ToString()!)}");
+        }
+
+        return query.Count == 0 ? path : $"{path}?{string.Join("&", query)}";
     }
 }
