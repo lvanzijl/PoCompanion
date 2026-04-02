@@ -9,6 +9,7 @@ using PoTool.Api.Services;
 using PoTool.Core.Filters;
 using PoTool.Core.PullRequests.Filters;
 using PoTool.Core.PullRequests.Queries;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Handlers;
 
@@ -99,6 +100,7 @@ public sealed class GetPrSprintTrendsQueryHandlerTests
 
     private async Task AddSprintAsync(int sprintId, DateTimeOffset start, DateTimeOffset end, string name)
     {
+        PersistenceTestGraph.EnsureTeam(_context, 1);
         _context.Sprints.Add(new SprintEntity
         {
             Id = sprintId,

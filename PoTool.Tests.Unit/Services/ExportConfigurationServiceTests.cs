@@ -8,6 +8,7 @@ using PoTool.Api.Services.Configuration;
 using PoTool.Core.Contracts;
 using PoTool.Shared.BugTriage;
 using PoTool.Shared.Settings;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -74,6 +75,7 @@ public sealed class ExportConfigurationServiceTests
         {
             Id = 9,
             ProductOwnerId = profile.Id,
+            ProjectId = PersistenceTestGraph.DefaultProjectId,
             Name = "Import Product",
             Order = 3,
             PictureType = (int)ProductPictureType.Default,
@@ -81,6 +83,8 @@ public sealed class ExportConfigurationServiceTests
             CreatedAt = DateTimeOffset.UtcNow.AddDays(-3),
             LastModified = DateTimeOffset.UtcNow.AddDays(-1)
         };
+
+        PersistenceTestGraph.EnsureProject(_dbContext);
 
         _dbContext.TfsConfigs.Add(new TfsConfigEntity
         {
