@@ -2,6 +2,14 @@
   {
     "date": "2026-04-02",
     "type": "Changed",
+    "title": "Analytical client surfaces now render only from explicit data states",
+    "impact": "Forecast, Backlog Health, Effort Distribution, Capacity Calibration, Plan Board, Trends, Bug Insights, and Add Lane now consume cache-backed data through explicit data-state responses instead of raw cache DTO calls and exception-driven UI fallbacks.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-02",
+    "type": "Changed",
     "title": "Cache-backed analytics now use one explicit data-state contract",
     "impact": "Cache-backed analytical reads now use the canonical route plus an explicit DataState contract instead of mixing raw routes, /state routes, and middleware cache-not-ready transport errors. Several analytics pages now render syncing and failure states from that single contract.",
     "area": "Home",
