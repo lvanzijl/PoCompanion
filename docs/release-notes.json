@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-04-02",
+    "type": "Fixed",
+    "title": "Configuration import now restores products under a valid project",
+    "impact": "Importing saved configuration now recreates products with the required project relationship, so settings import no longer fails after the repository-wide persistence integrity checks were tightened.",
+    "area": "Settings",
+    "link": "/settings"
+  },
+  {
+    "date": "2026-04-02",
     "type": "Changed",
     "title": "Analytical client surfaces now render only from explicit data states",
     "impact": "Forecast, Backlog Health, Effort Distribution, Capacity Calibration, Plan Board, Trends, Bug Insights, and Add Lane now consume cache-backed data through explicit data-state responses instead of raw cache DTO calls and exception-driven UI fallbacks.",
