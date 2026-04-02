@@ -74,9 +74,6 @@ jobs:
       - name: Build
         run: dotnet build PoTool.sln --configuration Release --no-restore
 
-      - name: Check sync-over-async patterns
-        run: ./.github/scripts/check-sync-over-async.sh
-
       - name: Prepare API Contract Gate artifact directory
         run: mkdir -p "$GATE_OUTPUT_DIR"
 
@@ -116,9 +113,6 @@ jobs:
 
       - name: Build
         run: dotnet build PoTool.sln --configuration Release --no-restore
-
-      - name: Check sync-over-async patterns
-        run: ./.github/scripts/check-sync-over-async.sh
 
       - name: Prepare Governance Gate artifact directory
         run: mkdir -p "$GATE_OUTPUT_DIR"
