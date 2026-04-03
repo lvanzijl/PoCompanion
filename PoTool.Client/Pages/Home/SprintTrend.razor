@@ -977,9 +977,6 @@
     private string? _selectedEpicName;
     private int? _selectedFeatureId;
     private string? _selectedFeatureName;
-    private int? _selectedTeamId;
-    private int? _selectedSprintId;
-
     private List<TeamDto> _teams = new();
     private List<SprintDto> _allSprints = new();
     private List<SprintDto> _filteredSprints = new();
@@ -1018,6 +1015,8 @@
     private CancellationTokenSource? _detailsLoadCts;
     private CancellationTokenSource? _buildQualityLoadCts;
     private IDisposable? _filterSubscription;
+    private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
+    private int? _selectedSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Sprint ? GlobalFilterStore.GetState().Time.SprintId : null;
 
     private static readonly string[] DefaultPiePalette =
     [
@@ -1089,7 +1088,6 @@
             _products = (await productsTask).ToList();
             _tfsConfig = await configTask;
             await SyncStoreFromCurrentRouteAsync(cancellationToken);
-            ApplyStoreState();
 
             if (!_selectedTeamId.HasValue)
             {
@@ -1847,21 +1845,8 @@
     private async Task SyncStoreFromCurrentRouteAsync(CancellationToken cancellationToken)
         => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId, cancellationToken: cancellationToken);
 
-    private void ApplyStoreState()
-    {
-        var state = GlobalFilterStore.GetState();
-        _selectedTeamId = state.TeamId;
-        _selectedSprintId = state.Time.Mode == FilterTimeMode.Sprint
-            ? state.Time.SprintId
-            : null;
-    }
-
     private void HandleGlobalFilterChanged()
-        => _ = InvokeAsync(() =>
-        {
-            ApplyStoreState();
-            StateHasChanged();
-        });
+        => _ = InvokeAsync(StateHasChanged);
 
     private record ProductMetrics(
         int CompletedPbis,

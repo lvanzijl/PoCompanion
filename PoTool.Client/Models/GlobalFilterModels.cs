@@ -23,6 +23,14 @@ public enum FilterUpdateSource
     Ui
 }
 
+public enum FilterResolutionStatus
+{
+    Resolved,
+    ResolvedWithNormalization,
+    Unresolved,
+    Invalid
+}
+
 public sealed record FilterTimeSelection(
     FilterTimeMode Mode,
     int? SprintId = null,
@@ -32,6 +40,16 @@ public sealed record FilterTimeSelection(
     FilterTimeUnit? RollingUnit = null)
 {
     public static FilterTimeSelection Snapshot { get; } = new(FilterTimeMode.Snapshot);
+
+    public bool IsResolved
+        => Mode switch
+        {
+            FilterTimeMode.Snapshot => true,
+            FilterTimeMode.Sprint => SprintId.HasValue,
+            FilterTimeMode.Range => StartSprintId.HasValue && EndSprintId.HasValue,
+            FilterTimeMode.Rolling => RollingWindow.HasValue && RollingWindow.Value > 0 && RollingUnit.HasValue,
+            _ => false
+        };
 
     public string ToDisplayString()
         => Mode switch
@@ -59,6 +77,10 @@ public sealed record FilterState(
     public bool AllProducts => ProductIds.Count == 0;
 
     public bool AllProjects => ProjectIds.Count == 0;
+
+    public int? PrimaryProductId => ProductIds.FirstOrDefault();
+
+    public string? PrimaryProjectId => ProjectIds.FirstOrDefault();
 }
 
 public sealed record GlobalFilterPageDefinition(
@@ -80,19 +102,35 @@ public sealed record FilterLocalBridgeState(
     int? FromSprintId = null,
     int? ToSprintId = null,
     int? RollingWindow = null,
-    FilterTimeUnit? RollingUnit = null);
+    FilterTimeUnit? RollingUnit = null)
+{
+    public static FilterLocalBridgeState FromState(FilterState state, string? projectAlias = null)
+        => new(
+            ProductId: state.PrimaryProductId,
+            ProjectAlias: projectAlias,
+            ProjectId: state.PrimaryProjectId,
+            TeamId: state.TeamId,
+            SprintId: state.Time.SprintId,
+            FromSprintId: state.Time.StartSprintId,
+            ToSprintId: state.Time.EndSprintId,
+            RollingWindow: state.Time.RollingWindow,
+            RollingUnit: state.Time.RollingUnit);
+}
 
 public sealed record FilterStateResolution(
     string PageName,
     string Route,
+    string RouteSignature,
     bool UsesProduct,
     bool UsesProject,
     bool UsesTeam,
     bool UsesTime,
     FilterState State,
+    FilterResolutionStatus Status,
     bool MissingTeam,
     bool MissingSprint,
     int? ActiveProfileId,
     FilterUpdateSource LastUpdateSource,
     IReadOnlyList<string> NormalizationDecisions,
+    IReadOnlyList<string> StateIssues,
     DateTimeOffset RecordedAtUtc);

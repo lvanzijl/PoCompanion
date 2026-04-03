@@ -2,6 +2,14 @@
   {
     "date": "2026-04-03",
     "type": "Changed",
+    "title": "Global filters now keep stable canonical route and time semantics",
+    "impact": "Home pages now derive team, sprint, product, project, and range context from one canonical filter state with explicit resolved, unresolved, or invalid classification, normalized inclusive sprint ranges, and guarded route synchronization to prevent redundant rewrites during refresh and navigation.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-03",
+    "type": "Changed",
     "title": "Global filters now normalize one shared canonical state",
     "impact": "Home and planning pages now route product, project, team, and time context through one shared filter store, so the read-only filter summary reflects normalized canonical state while existing links, query parameters, and page behavior continue to work.",
     "area": "Home",

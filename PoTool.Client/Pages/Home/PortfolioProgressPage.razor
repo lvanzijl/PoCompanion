@@ -526,16 +526,16 @@
     private void ToggleScopePopover()   => ToggleOnePopover(v => _scopePopoverOpen   = v, _scopePopoverOpen);
 
     // Selectors
-    private int? _selectedProductId;
-    private int? _selectedTeamId;
-    private int? _fromSprintId;
-    private int? _toSprintId;
     private int? _defaultFromSprintId;
     private int? _defaultToSprintId;
     private List<ProductDto> _products = new();
     private List<TeamDto> _teams = new();
     private List<SprintDto> _sprints = new();
     private IDisposable? _filterSubscription;
+    private int? _selectedProductId => GlobalFilterStore.GetState().PrimaryProductId;
+    private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
+    private int? _fromSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Range ? GlobalFilterStore.GetState().Time.StartSprintId : null;
+    private int? _toSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Range ? GlobalFilterStore.GetState().Time.EndSprintId : null;
 
     // Context chip labels — computed from current selection
     private string ContextProductLabel => _selectedProductId.HasValue
@@ -642,7 +642,6 @@
             _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
 
             await SyncStoreFromCurrentRouteAsync();
-            ApplyStoreState();
             UpdateBreadcrumbs();
 
             if (_selectedTeamId.HasValue)
@@ -651,7 +650,7 @@
 
                 if (!_fromSprintId.HasValue && !_toSprintId.HasValue)
                 {
-                    ApplyDefaultSprintWindow();
+                    await ApplyDefaultSprintWindowAsync();
                 }
 
                 // Auto-load trend data with defaults
@@ -670,7 +669,7 @@
     }
 
     /// <summary>
-    private void ApplyDefaultSprintWindow()
+    private async Task ApplyDefaultSprintWindowAsync()
     {
         if (_sprints.Count == 0) return;
 
@@ -678,34 +677,36 @@
         var toIdx = ordered.Count - 1;
         var fromIdx = Math.Max(0, toIdx - 4);
 
-        _fromSprintId = ordered[fromIdx].Id;
-        _toSprintId   = ordered[toIdx].Id;
+        var defaultFromSprintId = ordered[fromIdx].Id;
+        var defaultToSprintId = ordered[toIdx].Id;
 
         // Remember the default window for "Custom Scope" detection
-        _defaultFromSprintId = _fromSprintId;
-        _defaultToSprintId   = _toSprintId;
+        _defaultFromSprintId = defaultFromSprintId;
+        _defaultToSprintId   = defaultToSprintId;
+
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with
+        {
+            FromSprintId = defaultFromSprintId,
+            ToSprintId = defaultToSprintId
+        });
     }
 
     private async Task OnProductChangedAsync(int? productId)
     {
-        _selectedProductId = productId;
-        await SyncStoreFromLocalStateAsync();
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { ProductId = productId });
         await LoadTrendDataAsync();
     }
 
     private async Task OnTeamChangedAsync(int? teamId)
     {
-        _selectedTeamId = teamId;
-        _fromSprintId   = null;
-        _toSprintId     = null;
         _sprints.Clear();
         _trendData = null;
 
-        await SyncStoreFromLocalStateAsync();
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { TeamId = teamId, FromSprintId = null, ToSprintId = null });
         if (teamId.HasValue)
         {
             await LoadSprintsAsync(teamId.Value);
-            ApplyDefaultSprintWindow();
+            await ApplyDefaultSprintWindowAsync();
             await LoadTrendDataAsync();
         }
         else
@@ -716,15 +717,13 @@
 
     private async Task OnFromSprintChangedAsync(int? sprintId)
     {
-        _fromSprintId = sprintId;
-        await SyncStoreFromLocalStateAsync();
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { FromSprintId = sprintId });
         await LoadTrendDataAsync();
     }
 
     private async Task OnToSprintChangedAsync(int? sprintId)
     {
-        _toSprintId = sprintId;
-        await SyncStoreFromLocalStateAsync();
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { ToSprintId = sprintId });
         await LoadTrendDataAsync();
     }
 
@@ -980,35 +979,14 @@
     private async Task SyncStoreFromCurrentRouteAsync()
         => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId);
 
-    private async Task SyncStoreFromLocalStateAsync()
-        => await GlobalFilterStore.SetStateAsync(
-            NavigationManager.Uri,
-            _profileId,
-            new FilterLocalBridgeState(
-                ProductId: _selectedProductId,
-                TeamId: _selectedTeamId,
-                FromSprintId: _fromSprintId,
-                ToSprintId: _toSprintId),
-            FilterUpdateSource.Ui);
+    private FilterLocalBridgeState BuildCurrentLocalBridgeState()
+        => FilterLocalBridgeState.FromState(GlobalFilterStore.GetState());
 
-    private void ApplyStoreState()
-    {
-        var state = GlobalFilterStore.GetState();
-        _selectedProductId = state.ProductIds.FirstOrDefault();
-        _selectedTeamId = state.TeamId;
-        if (state.Time.Mode == FilterTimeMode.Range)
-        {
-            _fromSprintId = state.Time.StartSprintId;
-            _toSprintId = state.Time.EndSprintId;
-        }
-    }
+    private async Task UpdateFilterStateAsync(FilterLocalBridgeState localState)
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId, localState, FilterUpdateSource.Ui);
 
     private void HandleGlobalFilterChanged()
-        => _ = InvokeAsync(() =>
-        {
-            ApplyStoreState();
-            StateHasChanged();
-        });
+        => _ = InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {

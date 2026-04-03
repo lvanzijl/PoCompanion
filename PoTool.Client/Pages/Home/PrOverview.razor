@@ -619,7 +619,6 @@
     private bool _filterExpanded = true;
 
     // Filters
-    private int? _selectedTeamId;
     private DateTime? _fromDate;
     private DateTime? _toDate;
     private string? _selectedRepository;
@@ -628,7 +627,6 @@
 
     // Sprint quick-select
     private List<SprintDto> _sprints = new();
-    private int? _selectedSprintId;
 
     // Data
     private int? _profileId;
@@ -650,6 +648,8 @@
     /// </summary>
     private const int DefaultSprintDurationDays = 14;
     private IDisposable? _filterSubscription;
+    private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
+    private int? _selectedSprintId => GlobalFilterStore.GetState().Time.SprintId;
 
     // ── Init ─────────────────────────────────────────────────────────────
 
@@ -667,14 +667,18 @@
             _toDate   = DateTime.UtcNow.Date;
 
             await SyncStoreFromCurrentRouteAsync();
-            ApplyStoreState();
 
             if (_selectedTeamId.HasValue)
             {
                 await LoadSprintsForTeamAsync(_selectedTeamId.Value);
                 if (_selectedSprintId.HasValue && !_sprints.Any(s => s.Id == _selectedSprintId.Value))
                 {
-                    _selectedSprintId = null;
+                    await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with
+                    {
+                        SprintId = null,
+                        RollingWindow = 180,
+                        RollingUnit = FilterTimeUnit.Days
+                    });
                 }
             }
 
@@ -743,12 +747,16 @@
 
     private async Task OnTeamChanged(int? teamId)
     {
-        _selectedTeamId  = teamId;
         _highlightedPrId = null;
         _filteredAuthor  = null;
-        _selectedSprintId = null;
         _sprints.Clear();
-        await SyncStoreFromLocalStateAsync();
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with
+        {
+            TeamId = teamId,
+            SprintId = null,
+            RollingWindow = 180,
+            RollingUnit = FilterTimeUnit.Days
+        });
 
         if (teamId.HasValue)
         {
@@ -784,7 +792,6 @@
 
     private async Task OnSprintChanged(int? sprintId)
     {
-        _selectedSprintId = sprintId;
         _highlightedPrId  = null;
         _filteredAuthor   = null;
 
@@ -798,7 +805,12 @@
             }
         }
 
-        await SyncStoreFromLocalStateAsync();
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with
+        {
+            SprintId = sprintId,
+            RollingWindow = sprintId.HasValue ? 1 : 180,
+            RollingUnit = sprintId.HasValue ? FilterTimeUnit.Sprint : FilterTimeUnit.Days
+        });
         await ReloadAsync();
     }
 
@@ -832,33 +844,14 @@
             _profileId,
             new FilterLocalBridgeState(RollingWindow: 180, RollingUnit: FilterTimeUnit.Days, TeamId: _selectedTeamId, SprintId: _selectedSprintId));
 
-    private async Task SyncStoreFromLocalStateAsync()
-        => await GlobalFilterStore.SetStateAsync(
-            NavigationManager.Uri,
-            _profileId,
-            new FilterLocalBridgeState(
-                TeamId: _selectedTeamId,
-                SprintId: _selectedSprintId,
-                RollingWindow: _selectedSprintId.HasValue ? 1 : 180,
-                RollingUnit: _selectedSprintId.HasValue ? FilterTimeUnit.Sprint : FilterTimeUnit.Days),
-            FilterUpdateSource.Ui);
+    private FilterLocalBridgeState BuildCurrentLocalBridgeState()
+        => FilterLocalBridgeState.FromState(GlobalFilterStore.GetState());
 
-    private void ApplyStoreState()
-    {
-        var state = GlobalFilterStore.GetState();
-        _selectedTeamId = state.TeamId;
-        if (state.Time.Mode is FilterTimeMode.Sprint or FilterTimeMode.Rolling)
-        {
-            _selectedSprintId = state.Time.SprintId;
-        }
-    }
+    private async Task UpdateFilterStateAsync(FilterLocalBridgeState localState)
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId, localState, FilterUpdateSource.Ui);
 
     private void HandleGlobalFilterChanged()
-        => _ = InvokeAsync(() =>
-        {
-            ApplyStoreState();
-            StateHasChanged();
-        });
+        => _ = InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {

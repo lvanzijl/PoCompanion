@@ -162,6 +162,7 @@ builder.Services.AddScoped<SettingsService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<ProjectService>();
+builder.Services.AddScoped<ProjectIdentityMapper>();
 builder.Services.AddScoped<TeamService>();
 builder.Services.AddScoped<SprintService>();
 builder.Services.AddScoped<SprintDeliveryMetricsService>();

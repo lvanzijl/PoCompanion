@@ -458,15 +458,14 @@
     // Teams and sprints
     private List<TeamDto> _teams = new();
     private List<SprintDto> _sprints = new();
-    private int? _selectedTeamId;
-    private int? _fromSprintId;
-    private int? _toSprintId;
-
     // Popover state
     private bool _teamPopoverOpen;
     private bool _sprintPopoverOpen;
     private bool _scopePopoverOpen;
     private IDisposable? _filterSubscription;
+    private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
+    private int? _fromSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Range ? GlobalFilterStore.GetState().Time.StartSprintId : null;
+    private int? _toSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Range ? GlobalFilterStore.GetState().Time.EndSprintId : null;
 
     // Delivery data
     private PortfolioDeliveryDto? _data;
@@ -524,7 +523,6 @@
 
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
             await SyncStoreFromCurrentRouteAsync();
-            ApplyStoreState();
 
             UpdateBreadcrumbs();
 
@@ -535,8 +533,7 @@
                 if ((_fromSprintId.HasValue && !_sprints.Any(s => s.Id == _fromSprintId.Value)) ||
                     (_toSprintId.HasValue && !_sprints.Any(s => s.Id == _toSprintId.Value)))
                 {
-                    _fromSprintId = null;
-                    _toSprintId = null;
+                    await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { FromSprintId = null, ToSprintId = null });
                 }
 
                 UpdateContextUrl();
@@ -661,12 +658,9 @@
 
     private async Task OnTeamChangedAsync(int? teamId)
     {
-        _selectedTeamId = teamId;
-        _fromSprintId = null;
-        _toSprintId = null;
         _sprints = new List<SprintDto>();
         _data = null;
-        await SyncStoreFromLocalStateAsync();
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { TeamId = teamId, FromSprintId = null, ToSprintId = null });
 
         if (teamId.HasValue)
         {
@@ -675,8 +669,7 @@
             if ((_fromSprintId.HasValue && !_sprints.Any(s => s.Id == _fromSprintId.Value)) ||
                 (_toSprintId.HasValue && !_sprints.Any(s => s.Id == _toSprintId.Value)))
             {
-                _fromSprintId = null;
-                _toSprintId = null;
+                await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { FromSprintId = null, ToSprintId = null });
                 UpdateContextUrl();
             }
 
@@ -693,34 +686,40 @@
 
     private async Task OnFromSprintChangedAsync(int? sprintId)
     {
-        _fromSprintId = sprintId;
-        await SyncStoreFromLocalStateAsync();
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { FromSprintId = sprintId });
         UpdateContextUrl();
         await LoadDeliveryDataAsync();
     }
 
     private async Task OnToSprintChangedAsync(int? sprintId)
     {
-        _toSprintId = sprintId;
-        await SyncStoreFromLocalStateAsync();
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { ToSprintId = sprintId });
         UpdateContextUrl();
         await LoadDeliveryDataAsync();
     }
 
     // ── Navigation ───────────────────────────────────────────────────────────────
 
-    private void NavigateToDelivery() => NavigationManager.NavigateTo(
-        WorkspaceQueryContextHelper.BuildRoute(
+    private void NavigateToDelivery()
+    {
+        var targetUri = WorkspaceQueryContextHelper.BuildRoute(
             WorkspaceRoutes.DeliveryWorkspace,
-            new WorkspaceQueryContext(TeamId: _selectedTeamId, FromSprintId: _fromSprintId, ToSprintId: _toSprintId)));
+            new WorkspaceQueryContext(TeamId: _selectedTeamId, FromSprintId: _fromSprintId, ToSprintId: _toSprintId));
+        if (GlobalFilterStore.TryPrepareNavigation(NavigationManager.Uri, targetUri))
+        {
+            NavigationManager.NavigateTo(targetUri);
+        }
+    }
 
     private void UpdateContextUrl()
     {
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.PortfolioDelivery,
-                new WorkspaceQueryContext(TeamId: _selectedTeamId, FromSprintId: _fromSprintId, ToSprintId: _toSprintId)),
-            forceLoad: false);
+        var targetUri = WorkspaceQueryContextHelper.BuildRoute(
+            WorkspaceRoutes.PortfolioDelivery,
+            new WorkspaceQueryContext(TeamId: _selectedTeamId, FromSprintId: _fromSprintId, ToSprintId: _toSprintId));
+        if (GlobalFilterStore.TryPrepareNavigation(NavigationManager.Uri, targetUri))
+        {
+            NavigationManager.NavigateTo(targetUri, forceLoad: false);
+        }
     }
 
     // ── Breadcrumbs ──────────────────────────────────────────────────────────────
@@ -740,30 +739,14 @@
     private async Task SyncStoreFromCurrentRouteAsync()
         => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId);
 
-    private async Task SyncStoreFromLocalStateAsync()
-        => await GlobalFilterStore.SetStateAsync(
-            NavigationManager.Uri,
-            _profileId,
-            new FilterLocalBridgeState(TeamId: _selectedTeamId, FromSprintId: _fromSprintId, ToSprintId: _toSprintId),
-            FilterUpdateSource.Ui);
+    private FilterLocalBridgeState BuildCurrentLocalBridgeState()
+        => FilterLocalBridgeState.FromState(GlobalFilterStore.GetState());
 
-    private void ApplyStoreState()
-    {
-        var state = GlobalFilterStore.GetState();
-        _selectedTeamId = state.TeamId;
-        if (state.Time.Mode == FilterTimeMode.Range)
-        {
-            _fromSprintId = state.Time.StartSprintId;
-            _toSprintId = state.Time.EndSprintId;
-        }
-    }
+    private async Task UpdateFilterStateAsync(FilterLocalBridgeState localState)
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId, localState, FilterUpdateSource.Ui);
 
     private void HandleGlobalFilterChanged()
-        => _ = InvokeAsync(() =>
-        {
-            ApplyStoreState();
-            StateHasChanged();
-        });
+        => _ = InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {

@@ -218,8 +218,6 @@
     private List<BreadcrumbItem> _breadcrumbs = new();
     
     // Selectors
-    private int? _selectedTeamId;
-    private int? _selectedProductId;
     private List<TeamDto> _teams = new();
     private List<ProductDto> _products = new();
     
@@ -240,6 +238,8 @@
     private readonly DateTimeOffset _fromDate = DateTimeOffset.UtcNow.AddMonths(-6);
     private DataStateViewModel<IReadOnlyList<WorkItemDto>> _bugState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.NotRequested();
     private IDisposable? _filterSubscription;
+    private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
+    private int? _selectedProductId => GlobalFilterStore.GetState().PrimaryProductId;
     
     protected override async Task OnInitializedAsync()
     {
@@ -261,7 +261,6 @@
             _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
             
             await SyncStoreFromCurrentRouteAsync();
-            ApplyStoreState();
             
             // Load bug data and calculate metrics
             await LoadBugDataAsync();
@@ -347,16 +346,14 @@
     
     private async Task OnTeamChanged(int? teamId)
     {
-        _selectedTeamId = teamId;
-        await SyncStoreFromLocalStateAsync();
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { TeamId = teamId });
         UpdateUrlParameters();
         await LoadBugDataAsync();
     }
     
     private async Task OnProductChanged(int? productId)
     {
-        _selectedProductId = productId;
-        await SyncStoreFromLocalStateAsync();
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { ProductId = productId });
         UpdateUrlParameters();
         await LoadBugDataAsync();
     }
@@ -378,7 +375,10 @@
         var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
         var newUrl = $"{WorkspaceRoutes.BugOverview}{queryString}";
         
-        NavigationManager.NavigateTo(newUrl, forceLoad: false);
+        if (GlobalFilterStore.TryPrepareNavigation(NavigationManager.Uri, newUrl))
+        {
+            NavigationManager.NavigateTo(newUrl, forceLoad: false);
+        }
     }
     
     private void UpdateBreadcrumbs()
@@ -425,26 +425,14 @@
     private async Task SyncStoreFromCurrentRouteAsync()
         => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId);
 
-    private async Task SyncStoreFromLocalStateAsync()
-        => await GlobalFilterStore.SetStateAsync(
-            NavigationManager.Uri,
-            _profileId,
-            new FilterLocalBridgeState(ProductId: _selectedProductId, TeamId: _selectedTeamId),
-            FilterUpdateSource.Ui);
+    private FilterLocalBridgeState BuildCurrentLocalBridgeState()
+        => FilterLocalBridgeState.FromState(GlobalFilterStore.GetState());
 
-    private void ApplyStoreState()
-    {
-        var state = GlobalFilterStore.GetState();
-        _selectedProductId = state.ProductIds.FirstOrDefault();
-        _selectedTeamId = state.TeamId;
-    }
+    private async Task UpdateFilterStateAsync(FilterLocalBridgeState localState)
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId, localState, FilterUpdateSource.Ui);
 
     private void HandleGlobalFilterChanged()
-        => _ = InvokeAsync(() =>
-        {
-            ApplyStoreState();
-            StateHasChanged();
-        });
+        => _ = InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {

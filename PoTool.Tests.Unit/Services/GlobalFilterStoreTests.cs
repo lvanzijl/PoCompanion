@@ -40,6 +40,18 @@ public sealed class GlobalFilterStoreTests
     }
 
     [TestMethod]
+    public async Task TrackNavigation_RouteQueryProjectConflict_PrefersRouteAliasDeterministically()
+    {
+        var store = CreateStore();
+
+        await store.TrackNavigationAsync("http://localhost/planning/payments-platform/overview?projectId=project-other&projectAlias=other-project");
+
+        Assert.IsNotNull(store.CurrentUsage);
+        CollectionAssert.AreEqual(new[] { "project-payments" }, store.CurrentState.ProjectIds.ToArray());
+        Assert.AreEqual(FilterResolutionStatus.ResolvedWithNormalization, store.CurrentUsage.Status);
+    }
+
+    [TestMethod]
     public async Task TrackNavigation_SprintRouteWithoutSelections_FlagsMissingTeamAndSprint()
     {
         var store = CreateStore();
@@ -50,6 +62,7 @@ public sealed class GlobalFilterStoreTests
         Assert.AreEqual("SprintTrend", store.CurrentUsage.PageName);
         Assert.IsTrue(store.CurrentUsage.MissingTeam);
         Assert.IsTrue(store.CurrentUsage.MissingSprint);
+        Assert.AreEqual(FilterResolutionStatus.Unresolved, store.CurrentUsage.Status);
     }
 
     [TestMethod]
@@ -68,6 +81,54 @@ public sealed class GlobalFilterStoreTests
         Assert.IsFalse(store.CurrentUsage.MissingTeam);
         Assert.IsFalse(store.CurrentUsage.MissingSprint);
         CollectionAssert.Contains(store.CurrentUsage.NormalizationDecisions.ToArray(), "invalid range normalized by swapping from/to sprint IDs");
+        Assert.AreEqual(FilterResolutionStatus.ResolvedWithNormalization, store.CurrentUsage.Status);
+    }
+
+    [TestMethod]
+    public async Task TrackNavigation_UnknownProjectAlias_ClassifiesStateAsInvalid()
+    {
+        var store = CreateStore();
+
+        await store.TrackNavigationAsync("http://localhost/planning/unknown-project/overview");
+
+        Assert.IsNotNull(store.CurrentUsage);
+        Assert.AreEqual(FilterResolutionStatus.Invalid, store.CurrentUsage.Status);
+        CollectionAssert.Contains(store.CurrentUsage.StateIssues.ToArray(), "route project alias 'unknown-project' could not be resolved");
+    }
+
+    [TestMethod]
+    public async Task TryPrepareNavigation_IgnoresEquivalentRoutesAndPendingDuplicates()
+    {
+        var store = CreateStore();
+
+        await store.TrackNavigationAsync("http://localhost/home/trends?teamId=7&fromSprintId=100&toSprintId=101");
+
+        Assert.IsFalse(store.TryPrepareNavigation(
+            "http://localhost/home/trends?fromSprintId=100&toSprintId=101&teamId=7",
+            "http://localhost/home/trends?teamId=7&toSprintId=101&fromSprintId=100"));
+
+        Assert.IsTrue(store.TryPrepareNavigation(
+            "http://localhost/home/trends?teamId=7&fromSprintId=100&toSprintId=101",
+            "http://localhost/home/trends?teamId=7&fromSprintId=100&toSprintId=102"));
+
+        Assert.IsFalse(store.TryPrepareNavigation(
+            "http://localhost/home/trends?teamId=7&fromSprintId=100&toSprintId=101",
+            "http://localhost/home/trends?toSprintId=102&teamId=7&fromSprintId=100"));
+    }
+
+    [TestMethod]
+    public async Task TryPrepareNavigation_ClearsPendingSignatureAfterObservedNavigation()
+    {
+        var store = CreateStore();
+
+        Assert.IsTrue(store.TryPrepareNavigation(
+            "http://localhost/home/trends?teamId=7&fromSprintId=100&toSprintId=101",
+            "http://localhost/home/trends?teamId=7&fromSprintId=101&toSprintId=102"));
+
+        await store.TrackNavigationAsync("http://localhost/home/trends?teamId=7&fromSprintId=101&toSprintId=102");
+
+        Assert.IsNull(store.PendingRouteSignature);
+        Assert.AreEqual("home/trends?fromSprintId=101&teamId=7&toSprintId=102", store.CurrentRouteSignature);
     }
 
     private static GlobalFilterStore CreateStore()
@@ -79,7 +140,8 @@ public sealed class GlobalFilterStoreTests
         };
 
         var projectService = new ProjectService(httpClient);
-        var resolver = new FilterStateResolver(projectService);
+        var projectIdentityMapper = new ProjectIdentityMapper(projectService);
+        var resolver = new FilterStateResolver(projectIdentityMapper);
         return new GlobalFilterStore(NullLogger<GlobalFilterStore>.Instance, resolver);
     }
 

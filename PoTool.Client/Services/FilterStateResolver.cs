@@ -8,12 +8,11 @@ public sealed class FilterStateResolver
 {
     private const int DefaultRollingDays = 180;
 
-    private readonly ProjectService _projectService;
-    private readonly Dictionary<string, ProjectDto?> _projectCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ProjectIdentityMapper _projectIdentityMapper;
 
-    public FilterStateResolver(ProjectService projectService)
+    public FilterStateResolver(ProjectIdentityMapper projectIdentityMapper)
     {
-        _projectService = projectService;
+        _projectIdentityMapper = projectIdentityMapper;
     }
 
     public async Task<FilterStateResolution?> ResolveAsync(
@@ -29,10 +28,12 @@ public sealed class FilterStateResolver
         }
 
         var decisions = new List<string>();
+        var issues = new List<string>();
         var lastUpdateSource = FilterUpdateSource.Default;
+        var routeSignature = WorkspaceQueryContextHelper.CreateRouteSignature(uri);
 
         var productIds = ResolveProducts(route, context, localState, decisions, ref lastUpdateSource, localSource);
-        var projectResolution = await ResolveProjectsAsync(route, context, localState, decisions, localSource, cancellationToken);
+        var projectResolution = await ResolveProjectsAsync(route, context, localState, decisions, issues, localSource, cancellationToken);
         var projectIds = projectResolution.ProjectIds;
         if (projectResolution.Source != FilterUpdateSource.Default)
         {
@@ -46,23 +47,27 @@ public sealed class FilterStateResolver
             "teamId",
             localSource);
 
-        var time = ResolveTime(definition.TimeMode, context, localState, decisions, ref lastUpdateSource, localSource);
+        var time = ResolveTime(definition.TimeMode, context, localState, decisions, issues, ref lastUpdateSource, localSource);
         var missingTeam = definition.RequiresTeam && !teamId.HasValue;
         var missingSprint = definition.RequiresSprint && !HasRequiredSprint(time);
+        var status = DetermineStatus(missingTeam, missingSprint, decisions, issues);
 
         return new FilterStateResolution(
             definition.PageName,
             route,
+            routeSignature,
             definition.UsesProduct,
             definition.UsesProject,
             definition.UsesTeam,
             definition.UsesTime,
             new FilterState(productIds, projectIds, teamId, time),
+            status,
             missingTeam,
             missingSprint,
             activeProfileId,
             lastUpdateSource,
             decisions,
+            issues,
             DateTimeOffset.UtcNow);
     }
 
@@ -107,6 +112,7 @@ public sealed class FilterStateResolver
         WorkspaceQueryContext context,
         FilterLocalBridgeState? localState,
         ICollection<string> decisions,
+        ICollection<string> issues,
         FilterUpdateSource localSource,
         CancellationToken cancellationToken)
     {
@@ -129,6 +135,10 @@ public sealed class FilterStateResolver
             }
 
             var projectId = await ResolveProjectIdAsync(routeAlias, cancellationToken);
+            if (string.IsNullOrWhiteSpace(projectId))
+            {
+                issues.Add($"route project alias '{routeAlias}' could not be resolved");
+            }
             return (string.IsNullOrWhiteSpace(projectId) ? Array.Empty<string>() : new[] { projectId }, FilterUpdateSource.Route);
         }
 
@@ -140,6 +150,10 @@ public sealed class FilterStateResolver
         if (!string.IsNullOrWhiteSpace(queryAlias))
         {
             var projectId = await ResolveProjectIdAsync(queryAlias, cancellationToken);
+            if (string.IsNullOrWhiteSpace(projectId))
+            {
+                issues.Add($"query project alias '{queryAlias}' could not be resolved");
+            }
             return (string.IsNullOrWhiteSpace(projectId) ? Array.Empty<string>() : new[] { projectId }, FilterUpdateSource.Query);
         }
 
@@ -153,6 +167,10 @@ public sealed class FilterStateResolver
         {
             decisions.Add("local bridge supplied project alias");
             var projectId = await ResolveProjectIdAsync(localProjectAlias, cancellationToken);
+            if (string.IsNullOrWhiteSpace(projectId))
+            {
+                issues.Add($"local project alias '{localProjectAlias}' could not be resolved");
+            }
             return (string.IsNullOrWhiteSpace(projectId) ? Array.Empty<string>() : new[] { projectId }, localSource);
         }
 
@@ -188,6 +206,7 @@ public sealed class FilterStateResolver
         WorkspaceQueryContext context,
         FilterLocalBridgeState? localState,
         ICollection<string> decisions,
+        ICollection<string> issues,
         ref FilterUpdateSource lastUpdateSource,
         FilterUpdateSource localSource)
     {
@@ -195,7 +214,7 @@ public sealed class FilterStateResolver
         {
             FilterTimeMode.Sprint => ResolveSprintTime(context, localState, decisions, ref lastUpdateSource, localSource),
             FilterTimeMode.Range => ResolveRangeTime(context, localState, decisions, ref lastUpdateSource, localSource),
-            FilterTimeMode.Rolling => ResolveRollingTime(context, localState, decisions, ref lastUpdateSource, localSource),
+            FilterTimeMode.Rolling => ResolveRollingTime(context, localState, decisions, issues, ref lastUpdateSource, localSource),
             _ => FilterTimeSelection.Snapshot
         };
     }
@@ -268,6 +287,7 @@ public sealed class FilterStateResolver
         WorkspaceQueryContext context,
         FilterLocalBridgeState? localState,
         ICollection<string> decisions,
+        ICollection<string> issues,
         ref FilterUpdateSource lastUpdateSource,
         FilterUpdateSource localSource)
     {
@@ -280,6 +300,12 @@ public sealed class FilterStateResolver
 
         if (localState?.RollingWindow.HasValue == true)
         {
+            if (localState.RollingWindow <= 0 || localState.RollingUnit is null)
+            {
+                issues.Add("rolling time selection requires a positive rolling window and explicit unit");
+                return new FilterTimeSelection(FilterTimeMode.Rolling);
+            }
+
             lastUpdateSource = localSource;
             return new FilterTimeSelection(
                 FilterTimeMode.Rolling,
@@ -293,31 +319,37 @@ public sealed class FilterStateResolver
     }
 
     private async Task<string?> ResolveProjectIdAsync(string aliasOrId, CancellationToken cancellationToken)
-    {
-        var normalized = NormalizeProjectId(aliasOrId);
-        if (string.IsNullOrWhiteSpace(normalized))
-        {
-            return null;
-        }
-
-        if (_projectCache.TryGetValue(normalized, out var cached))
-        {
-            return cached?.Id ?? normalized;
-        }
-
-        var project = await _projectService.GetProjectAsync(normalized, cancellationToken);
-        _projectCache[normalized] = project;
-        return project?.Id ?? normalized;
-    }
+        => await _projectIdentityMapper.ResolveProjectIdAsync(aliasOrId, cancellationToken);
 
     private static bool HasRequiredSprint(FilterTimeSelection time)
         => time.Mode switch
         {
             FilterTimeMode.Sprint => time.SprintId.HasValue,
-            FilterTimeMode.Range => time.StartSprintId.HasValue || time.EndSprintId.HasValue,
-            FilterTimeMode.Rolling => time.SprintId.HasValue || time.RollingWindow.HasValue,
+            FilterTimeMode.Range => time.StartSprintId.HasValue && time.EndSprintId.HasValue,
+            FilterTimeMode.Rolling => time.RollingWindow.HasValue && time.RollingUnit.HasValue,
             _ => false
         };
+
+    private static FilterResolutionStatus DetermineStatus(
+        bool missingTeam,
+        bool missingSprint,
+        IReadOnlyCollection<string> decisions,
+        IReadOnlyCollection<string> issues)
+    {
+        if (issues.Count > 0)
+        {
+            return FilterResolutionStatus.Invalid;
+        }
+
+        if (missingTeam || missingSprint)
+        {
+            return FilterResolutionStatus.Unresolved;
+        }
+
+        return decisions.Count > 0
+            ? FilterResolutionStatus.ResolvedWithNormalization
+            : FilterResolutionStatus.Resolved;
+    }
 
     private static string? NormalizeProjectId(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

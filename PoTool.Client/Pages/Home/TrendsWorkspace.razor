@@ -318,9 +318,6 @@
     private List<BreadcrumbItem> _breadcrumbs = new();
     
     // Sprint range selector state
-    private int? _selectedTeamId;
-    private int? _selectedFromSprintId;
-    private int? _selectedToSprintId;
     private List<TeamDto> _teams = new();
     private List<SprintDto> _sprints = new();
     private DateTimeOffset _fromDate;
@@ -340,6 +337,9 @@
     private DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>> _bugTrendState = DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.NotRequested();
     private DataStateViewModel<PullRequestQueryResponseDto<GetPrSprintTrendsResponse>> _prTrendState = DataStateViewModel<PullRequestQueryResponseDto<GetPrSprintTrendsResponse>>.NotRequested();
     private IDisposable? _filterSubscription;
+    private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
+    private int? _selectedFromSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Range ? GlobalFilterStore.GetState().Time.StartSprintId : null;
+    private int? _selectedToSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Range ? GlobalFilterStore.GetState().Time.EndSprintId : null;
     
     protected override async Task OnInitializedAsync()
     {
@@ -359,8 +359,6 @@
             
             // Load teams for sprint selector
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
-            
-            ApplyStoreState();
             
             // Load sprints if team is selected
             if (_selectedTeamId.HasValue)
@@ -591,10 +589,13 @@
     
     private void ClearProductFilter()
     {
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.TrendsWorkspace,
-                new WorkspaceQueryContext(TeamId: _selectedTeamId, FromSprintId: _selectedFromSprintId, ToSprintId: _selectedToSprintId)));
+        var targetUri = WorkspaceQueryContextHelper.BuildRoute(
+            WorkspaceRoutes.TrendsWorkspace,
+            new WorkspaceQueryContext(TeamId: _selectedTeamId, FromSprintId: _selectedFromSprintId, ToSprintId: _selectedToSprintId));
+        if (GlobalFilterStore.TryPrepareNavigation(NavigationManager.Uri, targetUri))
+        {
+            NavigationManager.NavigateTo(targetUri);
+        }
     }
     
     /// <summary>
@@ -770,12 +771,9 @@
     /// </summary>
     private async Task OnTeamSelectionChanged(int? teamId)
     {
-        _selectedTeamId = teamId;
-        _selectedFromSprintId = null;
-        _selectedToSprintId = null;
         _sprints.Clear();
         _prTrendSignal = null;
-        await SyncStoreFromLocalStateAsync();
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { TeamId = teamId, FromSprintId = null, ToSprintId = null });
          
         if (teamId.HasValue)
         {
@@ -794,8 +792,7 @@
     /// </summary>
     private async Task OnFromSprintChanged(int? sprintId)
     {
-        _selectedFromSprintId = sprintId;
-        await SyncStoreFromLocalStateAsync();
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { FromSprintId = sprintId });
         CalculateDateRange();
         UpdateSprintUrlParameters();
         await LoadBugTrendDataAsync();
@@ -808,8 +805,7 @@
     /// </summary>
     private async Task OnToSprintChanged(int? sprintId)
     {
-        _selectedToSprintId = sprintId;
-        await SyncStoreFromLocalStateAsync();
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { ToSprintId = sprintId });
         CalculateDateRange();
         UpdateSprintUrlParameters();
         await LoadBugTrendDataAsync();
@@ -839,28 +835,16 @@
         CancelTileSignalLoad();
     }
 
-    private void ApplyStoreState()
-    {
-        var state = GlobalFilterStore.GetState();
-        _selectedTeamId = state.TeamId;
-        if (state.Time.Mode == FilterTimeMode.Range)
-        {
-            _selectedFromSprintId = state.Time.StartSprintId;
-            _selectedToSprintId = state.Time.EndSprintId;
-        }
-    }
+    private FilterLocalBridgeState BuildCurrentLocalBridgeState()
+        => FilterLocalBridgeState.FromState(GlobalFilterStore.GetState()) with { ProductId = ProductId };
 
-    private async Task SyncStoreFromLocalStateAsync()
+    private async Task UpdateFilterStateAsync(FilterLocalBridgeState localState)
         => await GlobalFilterStore.SetStateAsync(
             NavigationManager.Uri,
             _profileId,
-            new FilterLocalBridgeState(ProductId: ProductId, TeamId: _selectedTeamId, FromSprintId: _selectedFromSprintId, ToSprintId: _selectedToSprintId),
+            localState,
             FilterUpdateSource.Ui);
 
     private void HandleGlobalFilterChanged()
-        => _ = InvokeAsync(() =>
-        {
-            ApplyStoreState();
-            StateHasChanged();
-        });
+        => _ = InvokeAsync(StateHasChanged);
 }

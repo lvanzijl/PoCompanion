@@ -35,6 +35,35 @@ public static class WorkspaceQueryContextHelper
             ToSprintId: ParseNullableInt(queryParams["toSprintId"]));
     }
 
+    public static string CreateRouteSignature(string? uri)
+    {
+        if (string.IsNullOrWhiteSpace(uri))
+        {
+            return string.Empty;
+        }
+
+        var absoluteUri = Uri.TryCreate(uri, UriKind.Absolute, out var parsedAbsolute)
+            ? parsedAbsolute
+            : new Uri(new Uri("http://localhost"), uri.StartsWith('/') ? uri : $"/{uri}");
+
+        var queryParams = HttpUtility.ParseQueryString(absoluteUri.Query);
+        var normalizedQuery = queryParams.AllKeys
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
+            .SelectMany(key => (queryParams.GetValues(key!) ?? [string.Empty])
+                .OrderBy(value => value, StringComparer.Ordinal)
+                .Select(value => $"{key}={value}"))
+            .ToArray();
+
+        var normalizedPath = absoluteUri.AbsolutePath.Trim('/').ToLowerInvariant();
+        return normalizedQuery.Length == 0
+            ? normalizedPath
+            : $"{normalizedPath}?{string.Join("&", normalizedQuery)}";
+    }
+
+    public static bool AreEquivalentRoutes(string? left, string? right)
+        => string.Equals(CreateRouteSignature(left), CreateRouteSignature(right), StringComparison.Ordinal);
+
     public static string BuildQueryString(WorkspaceQueryContext context, string? additionalParams = null)
     {
         var parameters = new List<string>();

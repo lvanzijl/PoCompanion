@@ -31,29 +31,40 @@ public abstract class WorkspaceBase : ComponentBase
     protected string? ProjectAlias { get; set; }
 
     /// <summary>
+    /// Canonical project identifier from the global filter store.
+    /// </summary>
+    protected string? ProjectId => GlobalFilterStore.GetState().PrimaryProjectId;
+
+    /// <summary>
     /// Product ID for context propagation (parsed from URL).
     /// </summary>
-    protected int? ProductId { get; set; }
+    protected int? ProductId => GlobalFilterStore.GetState().PrimaryProductId;
     
     /// <summary>
     /// Team ID for context propagation (parsed from URL).
     /// </summary>
-    protected int? TeamId { get; set; }
+    protected int? TeamId => GlobalFilterStore.GetState().TeamId;
 
     /// <summary>
     /// Sprint ID for context propagation (parsed from URL).
     /// </summary>
-    protected int? SprintId { get; set; }
+    protected int? SprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Sprint
+        ? GlobalFilterStore.GetState().Time.SprintId
+        : null;
 
     /// <summary>
     /// Optional start sprint for trend-range context.
     /// </summary>
-    protected int? FromSprintId { get; set; }
+    protected int? FromSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Range
+        ? GlobalFilterStore.GetState().Time.StartSprintId
+        : null;
 
     /// <summary>
     /// Optional end sprint for trend-range context.
     /// </summary>
-    protected int? ToSprintId { get; set; }
+    protected int? ToSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Range
+        ? GlobalFilterStore.GetState().Time.EndSprintId
+        : null;
 
     /// <summary>
     /// Parses query parameters from the current URL for context propagation.
@@ -63,11 +74,6 @@ public abstract class WorkspaceBase : ComponentBase
     {
         var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
         ProjectAlias = context.ProjectAlias;
-        ProductId = context.ProductId;
-        TeamId = context.TeamId;
-        SprintId = context.SprintId;
-        FromSprintId = context.FromSprintId;
-        ToSprintId = context.ToSprintId;
         _ = GlobalFilterStore.TrackNavigationAsync(NavigationManager.Uri, ProfileService.GetActiveProfileId());
     }
 
@@ -79,7 +85,7 @@ public abstract class WorkspaceBase : ComponentBase
     /// <returns>Query string starting with "?" or empty string if no parameters</returns>
     protected string BuildContextQuery(string? additionalParams = null)
         => WorkspaceQueryContextHelper.BuildQueryString(
-            new WorkspaceQueryContext(ProjectAlias: ProjectAlias, ProductId: ProductId, TeamId: TeamId, SprintId: SprintId, FromSprintId: FromSprintId, ToSprintId: ToSprintId),
+            new WorkspaceQueryContext(ProjectAlias: ProjectAlias, ProjectId: ProjectId, ProductId: ProductId, TeamId: TeamId, SprintId: SprintId, FromSprintId: FromSprintId, ToSprintId: ToSprintId),
             additionalParams);
     
     /// <summary>
@@ -107,6 +113,6 @@ public abstract class WorkspaceBase : ComponentBase
             NavigationManager.NavigateTo(
                 WorkspaceQueryContextHelper.BuildRoute(
                     WorkspaceRoutes.Home,
-                    new WorkspaceQueryContext(ProjectAlias: ProjectAlias, ProductId: ProductId, TeamId: TeamId, SprintId: SprintId, FromSprintId: FromSprintId, ToSprintId: ToSprintId)));
+                    new WorkspaceQueryContext(ProjectAlias: ProjectAlias, ProjectId: ProjectId, ProductId: ProductId, TeamId: TeamId, SprintId: SprintId, FromSprintId: FromSprintId, ToSprintId: ToSprintId)));
     }
 }

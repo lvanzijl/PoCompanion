@@ -26,6 +26,9 @@
             <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Default">
                 Source: @GlobalFilterStore.CurrentUsage.LastUpdateSource
             </MudChip>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetStatusColor(GlobalFilterStore.CurrentUsage.Status)">
+                Status: @GlobalFilterStore.CurrentUsage.Status
+            </MudChip>
 
             @if (GlobalFilterStore.CurrentUsage.MissingTeam)
             {
@@ -72,4 +75,13 @@
 
     private static string FormatTime(FilterState state)
         => state.Time.ToDisplayString();
+
+    private static Color GetStatusColor(FilterResolutionStatus status)
+        => status switch
+        {
+            FilterResolutionStatus.Invalid => Color.Error,
+            FilterResolutionStatus.Unresolved => Color.Warning,
+            FilterResolutionStatus.ResolvedWithNormalization => Color.Info,
+            _ => Color.Success
+        };
 }
