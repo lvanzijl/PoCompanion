@@ -52,9 +52,10 @@ The reported `r.Result` access in `/home/runner/work/PoCompanion/PoCompanion/PoT
 - Local sync-over-async check: PASS (`/home/runner/work/PoCompanion/PoCompanion/.github/scripts/check-sync-over-async.sh`)
 - Local build: PASS (`dotnet build PoTool.sln --configuration Release --nologo`)
 - Local filtered tests: PASS (`dotnet test PoTool.sln --configuration Release --nologo --filter "TestCategory!=Governance&TestCategory!=ApiContract"`)
-- Core Gate result: PASS on the latest post-fix branch run
-- API Contract Gate result: unaffected
-- Governance Gate result: unaffected
+- Latest pushed Build and Test Gates run: `23934317558` (`action_required`, no jobs started yet)
+- Core Gate result: pending workflow approval on GitHub; local sync-over-async gate passes
+- API Contract Gate result: pending workflow approval; no affected code paths
+- Governance Gate result: pending workflow approval; no affected code paths
 
 ## 5. Residual risk
 
