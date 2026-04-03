@@ -71,12 +71,6 @@
 | `/settings/teams` | `PoTool.Client/Pages/Settings/ManageTeams.razor:1` | Settings manager; no analytics filters. |
 | `/settings/productowner/{ProfileId:int}` | `PoTool.Client/Pages/Settings/ManageProductOwner.razor:1` | Settings manager; no analytics filters. |
 
-### Legacy intent workspaces
-
-| Route | File | Notes |
-| --- | --- | --- |
-| `/workspace/product` and `/workspace/product/{ProductId:int}` | `PoTool.Client/Pages/LegacyWorkspaces/ProductWorkspace.razor:1-2` | Legacy workspace route. |
-
 ## 2. Filter inventory
 
 | Filter | Meaning | UI type | State scope | Server/client application | Main references |

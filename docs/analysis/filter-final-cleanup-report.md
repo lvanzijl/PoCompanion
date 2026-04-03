@@ -21,7 +21,6 @@ The remaining candidate legacy-looking paths were audited and were found to be e
 | Path | Status | Reason |
 |---|---|---|
 | `PoTool.Client/Pages/Home/WorkspaceBase.cs` | Temporary and should remain with reason | Still actively propagates coarse `productId` / `teamId` home-workspace navigation context. It is not a dead compatibility path, and removing it now would break current workspace navigation because no shared `FilterUrlParser` / `FilterNavigationAdapter` replacement was shipped. |
-| `PoTool.Client/Services/NavigationContextService.cs` | Temporary and should remain with reason | Still owns navigation-context serialization/parsing for home flows. It remains active alongside canonical filtering because the canonical workstream did not replace all workspace navigation plumbing. |
 | `PoTool.Client/Services/PipelineService.cs` | Required to keep | Still adapts client calls to the active pipeline API contract, which accepts family-specific transport parameters such as `productIds`, `fromDate`, and `toDate` before API-side canonical resolution. |
 | `PoTool.Client/Services/PullRequestService.cs` | Required to keep | Still adapts client calls to the active pull-request API contract, which accepts family-specific transport parameters and returns the canonical envelope. |
 | `PoTool.Client/Services/SprintDeliveryMetricsService.cs` | Required to keep | Still adapts sprint trend requests to the active API contract that accepts sprint collections and optional product scope before API-side canonical resolution. |
@@ -45,10 +44,10 @@ Results:
 
 The canonical API-side filtering system is now the sole active execution system for the migrated sprint, delivery, pipeline, pull-request, and portfolio slices.
 
-Client-side navigation context helpers and endpoint-family request adapters still remain, but they no longer replace or bypass the canonical backend effective-filter resolution model in the migrated slices.
+Client-side query-string helpers and endpoint-family request adapters still remain, but they no longer replace or bypass the canonical backend effective-filter resolution model in the migrated slices.
 
 ## Known Remaining Technical Debt
 
 - A shared client-side canonical filter runtime (`FilterState`, shared URL parser/serializer, shared navigation adapter) was planned but was not shipped; page-local selection and transport shaping still exist in several migrated pages.
-- `WorkspaceBase` and `NavigationContextService` still carry coarse workspace context through query parameters and remain separate from the canonical backend filtering system.
+- `WorkspaceBase` still carries coarse workspace context through query parameters and remains separate from the canonical backend filtering system.
 - Some DTO compatibility aliases outside the narrow filter-execution scope still remain for contract stability and can be revisited only in a dedicated contract-cleanup change.

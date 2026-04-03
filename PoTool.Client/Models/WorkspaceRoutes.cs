@@ -23,11 +23,6 @@ public static class WorkspaceRoutes
     /// </summary>
     public const string Profiles = "/profiles";
 
-    /// <summary>
-    /// Product Workspace route.
-    /// </summary>
-    public const string ProductWorkspace = "/workspace/product";
-
     #region Workspace Navigation Routes
 
     /// <summary>
@@ -194,22 +189,6 @@ public static class WorkspaceRoutes
     /// Work Item Explorer route.
     /// </summary>
     public const string WorkItems = "/workitems";
-
-    /// <summary>
-    /// Gets the target workspace route for a given intent.
-    /// </summary>
-    /// <param name="intent">The navigation intent.</param>
-    /// <param name="scopeLevel">The current scope level.</param>
-    /// <returns>The workspace route for the intent.</returns>
-    public static string GetRouteForIntent(Intent intent, ScopeLevel scopeLevel = ScopeLevel.Portfolio)
-    {
-        return intent switch
-        {
-            Intent.Overzien => ProductWorkspace,
-            Intent.Plannen => PlanningWorkspace,
-            _ => Home
-        };
-    }
 
     /// <summary>
     /// Gets the per-product roadmap editor route for a specific product.

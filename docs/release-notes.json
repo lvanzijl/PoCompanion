@@ -2,6 +2,14 @@
   {
     "date": "2026-04-03",
     "type": "Changed",
+    "title": "Final legacy product workspace has been removed",
+    "impact": "The standalone `/workspace/product` routes and their legacy navigation/context plumbing are no longer available. No `/workspace/*` routes remain, while modern product filtering, planning, delivery, trends, health, and CDC-related behavior continue to use the current Home workspace flows.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-03",
+    "type": "Changed",
     "title": "Legacy team workspace has been removed",
     "impact": "The standalone `/workspace/team` routes are no longer available. Legacy product pages no longer link into that removed workspace, while shared team filtering, assignment, analytics, and CDC-related logic remain available for modern features.",
     "area": "Home",
