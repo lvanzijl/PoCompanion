@@ -339,9 +339,11 @@
     private CancellationTokenSource? _tileSignalLoadCts;
     private DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>> _bugTrendState = DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.NotRequested();
     private DataStateViewModel<PullRequestQueryResponseDto<GetPrSprintTrendsResponse>> _prTrendState = DataStateViewModel<PullRequestQueryResponseDto<GetPrSprintTrendsResponse>>.NotRequested();
+    private IDisposable? _filterSubscription;
     
     protected override async Task OnInitializedAsync()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         try
         {
             // Parse context from query string (inherited from base class)
@@ -358,8 +360,7 @@
             // Load teams for sprint selector
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
             
-            // Parse URL parameters for sprint selection
-            ParseSprintQueryParameters();
+            ApplyStoreState();
             
             // Load sprints if team is selected
             if (_selectedTeamId.HasValue)
@@ -597,36 +598,6 @@
     }
     
     /// <summary>
-    /// Parses sprint selection parameters from URL query string.
-    /// </summary>
-    private void ParseSprintQueryParameters()
-    {
-        var uri = new Uri(NavigationManager.Uri);
-        var queryParams = HttpUtility.ParseQueryString(uri.Query);
-        
-        // Parse teamId
-        var teamIdStr = queryParams["teamId"];
-        if (!string.IsNullOrEmpty(teamIdStr) && int.TryParse(teamIdStr, out var teamId))
-        {
-            _selectedTeamId = teamId;
-        }
-        
-        // Parse fromSprintId
-        var fromSprintIdStr = queryParams["fromSprintId"];
-        if (!string.IsNullOrEmpty(fromSprintIdStr) && int.TryParse(fromSprintIdStr, out var fromSprintId))
-        {
-            _selectedFromSprintId = fromSprintId;
-        }
-        
-        // Parse toSprintId
-        var toSprintIdStr = queryParams["toSprintId"];
-        if (!string.IsNullOrEmpty(toSprintIdStr) && int.TryParse(toSprintIdStr, out var toSprintId))
-        {
-            _selectedToSprintId = toSprintId;
-        }
-    }
-    
-    /// <summary>
     /// Loads sprints for the selected team.
     /// </summary>
     private async Task LoadSprintsForTeamAsync(int teamId)
@@ -804,6 +775,7 @@
         _selectedToSprintId = null;
         _sprints.Clear();
         _prTrendSignal = null;
+        await SyncStoreFromLocalStateAsync();
          
         if (teamId.HasValue)
         {
@@ -823,6 +795,7 @@
     private async Task OnFromSprintChanged(int? sprintId)
     {
         _selectedFromSprintId = sprintId;
+        await SyncStoreFromLocalStateAsync();
         CalculateDateRange();
         UpdateSprintUrlParameters();
         await LoadBugTrendDataAsync();
@@ -836,6 +809,7 @@
     private async Task OnToSprintChanged(int? sprintId)
     {
         _selectedToSprintId = sprintId;
+        await SyncStoreFromLocalStateAsync();
         CalculateDateRange();
         UpdateSprintUrlParameters();
         await LoadBugTrendDataAsync();
@@ -861,6 +835,32 @@
 
     public void Dispose()
     {
+        _filterSubscription?.Dispose();
         CancelTileSignalLoad();
     }
+
+    private void ApplyStoreState()
+    {
+        var state = GlobalFilterStore.GetState();
+        _selectedTeamId = state.TeamId;
+        if (state.Time.Mode == FilterTimeMode.Range)
+        {
+            _selectedFromSprintId = state.Time.StartSprintId;
+            _selectedToSprintId = state.Time.EndSprintId;
+        }
+    }
+
+    private async Task SyncStoreFromLocalStateAsync()
+        => await GlobalFilterStore.SetStateAsync(
+            NavigationManager.Uri,
+            _profileId,
+            new FilterLocalBridgeState(ProductId: ProductId, TeamId: _selectedTeamId, FromSprintId: _selectedFromSprintId, ToSprintId: _selectedToSprintId),
+            FilterUpdateSource.Ui);
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(() =>
+        {
+            ApplyStoreState();
+            StateHasChanged();
+        });
 }
