@@ -12,7 +12,7 @@ namespace PoTool.Client.Services;
 public class StartupOrchestratorService : IStartupOrchestratorService
 {
     private readonly HttpClient _httpClient;
-    private readonly CacheSyncService _cacheSyncService;
+    private readonly ICacheSyncService _cacheSyncService;
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -20,7 +20,7 @@ public class StartupOrchestratorService : IStartupOrchestratorService
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public StartupOrchestratorService(HttpClient httpClient, CacheSyncService cacheSyncService)
+    public StartupOrchestratorService(HttpClient httpClient, ICacheSyncService cacheSyncService)
     {
         _httpClient = httpClient;
         _cacheSyncService = cacheSyncService;
@@ -167,8 +167,8 @@ public class StartupOrchestratorService : IStartupOrchestratorService
                 "Open Profiles and select the profile you want to use.");
         }
 
-        var cacheState = await _cacheSyncService.GetCacheStatusAsync(readiness.ActiveProfileId.Value, cancellationToken);
-        if (cacheState == null)
+        var profileCacheState = await _cacheSyncService.GetCacheStatusAsync(readiness.ActiveProfileId.Value, cancellationToken);
+        if (profileCacheState == null)
         {
             return new StartupReadinessResult(
                 StartupReadinessState.Unavailable,
@@ -177,12 +177,12 @@ public class StartupOrchestratorService : IStartupOrchestratorService
                 "Open Sync Gate after confirming the backend is available, then retry.");
         }
 
-        if (!cacheState.LastSuccessfulSync.HasValue)
+        if (!profileCacheState.LastSuccessfulSync.HasValue)
         {
             return new StartupReadinessResult(
                 StartupReadinessState.SyncRequired,
                 readiness,
-                cacheState.LastErrorMessage ?? "The active profile must complete a cache sync before workspace pages can load.",
+                profileCacheState.LastErrorMessage ?? "The active profile must complete a cache sync before workspace pages can load.",
                 "Open Sync Gate to build or refresh the cache for the active profile.");
         }
 

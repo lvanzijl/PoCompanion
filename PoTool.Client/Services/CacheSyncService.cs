@@ -4,9 +4,25 @@ using PoTool.Shared.Settings;
 namespace PoTool.Client.Services;
 
 /// <summary>
+/// Abstraction for interacting with cache sync operations.
+/// </summary>
+public interface ICacheSyncService
+{
+    Task<CacheStateDto?> GetCacheStatusAsync(int productOwnerId, CancellationToken cancellationToken = default);
+    Task<SyncTriggerResult> TriggerSyncAsync(int productOwnerId, CancellationToken cancellationToken = default);
+    Task<bool> CancelSyncAsync(int productOwnerId, CancellationToken cancellationToken = default);
+    Task<bool> DeleteCacheAsync(int productOwnerId, CancellationToken cancellationToken = default);
+    Task<bool> IsSyncRunningAsync(int productOwnerId, CancellationToken cancellationToken = default);
+    Task<CacheInsightsDto?> GetCacheInsightsAsync(int productOwnerId, CancellationToken cancellationToken = default);
+    Task<CacheResetResponse?> ResetCacheSelectiveAsync(int productOwnerId, CacheResetRequest request, CancellationToken cancellationToken = default);
+    Task<ActivityLedgerValidationDto?> GetActivityLedgerValidationAsync(int productOwnerId, int workItemId, DateTimeOffset? fromChangedDate, DateTimeOffset? toChangedDate, CancellationToken cancellationToken = default);
+    Task<SyncChangesSummaryDto?> GetChangesSinceSyncAsync(int productOwnerId, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
 /// Service for interacting with cache sync operations.
 /// </summary>
-public class CacheSyncService
+public class CacheSyncService : ICacheSyncService
 {
     private readonly HttpClient _httpClient;
 

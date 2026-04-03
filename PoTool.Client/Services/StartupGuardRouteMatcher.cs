@@ -9,8 +9,9 @@ public static class StartupGuardRouteMatcher
     {
         var normalizedCurrentPath = NormalizePath(currentPath);
 
-        foreach (var exemptPath in exemptPaths.Select(NormalizePath))
+        foreach (var rawExemptPath in exemptPaths)
         {
+            var exemptPath = NormalizePath(rawExemptPath);
             if (exemptPath == "/")
             {
                 if (normalizedCurrentPath == "/")

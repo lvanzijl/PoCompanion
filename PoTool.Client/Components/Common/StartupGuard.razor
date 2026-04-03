@@ -99,7 +99,7 @@ else
         _isChecking = true;
 
         var currentPath = StartupGuardRouteMatcher.NormalizePath(NavigationManager.ToBaseRelativePath(currentLocation));
-        var exemptPages = ExemptPages?.ToArray() ?? DefaultExemptPages;
+        var exemptPages = ExemptPages ?? DefaultExemptPages;
         if (StartupGuardRouteMatcher.IsExemptPath(currentPath, exemptPages))
         {
             _isReady = true;
