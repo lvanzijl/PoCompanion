@@ -877,9 +877,9 @@ The following suggestions are derived from analysing the current navigation stru
 
 ### Suggestion 10 — Resolve the Beta Navigation promotion path (Decision #1)
 
-**Current situation:** The current navigation (`/home` and its workspaces) is the production navigation, but the legacy intent-based navigation (`/legacy`) is still accessible via a subtle footer link. This creates two parallel navigation systems. The legacy system serves no active use case in the current implementation.
+**Current situation:** The current navigation (`/home` and its workspaces) is the production navigation. Direct routing for the legacy intent-based navigation (`/legacy`) has been disabled, so only the current workspace model remains routeable.
 
-**Suggestion:** Define and implement a promotion plan for the current navigation as the sole navigation model. Remove the `/legacy` entry point from the Home page footer. This reduces confusion, eliminates dead code, and presents a single coherent user experience to the product owner.
+**Suggestion:** Continue removing the remaining legacy intent-routing helpers and constants so the codebase matches the production navigation model exactly.
 
 ---
 

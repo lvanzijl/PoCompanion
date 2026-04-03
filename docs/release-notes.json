@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-04-03",
+    "type": "Changed",
+    "title": "Delivery and trends pages now require explicit sprint context",
+    "impact": "Legacy `/legacy` and `/workspace/*` routes are no longer directly routeable, Sprint Delivery / Sprint Execution / Pipeline Insights / Portfolio Delivery stop auto-selecting team or sprint context, PR and trend pages no longer anchor themselves to an inferred current sprint, and What's New Since Last Sync is now explicitly treated as an operational page outside the global filter contract.",
+    "area": "Home",
+    "link": "/home/delivery"
+  },
+  {
     "date": "2026-04-02",
     "type": "Fixed",
     "title": "Configuration import now restores products under a valid project",
@@ -101,7 +109,7 @@
     "title": "Backlog health iteration cards now show counted issues",
     "impact": "Backlog Health iteration cards now show the total number of issues counted in each health-score calculation, so product owners can see how many blocked, parent-progress, and missing-effort issues drove the score without leaving the current view.",
     "area": "Trends",
-    "link": "/workspace/analysis"
+    "link": "/home/health/backlog-health"
   },
   {
     "date": "2026-03-31",
