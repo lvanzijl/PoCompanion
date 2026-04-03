@@ -72,7 +72,6 @@
 | `/settings/productowner/edit/{ProfileId:int?}` | `PoTool.Client/Pages/Settings/EditProductOwner.razor:1` | Settings editor; no analytics filters. |
 | `/settings/teams` | `PoTool.Client/Pages/Settings/ManageTeams.razor:1` | Settings manager; no analytics filters. |
 | `/settings/productowner/{ProfileId:int}` | `PoTool.Client/Pages/Settings/ManageProductOwner.razor:1` | Settings manager; no analytics filters. |
-| `/settings/products` | `PoTool.Client/Pages/Settings/ManageProducts.razor:1` | Settings manager; no analytics filters. |
 
 ### Legacy intent workspaces
 

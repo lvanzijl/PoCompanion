@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-04-03",
+    "type": "Changed",
+    "title": "Unused Manage Products page has been removed",
+    "impact": "The standalone `/settings/products` page is no longer available. Product creation, editing, ordering, reassignment, and deletion now remain only under each Product Owner details page, and the obsolete orphan-only management route has been removed.",
+    "area": "Settings",
+    "link": "/profiles"
+  },
+  {
     "date": "2026-04-02",
     "type": "Fixed",
     "title": "Configuration import now restores products under a valid project",

@@ -607,7 +607,6 @@ For each current sidebar entry point, this table specifies the target mapping.
 | ReleasePlanning.razor (`/release-planning`) | plan | Plannen | Planning | Choice | Product | Future | Phase 6 | Phase 7B |
 | TfsConfig.razor (`/tfsconfig`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7B |
 | WorkItemStates.razor (`/settings/workitem-states`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7B |
-| ManageProducts.razor (`/settings/products`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7B |
 | ManageTeams.razor (`/settings/teams`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7B |
 | ManageProductOwner.razor (`/settings/productowner/{id}`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7B |
 | EditProductOwner.razor (`/settings/productowner/edit`) | configure | N/A | Settings | N/A | N/A | N/A | Phase 2 | Phase 7B |
@@ -855,7 +854,7 @@ This section maps **capabilities** (functional features) to their target workspa
 | Attribute | Value |
 |-----------|-------|
 | **Capability** | TFS config, work item states, product/team management, profile editing |
-| **Current Location(s)** | TfsConfig.razor, WorkItemStates.razor, ManageProducts.razor, ManageTeams.razor, EditProductOwner.razor |
+| **Current Location(s)** | TfsConfig.razor, WorkItemStates.razor, ManageTeams.razor, ManageProductOwner.razor, EditProductOwner.razor |
 | **Target Workspace** | Settings (header modal/drawer) |
 | **Intent(s)** | N/A (meta action) |
 | **Flow Position** | Header action → modal/drawer |
@@ -2200,7 +2199,6 @@ These controllers were incorrectly marked as "deprecated" in the original migrat
 | `/release-planning` | ~~ReleasePlanning.razor~~ | ~~Planning board~~ | DELETED in 7B.5 (embedded in PlanningWorkspace) |
 | `/tfsconfig` | TfsConfig.razor | TFS configuration | Active |
 | `/settings/workitem-states` | WorkItemStates.razor | State config | Active |
-| `/settings/products` | ManageProducts.razor | Product config | Active |
 | `/settings/teams` | ManageTeams.razor | Team config | Active |
 | `/settings/productowner/{id}` | ManageProductOwner.razor | Profile view | Active |
 | `/settings/productowner/edit` | EditProductOwner.razor | Profile edit | Active |

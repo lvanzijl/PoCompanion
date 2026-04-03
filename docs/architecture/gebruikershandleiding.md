@@ -1363,18 +1363,24 @@ Klik op een bestaand profiel in de lijst en pas de velden aan. Klik op **Opslaan
 
 ### 13.2 Producten beheren
 
-**Pagina:** `/settings/products`
+**Pagina:** `/settings/productowner/{id}`
 
-Producten zijn de primaire organisatie-eenheden waarop de backlog wordt gefilterd. Een product heeft:
+Producten worden beheerd binnen de detailpagina van een Product Owner. Een product heeft:
 
 - **Naam** — de productnaam.
 - **Backlog-rootwerkitems** — een of meerdere werkitems (typisch Epics) die de root van de productbacklog vormen. Werkitems buiten deze roots worden niet meegenomen in productgebonden analyses.
 - **Gekoppelde teams** — teams die aan dit product werken.
 - **Eigenaar** — de Product Owner die verantwoordelijk is voor dit product.
 
-#### Wees voorzichtig met wezen-producten
+#### Producten toewijzen en verplaatsen
 
-Producten zonder gekoppelde Product Owner worden als "wees" gemarkeerd. Gebruik de schakeloptie **Alleen wezen tonen** om deze snel te identificeren en te herstellen.
+Op de Product Owner-pagina kun je:
+
+- nieuwe producten aanmaken voor deze Product Owner;
+- bestaande producten bewerken of verwijderen;
+- producten herordenen binnen deze Product Owner;
+- producten loskoppelen zodat ze wees worden;
+- wees-producten opnieuw toewijzen aan een Product Owner.
 
 ---
 

@@ -36,7 +36,7 @@
     <MudCardActions Class="justify-center">
         <CompactIconButton Icon="@Icons.Material.Filled.Inventory2" 
                        Color="Color.Primary" 
-                       OnClick="@ManageProducts"
+                       OnClick="@OpenProductOwnerDetails"
                        Title="Show Details" />
     </MudCardActions>
 </MudCard>
@@ -118,7 +118,7 @@
         }
     }
 
-    private void ManageProducts()
+    private void OpenProductOwnerDetails()
     {
         if (Profile != null)
         {
