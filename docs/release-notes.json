@@ -2,6 +2,14 @@
   {
     "date": "2026-04-03",
     "type": "Changed",
+    "title": "Legacy workspace navigation and fallback sprint cadence were removed",
+    "impact": "The old /legacy and /workspace navigation model is no longer available in the shipped client, and planning timeline views now show cadence as unavailable instead of assuming a default sprint duration when no completed sprint history exists.",
+    "area": "Home",
+    "link": "/home/planning"
+  },
+  {
+    "date": "2026-04-03",
+    "type": "Changed",
     "title": "Delivery and trends pages now require explicit sprint context",
     "impact": "Legacy `/legacy` and `/workspace/*` routes are no longer directly routeable, Sprint Delivery / Sprint Execution / Pipeline Insights / Portfolio Delivery stop auto-selecting team or sprint context, PR and trend pages no longer anchor themselves to an inferred current sprint, and What's New Since Last Sync is now explicitly treated as an operational page outside the global filter contract.",
     "area": "Home",
