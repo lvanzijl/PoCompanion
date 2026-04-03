@@ -49,7 +49,6 @@
 | `/home/pr-delivery-insights` | `PoTool.Client/Pages/Home/PrDeliveryInsights.razor:1-360,736-950` | PR-to-epic/feature delivery insights. |
 | `/home/pipeline-insights` | `PoTool.Client/Pages/Home/PipelineInsights.razor:1-320,560-760` | Pipeline stability dashboard. |
 | `/home/bugs` | `PoTool.Client/Pages/Home/BugOverview.razor:1-320,317-470` | Bug insights dashboard. |
-| `/home/bugs/detail` | `PoTool.Client/Pages/Home/BugDetail.razor:1-235` | Bug detail/editor shell; currently placeholder-backed. |
 
 ### Planning workspace
 
@@ -59,7 +58,6 @@
 | `/planning/plan-board` | `PoTool.Client/Pages/Home/PlanBoard.razor:1-280,466-969` | Product planning board. |
 | `/planning/product-roadmaps` | `PoTool.Client/Pages/Home/ProductRoadmaps.razor:1-320,545-967` | Multi-product roadmap overview. |
 | `/planning/product-roadmaps/{ProductId:int}` | `PoTool.Client/Pages/Home/ProductRoadmapEditor.razor:1-220` | Per-product roadmap editor. |
-| `/home/dependencies` | `PoTool.Client/Pages/Home/DependencyOverview.razor:1-151` | Read-only dependency overview linked from planning context. |
 
 ### Other active routes
 
@@ -72,17 +70,6 @@
 | `/settings/productowner/edit/{ProfileId:int?}` | `PoTool.Client/Pages/Settings/EditProductOwner.razor:1` | Settings editor; no analytics filters. |
 | `/settings/teams` | `PoTool.Client/Pages/Settings/ManageTeams.razor:1` | Settings manager; no analytics filters. |
 | `/settings/productowner/{ProfileId:int}` | `PoTool.Client/Pages/Settings/ManageProductOwner.razor:1` | Settings manager; no analytics filters. |
-| `/settings/products` | `PoTool.Client/Pages/Settings/ManageProducts.razor:1` | Settings manager; no analytics filters. |
-
-### Legacy intent workspaces
-
-| Route | File | Notes |
-| --- | --- | --- |
-| `/legacy` | `PoTool.Client/Pages/Landing.razor:1-160` | Legacy intent landing; no analytics filters. |
-| `/workspace/product` and `/workspace/product/{ProductId:int}` | `PoTool.Client/Pages/LegacyWorkspaces/ProductWorkspace.razor:1-2` | Legacy workspace route. |
-| `/workspace/team` and `/workspace/team/{TeamId:int}` | `PoTool.Client/Pages/LegacyWorkspaces/TeamWorkspace.razor:1-2` | Legacy workspace route. |
-| `/workspace/analysis` and `/workspace/analysis/{Mode}` | `PoTool.Client/Pages/LegacyWorkspaces/AnalysisWorkspace.razor:1-2` | Legacy workspace route. |
-| `/workspace/communication` | `PoTool.Client/Pages/LegacyWorkspaces/CommunicationWorkspace.razor:1` | Legacy workspace route. |
 
 ## 2. Filter inventory
 
@@ -107,7 +94,7 @@
 | Free-text tree filter | Filter Work Item Explorer tree by text. | Text input embedded in tree grid | Local state | Client-side | `PoTool.Client/Components/WorkItems/WorkItemExplorer.razor:67-76,129-130` |
 | Search available epics | Filter available epics in roadmap editor. | Text field | Local state | Client-side | `PoTool.Client/Pages/Home/ProductRoadmapEditor.razor:145-155` |
 | Route-scoped product | Roadmap editor product route parameter. | Route parameter | URL/route state | Server-side through product-specific work item loads | `PoTool.Client/Pages/Home/ProductRoadmapEditor.razor:1-15` |
-| Route/query work item IDs | Sprint Activity and Bug Detail route/query context. | Route or query parameter | URL state | Sprint Activity is server-side; Bug Detail is currently placeholder/local only | `PoTool.Client/Pages/Home/SprintTrendActivity.razor:1-220`; `PoTool.Client/Pages/Home/BugDetail.razor:184-206` |
+| Route/query work item IDs | Sprint Activity route context. | Route or query parameter | URL state | Sprint Activity is server-side. | `PoTool.Client/Pages/Home/SprintTrendActivity.razor:1-220` |
 
 ### Shared context mechanism already in the codebase
 
@@ -335,13 +322,6 @@ Those filters are **not currently implemented in any page covered above**, becau
 - Inconsistency: unlike PR and pipeline pages, bug scoping is not pushed to the backend at all.
 - Change impact: using existing local filters globally is **frontend-only**; moving bug/product/team/time/state filtering server-side requires backend additions (likely new work-item query parameters or a dedicated bug insights endpoint).
 
-### Bug Detail
-- Current filters: `bugId` query parameter only (`BugDetail.razor:184-206`).
-- Backend: none today; the page loads sample data locally.
-- Missing filters: all real bug-detail data integration.
-- Inconsistency: page looks editable but has no API-backed data or save flow.
-- Change impact: any real filter/global-context support here requires **backend work** plus frontend implementation.
-
 ### Planning hub
 - Current filters: none.
 - Missing filters: none; it is a pure navigation hub.
@@ -439,10 +419,6 @@ These changes need API/controller/query/DTO updates because the current backend 
 - **Home Changes product/team filtering**
   - Current change-summary API is sync-window based, not scope-based (`HomeChanges.razor:65-71`).
   - Product/team slices require new API/query support and probably DTO changes in `CacheSyncService`/controller responses.
-
-- **Bug Detail real data/edit flow**
-  - The page currently loads placeholder data only (`BugDetail.razor:196-206`).
-  - Any real filtering/editing/stateful behavior requires backend endpoints and DTO wiring.
 
 ## Concrete conclusions
 

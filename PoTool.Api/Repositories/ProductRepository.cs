@@ -335,20 +335,6 @@ public class ProductRepository : IProductRepository
     }
 
     /// <inheritdoc />
-    public async Task<IEnumerable<ProductDto>> GetOrphanProductsAsync(CancellationToken cancellationToken = default)
-    {
-        var entities = await _context.Products
-            .Include(p => p.ProductTeamLinks)
-            .Include(p => p.Repositories)
-            .Include(p => p.BacklogRoots)
-            .Where(p => p.ProductOwnerId == null)
-            .OrderBy(p => p.Name)
-            .ToListAsync(cancellationToken);
-
-        return entities.Select(MapToDto);
-    }
-
-    /// <inheritdoc />
     public async Task<IEnumerable<ProductDto>> GetSelectableProductsAsync(int productOwnerId, CancellationToken cancellationToken = default)
     {
         var entities = await _context.Products

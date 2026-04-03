@@ -1,0 +1,36 @@
+@inject NavigationManager NavigationManager
+
+@code {
+    [Parameter, EditorRequired]
+    public string CanonicalPath { get; set; } = string.Empty;
+
+    private bool _redirected;
+
+    protected override void OnParametersSet()
+    {
+        if (_redirected || !TryBuildTarget(out var target))
+        {
+            return;
+        }
+
+        _redirected = true;
+        NavigationManager.NavigateTo(target, replace: true);
+    }
+
+    private bool TryBuildTarget(out string target)
+    {
+        target = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(CanonicalPath) ||
+            !CanonicalPath.StartsWith("/", StringComparison.Ordinal) ||
+            CanonicalPath.Contains('?', StringComparison.Ordinal) ||
+            CanonicalPath.Contains('#', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var currentUri = new Uri(NavigationManager.Uri);
+        target = $"{CanonicalPath}{currentUri.Query}{currentUri.Fragment}";
+        return true;
+    }
+}

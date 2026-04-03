@@ -143,9 +143,6 @@ Request → [Middleware checks route] → [Middleware checks ProductOwner cache 
 
 | User Action | Route | Controller Method | Handler | Provider Method | Mode | Result |
 |-------------|-------|-------------------|---------|-----------------|------|--------|
-| Navigate to Product Workspace | `/workspace/product` | `WorkItemsController.GetAll()` | `GetAllWorkItemsQueryHandler` | `IWorkItemReadProvider.GetByRootIdsAsync()` | Live (default) | **TFS call** |
-| Navigate to Team Workspace | `/workspace/team` | `WorkItemsController.GetAll()` | `GetAllWorkItemsQueryHandler` | `IWorkItemReadProvider.GetByAreaPathsAsync()` | Live (default) | **TFS call** |
-| Navigate to Analysis Workspace | `/workspace/analysis` | `WorkItemsController.GetAllWithValidation()` | `GetAllWorkItemsWithValidationQueryHandler` | `IWorkItemReadProvider.GetAllAsync()` | Live (default) | **TFS call** |
 | Navigate to Planning Workspace | `/workspace/planning` | Multiple controllers | Multiple handlers | Multiple providers | Live (default) | **TFS calls** |
 | View PR metrics | `/workspace/planning` | `PullRequestsController.GetAll()` | `GetAllPullRequestsQueryHandler` | `IPullRequestReadProvider.GetAllAsync()` | Live (default) | **TFS call** |
 | View Pipeline metrics | `/workspace/planning` | `PipelinesController.GetAll()` | `GetAllPipelinesQueryHandler` | `IPipelineReadProvider.GetAllAsync()` | Live (default) | **TFS call** |
@@ -153,7 +150,7 @@ Request → [Middleware checks route] → [Middleware checks ProductOwner cache 
 ### 3.2 Why Calls Happen on Navigation
 
 **Client-side initialization:**
-1. User navigates to workspace route (e.g., `/workspace/product`)
+1. User navigates to a routed page (for example `/home/planning`)
 2. Razor component `OnInitializedAsync()` or `OnParametersSetAsync()` fires
 3. Client service (e.g., `WorkItemService`) calls API
 4. API handler uses default Live mode

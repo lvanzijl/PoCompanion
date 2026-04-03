@@ -30,9 +30,7 @@ public static class WorkspaceNavigationCatalog
                 WorkspaceRoutes.ValidationQueue,
                 WorkspaceRoutes.ValidationFix,
                 WorkspaceRoutes.BacklogOverview,
-                WorkspaceRoutes.BacklogOverviewLegacy,
-                WorkspaceRoutes.BugOverview,
-                WorkspaceRoutes.BugDetail
+                WorkspaceRoutes.BugOverview
             ]),
         new(
             "Delivery",
@@ -43,8 +41,7 @@ public static class WorkspaceNavigationCatalog
                 WorkspaceRoutes.DeliveryWorkspace,
                 WorkspaceRoutes.SprintDelivery,
                 WorkspaceRoutes.SprintExecution,
-                WorkspaceRoutes.SprintTrend,
-                WorkspaceRoutes.SprintTrendActivity
+                WorkspaceRoutes.SprintDeliveryActivity
             ]),
         new(
             "Trends",
@@ -56,7 +53,6 @@ public static class WorkspaceNavigationCatalog
                 WorkspaceRoutes.PrOverview,
                 WorkspaceRoutes.PrDeliveryInsights,
                 WorkspaceRoutes.PipelineInsights,
-                WorkspaceRoutes.DependencyOverview,
                 WorkspaceRoutes.PortfolioProgress
             ]),
         new(

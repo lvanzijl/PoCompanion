@@ -216,17 +216,6 @@ public class ProductsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets all orphaned products (products with no owner).
-    /// </summary>
-    [HttpGet("orphans")]
-    [ProducesResponseType(typeof(IEnumerable<ProductDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<ProductDto>>> GetOrphanProducts(CancellationToken cancellationToken)
-    {
-        var products = await _mediator.Send(new GetOrphanProductsQuery(), cancellationToken);
-        return Ok(products);
-    }
-
-    /// <summary>
     /// Gets products selectable by a specific Product Owner (owned + orphaned).
     /// </summary>
     [HttpGet("selectable")]

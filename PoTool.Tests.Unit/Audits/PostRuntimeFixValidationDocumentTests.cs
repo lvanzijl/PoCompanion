@@ -34,8 +34,6 @@ public sealed class PostRuntimeFixValidationDocumentTests
         StringAssert.Contains(report, "/home/delivery/execution");
         StringAssert.Contains(report, "/home/portfolio-progress");
         StringAssert.Contains(report, "/home/delivery/portfolio");
-        StringAssert.Contains(report, "/workspace/analysis/forecast");
-        StringAssert.Contains(report, "/workspace/analysis/effort");
         StringAssert.Contains(report, "runtime integrity resolution confirmed");
     }
 

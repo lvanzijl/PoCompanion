@@ -40,7 +40,7 @@ Intentionally retained differences from the original design target:
 
 - no standalone shared client `FilterState` / `FilterService` runtime was introduced
 - no standalone shared `FilterUrlParser` / `FilterUrlSerializer` / `FilterNavigationAdapter` was introduced
-- home/workspace navigation still uses `WorkspaceBase` and `NavigationContextService` for coarse context propagation (`productId`, `teamId`)
+- home/workspace navigation still uses `WorkspaceBase` for coarse context propagation (`productId`, `teamId`)
 - client service methods still adapt to endpoint-family transport contracts such as `productIds`, sprint collections, and date-range parameters
 
 The remainder of this document should therefore be read as the design rationale and target shape that informed the implementation, with the bullets above describing the actual final shipped architecture.

@@ -9,7 +9,6 @@
 | `PoTool.Client/Pages/Home/WorkspaceBase.cs:24-80` | `ProductId`, `TeamId`; `ParseContextQueryParameters()` reads `productId` and `teamId` from the URL; `BuildContextQuery()` rebuilds a query string from those two values plus optional extra params. | Shared Home workspace context for pages inheriting `WorkspaceBase`; effectively global only inside the Home workspace flow. |
 | `PoTool.Client/Pages/Home/HomePage.razor:599-614,717-740` | Local `_selectedProductId` plus a page-local `BuildContextQuery()` that only emits `productId`. | Home page product context propagated into Health, Trends, Delivery, Planning, and Validation Triage navigation. |
 | `PoTool.Client/Pages/Home/TrendsWorkspace.razor:596-779` | `_selectedTeamId`, `_selectedFromSprintId`, `_selectedToSprintId`; `ParseSprintQueryParameters()` and `UpdateSprintUrlParameters()` read/write `teamId`, `fromSprintId`, `toSprintId`. `ProductId` still comes from `WorkspaceBase`. | Trends workspace only. |
-| `PoTool.Client/Services/NavigationContextService.cs:46-204` + `PoTool.Client/Models/NavigationContext.cs:7-90` | Serializes `intent`, `scope`, `productId`, `teamId`, `mode`, `time`, `trigger`; manages `_current` and `_contextStack`. | Exists as a broader navigation-context service, but current Home filter flows analyzed here do not actively use it; the current pages mostly use `WorkspaceBase` and page-local query builders instead. |
 
 ### 1.2 Page-local in-memory filter state
 

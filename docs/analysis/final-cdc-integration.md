@@ -146,8 +146,6 @@ enforcement) in Phase D.
   `docs/analysis/filtering.md §3`.
 - `WorkspaceBase` propagates `productId` and `teamId` via URL query strings. No implicit
   pre-filtering occurs at the component level.
-- Legacy workspace uses `INavigationContextService` with explicit context serialization. No
-  hidden filtering in that path either.
 - Backend handlers do not apply undocumented scoping beyond what the query DTO specifies.
 
 **Action required:** None. Filtering is transparent at both layers.

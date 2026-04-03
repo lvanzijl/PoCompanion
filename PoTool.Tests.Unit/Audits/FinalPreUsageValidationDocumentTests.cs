@@ -36,8 +36,6 @@ public sealed class FinalPreUsageValidationDocumentTests
         StringAssert.Contains(report, "/home/delivery/execution");
         StringAssert.Contains(report, "/home/portfolio-progress");
         StringAssert.Contains(report, "/home/delivery/portfolio");
-        StringAssert.Contains(report, "/workspace/analysis/forecast");
-        StringAssert.Contains(report, "/workspace/analysis/effort");
         StringAssert.Contains(report, "SYSTEM IS READY FOR REAL USAGE");
         StringAssert.Contains(report, "TFS configuration not found");
     }

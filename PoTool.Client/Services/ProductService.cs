@@ -173,14 +173,6 @@ public class ProductService
     }
 
     /// <summary>
-    /// Gets all orphaned products (products with no owner).
-    /// </summary>
-    public async Task<IEnumerable<ProductDto>> GetOrphanProductsAsync(CancellationToken cancellationToken = default)
-    {
-        return await _productsClient.GetOrphanProductsAsync(cancellationToken);
-    }
-
-    /// <summary>
     /// Gets products selectable by a specific Product Owner (owned + orphaned).
     /// </summary>
     public async Task<IEnumerable<ProductDto>> GetSelectableProductsAsync(int productOwnerId, CancellationToken cancellationToken = default)

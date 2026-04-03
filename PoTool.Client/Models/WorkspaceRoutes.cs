@@ -61,11 +61,6 @@ public static class WorkspaceRoutes
     public const string BugOverview = "/home/bugs";
 
     /// <summary>
-    /// Bug Detail route.
-    /// </summary>
-    public const string BugDetail = "/home/bugs/detail";
-
-    /// <summary>
     /// Bug Triage route - for triaging and categorizing bugs.
     /// </summary>
     public const string BugTriage = "/bugs-triage";
@@ -84,11 +79,6 @@ public static class WorkspaceRoutes
     /// Pipeline Insights route — PO-first stability overview per product, sprint-scoped (read-only).
     /// </summary>
     public const string PipelineInsights = "/home/pipeline-insights";
-
-    /// <summary>
-    /// Dependency Overview route (read-only).
-    /// </summary>
-    public const string DependencyOverview = "/home/dependencies";
 
     /// <summary>
     /// Project-scoped planning overview route.
@@ -127,8 +117,7 @@ public static class WorkspaceRoutes
     public const string ProjectPlanBoard = "/planning/{0}/plan-board";
 
     /// <summary>
-    /// Sprint Trend route - shows sprint-based revision metrics.
-    /// Legacy route kept for backward compatibility; canonical route is SprintDelivery.
+    /// Legacy Sprint Delivery alias route kept only for redirect normalization.
     /// </summary>
     public const string SprintTrend = "/home/sprint-trend";
 
@@ -148,7 +137,7 @@ public static class WorkspaceRoutes
     public const string PortfolioDelivery = "/home/delivery/portfolio";
 
     /// <summary>
-    /// Sprint Trend activity detail route.
+    /// Legacy Sprint Delivery activity alias route kept only for redirect normalization.
     /// </summary>
     public const string SprintTrendActivity = "/home/sprint-trend/activity";
 
@@ -179,7 +168,7 @@ public static class WorkspaceRoutes
     public const string BacklogOverview = "/home/health/backlog-health";
 
     /// <summary>
-    /// Legacy Backlog Health route kept for direct links and existing bookmarks.
+    /// Legacy Backlog Health route kept only for redirect normalization.
     /// </summary>
     public const string BacklogOverviewLegacy = "/home/backlog-overview";
 
@@ -192,6 +181,7 @@ public static class WorkspaceRoutes
     /// Delivery Trends route — temporal delivery patterns across multiple sprints (Trends workspace).
     /// </summary>
     public const string DeliveryTrends = "/home/trends/delivery";
+    
     #endregion
 
     /// <summary>

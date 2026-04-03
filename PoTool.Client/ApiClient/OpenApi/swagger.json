@@ -3541,29 +3541,6 @@
         }
       }
     },
-    "/api/Products/orphans": {
-      "get": {
-        "tags": [
-          "Products"
-        ],
-        "operationId": "Products_GetOrphanProducts",
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ProductDto"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/Products/selectable": {
       "get": {
         "tags": [
@@ -6947,38 +6924,6 @@
                   "items": {
                     "$ref": "#/components/schemas/WorkItemDto"
                   }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/WorkItems/{tfsId}": {
-      "get": {
-        "tags": [
-          "WorkItems"
-        ],
-        "operationId": "WorkItems_GetByTfsId",
-        "parameters": [
-          {
-            "name": "tfsId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            },
-            "x-position": 1
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkItemDto"
                 }
               }
             }
