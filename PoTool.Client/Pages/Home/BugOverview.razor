@@ -11,6 +11,7 @@
 @inject TeamService TeamService
 @inject NavigationManager NavigationManager
 @inject GlobalFilterStore GlobalFilterStore
+@inject PageFilterExecutionGate PageFilterExecutionGate
 @inject ISnackbar Snackbar
 @implements IDisposable
 
@@ -280,6 +281,19 @@
     
     private async Task LoadBugDataAsync()
     {
+        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        {
+            _allBugs = [];
+            _severityDistribution = new();
+            _totalOpenBugs = null;
+            _bugsCreated = null;
+            _bugsResolved = null;
+            _resolutionTime = null;
+            _bugState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.NotRequested();
+            StateHasChanged();
+            return;
+        }
+
         _metricsLoading = true;
         _bugState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.Loading();
         StateHasChanged();

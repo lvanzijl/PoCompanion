@@ -10,6 +10,7 @@
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject ProjectService ProjectService
+@inject GlobalFilterRouteService GlobalFilterRouteService
 @inject WorkItemService WorkItemService
 @inject SprintService SprintService
 @inject MetricsStateService MetricsStateService
@@ -1118,13 +1119,15 @@
     private static string NormalizeIterationPath(string path) =>
         path.Replace('/', '\\').Trim();
 
-    private void NavigateToPlanning() =>
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.PlanningWorkspace,
-                new WorkspaceQueryContext(ProjectAlias: _selectedProjectRouteKey, ProductId: _selectedProductId)));
+    private async Task NavigateToPlanning()
+        => NavigationManager.NavigateTo(
+            await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+                "PlanningWorkspace",
+                _selectedProjectRouteKey,
+                _selectedProductId,
+                WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
 
-    private void NavigateToOverview()
+    private async Task NavigateToOverview()
     {
         if (string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
         {
@@ -1132,9 +1135,11 @@
         }
 
         NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.GetProjectPlanningOverview(_selectedProjectRouteKey),
-                new WorkspaceQueryContext(ProjectAlias: _selectedProjectRouteKey, ProductId: _selectedProductId)));
+            await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+                "ProjectPlanningOverview",
+                _selectedProjectRouteKey,
+                _selectedProductId,
+                WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
     }
 
     private async Task<List<ProjectDto>> LoadAvailableProjectsAsync(IReadOnlyCollection<ProductDto> products)
@@ -1180,14 +1185,12 @@
 
     private async Task NavigateToCurrentScopeAsync(int? productId, bool loadBoard)
     {
-        var route = string.IsNullOrWhiteSpace(_selectedProjectRouteKey)
-            ? WorkspaceRoutes.PlanBoard
-            : WorkspaceRoutes.GetProjectPlanBoard(_selectedProjectRouteKey);
-
         NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                route,
-                new WorkspaceQueryContext(ProjectAlias: _selectedProjectRouteKey, ProductId: productId)),
+            await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+                "PlanBoard",
+                _selectedProjectRouteKey,
+                productId,
+                WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)),
             forceLoad: false);
 
         if (productId == null)

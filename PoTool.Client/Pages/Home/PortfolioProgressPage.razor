@@ -17,6 +17,7 @@
 @inject MetricsStateService MetricsStateService
 @inject NavigationManager NavigationManager
 @inject GlobalFilterStore GlobalFilterStore
+@inject PageFilterExecutionGate PageFilterExecutionGate
 @inject ISnackbar Snackbar
 @implements IDisposable
 
@@ -743,6 +744,13 @@
 
     private async Task LoadTrendDataAsync()
     {
+        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        {
+            _trendData = null;
+            _filterNotice = null;
+            return;
+        }
+
         if (!_profileId.HasValue) return;
 
         var sprintIds = GetSelectedSprintIds();

@@ -18,6 +18,7 @@
 @inject TfsConfigService TfsConfigService
 @inject NavigationManager NavigationManager
 @inject GlobalFilterStore GlobalFilterStore
+@inject PageFilterExecutionGate PageFilterExecutionGate
 @inject IBuildQualityService BuildQualityService
 
 <PageTitle>Sprint Delivery - PO Companion</PageTitle>
@@ -1088,6 +1089,14 @@
             _products = (await productsTask).ToList();
             _tfsConfig = await configTask;
             await SyncStoreFromCurrentRouteAsync(cancellationToken);
+
+            if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+            {
+                _contextErrorMessage = "Select the required filters to load Sprint Delivery.";
+                _isSummaryLoading = false;
+                _isBuildQualityLoading = false;
+                return;
+            }
 
             if (!_selectedTeamId.HasValue)
             {

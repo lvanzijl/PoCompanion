@@ -85,6 +85,19 @@ public sealed class GlobalFilterStoreTests
     }
 
     [TestMethod]
+    public async Task TrackNavigation_RollingQuery_TracksExplicitWindowAndUnit()
+    {
+        var store = CreateStore();
+
+        await store.TrackNavigationAsync("http://localhost/home/pull-requests?teamId=7&timeMode=Rolling&rollingWindow=30&rollingUnit=Days");
+
+        Assert.IsNotNull(store.CurrentUsage);
+        Assert.AreEqual(FilterTimeMode.Rolling, store.CurrentState.Time.Mode);
+        Assert.AreEqual(30, store.CurrentState.Time.RollingWindow);
+        Assert.AreEqual(FilterTimeUnit.Days, store.CurrentState.Time.RollingUnit);
+    }
+
+    [TestMethod]
     public async Task TrackNavigation_UnknownProjectAlias_ClassifiesStateAsInvalid()
     {
         var store = CreateStore();

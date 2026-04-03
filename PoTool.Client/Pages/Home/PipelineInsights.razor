@@ -15,6 +15,7 @@
 @inject SprintService SprintService
 @inject NavigationManager NavigationManager
 @inject GlobalFilterStore GlobalFilterStore
+@inject PageFilterExecutionGate PageFilterExecutionGate
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 @implements IDisposable
@@ -727,6 +728,13 @@
 
     private async Task LoadInsightsAsync()
     {
+        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        {
+            _insightsData = null;
+            _filterNotice = null;
+            return;
+        }
+
         if (!_activeProfileId.HasValue || !_selectedTeamId.HasValue || !_selectedSprintId.HasValue)
             return;
 

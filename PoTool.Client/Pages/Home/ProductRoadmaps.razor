@@ -11,6 +11,7 @@
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject ProjectService ProjectService
+@inject GlobalFilterRouteService GlobalFilterRouteService
 @inject WorkItemService WorkItemService
 @inject SprintService SprintService
 @inject TfsConfigService TfsConfigService
@@ -1066,52 +1067,81 @@
         };
     }
 
-    private void NavigateToHome()
+    private async Task NavigateToHome()
     {
         var currentContext = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.Home,
-                currentContext with { ProjectAlias = _selectedProjectRouteKey }));
+        var selectedProjectId = currentContext.ProjectId
+            ?? _projects.FirstOrDefault(project => string.Equals(project.Alias, _selectedProjectRouteKey, StringComparison.OrdinalIgnoreCase))?.Id;
+        NavigationManager.NavigateTo(await GlobalFilterRouteService.BuildUriAsync(
+            WorkspaceRoutes.Home,
+            new FilterState(
+                currentContext.ProductId.HasValue ? [currentContext.ProductId.Value] : Array.Empty<int>(),
+                string.IsNullOrWhiteSpace(selectedProjectId) ? Array.Empty<string>() : [selectedProjectId],
+                currentContext.TeamId,
+                new FilterTimeSelection(
+                    currentContext.TimeMode ?? FilterTimeMode.Snapshot,
+                    currentContext.SprintId,
+                    currentContext.FromSprintId,
+                    currentContext.ToSprintId,
+                    currentContext.RollingWindow,
+                    currentContext.RollingUnit)),
+            WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
     }
 
-    private void NavigateToPlanning()
+    private async Task NavigateToPlanning()
+    {
+        NavigationManager.NavigateTo(await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+            "PlanningWorkspace",
+            _selectedProjectRouteKey,
+            additionalParams: WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
+    }
+
+    private async Task NavigateToHealth()
     {
         var currentContext = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.PlanningWorkspace,
-                currentContext with { ProjectAlias = _selectedProjectRouteKey }));
+        var selectedProjectId = currentContext.ProjectId
+            ?? _projects.FirstOrDefault(project => string.Equals(project.Alias, _selectedProjectRouteKey, StringComparison.OrdinalIgnoreCase))?.Id;
+        NavigationManager.NavigateTo(await GlobalFilterRouteService.BuildUriAsync(
+            WorkspaceRoutes.HealthWorkspace,
+            new FilterState(
+                currentContext.ProductId.HasValue ? [currentContext.ProductId.Value] : Array.Empty<int>(),
+                string.IsNullOrWhiteSpace(selectedProjectId) ? Array.Empty<string>() : [selectedProjectId],
+                currentContext.TeamId,
+                new FilterTimeSelection(
+                    currentContext.TimeMode ?? FilterTimeMode.Snapshot,
+                    currentContext.SprintId,
+                    currentContext.FromSprintId,
+                    currentContext.ToSprintId,
+                    currentContext.RollingWindow,
+                    currentContext.RollingUnit)),
+            WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
     }
 
-    private void NavigateToHealth()
+    private async Task NavigateToRoadmapEditor(int productId)
     {
-        var currentContext = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.HealthWorkspace,
-                currentContext with { ProjectAlias = _selectedProjectRouteKey }));
+        NavigationManager.NavigateTo(await GlobalFilterRouteService.BuildUriAsync(
+            WorkspaceRoutes.GetProductRoadmapEditor(productId),
+            new FilterState(
+                [productId],
+                string.IsNullOrWhiteSpace(_selectedProjectRouteKey)
+                    ? Array.Empty<string>()
+                    : [_projects.FirstOrDefault(project => string.Equals(project.Alias, _selectedProjectRouteKey, StringComparison.OrdinalIgnoreCase))?.Id ?? string.Empty],
+                null,
+                FilterTimeSelection.Snapshot),
+            WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
     }
 
-    private void NavigateToRoadmapEditor(int productId)
-    {
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.GetProductRoadmapEditor(productId),
-                new WorkspaceQueryContext(ProjectAlias: _selectedProjectRouteKey, ProductId: productId)));
-    }
-
-    private void NavigateToOverview()
+    private async Task NavigateToOverview()
     {
         if (string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
         {
             return;
         }
 
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.GetProjectPlanningOverview(_selectedProjectRouteKey),
-                new WorkspaceQueryContext(ProjectAlias: _selectedProjectRouteKey)));
+        NavigationManager.NavigateTo(await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+            "ProjectPlanningOverview",
+            _selectedProjectRouteKey,
+            additionalParams: WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
     }
 
     private async Task<List<ProjectDto>> LoadAvailableProjectsAsync(IReadOnlyCollection<ProductDto> products)
@@ -1163,14 +1193,11 @@
         await LoadProjectPlanningSummaryAsync();
         await BuildProductLanesAsync();
 
-        var route = string.IsNullOrWhiteSpace(_selectedProjectRouteKey)
-            ? WorkspaceRoutes.ProductRoadmaps
-            : WorkspaceRoutes.GetProjectProductRoadmaps(_selectedProjectRouteKey);
-
         NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                route,
-                new WorkspaceQueryContext(ProjectAlias: _selectedProjectRouteKey)),
+            await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+                "ProductRoadmaps",
+                _selectedProjectRouteKey,
+                additionalParams: WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)),
             forceLoad: false);
     }
 

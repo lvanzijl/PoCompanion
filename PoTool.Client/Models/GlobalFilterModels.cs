@@ -78,9 +78,9 @@ public sealed record FilterState(
 
     public bool AllProjects => ProjectIds.Count == 0;
 
-    public int? PrimaryProductId => ProductIds.FirstOrDefault();
+    public int? PrimaryProductId => ProductIds.Count > 0 ? ProductIds[0] : null;
 
-    public string? PrimaryProjectId => ProjectIds.FirstOrDefault();
+    public string? PrimaryProjectId => ProjectIds.Count > 0 ? ProjectIds[0] : null;
 }
 
 public sealed record GlobalFilterPageDefinition(
@@ -91,7 +91,14 @@ public sealed record GlobalFilterPageDefinition(
     bool UsesTime,
     FilterTimeMode TimeMode,
     bool RequiresTeam = false,
-    bool RequiresSprint = false);
+    bool RequiresSprint = false,
+    IReadOnlyList<FilterTimeMode>? SupportedTimeModes = null,
+    FilterTimeMode? DefaultTimeMode = null)
+{
+    public IReadOnlyList<FilterTimeMode> AllowedTimeModes => SupportedTimeModes ?? [TimeMode];
+
+    public FilterTimeMode EffectiveDefaultTimeMode => DefaultTimeMode ?? TimeMode;
+}
 
 public sealed record FilterLocalBridgeState(
     int? ProductId = null,

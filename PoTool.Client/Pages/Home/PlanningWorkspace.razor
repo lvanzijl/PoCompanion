@@ -1,7 +1,9 @@
 @page "/home/planning"
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @inherits WorkspaceBase
+@inject GlobalFilterRouteService GlobalFilterRouteService
 
 <PageTitle>Planning - PO Companion</PageTitle>
 
@@ -128,32 +130,39 @@
         };
     }
 
-    private void NavigateToProductRoadmaps()
+    private async Task NavigateToProductRoadmaps()
     {
-        var route = string.IsNullOrWhiteSpace(ProjectAlias)
-            ? WorkspaceRoutes.ProductRoadmaps
-            : WorkspaceRoutes.GetProjectProductRoadmaps(ProjectAlias);
-
-        NavigationManager.NavigateTo($"{route}{BuildContextQuery()}");
+        var targetUri = await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+            "ProductRoadmaps",
+            ProjectId ?? ProjectAlias,
+            ProductId,
+            WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri));
+        NavigationManager.NavigateTo(targetUri);
     }
 
-    private void NavigateToPlanBoard()
+    private async Task NavigateToPlanBoard()
     {
-        var route = string.IsNullOrWhiteSpace(ProjectAlias)
-            ? WorkspaceRoutes.PlanBoard
-            : WorkspaceRoutes.GetProjectPlanBoard(ProjectAlias);
-
-        NavigationManager.NavigateTo($"{route}{BuildContextQuery()}");
+        var targetUri = await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+            "PlanBoard",
+            ProjectId ?? ProjectAlias,
+            ProductId,
+            WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri));
+        NavigationManager.NavigateTo(targetUri);
     }
 
-    private void NavigateToProjectOverview()
+    private async Task NavigateToProjectOverview()
     {
-        if (string.IsNullOrWhiteSpace(ProjectAlias))
+        if (string.IsNullOrWhiteSpace(ProjectId) && string.IsNullOrWhiteSpace(ProjectAlias))
         {
             return;
         }
 
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.GetProjectPlanningOverview(ProjectAlias)}{BuildContextQuery()}");
+        var targetUri = await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+            "ProjectPlanningOverview",
+            ProjectId ?? ProjectAlias,
+            ProductId,
+            WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri));
+        NavigationManager.NavigateTo(targetUri);
     }
 
     private void NavigateToMultiProductPlanning()

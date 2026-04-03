@@ -12,6 +12,7 @@
 @inject MetricsStateService MetricsStateService
 @inject NavigationManager NavigationManager
 @inject GlobalFilterStore GlobalFilterStore
+@inject PageFilterExecutionGate PageFilterExecutionGate
 @inject ISnackbar Snackbar
 @implements IDisposable
 
@@ -571,6 +572,14 @@
 
     private async Task LoadDeliveryDataAsync()
     {
+        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        {
+            _selectedSprintIds = new List<int>();
+            _data = null;
+            _filterNotice = null;
+            return;
+        }
+
         if (!_profileId.HasValue || !_selectedTeamId.HasValue || !_fromSprintId.HasValue || !_toSprintId.HasValue)
         {
             _selectedSprintIds = new List<int>();

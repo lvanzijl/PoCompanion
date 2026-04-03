@@ -298,6 +298,22 @@ public sealed class FilterStateResolver
             return new FilterTimeSelection(FilterTimeMode.Rolling, RollingWindow: 1, RollingUnit: FilterTimeUnit.Sprint, SprintId: context.SprintId);
         }
 
+        if (context.RollingWindow.HasValue || context.RollingUnit.HasValue)
+        {
+            if (!context.RollingWindow.HasValue || context.RollingWindow.Value <= 0 || !context.RollingUnit.HasValue)
+            {
+                issues.Add("rolling time selection requires a positive rolling window and explicit unit");
+                lastUpdateSource = FilterUpdateSource.Query;
+                return new FilterTimeSelection(FilterTimeMode.Rolling);
+            }
+
+            lastUpdateSource = FilterUpdateSource.Query;
+            return new FilterTimeSelection(
+                FilterTimeMode.Rolling,
+                RollingWindow: context.RollingWindow,
+                RollingUnit: context.RollingUnit);
+        }
+
         if (localState?.RollingWindow.HasValue == true)
         {
             if (localState.RollingWindow <= 0 || localState.RollingUnit is null)

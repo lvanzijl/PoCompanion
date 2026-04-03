@@ -85,7 +85,17 @@ public abstract class WorkspaceBase : ComponentBase
     /// <returns>Query string starting with "?" or empty string if no parameters</returns>
     protected string BuildContextQuery(string? additionalParams = null)
         => WorkspaceQueryContextHelper.BuildQueryString(
-            new WorkspaceQueryContext(ProjectAlias: ProjectAlias, ProjectId: ProjectId, ProductId: ProductId, TeamId: TeamId, SprintId: SprintId, FromSprintId: FromSprintId, ToSprintId: ToSprintId),
+            new WorkspaceQueryContext(
+                ProjectAlias: ProjectAlias,
+                ProjectId: ProjectId,
+                ProductId: ProductId,
+                TeamId: TeamId,
+                SprintId: SprintId,
+                FromSprintId: FromSprintId,
+                ToSprintId: ToSprintId,
+                TimeMode: GlobalFilterStore.GetState().Time.Mode,
+                RollingWindow: GlobalFilterStore.GetState().Time.RollingWindow,
+                RollingUnit: GlobalFilterStore.GetState().Time.RollingUnit),
             additionalParams);
     
     /// <summary>
@@ -113,6 +123,16 @@ public abstract class WorkspaceBase : ComponentBase
             NavigationManager.NavigateTo(
                 WorkspaceQueryContextHelper.BuildRoute(
                     WorkspaceRoutes.Home,
-                    new WorkspaceQueryContext(ProjectAlias: ProjectAlias, ProjectId: ProjectId, ProductId: ProductId, TeamId: TeamId, SprintId: SprintId, FromSprintId: FromSprintId, ToSprintId: ToSprintId)));
+                    new WorkspaceQueryContext(
+                        ProjectAlias: ProjectAlias,
+                        ProjectId: ProjectId,
+                        ProductId: ProductId,
+                        TeamId: TeamId,
+                        SprintId: SprintId,
+                        FromSprintId: FromSprintId,
+                        ToSprintId: ToSprintId,
+                        TimeMode: GlobalFilterStore.GetState().Time.Mode,
+                        RollingWindow: GlobalFilterStore.GetState().Time.RollingWindow,
+                        RollingUnit: GlobalFilterStore.GetState().Time.RollingUnit)));
     }
 }

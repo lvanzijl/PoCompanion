@@ -15,6 +15,7 @@
 @inject SprintService SprintService
 @inject PullRequestStateService PullRequestStateService
 @inject IBuildQualityService BuildQualityService
+@inject PageFilterExecutionGate PageFilterExecutionGate
 
 @* 
     Decision #3: Time Horizon Default - Configurable sprint range (defaults to last 6 months if no sprints selected)
@@ -435,6 +436,15 @@
     /// </summary>
     private async Task LoadBugTrendDataAsync()
     {
+        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        {
+            _bugTrendTotal = new Dictionary<string, int>();
+            _bugTrendFixed = new Dictionary<string, int>();
+            _bugTrendAdded = new Dictionary<string, int>();
+            _bugTrendSignal = null;
+            return;
+        }
+
         _bugTrendState = DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.Loading();
         var response = await WorkItemService.GetAllWithValidationStateAsync(cancellationToken: CancellationToken.None);
         _bugTrendState = DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.FromResponse(
@@ -620,6 +630,12 @@
     /// </summary>
     private async Task LoadPrTrendSignalAsync(CancellationToken cancellationToken)
     {
+        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        {
+            _prTrendSignal = null;
+            return;
+        }
+
         if (!_selectedFromSprintId.HasValue || !_selectedToSprintId.HasValue || _sprints.Count == 0)
         {
             _prTrendSignal = null;
@@ -681,6 +697,12 @@
 
     private async Task LoadPipelineSignalAsync(CancellationToken cancellationToken)
     {
+        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        {
+            _pipelineSignal = null;
+            return;
+        }
+
         if (!_profileId.HasValue)
         {
             _pipelineSignal = null;

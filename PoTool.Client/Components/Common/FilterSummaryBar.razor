@@ -1,6 +1,7 @@
 @using PoTool.Client.Models
 @using PoTool.Client.Services
 @inject GlobalFilterStore GlobalFilterStore
+@inject GlobalFilterUiState GlobalFilterUiState
 @implements IDisposable
 
 @if (GlobalFilterStore.CurrentUsage is not null)
@@ -29,6 +30,13 @@
             <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetStatusColor(GlobalFilterStore.CurrentUsage.Status)">
                 Status: @GlobalFilterStore.CurrentUsage.Status
             </MudChip>
+            <MudSpacer />
+            <MudButton Variant="Variant.Text"
+                       Color="Color.Primary"
+                       Size="Size.Small"
+                       OnClick="ToggleFilters">
+                @(GlobalFilterUiState.IsExpanded ? "Hide filters" : "Edit filters")
+            </MudButton>
 
             @if (GlobalFilterStore.CurrentUsage.MissingTeam)
             {
@@ -58,11 +66,13 @@
     protected override void OnInitialized()
     {
         GlobalFilterStore.Changed += HandleStoreChanged;
+        GlobalFilterUiState.Changed += HandleStoreChanged;
     }
 
     public void Dispose()
     {
         GlobalFilterStore.Changed -= HandleStoreChanged;
+        GlobalFilterUiState.Changed -= HandleStoreChanged;
     }
 
     private void HandleStoreChanged() => InvokeAsync(StateHasChanged);
@@ -84,4 +94,6 @@
             FilterResolutionStatus.ResolvedWithNormalization => Color.Info,
             _ => Color.Success
         };
+
+    private void ToggleFilters() => GlobalFilterUiState.ToggleExpanded();
 }
