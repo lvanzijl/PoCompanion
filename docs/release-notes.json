@@ -2,6 +2,14 @@
   {
     "date": "2026-04-03",
     "type": "Changed",
+    "title": "Legacy backlog and sprint aliases now normalize to the current routes",
+    "impact": "Opening legacy backlog and sprint URLs now redirects to the current Health and Delivery routes, the stale in-app help link was removed, and Work Item Explorer now accepts only the supported deep-link scope used by current backlog and release-planning entry points.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-03",
+    "type": "Changed",
     "title": "Final legacy product workspace has been removed",
     "impact": "The standalone `/workspace/product` routes and their legacy navigation/context plumbing are no longer available. No `/workspace/*` routes remain, while modern product filtering, planning, delivery, trends, health, and CDC-related behavior continue to use the current Home workspace flows.",
     "area": "Home",
