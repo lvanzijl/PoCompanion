@@ -385,23 +385,7 @@ Global header (available on every page) ◄────────────�
 | View All toggle | Shows all bugs across all products and teams, regardless of context filter. |
 | Home button | Returns to `/home`. |
 
-**Outgoing navigation:** `/bugs-triage`, `/home`, `/home/bugs/detail/{id}` (Bug Detail)
-
----
-
-### 2.8 Bug Detail — `/home/bugs/detail/{id}`
-
-**Purpose:** Detailed view for a single bug. Allows the PO to review and edit bug attributes (severity, tags).
-
-| Functionality | Description |
-|---|---|
-| Bug metadata display | Shows all key fields: ID, title, state, severity, tags, description. |
-| Severity edit | PO can change the severity of the bug (subject to pending backend API — currently blocked). |
-| Triage tag edit | PO can assign or remove triage tags. |
-| Save Changes button | Persists changes (currently blocked pending backend API). |
-| Back navigation | Returns to Bug Insights. |
-
-**Outgoing navigation:** `/home/bugs`
+**Outgoing navigation:** `/bugs-triage`, `/home`
 
 ---
 
@@ -779,8 +763,7 @@ Each level only appears when the user drills into the previous one. Users naviga
 | Delivery Trends | `/home/trends/delivery` | Trends workspace | Select sprint range | `/home/trends`, `/home` |
 | Planning | `/home/planning` | Home workspace card | Navigation hub: Product Roadmaps, Plan Board | `/planning/product-roadmaps`, `/planning/plan-board`, `/home/health/backlog-health`, `/home/health`, `/home/trends`, `/home/delivery` |
 | Plan Board | `/planning/plan-board` | Planning workspace card | Drag-and-drop sprint planning for PBIs and bugs with capacity indicators | `/home/planning` |
-| Bug Insights | `/home/bugs` | Health signal, Trends chart click | View/filter bugs | `/bugs-triage`, `/home/bugs/detail/{id}`, `/home` |
-| Bug Detail | `/home/bugs/detail/{id}` | Bug Insights | Edit severity/tags | `/home/bugs` |
+| Bug Insights | `/home/bugs` | Health signal, Trends chart click | View/filter bugs | `/bugs-triage`, `/home` |
 | Bug Triage | `/bugs-triage` | Home quick action, Bug Insights | Triage tags | (self-contained) |
 | PR Insights | `/home/pull-requests` | Trends workspace | View metrics | `/home` |
 | PR Delivery Insights | `/home/pr-delivery-insights` | Trends workspace | Select team/sprint, view PR classification | `/home/trends`, `/home` |

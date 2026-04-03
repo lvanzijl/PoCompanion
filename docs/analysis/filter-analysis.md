@@ -49,7 +49,6 @@
 | `/home/pr-delivery-insights` | `PoTool.Client/Pages/Home/PrDeliveryInsights.razor:1-360,736-950` | PR-to-epic/feature delivery insights. |
 | `/home/pipeline-insights` | `PoTool.Client/Pages/Home/PipelineInsights.razor:1-320,560-760` | Pipeline stability dashboard. |
 | `/home/bugs` | `PoTool.Client/Pages/Home/BugOverview.razor:1-320,317-470` | Bug insights dashboard. |
-| `/home/bugs/detail` | `PoTool.Client/Pages/Home/BugDetail.razor:1-235` | Bug detail/editor shell; currently placeholder-backed. |
 
 ### Planning workspace
 
@@ -106,7 +105,7 @@
 | Free-text tree filter | Filter Work Item Explorer tree by text. | Text input embedded in tree grid | Local state | Client-side | `PoTool.Client/Components/WorkItems/WorkItemExplorer.razor:67-76,129-130` |
 | Search available epics | Filter available epics in roadmap editor. | Text field | Local state | Client-side | `PoTool.Client/Pages/Home/ProductRoadmapEditor.razor:145-155` |
 | Route-scoped product | Roadmap editor product route parameter. | Route parameter | URL/route state | Server-side through product-specific work item loads | `PoTool.Client/Pages/Home/ProductRoadmapEditor.razor:1-15` |
-| Route/query work item IDs | Sprint Activity and Bug Detail route/query context. | Route or query parameter | URL state | Sprint Activity is server-side; Bug Detail is currently placeholder/local only | `PoTool.Client/Pages/Home/SprintTrendActivity.razor:1-220`; `PoTool.Client/Pages/Home/BugDetail.razor:184-206` |
+| Route/query work item IDs | Sprint Activity route context. | Route or query parameter | URL state | Sprint Activity is server-side. | `PoTool.Client/Pages/Home/SprintTrendActivity.razor:1-220` |
 
 ### Shared context mechanism already in the codebase
 
@@ -334,13 +333,6 @@ Those filters are **not currently implemented in any page covered above**, becau
 - Inconsistency: unlike PR and pipeline pages, bug scoping is not pushed to the backend at all.
 - Change impact: using existing local filters globally is **frontend-only**; moving bug/product/team/time/state filtering server-side requires backend additions (likely new work-item query parameters or a dedicated bug insights endpoint).
 
-### Bug Detail
-- Current filters: `bugId` query parameter only (`BugDetail.razor:184-206`).
-- Backend: none today; the page loads sample data locally.
-- Missing filters: all real bug-detail data integration.
-- Inconsistency: page looks editable but has no API-backed data or save flow.
-- Change impact: any real filter/global-context support here requires **backend work** plus frontend implementation.
-
 ### Planning hub
 - Current filters: none.
 - Missing filters: none; it is a pure navigation hub.
@@ -438,10 +430,6 @@ These changes need API/controller/query/DTO updates because the current backend 
 - **Home Changes product/team filtering**
   - Current change-summary API is sync-window based, not scope-based (`HomeChanges.razor:65-71`).
   - Product/team slices require new API/query support and probably DTO changes in `CacheSyncService`/controller responses.
-
-- **Bug Detail real data/edit flow**
-  - The page currently loads placeholder data only (`BugDetail.razor:196-206`).
-  - Any real filtering/editing/stateful behavior requires backend endpoints and DTO wiring.
 
 ## Concrete conclusions
 

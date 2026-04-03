@@ -86,11 +86,6 @@ public static class WorkspaceRoutes
     public const string BugOverview = "/home/bugs";
 
     /// <summary>
-    /// Bug Detail route.
-    /// </summary>
-    public const string BugDetail = "/home/bugs/detail";
-
-    /// <summary>
     /// Bug Triage route - for triaging and categorizing bugs.
     /// </summary>
     public const string BugTriage = "/bugs-triage";

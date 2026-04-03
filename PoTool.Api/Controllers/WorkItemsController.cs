@@ -389,32 +389,6 @@ public class WorkItemsController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Gets a specific work item by its TFS ID.
-    /// </summary>
-    [HttpGet("{tfsId:int}")]
-    public async Task<ActionResult<WorkItemDto>> GetByTfsId(
-        int tfsId,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var workItem = await _mediator.Send(new GetWorkItemByIdQuery(tfsId), cancellationToken);
-
-            if (workItem == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(workItem);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving work item with TFS ID: {TfsId}", tfsId);
-            return StatusCode(500, "Error retrieving work item");
-        }
-    }
-
 
     /// <summary>
     /// Validates a work item by ID directly from TFS (bypasses cache).

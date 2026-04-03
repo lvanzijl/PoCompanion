@@ -31,8 +31,7 @@ public static class WorkspaceNavigationCatalog
                 WorkspaceRoutes.ValidationFix,
                 WorkspaceRoutes.BacklogOverview,
                 WorkspaceRoutes.BacklogOverviewLegacy,
-                WorkspaceRoutes.BugOverview,
-                WorkspaceRoutes.BugDetail
+                WorkspaceRoutes.BugOverview
             ]),
         new(
             "Delivery",

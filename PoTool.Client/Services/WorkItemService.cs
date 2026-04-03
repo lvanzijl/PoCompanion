@@ -75,20 +75,6 @@ public class WorkItemService
     }
 
     /// <summary>
-    /// Gets a specific work item by TFS ID.
-    /// </summary>
-    public async Task<WorkItemDto?> GetByTfsIdAsync(int tfsId)
-    {
-        return await _client.GetByTfsIdAsync(tfsId);
-    }
-
-    public async Task<DataStateResponseDto<WorkItemDto>?> GetByTfsIdStateAsync(int tfsId, CancellationToken cancellationToken = default)
-        => await _httpClient.GetFromJsonAsync<DataStateResponseDto<WorkItemDto>>(
-            $"{WorkItemEndpoint}/{tfsId}",
-            _jsonOptions,
-            cancellationToken);
-
-    /// <summary>
     /// Gets a specific work item with validation by TFS ID from cache.
     /// This retrieves a single work item from the cached data efficiently via a dedicated endpoint.
     /// Much more efficient than fetching all work items and filtering client-side.
