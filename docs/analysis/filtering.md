@@ -28,16 +28,15 @@ Pages that inherit `WorkspaceBase`:
 
 `PoTool.Client/Services/INavigationContextService` (implemented by `NavigationContextService`) manages a richer, immutable context object used exclusively by the remaining legacy workspace pages:
 
-- `AnalysisWorkspace`
 - `ProductWorkspace`
 - `TeamWorkspace`
 
 The context object carries:
 
-- `Intent` (enum: Plannen / Begrijpen / Overzien)
+- `Intent` (enum: Plannen / Overzien)
 - `Scope.ProductId` and `Scope.TeamId`
 - `TimeHorizon` (Current / Future / Past)
-- `Mode` and `Trigger`
+- `Trigger`
 
 Navigation is performed via `NavigateWithContextAsync(route, context)`. The full context is serialized to and from URL query strings using `ToQueryString()` and `FromQueryString()`. A stack (`_contextStack`) tracks back-navigation history.
 

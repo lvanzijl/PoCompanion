@@ -2,6 +2,14 @@
   {
     "date": "2026-04-03",
     "type": "Changed",
+    "title": "Legacy analysis workspace has been removed",
+    "impact": "The standalone `/workspace/analysis` route is no longer available. Legacy product and team pages no longer link into that removed workspace, while shared analytics, filtering, and CDC-related logic remain in place for modern pages and reusable components.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-03",
+    "type": "Changed",
     "title": "Legacy communication workspace has been removed",
     "impact": "The standalone `/workspace/communication` route is no longer available. Legacy product, team, and analysis pages no longer expose navigation into that removed workspace, while shared clipboard and export infrastructure remains available where it is still used elsewhere.",
     "area": "Home",
@@ -141,7 +149,7 @@
     "title": "Backlog health iteration cards now show counted issues",
     "impact": "Backlog Health iteration cards now show the total number of issues counted in each health-score calculation, so product owners can see how many blocked, parent-progress, and missing-effort issues drove the score without leaving the current view.",
     "area": "Trends",
-    "link": "/workspace/analysis"
+    "link": "/home/health/backlog-health"
   },
   {
     "date": "2026-03-31",

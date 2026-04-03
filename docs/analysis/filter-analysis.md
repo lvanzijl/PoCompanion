@@ -77,7 +77,6 @@
 | --- | --- | --- |
 | `/workspace/product` and `/workspace/product/{ProductId:int}` | `PoTool.Client/Pages/LegacyWorkspaces/ProductWorkspace.razor:1-2` | Legacy workspace route. |
 | `/workspace/team` and `/workspace/team/{TeamId:int}` | `PoTool.Client/Pages/LegacyWorkspaces/TeamWorkspace.razor:1-2` | Legacy workspace route. |
-| `/workspace/analysis` and `/workspace/analysis/{Mode}` | `PoTool.Client/Pages/LegacyWorkspaces/AnalysisWorkspace.razor:1-2` | Legacy workspace route. |
 
 ## 2. Filter inventory
 
