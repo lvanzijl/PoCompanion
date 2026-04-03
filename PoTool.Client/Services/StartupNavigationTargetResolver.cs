@@ -5,6 +5,9 @@ namespace PoTool.Client.Services;
 /// </summary>
 public static class StartupNavigationTargetResolver
 {
+    /// <summary>
+    /// Maps a startup routing decision to the concrete client URI that should be opened.
+    /// </summary>
     public static string GetTargetUri(StartupRoutingResult routingResult)
     {
         return routingResult.Route switch

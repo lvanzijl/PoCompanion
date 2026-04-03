@@ -5,6 +5,10 @@ namespace PoTool.Client.Services;
 /// </summary>
 public static class StartupGuardRouteMatcher
 {
+    /// <summary>
+    /// Returns true when the current path is exempt from startup gating.
+    /// The root route matches exactly; all other exempt routes may match the exact path or nested subpaths.
+    /// </summary>
     public static bool IsExemptPath(string currentPath, IEnumerable<string> exemptPaths)
     {
         var normalizedCurrentPath = NormalizePath(currentPath);
@@ -32,6 +36,10 @@ public static class StartupGuardRouteMatcher
         return false;
     }
 
+    /// <summary>
+    /// Normalizes a route path by removing query and fragment parts, ensuring a leading slash,
+    /// and trimming trailing slashes except for the root path.
+    /// </summary>
     public static string NormalizePath(string? path)
     {
         if (string.IsNullOrWhiteSpace(path))
