@@ -77,8 +77,9 @@
 
 Validation commands:
 
-- `dotnet build /home/runner/work/PoCompanion/PoCompanion/PoTool.sln --configuration Release --nologo`
-- `dotnet test /home/runner/work/PoCompanion/PoCompanion/PoTool.sln --configuration Release --nologo --filter "TestCategory!=Governance&TestCategory!=ApiContract"`
+- CI sandbox path used for validation:
+  - `dotnet build /home/runner/work/PoCompanion/PoCompanion/PoTool.sln --configuration Release --nologo`
+  - `dotnet test /home/runner/work/PoCompanion/PoCompanion/PoTool.sln --configuration Release --nologo --filter "TestCategory!=Governance&TestCategory!=ApiContract"`
 
 Result:
 
