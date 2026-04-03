@@ -1,0 +1,22 @@
+@inject NavigationManager NavigationManager
+
+@code {
+    [Parameter, EditorRequired]
+    public string CanonicalPath { get; set; } = string.Empty;
+
+    private bool _redirected;
+
+    protected override void OnParametersSet()
+    {
+        if (_redirected || string.IsNullOrWhiteSpace(CanonicalPath))
+        {
+            return;
+        }
+
+        var currentUri = new Uri(NavigationManager.Uri);
+        var target = $"{CanonicalPath}{currentUri.Query}{currentUri.Fragment}";
+
+        _redirected = true;
+        NavigationManager.NavigateTo(target, replace: true);
+    }
+}

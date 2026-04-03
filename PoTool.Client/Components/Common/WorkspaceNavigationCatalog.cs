@@ -30,7 +30,6 @@ public static class WorkspaceNavigationCatalog
                 WorkspaceRoutes.ValidationQueue,
                 WorkspaceRoutes.ValidationFix,
                 WorkspaceRoutes.BacklogOverview,
-                WorkspaceRoutes.BacklogOverviewLegacy,
                 WorkspaceRoutes.BugOverview
             ]),
         new(
@@ -42,8 +41,7 @@ public static class WorkspaceNavigationCatalog
                 WorkspaceRoutes.DeliveryWorkspace,
                 WorkspaceRoutes.SprintDelivery,
                 WorkspaceRoutes.SprintExecution,
-                WorkspaceRoutes.SprintTrend,
-                WorkspaceRoutes.SprintTrendActivity
+                WorkspaceRoutes.SprintDeliveryActivity
             ]),
         new(
             "Trends",

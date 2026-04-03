@@ -117,8 +117,7 @@ public static class WorkspaceRoutes
     public const string ProjectPlanBoard = "/planning/{0}/plan-board";
 
     /// <summary>
-    /// Sprint Trend route - shows sprint-based revision metrics.
-    /// Legacy route kept for backward compatibility; canonical route is SprintDelivery.
+    /// Legacy Sprint Delivery alias route kept only for redirect normalization.
     /// </summary>
     public const string SprintTrend = "/home/sprint-trend";
 
@@ -138,7 +137,7 @@ public static class WorkspaceRoutes
     public const string PortfolioDelivery = "/home/delivery/portfolio";
 
     /// <summary>
-    /// Sprint Trend activity detail route.
+    /// Legacy Sprint Delivery activity alias route kept only for redirect normalization.
     /// </summary>
     public const string SprintTrendActivity = "/home/sprint-trend/activity";
 
@@ -169,7 +168,7 @@ public static class WorkspaceRoutes
     public const string BacklogOverview = "/home/health/backlog-health";
 
     /// <summary>
-    /// Legacy Backlog Health route kept for direct links and existing bookmarks.
+    /// Legacy Backlog Health route kept only for redirect normalization.
     /// </summary>
     public const string BacklogOverviewLegacy = "/home/backlog-overview";
 

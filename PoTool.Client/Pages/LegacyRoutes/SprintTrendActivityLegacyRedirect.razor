@@ -1,0 +1,10 @@
+@page "/home/sprint-trend/activity/{WorkItemId:int}"
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Models
+
+<CanonicalRouteRedirect CanonicalPath="@($"{WorkspaceRoutes.SprintDeliveryActivity}/{WorkItemId}")" />
+
+@code {
+    [Parameter]
+    public int WorkItemId { get; set; }
+}
