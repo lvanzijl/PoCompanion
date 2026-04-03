@@ -28,8 +28,6 @@ public sealed class PreCleanupAppValidationDocumentTests
         StringAssert.Contains(report, "/home/delivery/execution");
         StringAssert.Contains(report, "/home/portfolio-progress");
         StringAssert.Contains(report, "/home/delivery/portfolio");
-        StringAssert.Contains(report, "/workspace/analysis/effort");
-        StringAssert.Contains(report, "/workspace/analysis/forecast");
         StringAssert.Contains(report, "/api/metrics/effort-estimation-quality");
         StringAssert.Contains(report, "/api/metrics/effort-estimation-suggestions");
         StringAssert.Contains(report, "UseMockClient");

@@ -1065,8 +1065,7 @@
 
     private void HandleViewDetails(EpicViewDetailsEventArgs args)
     {
-        // Navigate to Work Item Explorer with the Epic selected
-        Navigation.NavigateTo($"/workitems?selected={args.EpicId}");
+        Navigation.NavigateTo($"{WorkspaceRoutes.WorkItems}?rootWorkItemId={args.EpicId}");
     }
 
     /// <summary>

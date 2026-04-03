@@ -61,7 +61,7 @@ The current TFS data access follows a dual-mode pattern:
 
 **Current Settings/Configuration Paths (bypass cache):**
 - `ManageProductOwner.razor` → Profile CRUD → DB only
-- `ManageProducts.razor` → Product CRUD → DB + TFS (validation)
+- `ManageProductOwner.razor` → Product CRUD and assignment → DB + TFS (validation)
 - `ManageTeams.razor` → Team CRUD → DB + TFS (discovery)
 - `EditProductOwner.razor` → Profile editing → DB only
 - `WorkItemStates.razor` → State classification → TFS (discovery)

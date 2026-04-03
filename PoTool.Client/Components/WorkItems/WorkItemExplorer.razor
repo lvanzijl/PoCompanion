@@ -85,39 +85,13 @@
 </div>
 
 @code {
-    // Home navigation parameters (query string)
-    /// <summary>
-    /// Validation category filter ID for Home navigation deep links.
-    /// When combined with filter=issues, pre-enables the specified validation category filter.
-    /// Values: 1 = Structural Integrity, 2 = Refinement Readiness, 3 = Refinement Completeness
-    /// </summary>
-    [Parameter]
-    [SupplyParameterFromQuery(Name = "validationCategory")]
-    public int? ValidationCategoryId { get; set; }
-    
     /// <summary>
     /// When set, filters to show only descendants (and the root itself) of the specified work item ID.
-    /// Used by Home Planning workspace for epic-centric navigation.
+    /// Used by current backlog and planning entry points.
     /// </summary>
     [Parameter]
     [SupplyParameterFromQuery(Name = "rootWorkItemId")]
     public int? RootWorkItemId { get; set; }
-    
-    /// <summary>
-    /// When true, loads all products instead of just profile-scoped products.
-    /// Used by Home task-driven entry points to provide full organizational visibility.
-    /// </summary>
-    [Parameter]
-    [SupplyParameterFromQuery(Name = "allProducts")]
-    public bool AllProducts { get; set; }
-    
-    /// <summary>
-    /// When true, indicates all teams scope for Home navigation.
-    /// Note: Currently for display/context purposes only; team-based filtering not yet implemented.
-    /// </summary>
-    [Parameter]
-    [SupplyParameterFromQuery(Name = "allTeams")]
-    public bool AllTeams { get; set; }
 
     private List<WorkItemDto> _workItems = new();
     private List<WorkItemWithValidationDto> _workItemsWithValidation = new();
@@ -161,9 +135,6 @@
         }
     };
     
-    // Focus root for product-aware navigation
-    private int? _focusRootId;
-
     // Tree structure
     private List<TreeNode> _treeRoots = new();
     private List<TreeNode> _flatNodeList = new(); // Flat list for keyboard navigation
@@ -176,63 +147,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Check for filter query parameter from Product Home navigation
-        ApplyQueryParameterFilters();
-        
         await LoadExpandedStateAsync();
         await LoadWorkItems();
-    }
-
-    private void ApplyQueryParameterFilters()
-    {
-        var uri = new Uri(NavigationManager.Uri);
-        var query = uri.Query;
-        
-        if (string.IsNullOrEmpty(query))
-        {
-            return;
-        }
-        
-        // Parse query string manually (remove leading '?' and split on '&')
-        var queryParams = query.TrimStart('?')
-            .Split('&', StringSplitOptions.RemoveEmptyEntries)
-            .Select(p => p.Split('=', 2))
-            .Where(p => p.Length == 2)
-            .ToDictionary(p => p[0], p => p[1], StringComparer.OrdinalIgnoreCase);
-        
-        // Check for "filter=issues" parameter
-        if (queryParams.TryGetValue("filter", out var filterValue) && 
-            filterValue.Equals("issues", StringComparison.OrdinalIgnoreCase))
-        {
-            // If validationCategory is specified, enable only that category
-            if (ValidationCategoryId.HasValue)
-            {
-                var categoryFilterId = ValidationCategoryId.Value.ToString();
-                var filter = _validationFilters.FirstOrDefault(f => f.Id == categoryFilterId);
-                if (filter != null)
-                {
-                    filter.IsEnabled = true;
-                }
-            }
-            else
-            {
-                // Otherwise enable all validation filters
-                foreach (var filter in _validationFilters)
-                {
-                    filter.IsEnabled = true;
-                }
-            }
-        }
-        
-        // Check for "focusRoot" parameter (product-aware navigation from Home page)
-        if (queryParams.TryGetValue("focusRoot", out var focusRootValue) && 
-            int.TryParse(focusRootValue, out var focusRootId))
-        {
-            _focusRootId = focusRootId;
-            // Auto-expand the focus root node when tree is built
-            _expandedState[focusRootId] = true;
-            Console.WriteLine($"[WorkItemExplorer] Focus root set to: {focusRootId}");
-        }
     }
 
     private async Task<List<ProductDto>> GetProfileProductsAsync()
@@ -261,10 +177,7 @@
         _isLoading = true;
         try
         {
-            // Get products for the active profile (or all products if AllProducts is true)
-            var profileProducts = AllProducts ? 
-                (await ProductService.GetAllProductsAsync()).ToList() : 
-                await GetProfileProductsAsync();
+            var profileProducts = await GetProfileProductsAsync();
 
             // Extract product IDs to pass to the backend for efficient filtering
             var productIds = profileProducts.Select(p => p.Id).ToArray();

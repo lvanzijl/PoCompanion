@@ -174,7 +174,6 @@ builder.Services.AddScoped<WorkItemVisibilityService>();
 builder.Services.AddScoped<IOnboardingService, OnboardingService>();
 builder.Services.AddScoped<IOnboardingWizardState, OnboardingWizardState>();
 builder.Services.AddScoped<IStartupOrchestratorService, StartupOrchestratorService>();
-builder.Services.AddScoped<INavigationContextService, NavigationContextService>();
 builder.Services.AddScoped<CacheSyncService>();
 builder.Services.AddScoped<HomeProductBarMetricsService>();
 builder.Services.AddScoped<ReleaseNotesService>();

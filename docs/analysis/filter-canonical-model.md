@@ -23,7 +23,7 @@ The canonical model in this document remains the authoritative design reference,
 - those API slices now emit requested/effective/invalid metadata through family-specific response envelopes
 - the client preserves and displays that metadata through `CanonicalClientResponseFactory` and `CanonicalFilterMetadataNotice`
 - a shared client-side `FilterState` / `FilterService` / `FilterUrlParser` runtime was **not** introduced as a standalone system
-- home/workspace URL context still uses `WorkspaceBase` and `NavigationContextService` to carry coarse `productId` / `teamId` navigation state
+- home/workspace URL context still uses `WorkspaceBase` to carry coarse `productId` / `teamId` navigation state
 
 Read this document as the canonical semantics that the implemented API-side filter system now enforces, not as a guarantee that every suggested client runtime type was shipped exactly as named below.
 

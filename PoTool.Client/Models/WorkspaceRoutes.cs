@@ -19,34 +19,9 @@ public static class WorkspaceRoutes
     public const string SyncGate = "/sync-gate";
     
     /// <summary>
-    /// Legacy landing page route for classic intent-based navigation.
-    /// </summary>
-    public const string Legacy = "/legacy";
-
-    /// <summary>
     /// Profile selection route.
     /// </summary>
     public const string Profiles = "/profiles";
-
-    /// <summary>
-    /// Product Workspace route.
-    /// </summary>
-    public const string ProductWorkspace = "/workspace/product";
-
-    /// <summary>
-    /// Team Workspace route.
-    /// </summary>
-    public const string TeamWorkspace = "/workspace/team";
-
-    /// <summary>
-    /// Analysis Workspace route.
-    /// </summary>
-    public const string AnalysisWorkspace = "/workspace/analysis";
-
-    /// <summary>
-    /// Communication Workspace route.
-    /// </summary>
-    public const string CommunicationWorkspace = "/workspace/communication";
 
     #region Workspace Navigation Routes
 
@@ -86,11 +61,6 @@ public static class WorkspaceRoutes
     public const string BugOverview = "/home/bugs";
 
     /// <summary>
-    /// Bug Detail route.
-    /// </summary>
-    public const string BugDetail = "/home/bugs/detail";
-
-    /// <summary>
     /// Bug Triage route - for triaging and categorizing bugs.
     /// </summary>
     public const string BugTriage = "/bugs-triage";
@@ -109,11 +79,6 @@ public static class WorkspaceRoutes
     /// Pipeline Insights route — PO-first stability overview per product, sprint-scoped (read-only).
     /// </summary>
     public const string PipelineInsights = "/home/pipeline-insights";
-
-    /// <summary>
-    /// Dependency Overview route (read-only).
-    /// </summary>
-    public const string DependencyOverview = "/home/dependencies";
 
     /// <summary>
     /// Project-scoped planning overview route.
@@ -152,8 +117,7 @@ public static class WorkspaceRoutes
     public const string ProjectPlanBoard = "/planning/{0}/plan-board";
 
     /// <summary>
-    /// Sprint Trend route - shows sprint-based revision metrics.
-    /// Legacy route kept for backward compatibility; canonical route is SprintDelivery.
+    /// Legacy Sprint Delivery alias route kept only for redirect normalization.
     /// </summary>
     public const string SprintTrend = "/home/sprint-trend";
 
@@ -173,7 +137,7 @@ public static class WorkspaceRoutes
     public const string PortfolioDelivery = "/home/delivery/portfolio";
 
     /// <summary>
-    /// Sprint Trend activity detail route.
+    /// Legacy Sprint Delivery activity alias route kept only for redirect normalization.
     /// </summary>
     public const string SprintTrendActivity = "/home/sprint-trend/activity";
 
@@ -204,7 +168,7 @@ public static class WorkspaceRoutes
     public const string BacklogOverview = "/home/health/backlog-health";
 
     /// <summary>
-    /// Legacy Backlog Health route kept for direct links and existing bookmarks.
+    /// Legacy Backlog Health route kept only for redirect normalization.
     /// </summary>
     public const string BacklogOverviewLegacy = "/home/backlog-overview";
 
@@ -218,34 +182,12 @@ public static class WorkspaceRoutes
     /// </summary>
     public const string DeliveryTrends = "/home/trends/delivery";
     
-    // Legacy Landing route constant for backward compatibility - alias to the new Legacy constant
-    public const string Landing = Legacy;
-
     #endregion
 
     /// <summary>
     /// Work Item Explorer route.
     /// </summary>
     public const string WorkItems = "/workitems";
-
-    /// <summary>
-    /// Gets the target workspace route for a given intent.
-    /// </summary>
-    /// <param name="intent">The navigation intent.</param>
-    /// <param name="scopeLevel">The current scope level.</param>
-    /// <returns>The workspace route for the intent.</returns>
-    public static string GetRouteForIntent(Intent intent, ScopeLevel scopeLevel = ScopeLevel.Portfolio)
-    {
-        return intent switch
-        {
-            Intent.Overzien when scopeLevel == ScopeLevel.Team => TeamWorkspace,
-            Intent.Overzien => ProductWorkspace,
-            Intent.Begrijpen => AnalysisWorkspace,
-            Intent.Plannen => PlanningWorkspace,
-            Intent.Delen => CommunicationWorkspace,
-            _ => Legacy
-        };
-    }
 
     /// <summary>
     /// Gets the per-product roadmap editor route for a specific product.

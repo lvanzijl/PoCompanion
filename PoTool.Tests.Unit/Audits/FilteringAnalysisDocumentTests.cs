@@ -21,7 +21,6 @@ public sealed class FilteringAnalysisDocumentTests
         StringAssert.Contains(report, "## 4. Required refactor points");
         StringAssert.Contains(report, "## 5. Summary");
         StringAssert.Contains(report, "WorkspaceBase");
-        StringAssert.Contains(report, "INavigationContextService");
         StringAssert.Contains(report, "ParseContextQueryParameters");
         StringAssert.Contains(report, "BuildContextQuery");
         StringAssert.Contains(report, "IProfileService");

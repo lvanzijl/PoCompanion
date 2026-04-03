@@ -61,11 +61,6 @@ public interface IProductRepository
     Task<IEnumerable<ProductDto>> GetAllProductsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets all orphaned products (products with no owner).
-    /// </summary>
-    Task<IEnumerable<ProductDto>> GetOrphanProductsAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Gets products selectable by a specific Product Owner (owned + orphaned).
     /// </summary>
     Task<IEnumerable<ProductDto>> GetSelectableProductsAsync(int productOwnerId, CancellationToken cancellationToken = default);

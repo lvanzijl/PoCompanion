@@ -2,7 +2,7 @@
 
 ## 1. Current filter architecture
 
-The repository currently applies filtering through two distinct context-propagation mechanisms and several local component-state patterns rather than one global filter layer.
+The repository currently applies filtering through one shared Home-workspace context mechanism and several local component-state patterns rather than one global filter layer.
 
 ### 1.1 WorkspaceBase — Home workspace context propagation
 
@@ -24,27 +24,7 @@ Pages that inherit `WorkspaceBase`:
 - `HealthOverviewPage` — inherits productId
 - `SprintExecution` — inherits productId, adds `sprintId` as a separate URL parameter
 
-### 1.2 INavigationContextService — Legacy workspace context propagation
-
-`PoTool.Client/Services/INavigationContextService` (implemented by `NavigationContextService`) manages a richer, immutable context object used exclusively by the four Legacy workspace pages:
-
-- `AnalysisWorkspace`
-- `CommunicationWorkspace`
-- `ProductWorkspace`
-- `TeamWorkspace`
-
-The context object carries:
-
-- `Intent` (enum: Plannen / Begrijpen / Communiceren)
-- `Scope.ProductId` and `Scope.TeamId`
-- `TimeHorizon` (Current / Future / Past)
-- `Mode` and `Trigger`
-
-Navigation is performed via `NavigateWithContextAsync(route, context)`. The full context is serialized to and from URL query strings using `ToQueryString()` and `FromQueryString()`. A stack (`_contextStack`) tracks back-navigation history.
-
-These pages do **not** inherit `WorkspaceBase`.
-
-### 1.3 Local component-state filters
+### 1.2 Local component-state filters
 
 Many Home workspace pages manage filter state locally as Blazor component fields, bypassing `WorkspaceBase` entirely for their filtering beyond `productId` and `teamId`. The most common pattern is a collapsible `MudPaper` filter panel containing `MudSelect` dropdowns wired to `OnTeamChanged` / `OnSprintChanged` / `OnProductChanged` event handlers.
 
@@ -67,7 +47,7 @@ Pages with full local filter panels:
 
 `SprintExecution` uses a popover-based pattern (not a collapsible panel) but also keeps local `_selectedSprintId` and `_selectedProductId` fields.
 
-### 1.4 API-level filtering
+### 1.3 API-level filtering
 
 Backend handlers receive filter dimensions as query class constructor parameters. The dominant pattern is:
 
@@ -128,11 +108,11 @@ Every page that needs a filter must declare its own fields, load the relevant li
 
 `WorkspaceBase.ParseContextQueryParameters` does not extract `sprintId`. Pages that need sprint context parse the URL parameter themselves or use local state. There is no `BuildContextQuery` equivalent that includes sprint context, so sprint state is not propagated through navigation links the way productId/teamId are.
 
-### 3.3 Two competing context-propagation models
+### 3.3 No shared cross-page state beyond query strings
 
-Home pages (inheriting `WorkspaceBase`) use a flat, stateless URL-query-parameter approach. Legacy pages (injecting `INavigationContextService`) use a richer, stack-based, immutable-context approach with Intent/Scope/TimeHorizon semantics.
+Home pages use a flat, stateless URL-query-parameter approach plus local component state. That keeps navigation explicit, but it also means cross-page filter state is reconstructed independently on every page rather than being owned by one reactive service.
 
-These are incompatible: a user navigating from a Legacy page to a Home page loses all context beyond productId/teamId, and vice versa. There is no bridge layer.
+The result is partial context carry-over only for dimensions explicitly encoded into the URL (`productId`, `teamId`, and page-specific additions). There is no single client-side owner for the active analytical context.
 
 ### 3.4 ProfileService is not a true filter layer
 
@@ -177,11 +157,7 @@ Move the "load sprints for team, default to current sprint" sequence into a reus
 
 A reusable Blazor component (e.g., `WorkspaceFilterPanel`) that renders the product/team/sprint selectors and delegates to `GlobalFilterService`. Each page embeds it instead of duplicating the collapsible `MudPaper` filter block. Pages that currently contain identical filter UX: `PipelineInsights`, `PrOverview`, `PrDeliveryInsights`.
 
-### 4.6 Align or sunset the Legacy context model
-
-Decide whether `INavigationContextService` will be extended to cover the Home workspace pages or retired as part of the Legacy workspace migration. Until that decision is made, the two models should at minimum share the same URL parameter names (`productId`, `teamId`) to allow partial context transfer across navigation boundaries.
-
-### 4.7 Standardize API query filter transport
+### 4.6 Standardize API query filter transport
 
 Consolidate the optional-product-list / optional-team-list / sprint-list pattern into a shared `WorkspaceFilterContext` input record that is accepted by all relevant query handlers. This reduces repetition in query class definitions and allows the filter transport contract to evolve in one place.
 
@@ -193,7 +169,7 @@ Consolidate the optional-product-list / optional-team-list / sprint-list pattern
 |---|---|---|
 | Client filter state | Per-page local fields | `GlobalFilterService` singleton |
 | Context propagation | `WorkspaceBase` (productId, teamId) + local sprint | `WorkspaceBase` + `GlobalFilterService` (all dimensions) |
-| Legacy context | `INavigationContextService` (separate model) | Aligned or replaced |
+| Legacy context | Removed with legacy workspace cleanup | Not needed |
 | Sprint loading | Duplicated in ≥ 6 pages | Shared helper / service method |
 | Product list loading | Duplicated in ≥ 10 pages | Reactive catalog in `ProductService` |
 | Filter UI | Duplicated `MudPaper` blocks in ≥ 3 pages | `WorkspaceFilterPanel` component |

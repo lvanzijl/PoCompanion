@@ -127,7 +127,7 @@ Note: the second example is representative of the returned product payload; `Pro
 - `WorkspaceQueryContext` now carries `ProjectAlias`
 - `WorkspaceQueryContextHelper` parses and builds `projectAlias`
 - `WorkspaceBase` now preserves `projectAlias` alongside `productId`, `teamId`, and sprint query parameters
-- `NavigationContext.Scope` and `NavigationContextService` now preserve `ProjectAlias`
+- Update note (2026-04-03): the legacy `NavigationContext` model and `NavigationContextService` were removed during final legacy workspace cleanup; current project-alias propagation now relies on `WorkspaceQueryContext` and `WorkspaceBase`.
 
 ### Planning pages
 - `PoTool.Client/Pages/Home/PlanBoard.razor`

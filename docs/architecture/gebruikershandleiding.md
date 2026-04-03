@@ -990,17 +990,7 @@ Onderaan de pagina bevinden zich knoppen om snel naar andere werkruimtes te navi
 
 ---
 
-### 10.1 Afhankelijkheidsoverzicht
-
-**Pagina:** `/home/dependencies`
-
-Een alleen-lezen visueel overzicht van werkitem-afhankelijkheden tussen epics en teams.
-
-> **Let op:** Dit is een inzichtweergave. Voor het beheren van afhankelijkheden ga je via de link naar het volledige afhankelijkheidsbeheer (`/dependency-graph`).
-
----
-
-### 10.2 Plan Board
+### 10.1 Plan Board
 
 **Pagina:** `/planning/plan-board`
 
@@ -1079,7 +1069,7 @@ Bovenaan het bord staat een productkiezer. Selecteer een product om alleen de PB
 
 ---
 
-### 10.3 Product Roadmaps
+### 10.2 Product Roadmaps
 
 **Pagina:** `/planning/product-roadmaps`
 
@@ -1173,7 +1163,7 @@ Via het **Snapshots**-menu rechtsboven kun je momentopnamen van de huidige roadm
 
 ---
 
-### 10.4 Product Roadmap Editor
+### 10.3 Product Roadmap Editor
 
 **Pagina:** `/planning/product-roadmaps/{productId}`
 
@@ -1363,18 +1353,24 @@ Klik op een bestaand profiel in de lijst en pas de velden aan. Klik op **Opslaan
 
 ### 13.2 Producten beheren
 
-**Pagina:** `/settings/products`
+**Pagina:** `/settings/productowner/{id}`
 
-Producten zijn de primaire organisatie-eenheden waarop de backlog wordt gefilterd. Een product heeft:
+Producten worden beheerd binnen de detailpagina van een Product Owner. Een product heeft:
 
 - **Naam** — de productnaam.
 - **Backlog-rootwerkitems** — een of meerdere werkitems (typisch Epics) die de root van de productbacklog vormen. Werkitems buiten deze roots worden niet meegenomen in productgebonden analyses.
 - **Gekoppelde teams** — teams die aan dit product werken.
 - **Eigenaar** — de Product Owner die verantwoordelijk is voor dit product.
 
-#### Wees voorzichtig met wezen-producten
+#### Producten toewijzen en verplaatsen
 
-Producten zonder gekoppelde Product Owner worden als "wees" gemarkeerd. Gebruik de schakeloptie **Alleen wezen tonen** om deze snel te identificeren en te herstellen.
+Op de Product Owner-pagina kun je:
+
+- nieuwe producten aanmaken voor deze Product Owner;
+- bestaande producten bewerken of verwijderen;
+- producten herordenen binnen deze Product Owner;
+- producten loskoppelen zodat ze wees worden;
+- wees-producten opnieuw toewijzen aan een Product Owner.
 
 ---
 
