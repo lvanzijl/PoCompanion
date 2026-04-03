@@ -22,6 +22,9 @@ public abstract class WorkspaceBase : ComponentBase
     [Inject]
     protected ISnackbar Snackbar { get; set; } = default!;
 
+    [Inject]
+    protected GlobalFilterStore GlobalFilterStore { get; set; } = default!;
+
     /// <summary>
     /// Project alias for context propagation (parsed from URL).
     /// </summary>
@@ -65,6 +68,7 @@ public abstract class WorkspaceBase : ComponentBase
         SprintId = context.SprintId;
         FromSprintId = context.FromSprintId;
         ToSprintId = context.ToSprintId;
+        GlobalFilterStore.TrackNavigation(NavigationManager.Uri, ProfileService.GetActiveProfileId());
     }
 
     /// <summary>

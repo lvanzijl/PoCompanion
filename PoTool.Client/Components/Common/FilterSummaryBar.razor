@@ -1,0 +1,66 @@
+@using PoTool.Client.Models
+@using PoTool.Client.Services
+@inject GlobalFilterStore GlobalFilterStore
+@implements IDisposable
+
+@if (GlobalFilterStore.CurrentUsage is not null)
+{
+    <MudPaper Outlined="true" Class="filter-summary-bar px-4 py-2 mb-3">
+        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.caption" Class="filter-summary-bar__label">
+                Filters · @GlobalFilterStore.CurrentUsage.PageName
+            </MudText>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+                Products: @FormatProducts(GlobalFilterStore.CurrentState)
+            </MudChip>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">
+                Projects: @FormatProjects(GlobalFilterStore.CurrentState)
+            </MudChip>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Secondary">
+                Team: @(GlobalFilterStore.CurrentState.TeamId?.ToString() ?? "none")
+            </MudChip>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
+                Time: @FormatTime(GlobalFilterStore.CurrentState)
+            </MudChip>
+
+            @if (GlobalFilterStore.CurrentUsage.MissingTeam)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text">
+                    Missing team
+                </MudChip>
+            }
+
+            @if (GlobalFilterStore.CurrentUsage.MissingSprint)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text">
+                    Missing sprint
+                </MudChip>
+            }
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        GlobalFilterStore.Changed += HandleStoreChanged;
+    }
+
+    public void Dispose()
+    {
+        GlobalFilterStore.Changed -= HandleStoreChanged;
+    }
+
+    private void HandleStoreChanged() => InvokeAsync(StateHasChanged);
+
+    private static string FormatProducts(GlobalFilterState state)
+        => state.AllProducts ? "ALL" : string.Join(", ", state.ProductIds);
+
+    private static string FormatProjects(GlobalFilterState state)
+        => state.AllProjects ? "ALL" : string.Join(", ", state.ProjectAliases);
+
+    private static string FormatTime(GlobalFilterState state)
+        => state.TimeValue is null
+            ? state.TimeMode.ToString()
+            : $"{state.TimeMode} · {state.TimeValue}";
+}

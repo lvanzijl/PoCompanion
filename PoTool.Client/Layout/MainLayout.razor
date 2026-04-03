@@ -6,6 +6,7 @@
 @using PoTool.Client.Models
 @inject IOnboardingService OnboardingService
 @inject IStartupOrchestratorService StartupOrchestrator
+@inject GlobalFilterStore GlobalFilterStore
 @inject IProfileService ProfileService
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
@@ -55,6 +56,7 @@
         </div>
 
         <article class="content px-4">
+            <FilterSummaryBar />
             <StartupGuard>
                 @Body
             </StartupGuard>
@@ -73,6 +75,7 @@
         if (firstRender && !_hasCheckedOnboarding)
         {
             _hasCheckedOnboarding = true;
+            ObserveCurrentRoute();
             
             // Subscribe to navigation changes to refresh profile selector when needed
             NavigationManager.LocationChanged += OnLocationChanged;
@@ -93,6 +96,8 @@
                     await _profileSelector.RefreshAsync();
                 }
             }
+
+            ObserveCurrentRoute(e.Location);
         }
         catch (Exception ex)
         {
@@ -159,6 +164,11 @@
     {
         // Refresh the current page when profile changes by forcing navigation
         NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+    }
+
+    private void ObserveCurrentRoute(string? uri = null)
+    {
+        GlobalFilterStore.TrackNavigation(uri ?? NavigationManager.Uri, ProfileService.GetActiveProfileId());
     }
 
     private async Task HandleGlobalKeyDown(KeyboardEventArgs e)

@@ -2,6 +2,14 @@
   {
     "date": "2026-04-03",
     "type": "Changed",
+    "title": "Pages now show a read-only filter summary bar",
+    "impact": "Home and planning pages now expose a passive summary of detected product, project, team, and time context for observability only. The bar does not change navigation, queries, or page behavior.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-03",
+    "type": "Changed",
     "title": "Legacy workspace navigation and fallback sprint cadence were removed",
     "impact": "The old /legacy and /workspace navigation model is no longer available in the shipped client, and planning timeline views now show cadence as unavailable instead of assuming a default sprint duration when no completed sprint history exists.",
     "area": "Home",
