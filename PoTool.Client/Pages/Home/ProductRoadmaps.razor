@@ -127,37 +127,6 @@
     }
     else
     {
-        <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                <MudIcon Icon="@Icons.Material.Filled.Folder" Color="Color.Primary" />
-                <MudText Typo="Typo.subtitle1">Project:</MudText>
-                @if (_isLoadingProjects)
-                {
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-                }
-                else if (_projects.Count == 0)
-                {
-                    <MudText Color="Color.Secondary">No projects available.</MudText>
-                }
-                else
-                {
-                    <MudSelect T="string"
-                               Value="_selectedProjectRouteKey"
-                               ValueChanged="OnProjectChanged"
-                               Variant="Variant.Outlined"
-                               Dense="true"
-                               Style="max-width: 420px;"
-                               Disabled="_isReordering">
-                        <MudSelectItem T="string" Value="@string.Empty">All projects</MudSelectItem>
-                        @foreach (var project in _projects)
-                        {
-                            <MudSelectItem T="string" Value="@project.Alias">@FormatProjectLabel(project)</MudSelectItem>
-                        }
-                    </MudSelect>
-                }
-            </MudStack>
-        </MudPaper>
-
         @if (_projectPlanningSummary is not null)
         {
             <MudPaper Elevation="2" Class="pa-4 mb-4">
@@ -779,7 +748,6 @@
 
     private bool _isLoading = true;
     private bool _isReordering = false;
-    private bool _isLoadingProjects = true;
     private int? _profileId;
     private List<BreadcrumbItem> _breadcrumbs = new();
     private List<ProductLane> _productLanes = new();
@@ -832,7 +800,6 @@
         }
         finally
         {
-            _isLoadingProjects = false;
             _isLoading = false;
         }
     }

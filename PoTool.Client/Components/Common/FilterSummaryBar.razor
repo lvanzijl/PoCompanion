@@ -6,30 +6,42 @@
 
 @if (GlobalFilterStore.CurrentUsage is not null)
 {
+    var state = GlobalFilterStore.GetState();
     <MudPaper Outlined="true" Class="filter-summary-bar px-4 py-2 mb-3">
         <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1" AlignItems="AlignItems.Center">
             <MudText Typo="Typo.caption" Class="filter-summary-bar__label">
                 Filters · @GlobalFilterStore.CurrentUsage.PageName
             </MudText>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
-                Products: @FormatProducts(GlobalFilterStore.GetState())
-            </MudChip>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">
-                Projects: @FormatProjects(GlobalFilterStore.GetState())
-            </MudChip>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Secondary">
-                Team: @(GlobalFilterStore.GetState().TeamId?.ToString() ?? "none")
-            </MudChip>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
-                Time: @FormatTime(GlobalFilterStore.GetState())
-            </MudChip>
-
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Default">
-                Source: @GlobalFilterStore.CurrentUsage.LastUpdateSource
-            </MudChip>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@GetStatusColor(GlobalFilterStore.CurrentUsage.Status)">
-                Status: @GlobalFilterStore.CurrentUsage.Status
-            </MudChip>
+            @if (!state.AllProducts)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+                    Products: @FormatProducts(state)
+                </MudChip>
+            }
+            @if (!state.AllProjects)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">
+                    Projects: @FormatProjects(state)
+                </MudChip>
+            }
+            @if (state.TeamId.HasValue)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Secondary">
+                    Team: @state.TeamId.Value
+                </MudChip>
+            }
+            @if (state.Time.Mode != FilterTimeMode.Snapshot)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
+                    Time: @FormatTime(state)
+                </MudChip>
+            }
+            @if (state.AllProducts && state.AllProjects && !state.TeamId.HasValue && state.Time.Mode == FilterTimeMode.Snapshot)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Default">
+                    Defaults active
+                </MudChip>
+            }
             <MudSpacer />
             <MudButton Variant="Variant.Text"
                        Color="Color.Primary"
@@ -41,21 +53,21 @@
             @if (GlobalFilterStore.CurrentUsage.MissingTeam)
             {
                 <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text">
-                    Missing team
+                    Team required
                 </MudChip>
             }
 
             @if (GlobalFilterStore.CurrentUsage.MissingSprint)
             {
                 <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text">
-                    Missing sprint
+                    Time selection incomplete
                 </MudChip>
             }
 
-            @foreach (var decision in GlobalFilterStore.CurrentUsage.NormalizationDecisions)
+            @if (GlobalFilterStore.CurrentUsage.Status == FilterResolutionStatus.Invalid)
             {
-                <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text">
-                    @decision
+                <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Text">
+                    Invalid filter state
                 </MudChip>
             }
         </MudStack>

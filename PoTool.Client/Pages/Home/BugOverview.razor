@@ -57,47 +57,6 @@
     }
     else
     {
-        <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudStack Spacing="3">
-                <MudText Typo="Typo.h6">
-                    <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Class="mr-2" />
-                    Filters
-                </MudText>
-
-                <MudGrid Spacing="2">
-                    <MudItem xs="12" sm="6">
-                        <MudSelect T="int?"
-                                   Value="_selectedTeamId"
-                                   Label="Team"
-                                   Variant="Variant.Outlined"
-                                   Clearable="true"
-                                   ValueChanged="OnTeamChanged">
-                            <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
-                            @foreach (var team in _teams)
-                            {
-                                <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudItem>
-
-                    <MudItem xs="12" sm="6">
-                        <MudSelect T="int?"
-                                   Value="_selectedProductId"
-                                   Label="Product"
-                                   Variant="Variant.Outlined"
-                                   Clearable="true"
-                                   ValueChanged="OnProductChanged">
-                            <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
-                            @foreach (var product in _products)
-                            {
-                                <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudItem>
-                </MudGrid>
-            </MudStack>
-        </MudPaper>
-
         <DataStateView TData="IReadOnlyList<WorkItemDto>"
                        State="@_bugState"
                        IsLoading="@_metricsLoading"
@@ -356,43 +315,6 @@
         _bugsResolved = _calculator.CalculateBugsResolvedPerPeriod(_allBugs, _fromDate);
         _resolutionTime = _calculator.CalculateBugResolutionTime(_allBugs, _fromDate);
         _severityDistribution = _calculator.CalculateBugsBySeverityDistribution(_allBugs);
-    }
-    
-    private async Task OnTeamChanged(int? teamId)
-    {
-        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { TeamId = teamId });
-        UpdateUrlParameters();
-        await LoadBugDataAsync();
-    }
-    
-    private async Task OnProductChanged(int? productId)
-    {
-        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { ProductId = productId });
-        UpdateUrlParameters();
-        await LoadBugDataAsync();
-    }
-    
-    private void UpdateUrlParameters()
-    {
-        var queryParams = new List<string>();
-        
-        if (_selectedTeamId.HasValue)
-        {
-            queryParams.Add($"teamId={_selectedTeamId.Value}");
-        }
-        
-        if (_selectedProductId.HasValue)
-        {
-            queryParams.Add($"productId={_selectedProductId.Value}");
-        }
-        
-        var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
-        var newUrl = $"{WorkspaceRoutes.BugOverview}{queryString}";
-        
-        if (GlobalFilterStore.TryPrepareNavigation(NavigationManager.Uri, newUrl))
-        {
-            NavigationManager.NavigateTo(newUrl, forceLoad: false);
-        }
     }
     
     private void UpdateBreadcrumbs()

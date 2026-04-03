@@ -43,120 +43,46 @@
         </MudStack>
     </MudPaper>
 
-    @* ── Context / Filters (collapsible) ───────────────────────────────── *@
     <MudPaper Elevation="2" Class="pa-4 mb-4">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center"
-                  Style="cursor:pointer;" @onclick="() => _filterExpanded = !_filterExpanded">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudIcon Icon="@Icons.Material.Filled.FilterAlt" />
-                <MudText Typo="Typo.h6">Filters</MudText>
-                @if (!_filterExpanded && (_selectedTeamId.HasValue || _selectedSprintId.HasValue))
-                {
-                    @* Summary chips shown when collapsed *@
-                    @if (_selectedTeamId.HasValue)
-                    {
-                        var teamName = _teams.FirstOrDefault(t => t.Id == _selectedTeamId)?.Name;
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Group">@teamName</MudChip>
-                    }
-                    @if (_selectedSprintId.HasValue)
-                    {
-                        var sprintName = _sprints.FirstOrDefault(s => s.Id == _selectedSprintId)?.Name;
-                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Icon="@Icons.Material.Filled.CalendarMonth">@sprintName</MudChip>
-                    }
-                }
+        <MudText Typo="Typo.h6" Class="mb-3">Display options</MudText>
+        <MudGrid Spacing="2">
+            <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
+                <MudTooltip Text="When enabled, partially succeeded builds are included in calculations and shown as warnings.">
+                    <MudSwitch T="bool"
+                               @bind-Value="_includePartiallySucceeded"
+                               Label="Include partial success"
+                               Color="Color.Warning" />
+                </MudTooltip>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
+                <MudTooltip Text="When enabled, canceled builds are counted in the total.">
+                    <MudSwitch T="bool"
+                               @bind-Value="_includeCanceled"
+                               Label="Include canceled"
+                               Color="Color.Default" />
+                </MudTooltip>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudNumericField T="double?"
+                                 @bind-Value="_sloDurationMinutes"
+                                 Label="SLO duration (min)"
+                                 Variant="Variant.Outlined"
+                                 Min="1"
+                                 HelperText="Optional horizontal SLO line on scatter" />
+            </MudItem>
+        </MudGrid>
+
+        @if (_insightsData is not null && _togglesDirty)
+        {
+            <MudStack Row="true" Class="mt-3">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           OnClick="LoadInsightsAsync">
+                    Apply options
+                </MudButton>
             </MudStack>
-            <MudIconButton Icon="@(_filterExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                           Size="Size.Small"
-                           Color="Color.Default"
-                           OnClick="() => _filterExpanded = !_filterExpanded" />
-        </MudStack>
-
-        <MudCollapse Expanded="_filterExpanded">
-            <MudDivider Class="my-3" />
-            <MudGrid Spacing="2">
-                @* Team selector — drives sprint list *@
-                <MudItem xs="12" sm="6" md="3">
-                    <MudSelect T="int?"
-                               Value="_selectedTeamId"
-                               Label="Team"
-                               Variant="Variant.Outlined"
-                               Clearable="true"
-                               ValueChanged="OnTeamChanged">
-                        <MudSelectItem T="int?" Value="@((int?)null)">Select team…</MudSelectItem>
-                        @foreach (var team in _teams)
-                        {
-                            <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-
-                @* Sprint selector *@
-                <MudItem xs="12" sm="6" md="3">
-                    <MudSelect T="int?"
-                               Value="_selectedSprintId"
-                               Label="Sprint"
-                               Variant="Variant.Outlined"
-                               Clearable="true"
-                               Disabled="@(!_sprints.Any())"
-                               ValueChanged="OnSprintChanged">
-                        <MudSelectItem T="int?" Value="@((int?)null)">Select sprint…</MudSelectItem>
-                        @foreach (var sprint in _sprints)
-                        {
-                            <MudSelectItem T="int?" Value="@sprint.Id">
-                                @sprint.Name
-                                @if (sprint.StartUtc.HasValue)
-                                {
-                                    <text> (@sprint.StartUtc.Value.ToString("MMM yyyy"))</text>
-                                }
-                            </MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-
-                @* Include partiallySucceeded toggle *@
-                <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
-                    <MudTooltip Text="When enabled, partially succeeded builds are included in calculations and shown as warnings.">
-                        <MudSwitch T="bool"
-                                   @bind-Value="_includePartiallySucceeded"
-                                   Label="Include partial success"
-                                   Color="Color.Warning" />
-                    </MudTooltip>
-                </MudItem>
-
-                @* Include canceled toggle *@
-                <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
-                    <MudTooltip Text="When enabled, canceled builds are counted in the total.">
-                        <MudSwitch T="bool"
-                                   @bind-Value="_includeCanceled"
-                                   Label="Include canceled"
-                                   Color="Color.Default" />
-                    </MudTooltip>
-                </MudItem>
-
-                @* SLO input *@
-                <MudItem xs="12" sm="6" md="3">
-                    <MudNumericField T="double?"
-                                     @bind-Value="_sloDurationMinutes"
-                                     Label="SLO duration (min)"
-                                     Variant="Variant.Outlined"
-                                     Min="1"
-                                     HelperText="Optional horizontal SLO line on scatter" />
-                </MudItem>
-            </MudGrid>
-
-            @* Reload button shown when toggles change after initial load *@
-            @if (_insightsData is not null && _togglesDirty)
-            {
-                <MudStack Row="true" Class="mt-3">
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.Refresh"
-                               OnClick="LoadInsightsAsync">
-                        Apply filters
-                    </MudButton>
-                </MudStack>
-            }
-        </MudCollapse>
+        }
     </MudPaper>
 
     <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
@@ -588,9 +514,6 @@
 
     private double? _sloDurationMinutes;
 
-    // ── Filter panel state ───────────────────────────────────────────────
-    private bool _filterExpanded = true;
-
     private List<TeamDto>   _teams   = new();
     private List<SprintDto> _sprints = new();
 
@@ -670,62 +593,6 @@
 
     // ── Event handlers ───────────────────────────────────────────────────
 
-    private async Task OnTeamChanged(int? teamId)
-    {
-        _insightsData    = null;
-        _sprints.Clear();
-        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { TeamId = teamId, SprintId = null });
-
-        if (teamId.HasValue)
-        {
-            try
-            {
-                var sprints = await SprintService.GetSprintsForTeamAsync(teamId.Value);
-                _sprints = sprints
-                    .Where(s => s.StartUtc.HasValue)
-                    .OrderByDescending(s => s.StartUtc)
-                    .ToList();
-
-                if (_selectedSprintId.HasValue && !_sprints.Any(s => s.Id == _selectedSprintId.Value))
-                {
-                    await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { SprintId = null });
-                }
-            }
-            catch (Exception ex)
-            {
-                Snackbar.Add($"Could not load sprints: {ex.Message}", Severity.Warning);
-            }
-
-            if (_selectedSprintId.HasValue)
-            {
-                UpdateContextUrl();
-                StateHasChanged();
-                await LoadInsightsAsync();
-                return;
-            }
-        }
-
-        UpdateContextUrl();
-        StateHasChanged();
-    }
-
-    private async Task OnSprintChanged(int? sprintId)
-    {
-        _insightsData = null;
-        _filterNotice = null;
-        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { SprintId = sprintId });
-        UpdateContextUrl();
-
-        if (sprintId.HasValue)
-        {
-            await LoadInsightsAsync();
-        }
-        else
-        {
-            StateHasChanged();
-        }
-    }
-
     private async Task LoadInsightsAsync()
     {
         if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
@@ -779,9 +646,6 @@
             if (_insightsData != null)
             {
                 BuildScatterMaps(_insightsData);
-                // Collapse filter panel once data is loaded successfully
-                _filterExpanded = false;
-
                 _ = LoadPipelineBuildQualityAsync(_selectedSprintId.Value, _insightsData);
             }
         }
@@ -962,17 +826,6 @@
             .Where(s => s.StartUtc.HasValue)
             .OrderByDescending(s => s.StartUtc)
             .ToList();
-    }
-
-    private void UpdateContextUrl()
-    {
-        var targetUri = WorkspaceQueryContextHelper.BuildRoute(
-            WorkspaceRoutes.PipelineInsights,
-            new WorkspaceQueryContext(TeamId: _selectedTeamId, SprintId: _selectedSprintId));
-        if (GlobalFilterStore.TryPrepareNavigation(NavigationManager.Uri, targetUri))
-        {
-            NavigationManager.NavigateTo(targetUri, forceLoad: false);
-        }
     }
 
     private async Task LoadPipelineBuildQualityAsync(int sprintId, PipelineInsightsDto data)

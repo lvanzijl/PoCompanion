@@ -42,78 +42,9 @@
         </MudStack>
     </MudPaper>
 
-    @* ── Context / Filters (collapsible) ───────────────────────────────── *@
     <MudPaper Elevation="2" Class="pa-4 mb-4">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center"
-                  Style="cursor:pointer;" @onclick="() => _filterExpanded = !_filterExpanded">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudIcon Icon="@Icons.Material.Filled.FilterAlt" />
-                <MudText Typo="Typo.h6">Context</MudText>
-                @if (!_filterExpanded && (_selectedTeamId.HasValue || _selectedSprintId.HasValue))
-                {
-                    @* Summary chips shown when collapsed *@
-                    @if (_selectedTeamId.HasValue)
-                    {
-                        var teamName = _teams.FirstOrDefault(t => t.Id == _selectedTeamId)?.Name;
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Group">@teamName</MudChip>
-                    }
-                    @if (_selectedSprintId.HasValue)
-                    {
-                        var sprintName = _sprints.FirstOrDefault(s => s.Id == _selectedSprintId)?.Name;
-                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Icon="@Icons.Material.Filled.CalendarMonth">@sprintName</MudChip>
-                    }
-                }
-            </MudStack>
-            <MudIconButton Icon="@(_filterExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                           Size="Size.Small"
-                           Color="Color.Default"
-                           OnClick="() => _filterExpanded = !_filterExpanded" />
-        </MudStack>
-
-        <MudCollapse Expanded="_filterExpanded">
-            <MudDivider Class="my-3" />
-            <MudGrid Spacing="2">
-            @* Team selector *@
-            <MudItem xs="12" sm="6" md="3">
-                <MudSelect T="int?"
-                           Value="_selectedTeamId"
-                           Label="Team"
-                           Variant="Variant.Outlined"
-                           Clearable="true"
-                           ValueChanged="OnTeamChanged">
-                    <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
-                    @foreach (var team in _teams)
-                    {
-                        <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-
-            @* Sprint quick-select (visible once a team is chosen) *@
-            @if (_sprints.Count > 0)
-            {
-                <MudItem xs="12" sm="6" md="3">
-                    <MudSelect T="int?"
-                               Value="_selectedSprintId"
-                               Label="Sprint (optional)"
-                               Variant="Variant.Outlined"
-                               ValueChanged="OnSprintChanged">
-                        <MudSelectItem T="int?" Value="@((int?)null)">Select sprint…</MudSelectItem>
-                        @foreach (var sprint in _sprints)
-                        {
-                            <MudSelectItem T="int?" Value="@sprint.Id">
-                                @sprint.Name
-                                @if (sprint.StartUtc.HasValue)
-                                {
-                                    <text> (@sprint.StartUtc.Value.ToString("MMM yyyy"))</text>
-                                }
-                            </MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-            }
-
-            @* Repository filter *@
+        <MudText Typo="Typo.h6" Class="mb-3">Repository view</MudText>
+        <MudGrid Spacing="2">
             <MudItem xs="12" sm="6" md="3">
                 <MudSelect T="string"
                            Value="@(_selectedRepository ?? string.Empty)"
@@ -129,8 +60,6 @@
                 </MudSelect>
             </MudItem>
         </MudGrid>
-
-        </MudCollapse>
     </MudPaper>
 
     <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
@@ -616,9 +545,6 @@
     private string? _errorMessage;
     private List<BreadcrumbItem> _breadcrumbs = new();
 
-    // Filter panel state
-    private bool _filterExpanded = true;
-
     // Filters
     private DateTime? _fromDate;
     private DateTime? _toDate;
@@ -740,11 +666,6 @@
                 .OrderBy(r => r)
                 .ToList() ?? new List<string>();
 
-            // Collapse filter panel once data is loaded successfully
-            if (_data != null)
-            {
-                _filterExpanded = false;
-            }
         }
         catch (Exception)
         {
@@ -753,34 +674,6 @@
     }
 
     // ── Filter handlers ───────────────────────────────────────────────────
-
-    private async Task OnTeamChanged(int? teamId)
-    {
-        _highlightedPrId = null;
-        _filteredAuthor  = null;
-        _sprints.Clear();
-        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with
-        {
-            TeamId = teamId,
-            SprintId = null,
-            RollingWindow = 180,
-            RollingUnit = FilterTimeUnit.Days
-        });
-
-        if (teamId.HasValue)
-        {
-            _fromDate = DateTime.UtcNow.AddMonths(-6).Date;
-            _toDate   = DateTime.UtcNow.Date;
-            await LoadSprintsForTeamAsync(teamId.Value);
-        }
-        else
-        {
-            _fromDate = DateTime.UtcNow.AddMonths(-6).Date;
-            _toDate   = DateTime.UtcNow.Date;
-        }
-
-        await ReloadAsync();
-    }
 
     private async Task LoadSprintsForTeamAsync(int teamId)
     {
@@ -797,30 +690,6 @@
             _sprints.Clear();
             Snackbar.Add($"Could not load sprints: {ex.Message}", Severity.Warning);
         }
-    }
-
-    private async Task OnSprintChanged(int? sprintId)
-    {
-        _highlightedPrId  = null;
-        _filteredAuthor   = null;
-
-        if (sprintId.HasValue)
-        {
-            var sprint = _sprints.FirstOrDefault(s => s.Id == sprintId.Value);
-            if (sprint?.StartUtc.HasValue == true)
-            {
-                _fromDate = sprint.StartUtc.Value.UtcDateTime.Date;
-                _toDate   = sprint.EndUtc?.UtcDateTime.Date ?? _fromDate.Value.AddDays(DefaultSprintDurationDays);
-            }
-        }
-
-        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with
-        {
-            SprintId = sprintId,
-            RollingWindow = sprintId.HasValue ? 1 : 180,
-            RollingUnit = sprintId.HasValue ? FilterTimeUnit.Sprint : FilterTimeUnit.Days
-        });
-        await ReloadAsync();
     }
 
     private async Task OnRepositoryChanged(string? repo)

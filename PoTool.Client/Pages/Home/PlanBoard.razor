@@ -64,65 +64,6 @@
         </MudStack>
     </MudPaper>
 
-    @* Product Selector *@
-    <MudPaper Elevation="2" Class="pa-4 mb-4">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-            <MudIcon Icon="@Icons.Material.Filled.Folder" Color="Color.Primary" />
-            <MudText Typo="Typo.subtitle1">Project:</MudText>
-            @if (_isLoadingProjects)
-            {
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-            }
-            else if (_projects.Count == 0)
-            {
-                <MudText Color="Color.Secondary">No projects available.</MudText>
-            }
-            else
-            {
-                <MudSelect T="string"
-                           Value="_selectedProjectRouteKey"
-                           ValueChanged="OnProjectChanged"
-                           Variant="Variant.Outlined"
-                           Dense="true"
-                           Style="max-width: 340px;"
-                           Disabled="_isBusy">
-                    <MudSelectItem T="string" Value="@string.Empty">All projects</MudSelectItem>
-                    @foreach (var project in _projects)
-                    {
-                        <MudSelectItem T="string" Value="@project.Alias">@FormatProjectLabel(project)</MudSelectItem>
-                    }
-                </MudSelect>
-            }
-
-            <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" />
-            <MudText Typo="Typo.subtitle1">Product:</MudText>
-            @if (_isLoadingProducts)
-            {
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-            }
-            else if (_products.Count == 0)
-            {
-                <MudText Color="Color.Secondary">No products available for the selected project.</MudText>
-            }
-            else
-            {
-                <MudSelect T="int?"
-                           Value="_selectedProductId"
-                           ValueChanged="OnProductChanged"
-                           Variant="Variant.Outlined"
-                           Dense="true"
-                           Style="max-width: 400px;"
-                           Placeholder="Select a product to plan…"
-                           Disabled="_isBusy">
-                    @foreach (var product in _products)
-                    {
-                        <MudSelectItem T="int?" Value="@((int?)product.Id)">@product.Name</MudSelectItem>
-                    }
-                </MudSelect>
-            }
-        </MudStack>
-    </MudPaper>
-
     @if (_projectPlanningSummary is not null)
     {
         <MudPaper Elevation="2" Class="pa-4 mb-4">
@@ -547,8 +488,6 @@
     private ProjectPlanningSummaryDto? _projectPlanningSummary;
     private string? _selectedProjectRouteKey;
     private int? _selectedProductId;
-    private bool _isLoadingProjects = true;
-    private bool _isLoadingProducts = true;
     private bool _isLoadingBoard;
     private bool _isBusy;
 
@@ -624,8 +563,6 @@
         }
         finally
         {
-            _isLoadingProjects = false;
-            _isLoadingProducts = false;
         }
     }
 

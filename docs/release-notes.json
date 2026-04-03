@@ -2,6 +2,14 @@
   {
     "date": "2026-04-03",
     "type": "Changed",
+    "title": "Filtering now uses one shared entry point across home and planning pages",
+    "impact": "Home and planning pages now remove duplicate team, sprint, range, project, and product filter panels so users change shared filter context only through the global summary bar and global filter controls, while page-specific controls remain only for local analytical options or explicit range projections.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-03",
+    "type": "Changed",
     "title": "Global filters now enforce required context and expose shared controls",
     "impact": "Home and planning pages now use one interactive global filter surface with explicit unresolved and invalid messaging, per-filter reset actions, centralized route correction, and query gating so pages stop loading data until the active filter state is valid for that page.",
     "area": "Home",
