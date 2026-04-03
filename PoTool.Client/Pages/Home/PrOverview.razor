@@ -13,8 +13,10 @@
 @inject TeamService TeamService
 @inject SprintService SprintService
 @inject NavigationManager NavigationManager
+@inject GlobalFilterStore GlobalFilterStore
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
+@implements IDisposable
 
 <PageTitle>Pull Request Insights - PO Companion</PageTitle>
 
@@ -647,11 +649,13 @@
     /// Most teams use 2-week sprints; this is applied only as a last resort.
     /// </summary>
     private const int DefaultSprintDurationDays = 14;
+    private IDisposable? _filterSubscription;
 
     // ── Init ─────────────────────────────────────────────────────────────
 
     protected override async Task OnInitializedAsync()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         try
         {
             var activeProfile = await ProfileService.GetActiveProfileAsync(); // ensure profile guard
@@ -662,7 +666,8 @@
             _fromDate = DateTime.UtcNow.AddMonths(-6).Date;
             _toDate   = DateTime.UtcNow.Date;
 
-            ParseQueryParameters();
+            await SyncStoreFromCurrentRouteAsync();
+            ApplyStoreState();
 
             if (_selectedTeamId.HasValue)
             {
@@ -685,15 +690,6 @@
         {
             _isLoading = false;
         }
-    }
-
-    private void ParseQueryParameters()
-    {
-        var uri = new Uri(NavigationManager.Uri);
-        var qs  = HttpUtility.ParseQueryString(uri.Query);
-
-        if (int.TryParse(qs["teamId"], out var tid))
-            _selectedTeamId = tid;
     }
 
     // ── Data loading ─────────────────────────────────────────────────────
@@ -752,6 +748,7 @@
         _filteredAuthor  = null;
         _selectedSprintId = null;
         _sprints.Clear();
+        await SyncStoreFromLocalStateAsync();
 
         if (teamId.HasValue)
         {
@@ -801,6 +798,7 @@
             }
         }
 
+        await SyncStoreFromLocalStateAsync();
         await ReloadAsync();
     }
 
@@ -826,6 +824,45 @@
         await LoadInsightsAsync();
         _isLoading = false;
         StateHasChanged();
+    }
+
+    private async Task SyncStoreFromCurrentRouteAsync()
+        => await GlobalFilterStore.SetStateAsync(
+            NavigationManager.Uri,
+            _profileId,
+            new FilterLocalBridgeState(RollingWindow: 180, RollingUnit: FilterTimeUnit.Days, TeamId: _selectedTeamId, SprintId: _selectedSprintId));
+
+    private async Task SyncStoreFromLocalStateAsync()
+        => await GlobalFilterStore.SetStateAsync(
+            NavigationManager.Uri,
+            _profileId,
+            new FilterLocalBridgeState(
+                TeamId: _selectedTeamId,
+                SprintId: _selectedSprintId,
+                RollingWindow: _selectedSprintId.HasValue ? 1 : 180,
+                RollingUnit: _selectedSprintId.HasValue ? FilterTimeUnit.Sprint : FilterTimeUnit.Days),
+            FilterUpdateSource.Ui);
+
+    private void ApplyStoreState()
+    {
+        var state = GlobalFilterStore.GetState();
+        _selectedTeamId = state.TeamId;
+        if (state.Time.Mode is FilterTimeMode.Sprint or FilterTimeMode.Rolling)
+        {
+            _selectedSprintId = state.Time.SprintId;
+        }
+    }
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(() =>
+        {
+            ApplyStoreState();
+            StateHasChanged();
+        });
+
+    public void Dispose()
+    {
+        _filterSubscription?.Dispose();
     }
 
     // ── Scatter interaction ───────────────────────────────────────────────

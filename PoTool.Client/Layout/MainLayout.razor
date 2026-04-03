@@ -168,7 +168,7 @@
 
     private void ObserveCurrentRoute(string? uri = null)
     {
-        GlobalFilterStore.TrackNavigation(uri ?? NavigationManager.Uri, ProfileService.GetActiveProfileId());
+        _ = GlobalFilterStore.TrackNavigationAsync(uri ?? NavigationManager.Uri, ProfileService.GetActiveProfileId());
     }
 
     private async Task HandleGlobalKeyDown(KeyboardEventArgs e)

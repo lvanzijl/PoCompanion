@@ -14,8 +14,10 @@
 @inject TeamService TeamService
 @inject SprintService SprintService
 @inject NavigationManager NavigationManager
+@inject GlobalFilterStore GlobalFilterStore
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
+@implements IDisposable
 
 <PageTitle>Pipeline Insights - PO Companion</PageTitle>
 
@@ -619,11 +621,13 @@
     // ── Breadcrumbs ──────────────────────────────────────────────────────
 
     private List<BreadcrumbItem> _breadcrumbs = new();
+    private IDisposable? _filterSubscription;
 
     // ── Lifecycle ────────────────────────────────────────────────────────
 
     protected override async Task OnInitializedAsync()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         UpdateBreadcrumbs();
 
         _isLoading = true;
@@ -635,9 +639,8 @@
             var teams = await TeamService.GetAllTeamsAsync();
             _teams = teams.OrderBy(t => t.Name).ToList();
 
-            var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
-            _selectedTeamId = context.TeamId;
-            _selectedSprintId = context.SprintId;
+            await SyncStoreFromCurrentRouteAsync();
+            ApplyStoreState();
 
             if (_selectedTeamId.HasValue)
             {
@@ -673,6 +676,7 @@
         _selectedSprintId = null;
         _insightsData    = null;
         _sprints.Clear();
+        await SyncStoreFromLocalStateAsync();
 
         if (teamId.HasValue)
         {
@@ -712,6 +716,7 @@
         _selectedSprintId = sprintId;
         _insightsData = null;
         _filterNotice = null;
+        await SyncStoreFromLocalStateAsync();
         UpdateContextUrl();
 
         if (sprintId.HasValue)
@@ -1073,6 +1078,38 @@
         _pipelineQualityLoadCts?.Cancel();
         _pipelineQualityLoadCts?.Dispose();
         _pipelineQualityLoadCts = null;
+    }
+
+    private async Task SyncStoreFromCurrentRouteAsync()
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _activeProfileId);
+
+    private async Task SyncStoreFromLocalStateAsync()
+        => await GlobalFilterStore.SetStateAsync(
+            NavigationManager.Uri,
+            _activeProfileId,
+            new FilterLocalBridgeState(TeamId: _selectedTeamId, SprintId: _selectedSprintId),
+            FilterUpdateSource.Ui);
+
+    private void ApplyStoreState()
+    {
+        var state = GlobalFilterStore.GetState();
+        _selectedTeamId = state.TeamId;
+        _selectedSprintId = state.Time.Mode == FilterTimeMode.Sprint
+            ? state.Time.SprintId
+            : null;
+    }
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(() =>
+        {
+            ApplyStoreState();
+            StateHasChanged();
+        });
+
+    public void Dispose()
+    {
+        _filterSubscription?.Dispose();
+        CancelPipelineQualityLoad();
     }
 }
 

@@ -68,7 +68,7 @@ public abstract class WorkspaceBase : ComponentBase
         SprintId = context.SprintId;
         FromSprintId = context.FromSprintId;
         ToSprintId = context.ToSprintId;
-        GlobalFilterStore.TrackNavigation(NavigationManager.Uri, ProfileService.GetActiveProfileId());
+        _ = GlobalFilterStore.TrackNavigationAsync(NavigationManager.Uri, ProfileService.GetActiveProfileId());
     }
 
     /// <summary>
@@ -79,7 +79,7 @@ public abstract class WorkspaceBase : ComponentBase
     /// <returns>Query string starting with "?" or empty string if no parameters</returns>
     protected string BuildContextQuery(string? additionalParams = null)
         => WorkspaceQueryContextHelper.BuildQueryString(
-            new WorkspaceQueryContext(ProjectAlias, ProductId, TeamId, SprintId, FromSprintId, ToSprintId),
+            new WorkspaceQueryContext(ProjectAlias: ProjectAlias, ProductId: ProductId, TeamId: TeamId, SprintId: SprintId, FromSprintId: FromSprintId, ToSprintId: ToSprintId),
             additionalParams);
     
     /// <summary>
@@ -104,9 +104,9 @@ public abstract class WorkspaceBase : ComponentBase
     /// </summary>
     protected void NavigateToHome()
     {
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.Home,
-                new WorkspaceQueryContext(ProjectAlias, ProductId, TeamId, SprintId, FromSprintId, ToSprintId)));
+            NavigationManager.NavigateTo(
+                WorkspaceQueryContextHelper.BuildRoute(
+                    WorkspaceRoutes.Home,
+                    new WorkspaceQueryContext(ProjectAlias: ProjectAlias, ProductId: ProductId, TeamId: TeamId, SprintId: SprintId, FromSprintId: FromSprintId, ToSprintId: ToSprintId)));
     }
 }

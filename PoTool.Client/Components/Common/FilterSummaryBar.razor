@@ -11,16 +11,20 @@
                 Filters · @GlobalFilterStore.CurrentUsage.PageName
             </MudText>
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
-                Products: @FormatProducts(GlobalFilterStore.CurrentState)
+                Products: @FormatProducts(GlobalFilterStore.GetState())
             </MudChip>
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">
-                Projects: @FormatProjects(GlobalFilterStore.CurrentState)
+                Projects: @FormatProjects(GlobalFilterStore.GetState())
             </MudChip>
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Secondary">
-                Team: @(GlobalFilterStore.CurrentState.TeamId?.ToString() ?? "none")
+                Team: @(GlobalFilterStore.GetState().TeamId?.ToString() ?? "none")
             </MudChip>
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
-                Time: @FormatTime(GlobalFilterStore.CurrentState)
+                Time: @FormatTime(GlobalFilterStore.GetState())
+            </MudChip>
+
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Default">
+                Source: @GlobalFilterStore.CurrentUsage.LastUpdateSource
             </MudChip>
 
             @if (GlobalFilterStore.CurrentUsage.MissingTeam)
@@ -34,6 +38,13 @@
             {
                 <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text">
                     Missing sprint
+                </MudChip>
+            }
+
+            @foreach (var decision in GlobalFilterStore.CurrentUsage.NormalizationDecisions)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text">
+                    @decision
                 </MudChip>
             }
         </MudStack>
@@ -53,14 +64,12 @@
 
     private void HandleStoreChanged() => InvokeAsync(StateHasChanged);
 
-    private static string FormatProducts(GlobalFilterState state)
+    private static string FormatProducts(FilterState state)
         => state.AllProducts ? "ALL" : string.Join(", ", state.ProductIds);
 
-    private static string FormatProjects(GlobalFilterState state)
-        => state.AllProjects ? "ALL" : string.Join(", ", state.ProjectAliases);
+    private static string FormatProjects(FilterState state)
+        => state.AllProjects ? "ALL" : string.Join(", ", state.ProjectIds);
 
-    private static string FormatTime(GlobalFilterState state)
-        => state.TimeValue is null
-            ? state.TimeMode.ToString()
-            : $"{state.TimeMode} · {state.TimeValue}";
+    private static string FormatTime(FilterState state)
+        => state.Time.ToDisplayString();
 }

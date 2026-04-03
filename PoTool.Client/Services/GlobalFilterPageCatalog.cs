@@ -5,45 +5,20 @@ namespace PoTool.Client.Services;
 
 public static class GlobalFilterPageCatalog
 {
-    public static bool TryCreateUsageReport(string? uri, int? activeProfileId, out GlobalFilterUsageReport? report)
+    public static bool TryResolvePage(string? uri, out string route, out GlobalFilterPageDefinition? definition, out WorkspaceQueryContext context)
     {
-        report = null;
-
-        var route = NormalizeRoute(uri);
+        route = NormalizeRoute(uri);
+        context = WorkspaceQueryContextHelper.Parse(uri);
+        definition = null;
         if (string.IsNullOrWhiteSpace(route))
         {
             return false;
         }
 
-        if (!TryGetPageDefinition(route, out var definition))
+        if (!TryGetPageDefinition(route, out definition))
         {
             return false;
         }
-
-        var context = WorkspaceQueryContextHelper.Parse(uri);
-        var productIds = ResolveProductIds(route, context.ProductId);
-        var projectAliases = ResolveProjectAliases(route, context.ProjectAlias);
-        var teamId = context.TeamId;
-        var hasSprintSelection = context.SprintId.HasValue || context.FromSprintId.HasValue || context.ToSprintId.HasValue;
-        var missingTeam = definition.RequiresTeam && !teamId.HasValue;
-        var missingSprint = definition.RequiresSprint && !hasSprintSelection;
-
-        report = new GlobalFilterUsageReport(
-            definition.PageName,
-            route,
-            definition.UsesProduct,
-            definition.UsesProject,
-            definition.UsesTeam,
-            definition.UsesTime,
-            productIds,
-            projectAliases,
-            teamId,
-            definition.TimeMode,
-            ResolveTimeValue(definition.TimeMode, context),
-            missingTeam,
-            missingSprint,
-            activeProfileId,
-            DateTimeOffset.UtcNow);
 
         return true;
     }
@@ -68,52 +43,47 @@ public static class GlobalFilterPageCatalog
     {
         definition = route switch
         {
-            "home" => new("HomePage", true, true, false, false, GlobalFilterTimeMode.Snapshot),
-            "home/health" => new("HealthWorkspace", false, false, false, false, GlobalFilterTimeMode.Snapshot),
-            "home/health/overview" => new("HealthOverviewPage", true, true, false, false, GlobalFilterTimeMode.Snapshot),
-            "home/health/backlog-health" or "home/backlog-overview" => new("BacklogOverviewPage", true, true, false, false, GlobalFilterTimeMode.Snapshot),
-            "home/changes" => new("HomeChanges", false, false, false, false, GlobalFilterTimeMode.Snapshot),
-            "home/delivery" => new("DeliveryWorkspace", false, false, false, false, GlobalFilterTimeMode.Snapshot),
-            "home/delivery/portfolio" => new("PortfolioDelivery", true, false, true, true, GlobalFilterTimeMode.Trend, RequiresTeam: true, RequiresSprint: true),
-            "home/delivery/execution" => new("SprintExecution", true, false, true, true, GlobalFilterTimeMode.Sprint, RequiresTeam: true, RequiresSprint: true),
-            "home/delivery/sprint" or "home/sprint-trend" => new("SprintTrend", true, false, true, true, GlobalFilterTimeMode.Sprint, RequiresTeam: true, RequiresSprint: true),
-            "home/trends" => new("TrendsWorkspace", true, false, true, true, GlobalFilterTimeMode.Trend, RequiresTeam: true, RequiresSprint: true),
-            "home/trends/delivery" => new("DeliveryTrends", true, false, true, true, GlobalFilterTimeMode.Trend, RequiresTeam: true, RequiresSprint: true),
-            "home/portfolio-progress" => new("PortfolioProgressPage", true, false, true, true, GlobalFilterTimeMode.Trend, RequiresTeam: true, RequiresSprint: true),
-            "home/pipeline-insights" => new("PipelineInsights", true, false, true, true, GlobalFilterTimeMode.Sprint, RequiresTeam: true, RequiresSprint: true),
-            "home/pull-requests" => new("PrOverview", false, false, true, true, GlobalFilterTimeMode.Rolling, RequiresTeam: true),
-            "home/pr-delivery-insights" => new("PrDeliveryInsights", false, false, true, true, GlobalFilterTimeMode.Sprint, RequiresTeam: true, RequiresSprint: true),
-            "home/bugs" => new("BugOverview", true, false, true, false, GlobalFilterTimeMode.Snapshot, RequiresTeam: false),
-            "home/bugs/detail" => new("BugDetail", false, false, false, false, GlobalFilterTimeMode.Snapshot),
-            "home/validation-triage" => new("ValidationTriagePage", true, true, false, false, GlobalFilterTimeMode.Snapshot),
-            "home/validation-queue" => new("ValidationQueuePage", true, true, false, false, GlobalFilterTimeMode.Snapshot),
-            "home/validation-fix" => new("ValidationFixPage", true, true, false, false, GlobalFilterTimeMode.Snapshot),
-            "home/planning" => new("PlanningWorkspace", false, true, false, false, GlobalFilterTimeMode.Snapshot),
-            "planning/multi-product" => new("MultiProductPlanning", true, true, false, false, GlobalFilterTimeMode.Snapshot),
-            "planning/product-roadmaps" => new("ProductRoadmaps", false, true, false, false, GlobalFilterTimeMode.Snapshot),
-            "planning/plan-board" => new("PlanBoard", true, true, false, true, GlobalFilterTimeMode.Snapshot),
-            _ when route.StartsWith("planning/product-roadmaps/", StringComparison.Ordinal) => new("ProductRoadmapEditor", true, true, false, false, GlobalFilterTimeMode.Snapshot),
-            _ when route.StartsWith("planning/", StringComparison.Ordinal) && route.EndsWith("/product-roadmaps", StringComparison.Ordinal) => new("ProductRoadmaps", false, true, false, false, GlobalFilterTimeMode.Snapshot),
-            _ when route.StartsWith("planning/", StringComparison.Ordinal) && route.EndsWith("/plan-board", StringComparison.Ordinal) => new("PlanBoard", true, true, false, true, GlobalFilterTimeMode.Snapshot),
-            _ when route.StartsWith("planning/", StringComparison.Ordinal) && route.EndsWith("/overview", StringComparison.Ordinal) => new("ProjectPlanningOverview", false, true, false, false, GlobalFilterTimeMode.Snapshot),
+            "home" => new("HomePage", true, true, false, false, FilterTimeMode.Snapshot),
+            "home/health" => new("HealthWorkspace", false, false, false, false, FilterTimeMode.Snapshot),
+            "home/health/overview" => new("HealthOverviewPage", true, true, false, false, FilterTimeMode.Snapshot),
+            "home/health/backlog-health" or "home/backlog-overview" => new("BacklogOverviewPage", true, true, false, false, FilterTimeMode.Snapshot),
+            "home/changes" => new("HomeChanges", false, false, false, false, FilterTimeMode.Snapshot),
+            "home/delivery" => new("DeliveryWorkspace", false, false, false, false, FilterTimeMode.Snapshot),
+            "home/delivery/portfolio" => new("PortfolioDelivery", true, false, true, true, FilterTimeMode.Range, RequiresTeam: true, RequiresSprint: true),
+            "home/delivery/execution" => new("SprintExecution", true, false, true, true, FilterTimeMode.Sprint, RequiresTeam: true, RequiresSprint: true),
+            "home/delivery/sprint" or "home/sprint-trend" => new("SprintTrend", true, false, true, true, FilterTimeMode.Sprint, RequiresTeam: true, RequiresSprint: true),
+            "home/trends" => new("TrendsWorkspace", true, false, true, true, FilterTimeMode.Range, RequiresTeam: true, RequiresSprint: true),
+            "home/trends/delivery" => new("DeliveryTrends", true, false, true, true, FilterTimeMode.Range, RequiresTeam: true, RequiresSprint: true),
+            "home/portfolio-progress" => new("PortfolioProgressPage", true, false, true, true, FilterTimeMode.Range, RequiresTeam: true, RequiresSprint: true),
+            "home/pipeline-insights" => new("PipelineInsights", true, false, true, true, FilterTimeMode.Sprint, RequiresTeam: true, RequiresSprint: true),
+            "home/pull-requests" => new("PrOverview", false, false, true, true, FilterTimeMode.Rolling, RequiresTeam: true),
+            "home/pr-delivery-insights" => new("PrDeliveryInsights", false, false, true, true, FilterTimeMode.Sprint, RequiresTeam: true, RequiresSprint: true),
+            "home/bugs" => new("BugOverview", true, false, true, false, FilterTimeMode.Snapshot, RequiresTeam: false),
+            "home/bugs/detail" => new("BugDetail", false, false, false, false, FilterTimeMode.Snapshot),
+            "home/validation-triage" => new("ValidationTriagePage", true, true, false, false, FilterTimeMode.Snapshot),
+            "home/validation-queue" => new("ValidationQueuePage", true, true, false, false, FilterTimeMode.Snapshot),
+            "home/validation-fix" => new("ValidationFixPage", true, true, false, false, FilterTimeMode.Snapshot),
+            "home/planning" => new("PlanningWorkspace", false, true, false, false, FilterTimeMode.Snapshot),
+            "planning/multi-product" => new("MultiProductPlanning", true, true, false, false, FilterTimeMode.Snapshot),
+            "planning/product-roadmaps" => new("ProductRoadmaps", false, true, false, false, FilterTimeMode.Snapshot),
+            "planning/plan-board" => new("PlanBoard", true, true, false, true, FilterTimeMode.Snapshot),
+            _ when route.StartsWith("planning/product-roadmaps/", StringComparison.Ordinal) => new("ProductRoadmapEditor", true, true, false, false, FilterTimeMode.Snapshot),
+            _ when route.StartsWith("planning/", StringComparison.Ordinal) && route.EndsWith("/product-roadmaps", StringComparison.Ordinal) => new("ProductRoadmaps", false, true, false, false, FilterTimeMode.Snapshot),
+            _ when route.StartsWith("planning/", StringComparison.Ordinal) && route.EndsWith("/plan-board", StringComparison.Ordinal) => new("PlanBoard", true, true, false, true, FilterTimeMode.Snapshot),
+            _ when route.StartsWith("planning/", StringComparison.Ordinal) && route.EndsWith("/overview", StringComparison.Ordinal) => new("ProjectPlanningOverview", false, true, false, false, FilterTimeMode.Snapshot),
             _ when route.StartsWith("home/delivery/sprint/activity/", StringComparison.Ordinal) || route.StartsWith("home/sprint-trend/activity/", StringComparison.Ordinal)
-                => new("SprintTrendActivity", true, false, true, true, GlobalFilterTimeMode.Sprint, RequiresTeam: true, RequiresSprint: true),
+                => new("SprintTrendActivity", true, false, true, true, FilterTimeMode.Sprint, RequiresTeam: true, RequiresSprint: true),
             _ => null!
         };
 
         return definition is not null;
     }
 
-    private static IReadOnlyList<string> ResolveProjectAliases(string route, string? queryProjectAlias)
+    public static string? ResolveRouteProjectAlias(string route)
     {
-        if (!string.IsNullOrWhiteSpace(queryProjectAlias))
-        {
-            return new[] { queryProjectAlias };
-        }
-
         if (!route.StartsWith("planning/", StringComparison.Ordinal))
         {
-            return Array.Empty<string>();
+            return null;
         }
 
         var segments = route.Split('/', StringSplitOptions.RemoveEmptyEntries);
@@ -122,44 +92,31 @@ public static class GlobalFilterPageCatalog
             && !string.Equals(segments[1], "product-roadmaps", StringComparison.Ordinal)
             && !string.Equals(segments[1], "multi-product", StringComparison.Ordinal))
         {
-            return new[] { segments[1] };
+            return segments[1];
         }
 
-        return Array.Empty<string>();
+        return null;
     }
 
-    private static IReadOnlyList<int> ResolveProductIds(string route, int? queryProductId)
+    public static int? ResolveRouteProductId(string route)
     {
-        if (queryProductId.HasValue)
-        {
-            return new[] { queryProductId.Value };
-        }
-
         if (route.StartsWith("planning/product-roadmaps/", StringComparison.Ordinal))
         {
             var segments = route.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (segments.Length >= 3 && int.TryParse(segments[2], out var productId))
             {
-                return new[] { productId };
+                return productId;
             }
         }
 
-        return Array.Empty<int>();
+        return null;
     }
 
-    private static string? ResolveTimeValue(GlobalFilterTimeMode timeMode, WorkspaceQueryContext context)
-    {
-        return timeMode switch
-        {
-            GlobalFilterTimeMode.Sprint when context.SprintId.HasValue => $"Sprint {context.SprintId.Value}",
-            GlobalFilterTimeMode.Trend when context.FromSprintId.HasValue || context.ToSprintId.HasValue
-                => $"{FormatSprintBoundary("from", context.FromSprintId)} → {FormatSprintBoundary("to", context.ToSprintId)}",
-            GlobalFilterTimeMode.Rolling when context.SprintId.HasValue => $"Sprint {context.SprintId.Value}",
-            GlobalFilterTimeMode.Snapshot => "Current page state",
-            _ => null
-        };
-    }
-
-    private static string FormatSprintBoundary(string label, int? sprintId)
-        => sprintId.HasValue ? $"{label} {sprintId.Value}" : $"{label} ?";
+    public static bool HasSprintSelection(WorkspaceQueryContext context, FilterLocalBridgeState? localState = null)
+        => context.SprintId.HasValue
+           || context.FromSprintId.HasValue
+           || context.ToSprintId.HasValue
+           || localState?.SprintId.HasValue == true
+           || localState?.FromSprintId.HasValue == true
+           || localState?.ToSprintId.HasValue == true;
 }

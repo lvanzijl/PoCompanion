@@ -10,7 +10,9 @@
 @inject ProductService ProductService
 @inject TeamService TeamService
 @inject NavigationManager NavigationManager
+@inject GlobalFilterStore GlobalFilterStore
 @inject ISnackbar Snackbar
+@implements IDisposable
 
 <PageTitle>Bug Insights - PO Companion</PageTitle>
 
@@ -237,9 +239,11 @@
     // Time window (6 months by default)
     private readonly DateTimeOffset _fromDate = DateTimeOffset.UtcNow.AddMonths(-6);
     private DataStateViewModel<IReadOnlyList<WorkItemDto>> _bugState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.NotRequested();
+    private IDisposable? _filterSubscription;
     
     protected override async Task OnInitializedAsync()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         try
         {
             var activeProfile = await ProfileService.GetActiveProfileAsync();
@@ -256,8 +260,8 @@
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
             _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
             
-            // Parse URL parameters
-            ParseQueryParameters();
+            await SyncStoreFromCurrentRouteAsync();
+            ApplyStoreState();
             
             // Load bug data and calculate metrics
             await LoadBugDataAsync();
@@ -272,26 +276,6 @@
         finally
         {
             _isLoading = false;
-        }
-    }
-    
-    private void ParseQueryParameters()
-    {
-        var uri = new Uri(NavigationManager.Uri);
-        var queryParams = HttpUtility.ParseQueryString(uri.Query);
-        
-        // Parse teamId
-        var teamIdStr = queryParams["teamId"];
-        if (!string.IsNullOrEmpty(teamIdStr) && int.TryParse(teamIdStr, out var teamId))
-        {
-            _selectedTeamId = teamId;
-        }
-        
-        // Parse productId
-        var productIdStr = queryParams["productId"];
-        if (!string.IsNullOrEmpty(productIdStr) && int.TryParse(productIdStr, out var productId))
-        {
-            _selectedProductId = productId;
         }
     }
     
@@ -364,6 +348,7 @@
     private async Task OnTeamChanged(int? teamId)
     {
         _selectedTeamId = teamId;
+        await SyncStoreFromLocalStateAsync();
         UpdateUrlParameters();
         await LoadBugDataAsync();
     }
@@ -371,6 +356,7 @@
     private async Task OnProductChanged(int? productId)
     {
         _selectedProductId = productId;
+        await SyncStoreFromLocalStateAsync();
         UpdateUrlParameters();
         await LoadBugDataAsync();
     }
@@ -434,5 +420,34 @@
     private void NavigateToBugTriage()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.BugTriage);
+    }
+
+    private async Task SyncStoreFromCurrentRouteAsync()
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId);
+
+    private async Task SyncStoreFromLocalStateAsync()
+        => await GlobalFilterStore.SetStateAsync(
+            NavigationManager.Uri,
+            _profileId,
+            new FilterLocalBridgeState(ProductId: _selectedProductId, TeamId: _selectedTeamId),
+            FilterUpdateSource.Ui);
+
+    private void ApplyStoreState()
+    {
+        var state = GlobalFilterStore.GetState();
+        _selectedProductId = state.ProductIds.FirstOrDefault();
+        _selectedTeamId = state.TeamId;
+    }
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(() =>
+        {
+            ApplyStoreState();
+            StateHasChanged();
+        });
+
+    public void Dispose()
+    {
+        _filterSubscription?.Dispose();
     }
 }

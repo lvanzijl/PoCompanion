@@ -16,7 +16,9 @@
 @inject IMetricsClient MetricsClient
 @inject MetricsStateService MetricsStateService
 @inject NavigationManager NavigationManager
+@inject GlobalFilterStore GlobalFilterStore
 @inject ISnackbar Snackbar
+@implements IDisposable
 
 <PageTitle>Portfolio Flow - PO Companion</PageTitle>
 
@@ -533,6 +535,7 @@
     private List<ProductDto> _products = new();
     private List<TeamDto> _teams = new();
     private List<SprintDto> _sprints = new();
+    private IDisposable? _filterSubscription;
 
     // Context chip labels — computed from current selection
     private string ContextProductLabel => _selectedProductId.HasValue
@@ -622,6 +625,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         try
         {
             var activeProfile = await ProfileService.GetActiveProfileAsync();
@@ -637,7 +641,8 @@
             _teams   = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
             _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
 
-            ParseQueryParameters();
+            await SyncStoreFromCurrentRouteAsync();
+            ApplyStoreState();
             UpdateBreadcrumbs();
 
             if (_selectedTeamId.HasValue)
@@ -681,25 +686,10 @@
         _defaultToSprintId   = _toSprintId;
     }
 
-    private void ParseQueryParameters()
-    {
-        var uri = new Uri(NavigationManager.Uri);
-        var queryParams = HttpUtility.ParseQueryString(uri.Query);
-
-        if (int.TryParse(queryParams["productId"], out var productId))
-        {
-            _selectedProductId = productId;
-        }
-
-        if (int.TryParse(queryParams["teamId"], out var teamId))
-        {
-            _selectedTeamId = teamId;
-        }
-    }
-
     private async Task OnProductChangedAsync(int? productId)
     {
         _selectedProductId = productId;
+        await SyncStoreFromLocalStateAsync();
         await LoadTrendDataAsync();
     }
 
@@ -711,6 +701,7 @@
         _sprints.Clear();
         _trendData = null;
 
+        await SyncStoreFromLocalStateAsync();
         if (teamId.HasValue)
         {
             await LoadSprintsAsync(teamId.Value);
@@ -726,12 +717,14 @@
     private async Task OnFromSprintChangedAsync(int? sprintId)
     {
         _fromSprintId = sprintId;
+        await SyncStoreFromLocalStateAsync();
         await LoadTrendDataAsync();
     }
 
     private async Task OnToSprintChangedAsync(int? sprintId)
     {
         _toSprintId = sprintId;
+        await SyncStoreFromLocalStateAsync();
         await LoadTrendDataAsync();
     }
 
@@ -982,5 +975,43 @@
     private void NavigateToTrends()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.TrendsWorkspace);
+    }
+
+    private async Task SyncStoreFromCurrentRouteAsync()
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId);
+
+    private async Task SyncStoreFromLocalStateAsync()
+        => await GlobalFilterStore.SetStateAsync(
+            NavigationManager.Uri,
+            _profileId,
+            new FilterLocalBridgeState(
+                ProductId: _selectedProductId,
+                TeamId: _selectedTeamId,
+                FromSprintId: _fromSprintId,
+                ToSprintId: _toSprintId),
+            FilterUpdateSource.Ui);
+
+    private void ApplyStoreState()
+    {
+        var state = GlobalFilterStore.GetState();
+        _selectedProductId = state.ProductIds.FirstOrDefault();
+        _selectedTeamId = state.TeamId;
+        if (state.Time.Mode == FilterTimeMode.Range)
+        {
+            _fromSprintId = state.Time.StartSprintId;
+            _toSprintId = state.Time.EndSprintId;
+        }
+    }
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(() =>
+        {
+            ApplyStoreState();
+            StateHasChanged();
+        });
+
+    public void Dispose()
+    {
+        _filterSubscription?.Dispose();
     }
 }

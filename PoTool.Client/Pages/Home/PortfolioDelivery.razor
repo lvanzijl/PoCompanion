@@ -11,7 +11,9 @@
 @inject ProductService ProductService
 @inject MetricsStateService MetricsStateService
 @inject NavigationManager NavigationManager
+@inject GlobalFilterStore GlobalFilterStore
 @inject ISnackbar Snackbar
+@implements IDisposable
 
 <PageTitle>Portfolio Delivery - PO Companion</PageTitle>
 
@@ -464,6 +466,7 @@
     private bool _teamPopoverOpen;
     private bool _sprintPopoverOpen;
     private bool _scopePopoverOpen;
+    private IDisposable? _filterSubscription;
 
     // Delivery data
     private PortfolioDeliveryDto? _data;
@@ -497,6 +500,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         await LoadInitialDataAsync();
     }
 
@@ -519,10 +523,8 @@
             ProfileService.SetCachedActiveProfileId(_profileId);
 
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
-            var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
-            _selectedTeamId = context.TeamId;
-            _fromSprintId = context.FromSprintId;
-            _toSprintId = context.ToSprintId;
+            await SyncStoreFromCurrentRouteAsync();
+            ApplyStoreState();
 
             UpdateBreadcrumbs();
 
@@ -664,6 +666,7 @@
         _toSprintId = null;
         _sprints = new List<SprintDto>();
         _data = null;
+        await SyncStoreFromLocalStateAsync();
 
         if (teamId.HasValue)
         {
@@ -691,6 +694,7 @@
     private async Task OnFromSprintChangedAsync(int? sprintId)
     {
         _fromSprintId = sprintId;
+        await SyncStoreFromLocalStateAsync();
         UpdateContextUrl();
         await LoadDeliveryDataAsync();
     }
@@ -698,6 +702,7 @@
     private async Task OnToSprintChangedAsync(int? sprintId)
     {
         _toSprintId = sprintId;
+        await SyncStoreFromLocalStateAsync();
         UpdateContextUrl();
         await LoadDeliveryDataAsync();
     }
@@ -731,4 +736,37 @@
     }
 
     private static string FormatStoryPoints(double storyPoints) => storyPoints.ToString("0.##");
+
+    private async Task SyncStoreFromCurrentRouteAsync()
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId);
+
+    private async Task SyncStoreFromLocalStateAsync()
+        => await GlobalFilterStore.SetStateAsync(
+            NavigationManager.Uri,
+            _profileId,
+            new FilterLocalBridgeState(TeamId: _selectedTeamId, FromSprintId: _fromSprintId, ToSprintId: _toSprintId),
+            FilterUpdateSource.Ui);
+
+    private void ApplyStoreState()
+    {
+        var state = GlobalFilterStore.GetState();
+        _selectedTeamId = state.TeamId;
+        if (state.Time.Mode == FilterTimeMode.Range)
+        {
+            _fromSprintId = state.Time.StartSprintId;
+            _toSprintId = state.Time.EndSprintId;
+        }
+    }
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(() =>
+        {
+            ApplyStoreState();
+            StateHasChanged();
+        });
+
+    public void Dispose()
+    {
+        _filterSubscription?.Dispose();
+    }
 }

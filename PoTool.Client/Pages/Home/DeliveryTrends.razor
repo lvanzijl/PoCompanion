@@ -13,7 +13,9 @@
 @inject TeamService TeamService
 @inject SprintService SprintService
 @inject NavigationManager NavigationManager
+@inject GlobalFilterStore GlobalFilterStore
 @inject ISnackbar Snackbar
+@implements IDisposable
 
 <PageTitle>Delivery Trends - PO Companion</PageTitle>
 
@@ -350,10 +352,13 @@
         YAxisLines = true,
         XAxisLines = true
     };
+    private IDisposable? _filterSubscription;
 
     protected override async Task OnInitializedAsync()
     {
-        ParseQueryParameters();
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
+        await SyncStoreFromCurrentRouteAsync();
+        ApplyStoreState();
         await LoadDataAsync();
     }
 
@@ -552,20 +557,6 @@
         return (nonZero.First(), nonZero.Last());
     }
 
-    private void ParseQueryParameters()
-    {
-        var uri = new Uri(NavigationManager.Uri);
-        var queryParams = HttpUtility.ParseQueryString(uri.Query);
-
-        var teamIdStr = queryParams["teamId"];
-        if (!string.IsNullOrEmpty(teamIdStr) && int.TryParse(teamIdStr, out var teamId))
-            _selectedTeamId = teamId;
-
-        var productIdStr = queryParams["productId"];
-        if (!string.IsNullOrEmpty(productIdStr) && int.TryParse(productIdStr, out var productId))
-            _selectedProductId = productId;
-    }
-
     private void UpdateUrlParameters()
     {
         var queryParams = new List<string>();
@@ -597,15 +588,17 @@
     private async Task OnTeamChanged(int? teamId)
     {
         _selectedTeamId = teamId;
+        await SyncStoreFromLocalStateAsync();
         UpdateUrlParameters();
         ApplySprintFilters();
         SelectDeterministicEndSprint();
         await LoadMetricsAsync();
     }
 
-    private void OnProductChanged(int? productId)
+    private async Task OnProductChanged(int? productId)
     {
         _selectedProductId = productId;
+        await SyncStoreFromLocalStateAsync();
         UpdateUrlParameters();
         if (_trendMetrics.Count > 0)
             BuildTrendCharts();
@@ -627,4 +620,33 @@
 
     private void NavigateToTrends() => NavigationManager.NavigateTo(WorkspaceRoutes.TrendsWorkspace);
     private void NavigateToHome() => NavigationManager.NavigateTo(WorkspaceRoutes.Home);
+
+    private async Task SyncStoreFromCurrentRouteAsync()
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId);
+
+    private async Task SyncStoreFromLocalStateAsync()
+        => await GlobalFilterStore.SetStateAsync(
+            NavigationManager.Uri,
+            _profileId,
+            new FilterLocalBridgeState(ProductId: _selectedProductId, TeamId: _selectedTeamId),
+            FilterUpdateSource.Ui);
+
+    private void ApplyStoreState()
+    {
+        var state = GlobalFilterStore.GetState();
+        _selectedTeamId = state.TeamId;
+        _selectedProductId = state.ProductIds.FirstOrDefault();
+    }
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(() =>
+        {
+            ApplyStoreState();
+            StateHasChanged();
+        });
+
+    public void Dispose()
+    {
+        _filterSubscription?.Dispose();
+    }
 }

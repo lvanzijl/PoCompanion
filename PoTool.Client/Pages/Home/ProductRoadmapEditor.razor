@@ -1240,7 +1240,7 @@
         NavigationManager.NavigateTo(
             WorkspaceQueryContextHelper.BuildRoute(
                 WorkspaceRoutes.Home,
-                new WorkspaceQueryContext(_projectRouteKey, ProductId)));
+                new WorkspaceQueryContext(ProjectAlias: _projectRouteKey, ProductId: ProductId)));
     }
 
     private void NavigateToRoadmaps()
@@ -1252,7 +1252,7 @@
         NavigationManager.NavigateTo(
             WorkspaceQueryContextHelper.BuildRoute(
                 route,
-                new WorkspaceQueryContext(_projectRouteKey, ProductId)));
+                new WorkspaceQueryContext(ProjectAlias: _projectRouteKey, ProductId: ProductId)));
     }
 
     // --- Drag item model ---

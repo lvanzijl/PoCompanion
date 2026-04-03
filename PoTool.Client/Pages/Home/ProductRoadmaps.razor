@@ -1098,7 +1098,7 @@
         NavigationManager.NavigateTo(
             WorkspaceQueryContextHelper.BuildRoute(
                 WorkspaceRoutes.GetProductRoadmapEditor(productId),
-                new WorkspaceQueryContext(_selectedProjectRouteKey, productId)));
+                new WorkspaceQueryContext(ProjectAlias: _selectedProjectRouteKey, ProductId: productId)));
     }
 
     private void NavigateToOverview()
@@ -1111,7 +1111,7 @@
         NavigationManager.NavigateTo(
             WorkspaceQueryContextHelper.BuildRoute(
                 WorkspaceRoutes.GetProjectPlanningOverview(_selectedProjectRouteKey),
-                new WorkspaceQueryContext(_selectedProjectRouteKey)));
+                new WorkspaceQueryContext(ProjectAlias: _selectedProjectRouteKey)));
     }
 
     private async Task<List<ProjectDto>> LoadAvailableProjectsAsync(IReadOnlyCollection<ProductDto> products)
