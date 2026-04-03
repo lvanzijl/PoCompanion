@@ -2,6 +2,14 @@
   {
     "date": "2026-04-03",
     "type": "Changed",
+    "title": "Unused Dependency Overview page has been removed",
+    "impact": "The standalone `/home/dependencies` page is no longer available. Shared dependency analysis remains embedded where it is still used, and the stale direct links to `/dependency-graph` were removed from current UI surfaces.",
+    "area": "Planning",
+    "link": "/home/planning"
+  },
+  {
+    "date": "2026-04-03",
+    "type": "Changed",
     "title": "Unused Bug Detail page has been removed",
     "impact": "The standalone `/home/bugs/detail` page is no longer available. Bug Insights and Bugs Triage remain available, but the orphaned bug-detail route and its dedicated client/API path were removed.",
     "area": "Health",

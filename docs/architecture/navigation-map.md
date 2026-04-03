@@ -65,7 +65,6 @@ After a Product Owner logs in, the application offers a workspace-driven model o
   │       ├──► /planning/product-roadmaps  (Product Roadmaps — read-only) │
   │       │       └──► /planning/product-roadmaps/{productId}  (Editor) │
   │       ├──► /planning/plan-board  (Plan Board — sprint planning)   │
-  │       ├──► /home/dependencies  (read-only)                        │
   │       ├──► /home/health/backlog-health  (cross-workspace)          │
   │       ├──► /home/health  (cross-workspace)                        │
   │       ├──► /home/trends  (cross-workspace)                        │
@@ -473,21 +472,6 @@ When multiple linked work items resolve to different categories, the highest-pri
 
 ---
 
-### 2.12 Dependency Overview — `/home/dependencies`
-
-**Purpose:** Read-only visual overview of work item dependencies between epics and teams.
-
-| Functionality | Description |
-|---|---|
-| Breadcrumb | `Home › Dependency Overview`. |
-| Read-only notice | Prominent alert informing the user that this is an insight-only view. Links to the full `/dependency-graph` for management. |
-| Dependencies panel | Embedded DependenciesPanel component showing cross-team and cross-epic dependencies. |
-| Home button | Returns to `/home`. |
-
-**Outgoing navigation:** `/home`, `/dependency-graph` (full management, separate page)
-
----
-
 ### 2.12a Product Roadmaps — `/planning/product-roadmaps`
 
 **Purpose:** Read-only overview of product roadmaps across all products. Displays horizontal product lanes with vertically stacked roadmap epics. Products are ordered by the root **Objective work item's TFS BacklogPriority** (`Microsoft.VSTS.Common.BacklogPriority`). Roadmap epics within each lane are ordered by the **Epic work item's TFS BacklogPriority**. Only epics tagged with **"roadmap"** are shown. Epic cards display order number, title, TFS ID, and a link to open the epic in TFS.
@@ -768,7 +752,6 @@ Each level only appears when the user drills into the previous one. Users naviga
 | PR Insights | `/home/pull-requests` | Trends workspace | View metrics | `/home` |
 | PR Delivery Insights | `/home/pr-delivery-insights` | Trends workspace | Select team/sprint, view PR classification | `/home/trends`, `/home` |
 | Pipeline Insights | `/home/pipeline-insights` | Trends workspace | Select team/sprint, view per-product health | `/home/trends`, `/home` |
-| Dependency Overview | `/home/dependencies` | Planning workspace | View dependencies | `/home`, `/dependency-graph` |
 | Product Roadmaps | `/planning/product-roadmaps` | Planning workspace | View roadmap lanes, reorder products | `/home`, `/home/planning`, `/home/health`, `/planning/product-roadmaps/{productId}` |
 | Product Roadmap Editor | `/planning/product-roadmaps/{productId}` | Product Roadmaps | Add/remove/reorder epics via drag-and-drop or buttons, edit title/description | `/home`, `/planning/product-roadmaps` |
 | ~~Plan Board~~ | ~~`/home/plan-board`~~ | ~~Home quick action~~ | ~~View/filter board~~ | Removed — replaced by new Plan Board at `/planning/plan-board` |
@@ -815,14 +798,6 @@ The following suggestions are derived from analysing the current navigation stru
 **Current situation:** Once a product context filter is applied on Home, all workspaces inherit it. However, there is no way to widen the scope from within a workspace — the user must return to Home and clear the filter. This is an unnecessary interruption.
 
 **Suggestion:** Add a small "All Products" toggle or a product context chip with a clear ("×") button on every workspace header. Clicking it resets the product filter for that workspace visit without requiring a full round-trip to Home.
-
----
-
-### Suggestion 5 — Make the Dependency Overview a first-class entry point in Planning
-
-**Current situation:** Dependency Overview (`/home/dependencies`) is currently marked "Read-only" and offered as a secondary card in Planning workspace. The read-only notice points users to a separate `/dependency-graph` page for management. This creates a confusing two-page split.
-
-**Suggestion:** Merge the read-only dependency overview and the full dependency management into a single contextual view, toggled by an "Edit Dependencies" mode switch. Alternatively, replace the read-only card with a direct link to the full `/dependency-graph`, eliminating the intermediate read-only page entirely.
 
 ---
 

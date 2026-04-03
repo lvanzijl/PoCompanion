@@ -75,8 +75,10 @@ public sealed record DependencyGraphDto(
 ### Access Point
 
 The Dependency Graph is accessible via:
-- Navigation menu: **Metrics → Dependency Graph**
-- Direct URL: `/dependency-graph`
+- Legacy analysis workspace: `/workspace/analysis/dependencies`
+- Embedded dependency panels that reuse the same API-backed data
+
+There is no standalone modern client route for Dependency Graph.
 
 ### Filter Controls
 

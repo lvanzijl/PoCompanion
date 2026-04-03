@@ -55,7 +55,6 @@ public static class WorkspaceNavigationCatalog
                 WorkspaceRoutes.PrOverview,
                 WorkspaceRoutes.PrDeliveryInsights,
                 WorkspaceRoutes.PipelineInsights,
-                WorkspaceRoutes.DependencyOverview,
                 WorkspaceRoutes.PortfolioProgress
             ]),
         new(

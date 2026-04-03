@@ -990,17 +990,7 @@ Onderaan de pagina bevinden zich knoppen om snel naar andere werkruimtes te navi
 
 ---
 
-### 10.1 Afhankelijkheidsoverzicht
-
-**Pagina:** `/home/dependencies`
-
-Een alleen-lezen visueel overzicht van werkitem-afhankelijkheden tussen epics en teams.
-
-> **Let op:** Dit is een inzichtweergave. Voor het beheren van afhankelijkheden ga je via de link naar het volledige afhankelijkheidsbeheer (`/dependency-graph`).
-
----
-
-### 10.2 Plan Board
+### 10.1 Plan Board
 
 **Pagina:** `/planning/plan-board`
 
@@ -1079,7 +1069,7 @@ Bovenaan het bord staat een productkiezer. Selecteer een product om alleen de PB
 
 ---
 
-### 10.3 Product Roadmaps
+### 10.2 Product Roadmaps
 
 **Pagina:** `/planning/product-roadmaps`
 
@@ -1173,7 +1163,7 @@ Via het **Snapshots**-menu rechtsboven kun je momentopnamen van de huidige roadm
 
 ---
 
-### 10.4 Product Roadmap Editor
+### 10.3 Product Roadmap Editor
 
 **Pagina:** `/planning/product-roadmaps/{productId}`
 
