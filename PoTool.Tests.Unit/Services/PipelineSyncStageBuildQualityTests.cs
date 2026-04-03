@@ -6,6 +6,7 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services.Sync;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Pipelines;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -739,22 +740,10 @@ public class PipelineSyncStageBuildQualityTests
             LastModified = DateTimeOffset.UtcNow
         });
 
-        dbContext.Products.Add(new ProductEntity
-        {
-            Id = 1,
-            Name = "Product",
-            ProductOwnerId = productOwnerId,
-            CreatedAt = DateTimeOffset.UtcNow,
-            LastModified = DateTimeOffset.UtcNow
-        });
+        PersistenceTestGraph.EnsureProject(dbContext);
+        dbContext.Products.Add(PersistenceTestGraph.CreateProduct(1, "Product", productOwnerId));
 
-        dbContext.Repositories.Add(new RepositoryEntity
-        {
-            Id = 1,
-            ProductId = 1,
-            Name = "Repo",
-            CreatedAt = DateTimeOffset.UtcNow
-        });
+        dbContext.Repositories.Add(PersistenceTestGraph.CreateRepository(1, 1, "Repo"));
 
         dbContext.PipelineDefinitions.Add(new PipelineDefinitionEntity
         {

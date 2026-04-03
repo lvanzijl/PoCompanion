@@ -116,9 +116,12 @@
             var pipelineTask = PipelineService.GetMetricsAsync(productIdsParam);
             
             await Task.WhenAll(prTask, pipelineTask);
-            
-            _prMetrics = prTask.Result.Data.ToList();
-            _pipelineMetrics = pipelineTask.Result.Data.ToList();
+
+            var prResponse = await prTask;
+            var pipelineResponse = await pipelineTask;
+
+            _prMetrics = prResponse.Data.ToList();
+            _pipelineMetrics = pipelineResponse.Data.ToList();
         }
         catch (Exception ex)
         {

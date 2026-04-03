@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Api.Repositories;
 using PoTool.Core.Contracts;
 using PoTool.Shared.BugTriage;
 using PoTool.Shared.Settings;
@@ -81,6 +82,7 @@ public sealed class ImportConfigurationService
         var globalSettingsApplied = new List<ConfigurationImportEntityResultDto>(validation.GlobalSettingsApplied);
         var profileIdMap = new Dictionary<int, int>();
         var teamIdMap = new Dictionary<int, int>();
+        var importedProject = await EnsureImportedProjectAsync(validation.Configuration.TfsConfiguration?.Project, cancellationToken);
 
         foreach (var profile in validation.Configuration.Profiles.OrderBy(profile => profile.Name))
         {
@@ -219,6 +221,7 @@ public sealed class ImportConfigurationService
                 {
                     ProductOwnerId = product.ProductOwnerId.HasValue ? importedOwnerId : null,
                     Name = product.Name,
+                    ProjectId = importedProject.Id,
                     Order = product.Order,
                     PictureType = (int)product.PictureType,
                     DefaultPictureId = product.DefaultPictureId,
@@ -1277,6 +1280,36 @@ public sealed class ImportConfigurationService
         var resolvedRepositoryName = DescribeName(repositoryName, "Unnamed repository");
         var resolvedProductName = DescribeName(productName, "Unnamed product");
         return $"{resolvedRepositoryName} ({resolvedProductName})";
+    }
+
+    private async Task<ProjectEntity> EnsureImportedProjectAsync(string? projectName, CancellationToken cancellationToken)
+    {
+        var normalizedProjectName = string.IsNullOrWhiteSpace(projectName)
+            ? "Project"
+            : projectName.Trim();
+
+        var existing = await _dbContext.Projects.FirstOrDefaultAsync(
+            project => project.Id == normalizedProjectName,
+            cancellationToken);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var alias = await ProjectAliasGenerator.GenerateUniqueAliasAsync(
+            normalizedProjectName,
+            candidate => _dbContext.Projects.AnyAsync(project => project.Alias == candidate, cancellationToken));
+
+        var projectEntity = new ProjectEntity
+        {
+            Id = normalizedProjectName,
+            Alias = alias,
+            Name = normalizedProjectName
+        };
+
+        _dbContext.Projects.Add(projectEntity);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return projectEntity;
     }
 
     private static ConfigurationImportEntityResultDto CreateEntityResult(

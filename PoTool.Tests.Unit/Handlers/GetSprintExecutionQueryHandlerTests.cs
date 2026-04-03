@@ -11,6 +11,7 @@ using PoTool.Core.Domain.Metrics;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Settings;
+using PoTool.Tests.Unit.TestSupport;
 using CdcModels = PoTool.Core.Domain.Models;
 
 namespace PoTool.Tests.Unit.Handlers;
@@ -179,10 +180,12 @@ public sealed class GetSprintExecutionQueryHandlerTests
             TeamAreaPath = "\\Project\\Team"
         };
 
+        PersistenceTestGraph.EnsureProject(_context);
         var product = new ProductEntity
         {
             Id = 1,
             ProductOwnerId = profile.Id,
+            ProjectId = PersistenceTestGraph.DefaultProjectId,
             Name = "Product"
         };
 

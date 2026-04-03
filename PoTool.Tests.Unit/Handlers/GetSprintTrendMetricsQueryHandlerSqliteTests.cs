@@ -14,6 +14,7 @@ using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Handlers;
 
@@ -55,6 +56,7 @@ public sealed class GetSprintTrendMetricsQueryHandlerSqliteTests
         _context.Teams.Add(team);
         await _context.SaveChangesAsync();
 
+        PersistenceTestGraph.EnsureProject(_context);
         var sprint = new SprintEntity
         {
             TeamId = team.Id,
@@ -71,6 +73,7 @@ public sealed class GetSprintTrendMetricsQueryHandlerSqliteTests
         {
             Name = "Product A",
             ProductOwnerId = owner.Id,
+            ProjectId = PersistenceTestGraph.DefaultProjectId,
             BacklogRoots = [new ProductBacklogRootEntity { WorkItemTfsId = 100 }]
         };
 

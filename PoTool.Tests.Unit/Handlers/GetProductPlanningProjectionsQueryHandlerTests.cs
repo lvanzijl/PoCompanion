@@ -4,6 +4,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Core.Settings.Queries;
 using PoTool.Shared.Metrics;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Handlers;
 
@@ -58,6 +59,7 @@ public sealed class GetProductPlanningProjectionsQueryHandlerTests
 
     private static void SeedData(PoToolDbContext context)
     {
+        PersistenceTestGraph.EnsureProject(context, "proj", "proj", "proj");
         context.Products.Add(new ProductEntity
         {
             Id = 1,

@@ -15,6 +15,40 @@ public class PoToolDbContext : DbContext
     }
 
     /// <summary>
+    /// Enforces repository-wide relationship validation before synchronous persistence.
+    /// </summary>
+    public override int SaveChanges()
+    {
+        return SaveChanges(acceptAllChangesOnSuccess: true);
+    }
+
+    /// <summary>
+    /// Enforces repository-wide relationship validation before synchronous persistence.
+    /// </summary>
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        ValidatePersistenceContract("SaveChanges");
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    /// <summary>
+    /// Enforces repository-wide relationship validation before asynchronous persistence.
+    /// </summary>
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        => SaveChangesAsync(acceptAllChangesOnSuccess: true, cancellationToken);
+
+    /// <summary>
+    /// Enforces repository-wide relationship validation before asynchronous persistence.
+    /// </summary>
+    public override async Task<int> SaveChangesAsync(
+        bool acceptAllChangesOnSuccess,
+        CancellationToken cancellationToken = default)
+    {
+        await ValidatePersistenceContractAsync("SaveChangesAsync", cancellationToken);
+        return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    /// <summary>
     /// Work items cached from TFS.
     /// </summary>
     public DbSet<WorkItemEntity> WorkItems => Set<WorkItemEntity>();
@@ -825,5 +859,30 @@ public class PoToolDbContext : DbContext
         throw new InvalidOperationException(
             "SQLite guardrail: DateTimeOffset mapped properties are forbidden. Persist predicate/sort timestamps as UTC DateTime (*Utc columns). Convert at edges."
             + $" Offending indexed properties: {string.Join(", ", offendingProperties)}");
+    }
+
+    private void ValidatePersistenceContract(string operation)
+    {
+        if (!ChangeTracker.HasChanges())
+        {
+            return;
+        }
+
+        RequiredRelationshipPersistenceValidator.ValidatePendingRequiredRelationships(this, operation);
+    }
+
+    private Task ValidatePersistenceContractAsync(
+        string operation,
+        CancellationToken cancellationToken)
+    {
+        if (!ChangeTracker.HasChanges())
+        {
+            return Task.CompletedTask;
+        }
+
+        return RequiredRelationshipPersistenceValidator.ValidatePendingRequiredRelationshipsAsync(
+            this,
+            operation,
+            cancellationToken);
     }
 }

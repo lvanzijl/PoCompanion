@@ -1,5 +1,6 @@
 namespace PoTool.Tests.Unit.Audits;
 
+[TestCategory("Governance")]
 [TestClass]
 public sealed class PortfolioCdcUiAuditTests
 {
@@ -18,11 +19,11 @@ public sealed class PortfolioCdcUiAuditTests
         StringAssert.Contains(panel, "PortfolioComparisonDto");
         StringAssert.Contains(panel, "PortfolioTrendDto");
         StringAssert.Contains(panel, "PortfolioDecisionSignalDto");
-        StringAssert.Contains(panel, "GetPortfolioProgressAsync");
-        StringAssert.Contains(panel, "GetPortfolioSnapshotsAsync");
-        StringAssert.Contains(panel, "GetPortfolioComparisonAsync");
-        StringAssert.Contains(panel, "GetPortfolioTrendsAsync");
-        StringAssert.Contains(panel, "GetPortfolioSignalsAsync");
+        StringAssert.Contains(panel, "GetPortfolioProgressStateAsync");
+        StringAssert.Contains(panel, "GetPortfolioSnapshotsStateAsync");
+        StringAssert.Contains(panel, "GetPortfolioComparisonStateAsync");
+        StringAssert.Contains(panel, "GetPortfolioTrendsStateAsync");
+        StringAssert.Contains(panel, "GetPortfolioSignalsStateAsync");
         Assert.IsFalse(panel.Contains(".Sum(", StringComparison.Ordinal), "The UI component should not aggregate domain values.");
         Assert.IsFalse(panel.Contains(".Average(", StringComparison.Ordinal), "The UI component should not calculate averages.");
         Assert.IsFalse(panel.Contains(".GroupBy(", StringComparison.Ordinal), "The UI component should not regroup trend data.");

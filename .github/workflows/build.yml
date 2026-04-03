@@ -1,0 +1,126 @@
+name: Build and Test Gates
+
+on:
+  push:
+    branches:
+      - main
+      - release/**
+  pull_request:
+
+jobs:
+  core-gate:
+    name: Core Gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore PoTool.sln
+
+      - name: Build
+        run: dotnet build PoTool.sln --configuration Release --no-restore
+
+      - name: Check sync-over-async patterns
+        run: ./.github/scripts/check-sync-over-async.sh
+
+      - name: Prepare Core Gate artifact directory
+        run: mkdir -p "${{ runner.temp }}/core-gate"
+
+      - name: Run Core Gate
+        id: run_core_gate
+        env:
+          GATE_RUN_ID: ${{ github.run_id }}
+        run: ./.github/scripts/run-core-gate.sh "${{ runner.temp }}/core-gate"
+
+      - name: Upload Core Gate artifacts
+        if: ${{ always() && steps.run_core_gate.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-gate-${{ github.run_id }}
+          path: ${{ runner.temp }}/core-gate
+          if-no-files-found: error
+
+  api-contract-gate:
+    name: API Contract Gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore PoTool.sln
+
+      - name: Build
+        run: dotnet build PoTool.sln --configuration Release --no-restore
+
+      - name: Prepare API Contract Gate artifact directory
+        run: mkdir -p "${{ runner.temp }}/api-contract-gate"
+
+      - name: Run API Contract Gate
+        id: run_api_contract_gate
+        env:
+          GATE_RUN_ID: ${{ github.run_id }}
+        run: ./.github/scripts/run-api-contract-gate.sh "${{ runner.temp }}/api-contract-gate"
+
+      - name: Upload API Contract Gate artifacts
+        if: ${{ always() && steps.run_api_contract_gate.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-contract-gate-${{ github.run_id }}
+          path: ${{ runner.temp }}/api-contract-gate
+          if-no-files-found: error
+
+  governance-gate:
+    name: Governance Gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore PoTool.sln
+
+      - name: Build
+        run: dotnet build PoTool.sln --configuration Release --no-restore
+
+      - name: Prepare Governance Gate artifact directory
+        run: mkdir -p "${{ runner.temp }}/governance-gate"
+
+      - name: Run Governance Gate
+        id: run_governance_gate
+        env:
+          GATE_RUN_ID: ${{ github.run_id }}
+        run: ./.github/scripts/run-governance-gate.sh "${{ runner.temp }}/governance-gate"
+
+      - name: Upload Governance Gate artifacts
+        if: ${{ always() && steps.run_governance_gate.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: governance-gate-${{ github.run_id }}
+          path: ${{ runner.temp }}/governance-gate
+          if-no-files-found: error

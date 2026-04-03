@@ -5,6 +5,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Domain.DeliveryTrends.Models;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -404,12 +405,8 @@ public sealed class PortfolioSnapshotPersistenceServiceTests
         context.Profiles.Add(profile);
         await context.SaveChangesAsync();
 
-        context.Products.Add(new ProductEntity
-        {
-            Id = productId,
-            ProductOwnerId = profile.Id,
-            Name = "Product 1"
-        });
+        PersistenceTestGraph.EnsureProject(context);
+        context.Products.Add(PersistenceTestGraph.CreateProduct(productId, "Product 1", profile.Id));
         await context.SaveChangesAsync();
     }
 }

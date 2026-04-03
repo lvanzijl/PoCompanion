@@ -10,6 +10,7 @@ using PoTool.Core.Filters;
 using PoTool.Core.PullRequests.Filters;
 using PoTool.Core.PullRequests.Queries;
 using PoTool.Core.WorkItems;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Handlers;
 
@@ -123,22 +124,24 @@ public class GetPrDeliveryInsightsQueryHandlerTests
 
     private async Task AddTeamWithRepoAsync(int teamId, string teamName, int productId, string repoName)
     {
-        _context.Teams.Add(new TeamEntity { Id = teamId, Name = teamName });
-        _context.Products.Add(new ProductEntity { Id = productId, Name = "Prod", ProductOwnerId = 1 });
+        _context.Teams.Add(new TeamEntity { Id = teamId, Name = teamName, TeamAreaPath = $"\\Team\\{teamId}" });
+        PersistenceTestGraph.EnsureProject(_context);
+        _context.Products.Add(PersistenceTestGraph.CreateProduct(productId, "Prod", 1));
         _context.ProductTeamLinks.Add(new ProductTeamLinkEntity { TeamId = teamId, ProductId = productId });
-        _context.Repositories.Add(new RepositoryEntity { Id = productId, Name = repoName, ProductId = productId });
+        _context.Repositories.Add(PersistenceTestGraph.CreateRepository(productId, productId, repoName));
         await _context.SaveChangesAsync();
     }
 
     private async Task AddSprintAsync(int sprintId, DateTimeOffset start, DateTimeOffset end, string name = "Sprint 1")
     {
+        PersistenceTestGraph.EnsureTeam(_context, 1);
         _context.Sprints.Add(new SprintEntity
         {
             Id           = sprintId,
             Name         = name,
             StartDateUtc = start.UtcDateTime,
             EndDateUtc   = end.UtcDateTime,
-            TeamId       = 0
+            TeamId       = 1
         });
         await _context.SaveChangesAsync();
     }
@@ -498,8 +501,9 @@ public class GetPrDeliveryInsightsQueryHandlerTests
     [TestMethod]
     public async Task Handle_TeamWithNoRepositories_ReturnsEmpty()
     {
-        _context.Teams.Add(new TeamEntity { Id = 1, Name = "Team X" });
-        _context.Products.Add(new ProductEntity { Id = 1, Name = "Prod", ProductOwnerId = 1 });
+        _context.Teams.Add(new TeamEntity { Id = 1, Name = "Team X", TeamAreaPath = "\\Team\\1" });
+        PersistenceTestGraph.EnsureProject(_context);
+        _context.Products.Add(PersistenceTestGraph.CreateProduct(1, "Prod", 1));
         _context.ProductTeamLinks.Add(new ProductTeamLinkEntity { TeamId = 1, ProductId = 1 });
         // No repository configured for Product 1
         await _context.SaveChangesAsync();

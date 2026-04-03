@@ -15,6 +15,7 @@ using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Metrics;
+using PoTool.Tests.Unit.TestSupport;
 using StateClassification = PoTool.Core.Domain.Models.StateClassification;
 
 namespace PoTool.Tests.Unit.Services;
@@ -41,10 +42,12 @@ public class SprintTrendProjectionServiceTests
             .Options;
 
         await using var context = new PoToolDbContext(options);
+        PersistenceTestGraph.EnsureProject(context);
         context.Products.Add(new ProductEntity
         {
             Id = 1,
             ProductOwnerId = 7,
+            ProjectId = PersistenceTestGraph.DefaultProjectId,
             Name = "Product A",
             EstimationMode = (int)PoTool.Shared.Settings.EstimationMode.Mixed,
             CreatedAt = DateTimeOffset.UtcNow,

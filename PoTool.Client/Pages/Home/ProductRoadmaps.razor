@@ -921,9 +921,10 @@
                      var sprintCadenceTask = ResolveSprintCadenceAsync(product);
                      await Task.WhenAll(dependencyTask, projectionTask, sprintCadenceTask);
 
-                     var epicIdsWithDependencies = dependencyTask.Result;
-                     var projectionsByEpicId = projectionTask.Result.ToDictionary(projection => projection.EpicId);
-                     lane.SprintCadence = sprintCadenceTask.Result;
+                     var epicIdsWithDependencies = await dependencyTask;
+                     var projections = await projectionTask;
+                     lane.SprintCadence = await sprintCadenceTask;
+                     var projectionsByEpicId = projections.ToDictionary(projection => projection.EpicId);
                      foreach (var epic in lane.Epics)
                      {
                         epic.HasDependencies = epicIdsWithDependencies.Contains(epic.TfsId);

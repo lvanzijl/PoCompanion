@@ -14,6 +14,7 @@ using PoTool.Core.Domain.Estimation;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Core.Metrics.Queries;
 using PoTool.Shared.Metrics;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Handlers;
 
@@ -35,6 +36,7 @@ public class GetSprintTrendMetricsQueryHandlerTests
             .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
             .Options;
         _context = new PoToolDbContext(options);
+        PersistenceTestGraph.EnsureProject(_context);
 
         _projectionService = new TestSprintTrendProjectionService();
         _mockLogger = new Mock<ILogger<GetSprintTrendMetricsQueryHandler>>();
@@ -156,6 +158,7 @@ public class GetSprintTrendMetricsQueryHandlerTests
         {
             Name = "Product A",
             BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 100 } },
+            ProjectId = PersistenceTestGraph.DefaultProjectId,
             ProductOwnerId = 1
         };
         _context.Products.Add(product);
@@ -211,12 +214,14 @@ public class GetSprintTrendMetricsQueryHandlerTests
         {
             Name = "Product A",
             BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 100 } },
+            ProjectId = PersistenceTestGraph.DefaultProjectId,
             ProductOwnerId = 1
         };
         var product2 = new ProductEntity
         {
             Name = "Product B",
             BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 200 } },
+            ProjectId = PersistenceTestGraph.DefaultProjectId,
             ProductOwnerId = 1
         };
         _context.Products.AddRange(product1, product2);
@@ -353,6 +358,7 @@ public class GetSprintTrendMetricsQueryHandlerTests
         {
             Name = "Product",
             BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 100 } },
+            ProjectId = PersistenceTestGraph.DefaultProjectId,
             ProductOwnerId = 1
         };
         _context.Products.Add(product);
@@ -420,6 +426,7 @@ public class GetSprintTrendMetricsQueryHandlerTests
         {
             Name = "Product A",
             BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 100 } },
+            ProjectId = PersistenceTestGraph.DefaultProjectId,
             ProductOwnerId = 1
         };
         _context.Products.Add(product);
@@ -513,6 +520,7 @@ public class GetSprintTrendMetricsQueryHandlerTests
         {
             Name = "Product A",
             BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 100 } },
+            ProjectId = PersistenceTestGraph.DefaultProjectId,
             ProductOwnerId = 1
         };
         _context.Products.Add(product);
@@ -622,6 +630,7 @@ public class GetSprintTrendMetricsQueryHandlerTests
         {
             Name = "Product A",
             BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 100 } },
+            ProjectId = PersistenceTestGraph.DefaultProjectId,
             ProductOwnerId = 1
         };
         _context.Products.Add(product);
@@ -770,6 +779,7 @@ public class GetSprintTrendMetricsQueryHandlerTests
         {
             Name = "Product A",
             BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 100 } },
+            ProjectId = PersistenceTestGraph.DefaultProjectId,
             ProductOwnerId = 1
         };
         _context.Products.Add(product);

@@ -6,6 +6,7 @@ using PoTool.Api.Filters;
 
 namespace PoTool.Tests.Unit.Audits;
 
+[TestCategory("Governance")]
 [TestClass]
 public class IActionResultUntypedResponseAuditTests
 {

@@ -10,6 +10,7 @@ using PoTool.Core.Domain.Forecasting.Components.DeliveryForecast;
 using PoTool.Core.Domain.Forecasting.Models;
 using PoTool.Core.Domain.Hierarchy;
 using PoTool.Shared.Settings;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -83,6 +84,8 @@ public sealed class ForecastProjectionMaterializationServiceTests
 
     private static void SeedForecastingData(PoToolDbContext context)
     {
+        PersistenceTestGraph.EnsureProfile(context, 1, "PO");
+        PersistenceTestGraph.EnsureProject(context, "Project", "project", "Project");
         var team = new TeamEntity
         {
             Id = 10,

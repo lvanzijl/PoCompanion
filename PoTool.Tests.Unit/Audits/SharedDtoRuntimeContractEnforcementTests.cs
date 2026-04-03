@@ -16,6 +16,7 @@ using PoTool.Api.Persistence;
 
 namespace PoTool.Tests.Unit.Audits;
 
+[TestCategory("Governance")]
 [TestClass]
 public class SharedDtoRuntimeContractEnforcementTests
 {

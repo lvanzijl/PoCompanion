@@ -10,6 +10,7 @@ using PoTool.Api.Services;
 using PoTool.Core.BuildQuality.Queries;
 using PoTool.Shared.BuildQuality;
 using PoTool.Shared.Metrics;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Controllers;
 
@@ -20,7 +21,9 @@ public sealed class BuildQualityControllerDeliveryCanonicalFilterTests
     public async Task GetSprint_WrapsResponseWithCanonicalFilterMetadata()
     {
         await using var context = CreateContext();
-        context.Products.Add(new ProductEntity { Id = 100, ProductOwnerId = 7, Name = "Product 100" });
+        PersistenceTestGraph.EnsureProject(context);
+        PersistenceTestGraph.EnsureTeam(context, 3);
+        context.Products.Add(PersistenceTestGraph.CreateProduct(100, "Product 100", 7));
         context.Sprints.Add(new SprintEntity
         {
             Id = 42,

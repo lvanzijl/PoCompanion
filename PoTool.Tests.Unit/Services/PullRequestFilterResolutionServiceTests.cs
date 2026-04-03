@@ -5,6 +5,7 @@ using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Filters;
 using PoTool.Core.PullRequests.Filters;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -15,12 +16,13 @@ public sealed class PullRequestFilterResolutionServiceTests
     public async Task ResolveAsync_TeamScopeResolvesLinkedProductsAndRepositories()
     {
         await using var context = CreateContext();
-        context.Teams.Add(new TeamEntity { Id = 10, Name = "Team 10" });
+        context.Teams.Add(new TeamEntity { Id = 10, Name = "Team 10", TeamAreaPath = "\\Team\\10" });
+        PersistenceTestGraph.EnsureProject(context);
         context.Products.AddRange(
-            new ProductEntity { Id = 100, ProductOwnerId = 1, Name = "Product 100" },
-            new ProductEntity { Id = 200, ProductOwnerId = 1, Name = "Product 200" });
+            PersistenceTestGraph.CreateProduct(100, "Product 100", 1),
+            PersistenceTestGraph.CreateProduct(200, "Product 200", 1));
         context.ProductTeamLinks.Add(new ProductTeamLinkEntity { TeamId = 10, ProductId = 100 });
-        context.Repositories.Add(new RepositoryEntity { Id = 1, ProductId = 100, Name = "Repo-Team", CreatedAt = DateTimeOffset.UtcNow });
+        context.Repositories.Add(PersistenceTestGraph.CreateRepository(1, 100, "Repo-Team"));
         context.PullRequests.AddRange(
             new PullRequestEntity
             {
@@ -75,6 +77,7 @@ public sealed class PullRequestFilterResolutionServiceTests
     public async Task ResolveAsync_SprintSelectionProducesRangeAndSprintMetadata()
     {
         await using var context = CreateContext();
+        PersistenceTestGraph.EnsureTeam(context, 5);
         context.Sprints.Add(new SprintEntity
         {
             Id = 42,

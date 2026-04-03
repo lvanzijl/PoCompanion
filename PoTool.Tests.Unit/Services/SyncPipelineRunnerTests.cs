@@ -12,6 +12,7 @@ using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -115,11 +116,13 @@ public class SyncPipelineRunnerTests
                 {
                     Id = 1,
                     ProductOwnerId = TestProductOwnerId,
+                    ProjectId = PersistenceTestGraph.DefaultProjectId,
                     Name = "Product A",
                     BacklogRoots = [new ProductBacklogRootEntity { ProductId = 1, WorkItemTfsId = 100 }]
                 }
             }
         });
+        PersistenceTestGraph.EnsureProject(context);
 
         context.ProductOwnerCacheStates.Add(new ProductOwnerCacheStateEntity
         {

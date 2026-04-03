@@ -219,14 +219,23 @@ No EF Core operation may run concurrently on the same `DbContext` instance.
 - Keep `DbContext` scoped.
 - If true parallel database work is required, use isolated scopes or `IDbContextFactory<TContext>`.
 
-### 10.5 SQLite timestamp rule
+### 10.5 Global persistence contract
+
+- Global persistence contract: no entity with required foreign keys may be persisted unless every required relationship is resolved before persistence begins.
+- Required foreign keys must be assigned explicitly, or the corresponding parent navigation must be assigned and tracked in the same persistence boundary.
+- Parent entities for required relationships must already exist as tracked or persisted principals before child persistence.
+- Do not rely on default values, empty strings, post-save mutation, or database exceptions to repair required relationships.
+- Validation before persistence is mandatory and must run from the central persistence boundary so callers cannot bypass it accidentally.
+- Seeding and bootstrap flows must follow plan → validate → execute and must not partially persist a graph before required parents exist.
+
+### 10.6 SQLite timestamp rule
 
 - Do not use `DateTimeOffset` in server-side SQLite predicates, sorting, aggregates, or watermark logic.
 - Persist queryable timestamps as UTC `DateTime` columns with a `Utc` suffix.
 - Convert incoming timestamps to UTC before persistence.
 - Compute UTC bounds outside LINQ and compare against UTC values inside LINQ.
 
-### 10.6 Migration rules
+### 10.7 Migration rules
 
 - Commit each migration with both generated files.
 - Never hand-edit migration designer files.

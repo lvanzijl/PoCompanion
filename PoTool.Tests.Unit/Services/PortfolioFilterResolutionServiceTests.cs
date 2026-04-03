@@ -4,6 +4,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Filters;
+using PoTool.Tests.Unit.TestSupport;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Tests.Unit.Services;
@@ -92,9 +93,10 @@ public sealed class PortfolioFilterResolutionServiceTests
 
     private static async Task SeedOwnerDataAsync(PoToolDbContext context)
     {
+        PersistenceTestGraph.EnsureProject(context);
         context.Products.AddRange(
-            new ProductEntity { Id = 1, ProductOwnerId = 42, Name = "Product A" },
-            new ProductEntity { Id = 2, ProductOwnerId = 42, Name = "Product B" });
+            PersistenceTestGraph.CreateProduct(1, "Product A", 42),
+            PersistenceTestGraph.CreateProduct(2, "Product B", 42));
 
         context.PortfolioSnapshots.AddRange(
             new PortfolioSnapshotEntity

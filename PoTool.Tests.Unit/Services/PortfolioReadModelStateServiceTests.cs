@@ -8,6 +8,7 @@ using PoTool.Core.Filters;
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Shared.Metrics;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -306,9 +307,11 @@ public sealed class PortfolioReadModelStateServiceTests
         context.Profiles.Add(profile);
         await context.SaveChangesAsync();
 
+        PersistenceTestGraph.EnsureProject(context);
         var product = new ProductEntity
         {
             ProductOwnerId = profile.Id,
+            ProjectId = PersistenceTestGraph.DefaultProjectId,
             Name = "Product 1"
         };
         context.Products.Add(product);

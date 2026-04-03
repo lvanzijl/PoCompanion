@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -44,6 +45,7 @@ public class LazyReadProviderTests
         services.AddScoped<IDataSourceModeProvider>(sp => mockModeProvider.Object);
         
         services.AddLogging();
+        services.AddHttpContextAccessor();
         services.AddScoped<DataSourceAwareReadProviderFactory>();
         
         var serviceProvider = services.BuildServiceProvider();
@@ -90,6 +92,7 @@ public class LazyReadProviderTests
         services.AddScoped<IDataSourceModeProvider>(sp => mockModeProvider.Object);
         
         services.AddLogging();
+        services.AddHttpContextAccessor();
         services.AddScoped<DataSourceAwareReadProviderFactory>();
         
         var serviceProvider = services.BuildServiceProvider();

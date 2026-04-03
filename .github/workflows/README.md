@@ -4,10 +4,14 @@ This repository contains several GitHub Actions workflows for continuous integra
 
 ## Workflows
 
-### 1. Build and Publish (`build.yml`)
-- **Trigger:** Push to `main` branch or pull requests
-- **Purpose:** Build and publish the PoTool application
-- **Outputs:** Published artifacts in the Actions artifacts section
+### 1. Build and Test Gates (`build.yml`)
+- **Trigger:** Pull requests to all branches; pushes to `main` and `release/**`
+- **Purpose:** Enforce repository test governance through explicit CI gates
+- **Jobs:**
+  - `Core Gate`
+  - `API Contract Gate`
+  - `Governance Gate`
+- **Outputs:** Per-job TRX results, full console logs, and failing-test summaries in the Actions artifacts section
 
 ### 2. Release (`release.yml`)
 - **Trigger:** Version tags (e.g., `v1.0.0`)
@@ -211,6 +215,25 @@ Example badge:
 6. ✅ Document any known issues in test results
 
 ### Support
+
+## Local gate commands
+
+Run the same gate entry points used by CI:
+
+```bash
+./.github/scripts/run-core-gate.sh /tmp/po-test-gates/core-gate
+./.github/scripts/run-api-contract-gate.sh /tmp/po-test-gates/api-contract-gate
+./.github/scripts/run-governance-gate.sh /tmp/po-test-gates/governance-gate
+```
+
+Each script requires an explicit output directory and writes TRX, console logs, and failing-test summaries into that exact directory.
+
+## Branch protection handoff
+
+Repository admins should configure branch protection using the exact CI job names, not just the workflow name.
+
+- Handoff instructions: `/home/runner/work/PoCompanion/PoCompanion/docs/analysis/2026-04-02-branch-protection-handoff.md`
+- Operational hardening report: `/home/runner/work/PoCompanion/PoCompanion/docs/analysis/2026-04-02-operational-enforcement-hardening.md`
 
 For issues with the exploratory tests workflow:
 

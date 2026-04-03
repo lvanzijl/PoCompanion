@@ -82,7 +82,7 @@ public class DataSourceModeConfigurationTests
         var intent = DataSourceModeConfiguration.GetRouteIntent("/api/portfolio/progress");
 
         Assert.AreEqual(
-            DataSourceModeConfiguration.RouteIntent.LiveAllowed,
+            DataSourceModeConfiguration.RouteIntent.CacheOnlyAnalyticalRead,
             intent);
     }
 

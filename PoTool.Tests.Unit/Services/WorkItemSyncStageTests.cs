@@ -9,6 +9,7 @@ using PoTool.Api.Services.Sync;
 using PoTool.Core.Contracts;
 using PoTool.Core.Sync;
 using PoTool.Shared.WorkItems;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -95,9 +96,11 @@ public class WorkItemSyncStageTests
         dbContext.Profiles.Add(profile);
         await dbContext.SaveChangesAsync();
 
+        PersistenceTestGraph.EnsureProject(dbContext);
         var product = new ProductEntity
         {
             ProductOwnerId = profile.Id,
+            ProjectId = PersistenceTestGraph.DefaultProjectId,
             Name = "Product 1"
         };
         dbContext.Products.Add(product);

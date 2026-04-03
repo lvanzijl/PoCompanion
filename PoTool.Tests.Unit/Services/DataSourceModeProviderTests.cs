@@ -6,6 +6,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Configuration;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -28,6 +29,7 @@ public class DataSourceModeProviderTests
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
         _context = new PoToolDbContext(options);
+        PersistenceTestGraph.EnsureProfile(_context, 1, "PO 1");
         
         _mockLogger = new Mock<ILogger<DataSourceModeProvider>>();
         _provider = new DataSourceModeProvider(_context, _mockLogger.Object);

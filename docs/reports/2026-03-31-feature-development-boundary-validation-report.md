@@ -130,8 +130,8 @@ A full rerun of `PoTool.Tests.Unit` still failed with 6 tests unrelated to this 
 
 - 4 failures in `DataSourceAwareReadProviderFactoryTests` / `LazyReadProviderTests` due missing `IHttpContextAccessor` test registration
 - 2 documentation-governance failures for pre-existing non-compliant markdown files:
-  - `di-activation-audit-and-fix.md`
-  - `docs/testing/ui-exploratory-screenshot-run.md`
+  - `2026-04-02-di-activation-audit-and-fix.md`
+  - `docs/reports/2026-03-31-ui-exploratory-screenshot-run.md`
 
 These were not introduced by this feature and were intentionally left unchanged.
 

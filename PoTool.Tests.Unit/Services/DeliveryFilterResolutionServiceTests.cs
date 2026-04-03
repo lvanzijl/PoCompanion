@@ -4,6 +4,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Filters;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -14,10 +15,12 @@ public sealed class DeliveryFilterResolutionServiceTests
     public async Task ResolveAsync_ProductOwnerScopeDerivesProductsAndMultiSprintWindow()
     {
         await using var context = CreateContext();
+        PersistenceTestGraph.EnsureProject(context);
+        PersistenceTestGraph.EnsureTeam(context, 3);
         context.Products.AddRange(
-            new ProductEntity { Id = 100, ProductOwnerId = 7, Name = "Product 100" },
-            new ProductEntity { Id = 200, ProductOwnerId = 7, Name = "Product 200" },
-            new ProductEntity { Id = 300, ProductOwnerId = 9, Name = "Product 300" });
+            PersistenceTestGraph.CreateProduct(100, "Product 100", 7),
+            PersistenceTestGraph.CreateProduct(200, "Product 200", 7),
+            PersistenceTestGraph.CreateProduct(300, "Product 300", 9));
         context.Sprints.AddRange(
             new SprintEntity
             {
@@ -60,10 +63,12 @@ public sealed class DeliveryFilterResolutionServiceTests
     public async Task ResolveAsync_OutOfScopeProductSelectionFallsBackToOwnerScopeAndReportsValidation()
     {
         await using var context = CreateContext();
+        PersistenceTestGraph.EnsureProject(context);
+        PersistenceTestGraph.EnsureTeam(context, 3);
         context.Products.AddRange(
-            new ProductEntity { Id = 100, ProductOwnerId = 7, Name = "Product 100" },
-            new ProductEntity { Id = 200, ProductOwnerId = 7, Name = "Product 200" },
-            new ProductEntity { Id = 300, ProductOwnerId = 9, Name = "Product 300" });
+            PersistenceTestGraph.CreateProduct(100, "Product 100", 7),
+            PersistenceTestGraph.CreateProduct(200, "Product 200", 7),
+            PersistenceTestGraph.CreateProduct(300, "Product 300", 9));
         context.Sprints.Add(new SprintEntity
         {
             Id = 42,

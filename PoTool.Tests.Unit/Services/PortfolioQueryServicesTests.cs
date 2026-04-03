@@ -7,6 +7,7 @@ using PoTool.Core.Filters;
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.Domain.DeliveryTrends.Services;
 using PoTool.Shared.Metrics;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -416,9 +417,10 @@ public sealed class PortfolioQueryServicesTests
             .Options;
 
         var context = new PoToolDbContext(options);
+        PersistenceTestGraph.EnsureProject(context);
         context.Products.AddRange(
-            new ProductEntity { Id = 1, ProductOwnerId = 42, Name = "Product A" },
-            new ProductEntity { Id = 2, ProductOwnerId = 42, Name = "Product B" });
+            PersistenceTestGraph.CreateProduct(1, "Product A", 42),
+            PersistenceTestGraph.CreateProduct(2, "Product B", 42));
         context.PortfolioSnapshots.AddRange(
             new PortfolioSnapshotEntity
             {

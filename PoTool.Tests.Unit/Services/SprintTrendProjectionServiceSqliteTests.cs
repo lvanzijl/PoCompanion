@@ -77,9 +77,11 @@ public class SprintTrendProjectionServiceSqliteTests
             var team = new TeamEntity { Name = "Team 1", TeamAreaPath = "\\Project\\Team 1" };
             context.Teams.Add(team);
 
+            PersistenceTestGraph.EnsureProject(context);
             var product = new ProductEntity
             {
                 ProductOwnerId = productOwner.Id,
+                ProjectId = PersistenceTestGraph.DefaultProjectId,
                 Name = "Product 1",
                 BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 1000 } }
             };
@@ -176,9 +178,11 @@ public class SprintTrendProjectionServiceSqliteTests
             var team = new TeamEntity { Name = "Team 1", TeamAreaPath = "\\Project\\Team 1" };
             context.Teams.Add(team);
 
+            PersistenceTestGraph.EnsureProject(context);
             var product = new ProductEntity
             {
                 ProductOwnerId = productOwner.Id,
+                ProjectId = PersistenceTestGraph.DefaultProjectId,
                 Name = "Product 1",
                 BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 1000 } }
             };
@@ -307,9 +311,11 @@ public class SprintTrendProjectionServiceSqliteTests
             var team = new TeamEntity { Name = "Team 1", TeamAreaPath = "\\Project\\Team 1" };
             context.Teams.Add(team);
 
+            PersistenceTestGraph.EnsureProject(context);
             var product = new ProductEntity
             {
                 ProductOwnerId = productOwner.Id,
+                ProjectId = PersistenceTestGraph.DefaultProjectId,
                 Name = "Product 1",
                 BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 1000 } }
             };
@@ -473,9 +479,11 @@ public class SprintTrendProjectionServiceSqliteTests
             var team = new TeamEntity { Name = "Team 1", TeamAreaPath = "\\Project\\Team 1" };
             context.Teams.Add(team);
 
+            PersistenceTestGraph.EnsureProject(context);
             var product = new ProductEntity
             {
                 ProductOwnerId = productOwner.Id,
+                ProjectId = PersistenceTestGraph.DefaultProjectId,
                 Name = "Product 1",
                 BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 1000 } }
             };
