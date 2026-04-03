@@ -1,9 +1,9 @@
 # Navigation structural gaps
 
 Sources:
-- `/home/runner/work/PoCompanion/PoCompanion/docs/reports/2026-04-03-route-inventory.md`
-- `/home/runner/work/PoCompanion/PoCompanion/docs/reports/2026-04-03-route-classification.md`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Common/WorkspaceNavigationCatalog.cs`
+- `docs/reports/2026-04-03-route-inventory.md`
+- `docs/reports/2026-04-03-route-classification.md`
+- `PoTool.Client/Components/Common/WorkspaceNavigationCatalog.cs`
 
 This report reviews the classified route set and highlights structural problems only. It does not propose implementation details.
 
