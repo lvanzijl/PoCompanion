@@ -8,15 +8,29 @@
 
     protected override void OnParametersSet()
     {
-        if (_redirected || string.IsNullOrWhiteSpace(CanonicalPath))
+        if (_redirected || !TryBuildTarget(out var target))
         {
             return;
         }
 
-        var currentUri = new Uri(NavigationManager.Uri);
-        var target = $"{CanonicalPath}{currentUri.Query}{currentUri.Fragment}";
-
         _redirected = true;
         NavigationManager.NavigateTo(target, replace: true);
+    }
+
+    private bool TryBuildTarget(out string target)
+    {
+        target = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(CanonicalPath) ||
+            !CanonicalPath.StartsWith("/", StringComparison.Ordinal) ||
+            CanonicalPath.Contains('?', StringComparison.Ordinal) ||
+            CanonicalPath.Contains('#', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var currentUri = new Uri(NavigationManager.Uri);
+        target = $"{CanonicalPath}{currentUri.Query}{currentUri.Fragment}";
+        return true;
     }
 }
