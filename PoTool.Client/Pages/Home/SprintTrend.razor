@@ -1689,7 +1689,7 @@
     {
         var path = WorkspaceQueryContextHelper.BuildRoute(
             $"{WorkspaceRoutes.SprintDeliveryActivity}/{workItemId}",
-            new WorkspaceQueryContext(TeamId: _selectedTeamId, SprintId: _currentSprint?.Id));
+            new WorkspaceQueryContext(TeamId: _selectedTeamId, SprintId: _selectedSprintId));
         if (!_profileId.HasValue)
         {
             return path;

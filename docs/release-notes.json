@@ -108,7 +108,7 @@
     "type": "Changed",
     "title": "Backlog health iteration cards now show counted issues",
     "impact": "Backlog Health iteration cards now show the total number of issues counted in each health-score calculation, so product owners can see how many blocked, parent-progress, and missing-effort issues drove the score without leaving the current view.",
-    "area": "Trends",
+    "area": "Health",
     "link": "/home/health/backlog-health"
   },
   {
