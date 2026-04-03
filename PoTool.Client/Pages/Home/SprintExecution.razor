@@ -124,6 +124,18 @@
             </MudButton>
         </MudAlert>
     }
+    else if (!_selectedTeamId.HasValue)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            Select a team to load sprint execution.
+        </MudAlert>
+    }
+    else if (!_selectedSprintId.HasValue)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            Select a sprint to load sprint execution.
+        </MudAlert>
+    }
 
     <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
 
@@ -500,22 +512,30 @@
             _profileId = activeProfile.Id;
             ProfileService.SetCachedActiveProfileId(_profileId);
 
+            var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
+            _selectedTeamId = context.TeamId;
+            _selectedSprintId = context.SprintId;
+
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
             _products = (await ProductService.GetProductsByOwnerAsync(_profileId.Value)).ToList();
 
             UpdateBreadcrumbs();
 
-            // Auto-select first team and load sprints
-            if (!_selectedTeamId.HasValue && _teams.Count > 0)
-            {
-                _selectedTeamId = _teams[0].Id;
-            }
-
             if (_selectedTeamId.HasValue)
             {
                 await LoadSprintsAsync(_selectedTeamId.Value);
-                ApplyDefaultSprint();
-                await LoadExecutionDataAsync();
+
+                if (_selectedSprintId.HasValue && !_sprints.Any(s => s.Id == _selectedSprintId.Value))
+                {
+                    _selectedSprintId = null;
+                    _data = null;
+                    _filterNotice = null;
+                }
+
+                if (_selectedSprintId.HasValue)
+                {
+                    await LoadExecutionDataAsync();
+                }
             }
         }
         catch (Exception ex)
@@ -544,24 +564,14 @@
         }
     }
 
-    private void ApplyDefaultSprint()
-    {
-        if (_sprints.Count == 0) return;
-
-        var now = DateTimeOffset.UtcNow;
-        var current = _sprints.FirstOrDefault(s => s.TimeFrame == "current")
-            ?? _sprints.FirstOrDefault(s => s.StartUtc <= now && (s.EndUtc == null || s.EndUtc >= now))
-            ?? _sprints.LastOrDefault(s => s.EndUtc <= now);
-
-        if (current != null)
-        {
-            _selectedSprintId = current.Id;
-        }
-    }
-
     private async Task LoadExecutionDataAsync()
     {
-        if (!_profileId.HasValue || !_selectedSprintId.HasValue) return;
+        if (!_profileId.HasValue || !_selectedTeamId.HasValue || !_selectedSprintId.HasValue)
+        {
+            _data = null;
+            _filterNotice = null;
+            return;
+        }
 
         try
         {
@@ -619,6 +629,7 @@
     {
         _sprintPopoverOpen = false;
         _selectedSprintId = sprintId;
+        UpdateContextUrl();
         await LoadExecutionDataAsync();
     }
 
@@ -626,6 +637,7 @@
     {
         _productPopoverOpen = false;
         _selectedProductId = productId;
+        UpdateContextUrl();
         await LoadExecutionDataAsync();
     }
 
@@ -635,13 +647,27 @@
         _selectedSprintId = null;
         _sprints = new List<SprintDto>();
         _data = null;
+        _filterNotice = null;
+        UpdateContextUrl();
 
         if (teamId.HasValue)
         {
             await LoadSprintsAsync(teamId.Value);
-            ApplyDefaultSprint();
-            await LoadExecutionDataAsync();
+
+            if (_selectedSprintId.HasValue && !_sprints.Any(s => s.Id == _selectedSprintId.Value))
+            {
+                _selectedSprintId = null;
+            }
         }
+    }
+
+    private void UpdateContextUrl()
+    {
+        NavigationManager.NavigateTo(
+            WorkspaceQueryContextHelper.BuildRoute(
+                WorkspaceRoutes.SprintExecution,
+                new WorkspaceQueryContext(TeamId: _selectedTeamId, SprintId: _selectedSprintId)),
+            forceLoad: false);
     }
 
     // ── Navigation ───────────────────────────────────────────────────────────────

@@ -664,20 +664,16 @@
 
             ParseQueryParameters();
 
-            // Auto-select team if only one is available and no team was set via query string
-            if (!_selectedTeamId.HasValue && _teams.Count == 1)
-            {
-                _selectedTeamId = _teams[0].Id;
-            }
-
             if (_selectedTeamId.HasValue)
             {
-                await LoadSprintsAndAutoSelectAsync(_selectedTeamId.Value);
+                await LoadSprintsForTeamAsync(_selectedTeamId.Value);
+                if (_selectedSprintId.HasValue && !_sprints.Any(s => s.Id == _selectedSprintId.Value))
+                {
+                    _selectedSprintId = null;
+                }
             }
-            else
-            {
-                await LoadInsightsAsync();
-            }
+
+            await LoadInsightsAsync();
 
             UpdateBreadcrumbs();
         }
@@ -759,40 +755,20 @@
 
         if (teamId.HasValue)
         {
-            await ReloadWithSprintAutoSelectAsync(teamId.Value);
-            return;
+            _fromDate = DateTime.UtcNow.AddMonths(-6).Date;
+            _toDate   = DateTime.UtcNow.Date;
+            await LoadSprintsForTeamAsync(teamId.Value);
         }
-
-        // Reset to default date range when clearing team selection
-        _fromDate = DateTime.UtcNow.AddMonths(-6).Date;
-        _toDate   = DateTime.UtcNow.Date;
+        else
+        {
+            _fromDate = DateTime.UtcNow.AddMonths(-6).Date;
+            _toDate   = DateTime.UtcNow.Date;
+        }
 
         await ReloadAsync();
     }
 
-    /// <summary>
-    /// Sets the loading state, loads sprints with auto-selection, then loads insights.
-    /// Called from OnTeamChanged so that the loading indicator is shown correctly.
-    /// </summary>
-    private async Task ReloadWithSprintAutoSelectAsync(int teamId)
-    {
-        _isLoading    = true;
-        _errorMessage = null;
-        _prDrawerOpen = false;
-        StateHasChanged();
-
-        await LoadSprintsAndAutoSelectAsync(teamId);
-
-        _isLoading = false;
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Loads sprints for the given team and auto-selects the current sprint
-    /// (or the most recent past sprint if no current sprint exists), then reloads insights.
-    /// This mirrors the PipelineInsights sprint auto-selection behaviour.
-    /// </summary>
-    private async Task LoadSprintsAndAutoSelectAsync(int teamId)
+    private async Task LoadSprintsForTeamAsync(int teamId)
     {
         try
         {
@@ -801,38 +777,12 @@
                 .Where(s => s.StartUtc.HasValue)
                 .OrderByDescending(s => s.StartUtc)
                 .ToList();
-
-            // Auto-select the current sprint (or the most recent past sprint)
-            if (_sprints.Count > 0)
-            {
-                var now = DateTimeOffset.UtcNow;
-
-                var activeSprint = _sprints.FirstOrDefault(s =>
-                    s.StartUtc.HasValue && s.EndUtc.HasValue &&
-                    s.StartUtc.Value <= now && s.EndUtc.Value >= now);
-
-                if (activeSprint is null)
-                {
-                    var mostRecentPast = _sprints.FirstOrDefault(s =>
-                        s.EndUtc.HasValue && s.EndUtc.Value <= now);
-                    activeSprint = mostRecentPast ?? _sprints[0];
-                }
-
-                _selectedSprintId = activeSprint.Id;
-                if (activeSprint.StartUtc.HasValue)
-                {
-                    _fromDate = activeSprint.StartUtc.Value.UtcDateTime.Date;
-                    _toDate   = activeSprint.EndUtc?.UtcDateTime.Date ?? _fromDate.Value.AddDays(DefaultSprintDurationDays);
-                }
-            }
         }
         catch (Exception ex)
         {
             _sprints.Clear();
             Snackbar.Add($"Could not load sprints: {ex.Message}", Severity.Warning);
         }
-
-        await LoadInsightsAsync();
     }
 
     private async Task OnSprintChanged(int? sprintId)

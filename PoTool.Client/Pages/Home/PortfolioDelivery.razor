@@ -72,10 +72,9 @@
                     <MudStack Spacing="2">
                         <MudText Typo="Typo.overline">Team</MudText>
                         <MudSelect T="int?" Value="_selectedTeamId" Label="Team"
-                                   Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
-                                   ValueChanged="OnTeamSelectedFromPopoverAsync"
-                                   Style="min-width: 200px;">
-                            <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
+                                    Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
+                                    ValueChanged="OnTeamSelectedFromPopoverAsync"
+                                    Style="min-width: 200px;">
                             @foreach (var team in _teams)
                             {
                                 <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
@@ -138,7 +137,6 @@
                                    Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
                                    ValueChanged="OnTeamChangedAsync"
                                    Style="min-width: 220px;">
-                            <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
                             @foreach (var team in _teams)
                             {
                                 <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
@@ -478,7 +476,7 @@
     private string ContextTeamLabel =>
         _selectedTeamId.HasValue
             ? _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value)?.Name ?? "Team"
-            : "All Teams";
+            : "Select Team";
 
     private string ContextSprintRangeLabel
     {
@@ -528,22 +526,22 @@
 
             UpdateBreadcrumbs();
 
-            // Auto-select first team and load sprint window
-            if (!_selectedTeamId.HasValue && _teams.Count > 0)
-            {
-                _selectedTeamId = _teams[0].Id;
-            }
-
             if (_selectedTeamId.HasValue)
             {
                 await LoadSprintsAsync(_selectedTeamId.Value);
-                if (!_fromSprintId.HasValue || !_toSprintId.HasValue)
+
+                if ((_fromSprintId.HasValue && !_sprints.Any(s => s.Id == _fromSprintId.Value)) ||
+                    (_toSprintId.HasValue && !_sprints.Any(s => s.Id == _toSprintId.Value)))
                 {
-                    ApplyDefaultSprintWindow();
+                    _fromSprintId = null;
+                    _toSprintId = null;
                 }
 
                 UpdateContextUrl();
-                await LoadDeliveryDataAsync();
+                if (_fromSprintId.HasValue && _toSprintId.HasValue)
+                {
+                    await LoadDeliveryDataAsync();
+                }
             }
         }
         catch (Exception ex)
@@ -572,27 +570,15 @@
         }
     }
 
-    private void ApplyDefaultSprintWindow()
-    {
-        if (_sprints.Count == 0) return;
-
-        var now = DateTimeOffset.UtcNow;
-        var current = _sprints.FirstOrDefault(s => s.TimeFrame == "current")
-            ?? _sprints.FirstOrDefault(s => s.StartUtc <= now && (s.EndUtc == null || s.EndUtc >= now))
-            ?? _sprints.LastOrDefault(s => s.EndUtc <= now);
-
-        if (current == null) return;
-
-        var currentIdx = _sprints.IndexOf(current);
-        var fromIdx = Math.Max(0, currentIdx - 4);
-
-        _fromSprintId = _sprints[fromIdx].Id;
-        _toSprintId = current.Id;
-    }
-
     private async Task LoadDeliveryDataAsync()
     {
-        if (!_profileId.HasValue) return;
+        if (!_profileId.HasValue || !_selectedTeamId.HasValue || !_fromSprintId.HasValue || !_toSprintId.HasValue)
+        {
+            _selectedSprintIds = new List<int>();
+            _data = null;
+            _filterNotice = null;
+            return;
+        }
 
         // Build sprint ID list from the from/to range
         _selectedSprintIds = BuildSprintRange(_fromSprintId, _toSprintId);
@@ -682,9 +668,19 @@
         if (teamId.HasValue)
         {
             await LoadSprintsAsync(teamId.Value);
-            ApplyDefaultSprintWindow();
             UpdateContextUrl();
-            await LoadDeliveryDataAsync();
+            if ((_fromSprintId.HasValue && !_sprints.Any(s => s.Id == _fromSprintId.Value)) ||
+                (_toSprintId.HasValue && !_sprints.Any(s => s.Id == _toSprintId.Value)))
+            {
+                _fromSprintId = null;
+                _toSprintId = null;
+                UpdateContextUrl();
+            }
+
+            if (_fromSprintId.HasValue && _toSprintId.HasValue)
+            {
+                await LoadDeliveryDataAsync();
+            }
         }
         else
         {

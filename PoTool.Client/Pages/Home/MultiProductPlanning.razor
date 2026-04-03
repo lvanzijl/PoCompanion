@@ -684,20 +684,8 @@ else
 
     private async Task<SprintCadenceInfo> ResolveSprintCadenceAsync(ProductDto product)
     {
-        if (product.TeamIds.Count == 0)
-        {
-            return SprintCadenceResolver.Resolve([]);
-        }
-
-        try
-        {
-            var sprints = (await SprintService.GetSprintsForTeamAsync(product.TeamIds.First())).ToList();
-            return SprintCadenceResolver.Resolve(sprints);
-        }
-        catch
-        {
-            return SprintCadenceResolver.Resolve([]);
-        }
+        await Task.CompletedTask;
+        return SprintCadenceResolver.Resolve([]);
     }
 
     private static string GetTimelineBarClass(RoadmapTimelineRow row, SprintCadenceInfo sprintCadence)

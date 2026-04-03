@@ -97,7 +97,7 @@
                     </MudStack>
                 </MudPopover>
 
-                @* Team chip — click to open team picker *@
+            @* Team chip — click to open team picker *@
                 <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Group"
                          Color="Color.Default" Style="cursor: pointer;"
                          OnClick="ToggleTeamPopover">
@@ -107,11 +107,10 @@
                             TransformOrigin="Origin.TopLeft" Paper="true" Elevation="8" Class="pa-3 ppt-scope-popover">
                     <MudStack Spacing="2">
                         <MudText Typo="Typo.overline">Team</MudText>
-                        <MudSelect T="int?" Value="_selectedTeamId" Label="Team"
-                                   Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
-                                   ValueChanged="@(async v => { await OnTeamChangedAsync(v); _teamPopoverOpen = false; })"
-                                   Style="min-width: 200px;">
-                            <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
+                            <MudSelect T="int?" Value="_selectedTeamId" Label="Team"
+                                    Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
+                                    ValueChanged="@(async v => { await OnTeamChangedAsync(v); _teamPopoverOpen = false; })"
+                                    Style="min-width: 200px;">
                             @foreach (var team in _teams)
                             {
                                 <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
@@ -193,7 +192,6 @@
                                    Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Clearable="true"
                                    ValueChanged="OnTeamChangedAsync"
                                    Style="min-width: 220px;">
-                            <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
                             @foreach (var team in _teams)
                             {
                                 <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
@@ -543,7 +541,7 @@
 
     private string ContextTeamLabel => _selectedTeamId.HasValue
         ? _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value)?.Name ?? "Unknown Team"
-        : "All Teams";
+        : "Select Team";
 
     private string ContextSprintRangeLabel
     {
@@ -642,19 +640,10 @@
             ParseQueryParameters();
             UpdateBreadcrumbs();
 
-            // Default: auto-select first available team and load the default 5-sprint window.
-            // This ensures the page loads with data without requiring manual filter selection.
-            if (!_selectedTeamId.HasValue && _teams.Count > 0)
-            {
-                _selectedTeamId = _teams[0].Id;
-            }
-
             if (_selectedTeamId.HasValue)
             {
                 await LoadSprintsAsync(_selectedTeamId.Value);
 
-                // Apply default 5-sprint window (current + past 4) if no sprint range was
-                // specified via query parameters.
                 if (!_fromSprintId.HasValue && !_toSprintId.HasValue)
                 {
                     ApplyDefaultSprintWindow();
@@ -676,36 +665,16 @@
     }
 
     /// <summary>
-    /// Selects the default sprint window: current sprint + the 4 most recently completed sprints
-    /// (5 sprints total), ordered chronologically.
-    ///
-    /// Selection logic:
-    ///   1. Identify the "current" sprint (TimeFrame == "current", or the sprint whose date range
-    ///      contains today if TimeFrame is absent).
-    ///   2. Take up to 4 past sprints ending before or at the current sprint.
-    ///   3. Set _fromSprintId to the earliest and _toSprintId to the current (latest).
-    /// </summary>
     private void ApplyDefaultSprintWindow()
     {
         if (_sprints.Count == 0) return;
 
         var ordered = _sprints.OrderBy(s => s.StartUtc ?? DateTimeOffset.MaxValue).ToList();
-        var now     = DateTimeOffset.UtcNow;
-
-        // Find current sprint: prefer TimeFrame == "current", fallback to date range
-        var current = ordered.FirstOrDefault(s => s.TimeFrame == "current")
-            ?? ordered.FirstOrDefault(s => s.StartUtc <= now && (s.EndUtc == null || s.EndUtc >= now))
-            ?? ordered.LastOrDefault(s => s.EndUtc <= now);  // fallback: most recent past sprint
-
-        if (current == null) return;
-
-        var currentIdx = ordered.IndexOf(current);
-
-        // Take up to 4 sprints before current (inclusive = 5 total)
-        var fromIdx = Math.Max(0, currentIdx - 4);
+        var toIdx = ordered.Count - 1;
+        var fromIdx = Math.Max(0, toIdx - 4);
 
         _fromSprintId = ordered[fromIdx].Id;
-        _toSprintId   = current.Id;
+        _toSprintId   = ordered[toIdx].Id;
 
         // Remember the default window for "Custom Scope" detection
         _defaultFromSprintId = _fromSprintId;
@@ -747,6 +716,10 @@
             await LoadSprintsAsync(teamId.Value);
             ApplyDefaultSprintWindow();
             await LoadTrendDataAsync();
+        }
+        else
+        {
+            _filterNotice = null;
         }
     }
 

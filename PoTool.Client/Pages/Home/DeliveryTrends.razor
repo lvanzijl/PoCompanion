@@ -388,7 +388,7 @@
             }
 
             ApplySprintFilters();
-            FindCurrentSprint();
+            SelectDeterministicEndSprint();
             await LoadMetricsAsync();
             UpdateBreadcrumbs();
         }
@@ -415,18 +415,9 @@
             .ToList();
     }
 
-    private void FindCurrentSprint()
+    private void SelectDeterministicEndSprint()
     {
-        var now = DateTimeOffset.UtcNow;
-        _currentSprintIndex = _filteredSprints.FindIndex(s => s.StartUtc <= now && s.EndUtc >= now);
-
-        if (_currentSprintIndex < 0 && _filteredSprints.Count > 0)
-        {
-            _currentSprintIndex = _filteredSprints.FindLastIndex(s => s.EndUtc <= now);
-            if (_currentSprintIndex < 0)
-                _currentSprintIndex = _filteredSprints.Count - 1;
-        }
-
+        _currentSprintIndex = _filteredSprints.Count - 1;
         _currentSprint = _currentSprintIndex >= 0 ? _filteredSprints[_currentSprintIndex] : null;
     }
 
@@ -608,7 +599,7 @@
         _selectedTeamId = teamId;
         UpdateUrlParameters();
         ApplySprintFilters();
-        FindCurrentSprint();
+        SelectDeterministicEndSprint();
         await LoadMetricsAsync();
     }
 

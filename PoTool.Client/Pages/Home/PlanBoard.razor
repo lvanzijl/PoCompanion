@@ -210,6 +210,13 @@
             <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-2" />
         }
 
+        @if (!string.IsNullOrWhiteSpace(_sprintResolutionMessage))
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-3">
+                @_sprintResolutionMessage
+            </MudAlert>
+        }
+
         <div class="plan-board-columns">
             @* Left: Hierarchical Candidate Tree *@
             <div class="plan-board-column plan-board-candidate-column">
@@ -567,6 +574,7 @@
     private CanonicalFilterMetadata? _capacityCalibrationFilterMetadata;
     private int[] _selectedProductRootIds = [];
     private bool _isRefreshingFromTfs;
+    private string? _sprintResolutionMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -701,18 +709,9 @@
             var workItems = _boardState.Data.ToList();
             _allWorkItems = workItems;
 
-            // Load sprints for the product's first team
             var sprints = new List<SprintDto>();
             var allTeamSprints = new List<SprintDto>();
-            if (product.TeamIds.Count > 0)
-            {
-                allTeamSprints = (await SprintService.GetSprintsForTeamAsync(product.TeamIds.First())).ToList();
-                sprints = allTeamSprints
-                    .Where(s => s.EndUtc.HasValue && s.EndUtc.Value > DateTimeOffset.UtcNow)
-                    .OrderBy(s => s.StartUtc)
-                    .Take(3)
-                    .ToList();
-            }
+            _sprintResolutionMessage = "Plan Board no longer derives sprint columns from product teams. Sprint columns stay unavailable until explicit sprint inputs exist.";
 
             // Build sprint columns
             _sprintColumns = sprints.Select(s => new SprintColumn

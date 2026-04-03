@@ -29,6 +29,10 @@
         </MudStack>
     </MudPaper>
 
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-4">
+        This is a non-filtered operational page. It stays outside the global filter contract and reports change activity for the last completed sync window.
+    </MudAlert>
+
     @if (_isLoading)
     {
         <LoadingIndicator IsLoading="true" />

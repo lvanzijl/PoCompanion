@@ -1538,20 +1538,7 @@
 
     private async Task<SprintCadenceInfo> ResolveSprintCadenceAsync(ProductDto product)
     {
-        if (product.TeamIds.Count == 0)
-        {
-            return SprintCadenceResolver.Resolve([]);
-        }
-
-        try
-        {
-            var sprints = (await SprintService.GetSprintsForTeamAsync(product.TeamIds.First())).ToList();
-            return SprintCadenceResolver.Resolve(sprints);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Falling back to default sprint cadence for product {ProductId}", product.Id);
-            return SprintCadenceResolver.Resolve([]);
-        }
+        await Task.CompletedTask;
+        return SprintCadenceResolver.Resolve([]);
     }
 }

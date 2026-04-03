@@ -2,6 +2,7 @@
 @page "/home/delivery/sprint"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @using PoTool.Client.Services
 @using PoTool.Client.Pages.Home.Components
@@ -975,6 +976,8 @@
     private string? _selectedEpicName;
     private int? _selectedFeatureId;
     private string? _selectedFeatureName;
+    private int? _selectedTeamId;
+    private int? _selectedSprintId;
 
     private List<TeamDto> _teams = new();
     private List<SprintDto> _allSprints = new();
@@ -1082,17 +1085,39 @@
             _teams = (await teamsTask).ToList();
             _products = (await productsTask).ToList();
             _tfsConfig = await configTask;
+            var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
+            _selectedTeamId = context.TeamId;
+            _selectedSprintId = context.SprintId;
 
-            var sprintTasks = _teams.Select(team => LoadTeamSprintsSafeAsync(team.Id, cancellationToken));
-            var sprintSets = await Task.WhenAll(sprintTasks);
-            _allSprints = sprintSets
-                .SelectMany(sprints => sprints)
-                .GroupBy(sprint => sprint.Id)
-                .Select(group => group.First())
-                .ToList();
+            if (!_selectedTeamId.HasValue)
+            {
+                _contextErrorMessage = "Sprint Delivery requires an explicit team.";
+                _isSummaryLoading = false;
+                _isBuildQualityLoading = false;
+                return;
+            }
+
+            if (!_selectedSprintId.HasValue)
+            {
+                _contextErrorMessage = "Sprint Delivery requires an explicit sprint.";
+                _isSummaryLoading = false;
+                _isBuildQualityLoading = false;
+                return;
+            }
+
+            _allSprints = (await LoadTeamSprintsSafeAsync(_selectedTeamId.Value, cancellationToken)).ToList();
 
             ApplySprintFilters();
-            FindCurrentSprint();
+            _currentSprintIndex = _filteredSprints.FindIndex(s => s.Id == _selectedSprintId.Value);
+            _currentSprint = _currentSprintIndex >= 0 ? _filteredSprints[_currentSprintIndex] : null;
+
+            if (_currentSprint is null)
+            {
+                _contextErrorMessage = "The selected sprint could not be resolved for the selected team.";
+                _isSummaryLoading = false;
+                _isBuildQualityLoading = false;
+                return;
+            }
         }
         catch (OperationCanceledException)
         {
@@ -1188,24 +1213,6 @@
             .ToList();
 
         _filteredProducts = _products.ToList();
-    }
-
-    private void FindCurrentSprint()
-    {
-        var now = DateTimeOffset.UtcNow;
-        _currentSprintIndex = _filteredSprints.FindIndex(s =>
-            s.StartUtc <= now && s.EndUtc >= now);
-
-        if (_currentSprintIndex < 0 && _filteredSprints.Count > 0)
-        {
-            _currentSprintIndex = _filteredSprints.FindLastIndex(s => s.EndUtc <= now);
-            if (_currentSprintIndex < 0)
-            {
-                _currentSprintIndex = _filteredSprints.Count - 1;
-            }
-        }
-
-        _currentSprint = _currentSprintIndex >= 0 ? _filteredSprints[_currentSprintIndex] : null;
     }
 
     private async Task LoadSummaryAsync()
@@ -1680,7 +1687,9 @@
 
     private string BuildWorkItemActivityUrl(int workItemId)
     {
-        var path = $"{WorkspaceRoutes.SprintDeliveryActivity}/{workItemId}";
+        var path = WorkspaceQueryContextHelper.BuildRoute(
+            $"{WorkspaceRoutes.SprintDeliveryActivity}/{workItemId}",
+            new WorkspaceQueryContext(TeamId: _selectedTeamId, SprintId: _currentSprint?.Id));
         if (!_profileId.HasValue)
         {
             return path;

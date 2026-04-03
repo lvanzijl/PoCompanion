@@ -644,21 +644,14 @@
                 await LoadSprintsForTeamAsync(_selectedTeamId.Value);
             }
 
-            if (_selectedTeamId.HasValue && !_selectedSprintId.HasValue && _sprints.Count > 0)
+            if (_selectedSprintId.HasValue && (!_selectedTeamId.HasValue || !_sprints.Any(s => s.Id == _selectedSprintId.Value)))
             {
-                _selectedSprintId = SelectDefaultSprintId(_sprints);
+                _selectedSprintId = null;
             }
 
-            if (_selectedSprintId.HasValue)
+            if (_selectedTeamId.HasValue && _selectedSprintId.HasValue)
             {
                 await LoadInsightsAsync();
-                return;
-            }
-
-            // Auto-select team if only one is available
-            if (!_selectedTeamId.HasValue && _teams.Count == 1)
-            {
-                await OnTeamChanged(_teams[0].Id);
                 return;
             }
         }
@@ -691,23 +684,9 @@
                     .OrderByDescending(s => s.StartUtc)
                     .ToList();
 
-                // Auto-select the current sprint (or the most recent past sprint)
-                if (_sprints.Count > 0)
+                if (_selectedSprintId.HasValue && !_sprints.Any(s => s.Id == _selectedSprintId.Value))
                 {
-                    var now = DateTimeOffset.UtcNow;
-
-                    var current = _sprints.FirstOrDefault(s =>
-                        s.StartUtc.HasValue && s.EndUtc.HasValue &&
-                        s.StartUtc.Value <= now && s.EndUtc.Value >= now);
-
-                    if (current is null)
-                    {
-                        var mostRecentPast = _sprints.FirstOrDefault(s =>
-                            s.EndUtc.HasValue && s.EndUtc.Value <= now);
-                        current = mostRecentPast ?? _sprints[0];
-                    }
-
-                    _selectedSprintId = current.Id;
+                    _selectedSprintId = null;
                 }
             }
             catch (Exception ex)
@@ -715,7 +694,6 @@
                 Snackbar.Add($"Could not load sprints: {ex.Message}", Severity.Warning);
             }
 
-            // Load data for the auto-selected sprint (if any)
             if (_selectedSprintId.HasValue)
             {
                 UpdateContextUrl();
@@ -748,7 +726,7 @@
 
     private async Task LoadInsightsAsync()
     {
-        if (!_activeProfileId.HasValue || !_selectedSprintId.HasValue)
+        if (!_activeProfileId.HasValue || !_selectedTeamId.HasValue || !_selectedSprintId.HasValue)
             return;
 
         _isLoading    = true;
@@ -975,26 +953,6 @@
             .Where(s => s.StartUtc.HasValue)
             .OrderByDescending(s => s.StartUtc)
             .ToList();
-    }
-
-    private static int? SelectDefaultSprintId(IReadOnlyList<SprintDto> sprints)
-    {
-        if (sprints.Count == 0)
-        {
-            return null;
-        }
-
-        var now = DateTimeOffset.UtcNow;
-        var current = sprints.FirstOrDefault(s =>
-            s.StartUtc.HasValue && s.EndUtc.HasValue &&
-            s.StartUtc.Value <= now && s.EndUtc.Value >= now);
-
-        if (current is null)
-        {
-            current = sprints.FirstOrDefault(s => s.EndUtc.HasValue && s.EndUtc.Value <= now) ?? sprints[0];
-        }
-
-        return current.Id;
     }
 
     private void UpdateContextUrl()
