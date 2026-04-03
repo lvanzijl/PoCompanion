@@ -19,34 +19,9 @@ public static class WorkspaceRoutes
     public const string SyncGate = "/sync-gate";
     
     /// <summary>
-    /// Legacy landing page route for classic intent-based navigation.
-    /// </summary>
-    public const string Legacy = "/legacy";
-
-    /// <summary>
     /// Profile selection route.
     /// </summary>
     public const string Profiles = "/profiles";
-
-    /// <summary>
-    /// Product Workspace route.
-    /// </summary>
-    public const string ProductWorkspace = "/workspace/product";
-
-    /// <summary>
-    /// Team Workspace route.
-    /// </summary>
-    public const string TeamWorkspace = "/workspace/team";
-
-    /// <summary>
-    /// Analysis Workspace route.
-    /// </summary>
-    public const string AnalysisWorkspace = "/workspace/analysis";
-
-    /// <summary>
-    /// Communication Workspace route.
-    /// </summary>
-    public const string CommunicationWorkspace = "/workspace/communication";
 
     #region Workspace Navigation Routes
 
@@ -217,35 +192,12 @@ public static class WorkspaceRoutes
     /// Delivery Trends route — temporal delivery patterns across multiple sprints (Trends workspace).
     /// </summary>
     public const string DeliveryTrends = "/home/trends/delivery";
-    
-    // Legacy Landing route constant for backward compatibility - alias to the new Legacy constant
-    public const string Landing = Legacy;
-
     #endregion
 
     /// <summary>
     /// Work Item Explorer route.
     /// </summary>
     public const string WorkItems = "/workitems";
-
-    /// <summary>
-    /// Gets the target workspace route for a given intent.
-    /// </summary>
-    /// <param name="intent">The navigation intent.</param>
-    /// <param name="scopeLevel">The current scope level.</param>
-    /// <returns>The workspace route for the intent.</returns>
-    public static string GetRouteForIntent(Intent intent, ScopeLevel scopeLevel = ScopeLevel.Portfolio)
-    {
-        return intent switch
-        {
-            Intent.Overzien when scopeLevel == ScopeLevel.Team => TeamWorkspace,
-            Intent.Overzien => ProductWorkspace,
-            Intent.Begrijpen => AnalysisWorkspace,
-            Intent.Plannen => PlanningWorkspace,
-            Intent.Delen => CommunicationWorkspace,
-            _ => Legacy
-        };
-    }
 
     /// <summary>
     /// Gets the per-product roadmap editor route for a specific product.

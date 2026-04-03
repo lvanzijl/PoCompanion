@@ -259,10 +259,10 @@
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">
                                         @lane.SprintCadence.TooltipText
                                     </MudText>
-                                    @if (lane.SprintCadence.UsesDefaultDuration)
+                                    @if (!lane.SprintCadence.IsResolved)
                                     {
                                         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning" Class="mt-2">
-                                            Using default sprint duration
+                                            Sprint cadence unavailable
                                         </MudChip>
                                     }
 
@@ -317,14 +317,10 @@
                                                                     {
                                                                         <MudText Typo="Typo.caption" Color="Color.Warning">Low confidence forecast</MudText>
                                                                     }
-                                                                    @if (lane.SprintCadence.UsesFallback)
-                                                                    {
-                                                                        <MudText Typo="Typo.caption" Color="Color.Warning">Sprint cadence fallback in use</MudText>
-                                                                    }
                                                                     <MudText Typo="Typo.caption">@lane.SprintCadence.TooltipText</MudText>
-                                                                    @if (lane.SprintCadence.UsesDefaultDuration)
+                                                                    @if (!lane.SprintCadence.IsResolved)
                                                                     {
-                                                                        <MudText Typo="Typo.caption" Color="Color.Warning">Using default sprint duration</MudText>
+                                                                        <MudText Typo="Typo.caption" Color="Color.Warning">Timeline hidden until explicit sprint cadence is available.</MudText>
                                                                     }
                                                                     @if (row.IsDelayed)
                                                                     {
@@ -918,12 +914,12 @@
                     var epicTfsIds = lane.Epics.Select(e => e.TfsId).ToList();
                      var dependencyTask = AnalyticsService.LoadDependencySignalsAsync(epicTfsIds);
                      var projectionTask = ProductService.GetPlanningProjectionsAsync(product.Id);
-                     var sprintCadenceTask = ResolveSprintCadenceAsync(product);
-                     await Task.WhenAll(dependencyTask, projectionTask, sprintCadenceTask);
+                     var sprintCadence = ResolveSprintCadence();
+                     await Task.WhenAll(dependencyTask, projectionTask);
 
                      var epicIdsWithDependencies = await dependencyTask;
                      var projections = await projectionTask;
-                     lane.SprintCadence = await sprintCadenceTask;
+                     lane.SprintCadence = sprintCadence;
                      var projectionsByEpicId = projections.ToDictionary(projection => projection.EpicId);
                      foreach (var epic in lane.Epics)
                      {
@@ -1486,6 +1482,11 @@
 
     private static RoadmapTimelineModel BuildTimeline(ProductLane lane)
     {
+        if (!lane.SprintCadence.IsResolved)
+        {
+            return new RoadmapTimelineModel(null, null, []);
+        }
+
         return RoadmapTimelineLayout.Build(
             lane.Epics
                 .Select(epic => new RoadmapTimelineEpicInput(
@@ -1498,7 +1499,7 @@
                     epic.HasForecast,
                     epic.IsDelayed))
                 .ToList(),
-            new RoadmapTimelineBuildOptions(lane.SprintCadence.DurationDays));
+            new RoadmapTimelineBuildOptions(lane.SprintCadence.DurationDays!.Value));
     }
 
     private static string GetTimelineBarClass(RoadmapTimelineRow row, SprintCadenceInfo sprintCadence)
@@ -1509,7 +1510,7 @@
             classes.Add("projection-timeline-bar-delayed");
         }
 
-        if (row.IsLowConfidence || sprintCadence.UsesFallback)
+        if (row.IsLowConfidence)
         {
             classes.Add("projection-timeline-bar-low-confidence");
         }
@@ -1536,9 +1537,8 @@
         return days == 1 ? "1 day" : $"{days} days";
     }
 
-    private async Task<SprintCadenceInfo> ResolveSprintCadenceAsync(ProductDto product)
+    private static SprintCadenceInfo ResolveSprintCadence()
     {
-        await Task.CompletedTask;
         return SprintCadenceResolver.Resolve([]);
     }
 }
