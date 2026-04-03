@@ -60,7 +60,7 @@ From that model:
 | `/settings/{SelectedTopic}` | `Pages/SettingsPage.razor` | Settings sidebar topic nav | direct URL | Yes | No | utility/settings | Visible topics: cache, cache-management, tfs, import-export, workitem-states, triage-tags, getting-started (`SettingsPage.razor:18-70,188-192`). |
 | `/settings/workitem-states` | `Pages/Settings/WorkItemStates.razor` | Settings sidebar → Work Item States | `WorkItemStateMappingSection` button | Yes | No | utility/settings | (`SettingsPage.razor:50-55`, `Components/Settings/WorkItemStateMappingSection.razor:4-21`). |
 | `/settings/teams` | `Pages/Settings/ManageTeams.razor` | Profiles → Manage Teams | legacy TeamWorkspace prompt | Yes | No | utility/settings | Discoverable from ProfilesHome (`ProfilesHome.razor:89-103,209-212`). |
-| `/settings/products` | `Pages/Settings/ManageProducts.razor` | none in modern UI found | legacy ProductWorkspace prompt only | No | Yes | residual via hidden legacy area | Only inbound link found is inside undiscoverable legacy ProductWorkspace (`Pages/LegacyWorkspaces/ProductWorkspace.razor:105`). |
+| `/settings/products` | `Pages/Settings/ManageProducts.razor` | none in modern UI found | legacy ProductWorkspace prompt only | No | Yes | residual via hidden legacy area | Only inbound link found at audit time was inside the undiscoverable legacy ProductWorkspace alert (same alert block now at `Pages/LegacyWorkspaces/ProductWorkspace.razor:103-106`, later changed by Batch 1 cleanup). |
 | `/settings/productowner/{ProfileId:int}` | `Pages/Settings/ManageProductOwner.razor` | Profiles → profile tile detail icon | return from edit page | Yes | No | utility/settings | (`Components/Settings/ProfileTile.razor:36-41,121-126`, `EditProductOwner.razor:248-318`). |
 | `/settings/productowner/edit/{ProfileId:int?}` | `Pages/Settings/EditProductOwner.razor` | Profiles → Add Profile | Manage Product Owner → Edit | Yes | No | utility/settings | (`ProfilesHome.razor:62-76,203-207`, `ManageProductOwner.razor:394`). |
 | `/profiles` | `Pages/ProfilesHome.razor` | profile selector; startup redirects; startup guard buttons | direct URL | Yes | No | setup/utility | (`Components/Settings/ProfileSelector.razor:128`, `Index.razor:47-50`, `StartupGuard.razor:41-55`). |
@@ -87,7 +87,7 @@ From that model:
    Routable detail page that expects `bugId` in the query string (`BugDetail.razor:199-227`), but no inbound link to it was found. It has outbound links back to Bug Overview / Bug Triage / Health, but no visible entry path into it.
 
 4. **Manage Products — `/settings/products`**  
-   Routable settings page, but the only inbound link found is inside the undiscoverable legacy Product workspace (`Pages/LegacyWorkspaces/ProductWorkspace.razor:105`).
+   Routable settings page, but the only inbound link found at audit time was inside the undiscoverable legacy Product workspace alert block (`Pages/LegacyWorkspaces/ProductWorkspace.razor:103-106`, later changed by Batch 1 cleanup).
 
 ### Residual legacy pages outside the intended modern app flow
 

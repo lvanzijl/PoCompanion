@@ -25,25 +25,25 @@ Not removed in this batch because still shared:
 
 ## 2. Files deleted
 
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Settings/ManageProducts.razor`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Core/Settings/Queries/GetOrphanProductsQuery.cs`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Handlers/Settings/Products/GetOrphanProductsQueryHandler.cs`
+- `PoTool.Client/Pages/Settings/ManageProducts.razor`
+- `PoTool.Core/Settings/Queries/GetOrphanProductsQuery.cs`
+- `PoTool.Api/Handlers/Settings/Products/GetOrphanProductsQueryHandler.cs`
 
 ## 3. Files modified
 
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Controllers/ProductsController.cs`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Repositories/ProductRepository.cs`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/ApiClient/Generated/ApiClient.g.cs`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/ApiClient/OpenApi/swagger.json`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Settings/ProfileTile.razor`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/LegacyWorkspaces/ProductWorkspace.razor`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Services/ProductService.cs`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Core/Contracts/IProductRepository.cs`
-- `/home/runner/work/PoCompanion/PoCompanion/docs/analysis/filter-analysis.md`
-- `/home/runner/work/PoCompanion/PoCompanion/docs/architecture/gebruikershandleiding.md`
-- `/home/runner/work/PoCompanion/PoCompanion/docs/implementation/tfs-cache-implementation-plan.md`
-- `/home/runner/work/PoCompanion/PoCompanion/docs/implementation/ui-migration-plan.md`
-- `/home/runner/work/PoCompanion/PoCompanion/docs/release-notes.json`
+- `PoTool.Api/Controllers/ProductsController.cs`
+- `PoTool.Api/Repositories/ProductRepository.cs`
+- `PoTool.Client/ApiClient/Generated/ApiClient.g.cs`
+- `PoTool.Client/ApiClient/OpenApi/swagger.json`
+- `PoTool.Client/Components/Settings/ProfileTile.razor`
+- `PoTool.Client/Pages/LegacyWorkspaces/ProductWorkspace.razor`
+- `PoTool.Client/Services/ProductService.cs`
+- `PoTool.Core/Contracts/IProductRepository.cs`
+- `docs/analysis/filter-analysis.md`
+- `docs/architecture/gebruikershandleiding.md`
+- `docs/implementation/tfs-cache-implementation-plan.md`
+- `docs/implementation/ui-migration-plan.md`
+- `docs/release-notes.json`
 
 ## 4. Backend/API impact
 
@@ -59,7 +59,7 @@ Retained backend/API surface because it is still shared with surviving features:
 
 - `GET /api/products` for profile-scoped product reads
 - `GET /api/products/{id}`
-- `GET /api/products/all}`
+- `GET /api/products/all`
 - `GET /api/products/selectable`
 - create/update/delete/reorder/change-owner/link-team/unlink-team operations
 - product repository/entity infrastructure
@@ -75,14 +75,14 @@ Reason for retention:
 
 Retained as shared infrastructure, not feature residue:
 
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Settings/ManageProductOwner.razor`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Settings/ProductEditor.razor`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Models/ProductEditorDraft.cs`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Services/ProductService.cs` remaining methods
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Controllers/ProductsController.cs` remaining endpoints
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Core/Contracts/IProductRepository.cs` remaining methods
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Repositories/ProductRepository.cs` remaining methods
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Shared/Settings/ProductDto.cs`
+- `PoTool.Client/Pages/Settings/ManageProductOwner.razor`
+- `PoTool.Client/Components/Settings/ProductEditor.razor`
+- `PoTool.Client/Models/ProductEditorDraft.cs`
+- `PoTool.Client/Services/ProductService.cs` remaining methods
+- `PoTool.Api/Controllers/ProductsController.cs` remaining endpoints
+- `PoTool.Core/Contracts/IProductRepository.cs` remaining methods
+- `PoTool.Api/Repositories/ProductRepository.cs` remaining methods
+- `PoTool.Shared/Settings/ProductDto.cs`
 - product persistence entities and mappings
 
 These remain because they still support active Product Owner product management and broader product-scoped application features.
@@ -103,20 +103,20 @@ Verified no remaining code references in client/API/core for:
 Validation evidence:
 
 - repo-wide sweeps under `PoTool.Client`, `PoTool.Api`, and `PoTool.Core` returned no matches after cleanup
-- no `/settings/products` reference remains under `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/LegacyWorkspaces`
+- no `/settings/products` reference remains under `PoTool.Client/Pages/LegacyWorkspaces`
 
 ### Legacy page references
 
 - No legacy page still links to `/settings/products`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/LegacyWorkspaces/ProductWorkspace.razor` now shows plain text guidance instead of a route link
+- `PoTool.Client/Pages/LegacyWorkspaces/ProductWorkspace.razor` now shows plain text guidance instead of a route link
 
 ### Historical documentation references retained
 
 Historical analysis/report artifacts still mention Manage Products, including:
 
-- `/home/runner/work/PoCompanion/PoCompanion/docs/analysis/assets/2026-04-02-ux-full-scan/scan-results.json`
-- `/home/runner/work/PoCompanion/PoCompanion/docs/analysis/2026-04-02-ux-full-scan-report.md`
-- older dated reports under `/home/runner/work/PoCompanion/PoCompanion/docs/reports/`
+- `docs/analysis/assets/2026-04-02-ux-full-scan/scan-results.json`
+- `docs/analysis/2026-04-02-ux-full-scan-report.md`
+- older dated reports under `docs/reports/`
 - the pre-cleanup navigation audit report created earlier today
 
 These were retained as historical records rather than current product guidance. Active guidance docs were updated.
@@ -165,4 +165,4 @@ These were retained as historical records rather than current product guidance. 
 
 ### Release notes
 
-- updated: `/home/runner/work/PoCompanion/PoCompanion/docs/release-notes.json`
+- updated: `docs/release-notes.json`
