@@ -118,15 +118,13 @@ public class NavigationContextServiceTests
         // Act
         var newContext = _service.WithUpdates(ctx => ctx with
         {
-            TimeHorizon = TimeHorizon.Historical,
-            Mode = "health"
+            TimeHorizon = TimeHorizon.Historical
         });
 
         // Assert
         Assert.AreNotSame(originalContext, newContext);
         Assert.AreEqual(TimeHorizon.Current, originalContext!.TimeHorizon);
         Assert.AreEqual(TimeHorizon.Historical, newContext.TimeHorizon);
-        Assert.AreEqual("health", newContext.Mode);
     }
 
     [TestMethod]
@@ -138,19 +136,17 @@ public class NavigationContextServiceTests
 
         var newContext = new NavigationContext
         {
-            Intent = Intent.Begrijpen,
+            Intent = Intent.Plannen,
             Scope = new Scope { Level = ScopeLevel.Product, ProfileId = 1, ProductId = 42 },
             Trigger = new Trigger { Type = TriggerType.Deviation },
-            TimeHorizon = TimeHorizon.Current,
-            Mode = "health"
+            TimeHorizon = TimeHorizon.Future
         };
 
         // Act
-        await _service.NavigateWithContextAsync("/workspace/analysis", newContext);
+        await _service.NavigateWithContextAsync("/home/planning", newContext);
 
         // Assert
-        Assert.AreEqual(Intent.Begrijpen, _service.CurrentOrDefault?.Intent);
-        Assert.AreEqual("health", _service.CurrentOrDefault?.Mode);
+        Assert.AreEqual(Intent.Plannen, _service.CurrentOrDefault?.Intent);
         Assert.IsNotNull(_service.CurrentOrDefault?.Parent);
     }
 
@@ -163,19 +159,19 @@ public class NavigationContextServiceTests
 
         var newContext = new NavigationContext
         {
-            Intent = Intent.Begrijpen,
+            Intent = Intent.Overzien,
             Scope = new Scope { Level = ScopeLevel.Product, ProfileId = 1, ProjectAlias = "payments-platform", ProductId = 42 },
             Trigger = new Trigger { Type = TriggerType.Choice },
             TimeHorizon = TimeHorizon.Current
         };
 
         // Act
-        await _service.NavigateWithContextAsync("/workspace/analysis", newContext);
+        await _service.NavigateWithContextAsync("/workspace/product", newContext);
 
         // Assert
         Assert.IsNotNull(_navigationManager.LastNavigatedUri);
-        StringAssert.StartsWith(_navigationManager.LastNavigatedUri, "/workspace/analysis?");
-        StringAssert.Contains(_navigationManager.LastNavigatedUri, "intent=begrijpen");
+        StringAssert.StartsWith(_navigationManager.LastNavigatedUri, "/workspace/product?");
+        StringAssert.Contains(_navigationManager.LastNavigatedUri, "intent=overzien");
         StringAssert.Contains(_navigationManager.LastNavigatedUri, "projectAlias=payments-platform");
         StringAssert.Contains(_navigationManager.LastNavigatedUri, "productId=42");
     }
@@ -186,22 +182,20 @@ public class NavigationContextServiceTests
         // Arrange
         var context = new NavigationContext
         {
-            Intent = Intent.Begrijpen,
+            Intent = Intent.Overzien,
             Scope = new Scope { Level = ScopeLevel.Product, ProfileId = 1, ProjectAlias = "payments-platform", ProductId = 42 },
             Trigger = new Trigger { Type = TriggerType.Deviation },
-            TimeHorizon = TimeHorizon.Historical,
-            Mode = "health"
+            TimeHorizon = TimeHorizon.Historical
         };
 
         // Act
         var queryString = _service.ToQueryString(context);
 
         // Assert
-        StringAssert.Contains(queryString, "intent=begrijpen");
+        StringAssert.Contains(queryString, "intent=overzien");
         StringAssert.Contains(queryString, "scope=product");
         StringAssert.Contains(queryString, "projectAlias=payments-platform");
         StringAssert.Contains(queryString, "productId=42");
-        StringAssert.Contains(queryString, "mode=health");
         StringAssert.Contains(queryString, "time=historical");
         StringAssert.Contains(queryString, "trigger=deviation");
     }
@@ -211,18 +205,17 @@ public class NavigationContextServiceTests
     {
         // Arrange
         _profileService.SetCachedActiveProfileId(1);
-        var queryString = "intent=begrijpen&scope=product&projectAlias=payments-platform&productId=42&mode=health&time=historical&trigger=deviation";
+        var queryString = "intent=overzien&scope=product&projectAlias=payments-platform&productId=42&time=historical&trigger=deviation";
 
         // Act
         var context = _service.FromQueryString(queryString);
 
         // Assert
         Assert.IsNotNull(context);
-        Assert.AreEqual(Intent.Begrijpen, context.Intent);
+        Assert.AreEqual(Intent.Overzien, context.Intent);
         Assert.AreEqual(ScopeLevel.Product, context.Scope.Level);
         Assert.AreEqual("payments-platform", context.Scope.ProjectAlias);
         Assert.AreEqual(42, context.Scope.ProductId);
-        Assert.AreEqual("health", context.Mode);
         Assert.AreEqual(TimeHorizon.Historical, context.TimeHorizon);
         Assert.AreEqual(TriggerType.Deviation, context.Trigger?.Type);
     }

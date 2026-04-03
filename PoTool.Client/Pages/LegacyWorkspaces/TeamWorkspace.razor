@@ -173,16 +173,6 @@
                 </MudItem>
                 
                 <MudItem xs="12" sm="6" md="3">
-                    <MudCard Elevation="1" Style="cursor: pointer; transition: all 0.2s;" Class="mud-card-hover" @onclick="NavigateToAnalysis">
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Psychology" Color="Color.Secondary" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Analyze</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Team health insights</MudText>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-                
-                <MudItem xs="12" sm="6" md="3">
                     <MudCard Elevation="1" Style="cursor: pointer; transition: all 0.2s;" Class="mud-card-hover" @onclick="NavigateToPlanning">
                         <MudCardContent Class="d-flex flex-column align-center pa-4">
                             <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Color="Color.Info" Size="Size.Large" />
@@ -425,22 +415,6 @@
     private void NavigateToVelocity()
     {
         NavigationManager.NavigateTo("/velocity");
-    }
-    
-    private async Task NavigateToAnalysis()
-    {
-        if (_currentContext == null) return;
-        
-        var newContext = _currentContext with
-        {
-            Intent = Intent.Begrijpen,
-            Trigger = new Trigger { Type = TriggerType.Choice, SourceLabel = "Team Workspace" },
-            Mode = "health"
-        };
-        
-        await NavigationContextService.NavigateWithContextAsync(
-            WorkspaceRoutes.AnalysisWorkspace, 
-            newContext);
     }
     
     private async Task NavigateToPlanning()

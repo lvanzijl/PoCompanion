@@ -31,10 +31,6 @@ public record NavigationContext
     /// </summary>
     public NavigationContext? Parent { get; init; }
 
-    /// <summary>
-    /// Optional workspace-specific mode (e.g., "health", "effort", "flow" for Analysis workspace).
-    /// </summary>
-    public string? Mode { get; init; }
 }
 
 /// <summary>
@@ -46,11 +42,6 @@ public enum Intent
     /// Build context and choose scope - "What am I looking at?"
     /// </summary>
     Overzien,
-
-    /// <summary>
-    /// Analyze, diagnose, reflect - "Why is this happening?"
-    /// </summary>
-    Begrijpen,
 
     /// <summary>
     /// Structure and look ahead - "What should happen next?"

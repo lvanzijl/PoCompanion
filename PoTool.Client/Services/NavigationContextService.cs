@@ -113,7 +113,6 @@ public class NavigationContextService : INavigationContextService
         // Define action permissions based on context
         return action switch
         {
-            "navigate-to-analysis" => true,
             "navigate-to-planning" => true,
             "navigate-to-team" => _current.Scope.ProductId != null,
             _ => true
@@ -188,11 +187,6 @@ public class NavigationContextService : INavigationContextService
             parameters.Add($"teamId={context.Scope.TeamId.Value}");
         }
         
-        if (!string.IsNullOrEmpty(context.Mode))
-        {
-            parameters.Add($"mode={HttpUtility.UrlEncode(context.Mode)}");
-        }
-        
         if (context.TimeHorizon != TimeHorizon.Current)
         {
             parameters.Add($"time={context.TimeHorizon.ToString().ToLowerInvariant()}");
@@ -234,8 +228,6 @@ public class NavigationContextService : INavigationContextService
             int? productId = int.TryParse(query["productId"], out var pid) ? pid : null;
             int? teamId = int.TryParse(query["teamId"], out var tid) ? tid : null;
             
-            var mode = query["mode"];
-            
             var timeStr = query["time"];
             var timeHorizon = Enum.TryParse<TimeHorizon>(timeStr, true, out var th) ? th : TimeHorizon.Current;
             
@@ -253,7 +245,6 @@ public class NavigationContextService : INavigationContextService
                     ProductId = productId,
                     TeamId = teamId
                 },
-                Mode = mode,
                 TimeHorizon = timeHorizon,
                 Trigger = new Trigger { Type = triggerType }
             };
@@ -289,7 +280,6 @@ public class NavigationContextService : INavigationContextService
         return intent switch
         {
             Intent.Plannen => TimeHorizon.Future,
-            Intent.Begrijpen => TimeHorizon.Current,
             _ => TimeHorizon.Current
         };
     }

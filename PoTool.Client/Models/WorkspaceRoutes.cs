@@ -33,11 +33,6 @@ public static class WorkspaceRoutes
     /// </summary>
     public const string TeamWorkspace = "/workspace/team";
 
-    /// <summary>
-    /// Analysis Workspace route.
-    /// </summary>
-    public const string AnalysisWorkspace = "/workspace/analysis";
-
     #region Workspace Navigation Routes
 
     /// <summary>
@@ -217,7 +212,6 @@ public static class WorkspaceRoutes
         {
             Intent.Overzien when scopeLevel == ScopeLevel.Team => TeamWorkspace,
             Intent.Overzien => ProductWorkspace,
-            Intent.Begrijpen => AnalysisWorkspace,
             Intent.Plannen => PlanningWorkspace,
             _ => Home
         };
