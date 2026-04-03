@@ -124,16 +124,6 @@
                     </MudCard>
                 </MudItem>
                 
-                <MudItem xs="12" sm="6" md="3">
-                    <MudCard Elevation="1" Style="cursor: pointer; transition: all 0.2s;" Class="mud-card-hover" @onclick="NavigateToTeam">
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Groups" Color="Color.Success" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Team View</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Velocity & sprint metrics</MudText>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-                
             </MudGrid>
         </MudPaper>
 
@@ -316,27 +306,6 @@
         await NavigationContextService.NavigateWithContextAsync(
             WorkspaceRoutes.PlanningWorkspace, 
             newContext);
-    }
-    
-    private async Task NavigateToTeam()
-    {
-        if (_currentContext == null) return;
-        
-        var newContext = _currentContext with
-        {
-            Intent = Intent.Overzien,
-            Scope = new Scope
-            {
-                Level = ScopeLevel.Team,
-                ProfileId = _currentContext.Scope.ProfileId,
-                ProductId = _selectedProductId,
-                TeamId = _selectedProduct?.TeamIds?.FirstOrDefault()
-            },
-            Trigger = new Trigger { Type = TriggerType.Choice, SourceLabel = "Product Workspace" }
-        };
-        
-        // Navigate to Team Workspace
-        await NavigationContextService.NavigateWithContextAsync(WorkspaceRoutes.TeamWorkspace, newContext);
     }
     
 }

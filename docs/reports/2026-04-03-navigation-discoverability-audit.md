@@ -102,7 +102,7 @@ From that model:
 
 These pages form a self-contained legacy navigation cluster. They are not exposed by the modern top navigation or home dashboard, but once entered manually they can navigate to one another.
 
-Update note: Batch 5.1 later removed `/workspace/communication`, and Batch 5.2 later removed `/workspace/analysis` and `/workspace/analysis/{Mode}`. The entries above reflect the audit-time state captured before those cleanup batches landed.
+Update note: Batch 5.1 later removed `/workspace/communication`, Batch 5.2 later removed `/workspace/analysis` and `/workspace/analysis/{Mode}`, and Batch 5.3 later removed `/workspace/team`, `/workspace/team/{TeamId:int}`, and the legacy `VelocityPanel`. The entries above reflect the audit-time state captured before those cleanup batches landed.
 
 ### Alias routes kept for backward compatibility rather than discovery
 

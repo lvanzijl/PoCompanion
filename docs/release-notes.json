@@ -2,6 +2,14 @@
   {
     "date": "2026-04-03",
     "type": "Changed",
+    "title": "Legacy team workspace has been removed",
+    "impact": "The standalone `/workspace/team` routes are no longer available. Legacy product pages no longer link into that removed workspace, while shared team filtering, assignment, analytics, and CDC-related logic remain available for modern features.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-03",
+    "type": "Changed",
     "title": "Legacy analysis workspace has been removed",
     "impact": "The standalone `/workspace/analysis` route is no longer available. Legacy product and team pages no longer link into that removed workspace, while shared analytics, filtering, and CDC-related logic remain in place for modern pages and reusable components.",
     "area": "Home",

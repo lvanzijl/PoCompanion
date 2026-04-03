@@ -276,17 +276,17 @@ public class NavigationContextServiceTests
     }
 
     [TestMethod]
-    public void CanPerform_NavigateToTeam_RequiresProductScope()
+    public void CanPerform_NavigateToPlanning_ReturnsTrueWhenContextExists()
     {
         // Arrange
         _profileService.SetCachedActiveProfileId(1);
         _service.SetInitialContext(Intent.Overzien, 1);
 
-        // Act - Portfolio scope (no productId)
-        var canNavigateFromPortfolio = _service.CanPerform("navigate-to-team");
+        // Act
+        var canNavigate = _service.CanPerform("navigate-to-planning");
 
         // Assert
-        Assert.IsFalse(canNavigateFromPortfolio);
+        Assert.IsTrue(canNavigate);
     }
 
     /// <summary>

@@ -114,7 +114,6 @@ public class NavigationContextService : INavigationContextService
         return action switch
         {
             "navigate-to-planning" => true,
-            "navigate-to-team" => _current.Scope.ProductId != null,
             _ => true
         };
     }

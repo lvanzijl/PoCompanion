@@ -29,7 +29,6 @@ Pages that inherit `WorkspaceBase`:
 `PoTool.Client/Services/INavigationContextService` (implemented by `NavigationContextService`) manages a richer, immutable context object used exclusively by the remaining legacy workspace pages:
 
 - `ProductWorkspace`
-- `TeamWorkspace`
 
 The context object carries:
 
