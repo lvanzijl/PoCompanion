@@ -1,0 +1,53 @@
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudAlert Severity="@Severity" Class="mb-4">
+        <MudText Typo="Typo.h6">@Title</MudText>
+        <MudText Typo="Typo.body1" Class="mt-2">@Reason</MudText>
+        <MudText Typo="Typo.body2" Class="mt-2">@RecoveryHint</MudText>
+    </MudAlert>
+
+    <MudStack Row="true" Spacing="2">
+        @if (!string.IsNullOrWhiteSpace(PrimaryActionText) && !string.IsNullOrWhiteSpace(PrimaryActionHref))
+        {
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Href="@PrimaryActionHref">
+                @PrimaryActionText
+            </MudButton>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(SecondaryActionText) && !string.IsNullOrWhiteSpace(SecondaryActionHref))
+        {
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       Href="@SecondaryActionHref">
+                @SecondaryActionText
+            </MudButton>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Reason { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string RecoveryHint { get; set; } = string.Empty;
+
+    [Parameter]
+    public Severity Severity { get; set; } = Severity.Warning;
+
+    [Parameter]
+    public string? PrimaryActionText { get; set; }
+
+    [Parameter]
+    public string? PrimaryActionHref { get; set; }
+
+    [Parameter]
+    public string? SecondaryActionText { get; set; }
+
+    [Parameter]
+    public string? SecondaryActionHref { get; set; }
+}
