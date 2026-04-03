@@ -11,6 +11,7 @@
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject ProjectService ProjectService
+@inject GlobalFilterRouteService GlobalFilterRouteService
 @inject WorkItemService WorkItemService
 @inject SprintService SprintService
 @inject TfsConfigService TfsConfigService
@@ -126,37 +127,6 @@
     }
     else
     {
-        <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                <MudIcon Icon="@Icons.Material.Filled.Folder" Color="Color.Primary" />
-                <MudText Typo="Typo.subtitle1">Project:</MudText>
-                @if (_isLoadingProjects)
-                {
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-                }
-                else if (_projects.Count == 0)
-                {
-                    <MudText Color="Color.Secondary">No projects available.</MudText>
-                }
-                else
-                {
-                    <MudSelect T="string"
-                               Value="_selectedProjectRouteKey"
-                               ValueChanged="OnProjectChanged"
-                               Variant="Variant.Outlined"
-                               Dense="true"
-                               Style="max-width: 420px;"
-                               Disabled="_isReordering">
-                        <MudSelectItem T="string" Value="@string.Empty">All projects</MudSelectItem>
-                        @foreach (var project in _projects)
-                        {
-                            <MudSelectItem T="string" Value="@project.Alias">@FormatProjectLabel(project)</MudSelectItem>
-                        }
-                    </MudSelect>
-                }
-            </MudStack>
-        </MudPaper>
-
         @if (_projectPlanningSummary is not null)
         {
             <MudPaper Elevation="2" Class="pa-4 mb-4">
@@ -259,10 +229,10 @@
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">
                                         @lane.SprintCadence.TooltipText
                                     </MudText>
-                                    @if (lane.SprintCadence.UsesDefaultDuration)
+                                    @if (!lane.SprintCadence.IsResolved)
                                     {
                                         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning" Class="mt-2">
-                                            Using default sprint duration
+                                            Sprint cadence unavailable
                                         </MudChip>
                                     }
 
@@ -317,14 +287,10 @@
                                                                     {
                                                                         <MudText Typo="Typo.caption" Color="Color.Warning">Low confidence forecast</MudText>
                                                                     }
-                                                                    @if (lane.SprintCadence.UsesFallback)
-                                                                    {
-                                                                        <MudText Typo="Typo.caption" Color="Color.Warning">Sprint cadence fallback in use</MudText>
-                                                                    }
                                                                     <MudText Typo="Typo.caption">@lane.SprintCadence.TooltipText</MudText>
-                                                                    @if (lane.SprintCadence.UsesDefaultDuration)
+                                                                    @if (!lane.SprintCadence.IsResolved)
                                                                     {
-                                                                        <MudText Typo="Typo.caption" Color="Color.Warning">Using default sprint duration</MudText>
+                                                                        <MudText Typo="Typo.caption" Color="Color.Warning">Timeline hidden until explicit sprint cadence is available.</MudText>
                                                                     }
                                                                     @if (row.IsDelayed)
                                                                     {
@@ -782,7 +748,6 @@
 
     private bool _isLoading = true;
     private bool _isReordering = false;
-    private bool _isLoadingProjects = true;
     private int? _profileId;
     private List<BreadcrumbItem> _breadcrumbs = new();
     private List<ProductLane> _productLanes = new();
@@ -835,7 +800,6 @@
         }
         finally
         {
-            _isLoadingProjects = false;
             _isLoading = false;
         }
     }
@@ -918,12 +882,12 @@
                     var epicTfsIds = lane.Epics.Select(e => e.TfsId).ToList();
                      var dependencyTask = AnalyticsService.LoadDependencySignalsAsync(epicTfsIds);
                      var projectionTask = ProductService.GetPlanningProjectionsAsync(product.Id);
-                     var sprintCadenceTask = ResolveSprintCadenceAsync(product);
-                     await Task.WhenAll(dependencyTask, projectionTask, sprintCadenceTask);
+                     var sprintCadence = ResolveSprintCadence();
+                     await Task.WhenAll(dependencyTask, projectionTask);
 
                      var epicIdsWithDependencies = await dependencyTask;
                      var projections = await projectionTask;
-                     lane.SprintCadence = await sprintCadenceTask;
+                     lane.SprintCadence = sprintCadence;
                      var projectionsByEpicId = projections.ToDictionary(projection => projection.EpicId);
                      foreach (var epic in lane.Epics)
                      {
@@ -1070,52 +1034,81 @@
         };
     }
 
-    private void NavigateToHome()
+    private async Task NavigateToHome()
     {
         var currentContext = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.Home,
-                currentContext with { ProjectAlias = _selectedProjectRouteKey }));
+        var selectedProjectId = currentContext.ProjectId
+            ?? _projects.FirstOrDefault(project => string.Equals(project.Alias, _selectedProjectRouteKey, StringComparison.OrdinalIgnoreCase))?.Id;
+        NavigationManager.NavigateTo(await GlobalFilterRouteService.BuildUriAsync(
+            WorkspaceRoutes.Home,
+            new FilterState(
+                currentContext.ProductId.HasValue ? [currentContext.ProductId.Value] : Array.Empty<int>(),
+                string.IsNullOrWhiteSpace(selectedProjectId) ? Array.Empty<string>() : [selectedProjectId],
+                currentContext.TeamId,
+                new FilterTimeSelection(
+                    currentContext.TimeMode ?? FilterTimeMode.Snapshot,
+                    currentContext.SprintId,
+                    currentContext.FromSprintId,
+                    currentContext.ToSprintId,
+                    currentContext.RollingWindow,
+                    currentContext.RollingUnit)),
+            WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
     }
 
-    private void NavigateToPlanning()
+    private async Task NavigateToPlanning()
+    {
+        NavigationManager.NavigateTo(await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+            "PlanningWorkspace",
+            _selectedProjectRouteKey,
+            additionalParams: WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
+    }
+
+    private async Task NavigateToHealth()
     {
         var currentContext = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.PlanningWorkspace,
-                currentContext with { ProjectAlias = _selectedProjectRouteKey }));
+        var selectedProjectId = currentContext.ProjectId
+            ?? _projects.FirstOrDefault(project => string.Equals(project.Alias, _selectedProjectRouteKey, StringComparison.OrdinalIgnoreCase))?.Id;
+        NavigationManager.NavigateTo(await GlobalFilterRouteService.BuildUriAsync(
+            WorkspaceRoutes.HealthWorkspace,
+            new FilterState(
+                currentContext.ProductId.HasValue ? [currentContext.ProductId.Value] : Array.Empty<int>(),
+                string.IsNullOrWhiteSpace(selectedProjectId) ? Array.Empty<string>() : [selectedProjectId],
+                currentContext.TeamId,
+                new FilterTimeSelection(
+                    currentContext.TimeMode ?? FilterTimeMode.Snapshot,
+                    currentContext.SprintId,
+                    currentContext.FromSprintId,
+                    currentContext.ToSprintId,
+                    currentContext.RollingWindow,
+                    currentContext.RollingUnit)),
+            WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
     }
 
-    private void NavigateToHealth()
+    private async Task NavigateToRoadmapEditor(int productId)
     {
-        var currentContext = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.HealthWorkspace,
-                currentContext with { ProjectAlias = _selectedProjectRouteKey }));
+        NavigationManager.NavigateTo(await GlobalFilterRouteService.BuildUriAsync(
+            WorkspaceRoutes.GetProductRoadmapEditor(productId),
+            new FilterState(
+                [productId],
+                string.IsNullOrWhiteSpace(_selectedProjectRouteKey)
+                    ? Array.Empty<string>()
+                    : [_projects.FirstOrDefault(project => string.Equals(project.Alias, _selectedProjectRouteKey, StringComparison.OrdinalIgnoreCase))?.Id ?? string.Empty],
+                null,
+                FilterTimeSelection.Snapshot),
+            WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
     }
 
-    private void NavigateToRoadmapEditor(int productId)
-    {
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.GetProductRoadmapEditor(productId),
-                new WorkspaceQueryContext(_selectedProjectRouteKey, productId)));
-    }
-
-    private void NavigateToOverview()
+    private async Task NavigateToOverview()
     {
         if (string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
         {
             return;
         }
 
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.GetProjectPlanningOverview(_selectedProjectRouteKey),
-                new WorkspaceQueryContext(_selectedProjectRouteKey)));
+        NavigationManager.NavigateTo(await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+            "ProjectPlanningOverview",
+            _selectedProjectRouteKey,
+            additionalParams: WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
     }
 
     private async Task<List<ProjectDto>> LoadAvailableProjectsAsync(IReadOnlyCollection<ProductDto> products)
@@ -1167,14 +1160,11 @@
         await LoadProjectPlanningSummaryAsync();
         await BuildProductLanesAsync();
 
-        var route = string.IsNullOrWhiteSpace(_selectedProjectRouteKey)
-            ? WorkspaceRoutes.ProductRoadmaps
-            : WorkspaceRoutes.GetProjectProductRoadmaps(_selectedProjectRouteKey);
-
         NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                route,
-                new WorkspaceQueryContext(ProjectAlias: _selectedProjectRouteKey)),
+            await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+                "ProductRoadmaps",
+                _selectedProjectRouteKey,
+                additionalParams: WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)),
             forceLoad: false);
     }
 
@@ -1486,6 +1476,11 @@
 
     private static RoadmapTimelineModel BuildTimeline(ProductLane lane)
     {
+        if (!lane.SprintCadence.IsResolved)
+        {
+            return new RoadmapTimelineModel(null, null, []);
+        }
+
         return RoadmapTimelineLayout.Build(
             lane.Epics
                 .Select(epic => new RoadmapTimelineEpicInput(
@@ -1498,7 +1493,7 @@
                     epic.HasForecast,
                     epic.IsDelayed))
                 .ToList(),
-            new RoadmapTimelineBuildOptions(lane.SprintCadence.DurationDays));
+            new RoadmapTimelineBuildOptions(lane.SprintCadence.DurationDays!.Value));
     }
 
     private static string GetTimelineBarClass(RoadmapTimelineRow row, SprintCadenceInfo sprintCadence)
@@ -1509,7 +1504,7 @@
             classes.Add("projection-timeline-bar-delayed");
         }
 
-        if (row.IsLowConfidence || sprintCadence.UsesFallback)
+        if (row.IsLowConfidence)
         {
             classes.Add("projection-timeline-bar-low-confidence");
         }
@@ -1536,22 +1531,8 @@
         return days == 1 ? "1 day" : $"{days} days";
     }
 
-    private async Task<SprintCadenceInfo> ResolveSprintCadenceAsync(ProductDto product)
+    private static SprintCadenceInfo ResolveSprintCadence()
     {
-        if (product.TeamIds.Count == 0)
-        {
-            return SprintCadenceResolver.Resolve([]);
-        }
-
-        try
-        {
-            var sprints = (await SprintService.GetSprintsForTeamAsync(product.TeamIds.First())).ToList();
-            return SprintCadenceResolver.Resolve(sprints);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Falling back to default sprint cadence for product {ProductId}", product.Id);
-            return SprintCadenceResolver.Resolve([]);
-        }
+        return SprintCadenceResolver.Resolve([]);
     }
 }

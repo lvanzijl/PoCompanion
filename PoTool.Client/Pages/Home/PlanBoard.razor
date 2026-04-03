@@ -10,6 +10,7 @@
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject ProjectService ProjectService
+@inject GlobalFilterRouteService GlobalFilterRouteService
 @inject WorkItemService WorkItemService
 @inject SprintService SprintService
 @inject MetricsStateService MetricsStateService
@@ -60,65 +61,6 @@
                     </MudButton>
                 }
             </MudStack>
-        </MudStack>
-    </MudPaper>
-
-    @* Product Selector *@
-    <MudPaper Elevation="2" Class="pa-4 mb-4">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-            <MudIcon Icon="@Icons.Material.Filled.Folder" Color="Color.Primary" />
-            <MudText Typo="Typo.subtitle1">Project:</MudText>
-            @if (_isLoadingProjects)
-            {
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-            }
-            else if (_projects.Count == 0)
-            {
-                <MudText Color="Color.Secondary">No projects available.</MudText>
-            }
-            else
-            {
-                <MudSelect T="string"
-                           Value="_selectedProjectRouteKey"
-                           ValueChanged="OnProjectChanged"
-                           Variant="Variant.Outlined"
-                           Dense="true"
-                           Style="max-width: 340px;"
-                           Disabled="_isBusy">
-                    <MudSelectItem T="string" Value="@string.Empty">All projects</MudSelectItem>
-                    @foreach (var project in _projects)
-                    {
-                        <MudSelectItem T="string" Value="@project.Alias">@FormatProjectLabel(project)</MudSelectItem>
-                    }
-                </MudSelect>
-            }
-
-            <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" />
-            <MudText Typo="Typo.subtitle1">Product:</MudText>
-            @if (_isLoadingProducts)
-            {
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-            }
-            else if (_products.Count == 0)
-            {
-                <MudText Color="Color.Secondary">No products available for the selected project.</MudText>
-            }
-            else
-            {
-                <MudSelect T="int?"
-                           Value="_selectedProductId"
-                           ValueChanged="OnProductChanged"
-                           Variant="Variant.Outlined"
-                           Dense="true"
-                           Style="max-width: 400px;"
-                           Placeholder="Select a product to plan…"
-                           Disabled="_isBusy">
-                    @foreach (var product in _products)
-                    {
-                        <MudSelectItem T="int?" Value="@((int?)product.Id)">@product.Name</MudSelectItem>
-                    }
-                </MudSelect>
-            }
         </MudStack>
     </MudPaper>
 
@@ -208,6 +150,13 @@
         @if (_isBusy)
         {
             <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-2" />
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_sprintResolutionMessage))
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-3">
+                @_sprintResolutionMessage
+            </MudAlert>
         }
 
         <div class="plan-board-columns">
@@ -539,8 +488,6 @@
     private ProjectPlanningSummaryDto? _projectPlanningSummary;
     private string? _selectedProjectRouteKey;
     private int? _selectedProductId;
-    private bool _isLoadingProjects = true;
-    private bool _isLoadingProducts = true;
     private bool _isLoadingBoard;
     private bool _isBusy;
 
@@ -567,6 +514,7 @@
     private CanonicalFilterMetadata? _capacityCalibrationFilterMetadata;
     private int[] _selectedProductRootIds = [];
     private bool _isRefreshingFromTfs;
+    private string? _sprintResolutionMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -615,8 +563,6 @@
         }
         finally
         {
-            _isLoadingProjects = false;
-            _isLoadingProducts = false;
         }
     }
 
@@ -701,18 +647,9 @@
             var workItems = _boardState.Data.ToList();
             _allWorkItems = workItems;
 
-            // Load sprints for the product's first team
             var sprints = new List<SprintDto>();
             var allTeamSprints = new List<SprintDto>();
-            if (product.TeamIds.Count > 0)
-            {
-                allTeamSprints = (await SprintService.GetSprintsForTeamAsync(product.TeamIds.First())).ToList();
-                sprints = allTeamSprints
-                    .Where(s => s.EndUtc.HasValue && s.EndUtc.Value > DateTimeOffset.UtcNow)
-                    .OrderBy(s => s.StartUtc)
-                    .Take(3)
-                    .ToList();
-            }
+            _sprintResolutionMessage = "Plan Board no longer derives sprint columns from product teams. Sprint columns stay unavailable until explicit sprint inputs exist.";
 
             // Build sprint columns
             _sprintColumns = sprints.Select(s => new SprintColumn
@@ -1119,13 +1056,15 @@
     private static string NormalizeIterationPath(string path) =>
         path.Replace('/', '\\').Trim();
 
-    private void NavigateToPlanning() =>
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.PlanningWorkspace,
-                new WorkspaceQueryContext(_selectedProjectRouteKey, _selectedProductId)));
+    private async Task NavigateToPlanning()
+        => NavigationManager.NavigateTo(
+            await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+                "PlanningWorkspace",
+                _selectedProjectRouteKey,
+                _selectedProductId,
+                WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
 
-    private void NavigateToOverview()
+    private async Task NavigateToOverview()
     {
         if (string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
         {
@@ -1133,9 +1072,11 @@
         }
 
         NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.GetProjectPlanningOverview(_selectedProjectRouteKey),
-                new WorkspaceQueryContext(_selectedProjectRouteKey, _selectedProductId)));
+            await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+                "ProjectPlanningOverview",
+                _selectedProjectRouteKey,
+                _selectedProductId,
+                WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
     }
 
     private async Task<List<ProjectDto>> LoadAvailableProjectsAsync(IReadOnlyCollection<ProductDto> products)
@@ -1181,14 +1122,12 @@
 
     private async Task NavigateToCurrentScopeAsync(int? productId, bool loadBoard)
     {
-        var route = string.IsNullOrWhiteSpace(_selectedProjectRouteKey)
-            ? WorkspaceRoutes.PlanBoard
-            : WorkspaceRoutes.GetProjectPlanBoard(_selectedProjectRouteKey);
-
         NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                route,
-                new WorkspaceQueryContext(_selectedProjectRouteKey, productId)),
+            await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+                "PlanBoard",
+                _selectedProjectRouteKey,
+                productId,
+                WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)),
             forceLoad: false);
 
         if (productId == null)

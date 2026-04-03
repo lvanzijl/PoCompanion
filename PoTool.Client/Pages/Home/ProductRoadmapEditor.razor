@@ -6,6 +6,7 @@
 @using ApiWorkItemDto = PoTool.Shared.WorkItems.WorkItemDto
 @inject IProfileService ProfileService
 @inject ProductService ProductService
+@inject GlobalFilterRouteService GlobalFilterRouteService
 @inject WorkItemService WorkItemService
 @inject TfsConfigService TfsConfigService
 @inject NavigationManager NavigationManager
@@ -1235,24 +1236,25 @@
         };
     }
 
-    private void NavigateToHome()
+    private async Task NavigateToHome()
     {
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.Home,
-                new WorkspaceQueryContext(_projectRouteKey, ProductId)));
+        NavigationManager.NavigateTo(await GlobalFilterRouteService.BuildUriAsync(
+            WorkspaceRoutes.Home,
+            new FilterState(
+                [ProductId],
+                Array.Empty<string>(),
+                null,
+                FilterTimeSelection.Snapshot),
+            WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
     }
 
-    private void NavigateToRoadmaps()
+    private async Task NavigateToRoadmaps()
     {
-        var route = string.IsNullOrWhiteSpace(_projectRouteKey)
-            ? WorkspaceRoutes.ProductRoadmaps
-            : WorkspaceRoutes.GetProjectProductRoadmaps(_projectRouteKey);
-
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                route,
-                new WorkspaceQueryContext(_projectRouteKey, ProductId)));
+        NavigationManager.NavigateTo(await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+            "ProductRoadmaps",
+            _projectRouteKey,
+            ProductId,
+            WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
     }
 
     // --- Drag item model ---

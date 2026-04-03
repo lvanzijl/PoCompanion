@@ -1,0 +1,416 @@
+@using PoTool.Client.Models
+@using PoTool.Client.Services
+@using PoTool.Shared.Settings
+@inject GlobalFilterStore GlobalFilterStore
+@inject GlobalFilterUiState GlobalFilterUiState
+@inject PageFilterExecutionGate PageFilterExecutionGate
+@inject GlobalFilterRouteService GlobalFilterRouteService
+@inject IProfileService ProfileService
+@inject ProductService ProductService
+@inject ProjectService ProjectService
+@inject TeamService TeamService
+@inject SprintService SprintService
+@inject NavigationManager NavigationManager
+@implements IDisposable
+
+@if (GlobalFilterStore.CurrentUsage is not null)
+{
+    var evaluation = PageFilterExecutionGate.Evaluate(GlobalFilterStore.CurrentUsage);
+
+    @if (!string.IsNullOrWhiteSpace(GlobalFilterUiState.CorrectionMessage))
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+            @GlobalFilterUiState.CorrectionMessage
+            <MudButton Variant="Variant.Text" Color="Color.Info" OnClick="DismissCorrection">Dismiss</MudButton>
+        </MudAlert>
+    }
+
+    @if (evaluation.BlockingMessages.Count > 0)
+    {
+            <MudAlert Severity="@(GlobalFilterStore.CurrentUsage.Status == FilterResolutionStatus.Invalid ? Severity.Error : Severity.Warning)" Dense="true" Class="mb-2">
+                <MudText Typo="Typo.body2">@GetBlockingTitle(GlobalFilterStore.CurrentUsage.Status)</MudText>
+                @foreach (var message in evaluation.BlockingMessages)
+                {
+                    <div>@message</div>
+                }
+            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="OpenFilters">Open filters</MudButton>
+        </MudAlert>
+    }
+
+    @if (evaluation.NotAppliedMessages.Count > 0)
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+            @foreach (var message in evaluation.NotAppliedMessages)
+            {
+                <div>@message</div>
+            }
+        </MudAlert>
+    }
+
+    <MudCollapse Expanded="@GlobalFilterUiState.IsExpanded">
+        <MudPaper Outlined="true" Class="pa-4 mb-3">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.subtitle2">Global filters</MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="int?"
+                                   Label="Product"
+                                   Value="@SelectedProductId"
+                                   ValueChanged="OnProductChangedAsync"
+                                   Disabled="@(!CanEditProducts)"
+                                   Clearable="true"
+                                   Variant="Variant.Outlined"
+                                   HelperText="@GetHelperText(CanEditProducts, "Product filter is not applied on this page.")">
+                            <MudSelectItem T="int?" Value="@((int?)null)">All products</MudSelectItem>
+                            @foreach (var product in _products)
+                            {
+                                <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="string"
+                                   Label="Project"
+                                   Value="@SelectedProjectId"
+                                   ValueChanged="OnProjectChangedAsync"
+                                   Disabled="@(!CanEditProjects)"
+                                   Clearable="true"
+                                   Variant="Variant.Outlined"
+                                   HelperText="@GetHelperText(CanEditProjects, "Project filter is not applied on this page.")">
+                            <MudSelectItem T="string" Value="@string.Empty">All projects</MudSelectItem>
+                            @foreach (var project in _projects)
+                            {
+                                <MudSelectItem T="string" Value="@project.Id">@($"{project.Name} ({project.Alias})")</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="int?"
+                                   Label="Team"
+                                   Value="@SelectedTeamId"
+                                   ValueChanged="OnTeamChangedAsync"
+                                   Disabled="@(!CanEditTeam)"
+                                   Clearable="true"
+                                   Variant="Variant.Outlined"
+                                   HelperText="@GetHelperText(CanEditTeam, "Team filter is not applied on this page.")">
+                            <MudSelectItem T="int?" Value="@((int?)null)">No team</MudSelectItem>
+                            @foreach (var team in _teams)
+                            {
+                                <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="FilterTimeMode"
+                                   Label="Time mode"
+                                   Value="@CurrentTimeMode"
+                                   ValueChanged="OnTimeModeChangedAsync"
+                                   Disabled="@(!CanEditTime || AllowedTimeModes.Count <= 1)"
+                                   Variant="Variant.Outlined"
+                                   HelperText="@GetHelperText(CanEditTime, "Time filter is not applied on this page.")">
+                            @foreach (var timeMode in AllowedTimeModes)
+                            {
+                                <MudSelectItem T="FilterTimeMode" Value="@timeMode">@timeMode</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+
+                    @if (CanEditTime && CurrentTimeMode == FilterTimeMode.Sprint)
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudSelect T="int?"
+                                       Label="Sprint"
+                                       Value="@SelectedSprintId"
+                                       ValueChanged="OnSprintChangedAsync"
+                                       Clearable="true"
+                                       Variant="Variant.Outlined">
+                                <MudSelectItem T="int?" Value="@((int?)null)">No sprint</MudSelectItem>
+                                @foreach (var sprint in _sprints)
+                                {
+                                    <MudSelectItem T="int?" Value="@sprint.Id">@sprint.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                    }
+                    else if (CanEditTime && CurrentTimeMode == FilterTimeMode.Range)
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudSelect T="int?"
+                                       Label="Start sprint"
+                                       Value="@SelectedFromSprintId"
+                                       ValueChanged="OnFromSprintChangedAsync"
+                                       Clearable="true"
+                                       Variant="Variant.Outlined">
+                                <MudSelectItem T="int?" Value="@((int?)null)">None</MudSelectItem>
+                                @foreach (var sprint in _sprints)
+                                {
+                                    <MudSelectItem T="int?" Value="@sprint.Id">@sprint.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudSelect T="int?"
+                                       Label="End sprint"
+                                       Value="@SelectedToSprintId"
+                                       ValueChanged="OnToSprintChangedAsync"
+                                       Clearable="true"
+                                       Variant="Variant.Outlined">
+                                <MudSelectItem T="int?" Value="@((int?)null)">None</MudSelectItem>
+                                @foreach (var sprint in _sprints)
+                                {
+                                    <MudSelectItem T="int?" Value="@sprint.Id">@sprint.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                    }
+                    else if (CanEditTime && CurrentTimeMode == FilterTimeMode.Rolling)
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudNumericField T="int?"
+                                             Label="Rolling window"
+                                             Value="@SelectedRollingWindow"
+                                             ValueChanged="OnRollingWindowChangedAsync"
+                                             Min="1"
+                                             Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudSelect T="FilterTimeUnit?"
+                                       Label="Rolling unit"
+                                       Value="@SelectedRollingUnit"
+                                       ValueChanged="OnRollingUnitChangedAsync"
+                                       Variant="Variant.Outlined">
+                                <MudSelectItem T="FilterTimeUnit?" Value="@FilterTimeUnit.Days">Days</MudSelectItem>
+                                <MudSelectItem T="FilterTimeUnit?" Value="@FilterTimeUnit.Sprint">Sprint</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                    }
+                </MudGrid>
+
+                <MudStack Row="true" Spacing="1">
+                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetProductsAsync" Disabled="@(SelectedProductId is null)">Reset product</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetProjectsAsync" Disabled="@string.IsNullOrWhiteSpace(SelectedProjectId)">Reset project</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetTeamAsync" Disabled="@(SelectedTeamId is null)">Reset team</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetTimeAsync" Disabled="@IsTimeResetDisabled">Reset time</MudButton>
+                    <MudSpacer />
+                    <MudButton Variant="Variant.Text" Color="Color.Warning" OnClick="ResetAllAsync">Reset all</MudButton>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+    </MudCollapse>
+}
+
+@code {
+    private List<ProductDto> _products = new();
+    private List<ProjectDto> _projects = new();
+    private List<TeamDto> _teams = new();
+    private List<SprintDto> _sprints = new();
+    private int? _loadedTeamId;
+
+    private FilterState State => GlobalFilterStore.GetState();
+    private FilterStateResolution? Usage => GlobalFilterStore.CurrentUsage;
+    private IReadOnlyList<FilterTimeMode> AllowedTimeModes => ResolveAllowedTimeModes(Usage);
+    private bool CanEditProducts => Usage?.UsesProduct == true;
+    private bool CanEditProjects => Usage?.UsesProject == true;
+    private bool CanEditTeam => Usage?.UsesTeam == true;
+    private bool CanEditTime => Usage?.UsesTime == true;
+    private int? SelectedProductId => State.PrimaryProductId;
+    private string SelectedProjectId => State.PrimaryProjectId ?? string.Empty;
+    private int? SelectedTeamId => State.TeamId;
+    private int? SelectedSprintId => State.Time.SprintId;
+    private int? SelectedFromSprintId => State.Time.StartSprintId;
+    private int? SelectedToSprintId => State.Time.EndSprintId;
+    private int? SelectedRollingWindow => State.Time.RollingWindow;
+    private FilterTimeUnit? SelectedRollingUnit => State.Time.RollingUnit ?? FilterTimeUnit.Days;
+    private FilterTimeMode CurrentTimeMode => AllowedTimeModes.Contains(State.Time.Mode) ? State.Time.Mode : ResolveDefaultTimeMode(Usage);
+    private bool IsTimeResetDisabled => State.Time == FilterTimeSelection.Snapshot;
+
+    protected override async Task OnInitializedAsync()
+    {
+        GlobalFilterStore.Changed += HandleStoreChanged;
+        GlobalFilterUiState.Changed += HandleUiStateChanged;
+        await LoadLookupDataAsync();
+        await EnsureSprintsLoadedAsync();
+    }
+
+    public void Dispose()
+    {
+        GlobalFilterStore.Changed -= HandleStoreChanged;
+        GlobalFilterUiState.Changed -= HandleUiStateChanged;
+    }
+
+    private async Task LoadLookupDataAsync()
+    {
+        var activeProfileId = ProfileService.GetActiveProfileId();
+        if (activeProfileId.HasValue)
+        {
+            _products = (await ProductService.GetProductsByOwnerAsync(activeProfileId.Value)).OrderBy(product => product.Name).ToList();
+        }
+
+        _projects = (await ProjectService.GetAllProjectsAsync()).OrderBy(project => project.Name).ToList();
+        _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).OrderBy(team => team.Name).ToList();
+    }
+
+    private async Task EnsureSprintsLoadedAsync()
+    {
+        if (!SelectedTeamId.HasValue)
+        {
+            _sprints = new();
+            _loadedTeamId = null;
+            return;
+        }
+
+        if (_loadedTeamId == SelectedTeamId)
+        {
+            return;
+        }
+
+        _loadedTeamId = SelectedTeamId;
+        _sprints = (await SprintService.GetSprintsForTeamAsync(SelectedTeamId.Value))
+            .Where(sprint => sprint.StartUtc.HasValue)
+            .OrderBy(sprint => sprint.StartUtc)
+            .ToList();
+    }
+
+    private async Task OnProductChangedAsync(int? productId)
+        => await ApplyStateAsync(FilterLocalBridgeState.FromState(State, await GlobalFilterRouteService.ResolveProjectAliasAsync(State.PrimaryProjectId)) with { ProductId = productId });
+
+    private async Task OnProjectChangedAsync(string projectId)
+        => await ApplyStateAsync(FilterLocalBridgeState.FromState(State, await GlobalFilterRouteService.ResolveProjectAliasAsync(projectId)) with
+        {
+            ProjectId = string.IsNullOrWhiteSpace(projectId) ? null : projectId,
+            ProjectAlias = string.IsNullOrWhiteSpace(projectId) ? null : await GlobalFilterRouteService.ResolveProjectAliasAsync(projectId)
+        });
+
+    private async Task OnTeamChangedAsync(int? teamId)
+        => await ApplyStateAsync(FilterLocalBridgeState.FromState(State, await GlobalFilterRouteService.ResolveProjectAliasAsync(State.PrimaryProjectId)) with
+        {
+            TeamId = teamId,
+            SprintId = null,
+            FromSprintId = null,
+            ToSprintId = null
+        });
+
+    private async Task OnTimeModeChangedAsync(FilterTimeMode timeMode)
+        => await ApplyStateAsync(CreateTimeModeProjection(timeMode));
+
+    private async Task OnSprintChangedAsync(int? sprintId)
+        => await ApplyStateAsync(FilterLocalBridgeState.FromState(State, await GlobalFilterRouteService.ResolveProjectAliasAsync(State.PrimaryProjectId)) with
+        {
+            SprintId = sprintId,
+            RollingWindow = CurrentTimeMode == FilterTimeMode.Rolling ? State.Time.RollingWindow : null,
+            RollingUnit = CurrentTimeMode == FilterTimeMode.Rolling ? State.Time.RollingUnit : null
+        });
+
+    private async Task OnFromSprintChangedAsync(int? sprintId)
+        => await ApplyStateAsync(FilterLocalBridgeState.FromState(State, await GlobalFilterRouteService.ResolveProjectAliasAsync(State.PrimaryProjectId)) with { FromSprintId = sprintId });
+
+    private async Task OnToSprintChangedAsync(int? sprintId)
+        => await ApplyStateAsync(FilterLocalBridgeState.FromState(State, await GlobalFilterRouteService.ResolveProjectAliasAsync(State.PrimaryProjectId)) with { ToSprintId = sprintId });
+
+    private async Task OnRollingWindowChangedAsync(int? rollingWindow)
+        => await ApplyStateAsync(FilterLocalBridgeState.FromState(State, await GlobalFilterRouteService.ResolveProjectAliasAsync(State.PrimaryProjectId)) with
+        {
+            RollingWindow = rollingWindow,
+            RollingUnit = SelectedRollingUnit
+        });
+
+    private async Task OnRollingUnitChangedAsync(FilterTimeUnit? rollingUnit)
+        => await ApplyStateAsync(FilterLocalBridgeState.FromState(State, await GlobalFilterRouteService.ResolveProjectAliasAsync(State.PrimaryProjectId)) with
+        {
+            RollingWindow = SelectedRollingWindow,
+            RollingUnit = rollingUnit
+        });
+
+    private async Task ResetProductsAsync()
+        => await OnProductChangedAsync(null);
+
+    private async Task ResetProjectsAsync()
+        => await OnProjectChangedAsync(string.Empty);
+
+    private async Task ResetTeamAsync()
+        => await OnTeamChangedAsync(null);
+
+    private async Task ResetTimeAsync()
+        => await ApplyStateAsync(FilterLocalBridgeState.FromState(State, await GlobalFilterRouteService.ResolveProjectAliasAsync(State.PrimaryProjectId)) with
+        {
+            SprintId = null,
+            FromSprintId = null,
+            ToSprintId = null,
+            RollingWindow = null,
+            RollingUnit = null
+        });
+
+    private async Task ResetAllAsync()
+        => await ApplyStateAsync(new FilterLocalBridgeState());
+
+    private void OpenFilters() => GlobalFilterUiState.Expand();
+
+    private void DismissCorrection() => GlobalFilterUiState.DismissCorrection();
+
+    private async Task ApplyStateAsync(FilterLocalBridgeState localState)
+    {
+        var activeProfileId = ProfileService.GetActiveProfileId();
+        await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, activeProfileId, localState, FilterUpdateSource.Ui);
+        await EnsureSprintsLoadedAsync();
+
+        var targetUri = await GlobalFilterRouteService.BuildCurrentPageUriAsync(NavigationManager.Uri, GlobalFilterStore.GetState());
+        if (GlobalFilterStore.TryPrepareNavigation(NavigationManager.Uri, targetUri))
+        {
+            NavigationManager.NavigateTo(targetUri, forceLoad: false);
+        }
+    }
+
+    private FilterLocalBridgeState CreateTimeModeProjection(FilterTimeMode timeMode)
+        => timeMode switch
+        {
+            FilterTimeMode.Sprint => new FilterLocalBridgeState(
+                ProductId: State.PrimaryProductId,
+                ProjectId: State.PrimaryProjectId,
+                TeamId: State.TeamId,
+                SprintId: State.Time.SprintId),
+            FilterTimeMode.Range => new FilterLocalBridgeState(
+                ProductId: State.PrimaryProductId,
+                ProjectId: State.PrimaryProjectId,
+                TeamId: State.TeamId,
+                FromSprintId: State.Time.StartSprintId,
+                ToSprintId: State.Time.EndSprintId),
+            FilterTimeMode.Rolling => new FilterLocalBridgeState(
+                ProductId: State.PrimaryProductId,
+                ProjectId: State.PrimaryProjectId,
+                TeamId: State.TeamId,
+                RollingWindow: State.Time.RollingWindow ?? 180,
+                RollingUnit: State.Time.RollingUnit ?? FilterTimeUnit.Days),
+            _ => new FilterLocalBridgeState(
+                ProductId: State.PrimaryProductId,
+                ProjectId: State.PrimaryProjectId,
+                TeamId: State.TeamId)
+        };
+
+    private void HandleStoreChanged()
+        => _ = InvokeAsync(async () =>
+        {
+            await EnsureSprintsLoadedAsync();
+            StateHasChanged();
+        });
+
+    private void HandleUiStateChanged()
+        => _ = InvokeAsync(StateHasChanged);
+
+    private static string GetBlockingTitle(FilterResolutionStatus status)
+        => status == FilterResolutionStatus.Invalid
+            ? "Invalid filter state"
+            : "Incomplete filter state";
+
+    private static string? GetHelperText(bool canEdit, string message)
+        => canEdit ? null : message;
+
+    private static IReadOnlyList<FilterTimeMode> ResolveAllowedTimeModes(FilterStateResolution? usage)
+        => usage is not null && GlobalFilterPageCatalog.TryResolvePage($"/{usage.Route}", out _, out var definition, out _)
+            ? definition?.AllowedTimeModes ?? [usage.State.Time.Mode]
+            : [FilterTimeMode.Snapshot];
+
+    private static FilterTimeMode ResolveDefaultTimeMode(FilterStateResolution? usage)
+        => usage is not null && GlobalFilterPageCatalog.TryResolvePage($"/{usage.Route}", out _, out var definition, out _)
+            ? definition?.EffectiveDefaultTimeMode ?? usage.State.Time.Mode
+            : FilterTimeMode.Snapshot;
+}

@@ -189,10 +189,10 @@ else
                                             @lane.MissingForecastCount without forecast
                                         </MudChip>
                                     }
-                                    @if (lane.SprintCadence.UsesDefaultDuration)
+                                    @if (!lane.SprintCadence.IsResolved)
                                     {
                                         <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
-                                            Using default sprint duration
+                                            Sprint cadence unavailable
                                         </MudChip>
                                     }
                                 </MudStack>
@@ -259,14 +259,10 @@ else
                                                             {
                                                                 <MudText Typo="Typo.caption" Color="Color.Warning">Low confidence forecast</MudText>
                                                             }
-                                                            @if (lane.SprintCadence.UsesFallback)
-                                                            {
-                                                                <MudText Typo="Typo.caption" Color="Color.Warning">Sprint cadence fallback in use</MudText>
-                                                            }
                                                             <MudText Typo="Typo.caption">@lane.SprintCadence.TooltipText</MudText>
-                                                            @if (lane.SprintCadence.UsesDefaultDuration)
+                                                            @if (!lane.SprintCadence.IsResolved)
                                                             {
-                                                                <MudText Typo="Typo.caption" Color="Color.Warning">Using default sprint duration</MudText>
+                                                                <MudText Typo="Typo.caption" Color="Color.Warning">Timeline hidden until explicit sprint cadence is available.</MudText>
                                                             }
                                                             @if (row.IsDelayed)
                                                             {
@@ -451,7 +447,7 @@ else
                 {
                     Product = product,
                     Projections = (await ProductService.GetPlanningProjectionsAsync(product.Id)).ToList(),
-                    SprintCadence = await ResolveSprintCadenceAsync(product)
+                    SprintCadence = ResolveSprintCadence()
                 })
                 .ToList();
             _availableProducts = (await Task.WhenAll(productTasks))
@@ -537,10 +533,10 @@ else
     private static ProductTimelineLane BuildUnalignedLane(LoadedProductPlanning product)
     {
         var epicInputs = product.Projections.Select(ToEpicInput).ToList();
-        var timeline = epicInputs.Count > 0
+        var timeline = epicInputs.Count > 0 && product.SprintCadence.IsResolved
             ? RoadmapTimelineLayout.Build(
                 epicInputs,
-                new RoadmapTimelineBuildOptions(product.SprintCadence.DurationDays))
+                new RoadmapTimelineBuildOptions(product.SprintCadence.DurationDays!.Value))
             : new RoadmapTimelineModel(null, null, []);
 
         return new ProductTimelineLane(product.ProductId, product.ProductName, product.TeamIds, product.SprintCadence, timeline);
@@ -552,12 +548,12 @@ else
         DateTimeOffset axisEnd)
     {
         var epicInputs = product.Projections.Select(ToEpicInput).ToList();
-        var timeline = epicInputs.Count > 0
+        var timeline = epicInputs.Count > 0 && product.SprintCadence.IsResolved
             ? RoadmapTimelineLayout.BuildWithSharedAxis(
                 epicInputs,
                 axisStart,
                 axisEnd,
-                new RoadmapTimelineBuildOptions(product.SprintCadence.DurationDays))
+                new RoadmapTimelineBuildOptions(product.SprintCadence.DurationDays!.Value))
             : new RoadmapTimelineModel(null, null, []);
 
         return new ProductTimelineLane(product.ProductId, product.ProductName, product.TeamIds, product.SprintCadence, timeline);
@@ -682,22 +678,9 @@ else
         return InvokeAsync(StateHasChanged);
     }
 
-    private async Task<SprintCadenceInfo> ResolveSprintCadenceAsync(ProductDto product)
+    private static SprintCadenceInfo ResolveSprintCadence()
     {
-        if (product.TeamIds.Count == 0)
-        {
-            return SprintCadenceResolver.Resolve([]);
-        }
-
-        try
-        {
-            var sprints = (await SprintService.GetSprintsForTeamAsync(product.TeamIds.First())).ToList();
-            return SprintCadenceResolver.Resolve(sprints);
-        }
-        catch
-        {
-            return SprintCadenceResolver.Resolve([]);
-        }
+        return SprintCadenceResolver.Resolve([]);
     }
 
     private static string GetTimelineBarClass(RoadmapTimelineRow row, SprintCadenceInfo sprintCadence)
@@ -707,7 +690,7 @@ else
         {
             classes.Append(" projection-timeline-bar-delayed");
         }
-        if (row.IsLowConfidence || sprintCadence.UsesFallback)
+        if (row.IsLowConfidence)
         {
             classes.Append(" projection-timeline-bar-low-confidence");
         }

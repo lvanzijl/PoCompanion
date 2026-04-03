@@ -1,0 +1,111 @@
+@using PoTool.Client.Models
+@using PoTool.Client.Services
+@inject GlobalFilterStore GlobalFilterStore
+@inject GlobalFilterUiState GlobalFilterUiState
+@implements IDisposable
+
+@if (GlobalFilterStore.CurrentUsage is not null)
+{
+    var state = GlobalFilterStore.GetState();
+    <MudPaper Outlined="true" Class="filter-summary-bar px-4 py-2 mb-3">
+        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.caption" Class="filter-summary-bar__label">
+                Filters · @GlobalFilterStore.CurrentUsage.PageName
+            </MudText>
+            @if (!state.AllProducts)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+                    Products: @FormatProducts(state)
+                </MudChip>
+            }
+            @if (!state.AllProjects)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">
+                    Projects: @FormatProjects(state)
+                </MudChip>
+            }
+            @if (state.TeamId.HasValue)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Secondary">
+                    Team: @state.TeamId.Value
+                </MudChip>
+            }
+            @if (state.Time.Mode != FilterTimeMode.Snapshot)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
+                    Time: @FormatTime(state)
+                </MudChip>
+            }
+            @if (state.AllProducts && state.AllProjects && !state.TeamId.HasValue && state.Time.Mode == FilterTimeMode.Snapshot)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Default">
+                    Defaults active
+                </MudChip>
+            }
+            <MudSpacer />
+            <MudButton Variant="Variant.Text"
+                       Color="Color.Primary"
+                       Size="Size.Small"
+                       OnClick="ToggleFilters">
+                @(GlobalFilterUiState.IsExpanded ? "Hide filters" : "Edit filters")
+            </MudButton>
+
+            @if (GlobalFilterStore.CurrentUsage.MissingTeam)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text">
+                    Team required
+                </MudChip>
+            }
+
+            @if (GlobalFilterStore.CurrentUsage.MissingSprint)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text">
+                    Time selection incomplete
+                </MudChip>
+            }
+
+            @if (GlobalFilterStore.CurrentUsage.Status == FilterResolutionStatus.Invalid)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Text">
+                    Invalid filter state
+                </MudChip>
+            }
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        GlobalFilterStore.Changed += HandleStoreChanged;
+        GlobalFilterUiState.Changed += HandleStoreChanged;
+    }
+
+    public void Dispose()
+    {
+        GlobalFilterStore.Changed -= HandleStoreChanged;
+        GlobalFilterUiState.Changed -= HandleStoreChanged;
+    }
+
+    private void HandleStoreChanged() => InvokeAsync(StateHasChanged);
+
+    private static string FormatProducts(FilterState state)
+        => state.AllProducts ? "ALL" : string.Join(", ", state.ProductIds);
+
+    private static string FormatProjects(FilterState state)
+        => state.AllProjects ? "ALL" : string.Join(", ", state.ProjectIds);
+
+    private static string FormatTime(FilterState state)
+        => state.Time.ToDisplayString();
+
+    private static Color GetStatusColor(FilterResolutionStatus status)
+        => status switch
+        {
+            FilterResolutionStatus.Invalid => Color.Error,
+            FilterResolutionStatus.Unresolved => Color.Warning,
+            FilterResolutionStatus.ResolvedWithNormalization => Color.Info,
+            _ => Color.Success
+        };
+
+    private void ToggleFilters() => GlobalFilterUiState.ToggleExpanded();
+}

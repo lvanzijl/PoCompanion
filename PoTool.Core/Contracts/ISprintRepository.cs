@@ -19,14 +19,10 @@ public interface ISprintRepository
     Task<IEnumerable<SprintDto>> GetSprintsForTeamAsync(int teamId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets the current sprint for a team, preferring timeFrame="current", falling back to date range.
+    /// Gets the current sprint for a team using only strict team-scoped current-sprint semantics.
+    /// Returns null when the team has no sprint marked current and no sprint whose active date window overlaps now.
     /// </summary>
     Task<SprintDto?> GetCurrentSprintForTeamAsync(int teamId, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets the next sprint for a team, preferring earliest timeFrame="future", falling back to earliest future date.
-    /// </summary>
-    Task<SprintDto?> GetNextSprintForTeamAsync(int teamId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Upserts sprints for a team from TFS sync data.

@@ -13,8 +13,11 @@
 @inject TeamService TeamService
 @inject SprintService SprintService
 @inject NavigationManager NavigationManager
+@inject GlobalFilterStore GlobalFilterStore
+@inject PageFilterExecutionGate PageFilterExecutionGate
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
+@implements IDisposable
 
 <PageTitle>Pull Request Insights - PO Companion</PageTitle>
 
@@ -39,78 +42,9 @@
         </MudStack>
     </MudPaper>
 
-    @* ── Context / Filters (collapsible) ───────────────────────────────── *@
     <MudPaper Elevation="2" Class="pa-4 mb-4">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center"
-                  Style="cursor:pointer;" @onclick="() => _filterExpanded = !_filterExpanded">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudIcon Icon="@Icons.Material.Filled.FilterAlt" />
-                <MudText Typo="Typo.h6">Context</MudText>
-                @if (!_filterExpanded && (_selectedTeamId.HasValue || _selectedSprintId.HasValue))
-                {
-                    @* Summary chips shown when collapsed *@
-                    @if (_selectedTeamId.HasValue)
-                    {
-                        var teamName = _teams.FirstOrDefault(t => t.Id == _selectedTeamId)?.Name;
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Group">@teamName</MudChip>
-                    }
-                    @if (_selectedSprintId.HasValue)
-                    {
-                        var sprintName = _sprints.FirstOrDefault(s => s.Id == _selectedSprintId)?.Name;
-                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Icon="@Icons.Material.Filled.CalendarMonth">@sprintName</MudChip>
-                    }
-                }
-            </MudStack>
-            <MudIconButton Icon="@(_filterExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                           Size="Size.Small"
-                           Color="Color.Default"
-                           OnClick="() => _filterExpanded = !_filterExpanded" />
-        </MudStack>
-
-        <MudCollapse Expanded="_filterExpanded">
-            <MudDivider Class="my-3" />
-            <MudGrid Spacing="2">
-            @* Team selector *@
-            <MudItem xs="12" sm="6" md="3">
-                <MudSelect T="int?"
-                           Value="_selectedTeamId"
-                           Label="Team"
-                           Variant="Variant.Outlined"
-                           Clearable="true"
-                           ValueChanged="OnTeamChanged">
-                    <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
-                    @foreach (var team in _teams)
-                    {
-                        <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-
-            @* Sprint quick-select (visible once a team is chosen) *@
-            @if (_sprints.Count > 0)
-            {
-                <MudItem xs="12" sm="6" md="3">
-                    <MudSelect T="int?"
-                               Value="_selectedSprintId"
-                               Label="Sprint (optional)"
-                               Variant="Variant.Outlined"
-                               ValueChanged="OnSprintChanged">
-                        <MudSelectItem T="int?" Value="@((int?)null)">Select sprint…</MudSelectItem>
-                        @foreach (var sprint in _sprints)
-                        {
-                            <MudSelectItem T="int?" Value="@sprint.Id">
-                                @sprint.Name
-                                @if (sprint.StartUtc.HasValue)
-                                {
-                                    <text> (@sprint.StartUtc.Value.ToString("MMM yyyy"))</text>
-                                }
-                            </MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-            }
-
-            @* Repository filter *@
+        <MudText Typo="Typo.h6" Class="mb-3">Repository view</MudText>
+        <MudGrid Spacing="2">
             <MudItem xs="12" sm="6" md="3">
                 <MudSelect T="string"
                            Value="@(_selectedRepository ?? string.Empty)"
@@ -126,8 +60,6 @@
                 </MudSelect>
             </MudItem>
         </MudGrid>
-
-        </MudCollapse>
     </MudPaper>
 
     <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
@@ -613,11 +545,7 @@
     private string? _errorMessage;
     private List<BreadcrumbItem> _breadcrumbs = new();
 
-    // Filter panel state
-    private bool _filterExpanded = true;
-
     // Filters
-    private int? _selectedTeamId;
     private DateTime? _fromDate;
     private DateTime? _toDate;
     private string? _selectedRepository;
@@ -626,7 +554,6 @@
 
     // Sprint quick-select
     private List<SprintDto> _sprints = new();
-    private int? _selectedSprintId;
 
     // Data
     private int? _profileId;
@@ -647,11 +574,15 @@
     /// Most teams use 2-week sprints; this is applied only as a last resort.
     /// </summary>
     private const int DefaultSprintDurationDays = 14;
+    private IDisposable? _filterSubscription;
+    private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
+    private int? _selectedSprintId => GlobalFilterStore.GetState().Time.SprintId;
 
     // ── Init ─────────────────────────────────────────────────────────────
 
     protected override async Task OnInitializedAsync()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         try
         {
             var activeProfile = await ProfileService.GetActiveProfileAsync(); // ensure profile guard
@@ -662,22 +593,23 @@
             _fromDate = DateTime.UtcNow.AddMonths(-6).Date;
             _toDate   = DateTime.UtcNow.Date;
 
-            ParseQueryParameters();
-
-            // Auto-select team if only one is available and no team was set via query string
-            if (!_selectedTeamId.HasValue && _teams.Count == 1)
-            {
-                _selectedTeamId = _teams[0].Id;
-            }
+            await SyncStoreFromCurrentRouteAsync();
 
             if (_selectedTeamId.HasValue)
             {
-                await LoadSprintsAndAutoSelectAsync(_selectedTeamId.Value);
+                await LoadSprintsForTeamAsync(_selectedTeamId.Value);
+                if (_selectedSprintId.HasValue && !_sprints.Any(s => s.Id == _selectedSprintId.Value))
+                {
+                    await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with
+                    {
+                        SprintId = null,
+                        RollingWindow = 180,
+                        RollingUnit = FilterTimeUnit.Days
+                    });
+                }
             }
-            else
-            {
-                await LoadInsightsAsync();
-            }
+
+            await LoadInsightsAsync();
 
             UpdateBreadcrumbs();
         }
@@ -691,19 +623,18 @@
         }
     }
 
-    private void ParseQueryParameters()
-    {
-        var uri = new Uri(NavigationManager.Uri);
-        var qs  = HttpUtility.ParseQueryString(uri.Query);
-
-        if (int.TryParse(qs["teamId"], out var tid))
-            _selectedTeamId = tid;
-    }
-
     // ── Data loading ─────────────────────────────────────────────────────
 
     private async Task LoadInsightsAsync()
     {
+        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        {
+            _data = null;
+            _filterNotice = null;
+            _availableRepositories = new List<string>();
+            return;
+        }
+
         try
         {
             var from = _fromDate.HasValue
@@ -735,11 +666,6 @@
                 .OrderBy(r => r)
                 .ToList() ?? new List<string>();
 
-            // Collapse filter panel once data is loaded successfully
-            if (_data != null)
-            {
-                _filterExpanded = false;
-            }
         }
         catch (Exception)
         {
@@ -749,50 +675,7 @@
 
     // ── Filter handlers ───────────────────────────────────────────────────
 
-    private async Task OnTeamChanged(int? teamId)
-    {
-        _selectedTeamId  = teamId;
-        _highlightedPrId = null;
-        _filteredAuthor  = null;
-        _selectedSprintId = null;
-        _sprints.Clear();
-
-        if (teamId.HasValue)
-        {
-            await ReloadWithSprintAutoSelectAsync(teamId.Value);
-            return;
-        }
-
-        // Reset to default date range when clearing team selection
-        _fromDate = DateTime.UtcNow.AddMonths(-6).Date;
-        _toDate   = DateTime.UtcNow.Date;
-
-        await ReloadAsync();
-    }
-
-    /// <summary>
-    /// Sets the loading state, loads sprints with auto-selection, then loads insights.
-    /// Called from OnTeamChanged so that the loading indicator is shown correctly.
-    /// </summary>
-    private async Task ReloadWithSprintAutoSelectAsync(int teamId)
-    {
-        _isLoading    = true;
-        _errorMessage = null;
-        _prDrawerOpen = false;
-        StateHasChanged();
-
-        await LoadSprintsAndAutoSelectAsync(teamId);
-
-        _isLoading = false;
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Loads sprints for the given team and auto-selects the current sprint
-    /// (or the most recent past sprint if no current sprint exists), then reloads insights.
-    /// This mirrors the PipelineInsights sprint auto-selection behaviour.
-    /// </summary>
-    private async Task LoadSprintsAndAutoSelectAsync(int teamId)
+    private async Task LoadSprintsForTeamAsync(int teamId)
     {
         try
         {
@@ -801,57 +684,12 @@
                 .Where(s => s.StartUtc.HasValue)
                 .OrderByDescending(s => s.StartUtc)
                 .ToList();
-
-            // Auto-select the current sprint (or the most recent past sprint)
-            if (_sprints.Count > 0)
-            {
-                var now = DateTimeOffset.UtcNow;
-
-                var activeSprint = _sprints.FirstOrDefault(s =>
-                    s.StartUtc.HasValue && s.EndUtc.HasValue &&
-                    s.StartUtc.Value <= now && s.EndUtc.Value >= now);
-
-                if (activeSprint is null)
-                {
-                    var mostRecentPast = _sprints.FirstOrDefault(s =>
-                        s.EndUtc.HasValue && s.EndUtc.Value <= now);
-                    activeSprint = mostRecentPast ?? _sprints[0];
-                }
-
-                _selectedSprintId = activeSprint.Id;
-                if (activeSprint.StartUtc.HasValue)
-                {
-                    _fromDate = activeSprint.StartUtc.Value.UtcDateTime.Date;
-                    _toDate   = activeSprint.EndUtc?.UtcDateTime.Date ?? _fromDate.Value.AddDays(DefaultSprintDurationDays);
-                }
-            }
         }
         catch (Exception ex)
         {
             _sprints.Clear();
             Snackbar.Add($"Could not load sprints: {ex.Message}", Severity.Warning);
         }
-
-        await LoadInsightsAsync();
-    }
-
-    private async Task OnSprintChanged(int? sprintId)
-    {
-        _selectedSprintId = sprintId;
-        _highlightedPrId  = null;
-        _filteredAuthor   = null;
-
-        if (sprintId.HasValue)
-        {
-            var sprint = _sprints.FirstOrDefault(s => s.Id == sprintId.Value);
-            if (sprint?.StartUtc.HasValue == true)
-            {
-                _fromDate = sprint.StartUtc.Value.UtcDateTime.Date;
-                _toDate   = sprint.EndUtc?.UtcDateTime.Date ?? _fromDate.Value.AddDays(DefaultSprintDurationDays);
-            }
-        }
-
-        await ReloadAsync();
     }
 
     private async Task OnRepositoryChanged(string? repo)
@@ -876,6 +714,26 @@
         await LoadInsightsAsync();
         _isLoading = false;
         StateHasChanged();
+    }
+
+    private async Task SyncStoreFromCurrentRouteAsync()
+        => await GlobalFilterStore.SetStateAsync(
+            NavigationManager.Uri,
+            _profileId,
+            new FilterLocalBridgeState(RollingWindow: 180, RollingUnit: FilterTimeUnit.Days, TeamId: _selectedTeamId, SprintId: _selectedSprintId));
+
+    private FilterLocalBridgeState BuildCurrentLocalBridgeState()
+        => FilterLocalBridgeState.FromState(GlobalFilterStore.GetState());
+
+    private async Task UpdateFilterStateAsync(FilterLocalBridgeState localState)
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId, localState, FilterUpdateSource.Ui);
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        _filterSubscription?.Dispose();
     }
 
     // ── Scatter interaction ───────────────────────────────────────────────

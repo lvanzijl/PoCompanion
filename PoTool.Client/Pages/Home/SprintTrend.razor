@@ -1,6 +1,7 @@
 @page "/home/delivery/sprint"
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @using PoTool.Client.Services
 @using PoTool.Client.Pages.Home.Components
@@ -15,6 +16,8 @@
 @inject SprintDeliveryMetricsService SprintDeliveryMetricsService
 @inject TfsConfigService TfsConfigService
 @inject NavigationManager NavigationManager
+@inject GlobalFilterStore GlobalFilterStore
+@inject PageFilterExecutionGate PageFilterExecutionGate
 @inject IBuildQualityService BuildQualityService
 
 <PageTitle>Sprint Delivery - PO Companion</PageTitle>
@@ -974,7 +977,6 @@
     private string? _selectedEpicName;
     private int? _selectedFeatureId;
     private string? _selectedFeatureName;
-
     private List<TeamDto> _teams = new();
     private List<SprintDto> _allSprints = new();
     private List<SprintDto> _filteredSprints = new();
@@ -1012,6 +1014,9 @@
     private CancellationTokenSource? _summaryLoadCts;
     private CancellationTokenSource? _detailsLoadCts;
     private CancellationTokenSource? _buildQualityLoadCts;
+    private IDisposable? _filterSubscription;
+    private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
+    private int? _selectedSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Sprint ? GlobalFilterStore.GetState().Time.SprintId : null;
 
     private static readonly string[] DefaultPiePalette =
     [
@@ -1027,6 +1032,7 @@
 
     protected override void OnInitialized()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         UpdateBreadcrumbs();
     }
 
@@ -1081,17 +1087,45 @@
             _teams = (await teamsTask).ToList();
             _products = (await productsTask).ToList();
             _tfsConfig = await configTask;
+            await SyncStoreFromCurrentRouteAsync(cancellationToken);
 
-            var sprintTasks = _teams.Select(team => LoadTeamSprintsSafeAsync(team.Id, cancellationToken));
-            var sprintSets = await Task.WhenAll(sprintTasks);
-            _allSprints = sprintSets
-                .SelectMany(sprints => sprints)
-                .GroupBy(sprint => sprint.Id)
-                .Select(group => group.First())
-                .ToList();
+            if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+            {
+                _contextErrorMessage = "Select the required filters to load Sprint Delivery.";
+                _isSummaryLoading = false;
+                _isBuildQualityLoading = false;
+                return;
+            }
+
+            if (!_selectedTeamId.HasValue)
+            {
+                _contextErrorMessage = "Sprint Delivery requires an explicit team.";
+                _isSummaryLoading = false;
+                _isBuildQualityLoading = false;
+                return;
+            }
+
+            if (!_selectedSprintId.HasValue)
+            {
+                _contextErrorMessage = "Sprint Delivery requires an explicit sprint.";
+                _isSummaryLoading = false;
+                _isBuildQualityLoading = false;
+                return;
+            }
+
+            _allSprints = (await LoadTeamSprintsSafeAsync(_selectedTeamId.Value, cancellationToken)).ToList();
 
             ApplySprintFilters();
-            FindCurrentSprint();
+            _currentSprintIndex = _filteredSprints.FindIndex(s => s.Id == _selectedSprintId.Value);
+            _currentSprint = _currentSprintIndex >= 0 ? _filteredSprints[_currentSprintIndex] : null;
+
+            if (_currentSprint is null)
+            {
+                _contextErrorMessage = "The selected sprint could not be resolved for the selected team.";
+                _isSummaryLoading = false;
+                _isBuildQualityLoading = false;
+                return;
+            }
         }
         catch (OperationCanceledException)
         {
@@ -1187,24 +1221,6 @@
             .ToList();
 
         _filteredProducts = _products.ToList();
-    }
-
-    private void FindCurrentSprint()
-    {
-        var now = DateTimeOffset.UtcNow;
-        _currentSprintIndex = _filteredSprints.FindIndex(s =>
-            s.StartUtc <= now && s.EndUtc >= now);
-
-        if (_currentSprintIndex < 0 && _filteredSprints.Count > 0)
-        {
-            _currentSprintIndex = _filteredSprints.FindLastIndex(s => s.EndUtc <= now);
-            if (_currentSprintIndex < 0)
-            {
-                _currentSprintIndex = _filteredSprints.Count - 1;
-            }
-        }
-
-        _currentSprint = _currentSprintIndex >= 0 ? _filteredSprints[_currentSprintIndex] : null;
     }
 
     private async Task LoadSummaryAsync()
@@ -1679,7 +1695,9 @@
 
     private string BuildWorkItemActivityUrl(int workItemId)
     {
-        var path = $"{WorkspaceRoutes.SprintDeliveryActivity}/{workItemId}";
+        var path = WorkspaceQueryContextHelper.BuildRoute(
+            $"{WorkspaceRoutes.SprintDeliveryActivity}/{workItemId}",
+            new WorkspaceQueryContext(TeamId: _selectedTeamId, SprintId: _selectedSprintId));
         if (!_profileId.HasValue)
         {
             return path;
@@ -1823,6 +1841,7 @@
 
     public void Dispose()
     {
+        _filterSubscription?.Dispose();
         CancelContextLoad();
         CancelSummaryLoad();
         CancelDetailsLoad();
@@ -1830,6 +1849,12 @@
         _lifetimeCts.Cancel();
         _lifetimeCts.Dispose();
     }
+
+    private async Task SyncStoreFromCurrentRouteAsync(CancellationToken cancellationToken)
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId, cancellationToken: cancellationToken);
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(StateHasChanged);
 
     private record ProductMetrics(
         int CompletedPbis,

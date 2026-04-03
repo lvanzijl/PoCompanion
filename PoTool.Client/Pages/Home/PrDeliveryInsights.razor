@@ -779,20 +779,16 @@
 
             ParseQueryParameters();
 
-            // Auto-select team if only one is available
-            if (!_selectedTeamId.HasValue && _teams.Count == 1)
-            {
-                _selectedTeamId = _teams[0].Id;
-            }
-
             if (_selectedTeamId.HasValue)
             {
-                await LoadSprintsAndAutoSelectAsync(_selectedTeamId.Value);
+                await LoadSprintsForTeamAsync(_selectedTeamId.Value);
+                if (_selectedSprintId.HasValue && !_sprints.Any(s => s.Id == _selectedSprintId.Value))
+                {
+                    _selectedSprintId = null;
+                }
             }
-            else
-            {
-                await LoadInsightsAsync();
-            }
+
+            await LoadInsightsAsync();
 
             UpdateBreadcrumbs();
         }
@@ -870,28 +866,18 @@
 
         if (teamId.HasValue)
         {
-            await ReloadWithSprintAutoSelectAsync(teamId.Value);
-            return;
+            ResetToDefaultDateRange();
+            await LoadSprintsForTeamAsync(teamId.Value);
         }
-
-        ResetToDefaultDateRange();
+        else
+        {
+            ResetToDefaultDateRange();
+        }
 
         await ReloadAsync();
     }
 
-    private async Task ReloadWithSprintAutoSelectAsync(int teamId)
-    {
-        _isLoading    = true;
-        _errorMessage = null;
-        StateHasChanged();
-
-        await LoadSprintsAndAutoSelectAsync(teamId);
-
-        _isLoading = false;
-        StateHasChanged();
-    }
-
-    private async Task LoadSprintsAndAutoSelectAsync(int teamId)
+    private async Task LoadSprintsForTeamAsync(int teamId)
     {
         try
         {
@@ -900,37 +886,12 @@
                 .Where(s => s.StartUtc.HasValue)
                 .OrderByDescending(s => s.StartUtc)
                 .ToList();
-
-            if (_sprints.Count > 0)
-            {
-                var now = DateTimeOffset.UtcNow;
-
-                var activeSprint = _sprints.FirstOrDefault(s =>
-                    s.StartUtc.HasValue && s.EndUtc.HasValue &&
-                    s.StartUtc.Value <= now && s.EndUtc.Value >= now);
-
-                if (activeSprint is null)
-                {
-                    var mostRecentPast = _sprints.FirstOrDefault(s =>
-                        s.EndUtc.HasValue && s.EndUtc.Value <= now);
-                    activeSprint = mostRecentPast ?? _sprints[0];
-                }
-
-                _selectedSprintId = activeSprint.Id;
-                if (activeSprint.StartUtc.HasValue)
-                {
-                    _fromDate = activeSprint.StartUtc.Value.UtcDateTime.Date;
-                    _toDate   = activeSprint.EndUtc?.UtcDateTime.Date ?? _fromDate.Value.AddDays(DefaultSprintDurationDays);
-                }
-            }
         }
         catch (Exception ex)
         {
             _sprints.Clear();
             Snackbar.Add($"Could not load sprints: {ex.Message}", Severity.Warning);
         }
-
-        await LoadInsightsAsync();
     }
 
     private async Task OnSprintChanged(int? sprintId)

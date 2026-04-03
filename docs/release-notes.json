@@ -2,74 +2,58 @@
   {
     "date": "2026-04-03",
     "type": "Changed",
-    "title": "Legacy backlog and sprint aliases now normalize to the current routes",
-    "impact": "Opening legacy backlog and sprint URLs now redirects to the current Health and Delivery routes, the stale in-app help link was removed, and Work Item Explorer now accepts only the supported deep-link scope used by current backlog and release-planning entry points.",
+    "title": "Filtering now uses one shared entry point across home and planning pages",
+    "impact": "Home and planning pages now remove duplicate team, sprint, range, project, and product filter panels so users change shared filter context only through the global summary bar and global filter controls, while page-specific controls remain only for local analytical options or explicit range projections.",
     "area": "Home",
     "link": "/home"
   },
   {
     "date": "2026-04-03",
     "type": "Changed",
-    "title": "Final legacy product workspace has been removed",
-    "impact": "The standalone `/workspace/product` routes and their legacy navigation/context plumbing are no longer available. No `/workspace/*` routes remain, while modern product filtering, planning, delivery, trends, health, and CDC-related behavior continue to use the current Home workspace flows.",
+    "title": "Global filters now enforce required context and expose shared controls",
+    "impact": "Home and planning pages now use one interactive global filter surface with explicit unresolved and invalid messaging, per-filter reset actions, centralized route correction, and query gating so pages stop loading data until the active filter state is valid for that page.",
     "area": "Home",
     "link": "/home"
   },
   {
     "date": "2026-04-03",
     "type": "Changed",
-    "title": "Legacy team workspace has been removed",
-    "impact": "The standalone `/workspace/team` routes are no longer available. Legacy product pages no longer link into that removed workspace, while shared team filtering, assignment, analytics, and CDC-related logic remain available for modern features.",
+    "title": "Global filters now keep stable canonical route and time semantics",
+    "impact": "Home pages now derive team, sprint, product, project, and range context from one canonical filter state with explicit resolved, unresolved, or invalid classification, normalized inclusive sprint ranges, and guarded route synchronization to prevent redundant rewrites during refresh and navigation.",
     "area": "Home",
     "link": "/home"
   },
   {
     "date": "2026-04-03",
     "type": "Changed",
-    "title": "Legacy analysis workspace has been removed",
-    "impact": "The standalone `/workspace/analysis` route is no longer available. Legacy product and team pages no longer link into that removed workspace, while shared analytics, filtering, and CDC-related logic remain in place for modern pages and reusable components.",
+    "title": "Global filters now normalize one shared canonical state",
+    "impact": "Home and planning pages now route product, project, team, and time context through one shared filter store, so the read-only filter summary reflects normalized canonical state while existing links, query parameters, and page behavior continue to work.",
     "area": "Home",
     "link": "/home"
   },
   {
     "date": "2026-04-03",
     "type": "Changed",
-    "title": "Legacy communication workspace has been removed",
-    "impact": "The standalone `/workspace/communication` route is no longer available. Legacy product, team, and analysis pages no longer expose navigation into that removed workspace, while shared clipboard and export infrastructure remains available where it is still used elsewhere.",
+    "title": "Pages now show a read-only filter summary bar",
+    "impact": "Home and planning pages now expose a passive summary of detected product, project, team, and time context for observability only. The bar does not change navigation, queries, or page behavior.",
     "area": "Home",
     "link": "/home"
   },
   {
     "date": "2026-04-03",
     "type": "Changed",
-    "title": "Legacy landing entry point has been removed",
-    "impact": "The standalone `/legacy` landing page is no longer available. The remaining legacy `/workspace/*` pages still exist for direct-entry compatibility, but visible navigation back into the legacy landing entry has been removed.",
+    "title": "Legacy workspace navigation and fallback sprint cadence were removed",
+    "impact": "The old /legacy and /workspace navigation model is no longer available in the shipped client, and planning timeline views now show cadence as unavailable instead of assuming a default sprint duration when no completed sprint history exists.",
     "area": "Home",
-    "link": "/home"
-  },
-  {
-    "date": "2026-04-03",
-    "type": "Changed",
-    "title": "Unused Dependency Overview page has been removed",
-    "impact": "The standalone `/home/dependencies` page is no longer available. Shared dependency analysis remains embedded where it is still used, and the stale direct links to `/dependency-graph` were removed from current UI surfaces.",
-    "area": "Planning",
     "link": "/home/planning"
   },
   {
     "date": "2026-04-03",
     "type": "Changed",
-    "title": "Unused Bug Detail page has been removed",
-    "impact": "The standalone `/home/bugs/detail` page is no longer available. Bug Insights and Bugs Triage remain available, but the orphaned bug-detail route and its dedicated client/API path were removed.",
-    "area": "Health",
-    "link": "/home/bugs"
-  },
-  {
-    "date": "2026-04-03",
-    "type": "Changed",
-    "title": "Unused Manage Products page has been removed",
-    "impact": "The standalone `/settings/products` page is no longer available. Product creation, editing, ordering, reassignment, and deletion now remain only under each Product Owner details page, and the obsolete orphan-only management route has been removed.",
-    "area": "Settings",
-    "link": "/profiles"
+    "title": "Delivery and trends pages now require explicit sprint context",
+    "impact": "Legacy `/legacy` and `/workspace/*` routes are no longer directly routeable, Sprint Delivery / Sprint Execution / Pipeline Insights / Portfolio Delivery stop auto-selecting team or sprint context, PR and trend pages no longer anchor themselves to an inferred current sprint, and What's New Since Last Sync is now explicitly treated as an operational page outside the global filter contract.",
+    "area": "Home",
+    "link": "/home/delivery"
   },
   {
     "date": "2026-04-02",

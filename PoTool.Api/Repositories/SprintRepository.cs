@@ -46,7 +46,7 @@ public class SprintRepository : ISprintRepository
     {
         var nowUtc = DateTime.UtcNow;
 
-        // Prefer timeFrame="current"
+        // Strict current-sprint resolution: honor explicit current markers first.
         var currentByTimeFrame = await _context.Sprints
             .Where(s => s.TeamId == teamId && s.TimeFrame == "current")
             .OrderBy(s => s.Id)
@@ -57,7 +57,7 @@ public class SprintRepository : ISprintRepository
             return MapToDto(currentByTimeFrame);
         }
 
-        // Fallback: find sprint by date range (start <= now < end)
+        // Strict overlap resolution: accept only a sprint whose active date window overlaps now.
         var currentByDate = await _context.Sprints
                 .Where(s => s.TeamId == teamId
                 && s.StartDateUtc.HasValue
@@ -69,31 +69,6 @@ public class SprintRepository : ISprintRepository
             .FirstOrDefaultAsync(cancellationToken);
 
         return currentByDate == null ? null : MapToDto(currentByDate);
-    }
-
-    /// <inheritdoc />
-    public async Task<SprintDto?> GetNextSprintForTeamAsync(int teamId, CancellationToken cancellationToken = default)
-    {
-        var nowUtc = DateTime.UtcNow;
-
-        // Prefer earliest timeFrame="future" by start date
-        var futureByTimeFrame = await _context.Sprints
-            .Where(s => s.TeamId == teamId && s.TimeFrame == "future" && s.StartDateUtc.HasValue)
-            .OrderBy(s => s.StartDateUtc)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (futureByTimeFrame != null)
-        {
-            return MapToDto(futureByTimeFrame);
-        }
-
-        // Fallback: find earliest sprint with start date in the future
-        var futureByDate = await _context.Sprints
-            .Where(s => s.TeamId == teamId && s.StartDateUtc.HasValue && s.StartDateUtc > nowUtc)
-            .OrderBy(s => s.StartDateUtc)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        return futureByDate == null ? null : MapToDto(futureByDate);
     }
 
     /// <inheritdoc />

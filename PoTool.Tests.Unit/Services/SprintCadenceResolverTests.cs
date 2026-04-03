@@ -22,14 +22,13 @@ public sealed class SprintCadenceResolverTests
 
         var cadence = SprintCadenceResolver.Resolve(sprints, now);
 
-        Assert.AreEqual(SprintCadenceSource.CompletedSprintAverage, cadence.Source);
         Assert.AreEqual(5, cadence.SampleCount);
-        Assert.AreEqual(11.2d, cadence.DurationDays, 0.001d);
-        Assert.IsFalse(cadence.UsesFallback);
+        Assert.IsTrue(cadence.IsResolved);
+        Assert.AreEqual(11.2d, cadence.DurationDays!.Value, 0.001d);
     }
 
     [TestMethod]
-    public void Resolve_UsesCurrentSprintWhenCompletedHistoryMissing()
+    public void Resolve_IsUnresolvedWhenCompletedHistoryMissing()
     {
         var now = new DateTimeOffset(2026, 4, 1, 0, 0, 0, TimeSpan.Zero);
         var sprints = new List<SprintDto>
@@ -39,22 +38,21 @@ public sealed class SprintCadenceResolverTests
 
         var cadence = SprintCadenceResolver.Resolve(sprints, now);
 
-        Assert.AreEqual(SprintCadenceSource.CurrentSprintFallback, cadence.Source);
-        Assert.AreEqual(14d, cadence.DurationDays, 0.001d);
-        Assert.IsTrue(cadence.UsesFallback);
-        Assert.IsFalse(cadence.UsesDefaultDuration);
+        Assert.IsFalse(cadence.IsResolved);
+        Assert.IsNull(cadence.DurationDays);
+        Assert.AreEqual(0, cadence.SampleCount);
     }
 
     [TestMethod]
-    public void Resolve_UsesDefaultWhenNoValidSprintDatesExist()
+    public void Resolve_IsUnresolvedWhenNoValidSprintDatesExist()
     {
         var cadence = SprintCadenceResolver.Resolve(
             [
                 new SprintDto(1, 10, null, "Invalid", "Invalid", null, null, null, DateTimeOffset.UtcNow)
             ]);
 
-        Assert.AreEqual(SprintCadenceSource.DefaultFallback, cadence.Source);
-        Assert.AreEqual(SprintCadenceResolver.DefaultFallbackSprintDurationDays, cadence.DurationDays, 0.001d);
-        Assert.IsTrue(cadence.UsesDefaultDuration);
+        Assert.IsFalse(cadence.IsResolved);
+        Assert.IsNull(cadence.DurationDays);
+        Assert.AreEqual(0, cadence.SampleCount);
     }
 }

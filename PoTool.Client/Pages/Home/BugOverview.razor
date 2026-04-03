@@ -10,7 +10,10 @@
 @inject ProductService ProductService
 @inject TeamService TeamService
 @inject NavigationManager NavigationManager
+@inject GlobalFilterStore GlobalFilterStore
+@inject PageFilterExecutionGate PageFilterExecutionGate
 @inject ISnackbar Snackbar
+@implements IDisposable
 
 <PageTitle>Bug Insights - PO Companion</PageTitle>
 
@@ -54,47 +57,6 @@
     }
     else
     {
-        <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudStack Spacing="3">
-                <MudText Typo="Typo.h6">
-                    <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Class="mr-2" />
-                    Filters
-                </MudText>
-
-                <MudGrid Spacing="2">
-                    <MudItem xs="12" sm="6">
-                        <MudSelect T="int?"
-                                   Value="_selectedTeamId"
-                                   Label="Team"
-                                   Variant="Variant.Outlined"
-                                   Clearable="true"
-                                   ValueChanged="OnTeamChanged">
-                            <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
-                            @foreach (var team in _teams)
-                            {
-                                <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudItem>
-
-                    <MudItem xs="12" sm="6">
-                        <MudSelect T="int?"
-                                   Value="_selectedProductId"
-                                   Label="Product"
-                                   Variant="Variant.Outlined"
-                                   Clearable="true"
-                                   ValueChanged="OnProductChanged">
-                            <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
-                            @foreach (var product in _products)
-                            {
-                                <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudItem>
-                </MudGrid>
-            </MudStack>
-        </MudPaper>
-
         <DataStateView TData="IReadOnlyList<WorkItemDto>"
                        State="@_bugState"
                        IsLoading="@_metricsLoading"
@@ -216,8 +178,6 @@
     private List<BreadcrumbItem> _breadcrumbs = new();
     
     // Selectors
-    private int? _selectedTeamId;
-    private int? _selectedProductId;
     private List<TeamDto> _teams = new();
     private List<ProductDto> _products = new();
     
@@ -237,9 +197,13 @@
     // Time window (6 months by default)
     private readonly DateTimeOffset _fromDate = DateTimeOffset.UtcNow.AddMonths(-6);
     private DataStateViewModel<IReadOnlyList<WorkItemDto>> _bugState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.NotRequested();
+    private IDisposable? _filterSubscription;
+    private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
+    private int? _selectedProductId => GlobalFilterStore.GetState().PrimaryProductId;
     
     protected override async Task OnInitializedAsync()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         try
         {
             var activeProfile = await ProfileService.GetActiveProfileAsync();
@@ -256,8 +220,7 @@
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
             _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
             
-            // Parse URL parameters
-            ParseQueryParameters();
+            await SyncStoreFromCurrentRouteAsync();
             
             // Load bug data and calculate metrics
             await LoadBugDataAsync();
@@ -275,28 +238,21 @@
         }
     }
     
-    private void ParseQueryParameters()
-    {
-        var uri = new Uri(NavigationManager.Uri);
-        var queryParams = HttpUtility.ParseQueryString(uri.Query);
-        
-        // Parse teamId
-        var teamIdStr = queryParams["teamId"];
-        if (!string.IsNullOrEmpty(teamIdStr) && int.TryParse(teamIdStr, out var teamId))
-        {
-            _selectedTeamId = teamId;
-        }
-        
-        // Parse productId
-        var productIdStr = queryParams["productId"];
-        if (!string.IsNullOrEmpty(productIdStr) && int.TryParse(productIdStr, out var productId))
-        {
-            _selectedProductId = productId;
-        }
-    }
-    
     private async Task LoadBugDataAsync()
     {
+        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        {
+            _allBugs = [];
+            _severityDistribution = new();
+            _totalOpenBugs = null;
+            _bugsCreated = null;
+            _bugsResolved = null;
+            _resolutionTime = null;
+            _bugState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.NotRequested();
+            StateHasChanged();
+            return;
+        }
+
         _metricsLoading = true;
         _bugState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.Loading();
         StateHasChanged();
@@ -361,40 +317,6 @@
         _severityDistribution = _calculator.CalculateBugsBySeverityDistribution(_allBugs);
     }
     
-    private async Task OnTeamChanged(int? teamId)
-    {
-        _selectedTeamId = teamId;
-        UpdateUrlParameters();
-        await LoadBugDataAsync();
-    }
-    
-    private async Task OnProductChanged(int? productId)
-    {
-        _selectedProductId = productId;
-        UpdateUrlParameters();
-        await LoadBugDataAsync();
-    }
-    
-    private void UpdateUrlParameters()
-    {
-        var queryParams = new List<string>();
-        
-        if (_selectedTeamId.HasValue)
-        {
-            queryParams.Add($"teamId={_selectedTeamId.Value}");
-        }
-        
-        if (_selectedProductId.HasValue)
-        {
-            queryParams.Add($"productId={_selectedProductId.Value}");
-        }
-        
-        var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
-        var newUrl = $"{WorkspaceRoutes.BugOverview}{queryString}";
-        
-        NavigationManager.NavigateTo(newUrl, forceLoad: false);
-    }
-    
     private void UpdateBreadcrumbs()
     {
         _breadcrumbs = new List<BreadcrumbItem>
@@ -434,5 +356,22 @@
     private void NavigateToBugTriage()
     {
         NavigationManager.NavigateTo(WorkspaceRoutes.BugTriage);
+    }
+
+    private async Task SyncStoreFromCurrentRouteAsync()
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId);
+
+    private FilterLocalBridgeState BuildCurrentLocalBridgeState()
+        => FilterLocalBridgeState.FromState(GlobalFilterStore.GetState());
+
+    private async Task UpdateFilterStateAsync(FilterLocalBridgeState localState)
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId, localState, FilterUpdateSource.Ui);
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        _filterSubscription?.Dispose();
     }
 }

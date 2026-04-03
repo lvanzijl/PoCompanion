@@ -6,9 +6,12 @@
 @using PoTool.Client.Models
 @inject IOnboardingService OnboardingService
 @inject IStartupOrchestratorService StartupOrchestrator
+@inject GlobalFilterStore GlobalFilterStore
 @inject IProfileService ProfileService
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
+@inject GlobalFilterCorrectionService GlobalFilterCorrectionService
+@inject GlobalFilterRouteService GlobalFilterRouteService
 @inherits LayoutComponentBase
 @implements IDisposable
 
@@ -55,6 +58,8 @@
         </div>
 
         <article class="content px-4">
+            <FilterSummaryBar />
+            <GlobalFilterControls />
             <StartupGuard>
                 @Body
             </StartupGuard>
@@ -73,6 +78,7 @@
         if (firstRender && !_hasCheckedOnboarding)
         {
             _hasCheckedOnboarding = true;
+            ObserveCurrentRoute();
             
             // Subscribe to navigation changes to refresh profile selector when needed
             NavigationManager.LocationChanged += OnLocationChanged;
@@ -93,6 +99,8 @@
                     await _profileSelector.RefreshAsync();
                 }
             }
+
+            ObserveCurrentRoute(e.Location);
         }
         catch (Exception ex)
         {
@@ -113,8 +121,7 @@
 
     private void NavigateToHome()
     {
-        var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
-        NavigationManager.NavigateTo(WorkspaceQueryContextHelper.BuildRoute(WorkspaceRoutes.Home, context));
+        _ = NavigateWithCurrentStateAsync(WorkspaceRoutes.Home);
     }
 
     private async Task NavigateToWorkspaceAsync(string route)
@@ -126,8 +133,7 @@
             return;
         }
 
-        var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
-        NavigationManager.NavigateTo(WorkspaceQueryContextHelper.BuildRoute(route, context));
+        await NavigateWithCurrentStateAsync(route);
     }
 
     private async Task OpenOnboardingWizard()
@@ -159,6 +165,31 @@
     {
         // Refresh the current page when profile changes by forcing navigation
         NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+    }
+
+    private void ObserveCurrentRoute(string? uri = null)
+    {
+        _ = ObserveCurrentRouteAsync(uri ?? NavigationManager.Uri);
+    }
+
+    private async Task ObserveCurrentRouteAsync(string uri)
+    {
+        await GlobalFilterStore.TrackNavigationAsync(uri, ProfileService.GetActiveProfileId());
+        var correctedUri = await GlobalFilterCorrectionService.BuildCorrectedUriAsync(uri);
+        if (!string.IsNullOrWhiteSpace(correctedUri) && GlobalFilterStore.TryPrepareNavigation(uri, correctedUri))
+        {
+            NavigationManager.NavigateTo(correctedUri, forceLoad: false);
+        }
+    }
+
+    private async Task NavigateWithCurrentStateAsync(string route)
+    {
+        var additionalParams = WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri);
+        var targetUri = await GlobalFilterRouteService.BuildUriAsync(route, GlobalFilterStore.GetState(), additionalParams);
+        if (GlobalFilterStore.TryPrepareNavigation(NavigationManager.Uri, targetUri))
+        {
+            NavigationManager.NavigateTo(targetUri);
+        }
     }
 
     private async Task HandleGlobalKeyDown(KeyboardEventArgs e)

@@ -13,7 +13,11 @@
 @inject TeamService TeamService
 @inject SprintService SprintService
 @inject NavigationManager NavigationManager
+@inject GlobalFilterStore GlobalFilterStore
+@inject PageFilterExecutionGate PageFilterExecutionGate
+@inject GlobalFilterRouteService GlobalFilterRouteService
 @inject ISnackbar Snackbar
+@implements IDisposable
 
 <PageTitle>Delivery Trends - PO Companion</PageTitle>
 
@@ -66,48 +70,15 @@
     }
     else
     {
-        @* Sprint range + filter controls *@
+        @* Canonical range projection *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Spacing="2">
                 <MudText Typo="Typo.h6">
                     <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Class="mr-2" />
-                    Sprint Range
+                    Trend window
                 </MudText>
 
                 <MudGrid Spacing="2">
-                    @* Team selector (drives sprint list) *@
-                    <MudItem xs="12" sm="6" md="3">
-                        <MudSelect T="int?"
-                                   Value="_selectedTeamId"
-                                   Label="Team"
-                                   Variant="Variant.Outlined"
-                                   Clearable="true"
-                                   ValueChanged="OnTeamChanged">
-                            <MudSelectItem T="int?" Value="@((int?)null)">All Teams</MudSelectItem>
-                            @foreach (var team in _teams)
-                            {
-                                <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudItem>
-
-                    @* Product filter *@
-                    <MudItem xs="12" sm="6" md="3">
-                        <MudSelect T="int?"
-                                   Value="_selectedProductId"
-                                   Label="Product"
-                                   Variant="Variant.Outlined"
-                                   Clearable="true"
-                                   ValueChanged="OnProductChanged">
-                            <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
-                            @foreach (var product in _products)
-                            {
-                                <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudItem>
-
-                    @* Last sprint to show *@
                     @if (_filteredSprints.Count > 0)
                     {
                         <MudItem xs="12" sm="6" md="3">
@@ -124,11 +95,10 @@
                             </MudSelect>
                         </MudItem>
 
-                        @* Sprint count *@
                         <MudItem xs="12" sm="6" md="3">
                             <MudNumericField T="int"
                                              Label="Sprints to show"
-                                             Value="@_trendSprintCount"
+                                             Value="@CurrentTrendSprintCount"
                                              ValueChanged="OnTrendSprintCountChanged"
                                              Min="2"
                                              Max="@MaxAvailableSprints"
@@ -141,7 +111,7 @@
                 @if (_filteredSprints.Count > 0 && _currentSprint != null)
                 {
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        Showing @GetTrendRangeLabel()
+                        Projection over canonical inclusive range: @GetTrendRangeLabel()
                     </MudText>
                 }
             </MudStack>
@@ -316,9 +286,6 @@
     private List<BreadcrumbItem> _breadcrumbs = new();
 
     // Selectors
-    private int? _selectedTeamId;
-    private int? _selectedProductId;
-    private int _trendSprintCount = DefaultTrendSprintCount;
     private List<TeamDto> _teams = new();
     private List<ProductDto> _products = new();
     private List<SprintDto> _allSprints = new();
@@ -350,10 +317,16 @@
         YAxisLines = true,
         XAxisLines = true
     };
+    private IDisposable? _filterSubscription;
+    private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
+    private int? _selectedProductId => GlobalFilterStore.GetState().PrimaryProductId;
+    private int? _selectedFromSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Range ? GlobalFilterStore.GetState().Time.StartSprintId : null;
+    private int? _selectedToSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Range ? GlobalFilterStore.GetState().Time.EndSprintId : null;
 
     protected override async Task OnInitializedAsync()
     {
-        ParseQueryParameters();
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
+        await SyncStoreFromCurrentRouteAsync();
         await LoadDataAsync();
     }
 
@@ -388,7 +361,7 @@
             }
 
             ApplySprintFilters();
-            FindCurrentSprint();
+            await EnsureRangeSelectionAsync();
             await LoadMetricsAsync();
             UpdateBreadcrumbs();
         }
@@ -415,18 +388,16 @@
             .ToList();
     }
 
-    private void FindCurrentSprint()
+    private void SelectDeterministicEndSprint()
     {
-        var now = DateTimeOffset.UtcNow;
-        _currentSprintIndex = _filteredSprints.FindIndex(s => s.StartUtc <= now && s.EndUtc >= now);
-
-        if (_currentSprintIndex < 0 && _filteredSprints.Count > 0)
+        var selectedEndSprintId = _selectedToSprintId ?? _filteredSprints.LastOrDefault()?.Id;
+        _currentSprintIndex = selectedEndSprintId.HasValue
+            ? _filteredSprints.FindIndex(s => s.Id == selectedEndSprintId.Value)
+            : _filteredSprints.Count - 1;
+        if (_currentSprintIndex < 0)
         {
-            _currentSprintIndex = _filteredSprints.FindLastIndex(s => s.EndUtc <= now);
-            if (_currentSprintIndex < 0)
-                _currentSprintIndex = _filteredSprints.Count - 1;
+            _currentSprintIndex = _filteredSprints.Count - 1;
         }
-
         _currentSprint = _currentSprintIndex >= 0 ? _filteredSprints[_currentSprintIndex] : null;
     }
 
@@ -439,15 +410,15 @@
 
         try
         {
+            if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+            {
+                return;
+            }
+
             if (!_profileId.HasValue || _currentSprint == null)
                 return;
 
-            var startIndex = Math.Max(0, _currentSprintIndex - _trendSprintCount + 1);
-            var sprintIds = _filteredSprints
-                .Skip(startIndex)
-                .Take(_currentSprintIndex - startIndex + 1)
-                .Select(s => s.Id)
-                .ToList();
+            var sprintIds = GetSelectedSprintIds();
 
             if (sprintIds.Count == 0)
                 return;
@@ -561,35 +532,37 @@
         return (nonZero.First(), nonZero.Last());
     }
 
-    private void ParseQueryParameters()
-    {
-        var uri = new Uri(NavigationManager.Uri);
-        var queryParams = HttpUtility.ParseQueryString(uri.Query);
-
-        var teamIdStr = queryParams["teamId"];
-        if (!string.IsNullOrEmpty(teamIdStr) && int.TryParse(teamIdStr, out var teamId))
-            _selectedTeamId = teamId;
-
-        var productIdStr = queryParams["productId"];
-        if (!string.IsNullOrEmpty(productIdStr) && int.TryParse(productIdStr, out var productId))
-            _selectedProductId = productId;
-    }
-
-    private void UpdateUrlParameters()
-    {
-        var queryParams = new List<string>();
-        if (_selectedTeamId.HasValue) queryParams.Add($"teamId={_selectedTeamId.Value}");
-        if (_selectedProductId.HasValue) queryParams.Add($"productId={_selectedProductId.Value}");
-        var qs = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : string.Empty;
-        NavigationManager.NavigateTo($"{WorkspaceRoutes.DeliveryTrends}{qs}", forceLoad: false);
-    }
-
     private int MaxAvailableSprints => _filteredSprints.Count > 0 ? _filteredSprints.Count : 1;
+
+    private int CurrentTrendSprintCount
+    {
+        get
+        {
+            if (!_selectedFromSprintId.HasValue || !_selectedToSprintId.HasValue || _filteredSprints.Count == 0)
+            {
+                return Math.Min(DefaultTrendSprintCount, MaxAvailableSprints);
+            }
+
+            var startIndex = _filteredSprints.FindIndex(s => s.Id == _selectedFromSprintId.Value);
+            var endIndex = _filteredSprints.FindIndex(s => s.Id == _selectedToSprintId.Value);
+            if (startIndex < 0 || endIndex < 0)
+            {
+                return Math.Min(DefaultTrendSprintCount, MaxAvailableSprints);
+            }
+
+            if (startIndex > endIndex)
+            {
+                (startIndex, endIndex) = (endIndex, startIndex);
+            }
+
+            return endIndex - startIndex + 1;
+        }
+    }
 
     private string GetTrendRangeLabel()
     {
         if (_filteredSprints.Count == 0 || _currentSprintIndex < 0) return string.Empty;
-        var startIndex = Math.Max(0, _currentSprintIndex - _trendSprintCount + 1);
+        var startIndex = Math.Max(0, _currentSprintIndex - CurrentTrendSprintCount + 1);
         return $"{_filteredSprints[startIndex].Name} – {_currentSprint!.Name}";
     }
 
@@ -605,17 +578,17 @@
 
     private async Task OnTeamChanged(int? teamId)
     {
-        _selectedTeamId = teamId;
-        UpdateUrlParameters();
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { TeamId = teamId, FromSprintId = null, ToSprintId = null });
+        await NavigateToResolvedFilterStateAsync();
         ApplySprintFilters();
-        FindCurrentSprint();
+        await EnsureRangeSelectionAsync();
         await LoadMetricsAsync();
     }
 
-    private void OnProductChanged(int? productId)
+    private async Task OnProductChanged(int? productId)
     {
-        _selectedProductId = productId;
-        UpdateUrlParameters();
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { ProductId = productId });
+        await NavigateToResolvedFilterStateAsync();
         if (_trendMetrics.Count > 0)
             BuildTrendCharts();
         StateHasChanged();
@@ -623,17 +596,112 @@
 
     private async Task OnEndSprintChanged(int sprintId)
     {
-        _currentSprintIndex = _filteredSprints.FindIndex(s => s.Id == sprintId);
-        _currentSprint = _currentSprintIndex >= 0 ? _filteredSprints[_currentSprintIndex] : null;
+        var endIndex = _filteredSprints.FindIndex(s => s.Id == sprintId);
+        if (endIndex < 0)
+        {
+            return;
+        }
+
+        var startIndex = Math.Max(0, endIndex - CurrentTrendSprintCount + 1);
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with
+        {
+            FromSprintId = _filteredSprints[startIndex].Id,
+            ToSprintId = _filteredSprints[endIndex].Id
+        });
+        await NavigateToResolvedFilterStateAsync();
+        SelectDeterministicEndSprint();
         await LoadMetricsAsync();
     }
 
     private async Task OnTrendSprintCountChanged(int count)
     {
-        _trendSprintCount = count;
+        if (_filteredSprints.Count == 0)
+        {
+            return;
+        }
+
+        SelectDeterministicEndSprint();
+        var endIndex = Math.Max(0, _currentSprintIndex);
+        var startIndex = Math.Max(0, endIndex - count + 1);
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with
+        {
+            FromSprintId = _filteredSprints[startIndex].Id,
+            ToSprintId = _filteredSprints[endIndex].Id
+        });
+        await NavigateToResolvedFilterStateAsync();
         await LoadMetricsAsync();
     }
 
     private void NavigateToTrends() => NavigationManager.NavigateTo(WorkspaceRoutes.TrendsWorkspace);
     private void NavigateToHome() => NavigationManager.NavigateTo(WorkspaceRoutes.Home);
+
+    private async Task SyncStoreFromCurrentRouteAsync()
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId);
+
+    private FilterLocalBridgeState BuildCurrentLocalBridgeState()
+        => FilterLocalBridgeState.FromState(GlobalFilterStore.GetState());
+
+    private async Task UpdateFilterStateAsync(FilterLocalBridgeState localState)
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId, localState, FilterUpdateSource.Ui);
+
+    private async Task NavigateToResolvedFilterStateAsync()
+    {
+        var targetUri = await GlobalFilterRouteService.BuildCurrentPageUriAsync(NavigationManager.Uri, GlobalFilterStore.GetState());
+        if (GlobalFilterStore.TryPrepareNavigation(NavigationManager.Uri, targetUri))
+        {
+            NavigationManager.NavigateTo(targetUri, forceLoad: false);
+        }
+    }
+
+    private List<int> GetSelectedSprintIds()
+    {
+        if (!_selectedFromSprintId.HasValue || !_selectedToSprintId.HasValue)
+        {
+            return new List<int>();
+        }
+
+        var startIndex = _filteredSprints.FindIndex(s => s.Id == _selectedFromSprintId.Value);
+        var endIndex = _filteredSprints.FindIndex(s => s.Id == _selectedToSprintId.Value);
+        if (startIndex < 0 || endIndex < 0)
+        {
+            return new List<int>();
+        }
+
+        if (startIndex > endIndex)
+        {
+            (startIndex, endIndex) = (endIndex, startIndex);
+        }
+
+        return _filteredSprints
+            .Skip(startIndex)
+            .Take(endIndex - startIndex + 1)
+            .Select(s => s.Id)
+            .ToList();
+    }
+
+    private async Task EnsureRangeSelectionAsync()
+    {
+        SelectDeterministicEndSprint();
+        if (_filteredSprints.Count == 0 || (_selectedFromSprintId.HasValue && _selectedToSprintId.HasValue))
+        {
+            return;
+        }
+
+        var endIndex = Math.Max(0, _currentSprintIndex);
+        var startIndex = Math.Max(0, endIndex - DefaultTrendSprintCount + 1);
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with
+        {
+            FromSprintId = _filteredSprints[startIndex].Id,
+            ToSprintId = _filteredSprints[endIndex].Id
+        });
+        SelectDeterministicEndSprint();
+    }
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        _filterSubscription?.Dispose();
+    }
 }

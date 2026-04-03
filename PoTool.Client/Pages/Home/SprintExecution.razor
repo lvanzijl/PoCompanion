@@ -11,7 +11,10 @@
 @inject ProductService ProductService
 @inject MetricsStateService MetricsStateService
 @inject NavigationManager NavigationManager
+@inject GlobalFilterStore GlobalFilterStore
+@inject PageFilterExecutionGate PageFilterExecutionGate
 @inject ISnackbar Snackbar
+@implements IDisposable
 
 <PageTitle>Sprint Execution - PO Companion</PageTitle>
 
@@ -37,77 +40,6 @@
             Internal sprint diagnostics — scope changes, completion order, and starved work detection
         </MudText>
 
-        @* Context chips *@
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-2">
-            @* Team chip *@
-            <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Group"
-                     OnClick="ToggleTeamPopover">
-                @ContextTeamLabel
-            </MudChip>
-            <MudPopover Open="@_teamPopoverOpen" AnchorOrigin="Origin.BottomLeft" Paper="true" Elevation="8" Class="pa-3">
-                <MudStack Spacing="2">
-                    <MudText Typo="Typo.overline">Team</MudText>
-                    <MudSelect T="int?" Value="_selectedTeamId" Label="Team"
-                               Variant="Variant.Outlined" Dense="true" Clearable="false"
-                               ValueChanged="OnTeamSelectedFromPopoverAsync"
-                               Style="min-width: 200px;">
-                        @foreach (var team in _teams)
-                        {
-                            <MudSelectItem T="int?" Value="@team.Id">@team.Name</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudStack>
-            </MudPopover>
-
-            @* Sprint chip *@
-            @if (_sprints.Count > 0)
-            {
-                <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.DateRange"
-                         OnClick="ToggleSprintPopover">
-                    @ContextSprintLabel
-                </MudChip>
-                <MudPopover Open="@_sprintPopoverOpen" AnchorOrigin="Origin.BottomLeft" Paper="true" Elevation="8" Class="pa-3">
-                    <MudStack Spacing="2">
-                        <MudText Typo="Typo.overline">Sprint</MudText>
-                        <MudSelect T="int?" Value="_selectedSprintId" Label="Sprint"
-                                   Variant="Variant.Outlined" Dense="true"
-                                   ValueChanged="OnSprintSelectedFromPopoverAsync"
-                                   Style="min-width: 260px;">
-                            @foreach (var sprint in _sprints)
-                            {
-                                <MudSelectItem T="int?" Value="@sprint.Id">
-                                    @sprint.Name (@(sprint.StartUtc?.ToString("dd MMM yyyy") ?? "?") – @(sprint.EndUtc?.ToString("dd MMM yyyy") ?? "?"))
-                                </MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudStack>
-                </MudPopover>
-            }
-
-            @* Product filter chip *@
-            @if (_products.Count > 0)
-            {
-                <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.FilterAlt"
-                         OnClick="ToggleProductPopover">
-                    @ContextProductLabel
-                </MudChip>
-                <MudPopover Open="@_productPopoverOpen" AnchorOrigin="Origin.BottomLeft" Paper="true" Elevation="8" Class="pa-3">
-                    <MudStack Spacing="2">
-                        <MudText Typo="Typo.overline">Product Filter</MudText>
-                        <MudSelect T="int?" Value="_selectedProductId" Label="Product"
-                                   Variant="Variant.Outlined" Dense="true" Clearable="true"
-                                   ValueChanged="OnProductSelectedFromPopoverAsync"
-                                   Style="min-width: 200px;">
-                            <MudSelectItem T="int?" Value="@((int?)null)">All Products</MudSelectItem>
-                            @foreach (var product in _products)
-                            {
-                                <MudSelectItem T="int?" Value="@product.Id">@product.Name</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudStack>
-                </MudPopover>
-            }
-        </MudStack>
     </MudPaper>
 
     @* Loading / Error States *@
@@ -122,6 +54,18 @@
             <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@LoadInitialDataAsync">
                 Retry
             </MudButton>
+        </MudAlert>
+    }
+    else if (!_selectedTeamId.HasValue)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            Select a team to load sprint execution.
+        </MudAlert>
+    }
+    else if (!_selectedSprintId.HasValue)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            Select a sprint to load sprint execution.
         </MudAlert>
     }
 
@@ -442,9 +386,6 @@
     private List<TeamDto> _teams = new();
     private List<SprintDto> _sprints = new();
     private List<ProductDto> _products = new();
-    private int? _selectedTeamId;
-    private int? _selectedSprintId;
-    private int? _selectedProductId;
     private SprintExecutionDto? _data;
     private DataStateViewModel<SprintQueryResponseDto<SprintExecutionDto>> _dataState = DataStateViewModel<SprintQueryResponseDto<SprintExecutionDto>>.NotRequested();
     private CanonicalFilterNoticeModel? _filterNotice;
@@ -457,6 +398,10 @@
     private bool _teamPopoverOpen;
     private bool _sprintPopoverOpen;
     private bool _productPopoverOpen;
+    private IDisposable? _filterSubscription;
+    private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
+    private int? _selectedSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Sprint ? GlobalFilterStore.GetState().Time.SprintId : null;
+    private int? _selectedProductId => GlobalFilterStore.GetState().PrimaryProductId;
 
     // ── Labels ───────────────────────────────────────────────────────────────────
     private string ContextTeamLabel => _selectedTeamId.HasValue
@@ -475,6 +420,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         UpdateBreadcrumbs();
         await LoadInitialDataAsync();
     }
@@ -502,20 +448,25 @@
 
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
             _products = (await ProductService.GetProductsByOwnerAsync(_profileId.Value)).ToList();
+            await SyncStoreFromCurrentRouteAsync();
 
             UpdateBreadcrumbs();
-
-            // Auto-select first team and load sprints
-            if (!_selectedTeamId.HasValue && _teams.Count > 0)
-            {
-                _selectedTeamId = _teams[0].Id;
-            }
 
             if (_selectedTeamId.HasValue)
             {
                 await LoadSprintsAsync(_selectedTeamId.Value);
-                ApplyDefaultSprint();
-                await LoadExecutionDataAsync();
+
+                if (_selectedSprintId.HasValue && !_sprints.Any(s => s.Id == _selectedSprintId.Value))
+                {
+                    await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { SprintId = null });
+                    _data = null;
+                    _filterNotice = null;
+                }
+
+                if (_selectedSprintId.HasValue)
+                {
+                    await LoadExecutionDataAsync();
+                }
             }
         }
         catch (Exception ex)
@@ -544,24 +495,21 @@
         }
     }
 
-    private void ApplyDefaultSprint()
-    {
-        if (_sprints.Count == 0) return;
-
-        var now = DateTimeOffset.UtcNow;
-        var current = _sprints.FirstOrDefault(s => s.TimeFrame == "current")
-            ?? _sprints.FirstOrDefault(s => s.StartUtc <= now && (s.EndUtc == null || s.EndUtc >= now))
-            ?? _sprints.LastOrDefault(s => s.EndUtc <= now);
-
-        if (current != null)
-        {
-            _selectedSprintId = current.Id;
-        }
-    }
-
     private async Task LoadExecutionDataAsync()
     {
-        if (!_profileId.HasValue || !_selectedSprintId.HasValue) return;
+        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        {
+            _data = null;
+            _filterNotice = null;
+            return;
+        }
+
+        if (!_profileId.HasValue || !_selectedTeamId.HasValue || !_selectedSprintId.HasValue)
+        {
+            _data = null;
+            _filterNotice = null;
+            return;
+        }
 
         try
         {
@@ -618,29 +566,46 @@
     private async Task OnSprintSelectedFromPopoverAsync(int? sprintId)
     {
         _sprintPopoverOpen = false;
-        _selectedSprintId = sprintId;
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { SprintId = sprintId });
+        UpdateContextUrl();
         await LoadExecutionDataAsync();
     }
 
     private async Task OnProductSelectedFromPopoverAsync(int? productId)
     {
         _productPopoverOpen = false;
-        _selectedProductId = productId;
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { ProductId = productId });
+        UpdateContextUrl();
         await LoadExecutionDataAsync();
     }
 
     private async Task OnTeamChangedAsync(int? teamId)
     {
-        _selectedTeamId = teamId;
-        _selectedSprintId = null;
         _sprints = new List<SprintDto>();
         _data = null;
+        _filterNotice = null;
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { TeamId = teamId, SprintId = null });
+        UpdateContextUrl();
 
         if (teamId.HasValue)
         {
             await LoadSprintsAsync(teamId.Value);
-            ApplyDefaultSprint();
-            await LoadExecutionDataAsync();
+
+            if (_selectedSprintId.HasValue && !_sprints.Any(s => s.Id == _selectedSprintId.Value))
+            {
+                await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { SprintId = null });
+            }
+        }
+    }
+
+    private void UpdateContextUrl()
+    {
+        var targetUri = WorkspaceQueryContextHelper.BuildRoute(
+            WorkspaceRoutes.SprintExecution,
+            new WorkspaceQueryContext(TeamId: _selectedTeamId, SprintId: _selectedSprintId));
+        if (GlobalFilterStore.TryPrepareNavigation(NavigationManager.Uri, targetUri))
+        {
+            NavigationManager.NavigateTo(targetUri, forceLoad: false);
         }
     }
 
@@ -661,4 +626,21 @@
     }
 
     private static string FormatStoryPoints(double storyPoints) => storyPoints.ToString("0.##");
+
+    private async Task SyncStoreFromCurrentRouteAsync()
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId);
+
+    private FilterLocalBridgeState BuildCurrentLocalBridgeState()
+        => FilterLocalBridgeState.FromState(GlobalFilterStore.GetState());
+
+    private async Task UpdateFilterStateAsync(FilterLocalBridgeState localState)
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId, localState, FilterUpdateSource.Ui);
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        _filterSubscription?.Dispose();
+    }
 }

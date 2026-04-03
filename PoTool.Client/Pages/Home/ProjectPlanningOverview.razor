@@ -5,6 +5,7 @@
 @using PoTool.Shared.Planning
 @inherits WorkspaceBase
 @inject ProjectService ProjectService
+@inject GlobalFilterRouteService GlobalFilterRouteService
 
 <PageTitle>Project Planning Overview - PO Companion</PageTitle>
 
@@ -176,17 +177,19 @@
         }
     }
 
-    private void NavigateToRoadmaps()
+    private async Task NavigateToRoadmaps()
         => NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.GetProjectProductRoadmaps(ProjectAliasRoute),
-                new WorkspaceQueryContext(ProjectAliasRoute)));
+            await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+                "ProductRoadmaps",
+                ProjectAliasRoute,
+                additionalParams: WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
 
-    private void NavigateToPlanBoard()
+    private async Task NavigateToPlanBoard()
         => NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.GetProjectPlanBoard(ProjectAliasRoute),
-                new WorkspaceQueryContext(ProjectAliasRoute)));
+            await GlobalFilterRouteService.BuildPlanningPageUriAsync(
+                "PlanBoard",
+                ProjectAliasRoute,
+                additionalParams: WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
 
     private bool HasProductImbalance()
     {
