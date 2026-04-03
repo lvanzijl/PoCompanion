@@ -115,9 +115,7 @@ public class NavigationContextService : INavigationContextService
         {
             "navigate-to-analysis" => true,
             "navigate-to-planning" => true,
-            "navigate-to-communication" => true,
             "navigate-to-team" => _current.Scope.ProductId != null,
-            "share" => _current.Intent != Intent.Plannen || _current.TimeHorizon == TimeHorizon.Future,
             _ => true
         };
     }

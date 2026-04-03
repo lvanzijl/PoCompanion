@@ -38,11 +38,6 @@ public static class WorkspaceRoutes
     /// </summary>
     public const string AnalysisWorkspace = "/workspace/analysis";
 
-    /// <summary>
-    /// Communication Workspace route.
-    /// </summary>
-    public const string CommunicationWorkspace = "/workspace/communication";
-
     #region Workspace Navigation Routes
 
     /// <summary>
@@ -224,7 +219,6 @@ public static class WorkspaceRoutes
             Intent.Overzien => ProductWorkspace,
             Intent.Begrijpen => AnalysisWorkspace,
             Intent.Plannen => PlanningWorkspace,
-            Intent.Delen => CommunicationWorkspace,
             _ => Home
         };
     }

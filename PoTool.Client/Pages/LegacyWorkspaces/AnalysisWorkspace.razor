@@ -203,9 +203,6 @@
                 <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Filled.CalendarMonth" OnClick="NavigateToPlanning">
                     Plan
                 </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Share" OnClick="NavigateToCommunication">
-                    Share
-                </MudButton>
                 <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Inventory2" OnClick="NavigateToProduct">
                     Product Workspace
                 </MudButton>
@@ -352,19 +349,6 @@
         };
         
         await NavigationContextService.NavigateWithContextAsync(WorkspaceRoutes.PlanningWorkspace, newContext);
-    }
-    
-    private async Task NavigateToCommunication()
-    {
-        if (_currentContext == null) return;
-        
-        var newContext = _currentContext with
-        {
-            Intent = Intent.Delen,
-            Trigger = new Trigger { Type = TriggerType.Choice, SourceLabel = "Analysis Workspace" }
-        };
-        
-        await NavigationContextService.NavigateWithContextAsync(WorkspaceRoutes.CommunicationWorkspace, newContext);
     }
     
     private async Task NavigateToProduct()

@@ -192,15 +192,6 @@
                     </MudCard>
                 </MudItem>
                 
-                <MudItem xs="12" sm="6" md="3">
-                    <MudCard Elevation="1" Style="cursor: pointer; transition: all 0.2s;" Class="mud-card-hover" @onclick="NavigateToCommunication">
-                        <MudCardContent Class="d-flex flex-column align-center pa-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Share" Color="Color.Warning" Size="Size.Large" />
-                            <MudText Typo="Typo.subtitle1" Class="mt-2">Share</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Export team data</MudText>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
             </MudGrid>
         </MudPaper>
 
@@ -468,18 +459,4 @@
             newContext);
     }
     
-    private async Task NavigateToCommunication()
-    {
-        if (_currentContext == null) return;
-        
-        var newContext = _currentContext with
-        {
-            Intent = Intent.Delen,
-            Trigger = new Trigger { Type = TriggerType.Choice, SourceLabel = "Team Workspace" }
-        };
-        
-        await NavigationContextService.NavigateWithContextAsync(
-            WorkspaceRoutes.CommunicationWorkspace, 
-            newContext);
-    }
 }

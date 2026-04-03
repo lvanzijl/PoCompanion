@@ -55,12 +55,7 @@ public enum Intent
     /// <summary>
     /// Structure and look ahead - "What should happen next?"
     /// </summary>
-    Plannen,
-
-    /// <summary>
-    /// Communicate and export - "Who needs to know?"
-    /// </summary>
-    Delen
+    Plannen
 }
 
 /// <summary>
