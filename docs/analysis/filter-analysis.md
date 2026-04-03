@@ -58,7 +58,6 @@
 | `/planning/plan-board` | `PoTool.Client/Pages/Home/PlanBoard.razor:1-280,466-969` | Product planning board. |
 | `/planning/product-roadmaps` | `PoTool.Client/Pages/Home/ProductRoadmaps.razor:1-320,545-967` | Multi-product roadmap overview. |
 | `/planning/product-roadmaps/{ProductId:int}` | `PoTool.Client/Pages/Home/ProductRoadmapEditor.razor:1-220` | Per-product roadmap editor. |
-| `/home/dependencies` | `PoTool.Client/Pages/Home/DependencyOverview.razor:1-151` | Read-only dependency overview linked from planning context. |
 
 ### Other active routes
 
@@ -76,11 +75,9 @@
 
 | Route | File | Notes |
 | --- | --- | --- |
-| `/legacy` | `PoTool.Client/Pages/Landing.razor:1-160` | Legacy intent landing; no analytics filters. |
 | `/workspace/product` and `/workspace/product/{ProductId:int}` | `PoTool.Client/Pages/LegacyWorkspaces/ProductWorkspace.razor:1-2` | Legacy workspace route. |
 | `/workspace/team` and `/workspace/team/{TeamId:int}` | `PoTool.Client/Pages/LegacyWorkspaces/TeamWorkspace.razor:1-2` | Legacy workspace route. |
 | `/workspace/analysis` and `/workspace/analysis/{Mode}` | `PoTool.Client/Pages/LegacyWorkspaces/AnalysisWorkspace.razor:1-2` | Legacy workspace route. |
-| `/workspace/communication` | `PoTool.Client/Pages/LegacyWorkspaces/CommunicationWorkspace.razor:1` | Legacy workspace route. |
 
 ## 2. Filter inventory
 

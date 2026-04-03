@@ -26,16 +26,15 @@ Pages that inherit `WorkspaceBase`:
 
 ### 1.2 INavigationContextService — Legacy workspace context propagation
 
-`PoTool.Client/Services/INavigationContextService` (implemented by `NavigationContextService`) manages a richer, immutable context object used exclusively by the four Legacy workspace pages:
+`PoTool.Client/Services/INavigationContextService` (implemented by `NavigationContextService`) manages a richer, immutable context object used exclusively by the remaining legacy workspace pages:
 
 - `AnalysisWorkspace`
-- `CommunicationWorkspace`
 - `ProductWorkspace`
 - `TeamWorkspace`
 
 The context object carries:
 
-- `Intent` (enum: Plannen / Begrijpen / Communiceren)
+- `Intent` (enum: Plannen / Begrijpen / Overzien)
 - `Scope.ProductId` and `Scope.TeamId`
 - `TimeHorizon` (Current / Future / Past)
 - `Mode` and `Trigger`

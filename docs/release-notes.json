@@ -2,6 +2,14 @@
   {
     "date": "2026-04-03",
     "type": "Changed",
+    "title": "Legacy communication workspace has been removed",
+    "impact": "The standalone `/workspace/communication` route is no longer available. Legacy product, team, and analysis pages no longer expose navigation into that removed workspace, while shared clipboard and export infrastructure remains available where it is still used elsewhere.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-03",
+    "type": "Changed",
     "title": "Legacy landing entry point has been removed",
     "impact": "The standalone `/legacy` landing page is no longer available. The remaining legacy `/workspace/*` pages still exist for direct-entry compatibility, but visible navigation back into the legacy landing entry has been removed.",
     "area": "Home",
