@@ -2,6 +2,14 @@
   {
     "date": "2026-04-03",
     "type": "Changed",
+    "title": "Global filters now enforce required context and expose shared controls",
+    "impact": "Home and planning pages now use one interactive global filter surface with explicit unresolved and invalid messaging, per-filter reset actions, centralized route correction, and query gating so pages stop loading data until the active filter state is valid for that page.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-03",
+    "type": "Changed",
     "title": "Global filters now keep stable canonical route and time semantics",
     "impact": "Home pages now derive team, sprint, product, project, and range context from one canonical filter state with explicit resolved, unresolved, or invalid classification, normalized inclusive sprint ranges, and guarded route synchronization to prevent redundant rewrites during refresh and navigation.",
     "area": "Home",
