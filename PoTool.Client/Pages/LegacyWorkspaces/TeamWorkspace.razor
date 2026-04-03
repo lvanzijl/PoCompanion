@@ -59,12 +59,12 @@
                     </MudButton>
                 }
                 
-                @* Back to Landing *@
+                @* Back to Home *@
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
                            StartIcon="@Icons.Material.Filled.Home"
-                           OnClick="NavigateToLanding">
-                    Landing
+                           OnClick="NavigateToHome">
+                    Home
                 </MudButton>
             </MudStack>
         </MudStack>
@@ -338,7 +338,7 @@
     {
         _breadcrumbs = new List<BreadcrumbItem>
         {
-            new("Landing", WorkspaceRoutes.Landing, icon: Icons.Material.Filled.Home),
+            new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
             new("Product", WorkspaceRoutes.ProductWorkspace, icon: Icons.Material.Filled.Inventory2),
             new("Team Workspace", null, disabled: true, icon: Icons.Material.Filled.Groups)
         };
@@ -404,10 +404,10 @@
         return _currentContext?.TimeHorizon == horizon ? Variant.Filled : Variant.Outlined;
     }
     
-    private void NavigateToLanding()
+    private void NavigateToHome()
     {
         NavigationContextService.ClearContext();
-        NavigationManager.NavigateTo(WorkspaceRoutes.Landing);
+        NavigationManager.NavigateTo(WorkspaceRoutes.Home);
     }
     
     private async Task NavigateToProduct()

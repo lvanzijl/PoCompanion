@@ -53,7 +53,7 @@ public interface INavigationContextService
     bool HasValidProfile();
 
     /// <summary>
-    /// Sets the initial context from Landing page intent selection.
+    /// Sets the initial context from an intent selection entry point.
     /// </summary>
     /// <param name="intent">The selected intent.</param>
     /// <param name="profileId">The current profile ID.</param>

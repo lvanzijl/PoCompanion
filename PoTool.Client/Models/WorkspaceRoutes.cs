@@ -19,11 +19,6 @@ public static class WorkspaceRoutes
     public const string SyncGate = "/sync-gate";
     
     /// <summary>
-    /// Legacy landing page route for classic intent-based navigation.
-    /// </summary>
-    public const string Legacy = "/legacy";
-
-    /// <summary>
     /// Profile selection route.
     /// </summary>
     public const string Profiles = "/profiles";
@@ -208,9 +203,6 @@ public static class WorkspaceRoutes
     /// </summary>
     public const string DeliveryTrends = "/home/trends/delivery";
     
-    // Legacy Landing route constant for backward compatibility - alias to the new Legacy constant
-    public const string Landing = Legacy;
-
     #endregion
 
     /// <summary>
@@ -233,7 +225,7 @@ public static class WorkspaceRoutes
             Intent.Begrijpen => AnalysisWorkspace,
             Intent.Plannen => PlanningWorkspace,
             Intent.Delen => CommunicationWorkspace,
-            _ => Legacy
+            _ => Home
         };
     }
 
