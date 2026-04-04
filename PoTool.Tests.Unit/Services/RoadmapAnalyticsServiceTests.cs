@@ -1,6 +1,7 @@
 using Moq;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
+using PoTool.Shared.DataState;
 using PoTool.Shared.Health;
 using PoTool.Shared.WorkItems;
 
@@ -162,20 +163,24 @@ public sealed class RoadmapAnalyticsServiceTests
     {
         _metricsClientMock
             .Setup(m => m.GetEpicForecastAsync(100, (int?)5))
-            .ReturnsAsync(new EpicCompletionForecastDto
+            .ReturnsAsync(new DataStateResponseDtoOfEpicCompletionForecastDto
             {
-                EpicId = 100,
-                Title = "Test Epic",
-                Type = "Epic",
-                TotalStoryPoints = 50,
-                DoneStoryPoints = 10,
-                RemainingStoryPoints = 40,
-                EstimatedVelocity = 10.0,
-                SprintsRemaining = 4,
-                Confidence = ForecastConfidence.High,
-                ForecastByDate = Array.Empty<SprintForecast>(),
-                AreaPath = "Test",
-                AnalysisTimestamp = DateTimeOffset.UtcNow,
+                State = DataStateDto.Available,
+                Data = new EpicCompletionForecastDto
+                {
+                    EpicId = 100,
+                    Title = "Test Epic",
+                    Type = "Epic",
+                    TotalStoryPoints = 50,
+                    DoneStoryPoints = 10,
+                    RemainingStoryPoints = 40,
+                    EstimatedVelocity = 10.0,
+                    SprintsRemaining = 4,
+                    Confidence = ForecastConfidence.High,
+                    ForecastByDate = Array.Empty<SprintForecast>(),
+                    AreaPath = "Test",
+                    AnalysisTimestamp = DateTimeOffset.UtcNow,
+                }
             });
 
         var result = await _service.LoadForecastAsync(100);
@@ -191,20 +196,24 @@ public sealed class RoadmapAnalyticsServiceTests
     {
         _metricsClientMock
             .Setup(m => m.GetEpicForecastAsync(100, (int?)5))
-            .ReturnsAsync(new EpicCompletionForecastDto
+            .ReturnsAsync(new DataStateResponseDtoOfEpicCompletionForecastDto
             {
-                EpicId = 100,
-                Title = "Small Epic",
-                Type = "Epic",
-                TotalStoryPoints = 20,
-                DoneStoryPoints = 10,
-                RemainingStoryPoints = 10,
-                EstimatedVelocity = 10.0,
-                SprintsRemaining = 1,
-                Confidence = ForecastConfidence.High,
-                ForecastByDate = Array.Empty<SprintForecast>(),
-                AreaPath = "Test",
-                AnalysisTimestamp = DateTimeOffset.UtcNow,
+                State = DataStateDto.Available,
+                Data = new EpicCompletionForecastDto
+                {
+                    EpicId = 100,
+                    Title = "Small Epic",
+                    Type = "Epic",
+                    TotalStoryPoints = 20,
+                    DoneStoryPoints = 10,
+                    RemainingStoryPoints = 10,
+                    EstimatedVelocity = 10.0,
+                    SprintsRemaining = 1,
+                    Confidence = ForecastConfidence.High,
+                    ForecastByDate = Array.Empty<SprintForecast>(),
+                    AreaPath = "Test",
+                    AnalysisTimestamp = DateTimeOffset.UtcNow,
+                }
             });
 
         var result = await _service.LoadForecastAsync(100);
@@ -235,29 +244,33 @@ public sealed class RoadmapAnalyticsServiceTests
     {
         _workItemsClientMock
             .Setup(m => m.GetBacklogStateAsync(1))
-            .ReturnsAsync(new ProductBacklogStateDto
+            .ReturnsAsync(new DataStateResponseDtoOfProductBacklogStateDto
             {
-                ProductId = 1,
-                Epics = new List<EpicRefinementDto>
+                State = DataStateDto.Available,
+                Data = new ProductBacklogStateDto
                 {
-                    new()
+                    ProductId = 1,
+                    Epics = new List<EpicRefinementDto>
                     {
-                        TfsId = 100,
-                        Title = "Epic 1",
-                        Score = 80,
-                        HasDescription = true,
-                        Features = new List<FeatureRefinementDto>
+                        new()
                         {
-                            new()
+                            TfsId = 100,
+                            Title = "Epic 1",
+                            Score = 80,
+                            HasDescription = true,
+                            Features = new List<FeatureRefinementDto>
                             {
-                                TfsId = 150,
-                                Title = "Feature 1",
-                                Score = 80,
-                                OwnerState = FeatureOwnerState.Team,
-                                Pbis = new List<PbiReadinessDto>
+                                new()
                                 {
-                                    new() { TfsId = 201, Score = 100 },
-                                    new() { TfsId = 202, Score = 75 },
+                                    TfsId = 150,
+                                    Title = "Feature 1",
+                                    Score = 80,
+                                    OwnerState = FeatureOwnerState.Team,
+                                    Pbis = new List<PbiReadinessDto>
+                                    {
+                                        new() { TfsId = 201, Score = 100 },
+                                        new() { TfsId = 202, Score = 75 },
+                                    }
                                 }
                             }
                         }
@@ -279,18 +292,22 @@ public sealed class RoadmapAnalyticsServiceTests
     {
         _workItemsClientMock
             .Setup(m => m.GetBacklogStateAsync(1))
-            .ReturnsAsync(new ProductBacklogStateDto
+            .ReturnsAsync(new DataStateResponseDtoOfProductBacklogStateDto
             {
-                ProductId = 1,
-                Epics = new List<EpicRefinementDto>
+                State = DataStateDto.Available,
+                Data = new ProductBacklogStateDto
                 {
-                    new()
+                    ProductId = 1,
+                    Epics = new List<EpicRefinementDto>
                     {
-                        TfsId = 100,
-                        Title = "Epic Without Description",
-                        Score = 0,
-                        HasDescription = false,
-                        Features = new List<FeatureRefinementDto>()
+                        new()
+                        {
+                            TfsId = 100,
+                            Title = "Epic Without Description",
+                            Score = 0,
+                            HasDescription = false,
+                            Features = new List<FeatureRefinementDto>()
+                        }
                     }
                 }
             });
@@ -321,18 +338,22 @@ public sealed class RoadmapAnalyticsServiceTests
     {
         _workItemsClientMock
             .Setup(m => m.GetDependencyGraphAsync(It.IsAny<string?>(), It.Is<string?>(s => s == "100,200"), It.IsAny<string?>()))
-            .ReturnsAsync(new DependencyGraphDto
+            .ReturnsAsync(new DataStateResponseDtoOfDependencyGraphDto
             {
-                Nodes = new List<DependencyNode>
+                State = DataStateDto.Available,
+                Data = new DependencyGraphDto
                 {
-                    new() { WorkItemId = 100, DependencyCount = 1, DependentCount = 0 },
-                    new() { WorkItemId = 200, DependencyCount = 0, DependentCount = 0 },
-                },
-                Links = new List<DependencyLink>(),
-                CriticalPaths = new List<DependencyChain>(),
-                BlockedWorkItemIds = new List<int>(),
-                CircularDependencies = new List<CircularDependency>(),
-                AnalysisTimestamp = DateTimeOffset.UtcNow,
+                    Nodes = new List<DependencyNode>
+                    {
+                        new() { WorkItemId = 100, DependencyCount = 1, DependentCount = 0 },
+                        new() { WorkItemId = 200, DependencyCount = 0, DependentCount = 0 },
+                    },
+                    Links = new List<DependencyLink>(),
+                    CriticalPaths = new List<DependencyChain>(),
+                    BlockedWorkItemIds = new List<int>(),
+                    CircularDependencies = new List<CircularDependency>(),
+                    AnalysisTimestamp = DateTimeOffset.UtcNow,
+                }
             });
 
         var result = await _service.LoadDependencySignalsAsync(new[] { 100, 200 });

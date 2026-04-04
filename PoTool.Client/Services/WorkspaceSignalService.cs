@@ -399,7 +399,8 @@ public sealed class WorkspaceSignalService
         {
             try
             {
-                return await _workItemsClient.GetBacklogStateAsync(product.Id, cancellationToken);
+                var response = await _workItemsClient.GetBacklogStateAsync(product.Id, cancellationToken);
+                return GeneratedCacheEnvelopeHelper.GetDataOrDefault<ProductBacklogStateDto>(response);
             }
             catch (ApiException ex) when (ex.StatusCode == 404)
             {
@@ -448,12 +449,12 @@ public sealed class WorkspaceSignalService
         {
             try
             {
-                var sprintExecutionEnvelopeTask = _metricsClient.GetSprintExecutionEnvelopeAsync(
+                var sprintExecutionEnvelopeTask = _metricsClient.GetSprintExecutionAsync(
                     productOwnerId,
                     sprint.Id,
                     selectedProductId,
                     cancellationToken);
-                var backlogHealthEnvelopeTask = _metricsClient.GetBacklogHealthEnvelopeAsync(
+                var backlogHealthEnvelopeTask = _metricsClient.GetBacklogHealthAsync(
                     sprint.Path,
                     productOwnerId,
                     selectedProductId.HasValue ? [selectedProductId.Value] : null,
@@ -462,8 +463,15 @@ public sealed class WorkspaceSignalService
 
                 await Task.WhenAll(sprintExecutionEnvelopeTask, backlogHealthEnvelopeTask);
 
-                var sprintExecutionResponse = CanonicalClientResponseFactory.Create(await sprintExecutionEnvelopeTask);
-                var backlogHealthResponse = CanonicalClientResponseFactory.Create(await backlogHealthEnvelopeTask);
+                var sprintExecutionEnvelope = (await sprintExecutionEnvelopeTask).GetDataOrDefault();
+                var backlogHealthEnvelope = (await backlogHealthEnvelopeTask).GetDataOrDefault();
+                if (sprintExecutionEnvelope is null || backlogHealthEnvelope is null)
+                {
+                    return null;
+                }
+
+                var sprintExecutionResponse = CanonicalClientResponseFactory.Create<SprintExecutionDto>(sprintExecutionEnvelope);
+                var backlogHealthResponse = CanonicalClientResponseFactory.Create<BacklogHealthDto>(backlogHealthEnvelope);
 
                 return new DeliverySignalContext(
                     sprint,
@@ -500,14 +508,15 @@ public sealed class WorkspaceSignalService
             return null;
         }
 
-        var response = await _metricsClient.GetSprintTrendMetricsEnvelopeAsync(
+        var response = await _metricsClient.GetSprintTrendMetricsAsync(
             productOwnerId,
             sprintIds,
             null,
             false,
             true,
             cancellationToken);
-        return CanonicalClientResponseFactory.Create(response);
+        var envelope = response.GetDataOrDefault();
+        return envelope is null ? null : CanonicalClientResponseFactory.Create(envelope);
     }
 
     private async Task<CanonicalClientResponse<GetPrSprintTrendsResponse>?> LoadPrTrendsAsync(
@@ -520,8 +529,9 @@ public sealed class WorkspaceSignalService
             return null;
         }
 
-        var response = await _pullRequestsClient.GetSprintTrendsEnvelopeAsync(sprintIds, productIdsCsv, null, cancellationToken);
-        return CanonicalClientResponseFactory.Create(response);
+        var response = await _pullRequestsClient.GetSprintTrendsAsync(sprintIds, productIdsCsv, null, cancellationToken);
+        var envelope = response.GetDataOrDefault();
+        return envelope is null ? null : CanonicalClientResponseFactory.Create(envelope);
     }
 
     private async Task<CanonicalClientResponse<CapacityCalibrationDto>?> LoadCapacityCalibrationAsync(
@@ -535,8 +545,9 @@ public sealed class WorkspaceSignalService
             return null;
         }
 
-        var response = await _metricsClient.GetCapacityCalibrationEnvelopeAsync(productOwnerId, sprintIds, productIds, cancellationToken);
-        return CanonicalClientResponseFactory.Create(response);
+        var response = await _metricsClient.GetCapacityCalibrationAsync(productOwnerId, sprintIds, productIds, cancellationToken);
+        var envelope = response.GetDataOrDefault();
+        return envelope is null ? null : CanonicalClientResponseFactory.Create(envelope);
     }
 
     private static IEnumerable<WorkspaceSignalCandidate> GetDeliveryCandidates(

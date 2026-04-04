@@ -1,5 +1,5 @@
-using System.Net.Http.Json;
 using System.Text.Json;
+using PoTool.Client.ApiClient;
 using PoTool.Shared.Settings;
 
 namespace PoTool.Client.Services;
@@ -12,21 +12,27 @@ public sealed class ConfigurationTransferService
         WriteIndented = true
     };
 
-    private readonly HttpClient _httpClient;
+    private readonly ISettingsClient _settingsClient;
 
-    public ConfigurationTransferService(HttpClient httpClient)
+    public ConfigurationTransferService(ISettingsClient settingsClient)
     {
-        _httpClient = httpClient;
+        _settingsClient = settingsClient;
     }
 
     public async Task<ConfigurationExportDto> ExportAsync(CancellationToken cancellationToken = default)
     {
-        var export = await _httpClient.GetFromJsonAsync<ConfigurationExportDto>(
-            "/api/settings/configuration-export",
-            JsonOptions,
-            cancellationToken);
-
-        return export ?? throw new InvalidOperationException("The export endpoint returned no configuration.");
+        try
+        {
+            return await _settingsClient.ExportConfigurationAsync(cancellationToken);
+        }
+        catch (ApiException ex) when (GeneratedClientErrorTranslator.IsSuccessfulEmptyResponse(ex))
+        {
+            throw new InvalidOperationException("The export endpoint returned no configuration.", ex);
+        }
+        catch (ApiException ex)
+        {
+            throw GeneratedClientErrorTranslator.ToHttpRequestException(ex);
+        }
     }
 
     public async Task<ConfigurationImportResultDto> ImportAsync(
@@ -35,7 +41,6 @@ public sealed class ConfigurationTransferService
         CancellationToken cancellationToken = default)
     {
         return await SendImportRequestAsync(
-            "/api/settings/configuration-import",
             new ConfigurationImportRequest(jsonContent, ValidateOnly: false, WipeExistingConfiguration: wipeExistingConfiguration),
             cancellationToken);
     }
@@ -46,14 +51,20 @@ public sealed class ConfigurationTransferService
     }
 
     private async Task<ConfigurationImportResultDto> SendImportRequestAsync(
-        string url,
         ConfigurationImportRequest request,
         CancellationToken cancellationToken)
     {
-        var response = await _httpClient.PostAsJsonAsync(url, request, JsonOptions, cancellationToken);
-        response.EnsureSuccessStatusCode();
-
-        var result = await response.Content.ReadFromJsonAsync<ConfigurationImportResultDto>(JsonOptions, cancellationToken);
-        return result ?? throw new InvalidOperationException("The configuration import endpoint returned no result.");
+        try
+        {
+            return await _settingsClient.ImportConfigurationAsync(request, cancellationToken);
+        }
+        catch (ApiException ex) when (GeneratedClientErrorTranslator.IsSuccessfulEmptyResponse(ex))
+        {
+            throw new InvalidOperationException("The configuration import endpoint returned no result.", ex);
+        }
+        catch (ApiException ex)
+        {
+            throw GeneratedClientErrorTranslator.ToHttpRequestException(ex);
+        }
     }
 }

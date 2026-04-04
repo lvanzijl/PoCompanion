@@ -1,5 +1,5 @@
 using PoTool.Client.ApiClient;
-using System.Net.Http.Json;
+using System.Net;
 using TeamPictureType = PoTool.Shared.Settings.TeamPictureType;
 
 namespace PoTool.Client.Services;
@@ -10,12 +10,10 @@ namespace PoTool.Client.Services;
 public class TeamService
 {
     private readonly ITeamsClient _teamsClient;
-    private readonly HttpClient _httpClient;
 
-    public TeamService(ITeamsClient teamsClient, HttpClient httpClient)
+    public TeamService(ITeamsClient teamsClient)
     {
         _teamsClient = teamsClient;
-        _httpClient = httpClient;
     }
 
     /// <summary>
@@ -59,24 +57,30 @@ public class TeamService
         // If no picture ID is specified and using default type, randomize it
         var pictureId = defaultPictureId ?? Random.Shared.Next(0, 64);
 
-        // Build request manually since NSwag client might not be regenerated yet
-        var requestBody = new
+        var request = new CreateTeamRequest
         {
-            name,
-            teamAreaPath,
-            pictureType = (int)pictureType,
-            defaultPictureId = pictureId,
-            customPicturePath,
-            projectName,
-            tfsTeamId,
-            tfsTeamName
+            Name = name,
+            TeamAreaPath = teamAreaPath,
+            PictureType = pictureType,
+            DefaultPictureId = pictureId,
+            CustomPicturePath = customPicturePath,
+            ProjectName = projectName,
+            TfsTeamId = tfsTeamId,
+            TfsTeamName = tfsTeamName
         };
 
-        var response = await _httpClient.PostAsJsonAsync("/api/teams", requestBody, cancellationToken);
-        response.EnsureSuccessStatusCode();
-
-        var result = await response.Content.ReadFromJsonAsync<TeamDto>(cancellationToken);
-        return result!;
+        try
+        {
+            return await _teamsClient.CreateTeamAsync(request, cancellationToken);
+        }
+        catch (ApiException ex) when (ex.StatusCode == (int)HttpStatusCode.BadRequest)
+        {
+            throw GeneratedClientErrorTranslator.ToHttpRequestException(ex);
+        }
+        catch (ApiException ex)
+        {
+            throw GeneratedClientErrorTranslator.ToHttpRequestException(ex);
+        }
     }
 
     /// <summary>

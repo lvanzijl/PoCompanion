@@ -1,7 +1,5 @@
-using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using PoTool.Shared.Settings;
+using PoTool.Client.ApiClient;
+using SharedStartupReadinessDto = PoTool.Shared.Settings.StartupReadinessDto;
 
 namespace PoTool.Client.Services;
 
@@ -11,18 +9,12 @@ namespace PoTool.Client.Services;
 /// </summary>
 public class StartupOrchestratorService : IStartupOrchestratorService
 {
-    private readonly HttpClient _httpClient;
+    private readonly IStartupClient _startupClient;
     private readonly ICacheSyncService _cacheSyncService;
 
-    private static readonly JsonSerializerOptions _jsonOptions = new()
+    public StartupOrchestratorService(IStartupClient startupClient, ICacheSyncService cacheSyncService)
     {
-        PropertyNameCaseInsensitive = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    public StartupOrchestratorService(HttpClient httpClient, ICacheSyncService cacheSyncService)
-    {
-        _httpClient = httpClient;
+        _startupClient = startupClient;
         _cacheSyncService = cacheSyncService;
     }
 
@@ -31,27 +23,7 @@ public class StartupOrchestratorService : IStartupOrchestratorService
     {
         try
         {
-            var response = await _httpClient.GetAsync("/api/startup/readiness", cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                return new StartupReadinessResult(
-                    StartupReadinessState.Unavailable,
-                    Readiness: null,
-                    Reason: $"Startup readiness is unavailable (HTTP {(int)response.StatusCode}).",
-                    RecoveryHint: "Confirm the backend is running, then retry startup.");
-            }
-
-            var readiness = await response.Content.ReadFromJsonAsync<StartupReadinessDto>(_jsonOptions, cancellationToken);
-            if (readiness == null)
-            {
-                return new StartupReadinessResult(
-                    StartupReadinessState.Error,
-                    Readiness: null,
-                    Reason: "Startup readiness returned an empty response.",
-                    RecoveryHint: "Retry startup. If the problem persists, check the API response contract.");
-            }
-
+            var readiness = MapReadiness(await _startupClient.GetStartupReadinessAsync(cancellationToken));
             return await ClassifyReadinessAsync(readiness, cancellationToken);
         }
         catch (HttpRequestException)
@@ -70,13 +42,29 @@ public class StartupOrchestratorService : IStartupOrchestratorService
                 Reason: "Startup readiness timed out before the backend responded.",
                 RecoveryHint: "Retry startup after confirming the backend is responsive.");
         }
-        catch (JsonException)
+        catch (ApiException ex) when (GeneratedClientErrorTranslator.IsSuccessfulEmptyResponse(ex))
+        {
+            return new StartupReadinessResult(
+                StartupReadinessState.Error,
+                Readiness: null,
+                Reason: "Startup readiness returned an empty response.",
+                RecoveryHint: "Retry startup. If the problem persists, check the API response contract.");
+        }
+        catch (ApiException ex) when (GeneratedClientErrorTranslator.IsSuccessfulDeserializationFailure(ex))
         {
             return new StartupReadinessResult(
                 StartupReadinessState.Error,
                 Readiness: null,
                 Reason: "Startup readiness returned an invalid response payload.",
                 RecoveryHint: "Check the backend startup endpoint contract, then retry.");
+        }
+        catch (ApiException ex)
+        {
+            return new StartupReadinessResult(
+                StartupReadinessState.Unavailable,
+                Readiness: null,
+                Reason: $"Startup readiness is unavailable (HTTP {ex.StatusCode}).",
+                RecoveryHint: "Confirm the backend is running, then retry startup.");
         }
         catch (Exception)
         {
@@ -209,5 +197,17 @@ public class StartupOrchestratorService : IStartupOrchestratorService
         }
 
         return "Create your first profile to continue.";
+    }
+
+    private static StartupReadinessDto MapReadiness(SharedStartupReadinessDto readiness)
+    {
+        return new StartupReadinessDto(
+            readiness.IsMockDataEnabled,
+            readiness.HasSavedTfsConfig,
+            readiness.HasTestedConnectionSuccessfully,
+            readiness.HasVerifiedTfsApiSuccessfully,
+            readiness.HasAnyProfile,
+            readiness.ActiveProfileId,
+            readiness.MissingRequirementMessage);
     }
 }

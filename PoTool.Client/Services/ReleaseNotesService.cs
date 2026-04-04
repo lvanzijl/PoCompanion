@@ -1,16 +1,16 @@
-using System.Net.Http.Json;
+using PoTool.Client.ApiClient;
 using PoTool.Shared.Settings;
 
 namespace PoTool.Client.Services;
 
 public sealed class ReleaseNotesService
 {
-    private readonly HttpClient _httpClient;
+    private readonly ISettingsClient _settingsClient;
     private IReadOnlyList<ReleaseNoteDto>? _cachedEntries;
 
-    public ReleaseNotesService(HttpClient httpClient)
+    public ReleaseNotesService(ISettingsClient settingsClient)
     {
-        _httpClient = httpClient;
+        _settingsClient = settingsClient;
     }
 
     public async Task<IReadOnlyList<ReleaseNoteDto>> GetReleaseNotesAsync(CancellationToken cancellationToken = default)
@@ -20,8 +20,14 @@ public sealed class ReleaseNotesService
             return _cachedEntries;
         }
 
-        var entries = await _httpClient.GetFromJsonAsync<List<ReleaseNoteDto>>("api/settings/release-notes", cancellationToken);
-        _cachedEntries = entries ?? [];
-        return _cachedEntries;
+        try
+        {
+            _cachedEntries = (await _settingsClient.GetReleaseNotesAsync(cancellationToken)).ToList();
+            return _cachedEntries;
+        }
+        catch (ApiException ex)
+        {
+            throw GeneratedClientErrorTranslator.ToHttpRequestException(ex);
+        }
     }
 }

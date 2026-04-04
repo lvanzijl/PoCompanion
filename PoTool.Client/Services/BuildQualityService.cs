@@ -1,4 +1,4 @@
-using System.Globalization;
+using PoTool.Client.ApiClient;
 using PoTool.Client.Helpers;
 using PoTool.Client.Models;
 using PoTool.Shared.BuildQuality;
@@ -11,11 +11,11 @@ namespace PoTool.Client.Services;
 /// </summary>
 public sealed class BuildQualityService : IBuildQualityService
 {
-    private readonly HttpClient _httpClient;
+    private readonly IBuildQualityClient _buildQualityClient;
 
-    public BuildQualityService(HttpClient httpClient)
+    public BuildQualityService(IBuildQualityClient buildQualityClient)
     {
-        _httpClient = httpClient;
+        _buildQualityClient = buildQualityClient;
     }
 
     public async Task<CacheBackedClientResult<CanonicalClientResponse<BuildQualityPageDto>>> GetRollingWindowAsync(
@@ -24,15 +24,17 @@ public sealed class BuildQualityService : IBuildQualityService
         DateTimeOffset windowEndUtc,
         CancellationToken cancellationToken = default)
     {
-        var endpoint = $"api/buildquality/rolling?productOwnerId={productOwnerId}" +
-                       $"&windowStartUtc={Uri.EscapeDataString(windowStartUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture))}" +
-                       $"&windowEndUtc={Uri.EscapeDataString(windowEndUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture))}";
-
-        var response = await DataStateHttpClientHelper.GetDataStateAsync<DeliveryQueryResponseDto<BuildQualityPageDto>>(
-            _httpClient,
-            endpoint,
-            cancellationToken);
-        return response.Map(CanonicalClientResponseFactory.Create);
+        try
+        {
+            var response = (await _buildQualityClient.GetRollingAsync(productOwnerId, windowStartUtc, windowEndUtc, cancellationToken))
+                .ToCacheBackedResult();
+            return response.Map(CanonicalClientResponseFactory.Create);
+        }
+        catch (ApiException ex)
+        {
+            return CacheBackedClientResult<CanonicalClientResponse<BuildQualityPageDto>>.Unavailable(
+                GeneratedClientErrorTranslator.ToHttpRequestException(ex).Message);
+        }
     }
 
     public async Task<CacheBackedClientResult<CanonicalClientResponse<DeliveryBuildQualityDto>>> GetSprintAsync(
@@ -40,40 +42,35 @@ public sealed class BuildQualityService : IBuildQualityService
         int sprintId,
         CancellationToken cancellationToken = default)
     {
-        var endpoint = $"api/buildquality/sprint?productOwnerId={productOwnerId}&sprintId={sprintId}";
-        var response = await DataStateHttpClientHelper.GetDataStateAsync<DeliveryQueryResponseDto<DeliveryBuildQualityDto>>(
-            _httpClient,
-            endpoint,
-            cancellationToken);
-        return response.Map(CanonicalClientResponseFactory.Create);
+        try
+        {
+            var response = (await _buildQualityClient.GetSprintAsync(productOwnerId, sprintId, cancellationToken))
+                .ToCacheBackedResult();
+            return response.Map(CanonicalClientResponseFactory.Create);
+        }
+        catch (ApiException ex)
+        {
+            return CacheBackedClientResult<CanonicalClientResponse<DeliveryBuildQualityDto>>.Unavailable(
+                GeneratedClientErrorTranslator.ToHttpRequestException(ex).Message);
+        }
     }
 
-    public Task<CacheBackedClientResult<PipelineBuildQualityDto>> GetPipelineAsync(
+    public async Task<CacheBackedClientResult<PipelineBuildQualityDto>> GetPipelineAsync(
         int productOwnerId,
         int sprintId,
         int? pipelineDefinitionId = null,
         int? repositoryId = null,
         CancellationToken cancellationToken = default)
     {
-        var query = new List<string>
+        try
         {
-            $"productOwnerId={productOwnerId}",
-            $"sprintId={sprintId}"
-        };
-
-        if (pipelineDefinitionId.HasValue)
-        {
-            query.Add($"pipelineDefinitionId={pipelineDefinitionId.Value}");
+            return GeneratedCacheEnvelopeHelper.ToCacheBackedResult<PipelineBuildQualityDto>(
+                await _buildQualityClient.GetPipelineAsync(productOwnerId, sprintId, pipelineDefinitionId, repositoryId, cancellationToken));
         }
-
-        if (repositoryId.HasValue)
+        catch (ApiException ex)
         {
-            query.Add($"repositoryId={repositoryId.Value}");
+            return CacheBackedClientResult<PipelineBuildQualityDto>.Unavailable(
+                GeneratedClientErrorTranslator.ToHttpRequestException(ex).Message);
         }
-
-        return DataStateHttpClientHelper.GetDataStateAsync<PipelineBuildQualityDto>(
-            _httpClient,
-            $"api/buildquality/pipeline?{string.Join("&", query)}",
-            cancellationToken);
     }
 }

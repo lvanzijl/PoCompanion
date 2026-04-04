@@ -1,4 +1,6 @@
 using System.Text.Json;
+using PoTool.Client.Helpers;
+using PoTool.Client.Models;
 
 namespace PoTool.Client.ApiClient;
 
@@ -15,6 +17,24 @@ internal static class ApiClientJsonSettings
     internal static void Configure(JsonSerializerOptions settings)
     {
         settings.PropertyNameCaseInsensitive = true;
+    }
+}
+
+internal static class CacheBackedGeneratedClientHelper
+{
+    internal static TData RequireData<TData>(
+        this CacheBackedClientResult<TData> result,
+        string operationName)
+    {
+        return result.State switch
+        {
+            CacheBackedClientState.Success when result.Data is not null => result.Data,
+            CacheBackedClientState.Empty => throw new InvalidOperationException($"{operationName} returned an empty cache-backed payload."),
+            CacheBackedClientState.NotReady => throw new InvalidOperationException($"{operationName} is not ready: {result.Reason ?? "Cache not ready."}"),
+            CacheBackedClientState.Failed => throw new InvalidOperationException($"{operationName} failed: {result.Reason ?? "Cache-backed request failed."}"),
+            CacheBackedClientState.Unavailable => throw new InvalidOperationException($"{operationName} is unavailable: {result.Reason ?? "Cache-backed request unavailable."}"),
+            _ => throw new InvalidOperationException($"{operationName} did not contain usable cache-backed data.")
+        };
     }
 }
 

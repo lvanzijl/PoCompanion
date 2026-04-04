@@ -79,7 +79,7 @@ internal static class PortfolioReadModelFiltering
             .ThenBy(item => item.ProductId ?? int.MinValue)
             .ThenBy(item => item.ProjectNumber ?? string.Empty, StringComparer.OrdinalIgnoreCase)
             .ThenBy(item => item.WorkPackage ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-            .ThenByDescending(item => item.SnapshotTimestamp ?? DateTimeOffset.MinValue)
+            .ThenByDescending(item => item.SnapshotTimestamp.HasValue ? item.SnapshotTimestamp.Value.UtcDateTime : DateTime.MinValue)
             .ToList();
     }
 

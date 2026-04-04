@@ -65,6 +65,7 @@ public static class ApiServiceCollectionExtensions
             config.Title = "PoTool API";
             config.Version = "v1";
             config.Description = "API for PO Companion work item management";
+            config.OperationProcessors.Add(new CacheBackedDataStateOpenApiOperationProcessor());
         });
 
         // Add Mediator (source-generated)

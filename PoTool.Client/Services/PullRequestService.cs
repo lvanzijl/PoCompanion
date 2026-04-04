@@ -23,7 +23,8 @@ public class PullRequestService
     /// </summary>
     public async Task<IEnumerable<PullRequestDto>> GetAllAsync()
     {
-        return await _pullRequestsClient.GetAllAsync() ?? Array.Empty<PullRequestDto>();
+        var response = await _pullRequestsClient.GetAllAsync();
+        return response.GetReadOnlyListOrDefault(Array.Empty<PullRequestDto>());
     }
 
     /// <summary>
@@ -33,7 +34,8 @@ public class PullRequestService
     {
         try
         {
-            return await _pullRequestsClient.GetByIdAsync(id);
+            var response = await _pullRequestsClient.GetByIdAsync(id);
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<PullRequestDto>(response);
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
         {
@@ -48,8 +50,11 @@ public class PullRequestService
     /// <param name="fromDate">Optional start date filter</param>
     public async Task<CanonicalClientResponse<IReadOnlyList<SharedPullRequestMetricsDto>>> GetMetricsAsync(string? productIds = null, DateTimeOffset? fromDate = null)
     {
-        var response = await _pullRequestsClient.GetMetricsEnvelopeAsync(productIds, fromDate, CancellationToken.None);
-        return CanonicalClientResponseFactory.Create(response);
+        var response = await _pullRequestsClient.GetMetricsAsync(productIds, fromDate, CancellationToken.None);
+        var payload = response.GetDataOrDefault();
+        return payload is null
+            ? new CanonicalClientResponse<IReadOnlyList<SharedPullRequestMetricsDto>>(Array.Empty<SharedPullRequestMetricsDto>())
+            : CanonicalClientResponseFactory.Create(payload);
     }
 
     /// <summary>
@@ -64,7 +69,7 @@ public class PullRequestService
         DateTimeOffset? toDate = null,
         string? status = null)
     {
-        var response = await _pullRequestsClient.GetFilteredEnvelopeAsync(
+        var response = await _pullRequestsClient.GetFilteredAsync(
             productIds,
             iterationPath,
             createdBy,
@@ -72,7 +77,10 @@ public class PullRequestService
             toDate,
             status,
             CancellationToken.None);
-        return CanonicalClientResponseFactory.Create(response);
+        var payload = response.GetDataOrDefault();
+        return payload is null
+            ? new CanonicalClientResponse<IReadOnlyList<SharedPullRequestDto>>(Array.Empty<SharedPullRequestDto>())
+            : CanonicalClientResponseFactory.Create(payload);
     }
 
     /// <summary>
@@ -82,7 +90,8 @@ public class PullRequestService
     {
         try
         {
-            return await _pullRequestsClient.GetCommentsAsync(pullRequestId) ?? Array.Empty<PullRequestCommentDto>();
+            var response = await _pullRequestsClient.GetCommentsAsync(pullRequestId);
+            return response.GetReadOnlyListOrDefault(Array.Empty<PullRequestCommentDto>());
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
         {
@@ -97,7 +106,8 @@ public class PullRequestService
     {
         try
         {
-            return await _pullRequestsClient.GetIterationsAsync(pullRequestId) ?? Array.Empty<PullRequestIterationDto>();
+            var response = await _pullRequestsClient.GetIterationsAsync(pullRequestId);
+            return response.GetReadOnlyListOrDefault(Array.Empty<PullRequestIterationDto>());
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
         {

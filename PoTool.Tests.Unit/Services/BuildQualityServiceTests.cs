@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
 using PoTool.Client.Services;
 
@@ -32,7 +33,11 @@ public class BuildQualityServiceTests
             BaseAddress = new Uri("http://localhost")
         };
 
-        var service = new BuildQualityService(httpClient);
+        var client = new BuildQualityClient(httpClient)
+        {
+            BaseUrl = "http://localhost"
+        };
+        var service = new BuildQualityService(client);
 
         var result = await service.GetRollingWindowAsync(
             7,

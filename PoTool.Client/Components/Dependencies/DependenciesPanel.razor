@@ -1,4 +1,5 @@
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
 @inject IWorkItemsClient WorkItemsClient
@@ -149,10 +150,11 @@ else if (!_isLoading && !_hasAttemptedLoad)
         try
         {
             ClearError();
-            _graphData = await WorkItemsClient.GetDependencyGraphAsync(
+            var response = await WorkItemsClient.GetDependencyGraphAsync(
                 areaPathFilter: _areaPathFilter, 
                 workItemIds: _workItemIdsFilter,
                 workItemTypes: _workItemTypesFilter);
+            _graphData = GeneratedCacheEnvelopeHelper.GetDataOrDefault<DependencyGraphDto>(response);
         }
         catch (Exception ex)
         {

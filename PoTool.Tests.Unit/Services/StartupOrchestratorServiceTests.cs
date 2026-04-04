@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
 using PoTool.Shared.Settings;
 using StartupReadinessDto = PoTool.Client.Services.StartupReadinessDto;
@@ -19,7 +20,9 @@ public class StartupOrchestratorServiceTests
             BaseAddress = new Uri("http://localhost")
         };
 
-        return new StartupOrchestratorService(httpClient, new CacheSyncService(httpClient));
+        return new StartupOrchestratorService(
+            new StartupClient(httpClient),
+            new CacheSyncService(httpClient, new CacheSyncClient(httpClient)));
     }
 
     [TestMethod]
@@ -60,7 +63,7 @@ public class StartupOrchestratorServiceTests
         {
             return request.RequestUri!.AbsolutePath switch
             {
-                "/api/startup/readiness" => CreateJsonResponse(readinessJson),
+                "/api/Startup/readiness" => CreateJsonResponse(readinessJson),
                 "/api/CacheSync/7" => CreateJsonResponse(cacheJson),
                 _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
             };

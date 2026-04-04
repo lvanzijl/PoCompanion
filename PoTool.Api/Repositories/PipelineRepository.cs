@@ -52,7 +52,7 @@ public class PipelineRepository : IPipelineRepository
         {
             var runs = _runs
                 .Where(r => r.PipelineId == pipelineId)
-                .OrderByDescending(r => r.StartTime)
+                .OrderByDescending(r => r.StartTime.HasValue ? r.StartTime.Value.UtcDateTime : DateTime.MinValue)
                 .Take(top)
                 .ToList();
             return Task.FromResult<IEnumerable<PipelineRunDto>>(runs);
@@ -99,7 +99,10 @@ public class PipelineRepository : IPipelineRepository
 
             var result = filteredRuns
                 .GroupBy(r => r.PipelineId)
-                .SelectMany(g => g.OrderByDescending(r => r.FinishTime).ThenByDescending(r => r.StartTime).Take(top))
+                .SelectMany(g => g
+                    .OrderByDescending(r => r.FinishTime.HasValue ? r.FinishTime.Value.UtcDateTime : DateTime.MinValue)
+                    .ThenByDescending(r => r.StartTime.HasValue ? r.StartTime.Value.UtcDateTime : DateTime.MinValue)
+                    .Take(top))
                 .ToList();
 
             return Task.FromResult<IEnumerable<PipelineRunDto>>(result);

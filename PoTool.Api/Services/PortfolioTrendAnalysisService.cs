@@ -59,7 +59,7 @@ public sealed class PortfolioTrendAnalysisService : IPortfolioTrendAnalysisServi
         }
 
         var orderedSnapshots = snapshots
-            .OrderByDescending(snapshot => snapshot.Snapshot.Timestamp)
+            .OrderByDescending(snapshot => snapshot.Snapshot.Timestamp.UtcDateTime)
             .ThenByDescending(snapshot => snapshot.SnapshotId)
             .ToArray();
 

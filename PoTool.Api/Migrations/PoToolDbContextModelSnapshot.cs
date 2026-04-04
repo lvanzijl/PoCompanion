@@ -323,7 +323,12 @@ namespace PoTool.Api.Migrations
                     b.Property<DateTimeOffset>("LastModified")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("LastModifiedUtc")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("LastModifiedUtc");
 
                     b.ToTable("EffortEstimationSettings");
                 });

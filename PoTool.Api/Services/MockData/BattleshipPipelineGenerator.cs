@@ -217,7 +217,7 @@ public class BattleshipPipelineGenerator
         }
 
         // Sort runs by start time descending (most recent first)
-        runs = runs.OrderByDescending(r => r.StartTime).ToList();
+        runs = runs.OrderByDescending(r => r.StartTime.HasValue ? r.StartTime.Value.UtcDateTime : DateTime.MinValue).ToList();
 
         _logger.LogInformation("Generated {Count} pipeline runs", runs.Count);
         return runs;

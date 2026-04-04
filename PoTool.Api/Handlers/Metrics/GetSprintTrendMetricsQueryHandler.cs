@@ -370,7 +370,7 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                         IsApproximate = g.Any(p => p.IsApproximate)
                     };
                 })
-                .OrderBy(m => m.StartUtc ?? DateTimeOffset.MaxValue)
+                .OrderBy(m => m.StartUtc.HasValue ? m.StartUtc.Value.UtcDateTime : DateTime.MaxValue)
                 .ToList();
 
             _logger.LogInformation(

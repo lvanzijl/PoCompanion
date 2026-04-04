@@ -3,6 +3,7 @@ using Moq;
 using PoTool.Client.Models;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
+using PoTool.Shared.DataState;
 using PoTool.Shared.Health;
 using PoTool.Shared.Metrics;
 using PoTool.Shared.PullRequests;
@@ -274,53 +275,61 @@ public sealed class WorkspaceSignalServiceTests
             ]);
 
         metricsClient
-            .Setup(client => client.GetSprintTrendMetricsEnvelopeAsync(
+            .Setup(client => client.GetSprintTrendMetricsAsync(
                 42,
                 It.IsAny<IEnumerable<int>>(),
                 null,
                 false,
                 true,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SprintQueryResponseDto<GetSprintTrendMetricsResponse>
+            .ReturnsAsync(new DataStateResponseDtoOfSprintQueryResponseDtoOfGetSprintTrendMetricsResponse
             {
-                Data = new GetSprintTrendMetricsResponse { Success = true, Metrics = [], ProductAnalytics = [] },
-                RequestedFilter = CreateSprintFilter([100], [10]),
-                EffectiveFilter = CreateSprintFilter([], [10], isAllProducts: true),
-                InvalidFields = ["productIds"],
-                ValidationMessages = [new FilterValidationIssueDto { Field = "productIds", Message = "Product scope was normalized." }]
+                State = DataStateDto.Available,
+                Data = new SprintQueryResponseDtoOfGetSprintTrendMetricsResponse
+                {
+                    Data = new GetSprintTrendMetricsResponse { Success = true, Metrics = [], ProductAnalytics = [] },
+                    RequestedFilter = CreateSprintFilter([100], [10]),
+                    EffectiveFilter = CreateSprintFilter([], [10], isAllProducts: true),
+                    InvalidFields = ["productIds"],
+                    ValidationMessages = [new FilterValidationIssueDto { Field = "productIds", Message = "Product scope was normalized." }]
+                }
             });
 
         pullRequestsClient
-            .Setup(client => client.GetSprintTrendsEnvelopeAsync(
+            .Setup(client => client.GetSprintTrendsAsync(
                 It.IsAny<IEnumerable<int>>(),
                 It.IsAny<string>(),
                 null,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PoTool.Shared.PullRequests.PullRequestQueryResponseDto<GetPrSprintTrendsResponse>
+            .ReturnsAsync(new DataStateResponseDtoOfPullRequestQueryResponseDtoOfGetPrSprintTrendsResponse
             {
-                Data = new GetPrSprintTrendsResponse { Success = true, Sprints = [] },
-                RequestedFilter = new PoTool.Shared.PullRequests.PullRequestFilterContextDto
+                State = DataStateDto.Available,
+                Data = new PullRequestQueryResponseDtoOfGetPrSprintTrendsResponse
                 {
-                    ProductIds = new FilterSelectionDto<int> { IsAll = false, Values = [100] },
-                    TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = [] },
-                    RepositoryNames = new FilterSelectionDto<string> { IsAll = true, Values = [] },
-                    IterationPaths = new FilterSelectionDto<string> { IsAll = true, Values = [] },
-                    CreatedBys = new FilterSelectionDto<string> { IsAll = true, Values = [] },
-                    Statuses = new FilterSelectionDto<string> { IsAll = true, Values = [] },
-                    Time = new SharedFilterTimeSelectionDto { Mode = SharedFilterTimeSelectionModeDto.MultiSprint, SprintIds = [1, 2] }
-                },
-                EffectiveFilter = new PoTool.Shared.PullRequests.PullRequestFilterContextDto
-                {
-                    ProductIds = new FilterSelectionDto<int> { IsAll = true, Values = [] },
-                    TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = [] },
-                    RepositoryNames = new FilterSelectionDto<string> { IsAll = true, Values = [] },
-                    IterationPaths = new FilterSelectionDto<string> { IsAll = true, Values = [] },
-                    CreatedBys = new FilterSelectionDto<string> { IsAll = true, Values = [] },
-                    Statuses = new FilterSelectionDto<string> { IsAll = true, Values = [] },
-                    Time = new SharedFilterTimeSelectionDto { Mode = SharedFilterTimeSelectionModeDto.MultiSprint, SprintIds = [1, 2] }
-                },
-                InvalidFields = [],
-                ValidationMessages = []
+                    Data = new GetPrSprintTrendsResponse { Success = true, Sprints = [] },
+                    RequestedFilter = new PoTool.Shared.PullRequests.PullRequestFilterContextDto
+                    {
+                        ProductIds = new FilterSelectionDto<int> { IsAll = false, Values = [100] },
+                        TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = [] },
+                        RepositoryNames = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+                        IterationPaths = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+                        CreatedBys = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+                        Statuses = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+                        Time = new SharedFilterTimeSelectionDto { Mode = SharedFilterTimeSelectionModeDto.MultiSprint, SprintIds = [1, 2] }
+                    },
+                    EffectiveFilter = new PoTool.Shared.PullRequests.PullRequestFilterContextDto
+                    {
+                        ProductIds = new FilterSelectionDto<int> { IsAll = true, Values = [] },
+                        TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = [] },
+                        RepositoryNames = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+                        IterationPaths = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+                        CreatedBys = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+                        Statuses = new FilterSelectionDto<string> { IsAll = true, Values = [] },
+                        Time = new SharedFilterTimeSelectionDto { Mode = SharedFilterTimeSelectionModeDto.MultiSprint, SprintIds = [1, 2] }
+                    },
+                    InvalidFields = [],
+                    ValidationMessages = []
+                }
             });
 
         var sprintService = new SprintService(sprintsClient.Object);

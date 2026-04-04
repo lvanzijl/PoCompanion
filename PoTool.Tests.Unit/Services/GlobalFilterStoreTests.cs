@@ -1,11 +1,10 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
 using PoTool.Client.Services;
 using PoTool.Shared.Settings;
-using System.Net;
 using System.Net.Http;
-using System.Net.Http.Json;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -146,37 +145,46 @@ public sealed class GlobalFilterStoreTests
 
     private static GlobalFilterStore CreateStore()
     {
-        var handler = new StubHttpMessageHandler();
-        var httpClient = new HttpClient(handler)
-        {
-            BaseAddress = new Uri("http://localhost/")
-        };
-
-        var projectService = new ProjectService(httpClient);
+        var projectService = new ProjectService(new StubProjectsClient());
         var projectIdentityMapper = new ProjectIdentityMapper(projectService);
         var resolver = new FilterStateResolver(projectIdentityMapper);
         return new GlobalFilterStore(NullLogger<GlobalFilterStore>.Instance, resolver);
     }
 
-    private sealed class StubHttpMessageHandler : HttpMessageHandler
+    private sealed class StubProjectsClient : IProjectsClient
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        private static readonly ProjectDto PaymentsProject = new("project-payments", "payments-platform", "Payments Platform", [11, 12]);
+
+        public Task<ICollection<ProjectDto>> GetProjectsAsync()
+            => Task.FromResult<ICollection<ProjectDto>>([PaymentsProject]);
+
+        public Task<ICollection<ProjectDto>> GetProjectsAsync(CancellationToken cancellationToken)
+            => Task.FromResult<ICollection<ProjectDto>>([PaymentsProject]);
+
+        public Task<ProjectDto> GetProjectAsync(string alias)
+            => GetProjectAsync(alias, CancellationToken.None);
+
+        public Task<ProjectDto> GetProjectAsync(string alias, CancellationToken cancellationToken)
         {
-            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
-            if (path.StartsWith("/api/projects/", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(alias, "payments-platform", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(alias, "project-payments", StringComparison.OrdinalIgnoreCase))
             {
-                var key = Uri.UnescapeDataString(path["/api/projects/".Length..]);
-                if (string.Equals(key, "payments-platform", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(key, "project-payments", StringComparison.OrdinalIgnoreCase))
-                {
-                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                    {
-                        Content = JsonContent.Create(new ProjectDto("project-payments", "payments-platform", "Payments Platform", new List<int> { 11, 12 }))
-                    });
-                }
+                return Task.FromResult(PaymentsProject);
             }
 
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+            throw new ApiException("Not found", 404, string.Empty, new Dictionary<string, IEnumerable<string>>(), null);
         }
+
+        public Task<ICollection<ProductDto>> GetProjectProductsAsync(string alias)
+            => Task.FromResult<ICollection<ProductDto>>([]);
+
+        public Task<ICollection<ProductDto>> GetProjectProductsAsync(string alias, CancellationToken cancellationToken)
+            => Task.FromResult<ICollection<ProductDto>>([]);
+
+        public Task<DataStateResponseDtoOfProjectPlanningSummaryDto> GetPlanningSummaryAsync(string alias)
+            => throw new NotSupportedException();
+
+        public Task<DataStateResponseDtoOfProjectPlanningSummaryDto> GetPlanningSummaryAsync(string alias, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
     }
 }

@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
+using PoTool.Shared.DataState;
 
 using PoTool.Core.WorkItems;
 
@@ -36,9 +37,13 @@ public class WorkItemFilteringServiceClientTests
 
         _mockFilteringClient
             .Setup(x => x.FilterByValidationWithAncestorsAsync(It.IsAny<FilterByValidationRequest>()))
-            .ReturnsAsync(new FilterByValidationResponse
+            .ReturnsAsync(new DataStateResponseDtoOfFilterByValidationResponse
             {
-                WorkItemIds = new List<int> { 1, 2, 3 }
+                State = DataStateDto.Available,
+                Data = new FilterByValidationResponse
+                {
+                    WorkItemIds = new List<int> { 1, 2, 3 }
+                }
             });
 
         // Act
@@ -69,9 +74,13 @@ public class WorkItemFilteringServiceClientTests
 
         _mockFilteringClient
             .Setup(x => x.GetWorkItemIdsByValidationFilterAsync(It.IsAny<GetWorkItemIdsByValidationFilterRequest>()))
-            .ReturnsAsync(new GetWorkItemIdsByValidationFilterResponse
+            .ReturnsAsync(new DataStateResponseDtoOfGetWorkItemIdsByValidationFilterResponse
             {
-                WorkItemIds = new List<int> { 1, 2 }
+                State = DataStateDto.Available,
+                Data = new GetWorkItemIdsByValidationFilterResponse
+                {
+                    WorkItemIds = new List<int> { 1, 2 }
+                }
             });
 
         // Act
@@ -101,9 +110,13 @@ public class WorkItemFilteringServiceClientTests
 
         _mockFilteringClient
             .Setup(x => x.CountWorkItemsByValidationFilterAsync(It.IsAny<CountWorkItemsByValidationFilterRequest>()))
-            .ReturnsAsync(new CountWorkItemsByValidationFilterResponse
+            .ReturnsAsync(new DataStateResponseDtoOfCountWorkItemsByValidationFilterResponse
             {
-                Count = 2
+                State = DataStateDto.Available,
+                Data = new CountWorkItemsByValidationFilterResponse
+                {
+                    Count = 2
+                }
             });
 
         // Act
@@ -131,16 +144,24 @@ public class WorkItemFilteringServiceClientTests
 
         _mockFilteringClient
             .Setup(x => x.GetWorkItemIdsByValidationFilterAsync(It.IsAny<GetWorkItemIdsByValidationFilterRequest>()))
-            .ReturnsAsync(new GetWorkItemIdsByValidationFilterResponse
+            .ReturnsAsync(new DataStateResponseDtoOfGetWorkItemIdsByValidationFilterResponse
             {
-                WorkItemIds = new List<int> { 1 }
+                State = DataStateDto.Available,
+                Data = new GetWorkItemIdsByValidationFilterResponse
+                {
+                    WorkItemIds = new List<int> { 1 }
+                }
             });
 
         _mockFilteringClient
             .Setup(x => x.FilterByValidationWithAncestorsAsync(It.IsAny<FilterByValidationRequest>()))
-            .ReturnsAsync(new FilterByValidationResponse
+            .ReturnsAsync(new DataStateResponseDtoOfFilterByValidationResponse
             {
-                WorkItemIds = new List<int> { 1 }
+                State = DataStateDto.Available,
+                Data = new FilterByValidationResponse
+                {
+                    WorkItemIds = new List<int> { 1 }
+                }
             });
 
         // Act
@@ -174,9 +195,13 @@ public class WorkItemFilteringServiceClientTests
 
         _mockFilteringClient
             .Setup(x => x.IsDescendantOfGoalsAsync(It.IsAny<IsDescendantOfGoalsRequest>()))
-            .ReturnsAsync(new IsDescendantOfGoalsResponse
+            .ReturnsAsync(new DataStateResponseDtoOfIsDescendantOfGoalsResponse
             {
-                IsDescendant = true
+                State = DataStateDto.Available,
+                Data = new IsDescendantOfGoalsResponse
+                {
+                    IsDescendant = true
+                }
             });
 
         // Act

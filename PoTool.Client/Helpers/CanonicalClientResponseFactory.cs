@@ -173,4 +173,5 @@ public static class CanonicalClientResponseFactory
 
     private static string FormatDate(DateTimeOffset? value)
         => value.HasValue ? value.Value.ToString("yyyy-MM-dd") : "Open";
+
 }

@@ -90,8 +90,8 @@ public sealed class GetPipelineMetricsQueryHandler : IQueryHandler<GetPipelineMe
             }
 
             var orderedRuns = runs
-                .OrderByDescending(r => r.FinishTime)
-                .ThenByDescending(r => r.StartTime)
+                .OrderByDescending(r => r.FinishTime.HasValue ? r.FinishTime.Value.UtcDateTime : DateTime.MinValue)
+                .ThenByDescending(r => r.StartTime.HasValue ? r.StartTime.Value.UtcDateTime : DateTime.MinValue)
                 .ToList();
             var lastRun = orderedRuns.FirstOrDefault();
 

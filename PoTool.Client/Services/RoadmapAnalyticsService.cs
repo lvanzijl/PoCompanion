@@ -1,4 +1,5 @@
 using PoTool.Client.ApiClient;
+using PoTool.Client.Helpers;
 
 namespace PoTool.Client.Services;
 
@@ -118,7 +119,8 @@ public class RoadmapAnalyticsService
             if (string.IsNullOrEmpty(idsParam))
                 return result;
 
-            var graph = await _workItemsClient.GetDependencyGraphAsync(null, idsParam, null);
+            var graphResponse = await _workItemsClient.GetDependencyGraphAsync(null, idsParam, null);
+            var graph = GeneratedCacheEnvelopeHelper.GetDataOrDefault<DependencyGraphDto>(graphResponse);
             if (graph?.Nodes == null)
                 return result;
 
@@ -147,7 +149,8 @@ public class RoadmapAnalyticsService
     {
         try
         {
-            var forecast = await _metricsClient.GetEpicForecastAsync(epicTfsId, 5);
+            var forecastResponse = await _metricsClient.GetEpicForecastAsync(epicTfsId, 5);
+            var forecast = GeneratedCacheEnvelopeHelper.GetDataOrDefault<EpicCompletionForecastDto>(forecastResponse);
             if (forecast == null)
                 return null;
 
@@ -179,7 +182,8 @@ public class RoadmapAnalyticsService
         var result = new Dictionary<int, EpicHealthAnalytics>();
         try
         {
-            var backlogState = await _workItemsClient.GetBacklogStateAsync(productId);
+            var backlogStateResponse = await _workItemsClient.GetBacklogStateAsync(productId);
+            var backlogState = GeneratedCacheEnvelopeHelper.GetDataOrDefault<ProductBacklogStateDto>(backlogStateResponse);
             if (backlogState?.Epics == null)
                 return result;
 

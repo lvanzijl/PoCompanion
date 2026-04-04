@@ -93,7 +93,7 @@ public sealed class GetEffortEstimationQualityQueryHandler
                 completedWorkItems.Add(wi);
             }
         }
-        completedWorkItems = completedWorkItems.OrderByDescending(wi => wi.RetrievedAt).ToList();
+        completedWorkItems = completedWorkItems.OrderByDescending(wi => wi.RetrievedAt.UtcDateTime).ToList();
 
         _logger.LogDebug("Found {Count} completed work items with effort estimates", completedWorkItems.Count);
 

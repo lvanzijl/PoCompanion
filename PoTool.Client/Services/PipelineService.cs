@@ -21,7 +21,8 @@ public class PipelineService
     /// </summary>
     public async Task<IEnumerable<PipelineDto>> GetAllAsync()
     {
-        return await _pipelinesClient.GetAllAsync() ?? Array.Empty<PipelineDto>();
+        var response = await _pipelinesClient.GetAllAsync();
+        return response.GetReadOnlyListOrDefault(Array.Empty<PipelineDto>());
     }
 
     /// <summary>
@@ -33,8 +34,11 @@ public class PipelineService
         DateTimeOffset? fromDate = null,
         DateTimeOffset? toDate = null)
     {
-        var response = await _pipelinesClient.GetMetricsEnvelopeAsync(productIds, fromDate, toDate, CancellationToken.None);
-        return CanonicalClientResponseFactory.Create(response);
+        var response = await _pipelinesClient.GetMetricsAsync(productIds, fromDate, toDate, CancellationToken.None);
+        var payload = response.GetDataOrDefault();
+        return payload is null
+            ? new CanonicalClientResponse<IReadOnlyList<PipelineMetricsDto>>(Array.Empty<PipelineMetricsDto>())
+            : CanonicalClientResponseFactory.Create(payload);
     }
 
     /// <summary>
@@ -42,7 +46,8 @@ public class PipelineService
     /// </summary>
     public async Task<IEnumerable<PipelineRunDto>> GetRunsAsync(int pipelineId, int top = 100)
     {
-        return await _pipelinesClient.GetRunsAsync(pipelineId, top) ?? Array.Empty<PipelineRunDto>();
+        var response = await _pipelinesClient.GetRunsAsync(pipelineId, top);
+        return response.GetReadOnlyListOrDefault(Array.Empty<PipelineRunDto>());
     }
 
     /// <summary>
@@ -69,8 +74,11 @@ public class PipelineService
             return new CanonicalClientResponse<IReadOnlyList<PipelineRunDto>>(Array.Empty<PipelineRunDto>());
         }
 
-        var response = await _pipelinesClient.GetRunsForProductsEnvelopeAsync(productIds, fromDate, toDate, CancellationToken.None);
-        return CanonicalClientResponseFactory.Create(response);
+        var response = await _pipelinesClient.GetRunsForProductsAsync(productIds, fromDate, toDate, CancellationToken.None);
+        var payload = response.GetDataOrDefault();
+        return payload is null
+            ? new CanonicalClientResponse<IReadOnlyList<PipelineRunDto>>(Array.Empty<PipelineRunDto>())
+            : CanonicalClientResponseFactory.Create(payload);
     }
 
     /// <summary>

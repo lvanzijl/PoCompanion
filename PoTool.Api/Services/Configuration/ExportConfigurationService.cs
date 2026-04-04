@@ -52,7 +52,7 @@ public sealed class ExportConfigurationService
 
         var effortSettings = await _dbContext.EffortEstimationSettings
             .AsNoTracking()
-            .OrderByDescending(settingsEntity => settingsEntity.LastModified)
+            .OrderByDescending(settingsEntity => settingsEntity.LastModifiedUtc)
             .Select(settingsEntity => new EffortEstimationSettingsDto(
                 settingsEntity.DefaultEffortTask,
                 settingsEntity.DefaultEffortBug,

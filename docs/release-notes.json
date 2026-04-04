@@ -2,6 +2,22 @@
   {
     "date": "2026-04-04",
     "type": "Changed",
+    "title": "Cache-backed planning and analytics services now use one generated-client data-state contract",
+    "impact": "Build quality, planning summary, release planning, pipeline, pull request, metric, and validation reads now flow through generated API clients with consistent ready, empty, not-ready, and failed state handling, reducing stale direct-route behavior and preserving cache state transitions across the client.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-04",
+    "type": "Fixed",
+    "title": "Configuration export now completes reliably on SQLite-backed development environments",
+    "impact": "Settings export no longer fails when the API orders DateTimeOffset-backed records on SQLite, so configuration export returns successfully and keeps its chronological ordering behavior intact.",
+    "area": "Settings",
+    "link": "/settings"
+  },
+  {
+    "date": "2026-04-04",
+    "type": "Changed",
     "title": "Cold-cache pages now use one consistent not-ready and failure UX",
     "impact": "Health, planning, trend, delivery, and workspace pages now treat cold-cache states as first-class UI states with consistent 'Data not ready' and 'Data unavailable' handling, retry actions, and tile badges, so pages stop falling through to misleading no-data or cleared-state behavior while cache-backed data is still warming.",
     "area": "Home",

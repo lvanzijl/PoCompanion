@@ -1,4 +1,5 @@
 using PoTool.Client.ApiClient;
+using PoTool.Client.Helpers;
 using PoTool.Client.Models;
 
 namespace PoTool.Client.Services;
@@ -31,9 +32,14 @@ public class WorkItemFilteringService
         // Call API to get filtered IDs
         var request = new FilterByValidationRequest { TargetIds = targetIds };
         var response = await _filteringClient.FilterByValidationWithAncestorsAsync(request);
+        var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault<FilterByValidationResponse>(response);
+        if (payload is null)
+        {
+            return Enumerable.Empty<WorkItemWithValidationDto>();
+        }
 
         // Return work items matching the filtered IDs
-        var filteredIds = new HashSet<int>(response.WorkItemIds);
+        var filteredIds = new HashSet<int>(payload.WorkItemIds);
         return items.Where(item => filteredIds.Contains(item.TfsId));
     }
 
@@ -50,7 +56,8 @@ public class WorkItemFilteringService
         // Call API to get work item IDs by filter
         var request = new GetWorkItemIdsByValidationFilterRequest { FilterId = filterId };
         var response = await _filteringClient.GetWorkItemIdsByValidationFilterAsync(request);
-        return response.WorkItemIds;
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault<GetWorkItemIdsByValidationFilterResponse>(response)?.WorkItemIds
+            ?? Enumerable.Empty<int>();
     }
 
     /// <summary>
@@ -66,7 +73,7 @@ public class WorkItemFilteringService
         // Call API to count work items by filter
         var request = new CountWorkItemsByValidationFilterRequest { FilterId = filterId };
         var response = await _filteringClient.CountWorkItemsByValidationFilterAsync(request);
-        return response.Count;
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault<CountWorkItemsByValidationFilterResponse>(response)?.Count ?? 0;
     }
 
     /// <summary>
@@ -134,7 +141,7 @@ public class WorkItemFilteringService
             GoalIds = goalIds
         };
         var response = await _filteringClient.IsDescendantOfGoalsAsync(request);
-        return response.IsDescendant;
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault<IsDescendantOfGoalsResponse>(response)?.IsDescendant ?? false;
     }
 
     /// <summary>
@@ -148,7 +155,9 @@ public class WorkItemFilteringService
         // Call API to get filtered IDs in a single batch operation
         var request = new FilterByGoalsRequest { GoalIds = goalIds };
         var response = await _filteringClient.FilterByGoalsAsync(request);
-        return new HashSet<int>(response.WorkItemIds);
+        return new HashSet<int>(
+            GeneratedCacheEnvelopeHelper.GetDataOrDefault<FilterByGoalsResponse>(response)?.WorkItemIds
+            ?? Enumerable.Empty<int>());
     }
 
     private static WorkItemDto ConvertToWorkItemDto(WorkItemWithValidationDto item)
