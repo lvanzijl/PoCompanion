@@ -463,15 +463,19 @@ public sealed class WorkspaceSignalService
 
                 await Task.WhenAll(sprintExecutionEnvelopeTask, backlogHealthEnvelopeTask);
 
-                var sprintExecutionEnvelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault<object>(await sprintExecutionEnvelopeTask);
-                var backlogHealthEnvelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault<object>(await backlogHealthEnvelopeTask);
+                var sprintExecutionEnvelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+                    await sprintExecutionEnvelopeTask,
+                    static data => data.ToShared());
+                var backlogHealthEnvelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+                    await backlogHealthEnvelopeTask,
+                    static data => data.ToShared());
                 if (sprintExecutionEnvelope is null || backlogHealthEnvelope is null)
                 {
                     return null;
                 }
 
-                var sprintExecutionResponse = CanonicalClientResponseFactory.CreateGenerated<SprintExecutionDto>(sprintExecutionEnvelope, CanonicalFilterKind.Sprint);
-                var backlogHealthResponse = CanonicalClientResponseFactory.CreateGenerated<BacklogHealthDto>(backlogHealthEnvelope, CanonicalFilterKind.Sprint);
+                var sprintExecutionResponse = CanonicalClientResponseFactory.Create(sprintExecutionEnvelope);
+                var backlogHealthResponse = CanonicalClientResponseFactory.Create(backlogHealthEnvelope);
 
                 return new DeliverySignalContext(
                     sprint,
@@ -515,8 +519,10 @@ public sealed class WorkspaceSignalService
             false,
             true,
             cancellationToken);
-        var envelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault<object>(response);
-        return envelope is null ? null : CanonicalClientResponseFactory.CreateGenerated<GetSprintTrendMetricsResponse>(envelope, CanonicalFilterKind.Sprint);
+        var envelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+            response,
+            static data => data.ToShared());
+        return envelope is null ? null : CanonicalClientResponseFactory.Create(envelope);
     }
 
     private async Task<CanonicalClientResponse<GetPrSprintTrendsResponse>?> LoadPrTrendsAsync(
@@ -530,8 +536,10 @@ public sealed class WorkspaceSignalService
         }
 
         var response = await _pullRequestsClient.GetSprintTrendsAsync(sprintIds, productIdsCsv, null, cancellationToken);
-        var envelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault<object>(response);
-        return envelope is null ? null : CanonicalClientResponseFactory.CreateGenerated<GetPrSprintTrendsResponse>(envelope, CanonicalFilterKind.PullRequest);
+        var envelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+            response,
+            static data => data.ToShared());
+        return envelope is null ? null : CanonicalClientResponseFactory.Create(envelope);
     }
 
     private async Task<CanonicalClientResponse<CapacityCalibrationDto>?> LoadCapacityCalibrationAsync(
@@ -546,8 +554,10 @@ public sealed class WorkspaceSignalService
         }
 
         var response = await _metricsClient.GetCapacityCalibrationAsync(productOwnerId, sprintIds, productIds, cancellationToken);
-        var envelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault<object>(response);
-        return envelope is null ? null : CanonicalClientResponseFactory.CreateGenerated<CapacityCalibrationDto>(envelope, CanonicalFilterKind.Delivery);
+        var envelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+            response,
+            static data => data.ToShared());
+        return envelope is null ? null : CanonicalClientResponseFactory.Create(envelope);
     }
 
     private static IEnumerable<WorkspaceSignalCandidate> GetDeliveryCandidates(

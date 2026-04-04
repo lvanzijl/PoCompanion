@@ -38,10 +38,12 @@ public class PipelineService
         DateTimeOffset? toDate = null)
     {
         var response = await _pipelinesClient.GetMetricsAsync(productIds, fromDate, toDate, CancellationToken.None);
-        var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault<object>(response);
+        var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+            response,
+            static data => data.ToShared());
         return payload is null
             ? new CanonicalClientResponse<IReadOnlyList<PipelineMetricsDto>>(Array.Empty<PipelineMetricsDto>())
-            : CanonicalClientResponseFactory.CreateGenerated<IReadOnlyList<PipelineMetricsDto>>(payload, CanonicalFilterKind.Pipeline);
+            : CanonicalClientResponseFactory.Create(payload);
     }
 
     /// <summary>
@@ -81,10 +83,12 @@ public class PipelineService
         }
 
         var response = await _pipelinesClient.GetRunsForProductsAsync(productIds, fromDate, toDate, CancellationToken.None);
-        var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault<object>(response);
+        var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+            response,
+            static data => data.ToShared());
         return payload is null
             ? new CanonicalClientResponse<IReadOnlyList<PipelineRunDto>>(Array.Empty<PipelineRunDto>())
-            : CanonicalClientResponseFactory.CreateGenerated<IReadOnlyList<PipelineRunDto>>(payload, CanonicalFilterKind.Pipeline);
+            : CanonicalClientResponseFactory.Create(payload);
     }
 
     /// <summary>

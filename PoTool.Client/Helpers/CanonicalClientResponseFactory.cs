@@ -2,7 +2,6 @@ using PoTool.Client.Models;
 using PoTool.Shared.Metrics;
 using PoTool.Shared.Pipelines;
 using PoTool.Shared.PullRequests;
-using System.Reflection;
 
 namespace PoTool.Client.Helpers;
 
@@ -70,20 +69,6 @@ public static class CanonicalClientResponseFactory
             metadata.ValidationMessages);
 
         return notice.HasSignals ? notice : null;
-    }
-
-    public static CanonicalClientResponse<TData> CreateGenerated<TData>(object response, CanonicalFilterKind kind)
-    {
-        ArgumentNullException.ThrowIfNull(response);
-
-        return new CanonicalClientResponse<TData>(
-            GetRequiredValue<TData>(response, "Data"),
-            new CanonicalFilterMetadata(
-                kind,
-                GetRequiredValue<object>(response, "RequestedFilter"),
-                GetRequiredValue<object>(response, "EffectiveFilter"),
-                GetRequiredValue<ICollection<string>>(response, "InvalidFields").ToList(),
-                GetRequiredValue<ICollection<FilterValidationIssueDto>>(response, "ValidationMessages").ToList()));
     }
 
     private static IReadOnlyList<CanonicalFilterDisplayDifference> BuildPullRequestDifferences(CanonicalFilterMetadata metadata)
@@ -189,17 +174,4 @@ public static class CanonicalClientResponseFactory
     private static string FormatDate(DateTimeOffset? value)
         => value.HasValue ? value.Value.ToString("yyyy-MM-dd") : "Open";
 
-    private static TValue GetRequiredValue<TValue>(object instance, string propertyName)
-    {
-        var property = instance.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance)
-            ?? throw new InvalidOperationException($"Generated canonical response type '{instance.GetType().FullName}' is missing property '{propertyName}'.");
-
-        var value = property.GetValue(instance);
-        if (value is null)
-        {
-            throw new InvalidOperationException($"Generated canonical response type '{instance.GetType().FullName}' returned null for property '{propertyName}'.");
-        }
-
-        return (TValue)value;
-    }
 }
