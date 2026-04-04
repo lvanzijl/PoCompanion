@@ -145,22 +145,10 @@ public sealed class GlobalFilterStoreTests
 
     private static GlobalFilterStore CreateStore()
     {
-        var handler = new StubHttpMessageHandler();
-        var httpClient = new HttpClient(handler)
-        {
-            BaseAddress = new Uri("http://localhost/")
-        };
-
-        var projectService = new ProjectService(new StubProjectsClient(), httpClient);
+        var projectService = new ProjectService(new StubProjectsClient());
         var projectIdentityMapper = new ProjectIdentityMapper(projectService);
         var resolver = new FilterStateResolver(projectIdentityMapper);
         return new GlobalFilterStore(NullLogger<GlobalFilterStore>.Instance, resolver);
-    }
-
-    private sealed class StubHttpMessageHandler : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-            => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
     }
 
     private sealed class StubProjectsClient : IProjectsClient

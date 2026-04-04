@@ -1,4 +1,5 @@
-using System.Net.Http.Json;
+using PoTool.Client.ApiClient;
+using PoTool.Client.Helpers;
 using PoTool.Shared.DataState;
 using PoTool.Shared.Pipelines;
 
@@ -6,20 +7,19 @@ namespace PoTool.Client.Services;
 
 public sealed class PipelineStateService
 {
-    private readonly HttpClient _httpClient;
+    private readonly IPipelinesClient _pipelinesClient;
 
-    public PipelineStateService(HttpClient httpClient)
+    public PipelineStateService(IPipelinesClient pipelinesClient)
     {
-        _httpClient = httpClient;
+        _pipelinesClient = pipelinesClient;
     }
 
-    public Task<DataStateResponseDto<PipelineQueryResponseDto<PipelineInsightsDto>>?> GetInsightsStateAsync(
+    public async Task<DataStateResponseDto<PipelineQueryResponseDto<PipelineInsightsDto>>?> GetInsightsStateAsync(
         int productOwnerId,
         int sprintId,
         bool includePartiallySucceeded,
         bool includeCanceled,
         CancellationToken cancellationToken = default)
-        => _httpClient.GetFromJsonAsync<DataStateResponseDto<PipelineQueryResponseDto<PipelineInsightsDto>>>(
-            $"/api/pipelines/insights?productOwnerId={productOwnerId}&sprintId={sprintId}&includePartiallySucceeded={includePartiallySucceeded}&includeCanceled={includeCanceled}",
-            cancellationToken);
+        => GeneratedCacheEnvelopeHelper.ToDataStateResponse<PipelineQueryResponseDto<PipelineInsightsDto>>(
+            await _pipelinesClient.GetInsightsAsync(productOwnerId, sprintId, includePartiallySucceeded, includeCanceled, cancellationToken));
 }

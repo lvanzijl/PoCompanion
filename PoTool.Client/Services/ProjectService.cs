@@ -12,12 +12,10 @@ namespace PoTool.Client.Services;
 public class ProjectService
 {
     private readonly IProjectsClient _projectsClient;
-    private readonly HttpClient _httpClient;
 
-    public ProjectService(IProjectsClient projectsClient, HttpClient httpClient)
+    public ProjectService(IProjectsClient projectsClient)
     {
         _projectsClient = projectsClient;
-        _httpClient = httpClient;
     }
 
     /// <summary>
@@ -89,9 +87,15 @@ public class ProjectService
             return CacheBackedClientResult<ProjectPlanningSummaryDto>.Empty("No project was selected.");
         }
 
-        return await DataStateHttpClientHelper.GetDataStateAsync<ProjectPlanningSummaryDto>(
-            _httpClient,
-            $"api/projects/{Uri.EscapeDataString(aliasOrId)}/planning-summary",
-            cancellationToken);
+        try
+        {
+            return GeneratedCacheEnvelopeHelper.ToCacheBackedResult<ProjectPlanningSummaryDto>(
+                await _projectsClient.GetPlanningSummaryAsync(aliasOrId, cancellationToken));
+        }
+        catch (ApiException ex)
+        {
+            return CacheBackedClientResult<ProjectPlanningSummaryDto>.Unavailable(
+                GeneratedClientErrorTranslator.ToHttpRequestException(ex).Message);
+        }
     }
 }

@@ -1,31 +1,22 @@
-using System.Net.Http.Json;
+using PoTool.Client.ApiClient;
+using PoTool.Client.Helpers;
 using PoTool.Shared.ReleasePlanning;
 
 namespace PoTool.Client.Services;
-
-// Client-side request DTOs for API calls
-public record CreateLaneCommand(int ObjectiveId, int DisplayOrder);
-public record CreateEpicPlacementCommand(int EpicId, int LaneId, int RowIndex, int OrderInRow);
-public record ReorderEpicsInRowCommand(int LaneId, int RowIndex, IReadOnlyList<int> PlacementIdsInOrder);
-public record CreateMilestoneLineCommand(string Label, double VerticalPosition, MilestoneType Type);
-public record UpdateMilestoneLineRequest(string Label, double VerticalPosition, MilestoneType Type);
-public record CreateIterationLineCommand(string Label, double VerticalPosition);
-public record UpdateIterationLineRequest(string Label, double VerticalPosition);
-public record MoveEpicRequest(int NewRowIndex, int NewOrderInRow);
 
 /// <summary>
 /// Service for Release Planning Board operations.
 /// </summary>
 public class ReleasePlanningService
 {
-    private readonly HttpClient _httpClient;
+    private readonly IReleasePlanningClient _releasePlanningClient;
     private readonly ILogger<ReleasePlanningService> _logger;
 
     public ReleasePlanningService(
-        HttpClient httpClient,
+        IReleasePlanningClient releasePlanningClient,
         ILogger<ReleasePlanningService> logger)
     {
-        _httpClient = httpClient;
+        _releasePlanningClient = releasePlanningClient;
         _logger = logger;
     }
 
@@ -36,11 +27,10 @@ public class ReleasePlanningService
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<ReleasePlanningBoardDto>(
-                "api/releaseplanning/board",
-                cancellationToken);
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<ReleasePlanningBoardDto>(
+                await _releasePlanningClient.GetBoardAsync(cancellationToken));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error retrieving Release Planning Board");
             return null;
@@ -54,11 +44,11 @@ public class ReleasePlanningService
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<List<UnplannedEpicDto>>(
-                "api/releaseplanning/unplanned-epics",
-                cancellationToken);
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<IReadOnlyList<UnplannedEpicDto>>(
+                await _releasePlanningClient.GetUnplannedEpicsAsync(cancellationToken),
+                Array.Empty<UnplannedEpicDto>());
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error retrieving unplanned Epics");
             return null;
@@ -74,11 +64,11 @@ public class ReleasePlanningService
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<List<ObjectiveEpicDto>>(
-                $"api/releaseplanning/objectives/{objectiveId}/epics",
-                cancellationToken);
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<IReadOnlyList<ObjectiveEpicDto>>(
+                await _releasePlanningClient.GetObjectiveEpicsAsync(objectiveId, cancellationToken),
+                Array.Empty<ObjectiveEpicDto>());
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error retrieving Epics for Objective {ObjectiveId}", objectiveId);
             return null;
@@ -97,11 +87,15 @@ public class ReleasePlanningService
     {
         try
         {
-            var command = new CreateLaneCommand(objectiveId, displayOrder);
-            var response = await _httpClient.PostAsJsonAsync("api/releaseplanning/lanes", command, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<LaneOperationResultDto>(cancellationToken);
+            var command = new PoTool.Client.ApiClient.CreateLaneCommand
+            {
+                ObjectiveId = objectiveId,
+                DisplayOrder = displayOrder
+            };
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<LaneOperationResultDto>(
+                await _releasePlanningClient.CreateLaneAsync(command, cancellationToken));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error creating Lane");
             return null;
@@ -117,10 +111,10 @@ public class ReleasePlanningService
     {
         try
         {
-            var response = await _httpClient.DeleteAsync($"api/releaseplanning/lanes/{laneId}", cancellationToken);
-            return await response.Content.ReadFromJsonAsync<LaneOperationResultDto>(cancellationToken);
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<LaneOperationResultDto>(
+                await _releasePlanningClient.DeleteLaneAsync(laneId, cancellationToken));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error deleting Lane {LaneId}", laneId);
             return null;
@@ -143,11 +137,17 @@ public class ReleasePlanningService
     {
         try
         {
-            var command = new CreateEpicPlacementCommand(epicId, laneId, rowIndex, orderInRow);
-            var response = await _httpClient.PostAsJsonAsync("api/releaseplanning/placements", command, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<EpicPlacementResultDto>(cancellationToken);
+            var command = new PoTool.Client.ApiClient.CreateEpicPlacementCommand
+            {
+                EpicId = epicId,
+                LaneId = laneId,
+                RowIndex = rowIndex,
+                OrderInRow = orderInRow
+            };
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<EpicPlacementResultDto>(
+                await _releasePlanningClient.CreatePlacementAsync(command, cancellationToken));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error creating Epic placement");
             return null;
@@ -165,14 +165,15 @@ public class ReleasePlanningService
     {
         try
         {
-            var request = new MoveEpicRequest(newRowIndex, newOrderInRow);
-            var response = await _httpClient.PostAsJsonAsync(
-                $"api/releaseplanning/placements/{placementId}/move",
-                request,
-                cancellationToken);
-            return await response.Content.ReadFromJsonAsync<EpicPlacementResultDto>(cancellationToken);
+            var request = new PoTool.Client.ApiClient.MoveEpicRequest
+            {
+                NewRowIndex = newRowIndex,
+                NewOrderInRow = newOrderInRow
+            };
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<EpicPlacementResultDto>(
+                await _releasePlanningClient.MoveEpicAsync(placementId, request, cancellationToken));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error moving Epic placement {PlacementId}", placementId);
             return null;
@@ -190,11 +191,16 @@ public class ReleasePlanningService
     {
         try
         {
-            var command = new ReorderEpicsInRowCommand(laneId, rowIndex, placementIdsInOrder);
-            var response = await _httpClient.PostAsJsonAsync("api/releaseplanning/rows/reorder", command, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<EpicPlacementResultDto>(cancellationToken);
+            var command = new PoTool.Client.ApiClient.ReorderEpicsInRowCommand
+            {
+                LaneId = laneId,
+                RowIndex = rowIndex,
+                PlacementIdsInOrder = placementIdsInOrder.ToList()
+            };
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<EpicPlacementResultDto>(
+                await _releasePlanningClient.ReorderEpicsInRowAsync(command, cancellationToken));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error reordering Epics in row");
             return null;
@@ -210,23 +216,10 @@ public class ReleasePlanningService
     {
         try
         {
-            var response = await _httpClient.DeleteAsync($"api/releaseplanning/placements/{placementId}", cancellationToken);
-            
-            // Check if the response was successful before deserializing
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogError("Failed to delete placement {PlacementId}. Status: {StatusCode}", 
-                    placementId, response.StatusCode);
-                return new EpicPlacementResultDto 
-                { 
-                    Success = false, 
-                    ErrorMessage = $"Server returned {response.StatusCode}" 
-                };
-            }
-            
-            return await response.Content.ReadFromJsonAsync<EpicPlacementResultDto>(cancellationToken);
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<EpicPlacementResultDto>(
+                await _releasePlanningClient.DeletePlacementAsync(placementId, cancellationToken));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error deleting Epic placement {PlacementId}", placementId);
             return null;
@@ -248,11 +241,16 @@ public class ReleasePlanningService
     {
         try
         {
-            var command = new CreateMilestoneLineCommand(label, verticalPosition, type);
-            var response = await _httpClient.PostAsJsonAsync("api/releaseplanning/milestone-lines", command, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<LineOperationResultDto>(cancellationToken);
+            var command = new PoTool.Client.ApiClient.CreateMilestoneLineCommand
+            {
+                Label = label,
+                VerticalPosition = verticalPosition,
+                Type = type
+            };
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<LineOperationResultDto>(
+                await _releasePlanningClient.CreateMilestoneLineAsync(command, cancellationToken));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error creating Milestone Line");
             return null;
@@ -271,11 +269,16 @@ public class ReleasePlanningService
     {
         try
         {
-            var request = new UpdateMilestoneLineRequest(label, verticalPosition, type);
-            var response = await _httpClient.PutAsJsonAsync($"api/releaseplanning/milestone-lines/{lineId}", request, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<LineOperationResultDto>(cancellationToken);
+            var request = new PoTool.Client.ApiClient.UpdateMilestoneLineRequest
+            {
+                Label = label,
+                VerticalPosition = verticalPosition,
+                Type = type
+            };
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<LineOperationResultDto>(
+                await _releasePlanningClient.UpdateMilestoneLineAsync(lineId, request, cancellationToken));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error updating Milestone Line {LineId}", lineId);
             return null;
@@ -291,10 +294,10 @@ public class ReleasePlanningService
     {
         try
         {
-            var response = await _httpClient.DeleteAsync($"api/releaseplanning/milestone-lines/{lineId}", cancellationToken);
-            return await response.Content.ReadFromJsonAsync<LineOperationResultDto>(cancellationToken);
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<LineOperationResultDto>(
+                await _releasePlanningClient.DeleteMilestoneLineAsync(lineId, cancellationToken));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error deleting Milestone Line {LineId}", lineId);
             return null;
@@ -311,11 +314,15 @@ public class ReleasePlanningService
     {
         try
         {
-            var command = new CreateIterationLineCommand(label, verticalPosition);
-            var response = await _httpClient.PostAsJsonAsync("api/releaseplanning/iteration-lines", command, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<LineOperationResultDto>(cancellationToken);
+            var command = new PoTool.Client.ApiClient.CreateIterationLineCommand
+            {
+                Label = label,
+                VerticalPosition = verticalPosition
+            };
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<LineOperationResultDto>(
+                await _releasePlanningClient.CreateIterationLineAsync(command, cancellationToken));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error creating Iteration Line");
             return null;
@@ -333,11 +340,15 @@ public class ReleasePlanningService
     {
         try
         {
-            var request = new UpdateIterationLineRequest(label, verticalPosition);
-            var response = await _httpClient.PutAsJsonAsync($"api/releaseplanning/iteration-lines/{lineId}", request, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<LineOperationResultDto>(cancellationToken);
+            var request = new PoTool.Client.ApiClient.UpdateIterationLineRequest
+            {
+                Label = label,
+                VerticalPosition = verticalPosition
+            };
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<LineOperationResultDto>(
+                await _releasePlanningClient.UpdateIterationLineAsync(lineId, request, cancellationToken));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error updating Iteration Line {LineId}", lineId);
             return null;
@@ -353,10 +364,10 @@ public class ReleasePlanningService
     {
         try
         {
-            var response = await _httpClient.DeleteAsync($"api/releaseplanning/iteration-lines/{lineId}", cancellationToken);
-            return await response.Content.ReadFromJsonAsync<LineOperationResultDto>(cancellationToken);
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<LineOperationResultDto>(
+                await _releasePlanningClient.DeleteIterationLineAsync(lineId, cancellationToken));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error deleting Iteration Line {LineId}", lineId);
             return null;
@@ -374,10 +385,10 @@ public class ReleasePlanningService
     {
         try
         {
-            var response = await _httpClient.PostAsync("api/releaseplanning/validation/refresh", null, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<ValidationCacheResultDto>(cancellationToken);
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<ValidationCacheResultDto>(
+                await _releasePlanningClient.RefreshValidationAsync(cancellationToken));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error refreshing validation cache");
             return null;
@@ -397,10 +408,10 @@ public class ReleasePlanningService
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("api/releaseplanning/export", options, cancellationToken);
-            return await response.Content.ReadFromJsonAsync<ExportResultDto>(cancellationToken);
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<ExportResultDto>(
+                await _releasePlanningClient.ExportBoardAsync(options, cancellationToken));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error exporting Release Planning Board");
             return null;
@@ -420,11 +431,11 @@ public class ReleasePlanningService
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<List<EpicFeatureDto>>(
-                $"api/releaseplanning/epics/{epicId}/features",
-                cancellationToken);
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<IReadOnlyList<EpicFeatureDto>>(
+                await _releasePlanningClient.GetEpicFeaturesAsync(epicId, cancellationToken),
+                Array.Empty<EpicFeatureDto>());
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error retrieving Features for Epic {EpicId}", epicId);
             return null;
@@ -442,30 +453,15 @@ public class ReleasePlanningService
     {
         try
         {
-            var request = new SplitEpicRequest(extractedEpicTitle, featureIdsForExtractedEpic);
-            var response = await _httpClient.PostAsJsonAsync(
-                $"api/releaseplanning/epics/{epicId}/split",
-                request,
-                cancellationToken);
-
-            // Try to deserialize the result even for non-success status (e.g., 400 BadRequest returns EpicSplitResultDto)
-            var result = await response.Content.ReadFromJsonAsync<EpicSplitResultDto>(cancellationToken);
-
-            // If we got a result, return it (it will have Success=false for failures)
-            if (result != null)
+            var request = new PoTool.Client.ApiClient.SplitEpicRequest
             {
-                return result;
-            }
-
-            // If deserialization failed but response was successful, something is wrong
-            if (response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning("Successfully split Epic {EpicId} but response deserialization failed", epicId);
-            }
-
-            return null;
+                ExtractedEpicTitle = extractedEpicTitle,
+                FeatureIdsForExtractedEpic = featureIdsForExtractedEpic.ToList()
+            };
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<EpicSplitResultDto>(
+                await _releasePlanningClient.SplitEpicAsync(epicId, request, cancellationToken));
         }
-        catch (Exception ex)
+        catch (ApiException ex)
         {
             _logger.LogError(ex, "Error splitting Epic {EpicId}", epicId);
             return null;
@@ -474,6 +470,3 @@ public class ReleasePlanningService
 
     #endregion
 }
-
-// Client-side request DTO for Epic Split
-public record SplitEpicRequest(string ExtractedEpicTitle, IReadOnlyList<int> FeatureIdsForExtractedEpic);

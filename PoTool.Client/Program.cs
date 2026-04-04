@@ -113,6 +113,14 @@ builder.Services.AddScoped<IMetricsClient>(sp =>
     return client;
 });
 
+builder.Services.AddScoped<IBuildQualityClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new BuildQualityClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
 builder.Services.AddBugTriageClient(apiBaseUrl);
 builder.Services.AddTriageTagsClient(apiBaseUrl);
 
@@ -160,6 +168,14 @@ builder.Services.AddScoped<ISprintsClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
     var client = new SprintsClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
+builder.Services.AddScoped<IReleasePlanningClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new ReleasePlanningClient(httpClient);
     client.BaseUrl = apiBaseUrl;
     return client;
 });

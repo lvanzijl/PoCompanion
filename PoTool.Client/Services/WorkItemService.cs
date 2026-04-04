@@ -26,12 +26,7 @@ public class WorkItemService
     // API endpoint paths for direct TFS calls (bypassing cache)
     private const string AreaPathsFromTfsEndpoint = "/api/workitems/area-paths/from-tfs";
     private const string GoalsFromTfsEndpoint = "/api/workitems/goals/from-tfs";
-    private const string ByRootIdsEndpoint = "/api/workitems/by-root-ids";
     private const string RefreshByRootIdsFromTfsEndpoint = "/api/workitems/by-root-ids/refresh-from-tfs";
-    private const string ValidationTriageEndpoint = "/api/workitems/validation-triage";
-    private const string ValidationQueueEndpoint = "/api/workitems/validation-queue";
-    private const string ValidationFixEndpoint = "/api/workitems/validation-fix";
-    private const string WorkItemEndpoint = "/api/workitems";
 
     // JSON options for case-insensitive deserialization of API responses
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -63,10 +58,8 @@ public class WorkItemService
 
     public async Task<DataStateResponseDto<IReadOnlyList<WorkItemDto>>?> GetAllStateAsync(
         CancellationToken cancellationToken = default)
-        => await _httpClient.GetFromJsonAsync<DataStateResponseDto<IReadOnlyList<WorkItemDto>>>(
-            WorkItemEndpoint,
-            _jsonOptions,
-            cancellationToken);
+        => GeneratedCacheEnvelopeHelper.ToDataStateResponse<IReadOnlyList<WorkItemDto>>(
+            await _client.GetAllAsync(cancellationToken));
 
     /// <summary>
     /// Gets filtered work items.
@@ -187,16 +180,9 @@ public class WorkItemService
         int[]? productIds = null,
         CancellationToken cancellationToken = default)
     {
-        var url = "/api/workitems/validated";
-        if (productIds != null && productIds.Length > 0)
-        {
-            url += $"?productIds={string.Join(",", productIds)}";
-        }
-
-        return await _httpClient.GetFromJsonAsync<DataStateResponseDto<IReadOnlyList<WorkItemWithValidationDto>>>(
-            url,
-            _jsonOptions,
-            cancellationToken);
+        string? productIdsParam = productIds != null && productIds.Length > 0 ? string.Join(",", productIds) : null;
+        return GeneratedCacheEnvelopeHelper.ToDataStateResponse<IReadOnlyList<WorkItemWithValidationDto>>(
+            await _client.GetAllWithValidationAsync(productIdsParam, cancellationToken));
     }
 
     /// <summary>
@@ -217,16 +203,9 @@ public class WorkItemService
         int[]? productIds = null,
         CancellationToken cancellationToken = default)
     {
-        var url = ValidationTriageEndpoint;
-        if (productIds != null && productIds.Length > 0)
-        {
-            url += $"?productIds={string.Join(",", productIds)}";
-        }
-
-        return await _httpClient.GetFromJsonAsync<DataStateResponseDto<SharedValidationTriageSummaryDto>>(
-            url,
-            _jsonOptions,
-            cancellationToken);
+        var productIdsParam = productIds != null && productIds.Length > 0 ? string.Join(",", productIds) : null;
+        return GeneratedCacheEnvelopeHelper.ToDataStateResponse<SharedValidationTriageSummaryDto>(
+            await _client.GetValidationTriageAsync(productIdsParam, cancellationToken));
     }
 
     /// <summary>
@@ -259,16 +238,9 @@ public class WorkItemService
         int[]? productIds = null,
         CancellationToken cancellationToken = default)
     {
-        var url = $"{ValidationQueueEndpoint}?category={Uri.EscapeDataString(categoryKey)}";
-        if (productIds != null && productIds.Length > 0)
-        {
-            url += $"&productIds={string.Join(",", productIds)}";
-        }
-
-        return await _httpClient.GetFromJsonAsync<DataStateResponseDto<SharedValidationQueueDto>>(
-            url,
-            _jsonOptions,
-            cancellationToken);
+        var productIdsParam = productIds != null && productIds.Length > 0 ? string.Join(",", productIds) : null;
+        return GeneratedCacheEnvelopeHelper.ToDataStateResponse<SharedValidationQueueDto>(
+            await _client.GetValidationQueueAsync(categoryKey, productIdsParam, cancellationToken));
     }
 
     /// <summary>
@@ -293,16 +265,9 @@ public class WorkItemService
         int[]? productIds = null,
         CancellationToken cancellationToken = default)
     {
-        var url = $"{ValidationFixEndpoint}?ruleId={Uri.EscapeDataString(ruleId)}&category={Uri.EscapeDataString(categoryKey)}";
-        if (productIds != null && productIds.Length > 0)
-        {
-            url += $"&productIds={string.Join(",", productIds)}";
-        }
-
-        return await _httpClient.GetFromJsonAsync<DataStateResponseDto<SharedValidationFixSessionDto>>(
-            url,
-            _jsonOptions,
-            cancellationToken);
+        var productIdsParam = productIds != null && productIds.Length > 0 ? string.Join(",", productIds) : null;
+        return GeneratedCacheEnvelopeHelper.ToDataStateResponse<SharedValidationFixSessionDto>(
+            await _client.GetValidationFixSessionAsync(ruleId, categoryKey, productIdsParam, cancellationToken));
     }
 
     /// <summary>
@@ -467,8 +432,6 @@ public class WorkItemService
         }
 
         var rootIdsParam = string.Join(",", rootIds);
-        var url = $"{ByRootIdsEndpoint}?rootIds={rootIdsParam}";
-        
         var response = await _client.GetByRootIdsAsync(rootIdsParam);
         return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemDto>());
     }
@@ -488,12 +451,8 @@ public class WorkItemService
         }
 
         var rootIdsParam = string.Join(",", rootIds);
-        var url = $"{ByRootIdsEndpoint}?rootIds={rootIdsParam}";
-
-        return await _httpClient.GetFromJsonAsync<DataStateResponseDto<IReadOnlyList<WorkItemDto>>>(
-            url,
-            _jsonOptions,
-            cancellationToken);
+        return GeneratedCacheEnvelopeHelper.ToDataStateResponse<IReadOnlyList<WorkItemDto>>(
+            await _client.GetByRootIdsAsync(rootIdsParam, cancellationToken));
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using PoTool.Client.Models;
 using PoTool.Shared.DataState;
 
@@ -6,6 +7,8 @@ namespace PoTool.Client.Helpers;
 
 public static class GeneratedCacheEnvelopeHelper
 {
+    private static readonly JsonSerializerOptions SerializationOptions = JsonHelper.CaseInsensitiveOptions;
+
     public static CacheBackedClientResult<TData> ToCacheBackedResult<TEnvelope, TData>(
         TEnvelope envelope,
         Func<TEnvelope, TData?> dataSelector)
@@ -26,6 +29,25 @@ public static class GeneratedCacheEnvelopeHelper
             DataStateDto.NotReady => CacheBackedClientResult<TData>.NotReady(reason, retryAfterSeconds),
             DataStateDto.Failed => CacheBackedClientResult<TData>.Failed(reason, retryAfterSeconds),
             _ => CacheBackedClientResult<TData>.Failed("The generated cache-backed response did not contain usable data.", retryAfterSeconds)
+        };
+    }
+
+    public static CacheBackedClientResult<TData> ToCacheBackedResult<TData>(object envelope)
+    {
+        ArgumentNullException.ThrowIfNull(envelope);
+        return ToCacheBackedResult(envelope, current => GetOptionalValue<TData>(current, "Data"));
+    }
+
+    public static DataStateResponseDto<TData> ToDataStateResponse<TData>(object envelope)
+    {
+        ArgumentNullException.ThrowIfNull(envelope);
+
+        return new DataStateResponseDto<TData>
+        {
+            State = GetRequiredValue<DataStateDto>(envelope, "State"),
+            Data = GetOptionalValue<TData>(envelope, "Data"),
+            Reason = GetOptionalValue<string>(envelope, "Reason"),
+            RetryAfterSeconds = GetOptionalValue<int?>(envelope, "RetryAfterSeconds")
         };
     }
 
@@ -77,6 +99,22 @@ public static class GeneratedCacheEnvelopeHelper
             ?? throw new InvalidOperationException($"Generated cache-backed response type '{instance.GetType().FullName}' is missing property '{propertyName}'.");
 
         var value = property.GetValue(instance);
-        return value is null ? default : (TValue?)value;
+        return ConvertValue<TValue>(value);
+    }
+
+    private static TValue? ConvertValue<TValue>(object? value)
+    {
+        if (value is null)
+        {
+            return default;
+        }
+
+        if (value is TValue typedValue)
+        {
+            return typedValue;
+        }
+
+        var json = JsonSerializer.Serialize(value, SerializationOptions);
+        return JsonSerializer.Deserialize<TValue>(json, SerializationOptions);
     }
 }

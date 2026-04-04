@@ -40,19 +40,9 @@ public sealed class GlobalFilterRouteServiceTests
 
     private static GlobalFilterRouteService CreateRouteService()
     {
-        var httpClient = new HttpClient(new StubHttpMessageHandler())
-        {
-            BaseAddress = new Uri("http://localhost/")
-        };
-        var projectService = new ProjectService(new StubProjectsClient(), httpClient);
+        var projectService = new ProjectService(new StubProjectsClient());
         var projectIdentityMapper = new ProjectIdentityMapper(projectService);
         return new GlobalFilterRouteService(projectIdentityMapper);
-    }
-
-    private sealed class StubHttpMessageHandler : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-            => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
     }
 
     private sealed class StubProjectsClient : IProjectsClient
