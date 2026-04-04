@@ -26,10 +26,10 @@
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
     
     @* Startup Readiness Banner *@
-    @if (_startupReadiness != null && !string.IsNullOrEmpty(_startupReadiness.MissingRequirementMessage))
+    @if (_startupReadiness != null && _startupReadiness.State != StartupReadinessState.Ready && !string.IsNullOrEmpty(_startupReadiness.Reason))
     {
         <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true" Icon="@Icons.Material.Filled.Info">
-            <MudText Typo="Typo.subtitle2">@_startupReadiness.MissingRequirementMessage</MudText>
+            <MudText Typo="Typo.subtitle2">@_startupReadiness.Reason</MudText>
         </MudAlert>
     }
     
@@ -250,7 +250,7 @@
     private ErrorResponse? _errorResponse;
     
     // Startup readiness state
-    private PoTool.Client.Services.StartupReadinessDto? _startupReadiness;
+    private StartupReadinessResult? _startupReadiness;
 
     protected override async Task OnInitializedAsync()
     {
@@ -260,14 +260,7 @@
     
     private async Task LoadStartupReadiness()
     {
-        try
-        {
-            _startupReadiness = await StartupOrchestrator.GetStartupReadinessAsync();
-        }
-        catch (Exception)
-        {
-            // Graceful degradation - don't block the page
-        }
+        _startupReadiness = await StartupOrchestrator.GetStartupReadinessAsync();
     }
 
     private async Task OnUrlChanged(string value)

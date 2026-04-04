@@ -8,18 +8,18 @@ namespace PoTool.Client.Services;
 /// </summary>
 public interface IBuildQualityService
 {
-    Task<CanonicalClientResponse<BuildQualityPageDto>> GetRollingWindowAsync(
+    Task<CacheBackedClientResult<CanonicalClientResponse<BuildQualityPageDto>>> GetRollingWindowAsync(
         int productOwnerId,
         DateTimeOffset windowStartUtc,
         DateTimeOffset windowEndUtc,
         CancellationToken cancellationToken = default);
 
-    Task<CanonicalClientResponse<DeliveryBuildQualityDto>> GetSprintAsync(
+    Task<CacheBackedClientResult<CanonicalClientResponse<DeliveryBuildQualityDto>>> GetSprintAsync(
         int productOwnerId,
         int sprintId,
         CancellationToken cancellationToken = default);
 
-    Task<PipelineBuildQualityDto> GetPipelineAsync(
+    Task<CacheBackedClientResult<PipelineBuildQualityDto>> GetPipelineAsync(
         int productOwnerId,
         int sprintId,
         int? pipelineDefinitionId = null,

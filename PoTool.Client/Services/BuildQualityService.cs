@@ -1,6 +1,4 @@
 using System.Globalization;
-using System.Net.Http.Json;
-using System.Text.Json;
 using PoTool.Client.Helpers;
 using PoTool.Client.Models;
 using PoTool.Shared.BuildQuality;
@@ -20,7 +18,7 @@ public sealed class BuildQualityService : IBuildQualityService
         _httpClient = httpClient;
     }
 
-    public async Task<CanonicalClientResponse<BuildQualityPageDto>> GetRollingWindowAsync(
+    public async Task<CacheBackedClientResult<CanonicalClientResponse<BuildQualityPageDto>>> GetRollingWindowAsync(
         int productOwnerId,
         DateTimeOffset windowStartUtc,
         DateTimeOffset windowEndUtc,
@@ -30,21 +28,27 @@ public sealed class BuildQualityService : IBuildQualityService
                        $"&windowStartUtc={Uri.EscapeDataString(windowStartUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture))}" +
                        $"&windowEndUtc={Uri.EscapeDataString(windowEndUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture))}";
 
-        var envelope = await GetAsync<DeliveryQueryResponseDto<BuildQualityPageDto>>(endpoint, cancellationToken);
-        return CanonicalClientResponseFactory.Create(envelope);
+        var response = await DataStateHttpClientHelper.GetDataStateAsync<DeliveryQueryResponseDto<BuildQualityPageDto>>(
+            _httpClient,
+            endpoint,
+            cancellationToken);
+        return response.Map(CanonicalClientResponseFactory.Create);
     }
 
-    public async Task<CanonicalClientResponse<DeliveryBuildQualityDto>> GetSprintAsync(
+    public async Task<CacheBackedClientResult<CanonicalClientResponse<DeliveryBuildQualityDto>>> GetSprintAsync(
         int productOwnerId,
         int sprintId,
         CancellationToken cancellationToken = default)
     {
         var endpoint = $"api/buildquality/sprint?productOwnerId={productOwnerId}&sprintId={sprintId}";
-        var envelope = await GetAsync<DeliveryQueryResponseDto<DeliveryBuildQualityDto>>(endpoint, cancellationToken);
-        return CanonicalClientResponseFactory.Create(envelope);
+        var response = await DataStateHttpClientHelper.GetDataStateAsync<DeliveryQueryResponseDto<DeliveryBuildQualityDto>>(
+            _httpClient,
+            endpoint,
+            cancellationToken);
+        return response.Map(CanonicalClientResponseFactory.Create);
     }
 
-    public Task<PipelineBuildQualityDto> GetPipelineAsync(
+    public Task<CacheBackedClientResult<PipelineBuildQualityDto>> GetPipelineAsync(
         int productOwnerId,
         int sprintId,
         int? pipelineDefinitionId = null,
@@ -67,16 +71,9 @@ public sealed class BuildQualityService : IBuildQualityService
             query.Add($"repositoryId={repositoryId.Value}");
         }
 
-        return GetAsync<PipelineBuildQualityDto>($"api/buildquality/pipeline?{string.Join("&", query)}", cancellationToken);
-    }
-
-    private async Task<T> GetAsync<T>(string endpoint, CancellationToken cancellationToken)
-    {
-        using var response = await _httpClient.GetAsync(endpoint, cancellationToken);
-        response.EnsureSuccessStatusCode();
-
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        var value = await JsonSerializer.DeserializeAsync<T>(stream, JsonHelper.CaseInsensitiveOptions, cancellationToken);
-        return value ?? throw new InvalidOperationException($"Received an empty BuildQuality response for {endpoint}.");
+        return DataStateHttpClientHelper.GetDataStateAsync<PipelineBuildQualityDto>(
+            _httpClient,
+            $"api/buildquality/pipeline?{string.Join("&", query)}",
+            cancellationToken);
     }
 }

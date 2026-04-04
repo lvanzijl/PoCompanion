@@ -66,15 +66,15 @@
     else if (_dataState.State == DataStateDto.NotReady)
     {
         <DataStatePanel State="@_dataState.State"
-                        Title="Validation queue is syncing"
-                        Message="@(_dataState.Reason ?? "Validation queue data will load automatically after cache warming completes.")"
+                        Subject="Validation queue"
+                        Reason="@_dataState.Reason"
                         ProductOwnerId="@_profileId" />
     }
     else if (_dataState.State == DataStateDto.Failed)
     {
         <DataStatePanel State="@_dataState.State"
-                        Title="Validation queue failed to load"
-                        Message="@(_dataState.Reason ?? "Validation queue data could not be loaded right now.")" />
+                        Subject="Validation queue"
+                        Reason="@_dataState.Reason" />
     }
     else if (_loadError != null)
     {

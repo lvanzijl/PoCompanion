@@ -56,15 +56,15 @@
     else if (_dataState.State == DataStateDto.NotReady)
     {
         <DataStatePanel State="@_dataState.State"
-                        Title="Validation triage is syncing"
-                        Message="@(_dataState.Reason ?? "Validation data will load automatically after the active profile cache is ready.")"
+                        Subject="Validation triage"
+                        Reason="@_dataState.Reason"
                         ProductOwnerId="@_profileId" />
     }
     else if (_dataState.State == DataStateDto.Failed)
     {
         <DataStatePanel State="@_dataState.State"
-                        Title="Validation triage failed to load"
-                        Message="@(_dataState.Reason ?? "Validation triage could not be loaded right now.")" />
+                        Subject="Validation triage"
+                        Reason="@_dataState.Reason" />
     }
     else if (_loadError != null)
     {

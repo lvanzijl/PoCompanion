@@ -1,74 +1,30 @@
 @using PoTool.Client.Services
-@using PoTool.Shared.Settings
 @inject IStartupOrchestratorService StartupOrchestrator
-@inject NavigationManager NavigationManager
 @inject IPreferencesService PreferencesService
+@inject NavigationManager NavigationManager
 @inject IProfileService ProfileService
-@inject IOnboardingService OnboardingService
-@inject CacheSyncService CacheSyncService
 
 @* 
     StartupGuard component that checks startup readiness and routes appropriately.
     This component should be used in layouts to enforce startup gating.
 *@
 
-@if (_isChecking || _isCacheChecking)
+@if (_isChecking)
 {
     <MudContainer Class="d-flex justify-center align-center" Style="height: 100vh;">
         <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
     </MudContainer>
 }
-else if (!_isReady && _readiness != null)
+else if (!_isReady)
 {
-    @* Show blocking message when not ready *@
-    <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
-        <MudAlert Severity="Severity.Warning" Class="mb-4">
-            <MudText Typo="Typo.h6">Setup Required</MudText>
-            <MudText Typo="Typo.body1" Class="mt-2">
-                @(_readiness.MissingRequirementMessage ?? "Please complete setup before using this feature.")
-            </MudText>
-        </MudAlert>
-        
-        <MudStack Row="true" Spacing="2">
-            @if (!_readiness.HasSavedTfsConfig || !_readiness.HasTestedConnectionSuccessfully || !_readiness.HasVerifiedTfsApiSuccessfully)
-            {
-                <MudButton Variant="Variant.Filled" 
-                           Color="Color.Primary" 
-                           OnClick="@(() => NavigationManager.NavigateTo("/settings/tfs"))">
-                    Configure Now
-                </MudButton>
-            }
-            else if (!_readiness.HasAnyProfile)
-            {
-                <MudButton Variant="Variant.Filled" 
-                           Color="Color.Primary" 
-                           OnClick="@(() => NavigationManager.NavigateTo("/profiles"))">
-                    Create Profile
-                </MudButton>
-            }
-            else if (_readiness.ActiveProfileId == null)
-            {
-                <MudButton Variant="Variant.Filled" 
-                           Color="Color.Primary" 
-                           OnClick="@(() => NavigationManager.NavigateTo("/profiles"))">
-                    Select Profile
-                </MudButton>
-            }
-        </MudStack>
-    </MudContainer>
-}
-else if (!_isCacheReady && _readiness?.ActiveProfileId != null)
-{
-    <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
-        <MudAlert Severity="Severity.Info" Class="mb-4">
-            <MudText Typo="Typo.h6">Syncing cache</MudText>
-            <MudText Typo="Typo.body1" Class="mt-2">
-                Cache data is syncing for the selected profile. Workspace data will load once the sync completes.
-            </MudText>
-        </MudAlert>
-
-        <CacheStatusSection ProductOwnerId="@_readiness.ActiveProfileId.Value" AutoSync="true" />
-    </MudContainer>
+    <StartupBlockingPanel Title="@GetBlockingTitle()"
+                          Reason="@_startupReadiness.Reason"
+                          RecoveryHint="@_startupReadiness.RecoveryHint"
+                          Severity="@GetBlockingSeverity()"
+                          PrimaryActionText="@GetPrimaryActionText()"
+                          PrimaryActionHref="@GetPrimaryActionHref()"
+                          SecondaryActionText="@GetSecondaryActionText()"
+                          SecondaryActionHref="@GetSecondaryActionHref()" />
 }
 else
 {
@@ -90,14 +46,14 @@ else
     
     private bool _isChecking = true;
     private bool _isReady = false;
-    private bool _isCacheChecking = false;
-    private bool _isCacheReady = true;
-    private PoTool.Client.Services.StartupReadinessDto? _readiness;
-    private CacheStateDto? _cacheState;
+    private StartupReadinessResult _startupReadiness = new(
+        StartupReadinessState.Unavailable,
+        Readiness: null,
+        Reason: "Startup readiness has not been checked yet.",
+        RecoveryHint: "Retry startup once the application is ready.");
     private string _lastCheckedLocation = string.Empty;
-    private CancellationTokenSource? _cachePollingTokenSource;
     
-    // Default exempt pages (settings, profiles, profile management, onboarding, index, sync-gate)
+    // Default exempt pages (settings, profiles, profile management, onboarding, root, sync-gate, blocking page)
     private static readonly string[] DefaultExemptPages = new[]
     {
         "/",
@@ -105,7 +61,8 @@ else
         "/profiles",
         "/settings/productowner/edit",
         "/onboarding",
-        "/sync-gate"
+        "/sync-gate",
+        "/startup-blocked"
     };
 
     protected override async Task OnInitializedAsync()
@@ -126,99 +83,60 @@ else
     
     public void Dispose()
     {
-        // Unsubscribe from location changes
         NavigationManager.LocationChanged -= HandleLocationChanged;
-        StopCachePolling();
     }
 
     private async Task CheckReadinessAsync()
     {
-        // Get current location
         var currentLocation = NavigationManager.Uri;
-        
-        // Skip check if location hasn't changed (prevents unnecessary checks on component re-renders)
-        if (_lastCheckedLocation == currentLocation && _readiness != null)
+
+        if (_lastCheckedLocation == currentLocation && _isChecking is false)
         {
             return;
         }
-        
+
         _lastCheckedLocation = currentLocation;
         _isChecking = true;
-        _isCacheReady = true;
-        _isCacheChecking = false;
-        _cacheState = null;
-        StopCachePolling();
-        
+
+        var currentPath = StartupGuardRouteMatcher.NormalizePath(NavigationManager.ToBaseRelativePath(currentLocation));
+        var exemptPages = ExemptPages ?? DefaultExemptPages;
+        if (StartupGuardRouteMatcher.IsExemptPath(currentPath, exemptPages))
+        {
+            _isReady = true;
+            _isChecking = false;
+            return;
+        }
+
         try
         {
-            _readiness = await StartupOrchestrator.GetStartupReadinessAsync();
-            
-            if (_readiness == null)
-            {
-                // Backend readiness check failed - reset onboarding and assume ready (graceful degradation)
-                // This ensures user can retry setup from scratch
-                await OnboardingService.ResetOnboardingAsync();
-                _isReady = true;
-                return;
-            }
-            
-            // Reset onboarding if database is empty (no TFS config)
-            // Since TFS config and profiles are in same DB, this handles database deletion
-            // Note: We continue execution (unlike null case above) because we have readiness info
-            // and want to use it for proper routing (e.g., to TFS config page)
-            if (!_readiness.HasSavedTfsConfig)
-            {
-                await OnboardingService.ResetOnboardingAsync();
-            }
-            
-            // If no active profile, try to restore from localStorage
-            if (_readiness.ActiveProfileId == null)
+            _startupReadiness = await StartupOrchestrator.GetStartupReadinessAsync();
+            if (_startupReadiness.State == StartupReadinessState.NotReady)
             {
                 var cachedProfileId = await PreferencesService.GetIntAsync("ActiveProfileId");
                 if (cachedProfileId.HasValue)
                 {
                     try
                     {
-                        // Attempt to restore the profile
                         await ProfileService.SetActiveProfileAsync(cachedProfileId.Value);
-                        // Re-check readiness after restoration
-                        _readiness = await StartupOrchestrator.GetStartupReadinessAsync();
-                        Console.WriteLine($"[StartupGuard] Restored active profile from localStorage: ID {cachedProfileId.Value}");
+                        _startupReadiness = await StartupOrchestrator.GetStartupReadinessAsync();
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        Console.WriteLine($"[StartupGuard] Failed to restore profile from localStorage: {ex.Message}");
-                        // Clear invalid cached profile ID
                         await PreferencesService.RemoveAsync("ActiveProfileId");
                     }
                 }
             }
-            
-            // Check if current page is exempt
-            var currentPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-            // Normalize: remove query string and ensure leading slash
-            currentPath = "/" + currentPath.Split('?')[0].TrimStart('/');
-            
-            var exemptPages = ExemptPages?.ToArray() ?? DefaultExemptPages;
-            if (exemptPages.Any(p => currentPath.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
-            {
-                _isReady = true;
-                return;
-            }
-            
-            // Check if feature pages are accessible
-            _isReady = _readiness != null && StartupOrchestrator.IsFeaturePageAccessible(_readiness);
 
-            if (_isReady && _readiness?.ActiveProfileId.HasValue == true)
-            {
-                var activeProfileId = _readiness.ActiveProfileId.Value;
-                await CheckCacheStateAsync(activeProfileId);
-            }
+            _isReady = StartupOrchestrator.IsFeaturePageAccessible(_startupReadiness);
         }
-        catch (Exception)
+        catch
         {
-            // On error, allow access (graceful degradation)
-            _isReady = true;
+            _startupReadiness = new StartupReadinessResult(
+                StartupReadinessState.Error,
+                Readiness: null,
+                Reason: "Startup enforcement failed unexpectedly.",
+                RecoveryHint: "Retry startup. If the problem persists, inspect the client logs.");
+            _isReady = false;
         }
         finally
         {
@@ -226,69 +144,63 @@ else
         }
     }
 
-    private async Task CheckCacheStateAsync(int productOwnerId)
+    private string GetBlockingTitle()
     {
-        _isCacheChecking = true;
-        try
+        return _startupReadiness.State switch
         {
-            _cacheState = await CacheSyncService.GetCacheStatusAsync(productOwnerId);
-            _isCacheReady = _cacheState?.LastSuccessfulSync.HasValue == true;
-
-            if (!_isCacheReady)
-            {
-                StartCachePolling(productOwnerId);
-            }
-        }
-        finally
-        {
-            _isCacheChecking = false;
-        }
+            StartupReadinessState.SetupRequired => "Setup required",
+            StartupReadinessState.SyncRequired => "Sync required",
+            StartupReadinessState.NotReady => "Profile selection required",
+            StartupReadinessState.Unavailable => "Startup unavailable",
+            StartupReadinessState.Error => "Startup error",
+            _ => "Startup blocked"
+        };
     }
 
-    private void StartCachePolling(int productOwnerId)
+    private Severity GetBlockingSeverity()
     {
-        StopCachePolling();
-        _cachePollingTokenSource = new CancellationTokenSource();
-        var token = _cachePollingTokenSource.Token;
-
-        _ = Task.Run(async () =>
-        {
-            while (!token.IsCancellationRequested)
-            {
-                try
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(2), token);
-                    var cacheState = await CacheSyncService.GetCacheStatusAsync(productOwnerId, token);
-
-                    if (cacheState?.LastSuccessfulSync.HasValue == true)
-                    {
-                        _cacheState = cacheState;
-                        _isCacheReady = true;
-                        await InvokeAsync(StateHasChanged);
-                        StopCachePolling();
-                        return;
-                    }
-
-                    _cacheState = cacheState;
-                    await InvokeAsync(StateHasChanged);
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
-            }
-        }, token);
+        return _startupReadiness.State is StartupReadinessState.Unavailable or StartupReadinessState.Error
+            ? Severity.Error
+            : Severity.Warning;
     }
 
-    private void StopCachePolling()
+    private string GetPrimaryActionText()
     {
-        if (_cachePollingTokenSource == null)
+        return _startupReadiness.State switch
         {
-            return;
-        }
+            StartupReadinessState.SetupRequired when _startupReadiness.Readiness is { HasSavedTfsConfig: false }
+                or { HasTestedConnectionSuccessfully: false }
+                or { HasVerifiedTfsApiSuccessfully: false } => "Open settings",
+            StartupReadinessState.SetupRequired or StartupReadinessState.NotReady => "Open profiles",
+            StartupReadinessState.SyncRequired => "Open sync gate",
+            _ => "Retry startup"
+        };
+    }
 
-        _cachePollingTokenSource.Cancel();
-        _cachePollingTokenSource.Dispose();
-        _cachePollingTokenSource = null;
+    private string GetPrimaryActionHref()
+    {
+        return _startupReadiness.State switch
+        {
+            StartupReadinessState.SetupRequired when _startupReadiness.Readiness is { HasSavedTfsConfig: false }
+                or { HasTestedConnectionSuccessfully: false }
+                or { HasVerifiedTfsApiSuccessfully: false } => "/settings/tfs",
+            StartupReadinessState.SetupRequired or StartupReadinessState.NotReady => "/profiles",
+            StartupReadinessState.SyncRequired => "/sync-gate?returnUrl=%2Fhome",
+            _ => "/"
+        };
+    }
+
+    private string? GetSecondaryActionText()
+    {
+        return _startupReadiness.State is StartupReadinessState.Unavailable or StartupReadinessState.Error
+            ? "Open settings"
+            : null;
+    }
+
+    private string? GetSecondaryActionHref()
+    {
+        return _startupReadiness.State is StartupReadinessState.Unavailable or StartupReadinessState.Error
+            ? "/settings/tfs"
+            : null;
     }
 }

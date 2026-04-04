@@ -1,14 +1,26 @@
+@using PoTool.Client.Helpers
 @using PoTool.Shared.DataState
 
 <MudPaper Elevation="1" Class="pa-6">
     <MudStack Spacing="3">
         <MudAlert Severity="@GetSeverity()" Variant="Variant.Filled" Dense="true">
-            @Title
+            @DisplayContent.Title
         </MudAlert>
 
         <MudText Typo="Typo.body1">
-            @Message
+            @DisplayContent.Message
         </MudText>
+
+        @if (HasRecoveryAction)
+        {
+            <MudStack Row="true">
+                <MudButton Variant="Variant.Outlined"
+                           Color="@(State == DataStateDto.Failed ? Color.Error : Color.Primary)"
+                           OnClick="HandleRecoveryAsync">
+                    @RecoveryActionText
+                </MudButton>
+            </MudStack>
+        }
 
         @if (State == DataStateDto.NotReady && ProductOwnerId.HasValue)
         {
@@ -21,14 +33,47 @@
     [Parameter, EditorRequired]
     public DataStateDto State { get; set; }
 
-    [Parameter, EditorRequired]
+    [Parameter]
     public string Title { get; set; } = string.Empty;
 
-    [Parameter, EditorRequired]
+    [Parameter]
     public string Message { get; set; } = string.Empty;
 
     [Parameter]
+    public string Subject { get; set; } = "Data";
+
+    [Parameter]
+    public string? Reason { get; set; }
+
+    [Parameter]
     public int? ProductOwnerId { get; set; }
+
+    [Parameter]
+    public string RecoveryActionText { get; set; } = "Retry";
+
+    [Parameter]
+    public EventCallback OnRecovery { get; set; }
+
+    private bool HasRecoveryAction => OnRecovery.HasDelegate;
+
+    private CacheStateDisplayContent DisplayContent
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(Title) || !string.IsNullOrWhiteSpace(Message))
+            {
+                var fallback = CacheStatePresentation.Create(Subject, State, Reason);
+                return new CacheStateDisplayContent(
+                    string.IsNullOrWhiteSpace(Title) ? fallback.Title : Title,
+                    string.IsNullOrWhiteSpace(Message) ? fallback.Message : Message);
+            }
+
+            return CacheStatePresentation.Create(Subject, State, Reason);
+        }
+    }
+
+    private Task HandleRecoveryAsync()
+        => OnRecovery.InvokeAsync();
 
     private Severity GetSeverity() => State switch
     {

@@ -1,0 +1,29 @@
+@page "/startup-blocked"
+@using System.Web
+@using PoTool.Client.Components.Common
+@using PoTool.Client.Services
+@inject NavigationManager NavigationManager
+
+<PageTitle>Startup Blocked - PO Companion</PageTitle>
+
+<StartupBlockingPanel Title="Startup blocked"
+                      Reason="@_reason"
+                      RecoveryHint="@_hint"
+                      Severity="Severity.Error"
+                      PrimaryActionText="Retry startup"
+                      PrimaryActionHref="/"
+                      SecondaryActionText="Open settings"
+                      SecondaryActionHref="/settings/tfs" />
+
+@code {
+    private string _reason = "Startup could not continue safely.";
+    private string _hint = "Retry startup after confirming the backend and configuration are available.";
+
+    protected override void OnInitialized()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var query = HttpUtility.ParseQueryString(uri.Query);
+        _reason = query["message"] ?? _reason;
+        _hint = query["hint"] ?? _hint;
+    }
+}

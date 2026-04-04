@@ -2,6 +2,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Models
+@using PoTool.Shared.DataState
 @using SharedBuildQualityPageDto = PoTool.Shared.BuildQuality.BuildQualityPageDto
 @using SharedBuildQualityProductDto = PoTool.Shared.BuildQuality.BuildQualityProductDto
 @implements IDisposable
@@ -98,10 +99,25 @@
                 }
             </MudGrid>
         }
-        else if (_buildQualityPage is null || !_buildQualityPage.Products.Any())
+        else if (_buildQualityResponse?.State == CacheBackedClientState.NotReady)
+        {
+            <DataStatePanel State="DataStateDto.NotReady"
+                            Subject="Build Quality overview"
+                            Reason="@_buildQualityResponse.Reason"
+                            ProductOwnerId="@_activeProfileId"
+                            OnRecovery="@RetryLoadAsync" />
+        }
+        else if (_buildQualityResponse?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
+        {
+            <DataStatePanel State="DataStateDto.Failed"
+                            Subject="Build Quality overview"
+                            Reason="@(_buildQualityResponse?.Reason)"
+                            OnRecovery="@RetryLoadAsync" />
+        }
+        else if (_buildQualityResponse?.State == CacheBackedClientState.Empty || _buildQualityPage is null || !_buildQualityPage.Products.Any())
         {
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                No Build Quality data is available for the active Product Owner yet.
+                @(_buildQualityResponse?.Reason ?? "No Build Quality data is available for the active Product Owner yet.")
             </MudAlert>
         }
         else
@@ -139,9 +155,11 @@
     private readonly List<BreadcrumbItem> _breadcrumbs = new();
 
     private SharedBuildQualityPageDto? _buildQualityPage;
+    private CacheBackedClientResult<CanonicalClientResponse<SharedBuildQualityPageDto>>? _buildQualityResponse;
     private CanonicalFilterMetadata? _buildQualityFilterMetadata;
     private string? _loadError;
     private string? _selectedProductName;
+    private int? _activeProfileId;
     private bool _isLoading = true;
     private DateTimeOffset _windowStartUtc;
     private DateTimeOffset _windowEndUtc;
@@ -189,13 +207,22 @@
                 return;
             }
 
-            var buildQualityResponse = await BuildQualityService.GetRollingWindowAsync(
+            _activeProfileId = activeProfile.Id;
+            _buildQualityResponse = await BuildQualityService.GetRollingWindowAsync(
                 activeProfile.Id,
                 _windowStartUtc,
                 _windowEndUtc,
                 _lifetimeCts.Token);
-            _buildQualityFilterMetadata = buildQualityResponse.FilterMetadata;
-            _buildQualityPage = buildQualityResponse.Data;
+
+            if (_buildQualityResponse.State != CacheBackedClientState.Success || _buildQualityResponse.Data is null)
+            {
+                _buildQualityFilterMetadata = null;
+                _buildQualityPage = null;
+                return;
+            }
+
+            _buildQualityFilterMetadata = _buildQualityResponse.Data.FilterMetadata;
+            _buildQualityPage = _buildQualityResponse.Data.Data;
 
             if (ProductId.HasValue)
             {
@@ -210,7 +237,8 @@
         catch (Exception ex)
         {
             _buildQualityFilterMetadata = null;
-            _loadError = $"Build Quality overview unavailable right now: {ex.Message}";
+            _buildQualityResponse = CacheBackedClientResult<CanonicalClientResponse<SharedBuildQualityPageDto>>.Failed($"Build Quality overview unavailable right now: {ex.Message}");
+            _buildQualityPage = null;
         }
         finally
         {

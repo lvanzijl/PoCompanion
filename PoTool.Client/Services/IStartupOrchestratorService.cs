@@ -17,13 +17,41 @@ public sealed record StartupReadinessDto(
 );
 
 /// <summary>
+/// Explicit readiness states for startup gating and root routing.
+/// </summary>
+public enum StartupReadinessState
+{
+    Ready,
+    NotReady,
+    SetupRequired,
+    SyncRequired,
+    Unavailable,
+    Error
+}
+
+/// <summary>
+/// Structured startup readiness result that never relies on null.
+/// </summary>
+public sealed record StartupReadinessResult(
+    StartupReadinessState State,
+    StartupReadinessDto? Readiness,
+    string Reason,
+    string RecoveryHint
+);
+
+/// <summary>
 /// Represents the startup routing destination.
 /// </summary>
 public enum StartupRoute
 {
     /// <summary>
-    /// Route to Profiles Home (user is ready to use the app).
+    /// Route to the home dashboard.
     /// </summary>
+    Home,
+
+    /// <summary>
+     /// Route to Profiles Home (user is ready to use the app).
+     /// </summary>
     ProfilesHome,
 
     /// <summary>
@@ -32,9 +60,19 @@ public enum StartupRoute
     Configuration,
 
     /// <summary>
-    /// Route to Create First Profile page.
+     /// Route to Create First Profile page.
+     /// </summary>
+    CreateFirstProfile,
+
+    /// <summary>
+    /// Route to Sync Gate page.
     /// </summary>
-    CreateFirstProfile
+    SyncGate,
+
+    /// <summary>
+    /// Route to the blocking startup error page.
+    /// </summary>
+    BlockingError
 }
 
 /// <summary>
@@ -42,8 +80,9 @@ public enum StartupRoute
 /// </summary>
 public sealed record StartupRoutingResult(
     StartupRoute Route,
-    string? Message,
-    bool IsAppUsable
+    string Message,
+    string RecoveryHint,
+    bool IsBlocking
 );
 
 /// <summary>
@@ -54,16 +93,16 @@ public interface IStartupOrchestratorService
     /// <summary>
     /// Gets the startup readiness state from the backend.
     /// </summary>
-    Task<StartupReadinessDto?> GetStartupReadinessAsync(CancellationToken cancellationToken = default);
+    Task<StartupReadinessResult> GetStartupReadinessAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Determines where to route the user based on startup readiness state.
     /// </summary>
-    StartupRoutingResult DetermineRoute(StartupReadinessDto readiness);
+    StartupRoutingResult DetermineRoute(StartupReadinessResult readiness);
 
     /// <summary>
     /// Checks if a given feature page should be accessible based on the current readiness state.
     /// Returns true if accessible, false if should be blocked.
     /// </summary>
-    bool IsFeaturePageAccessible(StartupReadinessDto readiness);
+    bool IsFeaturePageAccessible(StartupReadinessResult readiness);
 }

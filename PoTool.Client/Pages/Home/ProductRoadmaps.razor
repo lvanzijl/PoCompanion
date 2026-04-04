@@ -5,6 +5,7 @@
 @using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @using PoTool.Shared.Contracts
+@using PoTool.Shared.DataState
 @using PoTool.Shared.Planning
 @using PoTool.Shared.Settings
 @using PoTool.Shared.WorkItems
@@ -165,6 +166,21 @@
                     </MudGrid>
                 </MudStack>
             </MudPaper>
+        }
+        else if (_projectPlanningSummaryState?.State == CacheBackedClientState.NotReady)
+        {
+            <DataStatePanel State="DataStateDto.NotReady"
+                            Subject="Project roadmap summary"
+                            Reason="@_projectPlanningSummaryState.Reason"
+                            ProductOwnerId="@_profileId"
+                            OnRecovery="@LoadProjectPlanningSummaryAsync" />
+        }
+        else if (_projectPlanningSummaryState?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
+        {
+            <DataStatePanel State="DataStateDto.Failed"
+                            Subject="Project roadmap summary"
+                            Reason="@(_projectPlanningSummaryState?.Reason)"
+                            OnRecovery="@LoadProjectPlanningSummaryAsync" />
         }
 
         @* Horizontal Scrollable Product Lanes *@
@@ -756,6 +772,7 @@
     private List<ProjectDto> _projects = new();
     private string? _selectedProjectRouteKey;
     private ProjectPlanningSummaryDto? _projectPlanningSummary;
+    private CacheBackedClientResult<ProjectPlanningSummaryDto>? _projectPlanningSummaryState;
     private TfsConfigDto? _tfsConfig;
     private readonly IReadOnlyList<PromptTemplateOption> _promptTemplates = RoadmapReportingService.GetAvailableTemplates();
 
@@ -1148,9 +1165,17 @@
 
     private async Task LoadProjectPlanningSummaryAsync()
     {
-        _projectPlanningSummary = string.IsNullOrWhiteSpace(_selectedProjectRouteKey)
-            ? null
-            : await ProjectService.GetPlanningSummaryAsync(_selectedProjectRouteKey);
+        if (string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
+        {
+            _projectPlanningSummaryState = CacheBackedClientResult<ProjectPlanningSummaryDto>.Empty();
+            _projectPlanningSummary = null;
+            return;
+        }
+
+        _projectPlanningSummaryState = await ProjectService.GetPlanningSummaryAsync(_selectedProjectRouteKey);
+        _projectPlanningSummary = _projectPlanningSummaryState.State == CacheBackedClientState.Success
+            ? _projectPlanningSummaryState.Data
+            : null;
     }
 
     private async Task OnProjectChanged(string? projectRouteKey)

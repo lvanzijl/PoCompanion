@@ -9,16 +9,24 @@
 else if (State.State == DataStateDto.NotReady)
 {
     <DataStatePanel State="DataStateDto.NotReady"
+                    Subject="@Subject"
+                    Reason="@State.Reason"
                     Title="@NotReadyTitle"
                     Message="@(State.Reason ?? NotReadyMessage)"
-                    ProductOwnerId="@ProductOwnerId" />
+                    ProductOwnerId="@ProductOwnerId"
+                    RecoveryActionText="@RecoveryActionText"
+                    OnRecovery="@OnRecovery" />
 }
 else if (State.State == DataStateDto.Failed)
 {
     <DataStatePanel State="DataStateDto.Failed"
+                    Subject="@Subject"
+                    Reason="@State.Reason"
                     Title="@FailedTitle"
                     Message="@(State.Reason ?? FailedMessage)"
-                    ProductOwnerId="@ProductOwnerId" />
+                    ProductOwnerId="@ProductOwnerId"
+                    RecoveryActionText="@RecoveryActionText"
+                    OnRecovery="@OnRecovery" />
 }
 else if (State.State == DataStateDto.Empty)
 {
@@ -51,16 +59,25 @@ else
     public int? ProductOwnerId { get; set; }
 
     [Parameter]
-    public string NotReadyTitle { get; set; } = "Data is syncing";
+    public string Subject { get; set; } = "Data";
 
     [Parameter]
-    public string NotReadyMessage { get; set; } = "Cached data is still loading for this view.";
+    public string NotReadyTitle { get; set; } = string.Empty;
 
     [Parameter]
-    public string FailedTitle { get; set; } = "Data failed to load";
+    public string NotReadyMessage { get; set; } = string.Empty;
 
     [Parameter]
-    public string FailedMessage { get; set; } = "The requested data could not be loaded right now.";
+    public string FailedTitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public string FailedMessage { get; set; } = string.Empty;
+
+    [Parameter]
+    public string RecoveryActionText { get; set; } = "Retry";
+
+    [Parameter]
+    public EventCallback OnRecovery { get; set; }
 
     [Parameter]
     public string EmptyTitle { get; set; } = "No data available";

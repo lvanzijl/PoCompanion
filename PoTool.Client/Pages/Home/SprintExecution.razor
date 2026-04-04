@@ -77,11 +77,18 @@
     }
     else if (_dataState.State == DataStateDto.NotReady)
     {
-        <DataStatePanel State="@_dataState.State" Title="Sprint execution is syncing" Message="@(_dataState.Reason ?? "Sprint execution data will load once the cache is ready.")" ProductOwnerId="@_profileId" />
+        <DataStatePanel State="@_dataState.State"
+                        Subject="Sprint execution"
+                        Reason="@_dataState.Reason"
+                        ProductOwnerId="@_profileId"
+                        OnRecovery="@LoadInitialDataAsync" />
     }
     else if (_dataState.State == DataStateDto.Failed)
     {
-        <DataStatePanel State="@_dataState.State" Title="Sprint execution failed to load" Message="@(_dataState.Reason ?? "Sprint execution data could not be loaded right now.")" />
+        <DataStatePanel State="@_dataState.State"
+                        Subject="Sprint execution"
+                        Reason="@_dataState.Reason"
+                        OnRecovery="@LoadInitialDataAsync" />
     }
 
     @if (_sprints.Count == 0 && !_isLoading)
@@ -537,7 +544,8 @@
         }
         catch (Exception)
         {
-            Snackbar.Add("Sprint execution data could not be loaded right now. Try again later.", Severity.Error);
+            _dataState = DataStateViewModel<SprintQueryResponseDto<SprintExecutionDto>>.Failed("Sprint execution could not be loaded right now.");
+            Snackbar.Add(_dataState.Reason!, Severity.Error);
             _data = null;
             _filterNotice = null;
         }

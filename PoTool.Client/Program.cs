@@ -182,6 +182,7 @@ builder.Services.AddScoped<IOnboardingService, OnboardingService>();
 builder.Services.AddScoped<IOnboardingWizardState, OnboardingWizardState>();
 builder.Services.AddScoped<IStartupOrchestratorService, StartupOrchestratorService>();
 builder.Services.AddScoped<CacheSyncService>();
+builder.Services.AddScoped<ICacheSyncService>(sp => sp.GetRequiredService<CacheSyncService>());
 builder.Services.AddScoped<HomeProductBarMetricsService>();
 builder.Services.AddScoped<ReleaseNotesService>();
 

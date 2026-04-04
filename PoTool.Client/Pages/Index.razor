@@ -11,53 +11,28 @@
 @code {
     protected override async Task OnInitializedAsync()
     {
-        // Check if onboarding is needed
         var readiness = await StartupOrchestrator.GetStartupReadinessAsync();
-        
-        // Reset onboarding state if:
-        // 1. Backend readiness check failed (null) - can't determine app state, start fresh
-        // 2. Backend has no TFS configuration - database might have been deleted
-        // Note: TFS config and profiles are in same DB, so if TFS config is missing, profiles are too
-        if (readiness == null || !readiness.HasSavedTfsConfig)
+        if (readiness.State is StartupReadinessState.Error or StartupReadinessState.Unavailable)
+        {
+            var errorRoute = StartupOrchestrator.DetermineRoute(readiness);
+            NavigationManager.NavigateTo(StartupNavigationTargetResolver.GetTargetUri(errorRoute), replace: true);
+            return;
+        }
+
+        if (readiness.Readiness?.HasSavedTfsConfig == false)
         {
             await OnboardingService.ResetOnboardingAsync();
         }
-        
+
         var onboardingCompleted = await OnboardingService.HasCompletedOnboardingAsync();
-        
-        if (!onboardingCompleted)
+
+        if (!onboardingCompleted && readiness.State == StartupReadinessState.SetupRequired)
         {
-            // Redirect to onboarding for first-time users
             NavigationManager.NavigateTo("/onboarding", replace: true);
             return;
         }
-        
-        // If onboarding is complete, perform startup routing
-        if (readiness != null)
-        {
-            var routingResult = StartupOrchestrator.DetermineRoute(readiness);
-            
-            // Route based on startup readiness
-            // Note: Configuration route now goes to settings page instead of standalone TFS config page
-            switch (routingResult.Route)
-            {
-                case StartupRoute.Configuration:
-                    NavigationManager.NavigateTo("/settings/tfs", replace: true);
-                    break;
-                case StartupRoute.CreateFirstProfile:
-                case StartupRoute.ProfilesHome:
-                    NavigationManager.NavigateTo("/profiles", replace: true);
-                    break;
-                default:
-                    // Navigate to sync-gate which ensures cache is ready before showing home
-                    NavigationManager.NavigateTo("/sync-gate?returnUrl=%2Fhome", replace: true);
-                    break;
-            }
-        }
-        else
-        {
-            // Fallback to sync-gate if readiness check fails
-            NavigationManager.NavigateTo("/sync-gate?returnUrl=%2Fhome", replace: true);
-        }
+
+        var routingResult = StartupOrchestrator.DetermineRoute(readiness);
+        NavigationManager.NavigateTo(StartupNavigationTargetResolver.GetTargetUri(routingResult), replace: true);
     }
 }

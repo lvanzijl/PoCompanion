@@ -1,8 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Client.Services;
+using PoTool.Shared.Settings;
 using StartupReadinessDto = PoTool.Client.Services.StartupReadinessDto;
-
-using PoTool.Core.WorkItems;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -13,86 +12,87 @@ namespace PoTool.Tests.Unit.Services;
 [TestClass]
 public class StartupOrchestratorServiceTests
 {
-    private StartupOrchestratorService CreateService()
+    private StartupOrchestratorService CreateService(Func<HttpRequestMessage, HttpResponseMessage> handler)
     {
-        // For unit tests, we don't need a real HttpClient since we're testing the DetermineRoute method
-        // which doesn't make HTTP calls
-        return new StartupOrchestratorService(new HttpClient());
-    }
+        var httpClient = new HttpClient(new StubHttpMessageHandler(handler))
+        {
+            BaseAddress = new Uri("http://localhost")
+        };
 
-    #region DetermineRoute Tests - Mock Mode
-
-    [TestMethod]
-    public void DetermineRoute_MockModeEnabled_ReturnsProfilesHomeWithUsableApp()
-    {
-        // Arrange
-        var service = CreateService();
-        var readiness = new StartupReadinessDto(
-            IsMockDataEnabled: true,
-            HasSavedTfsConfig: false,
-            HasTestedConnectionSuccessfully: false,
-            HasVerifiedTfsApiSuccessfully: false,
-            HasAnyProfile: false,
-            ActiveProfileId: null,
-            MissingRequirementMessage: null
-        );
-
-        // Act
-        var result = service.DetermineRoute(readiness);
-
-        // Assert
-        Assert.AreEqual(StartupRoute.ProfilesHome, result.Route);
-        Assert.IsTrue(result.IsAppUsable);
-        Assert.IsNull(result.Message);
+        return new StartupOrchestratorService(httpClient, new CacheSyncService(httpClient));
     }
 
     [TestMethod]
-    public void DetermineRoute_MockModeWithNoProfiles_StillUsable()
+    public async Task GetStartupReadinessAsync_HttpFailure_ReturnsUnavailableState()
     {
-        // Arrange
-        var service = CreateService();
-        var readiness = new StartupReadinessDto(
-            IsMockDataEnabled: true,
-            HasSavedTfsConfig: false,
-            HasTestedConnectionSuccessfully: false,
-            HasVerifiedTfsApiSuccessfully: false,
-            HasAnyProfile: false,
-            ActiveProfileId: null,
-            MissingRequirementMessage: null
-        );
+        var service = CreateService(_ => new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable));
 
-        // Act
-        var result = service.DetermineRoute(readiness);
+        var result = await service.GetStartupReadinessAsync();
 
-        // Assert - In mock mode, app should be usable even without profiles
-        Assert.IsTrue(result.IsAppUsable);
+        Assert.AreEqual(StartupReadinessState.Unavailable, result.State);
+        Assert.IsNull(result.Readiness);
     }
 
-    #endregion
+    [TestMethod]
+    public async Task GetStartupReadinessAsync_NoSuccessfulSync_ReturnsSyncRequired()
+    {
+        var readinessJson = """
+            {
+              "isMockDataEnabled": false,
+              "hasSavedTfsConfig": true,
+              "hasTestedConnectionSuccessfully": true,
+              "hasVerifiedTfsApiSuccessfully": true,
+              "hasAnyProfile": true,
+              "activeProfileId": 7,
+              "missingRequirementMessage": null
+            }
+            """;
+        var cacheJson = """
+            {
+              "productOwnerId": 7,
+              "syncStatus": 0,
+              "lastSuccessfulSync": null,
+              "lastErrorMessage": "Cache empty."
+            }
+            """;
 
-    #region DetermineRoute Tests - Real TFS Mode
+        var service = CreateService(request =>
+        {
+            return request.RequestUri!.AbsolutePath switch
+            {
+                "/api/startup/readiness" => CreateJsonResponse(readinessJson),
+                "/api/CacheSync/7" => CreateJsonResponse(cacheJson),
+                _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
+            };
+        });
+
+        var result = await service.GetStartupReadinessAsync();
+
+        Assert.AreEqual(StartupReadinessState.SyncRequired, result.State);
+        Assert.IsNotNull(result.Readiness);
+    }
 
     [TestMethod]
     public void DetermineRoute_NoTfsConfig_ReturnsConfigurationRoute()
     {
-        // Arrange
-        var service = CreateService();
-        var readiness = new StartupReadinessDto(
-            IsMockDataEnabled: false,
-            HasSavedTfsConfig: false,
-            HasTestedConnectionSuccessfully: false,
-            HasVerifiedTfsApiSuccessfully: false,
-            HasAnyProfile: false,
-            ActiveProfileId: null,
-            MissingRequirementMessage: "Configuration required"
+        var service = CreateService(_ => throw new InvalidOperationException("HTTP should not be used."));
+        var readiness = new StartupReadinessResult(
+            StartupReadinessState.SetupRequired,
+            new StartupReadinessDto(
+                IsMockDataEnabled: false,
+                HasSavedTfsConfig: false,
+                HasTestedConnectionSuccessfully: false,
+                HasVerifiedTfsApiSuccessfully: false,
+                HasAnyProfile: false,
+                ActiveProfileId: null,
+                MissingRequirementMessage: "Configuration required"),
+            "Configuration required",
+            "Open TFS settings."
         );
 
-        // Act
         var result = service.DetermineRoute(readiness);
 
-        // Assert
         Assert.AreEqual(StartupRoute.Configuration, result.Route);
-        Assert.IsFalse(result.IsAppUsable);
         Assert.IsNotNull(result.Message);
         Assert.Contains("Configuration", result.Message);
     }
@@ -100,236 +100,221 @@ public class StartupOrchestratorServiceTests
     [TestMethod]
     public void DetermineRoute_ConfigSavedButNotTested_ReturnsConfigurationRoute()
     {
-        // Arrange
-        var service = CreateService();
-        var readiness = new StartupReadinessDto(
-            IsMockDataEnabled: false,
-            HasSavedTfsConfig: true,
-            HasTestedConnectionSuccessfully: false,
-            HasVerifiedTfsApiSuccessfully: false,
-            HasAnyProfile: false,
-            ActiveProfileId: null,
-            MissingRequirementMessage: "Test Connection required"
+        var service = CreateService(_ => throw new InvalidOperationException("HTTP should not be used."));
+        var readiness = new StartupReadinessResult(
+            StartupReadinessState.SetupRequired,
+            new StartupReadinessDto(
+                IsMockDataEnabled: false,
+                HasSavedTfsConfig: true,
+                HasTestedConnectionSuccessfully: false,
+                HasVerifiedTfsApiSuccessfully: false,
+                HasAnyProfile: false,
+                ActiveProfileId: null,
+                MissingRequirementMessage: "Test Connection required"),
+            "Test Connection required",
+            "Open TFS settings."
         );
 
-        // Act
         var result = service.DetermineRoute(readiness);
 
-        // Assert
         Assert.AreEqual(StartupRoute.Configuration, result.Route);
-        Assert.IsFalse(result.IsAppUsable);
         Assert.Contains("Test Connection", result.Message!);
     }
 
     [TestMethod]
     public void DetermineRoute_TestedButNotVerified_ReturnsConfigurationRoute()
     {
-        // Arrange
-        var service = CreateService();
-        var readiness = new StartupReadinessDto(
-            IsMockDataEnabled: false,
-            HasSavedTfsConfig: true,
-            HasTestedConnectionSuccessfully: true,
-            HasVerifiedTfsApiSuccessfully: false,
-            HasAnyProfile: false,
-            ActiveProfileId: null,
-            MissingRequirementMessage: "Verify TFS API required"
+        var service = CreateService(_ => throw new InvalidOperationException("HTTP should not be used."));
+        var readiness = new StartupReadinessResult(
+            StartupReadinessState.SetupRequired,
+            new StartupReadinessDto(
+                IsMockDataEnabled: false,
+                HasSavedTfsConfig: true,
+                HasTestedConnectionSuccessfully: true,
+                HasVerifiedTfsApiSuccessfully: false,
+                HasAnyProfile: false,
+                ActiveProfileId: null,
+                MissingRequirementMessage: "Verify TFS API required"),
+            "Verify TFS API required",
+            "Open TFS settings."
         );
 
-        // Act
         var result = service.DetermineRoute(readiness);
 
-        // Assert
         Assert.AreEqual(StartupRoute.Configuration, result.Route);
-        Assert.IsFalse(result.IsAppUsable);
         Assert.Contains("Verify", result.Message!);
     }
 
     [TestMethod]
     public void DetermineRoute_VerifiedButNoProfile_ReturnsCreateFirstProfileRoute()
     {
-        // Arrange
-        var service = CreateService();
-        var readiness = new StartupReadinessDto(
-            IsMockDataEnabled: false,
-            HasSavedTfsConfig: true,
-            HasTestedConnectionSuccessfully: true,
-            HasVerifiedTfsApiSuccessfully: true,
-            HasAnyProfile: false,
-            ActiveProfileId: null,
-            MissingRequirementMessage: "Profile required"
+        var service = CreateService(_ => throw new InvalidOperationException("HTTP should not be used."));
+        var readiness = new StartupReadinessResult(
+            StartupReadinessState.SetupRequired,
+            new StartupReadinessDto(
+                IsMockDataEnabled: false,
+                HasSavedTfsConfig: true,
+                HasTestedConnectionSuccessfully: true,
+                HasVerifiedTfsApiSuccessfully: true,
+                HasAnyProfile: false,
+                ActiveProfileId: null,
+                MissingRequirementMessage: "Profile required"),
+            "Profile required",
+            "Create your first profile."
         );
 
-        // Act
         var result = service.DetermineRoute(readiness);
 
-        // Assert
         Assert.AreEqual(StartupRoute.CreateFirstProfile, result.Route);
-        Assert.IsFalse(result.IsAppUsable);
         Assert.Contains("Profile", result.Message!);
     }
 
     [TestMethod]
-    public void DetermineRoute_HasProfileButNoneActive_ReturnsProfilesHomeNotUsable()
+    public void DetermineRoute_HasProfileButNoneActive_ReturnsProfilesHome()
     {
-        // Arrange
-        var service = CreateService();
-        var readiness = new StartupReadinessDto(
-            IsMockDataEnabled: false,
-            HasSavedTfsConfig: true,
-            HasTestedConnectionSuccessfully: true,
-            HasVerifiedTfsApiSuccessfully: true,
-            HasAnyProfile: true,
-            ActiveProfileId: null,
-            MissingRequirementMessage: "Profile selection required"
+        var service = CreateService(_ => throw new InvalidOperationException("HTTP should not be used."));
+        var readiness = new StartupReadinessResult(
+            StartupReadinessState.NotReady,
+            new StartupReadinessDto(
+                IsMockDataEnabled: false,
+                HasSavedTfsConfig: true,
+                HasTestedConnectionSuccessfully: true,
+                HasVerifiedTfsApiSuccessfully: true,
+                HasAnyProfile: true,
+                ActiveProfileId: null,
+                MissingRequirementMessage: "Profile selection required"),
+            "Profile selection required",
+            "Open Profiles."
         );
 
-        // Act
         var result = service.DetermineRoute(readiness);
 
-        // Assert
         Assert.AreEqual(StartupRoute.ProfilesHome, result.Route);
-        Assert.IsFalse(result.IsAppUsable);
         Assert.Contains("select", result.Message!);
     }
 
     [TestMethod]
-    public void DetermineRoute_AllRequirementsMet_ReturnsProfilesHomeUsable()
+    public void DetermineRoute_SyncRequired_ReturnsSyncGate()
     {
-        // Arrange
-        var service = CreateService();
-        var readiness = new StartupReadinessDto(
-            IsMockDataEnabled: false,
-            HasSavedTfsConfig: true,
-            HasTestedConnectionSuccessfully: true,
-            HasVerifiedTfsApiSuccessfully: true,
-            HasAnyProfile: true,
-            ActiveProfileId: 1,
-            MissingRequirementMessage: null
+        var service = CreateService(_ => throw new InvalidOperationException("HTTP should not be used."));
+        var readiness = new StartupReadinessResult(
+            StartupReadinessState.SyncRequired,
+            new StartupReadinessDto(
+                IsMockDataEnabled: false,
+                HasSavedTfsConfig: true,
+                HasTestedConnectionSuccessfully: true,
+                HasVerifiedTfsApiSuccessfully: true,
+                HasAnyProfile: true,
+                ActiveProfileId: 1,
+                MissingRequirementMessage: null),
+            "Sync required",
+            "Open sync gate."
         );
 
-        // Act
         var result = service.DetermineRoute(readiness);
 
-        // Assert
-        Assert.AreEqual(StartupRoute.ProfilesHome, result.Route);
-        Assert.IsTrue(result.IsAppUsable);
-        Assert.IsNull(result.Message);
+        Assert.AreEqual(StartupRoute.SyncGate, result.Route);
     }
 
-    #endregion
-
-    #region IsFeaturePageAccessible Tests
-
     [TestMethod]
-    public void IsFeaturePageAccessible_MockMode_ReturnsTrue()
+    public void DetermineRoute_AllRequirementsMet_ReturnsHome()
     {
-        // Arrange
-        var service = CreateService();
-        var readiness = new StartupReadinessDto(
-            IsMockDataEnabled: true,
-            HasSavedTfsConfig: false,
-            HasTestedConnectionSuccessfully: false,
-            HasVerifiedTfsApiSuccessfully: false,
-            HasAnyProfile: false,
-            ActiveProfileId: null,
-            MissingRequirementMessage: null
+        var service = CreateService(_ => throw new InvalidOperationException("HTTP should not be used."));
+        var readiness = new StartupReadinessResult(
+            StartupReadinessState.Ready,
+            new StartupReadinessDto(
+                IsMockDataEnabled: false,
+                HasSavedTfsConfig: true,
+                HasTestedConnectionSuccessfully: true,
+                HasVerifiedTfsApiSuccessfully: true,
+                HasAnyProfile: true,
+                ActiveProfileId: 1,
+                MissingRequirementMessage: null),
+            "Startup checks passed.",
+            "Continue to home."
         );
 
-        // Act
+        var result = service.DetermineRoute(readiness);
+
+        Assert.AreEqual(StartupRoute.Home, result.Route);
+        Assert.IsFalse(result.IsBlocking);
+    }
+
+    [TestMethod]
+    public void DetermineRoute_ErrorState_ReturnsBlockingErrorRoute()
+    {
+        var service = CreateService(_ => throw new InvalidOperationException("HTTP should not be used."));
+        var readiness = new StartupReadinessResult(
+            StartupReadinessState.Error,
+            Readiness: null,
+            Reason: "Startup failed.",
+            RecoveryHint: "Retry.");
+
+        var result = service.DetermineRoute(readiness);
+
+        Assert.AreEqual(StartupRoute.BlockingError, result.Route);
+        Assert.IsTrue(result.IsBlocking);
+    }
+
+    [TestMethod]
+    public void IsFeaturePageAccessible_Ready_ReturnsTrue()
+    {
+        var service = CreateService(_ => throw new InvalidOperationException("HTTP should not be used."));
+        var readiness = new StartupReadinessResult(
+            StartupReadinessState.Ready,
+            new StartupReadinessDto(
+                IsMockDataEnabled: false,
+                HasSavedTfsConfig: true,
+                HasTestedConnectionSuccessfully: true,
+                HasVerifiedTfsApiSuccessfully: true,
+                HasAnyProfile: true,
+                ActiveProfileId: 1,
+                MissingRequirementMessage: null),
+            "Ready",
+            "Continue."
+        );
+
         var result = service.IsFeaturePageAccessible(readiness);
 
-        // Assert
         Assert.IsTrue(result);
     }
 
     [TestMethod]
-    public void IsFeaturePageAccessible_RealModeNotVerified_ReturnsFalse()
+    public void IsFeaturePageAccessible_Error_ReturnsFalse()
     {
-        // Arrange
-        var service = CreateService();
-        var readiness = new StartupReadinessDto(
-            IsMockDataEnabled: false,
-            HasSavedTfsConfig: true,
-            HasTestedConnectionSuccessfully: true,
-            HasVerifiedTfsApiSuccessfully: false,
-            HasAnyProfile: true,
-            ActiveProfileId: 1,
-            MissingRequirementMessage: null
+        var service = CreateService(_ => throw new InvalidOperationException("HTTP should not be used."));
+        var readiness = new StartupReadinessResult(
+            StartupReadinessState.Error,
+            Readiness: null,
+            Reason: "Error",
+            RecoveryHint: "Retry."
         );
 
-        // Act
         var result = service.IsFeaturePageAccessible(readiness);
 
-        // Assert
         Assert.IsFalse(result);
     }
 
-    [TestMethod]
-    public void IsFeaturePageAccessible_RealModeNoProfile_ReturnsFalse()
+    private static HttpResponseMessage CreateJsonResponse(string json)
     {
-        // Arrange
-        var service = CreateService();
-        var readiness = new StartupReadinessDto(
-            IsMockDataEnabled: false,
-            HasSavedTfsConfig: true,
-            HasTestedConnectionSuccessfully: true,
-            HasVerifiedTfsApiSuccessfully: true,
-            HasAnyProfile: false,
-            ActiveProfileId: null,
-            MissingRequirementMessage: null
-        );
-
-        // Act
-        var result = service.IsFeaturePageAccessible(readiness);
-
-        // Assert
-        Assert.IsFalse(result);
+        return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+        };
     }
 
-    [TestMethod]
-    public void IsFeaturePageAccessible_RealModeNoActiveProfile_ReturnsFalse()
+    private sealed class StubHttpMessageHandler : HttpMessageHandler
     {
-        // Arrange
-        var service = CreateService();
-        var readiness = new StartupReadinessDto(
-            IsMockDataEnabled: false,
-            HasSavedTfsConfig: true,
-            HasTestedConnectionSuccessfully: true,
-            HasVerifiedTfsApiSuccessfully: true,
-            HasAnyProfile: true,
-            ActiveProfileId: null,
-            MissingRequirementMessage: null
-        );
+        private readonly Func<HttpRequestMessage, HttpResponseMessage> _handler;
 
-        // Act
-        var result = service.IsFeaturePageAccessible(readiness);
+        public StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> handler)
+        {
+            _handler = handler;
+        }
 
-        // Assert
-        Assert.IsFalse(result);
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_handler(request));
+        }
     }
-
-    [TestMethod]
-    public void IsFeaturePageAccessible_RealModeAllRequirementsMet_ReturnsTrue()
-    {
-        // Arrange
-        var service = CreateService();
-        var readiness = new StartupReadinessDto(
-            IsMockDataEnabled: false,
-            HasSavedTfsConfig: true,
-            HasTestedConnectionSuccessfully: true,
-            HasVerifiedTfsApiSuccessfully: true,
-            HasAnyProfile: true,
-            ActiveProfileId: 1,
-            MissingRequirementMessage: null
-        );
-
-        // Act
-        var result = service.IsFeaturePageAccessible(readiness);
-
-        // Assert
-        Assert.IsTrue(result);
-    }
-
-    #endregion
 }

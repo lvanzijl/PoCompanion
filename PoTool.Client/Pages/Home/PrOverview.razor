@@ -70,11 +70,18 @@
     }
     else if (_dataState.State == DataStateDto.NotReady)
     {
-        <DataStatePanel State="@_dataState.State" Title="Pull request insights are syncing" Message="@(_dataState.Reason ?? "Pull request insights will load once the cache is ready.")" ProductOwnerId="@_profileId" />
+        <DataStatePanel State="@_dataState.State"
+                        Subject="Pull request insights"
+                        Reason="@_dataState.Reason"
+                        ProductOwnerId="@_profileId"
+                        OnRecovery="@ReloadAsync" />
     }
     else if (_dataState.State == DataStateDto.Failed)
     {
-        <DataStatePanel State="@_dataState.State" Title="Pull request insights failed to load" Message="@(_dataState.Reason ?? "Pull request insights could not be loaded right now.")" />
+        <DataStatePanel State="@_dataState.State"
+                        Subject="Pull request insights"
+                        Reason="@_dataState.Reason"
+                        OnRecovery="@ReloadAsync" />
     }
     else if (!string.IsNullOrEmpty(_errorMessage))
     {
@@ -615,7 +622,9 @@
         }
         catch (Exception)
         {
-            _errorMessage = "Pull request insights could not be loaded right now. Try again later.";
+            _dataState = DataStateViewModel<PullRequestQueryResponseDto<PullRequestInsightsDto>>.Failed("Pull request insights could not be loaded right now.");
+            _data = null;
+            _filterNotice = null;
         }
         finally
         {
@@ -669,7 +678,9 @@
         }
         catch (Exception)
         {
-            _errorMessage = "Pull request insights could not be loaded right now. Try again later.";
+            _dataState = DataStateViewModel<PullRequestQueryResponseDto<PullRequestInsightsDto>>.Failed("Pull request insights could not be loaded right now.");
+            _data = null;
+            _filterNotice = null;
         }
     }
 

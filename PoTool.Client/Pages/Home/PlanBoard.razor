@@ -109,6 +109,21 @@
             </MudStack>
         </MudPaper>
     }
+    else if (_projectPlanningSummaryState?.State == CacheBackedClientState.NotReady)
+    {
+        <DataStatePanel State="DataStateDto.NotReady"
+                        Subject="Project planning summary"
+                        Reason="@_projectPlanningSummaryState.Reason"
+                        ProductOwnerId="@_activeProfileId"
+                        OnRecovery="@LoadProjectPlanningSummaryAsync" />
+    }
+    else if (_projectPlanningSummaryState?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
+    {
+        <DataStatePanel State="DataStateDto.Failed"
+                        Subject="Project planning summary"
+                        Reason="@(_projectPlanningSummaryState?.Reason)"
+                        OnRecovery="@LoadProjectPlanningSummaryAsync" />
+    }
 
     @* Board Content *@
     @if (_selectedProductId == null)
@@ -130,15 +145,17 @@
     else if (_boardState.State == DataStateDto.NotReady)
     {
         <DataStatePanel State="@_boardState.State"
-                        Title="Plan Board is syncing"
-                        Message="@(_boardState.Reason ?? "Plan Board data will load once the cache is ready.")"
-                        ProductOwnerId="@_activeProfileId" />
+                        Subject="Plan Board"
+                        Reason="@_boardState.Reason"
+                        ProductOwnerId="@_activeProfileId"
+                        OnRecovery="@RetryBoardLoadAsync" />
     }
     else if (_boardState.State == DataStateDto.Failed)
     {
         <DataStatePanel State="@_boardState.State"
-                        Title="Plan Board failed to load"
-                        Message="@(_boardState.Reason ?? "Plan Board data could not be loaded right now.")" />
+                        Subject="Plan Board"
+                        Reason="@_boardState.Reason"
+                        OnRecovery="@RetryBoardLoadAsync" />
     }
     else if (_boardState.State == DataStateDto.Empty)
     {
@@ -486,6 +503,7 @@
     private List<ProductDto> _allProducts = new();
     private List<ProductDto> _products = new();
     private ProjectPlanningSummaryDto? _projectPlanningSummary;
+    private CacheBackedClientResult<ProjectPlanningSummaryDto>? _projectPlanningSummaryState;
     private string? _selectedProjectRouteKey;
     private int? _selectedProductId;
     private bool _isLoadingBoard;
@@ -1115,9 +1133,17 @@
 
     private async Task LoadProjectPlanningSummaryAsync()
     {
-        _projectPlanningSummary = string.IsNullOrWhiteSpace(_selectedProjectRouteKey)
-            ? null
-            : await ProjectService.GetPlanningSummaryAsync(_selectedProjectRouteKey);
+        if (string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
+        {
+            _projectPlanningSummaryState = CacheBackedClientResult<ProjectPlanningSummaryDto>.Empty();
+            _projectPlanningSummary = null;
+            return;
+        }
+
+        _projectPlanningSummaryState = await ProjectService.GetPlanningSummaryAsync(_selectedProjectRouteKey);
+        _projectPlanningSummary = _projectPlanningSummaryState.State == CacheBackedClientState.Success
+            ? _projectPlanningSummaryState.Data
+            : null;
     }
 
     private async Task NavigateToCurrentScopeAsync(int? productId, bool loadBoard)
@@ -1150,6 +1176,11 @@
         _candidateTree = new List<PlanBoardCandidateNode>();
         _sprintItems = new Dictionary<string, List<SprintDragItem>>();
     }
+
+    private Task RetryBoardLoadAsync()
+        => _selectedProductId.HasValue
+            ? LoadBoardAsync(_selectedProductId.Value)
+            : Task.CompletedTask;
 
     private ProjectDto? ResolveProject(string? projectRouteKey)
     {

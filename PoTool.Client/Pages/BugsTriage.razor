@@ -60,15 +60,15 @@
     else if (_dataState.State == DataStateDto.NotReady)
     {
         <DataStatePanel State="@_dataState.State"
-                        Title="Bug triage is syncing"
-                        Message="@(_dataState.Reason ?? "Bug triage data will load automatically after cache warming completes.")"
+                        Subject="Bug triage"
+                        Reason="@_dataState.Reason"
                         ProductOwnerId="@_profileId" />
     }
     else if (_dataState.State == DataStateDto.Failed)
     {
         <DataStatePanel State="@_dataState.State"
-                        Title="Bug triage failed to load"
-                        Message="@(_dataState.Reason ?? "Bug triage data could not be loaded right now.")" />
+                        Subject="Bug triage"
+                        Reason="@_dataState.Reason" />
     }
     else if (_errorMessage != null)
     {

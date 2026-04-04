@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
+using PoTool.Client.Helpers;
+using PoTool.Client.Models;
 using PoTool.Shared.Planning;
 
 namespace PoTool.Client.Services;
@@ -10,11 +11,6 @@ namespace PoTool.Client.Services;
 /// </summary>
 public class ProjectService
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
-    {
-        PropertyNameCaseInsensitive = true
-    };
-
     private readonly HttpClient _httpClient;
 
     public ProjectService(HttpClient httpClient)
@@ -27,7 +23,7 @@ public class ProjectService
     /// </summary>
     public async Task<IReadOnlyList<ProjectDto>> GetAllProjectsAsync(CancellationToken cancellationToken = default)
     {
-        var projects = await _httpClient.GetFromJsonAsync<List<ProjectDto>>("api/projects", SerializerOptions, cancellationToken);
+        var projects = await _httpClient.GetFromJsonAsync<List<ProjectDto>>("api/projects", JsonHelper.CaseInsensitiveOptions, cancellationToken);
         return projects ?? [];
     }
 
@@ -51,7 +47,7 @@ public class ProjectService
         }
 
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<ProjectDto>(SerializerOptions, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<ProjectDto>(JsonHelper.CaseInsensitiveOptions, cancellationToken);
     }
 
     /// <summary>
@@ -66,7 +62,7 @@ public class ProjectService
 
         var products = await _httpClient.GetFromJsonAsync<List<ProductDto>>(
             $"api/projects/{Uri.EscapeDataString(aliasOrId)}/products",
-            SerializerOptions,
+            JsonHelper.CaseInsensitiveOptions,
             cancellationToken);
 
         return products ?? [];
@@ -75,23 +71,16 @@ public class ProjectService
     /// <summary>
     /// Gets the read-only planning summary for a project resolved by alias or internal identifier.
     /// </summary>
-    public async Task<ProjectPlanningSummaryDto?> GetPlanningSummaryAsync(string aliasOrId, CancellationToken cancellationToken = default)
+    public async Task<CacheBackedClientResult<ProjectPlanningSummaryDto>> GetPlanningSummaryAsync(string aliasOrId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(aliasOrId))
         {
-            return null;
+            return CacheBackedClientResult<ProjectPlanningSummaryDto>.Empty("No project was selected.");
         }
 
-        using var response = await _httpClient.GetAsync(
+        return await DataStateHttpClientHelper.GetDataStateAsync<ProjectPlanningSummaryDto>(
+            _httpClient,
             $"api/projects/{Uri.EscapeDataString(aliasOrId)}/planning-summary",
             cancellationToken);
-
-        if (response.StatusCode == HttpStatusCode.NotFound)
-        {
-            return null;
-        }
-
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<ProjectPlanningSummaryDto>(SerializerOptions, cancellationToken);
     }
 }
