@@ -45,7 +45,10 @@ public sealed class BucketAGeneratedClientMigrationAuditTests
     {
         var signature = $" {methodName}(";
         var startIndex = source.LastIndexOf(signature, StringComparison.Ordinal);
-        Assert.IsGreaterThanOrEqualTo(0, startIndex, $"Could not locate method '{methodName}'.");
+        if (startIndex < 0)
+        {
+            Assert.Fail($"Could not locate method '{methodName}'.");
+        }
 
         var bodyStartIndex = source.LastIndexOf('\n', startIndex);
         var nextMethodIndex = source.IndexOf("\n    public", startIndex + signature.Length, StringComparison.Ordinal);
