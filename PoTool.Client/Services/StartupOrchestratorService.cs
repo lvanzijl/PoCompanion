@@ -1,5 +1,5 @@
 using PoTool.Client.ApiClient;
-using PoTool.Shared.Settings;
+using SharedStartupReadinessDto = PoTool.Shared.Settings.StartupReadinessDto;
 
 namespace PoTool.Client.Services;
 
@@ -23,7 +23,7 @@ public class StartupOrchestratorService : IStartupOrchestratorService
     {
         try
         {
-            var readiness = await _startupClient.GetStartupReadinessAsync(cancellationToken);
+            var readiness = MapReadiness(await _startupClient.GetStartupReadinessAsync(cancellationToken));
             return await ClassifyReadinessAsync(readiness, cancellationToken);
         }
         catch (HttpRequestException)
@@ -197,5 +197,17 @@ public class StartupOrchestratorService : IStartupOrchestratorService
         }
 
         return "Create your first profile to continue.";
+    }
+
+    private static StartupReadinessDto MapReadiness(SharedStartupReadinessDto readiness)
+    {
+        return new StartupReadinessDto(
+            readiness.IsMockDataEnabled,
+            readiness.HasSavedTfsConfig,
+            readiness.HasTestedConnectionSuccessfully,
+            readiness.HasVerifiedTfsApiSuccessfully,
+            readiness.HasAnyProfile,
+            readiness.ActiveProfileId,
+            readiness.MissingRequirementMessage);
     }
 }

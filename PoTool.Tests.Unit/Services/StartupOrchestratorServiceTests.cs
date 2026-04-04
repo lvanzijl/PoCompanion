@@ -63,7 +63,7 @@ public class StartupOrchestratorServiceTests
         {
             return request.RequestUri!.AbsolutePath switch
             {
-                "/api/startup/readiness" => CreateJsonResponse(readinessJson),
+                "/api/Startup/readiness" => CreateJsonResponse(readinessJson),
                 "/api/CacheSync/7" => CreateJsonResponse(cacheJson),
                 _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
             };

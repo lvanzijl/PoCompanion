@@ -5,6 +5,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
 using PoTool.Client.Services;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -22,7 +23,7 @@ public class ProjectServiceTests
             BaseAddress = new Uri("http://localhost")
         };
 
-        var service = new ProjectService(new ProjectsClient(httpClient), httpClient);
+        var service = new ProjectService(new StubProjectsClient(), httpClient);
 
         var result = await service.GetPlanningSummaryAsync("project-alpha");
 
@@ -41,5 +42,32 @@ public class ProjectServiceTests
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             => Task.FromResult(_handler(request));
+    }
+
+    private sealed class StubProjectsClient : IProjectsClient
+    {
+        public Task<ICollection<ProjectDto>> GetProjectsAsync()
+            => Task.FromResult<ICollection<ProjectDto>>([]);
+
+        public Task<ICollection<ProjectDto>> GetProjectsAsync(CancellationToken cancellationToken)
+            => Task.FromResult<ICollection<ProjectDto>>([]);
+
+        public Task<ProjectDto> GetProjectAsync(string alias)
+            => throw new NotSupportedException();
+
+        public Task<ProjectDto> GetProjectAsync(string alias, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<ICollection<ProductDto>> GetProjectProductsAsync(string alias)
+            => throw new NotSupportedException();
+
+        public Task<ICollection<ProductDto>> GetProjectProductsAsync(string alias, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<DataStateResponseDtoOfProjectPlanningSummaryDto> GetPlanningSummaryAsync(string alias)
+            => throw new NotSupportedException();
+
+        public Task<DataStateResponseDtoOfProjectPlanningSummaryDto> GetPlanningSummaryAsync(string alias, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
     }
 }

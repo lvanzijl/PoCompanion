@@ -44,8 +44,8 @@ public sealed class BucketAGeneratedClientMigrationAuditTests
     private static void AssertMethodDoesNotContainForbiddenPatterns(string source, string methodName)
     {
         var signature = $" {methodName}(";
-        var startIndex = source.IndexOf(signature, StringComparison.Ordinal);
-        Assert.IsTrue(startIndex >= 0, $"Could not locate method '{methodName}'.");
+        var startIndex = source.LastIndexOf(signature, StringComparison.Ordinal);
+        Assert.IsGreaterThanOrEqualTo(0, startIndex, $"Could not locate method '{methodName}'.");
 
         var bodyStartIndex = source.LastIndexOf('\n', startIndex);
         var nextMethodIndex = source.IndexOf("\n    public", startIndex + signature.Length, StringComparison.Ordinal);

@@ -57,15 +57,17 @@ public class TeamService
         // If no picture ID is specified and using default type, randomize it
         var pictureId = defaultPictureId ?? Random.Shared.Next(0, 64);
 
-        var request = new CreateTeamRequest(
-            name,
-            teamAreaPath,
-            pictureType,
-            pictureId,
-            customPicturePath,
-            projectName,
-            tfsTeamId,
-            tfsTeamName);
+        var request = new CreateTeamRequest
+        {
+            Name = name,
+            TeamAreaPath = teamAreaPath,
+            PictureType = pictureType,
+            DefaultPictureId = pictureId,
+            CustomPicturePath = customPicturePath,
+            ProjectName = projectName,
+            TfsTeamId = tfsTeamId,
+            TfsTeamName = tfsTeamName
+        };
 
         try
         {
