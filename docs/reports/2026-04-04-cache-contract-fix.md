@@ -11,19 +11,19 @@
 
 ### Client services fixed
 
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Services/BuildQualityService.cs`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Services/ProjectService.cs`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Helpers/DataStateHttpClientHelper.cs`
+- `PoTool.Client/Services/BuildQualityService.cs`
+- `PoTool.Client/Services/ProjectService.cs`
+- `PoTool.Client/Helpers/DataStateHttpClientHelper.cs`
 
 ### Pages fixed
 
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/HealthOverviewPage.razor`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/SprintTrend.razor`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/PipelineInsights.razor`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/TrendsWorkspace.razor`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/ProjectPlanningOverview.razor`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/PlanBoard.razor`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/ProductRoadmaps.razor`
+- `PoTool.Client/Pages/Home/HealthOverviewPage.razor`
+- `PoTool.Client/Pages/Home/SprintTrend.razor`
+- `PoTool.Client/Pages/Home/PipelineInsights.razor`
+- `PoTool.Client/Pages/Home/TrendsWorkspace.razor`
+- `PoTool.Client/Pages/Home/ProjectPlanningOverview.razor`
+- `PoTool.Client/Pages/Home/PlanBoard.razor`
+- `PoTool.Client/Pages/Home/ProductRoadmaps.razor`
 
 ## Before vs after behavior
 
