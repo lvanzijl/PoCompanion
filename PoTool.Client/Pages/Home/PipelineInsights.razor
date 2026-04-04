@@ -93,11 +93,18 @@
     }
     else if (_dataState.State == DataStateDto.NotReady)
     {
-        <DataStatePanel State="@_dataState.State" Title="Pipeline insights are syncing" Message="@(_dataState.Reason ?? "Pipeline insights will load once the cache is ready.")" ProductOwnerId="@_activeProfileId" />
+        <DataStatePanel State="@_dataState.State"
+                        Subject="Pipeline insights"
+                        Reason="@_dataState.Reason"
+                        ProductOwnerId="@_activeProfileId"
+                        OnRecovery="@LoadInsightsAsync" />
     }
     else if (_dataState.State == DataStateDto.Failed)
     {
-        <DataStatePanel State="@_dataState.State" Title="Pipeline insights failed to load" Message="@(_dataState.Reason ?? "Pipeline insights could not be loaded right now.")" />
+        <DataStatePanel State="@_dataState.State"
+                        Subject="Pipeline insights"
+                        Reason="@_dataState.Reason"
+                        OnRecovery="@LoadInsightsAsync" />
     }
     else if (!string.IsNullOrEmpty(_errorMessage))
     {
@@ -869,7 +876,7 @@
                 .FirstOrDefault(detail => detail.State is CacheBackedClientState.NotReady or CacheBackedClientState.Failed or CacheBackedClientState.Unavailable);
             if (nonSuccessDetail is not null)
             {
-                _pipelineQualityErrorMessage = nonSuccessDetail.Reason ?? "Build Quality detail is not ready for one or more pipelines yet.";
+                _pipelineQualityErrorMessage = nonSuccessDetail.Reason ?? "Data not ready. Cache not built yet for one or more pipeline details.";
             }
 
             if (_insightsData is not null)
@@ -925,7 +932,7 @@
             }
 
             _drawerBuildQuality = null;
-            _drawerBuildQualityErrorMessage = buildQualityResult.Reason ?? "Build Quality detail is not ready for the selected pipeline.";
+            _drawerBuildQualityErrorMessage = buildQualityResult.Reason ?? "Data not ready. Cache not built yet for the selected pipeline.";
         }
         catch (Exception ex)
         {

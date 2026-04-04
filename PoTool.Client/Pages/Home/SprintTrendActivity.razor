@@ -38,15 +38,17 @@
     else if (_dataState.State == DataStateDto.NotReady)
     {
         <DataStatePanel State="@_dataState.State"
-                        Title="Sprint activity is syncing"
-                        Message="@(_dataState.Reason ?? "Sprint activity will load automatically after cache warming completes.")"
-                        ProductOwnerId="@_productOwnerId" />
+                        Subject="Sprint activity"
+                        Reason="@_dataState.Reason"
+                        ProductOwnerId="@_productOwnerId"
+                        OnRecovery="@ReloadActivityAsync" />
     }
     else if (_dataState.State == DataStateDto.Failed)
     {
         <DataStatePanel State="@_dataState.State"
-                        Title="Sprint activity failed to load"
-                        Message="@(_dataState.Reason ?? "Sprint activity could not be loaded right now.")" />
+                        Subject="Sprint activity"
+                        Reason="@_dataState.Reason"
+                        OnRecovery="@ReloadActivityAsync" />
     }
     else if (!string.IsNullOrEmpty(_errorMessage))
     {
@@ -310,9 +312,10 @@
         }
         catch (Exception)
         {
-            _errorMessage = "Sprint activity could not be loaded right now. Try again later.";
+            _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.Failed("Sprint activity could not be loaded right now.");
+            _errorMessage = null;
             _filterNotice = null;
-            Snackbar.Add(_errorMessage, Severity.Error);
+            Snackbar.Add(_dataState.Reason!, Severity.Error);
         }
         finally
         {
@@ -511,6 +514,9 @@
         }
         NavigationManager.NavigateTo(url);
     }
+
+    private Task ReloadActivityAsync()
+        => OnInitializedAsync();
 
     private void ParseQueryParameters()
     {

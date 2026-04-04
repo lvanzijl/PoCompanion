@@ -55,11 +55,18 @@
     }
     else if (_dataState.State == DataStateDto.NotReady)
     {
-        <DataStatePanel State="@_dataState.State" Title="Delivery trends are syncing" Message="@(_dataState.Reason ?? "Delivery trends will load once the cache is ready.")" ProductOwnerId="@_profileId" />
+        <DataStatePanel State="@_dataState.State"
+                        Subject="Delivery trends"
+                        Reason="@_dataState.Reason"
+                        ProductOwnerId="@_profileId"
+                        OnRecovery="@LoadDataAsync" />
     }
     else if (_dataState.State == DataStateDto.Failed)
     {
-        <DataStatePanel State="@_dataState.State" Title="Delivery trends failed to load" Message="@(_dataState.Reason ?? "Delivery trends could not be loaded right now.")" />
+        <DataStatePanel State="@_dataState.State"
+                        Subject="Delivery trends"
+                        Reason="@_dataState.Reason"
+                        OnRecovery="@LoadDataAsync" />
     }
     else if (!string.IsNullOrEmpty(_errorMessage))
     {
@@ -443,7 +450,8 @@
         }
         catch (Exception)
         {
-            Snackbar.Add("Delivery trends could not be loaded right now. Try again later.", Severity.Warning);
+            _dataState = DataStateViewModel<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>.Failed("Delivery trends could not be loaded right now.");
+            Snackbar.Add(_dataState.Reason!, Severity.Warning);
         }
         finally
         {

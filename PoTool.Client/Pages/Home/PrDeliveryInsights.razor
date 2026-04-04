@@ -120,11 +120,18 @@
     }
     else if (_dataState.State == DataStateDto.NotReady)
     {
-        <DataStatePanel State="@_dataState.State" Title="PR delivery insights are syncing" Message="@(_dataState.Reason ?? "PR delivery insights will load once the cache is ready.")" ProductOwnerId="@_profileId" />
+        <DataStatePanel State="@_dataState.State"
+                        Subject="PR delivery insights"
+                        Reason="@_dataState.Reason"
+                        ProductOwnerId="@_profileId"
+                        OnRecovery="@ReloadAsync" />
     }
     else if (_dataState.State == DataStateDto.Failed)
     {
-        <DataStatePanel State="@_dataState.State" Title="PR delivery insights failed to load" Message="@(_dataState.Reason ?? "PR delivery insights could not be loaded right now.")" />
+        <DataStatePanel State="@_dataState.State"
+                        Subject="PR delivery insights"
+                        Reason="@_dataState.Reason"
+                        OnRecovery="@ReloadAsync" />
     }
     else if (!string.IsNullOrEmpty(_errorMessage))
     {
@@ -794,7 +801,9 @@
         }
         catch (Exception)
         {
-            _errorMessage = "PR delivery insights could not be loaded right now. Try again later.";
+            _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.Failed("PR delivery insights could not be loaded right now.");
+            _data = null;
+            _filterNotice = null;
         }
         finally
         {
@@ -852,7 +861,9 @@
         }
         catch (Exception)
         {
-            _errorMessage = "PR delivery insights could not be loaded right now. Try again later.";
+            _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.Failed("PR delivery insights could not be loaded right now.");
+            _data = null;
+            _filterNotice = null;
         }
     }
 

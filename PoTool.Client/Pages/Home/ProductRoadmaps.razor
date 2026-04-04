@@ -170,15 +170,17 @@
         else if (_projectPlanningSummaryState?.State == CacheBackedClientState.NotReady)
         {
             <DataStatePanel State="DataStateDto.NotReady"
-                            Title="Project roadmap summary is syncing"
-                            Message="@(_projectPlanningSummaryState.Reason ?? "Project roadmap summary data is not ready yet because the cache has not been built.")"
-                            ProductOwnerId="@_profileId" />
+                            Subject="Project roadmap summary"
+                            Reason="@_projectPlanningSummaryState.Reason"
+                            ProductOwnerId="@_profileId"
+                            OnRecovery="@LoadProjectPlanningSummaryAsync" />
         }
         else if (_projectPlanningSummaryState?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
         {
             <DataStatePanel State="DataStateDto.Failed"
-                            Title="Project roadmap summary failed to load"
-                            Message="@(_projectPlanningSummaryState.Reason ?? "Project roadmap summary data could not be loaded right now.")" />
+                            Subject="Project roadmap summary"
+                            Reason="@(_projectPlanningSummaryState?.Reason)"
+                            OnRecovery="@LoadProjectPlanningSummaryAsync" />
         }
 
         @* Horizontal Scrollable Product Lanes *@

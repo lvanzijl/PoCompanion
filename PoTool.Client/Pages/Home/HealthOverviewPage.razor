@@ -102,15 +102,17 @@
         else if (_buildQualityResponse?.State == CacheBackedClientState.NotReady)
         {
             <DataStatePanel State="DataStateDto.NotReady"
-                            Title="Build Quality overview is syncing"
-                            Message="@(_buildQualityResponse.Reason ?? "Build Quality data is not ready yet because the cache has not been built for this profile.")"
-                            ProductOwnerId="@_activeProfileId" />
+                            Subject="Build Quality overview"
+                            Reason="@_buildQualityResponse.Reason"
+                            ProductOwnerId="@_activeProfileId"
+                            OnRecovery="@RetryLoadAsync" />
         }
         else if (_buildQualityResponse?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
         {
             <DataStatePanel State="DataStateDto.Failed"
-                            Title="Build Quality overview failed to load"
-                            Message="@(_buildQualityResponse.Reason ?? "Build Quality data could not be loaded right now.")" />
+                            Subject="Build Quality overview"
+                            Reason="@(_buildQualityResponse?.Reason)"
+                            OnRecovery="@RetryLoadAsync" />
         }
         else if (_buildQualityResponse?.State == CacheBackedClientState.Empty || _buildQualityPage is null || !_buildQualityPage.Products.Any())
         {
@@ -235,7 +237,8 @@
         catch (Exception ex)
         {
             _buildQualityFilterMetadata = null;
-            _loadError = $"Build Quality overview unavailable right now: {ex.Message}";
+            _buildQualityResponse = CacheBackedClientResult<CanonicalClientResponse<SharedBuildQualityPageDto>>.Failed($"Build Quality overview unavailable right now: {ex.Message}");
+            _buildQualityPage = null;
         }
         finally
         {

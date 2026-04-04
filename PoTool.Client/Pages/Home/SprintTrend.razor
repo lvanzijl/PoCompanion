@@ -162,15 +162,17 @@
             else if (_buildQualityResponse?.State == CacheBackedClientState.NotReady)
             {
                 <DataStatePanel State="DataStateDto.NotReady"
-                                Title="Build Quality is syncing"
-                                Message="@(_buildQualityResponse.Reason ?? "Build Quality data is not ready yet because the cache has not been built for this sprint scope.")"
-                                ProductOwnerId="@_profileId" />
+                                Subject="Build Quality"
+                                Reason="@(_buildQualityResponse?.Reason)"
+                                ProductOwnerId="@_profileId"
+                                OnRecovery="@RetryBuildQualityLoadAsync" />
             }
             else if (_buildQualityResponse?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
             {
                 <DataStatePanel State="DataStateDto.Failed"
-                                Title="Build Quality failed to load"
-                                Message="@(_buildQualityResponse.Reason ?? "Build Quality data could not be loaded right now.")" />
+                                Subject="Build Quality"
+                                Reason="@(_buildQualityResponse?.Reason)"
+                                OnRecovery="@RetryBuildQualityLoadAsync" />
             }
             else if (_sprintBuildQuality is null)
             {

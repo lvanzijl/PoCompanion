@@ -50,15 +50,17 @@
         else if (_summaryState?.State == CacheBackedClientState.NotReady)
         {
             <DataStatePanel State="DataStateDto.NotReady"
-                            Title="Project planning summary is syncing"
-                            Message="@(_summaryState.Reason ?? "Project planning summary data is not ready yet because the cache has not been built.")"
-                            ProductOwnerId="@_activeProfileId" />
+                            Subject="Project planning summary"
+                            Reason="@_summaryState.Reason"
+                            ProductOwnerId="@_activeProfileId"
+                            OnRecovery="@ReloadSummaryAsync" />
         }
         else if (_summaryState?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
         {
             <DataStatePanel State="DataStateDto.Failed"
-                            Title="Project planning summary failed to load"
-                            Message="@(_summaryState.Reason ?? "Project planning summary data could not be loaded right now.")" />
+                            Subject="Project planning summary"
+                            Reason="@(_summaryState?.Reason)"
+                            OnRecovery="@ReloadSummaryAsync" />
         }
         else if (_summary is null)
         {
@@ -191,7 +193,8 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Could not load project planning summary: {ex.Message}";
+            _summaryState = CacheBackedClientResult<ProjectPlanningSummaryDto>.Failed($"Could not load project planning summary: {ex.Message}");
+            _summary = null;
         }
         finally
         {
@@ -212,6 +215,21 @@
                 "PlanBoard",
                 ProjectAliasRoute,
                 additionalParams: WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
+
+    private async Task ReloadSummaryAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        try
+        {
+            _summaryState = await ProjectService.GetPlanningSummaryAsync(ProjectAliasRoute);
+            _summary = _summaryState.State == CacheBackedClientState.Success ? _summaryState.Data : null;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
 
     private bool HasProductImbalance()
     {

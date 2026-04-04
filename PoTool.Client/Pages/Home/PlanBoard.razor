@@ -112,15 +112,17 @@
     else if (_projectPlanningSummaryState?.State == CacheBackedClientState.NotReady)
     {
         <DataStatePanel State="DataStateDto.NotReady"
-                        Title="Project planning summary is syncing"
-                        Message="@(_projectPlanningSummaryState.Reason ?? "Project planning summary data is not ready yet because the cache has not been built.")"
-                        ProductOwnerId="@_activeProfileId" />
+                        Subject="Project planning summary"
+                        Reason="@_projectPlanningSummaryState.Reason"
+                        ProductOwnerId="@_activeProfileId"
+                        OnRecovery="@LoadProjectPlanningSummaryAsync" />
     }
     else if (_projectPlanningSummaryState?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
     {
         <DataStatePanel State="DataStateDto.Failed"
-                        Title="Project planning summary failed to load"
-                        Message="@(_projectPlanningSummaryState.Reason ?? "Project planning summary data could not be loaded right now.")" />
+                        Subject="Project planning summary"
+                        Reason="@(_projectPlanningSummaryState?.Reason)"
+                        OnRecovery="@LoadProjectPlanningSummaryAsync" />
     }
 
     @* Board Content *@
@@ -143,15 +145,17 @@
     else if (_boardState.State == DataStateDto.NotReady)
     {
         <DataStatePanel State="@_boardState.State"
-                        Title="Plan Board is syncing"
-                        Message="@(_boardState.Reason ?? "Plan Board data will load once the cache is ready.")"
-                        ProductOwnerId="@_activeProfileId" />
+                        Subject="Plan Board"
+                        Reason="@_boardState.Reason"
+                        ProductOwnerId="@_activeProfileId"
+                        OnRecovery="@RetryBoardLoadAsync" />
     }
     else if (_boardState.State == DataStateDto.Failed)
     {
         <DataStatePanel State="@_boardState.State"
-                        Title="Plan Board failed to load"
-                        Message="@(_boardState.Reason ?? "Plan Board data could not be loaded right now.")" />
+                        Subject="Plan Board"
+                        Reason="@_boardState.Reason"
+                        OnRecovery="@RetryBoardLoadAsync" />
     }
     else if (_boardState.State == DataStateDto.Empty)
     {
@@ -1172,6 +1176,11 @@
         _candidateTree = new List<PlanBoardCandidateNode>();
         _sprintItems = new Dictionary<string, List<SprintDragItem>>();
     }
+
+    private Task RetryBoardLoadAsync()
+        => _selectedProductId.HasValue
+            ? LoadBoardAsync(_selectedProductId.Value)
+            : Task.CompletedTask;
 
     private ProjectDto? ResolveProject(string? projectRouteKey)
     {
