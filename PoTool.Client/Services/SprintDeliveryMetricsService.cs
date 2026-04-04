@@ -48,7 +48,7 @@ public class SprintDeliveryMetricsService
                 includeDetails,
                 cancellationToken);
 
-            var envelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>(response);
+            var envelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault<object>(response);
             if (envelope is null)
             {
                 return new CanonicalClientResponse<GetSprintTrendMetricsResponse>(
@@ -59,7 +59,7 @@ public class SprintDeliveryMetricsService
                     });
             }
 
-            return CanonicalClientResponseFactory.Create(envelope);
+            return CanonicalClientResponseFactory.CreateGenerated<GetSprintTrendMetricsResponse>(envelope, CanonicalFilterKind.Sprint);
         }
         catch (ApiException ex)
         {

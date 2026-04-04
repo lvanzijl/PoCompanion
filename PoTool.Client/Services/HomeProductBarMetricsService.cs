@@ -25,8 +25,10 @@ public class HomeProductBarMetricsService
         try
         {
             var response = await _metricsClient.GetHomeProductBarMetricsAsync(productOwnerId, productId, cancellationToken);
-            var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault<DeliveryQueryResponseDto<HomeProductBarMetricsDto>>(response);
-            return payload is null ? null : CanonicalClientResponseFactory.Create(payload);
+            var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault<object>(response);
+            return payload is null
+                ? null
+                : CanonicalClientResponseFactory.CreateGenerated<HomeProductBarMetricsDto>(payload, CanonicalFilterKind.Delivery);
         }
         catch (Exception ex) when (ex is HttpRequestException or ApiException)
         {

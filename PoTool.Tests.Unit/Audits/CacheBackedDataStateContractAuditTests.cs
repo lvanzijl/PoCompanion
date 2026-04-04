@@ -114,16 +114,17 @@ public sealed class CacheBackedDataStateContractAuditTests
 
     private static string? ValidateSnapshotContract(JsonElement paths, MethodInfo methodInfo, string route)
     {
-        if (!paths.TryGetProperty(route, out var pathEntry) && !paths.TryGetProperty(route.Replace("/api/", "/api/", StringComparison.Ordinal), out pathEntry))
+        var snapshotRoute = Regex.Replace(route, @"\{([^}:]+):[^}]+\}", "{$1}");
+        if (!paths.TryGetProperty(snapshotRoute, out var pathEntry))
         {
-            return $"{methodInfo.DeclaringType!.Name}.{methodInfo.Name} => missing OpenAPI path {route}";
+            return $"{methodInfo.DeclaringType!.Name}.{methodInfo.Name} => missing OpenAPI path {snapshotRoute}";
         }
 
         var httpAttribute = methodInfo.GetCustomAttributes(inherit: true).OfType<HttpMethodAttribute>().First();
         var verb = httpAttribute.HttpMethods.Single().ToLowerInvariant();
         if (!pathEntry.TryGetProperty(verb, out var operation))
         {
-            return $"{methodInfo.DeclaringType!.Name}.{methodInfo.Name} => missing OpenAPI verb {verb} for {route}";
+            return $"{methodInfo.DeclaringType!.Name}.{methodInfo.Name} => missing OpenAPI verb {verb} for {snapshotRoute}";
         }
 
         if (!operation.TryGetProperty("responses", out var responses) ||
@@ -134,19 +135,19 @@ public sealed class CacheBackedDataStateContractAuditTests
             !schema.TryGetProperty("$ref", out var schemaRef) ||
             !schemaRef.GetString()!.Contains("DataStateResponseDto", StringComparison.Ordinal))
         {
-            return $"{methodInfo.DeclaringType!.Name}.{methodInfo.Name} => {route} does not use a DataState wrapper schema in OpenAPI";
+            return $"{methodInfo.DeclaringType!.Name}.{methodInfo.Name} => {snapshotRoute} does not use a DataState wrapper schema in OpenAPI";
         }
 
         if (responses.TryGetProperty("204", out _) || responses.TryGetProperty("404", out _))
         {
-            return $"{methodInfo.DeclaringType!.Name}.{methodInfo.Name} => {route} still exposes normalized 204/404 statuses in OpenAPI";
+            return $"{methodInfo.DeclaringType!.Name}.{methodInfo.Name} => {snapshotRoute} still exposes normalized 204/404 statuses in OpenAPI";
         }
 
         foreach (var response in responses.EnumerateObject())
         {
             if (int.TryParse(response.Name, out var statusCode) && statusCode >= 500 && statusCode <= 599)
             {
-                return $"{methodInfo.DeclaringType!.Name}.{methodInfo.Name} => {route} still exposes normalized 5xx statuses in OpenAPI";
+                return $"{methodInfo.DeclaringType!.Name}.{methodInfo.Name} => {snapshotRoute} still exposes normalized 5xx statuses in OpenAPI";
             }
         }
 

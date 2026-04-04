@@ -51,10 +51,10 @@ public class PullRequestService
     public async Task<CanonicalClientResponse<IReadOnlyList<SharedPullRequestMetricsDto>>> GetMetricsAsync(string? productIds = null, DateTimeOffset? fromDate = null)
     {
         var response = await _pullRequestsClient.GetMetricsAsync(productIds, fromDate, CancellationToken.None);
-        var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault<PullRequestQueryResponseDto<IReadOnlyList<SharedPullRequestMetricsDto>>>(response);
+        var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault<object>(response);
         return payload is null
             ? new CanonicalClientResponse<IReadOnlyList<SharedPullRequestMetricsDto>>(Array.Empty<SharedPullRequestMetricsDto>())
-            : CanonicalClientResponseFactory.Create(payload);
+            : CanonicalClientResponseFactory.CreateGenerated<IReadOnlyList<SharedPullRequestMetricsDto>>(payload, CanonicalFilterKind.PullRequest);
     }
 
     /// <summary>
@@ -77,10 +77,10 @@ public class PullRequestService
             toDate,
             status,
             CancellationToken.None);
-        var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault<PullRequestQueryResponseDto<IReadOnlyList<SharedPullRequestDto>>>(response);
+        var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault<object>(response);
         return payload is null
             ? new CanonicalClientResponse<IReadOnlyList<SharedPullRequestDto>>(Array.Empty<SharedPullRequestDto>())
-            : CanonicalClientResponseFactory.Create(payload);
+            : CanonicalClientResponseFactory.CreateGenerated<IReadOnlyList<SharedPullRequestDto>>(payload, CanonicalFilterKind.PullRequest);
     }
 
     /// <summary>

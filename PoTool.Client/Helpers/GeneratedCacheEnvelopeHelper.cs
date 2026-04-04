@@ -33,7 +33,10 @@ public static class GeneratedCacheEnvelopeHelper
         object envelope,
         TData defaultValue)
     {
-        ArgumentNullException.ThrowIfNull(envelope);
+        if (envelope is null)
+        {
+            return defaultValue;
+        }
 
         var result = ToCacheBackedResult(envelope, current => GetOptionalValue<TData>(current, "Data"));
         return result.State == CacheBackedClientState.Success && result.Data is not null
@@ -43,7 +46,10 @@ public static class GeneratedCacheEnvelopeHelper
 
     public static TData? GetDataOrDefault<TData>(object envelope)
     {
-        ArgumentNullException.ThrowIfNull(envelope);
+        if (envelope is null)
+        {
+            return default;
+        }
 
         var result = ToCacheBackedResult(envelope, current => GetOptionalValue<TData>(current, "Data"));
         return result.State == CacheBackedClientState.Success

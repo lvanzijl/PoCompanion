@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
+using PoTool.Shared.DataState;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -165,8 +166,19 @@ public class PipelineServiceTests
         };
 
         _mockClient
-            .Setup(c => c.GetRunsForProductsEnvelopeAsync(productIdsStr, null, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+            .Setup(c => c.GetRunsForProductsAsync(productIdsStr, null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineRunDto
+            {
+                State = DataStateDto.Available,
+                Data = new PipelineQueryResponseDtoOfIReadOnlyListOfPipelineRunDto
+                {
+                    Data = response.Data.ToList(),
+                    RequestedFilter = response.RequestedFilter,
+                    EffectiveFilter = response.EffectiveFilter,
+                    InvalidFields = response.InvalidFields.ToList(),
+                    ValidationMessages = response.ValidationMessages.ToList()
+                }
+            });
 
         // Act
         var result = await _service.GetRunsForProductsAsync(productIdsStr);
@@ -181,7 +193,7 @@ public class PipelineServiceTests
             _ => string.Empty
         });
 
-        _mockClient.Verify(c => c.GetRunsForProductsEnvelopeAsync(productIdsStr, null, null, It.IsAny<CancellationToken>()), Times.Once);
+        _mockClient.Verify(c => c.GetRunsForProductsAsync(productIdsStr, null, null, It.IsAny<CancellationToken>()), Times.Once);
         _mockClient.Verify(c => c.GetDefinitionsAsync(It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
         _mockClient.Verify(c => c.GetRunsAsync(It.IsAny<int>(), It.IsAny<int?>()), Times.Never);
     }
