@@ -97,7 +97,7 @@ public sealed class GlobalFilterStoreTests
     }
 
     [TestMethod]
-    public async Task TrackNavigation_UnknownProjectAlias_PreservesRouteAuthorityWithoutInvalidatingPage()
+    public async Task TrackNavigation_UnknownProjectAlias_PreservesRouteAuthority()
     {
         var store = CreateStore();
 

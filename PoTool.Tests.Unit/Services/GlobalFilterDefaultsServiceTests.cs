@@ -39,6 +39,62 @@ public sealed class GlobalFilterDefaultsServiceTests
         Assert.AreEqual("/planning/plan-board?productId=11&timeMode=Snapshot", uri);
     }
 
+    [TestMethod]
+    public async Task BuildDefaultedUriAsync_InvalidUsage_DoesNotApplyDefaults()
+    {
+        var store = CreateStore();
+        await store.TrackNavigationAsync("http://localhost/planning/unknown-project/overview", 42);
+
+        store.SetResolvedState(store.CurrentUsage! with { Status = FilterResolutionStatus.Invalid });
+        var defaultsService = CreateDefaultsService(store);
+
+        var uri = await defaultsService.BuildDefaultedUriAsync("http://localhost/planning/unknown-project/overview", 42);
+
+        Assert.IsNull(uri);
+    }
+
+    [TestMethod]
+    public async Task BuildDefaultedUriAsync_UserDrivenState_DoesNotReapplyDefaults()
+    {
+        var store = CreateStore();
+        await store.TrackNavigationAsync("http://localhost/home/delivery/execution", 42);
+
+        store.SetResolvedState(store.CurrentUsage! with { LastUpdateSource = FilterUpdateSource.Ui });
+        var defaultsService = CreateDefaultsService(store);
+
+        var uri = await defaultsService.BuildDefaultedUriAsync("http://localhost/home/delivery/execution", 42);
+
+        Assert.IsNull(uri);
+    }
+
+    [TestMethod]
+    public async Task BuildDefaultedUriAsync_ResolvedState_DoesNotChangeRoute()
+    {
+        var store = CreateStore();
+        await store.TrackNavigationAsync("http://localhost/home/delivery/execution?teamId=7&sprintId=701&timeMode=Sprint", 42);
+
+        var defaultsService = CreateDefaultsService(store);
+
+        var uri = await defaultsService.BuildDefaultedUriAsync("http://localhost/home/delivery/execution?teamId=7&sprintId=701&timeMode=Sprint", 42);
+
+        Assert.IsNull(uri);
+    }
+
+    [TestMethod]
+    public async Task BuildDefaultedUriAsync_UsesHistoricalSprintWhenCurrentSprintIsUnavailable()
+    {
+        var store = CreateStore();
+        await store.TrackNavigationAsync("http://localhost/home/delivery/execution", 42);
+
+        var defaultsService = CreateDefaultsService(
+            store,
+            sprintsClient: new HistoricalOnlySprintsClient());
+
+        var uri = await defaultsService.BuildDefaultedUriAsync("http://localhost/home/delivery/execution", 42);
+
+        Assert.AreEqual("/home/delivery/execution?teamId=7&sprintId=799&timeMode=Sprint", uri);
+    }
+
     private static GlobalFilterStore CreateStore()
     {
         var projectService = new ProjectService(new StubProjectsClient());
@@ -47,7 +103,11 @@ public sealed class GlobalFilterDefaultsServiceTests
         return new GlobalFilterStore(NullLogger<GlobalFilterStore>.Instance, resolver);
     }
 
-    private static GlobalFilterDefaultsService CreateDefaultsService(GlobalFilterStore store)
+    private static GlobalFilterDefaultsService CreateDefaultsService(
+        GlobalFilterStore store,
+        IProductsClient? productsClient = null,
+        ITeamsClient? teamsClient = null,
+        ISprintsClient? sprintsClient = null)
     {
         var projectService = new ProjectService(new StubProjectsClient());
         var projectIdentityMapper = new ProjectIdentityMapper(projectService);
@@ -55,9 +115,9 @@ public sealed class GlobalFilterDefaultsServiceTests
         return new GlobalFilterDefaultsService(
             store,
             new GlobalFilterRouteService(projectIdentityMapper),
-            new ProductService(new StubProductsClient()),
-            new TeamService(new StubTeamsClient()),
-            new SprintService(new StubSprintsClient()),
+            new ProductService(productsClient ?? new StubProductsClient()),
+            new TeamService(teamsClient ?? new StubTeamsClient()),
+            new SprintService(sprintsClient ?? new StubSprintsClient()),
             new InMemorySecureStorageService());
     }
 
@@ -210,5 +270,24 @@ public sealed class GlobalFilterDefaultsServiceTests
 
             throw new ApiException("Not found", 404, string.Empty, new Dictionary<string, IEnumerable<string>>(), null);
         }
+    }
+
+    private sealed class HistoricalOnlySprintsClient : ISprintsClient
+    {
+        private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-04-04T00:00:00Z");
+        private static readonly SprintDto Sprint798 = new(798, 7, "798", "\\Payments\\Sprint 10", "Sprint 10", Now.AddDays(-28), Now.AddDays(-15), "past", Now);
+        private static readonly SprintDto Sprint799 = new(799, 7, "799", "\\Payments\\Sprint 11", "Sprint 11", Now.AddDays(-14), Now.AddDays(-1), "past", Now);
+
+        public Task<ICollection<SprintDto>> GetSprintsForTeamAsync(int? teamId)
+            => GetSprintsForTeamAsync(teamId, CancellationToken.None);
+
+        public Task<ICollection<SprintDto>> GetSprintsForTeamAsync(int? teamId, CancellationToken cancellationToken)
+            => Task.FromResult<ICollection<SprintDto>>(teamId == 7 ? [Sprint798, Sprint799] : []);
+
+        public Task<SprintDto> GetCurrentSprintForTeamAsync(int? teamId)
+            => GetCurrentSprintForTeamAsync(teamId, CancellationToken.None);
+
+        public Task<SprintDto> GetCurrentSprintForTeamAsync(int? teamId, CancellationToken cancellationToken)
+            => throw new ApiException("Not found", 404, string.Empty, new Dictionary<string, IEnumerable<string>>(), null);
     }
 }
