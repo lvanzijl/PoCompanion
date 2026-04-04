@@ -397,6 +397,7 @@ public class PoToolDbContext : DbContext
         modelBuilder.Entity<EffortEstimationSettingsEntity>(entity =>
         {
             // EffortEstimationSettings entity configuration (Id is primary key by convention)
+            entity.HasIndex(e => e.LastModifiedUtc);
         });
 
         // Release Planning Board entities

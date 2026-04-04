@@ -7,6 +7,8 @@ namespace PoTool.Api.Persistence.Entities;
 /// </summary>
 public class EffortEstimationSettingsEntity
 {
+    private DateTimeOffset _lastModified;
+
     /// <summary>
     /// Internal database ID (primary key).
     /// </summary>
@@ -57,5 +59,19 @@ public class EffortEstimationSettingsEntity
     /// Timestamp when settings were last modified.
     /// </summary>
     [Required]
-    public DateTimeOffset LastModified { get; set; }
+    public DateTimeOffset LastModified
+    {
+        get => _lastModified;
+        set
+        {
+            _lastModified = value;
+            LastModifiedUtc = value.UtcDateTime;
+        }
+    }
+
+    /// <summary>
+    /// UTC timestamp used for SQL-translatable ordering on SQLite.
+    /// </summary>
+    [Required]
+    public DateTime LastModifiedUtc { get; set; }
 }

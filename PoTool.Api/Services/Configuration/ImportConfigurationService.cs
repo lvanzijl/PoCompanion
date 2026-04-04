@@ -656,7 +656,7 @@ public sealed class ImportConfigurationService
         }
 
         var entity = await _dbContext.EffortEstimationSettings
-            .OrderByDescending(settings => settings.LastModified.UtcDateTime)
+            .OrderByDescending(settings => settings.LastModifiedUtc)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (entity == null)
