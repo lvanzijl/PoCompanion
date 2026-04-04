@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-04-04",
+    "type": "Fixed",
+    "title": "Cache-backed build quality and planning pages now show readiness states instead of crashing",
+    "impact": "Health Overview, Sprint Delivery build quality, Pipeline Insights overlays, Trends pipeline signals, and project planning summary pages now understand the backend cache envelope contract, so cache-not-ready responses show explicit recovery states instead of JSON errors, empty fallback metrics, or missing summary cards.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
     "date": "2026-04-03",
     "type": "Fixed",
     "title": "Startup now blocks invalid readiness states before loading workspaces",
