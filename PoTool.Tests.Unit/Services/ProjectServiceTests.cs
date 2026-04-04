@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
 using PoTool.Client.Services;
 
@@ -21,7 +22,7 @@ public class ProjectServiceTests
             BaseAddress = new Uri("http://localhost")
         };
 
-        var service = new ProjectService(httpClient);
+        var service = new ProjectService(new ProjectsClient(httpClient), httpClient);
 
         var result = await service.GetPlanningSummaryAsync("project-alpha");
 

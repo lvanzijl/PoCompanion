@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
 using PoTool.Client.Services;
 using PoTool.Shared.Settings;
@@ -45,7 +46,7 @@ public sealed class GlobalFilterRouteServiceTests
         {
             BaseAddress = new Uri("http://localhost/")
         };
-        var projectService = new ProjectService(httpClient);
+        var projectService = new ProjectService(new ProjectsClient(httpClient), httpClient);
         var projectIdentityMapper = new ProjectIdentityMapper(projectService);
         return new GlobalFilterRouteService(projectIdentityMapper);
     }

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using PoTool.Client.ApiClient;
 using PoTool.Client.Services;
 
 namespace PoTool.Tests.Unit.Services;
@@ -30,14 +31,14 @@ public class ReleaseNotesServiceTests
         {
             BaseAddress = new Uri("https://example.test/")
         };
-        var service = new ReleaseNotesService(httpClient);
+        var service = new ReleaseNotesService(new SettingsClient(httpClient));
 
         var entries = await service.GetReleaseNotesAsync();
 
         Assert.HasCount(1, entries);
         Assert.AreEqual("Release notes button on profiles landing", entries[0].Title);
         Assert.AreEqual("/profiles", entries[0].Link);
-        Assert.AreEqual("/api/settings/release-notes", capturedRequest?.RequestUri?.AbsolutePath);
+        Assert.AreEqual("/api/Settings/release-notes", capturedRequest?.RequestUri?.AbsolutePath);
     }
 
     [TestMethod]
@@ -56,7 +57,7 @@ public class ReleaseNotesServiceTests
         {
             BaseAddress = new Uri("https://example.test/")
         };
-        var service = new ReleaseNotesService(httpClient);
+        var service = new ReleaseNotesService(new SettingsClient(httpClient));
 
         await service.GetReleaseNotesAsync();
         await service.GetReleaseNotesAsync();

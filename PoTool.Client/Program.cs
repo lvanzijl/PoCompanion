@@ -65,6 +65,14 @@ builder.Services.AddScoped<ISettingsClient>(sp =>
     return client;
 });
 
+builder.Services.AddScoped<IProjectsClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new ProjectsClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
 builder.Services.AddScoped<IProfilesClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
@@ -106,11 +114,28 @@ builder.Services.AddScoped<IMetricsClient>(sp =>
 });
 
 builder.Services.AddBugTriageClient(apiBaseUrl);
+builder.Services.AddTriageTagsClient(apiBaseUrl);
 
 builder.Services.AddScoped<IPipelinesClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
     var client = new PipelinesClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
+builder.Services.AddScoped<IStartupClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new StartupClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
+builder.Services.AddScoped<ICacheSyncClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new CacheSyncClient(httpClient);
     client.BaseUrl = apiBaseUrl;
     return client;
 });

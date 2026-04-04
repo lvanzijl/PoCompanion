@@ -1,5 +1,5 @@
 using System.Net;
-using System.Net.Http.Json;
+using PoTool.Client.ApiClient;
 using PoTool.Client.Helpers;
 using PoTool.Client.Models;
 using PoTool.Shared.Planning;
@@ -11,10 +11,12 @@ namespace PoTool.Client.Services;
 /// </summary>
 public class ProjectService
 {
+    private readonly IProjectsClient _projectsClient;
     private readonly HttpClient _httpClient;
 
-    public ProjectService(HttpClient httpClient)
+    public ProjectService(IProjectsClient projectsClient, HttpClient httpClient)
     {
+        _projectsClient = projectsClient;
         _httpClient = httpClient;
     }
 
@@ -23,8 +25,14 @@ public class ProjectService
     /// </summary>
     public async Task<IReadOnlyList<ProjectDto>> GetAllProjectsAsync(CancellationToken cancellationToken = default)
     {
-        var projects = await _httpClient.GetFromJsonAsync<List<ProjectDto>>("api/projects", JsonHelper.CaseInsensitiveOptions, cancellationToken);
-        return projects ?? [];
+        try
+        {
+            return (await _projectsClient.GetProjectsAsync(cancellationToken)).ToList();
+        }
+        catch (ApiException ex)
+        {
+            throw GeneratedClientErrorTranslator.ToHttpRequestException(ex);
+        }
     }
 
     /// <summary>
@@ -37,17 +45,18 @@ public class ProjectService
             return null;
         }
 
-        using var response = await _httpClient.GetAsync(
-            $"api/projects/{Uri.EscapeDataString(aliasOrId)}",
-            cancellationToken);
-
-        if (response.StatusCode == HttpStatusCode.NotFound)
+        try
+        {
+            return await _projectsClient.GetProjectAsync(aliasOrId, cancellationToken);
+        }
+        catch (ApiException ex) when (ex.StatusCode == (int)HttpStatusCode.NotFound)
         {
             return null;
         }
-
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<ProjectDto>(JsonHelper.CaseInsensitiveOptions, cancellationToken);
+        catch (ApiException ex)
+        {
+            throw GeneratedClientErrorTranslator.ToHttpRequestException(ex);
+        }
     }
 
     /// <summary>
@@ -60,12 +69,14 @@ public class ProjectService
             return [];
         }
 
-        var products = await _httpClient.GetFromJsonAsync<List<ProductDto>>(
-            $"api/projects/{Uri.EscapeDataString(aliasOrId)}/products",
-            JsonHelper.CaseInsensitiveOptions,
-            cancellationToken);
-
-        return products ?? [];
+        try
+        {
+            return (await _projectsClient.GetProjectProductsAsync(aliasOrId, cancellationToken)).ToList();
+        }
+        catch (ApiException ex)
+        {
+            throw GeneratedClientErrorTranslator.ToHttpRequestException(ex);
+        }
     }
 
     /// <summary>

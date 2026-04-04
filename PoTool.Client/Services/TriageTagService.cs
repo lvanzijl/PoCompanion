@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+using PoTool.Client.ApiClient;
 using PoTool.Shared.BugTriage;
 
 namespace PoTool.Client.Services;
@@ -9,16 +9,11 @@ namespace PoTool.Client.Services;
 /// </summary>
 public class TriageTagService
 {
-    // TODO: Inject ITriageTagsClient once NSwag regenerates
-    // private readonly ITriageTagsClient _triageTagsClient;
-    
-    // Temporary: Use HttpClient directly until NSwag client is generated
-    private readonly HttpClient _httpClient;
-    private readonly string _baseUrl = "api/TriageTags";
+    private readonly ITriageTagsClient _triageTagsClient;
 
-    public TriageTagService(HttpClient httpClient)
+    public TriageTagService(ITriageTagsClient triageTagsClient)
     {
-        _httpClient = httpClient;
+        _triageTagsClient = triageTagsClient;
     }
 
     /// <summary>
@@ -26,10 +21,7 @@ public class TriageTagService
     /// </summary>
     public async Task<List<TriageTagDto>> GetAllTagsAsync(CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.GetAsync(_baseUrl, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<List<TriageTagDto>>(cancellationToken)
-            ?? new List<TriageTagDto>();
+        return (await _triageTagsClient.GetAllTagsAsync(cancellationToken)).ToList();
     }
 
     /// <summary>
@@ -37,10 +29,7 @@ public class TriageTagService
     /// </summary>
     public async Task<List<TriageTagDto>> GetEnabledTagsAsync(CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.GetAsync($"{_baseUrl}/enabled", cancellationToken);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<List<TriageTagDto>>(cancellationToken)
-            ?? new List<TriageTagDto>();
+        return (await _triageTagsClient.GetEnabledTagsAsync(cancellationToken)).ToList();
     }
 
     /// <summary>
@@ -51,9 +40,7 @@ public class TriageTagService
         CancellationToken cancellationToken = default)
     {
         var request = new CreateTriageTagRequest(name);
-        var response = await _httpClient.PostAsJsonAsync(_baseUrl, request, cancellationToken);
-        return await response.Content.ReadFromJsonAsync<TriageTagOperationResponse>(cancellationToken)
-            ?? new TriageTagOperationResponse(false, "Unknown error");
+        return await _triageTagsClient.CreateTagAsync(request, cancellationToken);
     }
 
     /// <summary>
@@ -67,9 +54,7 @@ public class TriageTagService
         CancellationToken cancellationToken = default)
     {
         var request = new UpdateTriageTagRequest(id, name, isEnabled, displayOrder);
-        var response = await _httpClient.PutAsJsonAsync($"{_baseUrl}/{id}", request, cancellationToken);
-        return await response.Content.ReadFromJsonAsync<TriageTagOperationResponse>(cancellationToken)
-            ?? new TriageTagOperationResponse(false, "Unknown error");
+        return await _triageTagsClient.UpdateTagAsync(id, request, cancellationToken);
     }
 
     /// <summary>
@@ -79,9 +64,7 @@ public class TriageTagService
         int id,
         CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.DeleteAsync($"{_baseUrl}/{id}", cancellationToken);
-        return await response.Content.ReadFromJsonAsync<TriageTagOperationResponse>(cancellationToken)
-            ?? new TriageTagOperationResponse(false, "Unknown error");
+        return await _triageTagsClient.DeleteTagAsync(id, cancellationToken);
     }
 
     /// <summary>
@@ -91,8 +74,6 @@ public class TriageTagService
         List<int> tagIds,
         CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/reorder", tagIds, cancellationToken);
-        return await response.Content.ReadFromJsonAsync<TriageTagOperationResponse>(cancellationToken)
-            ?? new TriageTagOperationResponse(false, "Unknown error");
+        return await _triageTagsClient.ReorderTagsAsync(tagIds, cancellationToken);
     }
 }

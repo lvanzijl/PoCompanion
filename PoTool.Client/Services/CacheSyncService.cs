@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using PoTool.Client.ApiClient;
 using PoTool.Shared.Settings;
 
 namespace PoTool.Client.Services;
@@ -25,10 +26,12 @@ public interface ICacheSyncService
 public class CacheSyncService : ICacheSyncService
 {
     private readonly HttpClient _httpClient;
+    private readonly ICacheSyncClient _cacheSyncClient;
 
-    public CacheSyncService(HttpClient httpClient)
+    public CacheSyncService(HttpClient httpClient, ICacheSyncClient cacheSyncClient)
     {
         _httpClient = httpClient;
+        _cacheSyncClient = cacheSyncClient;
     }
 
     /// <summary>
@@ -38,13 +41,10 @@ public class CacheSyncService : ICacheSyncService
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<CacheStateDto>(
-                $"api/CacheSync/{productOwnerId}",
-                cancellationToken);
+            return await _cacheSyncClient.GetCacheStatusAsync(productOwnerId, cancellationToken);
         }
-        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException)
+        catch (Exception ex) when (ex is HttpRequestException or ApiException)
         {
-            // Handle network errors and invalid JSON responses (e.g., empty response)
             return null;
         }
     }
@@ -124,12 +124,10 @@ public class CacheSyncService : ICacheSyncService
     {
         try
         {
-            var response = await _httpClient.GetFromJsonAsync<SyncStatusResult>(
-                $"api/CacheSync/{productOwnerId}/status",
-                cancellationToken);
+            var response = await _cacheSyncClient.GetSyncStatusAsync(productOwnerId, cancellationToken);
             return response?.IsSyncing ?? false;
         }
-        catch (HttpRequestException)
+        catch (Exception ex) when (ex is HttpRequestException or ApiException)
         {
             return false;
         }
@@ -142,11 +140,9 @@ public class CacheSyncService : ICacheSyncService
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<CacheInsightsDto>(
-                $"api/CacheSync/{productOwnerId}/insights",
-                cancellationToken);
+            return await _cacheSyncClient.GetCacheInsightsAsync(productOwnerId, cancellationToken);
         }
-        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException)
+        catch (Exception ex) when (ex is HttpRequestException or ApiException)
         {
             return null;
         }
@@ -187,21 +183,14 @@ public class CacheSyncService : ICacheSyncService
     {
         try
         {
-            var queryParts = new List<string> { $"workItemId={workItemId}" };
-            if (fromChangedDate.HasValue)
-            {
-                queryParts.Add($"fromChangedDate={Uri.EscapeDataString(fromChangedDate.Value.ToString("O"))}");
-            }
-
-            if (toChangedDate.HasValue)
-            {
-                queryParts.Add($"toChangedDate={Uri.EscapeDataString(toChangedDate.Value.ToString("O"))}");
-            }
-
-            var requestUri = $"api/CacheSync/{productOwnerId}/activity-ledger-validation?{string.Join("&", queryParts)}";
-            return await _httpClient.GetFromJsonAsync<ActivityLedgerValidationDto>(requestUri, cancellationToken);
+            return await _cacheSyncClient.GetActivityLedgerValidationAsync(
+                productOwnerId,
+                workItemId,
+                fromChangedDate,
+                toChangedDate,
+                cancellationToken);
         }
-        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException)
+        catch (Exception ex) when (ex is HttpRequestException or ApiException)
         {
             return null;
         }
@@ -217,11 +206,9 @@ public class CacheSyncService : ICacheSyncService
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<SyncChangesSummaryDto>(
-                $"api/CacheSync/{productOwnerId}/changes-since-sync",
-                cancellationToken);
+            return await _cacheSyncClient.GetChangesSinceSyncAsync(productOwnerId, cancellationToken);
         }
-        catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException)
+        catch (Exception ex) when (ex is HttpRequestException or ApiException)
         {
             return null;
         }
@@ -236,12 +223,4 @@ public record SyncTriggerResult
 {
     public bool Success { get; init; }
     public string? Message { get; init; }
-}
-
-/// <summary>
-/// Result of a sync status check.
-/// </summary>
-public record SyncStatusResult
-{
-    public bool IsSyncing { get; init; }
 }
