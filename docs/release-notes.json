@@ -2,6 +2,14 @@
   {
     "date": "2026-04-04",
     "type": "Changed",
+    "title": "Product selection now stays global across planning, health, bug, and work-item pages",
+    "impact": "Home, Backlog Health, Plan Board, Product Roadmaps, Product Roadmap Editor, Bugs Triage, and Work Item Explorer now read product scope from the shared global filter only. Product-scoped pages stop silently picking the first or profile-owned product, direct roadmap-editor routes no longer override the shared selection, and pages that require a single product now wait for an explicit global product choice instead of falling back implicitly.",
+    "area": "Home / Planning / Health / Bugs",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-04",
+    "type": "Changed",
     "title": "Planning and delivery pages now keep route context and open with meaningful defaults",
     "impact": "Project- and product-scoped planning routes now keep their path authority, delivery and planning pages now initialize team/sprint/product defaults from the battleship mock portfolio on first load, and shared filter controls moved below the primary page signal so analytical content stays above the fold.",
     "area": "Home / Planning / Delivery",
