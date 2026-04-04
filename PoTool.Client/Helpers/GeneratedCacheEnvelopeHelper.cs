@@ -1,5 +1,4 @@
-using System.Reflection;
-using System.Text.Json;
+using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
 using PoTool.Shared.DataState;
 
@@ -7,114 +6,151 @@ namespace PoTool.Client.Helpers;
 
 public static class GeneratedCacheEnvelopeHelper
 {
-    private static readonly JsonSerializerOptions SerializationOptions = JsonHelper.CaseInsensitiveOptions;
-
-    public static CacheBackedClientResult<TData> ToCacheBackedResult<TEnvelope, TData>(
-        TEnvelope envelope,
-        Func<TEnvelope, TData?> dataSelector)
-        where TEnvelope : class
+    public static CacheBackedClientResult<TData> ToCacheBackedResult<TData>(
+        IGeneratedDataStateEnvelope<TData> envelope)
     {
         ArgumentNullException.ThrowIfNull(envelope);
-        ArgumentNullException.ThrowIfNull(dataSelector);
-
-        var state = GetRequiredValue<DataStateDto>(envelope, "State");
-        var data = dataSelector(envelope);
-        var reason = GetOptionalValue<string>(envelope, "Reason");
-        var retryAfterSeconds = GetOptionalValue<int?>(envelope, "RetryAfterSeconds");
-
-        return state switch
-        {
-            DataStateDto.Available when data is not null => CacheBackedClientResult<TData>.Success(data),
-            DataStateDto.Empty => CacheBackedClientResult<TData>.Empty(reason, retryAfterSeconds),
-            DataStateDto.NotReady => CacheBackedClientResult<TData>.NotReady(reason, retryAfterSeconds),
-            DataStateDto.Failed => CacheBackedClientResult<TData>.Failed(reason, retryAfterSeconds),
-            _ => CacheBackedClientResult<TData>.Failed("The generated cache-backed response did not contain usable data.", retryAfterSeconds)
-        };
+        return CreateCacheBackedResult(envelope, static data => data);
     }
 
-    public static CacheBackedClientResult<TData> ToCacheBackedResult<TData>(object envelope)
+    public static CacheBackedClientResult<TMapped> ToCacheBackedResult<TData, TMapped>(
+        IGeneratedDataStateEnvelope<TData> envelope,
+        Func<TData, TMapped?> mapper)
     {
         ArgumentNullException.ThrowIfNull(envelope);
-        return ToCacheBackedResult(envelope, current => GetOptionalValue<TData>(current, "Data"));
+        ArgumentNullException.ThrowIfNull(mapper);
+        return CreateCacheBackedResult(envelope, mapper);
     }
 
-    public static DataStateResponseDto<TData> ToDataStateResponse<TData>(object envelope)
+    public static DataStateResponseDto<TData> ToDataStateResponse<TData>(
+        IGeneratedDataStateEnvelope<TData> envelope)
     {
         ArgumentNullException.ThrowIfNull(envelope);
+        return CreateDataStateResponse(envelope, static data => data);
+    }
 
-        return new DataStateResponseDto<TData>
-        {
-            State = GetRequiredValue<DataStateDto>(envelope, "State"),
-            Data = GetOptionalValue<TData>(envelope, "Data"),
-            Reason = GetOptionalValue<string>(envelope, "Reason"),
-            RetryAfterSeconds = GetOptionalValue<int?>(envelope, "RetryAfterSeconds")
-        };
+    public static DataStateResponseDto<TMapped> ToDataStateResponse<TData, TMapped>(
+        IGeneratedDataStateEnvelope<TData> envelope,
+        Func<TData, TMapped?> mapper)
+    {
+        ArgumentNullException.ThrowIfNull(envelope);
+        ArgumentNullException.ThrowIfNull(mapper);
+        return CreateDataStateResponse(envelope, mapper);
     }
 
     public static TData GetDataOrDefault<TData>(
-        object envelope,
+        IGeneratedDataStateEnvelope<TData> envelope,
         TData defaultValue)
     {
-        if (envelope is null)
-        {
-            return defaultValue;
-        }
+        ArgumentNullException.ThrowIfNull(envelope);
 
-        var result = ToCacheBackedResult(envelope, current => GetOptionalValue<TData>(current, "Data"));
+        var result = ToCacheBackedResult(envelope);
         return result.State == CacheBackedClientState.Success && result.Data is not null
             ? result.Data
             : defaultValue;
     }
 
-    public static TData? GetDataOrDefault<TData>(object envelope)
+    public static TData? GetDataOrDefault<TData>(IGeneratedDataStateEnvelope<TData> envelope)
     {
-        if (envelope is null)
-        {
-            return default;
-        }
+        ArgumentNullException.ThrowIfNull(envelope);
 
-        var result = ToCacheBackedResult(envelope, current => GetOptionalValue<TData>(current, "Data"));
+        var result = ToCacheBackedResult(envelope);
         return result.State == CacheBackedClientState.Success
             ? result.Data
             : default;
     }
 
-    private static TValue GetRequiredValue<TValue>(object instance, string propertyName)
+    public static IReadOnlyList<TItem> GetDataOrDefault<TItem>(
+        IGeneratedDataStateEnvelope<ICollection<TItem>> envelope,
+        IReadOnlyCollection<TItem> defaultValue)
     {
-        var property = instance.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance)
-            ?? throw new InvalidOperationException($"Generated cache-backed response type '{instance.GetType().FullName}' is missing property '{propertyName}'.");
+        ArgumentNullException.ThrowIfNull(envelope);
+        ArgumentNullException.ThrowIfNull(defaultValue);
 
-        var value = property.GetValue(instance);
-        if (value is null)
-        {
-            throw new InvalidOperationException($"Generated cache-backed response type '{instance.GetType().FullName}' returned null for required property '{propertyName}'.");
-        }
+        var result = ToCacheBackedResult(
+            envelope,
+            static data => data.ToList());
 
-        return (TValue)value;
+        return result.State == CacheBackedClientState.Success && result.Data is not null
+            ? result.Data
+            : defaultValue.ToList();
     }
 
-    private static TValue? GetOptionalValue<TValue>(object instance, string propertyName)
+    public static IReadOnlyList<TItem> GetDataOrDefault<TItem>(
+        IGeneratedDataStateEnvelope<ICollection<TItem>> envelope)
     {
-        var property = instance.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance)
-            ?? throw new InvalidOperationException($"Generated cache-backed response type '{instance.GetType().FullName}' is missing property '{propertyName}'.");
+        ArgumentNullException.ThrowIfNull(envelope);
 
-        var value = property.GetValue(instance);
-        return ConvertValue<TValue>(value);
+        var result = ToCacheBackedResult(
+            envelope,
+            static data => data.ToList());
+
+        return result.State == CacheBackedClientState.Success && result.Data is not null
+            ? result.Data
+            : Array.Empty<TItem>();
     }
 
-    private static TValue? ConvertValue<TValue>(object? value)
+    public static TMapped GetDataOrDefault<TData, TMapped>(
+        IGeneratedDataStateEnvelope<TData> envelope,
+        Func<TData, TMapped?> mapper,
+        TMapped defaultValue)
     {
-        if (value is null)
-        {
-            return default;
-        }
+        ArgumentNullException.ThrowIfNull(envelope);
+        ArgumentNullException.ThrowIfNull(mapper);
 
-        if (value is TValue typedValue)
-        {
-            return typedValue;
-        }
+        var result = ToCacheBackedResult(envelope, mapper);
+        return result.State == CacheBackedClientState.Success && result.Data is not null
+            ? result.Data
+            : defaultValue;
+    }
 
-        var json = JsonSerializer.Serialize(value, SerializationOptions);
-        return JsonSerializer.Deserialize<TValue>(json, SerializationOptions);
+    public static TMapped? GetDataOrDefault<TData, TMapped>(
+        IGeneratedDataStateEnvelope<TData> envelope,
+        Func<TData, TMapped?> mapper)
+    {
+        ArgumentNullException.ThrowIfNull(envelope);
+        ArgumentNullException.ThrowIfNull(mapper);
+
+        var result = ToCacheBackedResult(envelope, mapper);
+        return result.State == CacheBackedClientState.Success
+            ? result.Data
+            : default;
+    }
+
+    private static CacheBackedClientResult<TMapped> CreateCacheBackedResult<TData, TMapped>(
+        IGeneratedDataStateEnvelope<TData> envelope,
+        Func<TData, TMapped?> mapper)
+    {
+        return envelope.State switch
+        {
+            DataStateDto.Available when envelope.Data is not null && mapper(envelope.Data) is { } mapped
+                => CacheBackedClientResult<TMapped>.Success(mapped),
+            DataStateDto.Available
+                => CacheBackedClientResult<TMapped>.Failed(
+                    "The generated cache-backed response did not contain usable data.",
+                    envelope.RetryAfterSeconds),
+            DataStateDto.Empty
+                => CacheBackedClientResult<TMapped>.Empty(envelope.Reason, envelope.RetryAfterSeconds),
+            DataStateDto.NotReady
+                => CacheBackedClientResult<TMapped>.NotReady(envelope.Reason, envelope.RetryAfterSeconds),
+            DataStateDto.Failed
+                => CacheBackedClientResult<TMapped>.Failed(envelope.Reason, envelope.RetryAfterSeconds),
+            _ => CacheBackedClientResult<TMapped>.Failed(
+                "The generated cache-backed response did not contain usable data.",
+                envelope.RetryAfterSeconds)
+        };
+    }
+
+    private static DataStateResponseDto<TMapped> CreateDataStateResponse<TData, TMapped>(
+        IGeneratedDataStateEnvelope<TData> envelope,
+        Func<TData, TMapped?> mapper)
+    {
+        return new DataStateResponseDto<TMapped>
+        {
+            State = envelope.State,
+            Data = envelope.Data is null ? default : mapper(envelope.Data),
+            Reason = envelope.Reason,
+            RetryAfterSeconds = envelope.RetryAfterSeconds
+        };
     }
 }

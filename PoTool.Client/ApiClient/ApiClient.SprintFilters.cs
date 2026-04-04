@@ -1,4 +1,5 @@
 using PoTool.Shared.Metrics;
+using PoTool.Client.Helpers;
 
 namespace PoTool.Client.ApiClient;
 
@@ -66,7 +67,11 @@ public partial class MetricsClient
         CancellationToken cancellationToken)
     {
         var response = await GetSprintMetricsAsync(iterationPath, productOwnerId, productIds, sprintId, cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintMetricsDto, SprintQueryResponseDto<SprintMetricsDto>>(response, nameof(GetSprintMetricsEnvelopeAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
+                response,
+                static data => data.ToShared()),
+            nameof(GetSprintMetricsEnvelopeAsync));
     }
 
     public async Task<SprintQueryResponseDto<BacklogHealthDto>> GetBacklogHealthEnvelopeAsync(
@@ -77,7 +82,11 @@ public partial class MetricsClient
         CancellationToken cancellationToken)
     {
         var response = await GetBacklogHealthAsync(iterationPath, productOwnerId, productIds, sprintId, cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfSprintQueryResponseDtoOfBacklogHealthDto, SprintQueryResponseDto<BacklogHealthDto>>(response, nameof(GetBacklogHealthEnvelopeAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
+                response,
+                static data => data.ToShared()),
+            nameof(GetBacklogHealthEnvelopeAsync));
     }
 
     public async Task<SprintQueryResponseDto<MultiIterationBacklogHealthDto>> GetMultiIterationBacklogHealthEnvelopeAsync(
@@ -88,7 +97,11 @@ public partial class MetricsClient
         CancellationToken cancellationToken)
     {
         var response = await GetMultiIterationBacklogHealthAsync(productOwnerId, productIds, areaPath, maxIterations, cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfSprintQueryResponseDtoOfMultiIterationBacklogHealthDto, SprintQueryResponseDto<MultiIterationBacklogHealthDto>>(response, nameof(GetMultiIterationBacklogHealthEnvelopeAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
+                response,
+                static data => data.ToShared()),
+            nameof(GetMultiIterationBacklogHealthEnvelopeAsync));
     }
 
     public async Task<SprintQueryResponseDto<SprintCapacityPlanDto>> GetSprintCapacityPlanEnvelopeAsync(
@@ -100,7 +113,11 @@ public partial class MetricsClient
         CancellationToken cancellationToken)
     {
         var response = await GetSprintCapacityPlanAsync(iterationPath, productOwnerId, productIds, sprintId, defaultCapacity, cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintCapacityPlanDto, SprintQueryResponseDto<SprintCapacityPlanDto>>(response, nameof(GetSprintCapacityPlanEnvelopeAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
+                response,
+                static data => data.ToShared()),
+            nameof(GetSprintCapacityPlanEnvelopeAsync));
     }
 
     public async Task<SprintQueryResponseDto<GetSprintTrendMetricsResponse>> GetSprintTrendMetricsEnvelopeAsync(
@@ -112,7 +129,11 @@ public partial class MetricsClient
         CancellationToken cancellationToken)
     {
         var response = await GetSprintTrendMetricsAsync(productOwnerId, sprintIds, productIds, recompute, includeDetails, cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfSprintQueryResponseDtoOfGetSprintTrendMetricsResponse, SprintQueryResponseDto<GetSprintTrendMetricsResponse>>(response, nameof(GetSprintTrendMetricsEnvelopeAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
+                response,
+                static data => data.ToShared()),
+            nameof(GetSprintTrendMetricsEnvelopeAsync));
     }
 
     public async Task<SprintQueryResponseDto<SprintExecutionDto>> GetSprintExecutionEnvelopeAsync(
@@ -122,7 +143,11 @@ public partial class MetricsClient
         CancellationToken cancellationToken)
     {
         var response = await GetSprintExecutionAsync(productOwnerId, sprintId, productId, cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintExecutionDto, SprintQueryResponseDto<SprintExecutionDto>>(response, nameof(GetSprintExecutionEnvelopeAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
+                response,
+                static data => data.ToShared()),
+            nameof(GetSprintExecutionEnvelopeAsync));
     }
 
     public async Task<SprintQueryResponseDto<WorkItemActivityDetailsDto>> GetWorkItemActivityDetailsEnvelopeAsync(
@@ -134,6 +159,10 @@ public partial class MetricsClient
         CancellationToken cancellationToken)
     {
         var response = await GetWorkItemActivityDetailsAsync(workItemId, productOwnerId, sprintId, periodStartUtc, periodEndUtc, cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfSprintQueryResponseDtoOfWorkItemActivityDetailsDto, SprintQueryResponseDto<WorkItemActivityDetailsDto>>(response, nameof(GetWorkItemActivityDetailsEnvelopeAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
+                response,
+                static data => data.ToShared()),
+            nameof(GetWorkItemActivityDetailsEnvelopeAsync));
     }
 }

@@ -24,7 +24,10 @@ public class PullRequestService
     public async Task<IEnumerable<PullRequestDto>> GetAllAsync()
     {
         var response = await _pullRequestsClient.GetAllAsync();
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<PullRequestDto>());
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+            response,
+            static data => data.ToReadOnlyList(),
+            Array.Empty<PullRequestDto>());
     }
 
     /// <summary>
@@ -91,7 +94,10 @@ public class PullRequestService
         try
         {
             var response = await _pullRequestsClient.GetCommentsAsync(pullRequestId);
-            return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<PullRequestCommentDto>());
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+                response,
+                static data => data.ToReadOnlyList(),
+                Array.Empty<PullRequestCommentDto>());
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
         {
@@ -107,7 +113,10 @@ public class PullRequestService
         try
         {
             var response = await _pullRequestsClient.GetIterationsAsync(pullRequestId);
-            return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<PullRequestIterationDto>());
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+                response,
+                static data => data.ToReadOnlyList(),
+                Array.Empty<PullRequestIterationDto>());
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
         {

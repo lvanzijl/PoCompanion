@@ -20,38 +20,51 @@ public sealed class PullRequestStateService
         int? teamId,
         string? repositoryName,
         CancellationToken cancellationToken = default)
-        => GetAsync<DataStateResponseDtoOfPullRequestQueryResponseDtoOfPullRequestInsightsDto, PullRequestQueryResponseDto<PullRequestInsightsDto>>(
+        => GetAsync<DataStateResponseDtoOfPullRequestQueryResponseDtoOfPullRequestInsightsDto, PullRequestQueryResponseDtoOfPullRequestInsightsDto, PullRequestQueryResponseDto<PullRequestInsightsDto>>(
             _pullRequestsClient.GetInsightsAsync(
                 teamId,
                 fromDate: null,
                 toDate: null,
                 repositoryName,
-                cancellationToken));
+                cancellationToken),
+            static data => data.ToShared());
 
     public Task<DataStateResponseDto<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>?> GetDeliveryInsightsStateAsync(
         int productOwnerId,
         int? sprintId,
         int? teamId,
         CancellationToken cancellationToken = default)
-        => GetAsync<DataStateResponseDtoOfPullRequestQueryResponseDtoOfPrDeliveryInsightsDto, PullRequestQueryResponseDto<PrDeliveryInsightsDto>>(
+        => GetAsync<DataStateResponseDtoOfPullRequestQueryResponseDtoOfPrDeliveryInsightsDto, PullRequestQueryResponseDtoOfPrDeliveryInsightsDto, PullRequestQueryResponseDto<PrDeliveryInsightsDto>>(
             _pullRequestsClient.GetDeliveryInsightsAsync(
                 teamId,
                 sprintId,
                 fromDate: null,
                 toDate: null,
-                cancellationToken));
+                cancellationToken),
+            static data => data.ToShared());
 
     public Task<DataStateResponseDto<PullRequestQueryResponseDto<GetPrSprintTrendsResponse>>?> GetSprintTrendsStateAsync(
         IEnumerable<int> sprintIds,
         IEnumerable<int>? productIds,
         int? teamId,
         CancellationToken cancellationToken = default)
-        => GetAsync<DataStateResponseDtoOfPullRequestQueryResponseDtoOfGetPrSprintTrendsResponse, PullRequestQueryResponseDto<GetPrSprintTrendsResponse>>(
-            _pullRequestsClient.GetSprintTrendsAsync(sprintIds, productIds is null ? null : string.Join(",", productIds), teamId, cancellationToken));
+        => GetAsync<DataStateResponseDtoOfPullRequestQueryResponseDtoOfGetPrSprintTrendsResponse, PullRequestQueryResponseDtoOfGetPrSprintTrendsResponse, PullRequestQueryResponseDto<GetPrSprintTrendsResponse>>(
+            _pullRequestsClient.GetSprintTrendsAsync(sprintIds, productIds is null ? null : string.Join(",", productIds), teamId, cancellationToken),
+            static data => data.ToShared());
 
     private static async Task<DataStateResponseDto<TData>?> GetAsync<TEnvelope, TData>(Task<TEnvelope> requestTask)
-        where TEnvelope : class
+        where TEnvelope : class, IGeneratedDataStateEnvelope<TData>
     {
-        return GeneratedCacheEnvelopeHelper.ToDataStateResponse<TData>(await requestTask.ConfigureAwait(false));
+        return GeneratedCacheEnvelopeHelper.ToDataStateResponse(await requestTask.ConfigureAwait(false));
+    }
+
+    private static async Task<DataStateResponseDto<TMapped>?> GetAsync<TEnvelope, TSource, TMapped>(
+        Task<TEnvelope> requestTask,
+        Func<TSource, TMapped?> mapper)
+        where TEnvelope : class, IGeneratedDataStateEnvelope<TSource>
+    {
+        return GeneratedCacheEnvelopeHelper.ToDataStateResponse(
+            await requestTask.ConfigureAwait(false),
+            mapper);
     }
 }

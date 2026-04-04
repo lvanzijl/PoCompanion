@@ -22,12 +22,10 @@ internal static class ApiClientJsonSettings
 
 internal static class CacheBackedGeneratedClientHelper
 {
-    internal static TData RequireData<TEnvelope, TData>(TEnvelope envelope, string operationName)
-        where TEnvelope : class
+    internal static TData RequireData<TData>(
+        CacheBackedClientResult<TData> result,
+        string operationName)
     {
-        ArgumentNullException.ThrowIfNull(envelope);
-
-        var result = GeneratedCacheEnvelopeHelper.ToCacheBackedResult(envelope, current => GetData<TEnvelope, TData>(current));
         return result.State switch
         {
             CacheBackedClientState.Success when result.Data is not null => result.Data,
@@ -38,10 +36,6 @@ internal static class CacheBackedGeneratedClientHelper
             _ => throw new InvalidOperationException($"{operationName} did not contain usable cache-backed data.")
         };
     }
-
-    private static TData? GetData<TEnvelope, TData>(TEnvelope envelope)
-        where TEnvelope : class
-        => GeneratedCacheEnvelopeHelper.GetDataOrDefault<TData>(envelope);
 }
 
 public partial class Client

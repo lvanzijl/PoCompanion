@@ -20,6 +20,7 @@ public sealed class PipelineStateService
         bool includePartiallySucceeded,
         bool includeCanceled,
         CancellationToken cancellationToken = default)
-        => GeneratedCacheEnvelopeHelper.ToDataStateResponse<PipelineQueryResponseDto<PipelineInsightsDto>>(
-            await _pipelinesClient.GetInsightsAsync(productOwnerId, sprintId, includePartiallySucceeded, includeCanceled, cancellationToken));
+        => GeneratedCacheEnvelopeHelper.ToDataStateResponse(
+            await _pipelinesClient.GetInsightsAsync(productOwnerId, sprintId, includePartiallySucceeded, includeCanceled, cancellationToken),
+            static data => data.ToShared());
 }

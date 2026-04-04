@@ -53,13 +53,17 @@ public class WorkItemService
     public async Task<IEnumerable<WorkItemDto>> GetAllAsync()
     {
         var response = await _client.GetAllAsync();
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemDto>());
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+            response,
+            static data => data.ToReadOnlyList(),
+            Array.Empty<WorkItemDto>());
     }
 
     public async Task<DataStateResponseDto<IReadOnlyList<WorkItemDto>>?> GetAllStateAsync(
         CancellationToken cancellationToken = default)
-        => GeneratedCacheEnvelopeHelper.ToDataStateResponse<IReadOnlyList<WorkItemDto>>(
-            await _client.GetAllAsync(cancellationToken));
+        => GeneratedCacheEnvelopeHelper.ToDataStateResponse(
+            await _client.GetAllAsync(cancellationToken),
+            static data => data.ToReadOnlyList());
 
     /// <summary>
     /// Gets filtered work items.
@@ -67,7 +71,10 @@ public class WorkItemService
     public async Task<IEnumerable<WorkItemDto>> GetFilteredAsync(string filter)
     {
         var response = await _client.GetFilteredAsync(filter);
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemDto>());
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+            response,
+            static data => data.ToReadOnlyList(),
+            Array.Empty<WorkItemDto>());
     }
 
     /// <summary>
@@ -121,7 +128,10 @@ public class WorkItemService
     public async Task<IEnumerable<WorkItemDto>> GetAllGoalsAsync()
     {
         var response = await _client.GetAllGoalsAsync();
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemDto>());
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+            response,
+            static data => data.ToReadOnlyList(),
+            Array.Empty<WorkItemDto>());
     }
 
     /// <summary>
@@ -131,7 +141,10 @@ public class WorkItemService
     {
         var goalIdsParam = string.Join(",", goalIds);
         var response = await _client.GetGoalHierarchyAsync(goalIdsParam);
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemDto>());
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+            response,
+            static data => data.ToReadOnlyList(),
+            Array.Empty<WorkItemDto>());
     }
 
     /// <summary>
@@ -140,7 +153,10 @@ public class WorkItemService
     public async Task<IEnumerable<WorkItemWithValidationDto>> GetAllWithValidationAsync()
     {
         var response = await _client.GetAllWithValidationAsync(null);
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemWithValidationDto>());
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+            response,
+            static data => data.ToReadOnlyList(),
+            Array.Empty<WorkItemWithValidationDto>());
     }
 
     /// <summary>
@@ -155,7 +171,10 @@ public class WorkItemService
             productIdsParam = string.Join(",", productIds);
         }
         var response = await _client.GetAllWithValidationAsync(productIdsParam);
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemWithValidationDto>());
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+            response,
+            static data => data.ToReadOnlyList(),
+            Array.Empty<WorkItemWithValidationDto>());
     }
 
     /// <summary>
@@ -173,7 +192,10 @@ public class WorkItemService
         }
 
         var response = await _client.GetAllWithValidationAsync(productIdsParam, cancellationToken);
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemWithValidationDto>());
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+            response,
+            static data => data.ToReadOnlyList(),
+            Array.Empty<WorkItemWithValidationDto>());
     }
 
     public async Task<DataStateResponseDto<IReadOnlyList<WorkItemWithValidationDto>>?> GetAllWithValidationStateAsync(
@@ -181,8 +203,9 @@ public class WorkItemService
         CancellationToken cancellationToken = default)
     {
         string? productIdsParam = productIds != null && productIds.Length > 0 ? string.Join(",", productIds) : null;
-        return GeneratedCacheEnvelopeHelper.ToDataStateResponse<IReadOnlyList<WorkItemWithValidationDto>>(
-            await _client.GetAllWithValidationAsync(productIdsParam, cancellationToken));
+        return GeneratedCacheEnvelopeHelper.ToDataStateResponse(
+            await _client.GetAllWithValidationAsync(productIdsParam, cancellationToken),
+            static data => data.ToReadOnlyList());
     }
 
     /// <summary>
@@ -276,7 +299,10 @@ public class WorkItemService
     public async Task<IEnumerable<WorkItemRevisionDto>> GetRevisionsAsync(int workItemId)
     {
         var response = await _client.GetWorkItemRevisionsAsync(workItemId);
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemRevisionDto>());
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+            response,
+            static data => data.ToReadOnlyList(),
+            Array.Empty<WorkItemRevisionDto>());
     }
 
     /// <summary>
@@ -382,7 +408,10 @@ public class WorkItemService
     public async Task<IEnumerable<string>> GetDistinctAreaPathsAsync()
     {
         var allWorkItems = await _client.GetAllAsync();
-        var availableWorkItems = GeneratedCacheEnvelopeHelper.GetDataOrDefault(allWorkItems, Array.Empty<WorkItemDto>());
+        var availableWorkItems = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+            allWorkItems,
+            static data => data.ToReadOnlyList(),
+            Array.Empty<WorkItemDto>());
         return availableWorkItems
             .Select(wi => wi.AreaPath)
             .Distinct()
@@ -433,7 +462,10 @@ public class WorkItemService
 
         var rootIdsParam = string.Join(",", rootIds);
         var response = await _client.GetByRootIdsAsync(rootIdsParam);
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemDto>());
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+            response,
+            static data => data.ToReadOnlyList(),
+            Array.Empty<WorkItemDto>());
     }
 
     public async Task<DataStateResponseDto<IReadOnlyList<WorkItemDto>>?> GetByRootIdsStateAsync(
@@ -451,8 +483,9 @@ public class WorkItemService
         }
 
         var rootIdsParam = string.Join(",", rootIds);
-        return GeneratedCacheEnvelopeHelper.ToDataStateResponse<IReadOnlyList<WorkItemDto>>(
-            await _client.GetByRootIdsAsync(rootIdsParam, cancellationToken));
+        return GeneratedCacheEnvelopeHelper.ToDataStateResponse(
+            await _client.GetByRootIdsAsync(rootIdsParam, cancellationToken),
+            static data => data.ToReadOnlyList());
     }
 
     /// <summary>

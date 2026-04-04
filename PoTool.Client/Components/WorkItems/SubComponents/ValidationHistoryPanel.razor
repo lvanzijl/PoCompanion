@@ -255,7 +255,10 @@
                 startDateOffset, 
                 endDateOffset, 
                 null);
-            _historyRecords = GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<ValidationViolationHistoryDto>());
+            _historyRecords = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
+                response,
+                static data => data.ToReadOnlyList(),
+                Array.Empty<ValidationViolationHistoryDto>()).ToList();
 
             if (_historyRecords?.Count == 0)
             {

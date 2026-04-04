@@ -1,3 +1,4 @@
+using PoTool.Client.Helpers;
 using SharedPrDeliveryInsightsDto = PoTool.Shared.PullRequests.PrDeliveryInsightsDto;
 using SharedPrInsightsDto = PoTool.Shared.PullRequests.PullRequestInsightsDto;
 using SharedPrMetricsDto = PoTool.Shared.PullRequests.PullRequestMetricsDto;
@@ -51,7 +52,11 @@ public partial class PullRequestsClient
         CancellationToken cancellationToken)
     {
         var response = await GetMetricsAsync(productIds, fromDate, cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestMetricsDto, PoTool.Shared.PullRequests.PullRequestQueryResponseDto<IReadOnlyList<SharedPrMetricsDto>>>(response, nameof(GetMetricsEnvelopeAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
+                response,
+                static data => data.ToShared()),
+            nameof(GetMetricsEnvelopeAsync));
     }
 
     public async Task<PoTool.Shared.PullRequests.PullRequestQueryResponseDto<IReadOnlyList<SharedPullRequestDto>>> GetFilteredEnvelopeAsync(
@@ -64,7 +69,11 @@ public partial class PullRequestsClient
         CancellationToken cancellationToken)
     {
         var response = await GetFilteredAsync(productIds, iterationPath, createdBy, fromDate, toDate, status, cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestDto, PoTool.Shared.PullRequests.PullRequestQueryResponseDto<IReadOnlyList<SharedPullRequestDto>>>(response, nameof(GetFilteredEnvelopeAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
+                response,
+                static data => data.ToShared()),
+            nameof(GetFilteredEnvelopeAsync));
     }
 
     public async Task<PoTool.Shared.PullRequests.PullRequestQueryResponseDto<SharedPrSprintTrendsResponse>> GetSprintTrendsEnvelopeAsync(
@@ -74,7 +83,11 @@ public partial class PullRequestsClient
         CancellationToken cancellationToken)
     {
         var response = await GetSprintTrendsAsync(sprintIds, productIds, teamId, cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfPullRequestQueryResponseDtoOfGetPrSprintTrendsResponse, PoTool.Shared.PullRequests.PullRequestQueryResponseDto<SharedPrSprintTrendsResponse>>(response, nameof(GetSprintTrendsEnvelopeAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
+                response,
+                static data => data.ToShared()),
+            nameof(GetSprintTrendsEnvelopeAsync));
     }
 
     public async Task<PoTool.Shared.PullRequests.PullRequestQueryResponseDto<SharedPrInsightsDto>> GetInsightsEnvelopeAsync(
@@ -85,7 +98,11 @@ public partial class PullRequestsClient
         CancellationToken cancellationToken)
     {
         var response = await GetInsightsAsync(teamId, fromDate, toDate, repositoryName, cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfPullRequestQueryResponseDtoOfPullRequestInsightsDto, PoTool.Shared.PullRequests.PullRequestQueryResponseDto<SharedPrInsightsDto>>(response, nameof(GetInsightsEnvelopeAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
+                response,
+                static data => data.ToShared()),
+            nameof(GetInsightsEnvelopeAsync));
     }
 
     public async Task<PoTool.Shared.PullRequests.PullRequestQueryResponseDto<SharedPrDeliveryInsightsDto>> GetDeliveryInsightsEnvelopeAsync(
@@ -96,6 +113,10 @@ public partial class PullRequestsClient
         CancellationToken cancellationToken)
     {
         var response = await GetDeliveryInsightsAsync(teamId, sprintId, fromDate, toDate, cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfPullRequestQueryResponseDtoOfPrDeliveryInsightsDto, PoTool.Shared.PullRequests.PullRequestQueryResponseDto<SharedPrDeliveryInsightsDto>>(response, nameof(GetDeliveryInsightsEnvelopeAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
+                response,
+                static data => data.ToShared()),
+            nameof(GetDeliveryInsightsEnvelopeAsync));
     }
 }

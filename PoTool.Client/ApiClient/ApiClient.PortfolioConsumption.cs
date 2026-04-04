@@ -1,4 +1,5 @@
 using PoTool.Shared.Metrics;
+using PoTool.Client.Helpers;
 
 namespace PoTool.Client.ApiClient;
 
@@ -103,7 +104,9 @@ public partial class MetricsClient
             (PortfolioReadSortDirection?)sortDirection,
             (PortfolioReadGroupBy?)groupBy,
             cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfPortfolioProgressDto, PortfolioProgressDto>(response, nameof(GetPortfolioProgressAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(response),
+            nameof(GetPortfolioProgressAsync));
     }
 
     public async Task<PortfolioSnapshotDto> GetPortfolioSnapshotsAsync(
@@ -127,7 +130,9 @@ public partial class MetricsClient
             (PortfolioReadSortDirection?)sortDirection,
             (PortfolioReadGroupBy?)groupBy,
             cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfPortfolioSnapshotDto, PortfolioSnapshotDto>(response, nameof(GetPortfolioSnapshotsAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(response),
+            nameof(GetPortfolioSnapshotsAsync));
     }
 
     public async Task<PortfolioComparisonDto> GetPortfolioComparisonAsync(
@@ -159,7 +164,9 @@ public partial class MetricsClient
             includeArchivedSnapshots,
             compareToSnapshotId,
             cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfPortfolioComparisonDto, PortfolioComparisonDto>(response, nameof(GetPortfolioComparisonAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(response),
+            nameof(GetPortfolioComparisonAsync));
     }
 
     public async Task<PortfolioTrendDto> GetPortfolioTrendsAsync(
@@ -191,7 +198,9 @@ public partial class MetricsClient
             rangeEndUtc,
             includeArchivedSnapshots,
             cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfPortfolioTrendDto, PortfolioTrendDto>(response, nameof(GetPortfolioTrendsAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(response),
+            nameof(GetPortfolioTrendsAsync));
     }
 
     public async Task<PortfolioSignalsDto> GetPortfolioSignalsAsync(
@@ -225,6 +234,8 @@ public partial class MetricsClient
             includeArchivedSnapshots,
             compareToSnapshotId,
             cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData<DataStateResponseDtoOfPortfolioSignalsDto, PortfolioSignalsDto>(response, nameof(GetPortfolioSignalsAsync));
+        return CacheBackedGeneratedClientHelper.RequireData(
+            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(response),
+            nameof(GetPortfolioSignalsAsync));
     }
 }
