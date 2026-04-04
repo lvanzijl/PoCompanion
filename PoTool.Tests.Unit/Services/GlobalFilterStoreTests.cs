@@ -97,15 +97,15 @@ public sealed class GlobalFilterStoreTests
     }
 
     [TestMethod]
-    public async Task TrackNavigation_UnknownProjectAlias_ClassifiesStateAsInvalid()
+    public async Task TrackNavigation_UnknownProjectAlias_PreservesRouteAuthorityWithoutInvalidatingPage()
     {
         var store = CreateStore();
 
         await store.TrackNavigationAsync("http://localhost/planning/unknown-project/overview");
 
         Assert.IsNotNull(store.CurrentUsage);
-        Assert.AreEqual(FilterResolutionStatus.Invalid, store.CurrentUsage.Status);
-        CollectionAssert.Contains(store.CurrentUsage.StateIssues.ToArray(), "route project alias 'unknown-project' could not be resolved");
+        Assert.AreEqual(FilterResolutionStatus.ResolvedWithNormalization, store.CurrentUsage.Status);
+        CollectionAssert.Contains(store.CurrentUsage.NormalizationDecisions.ToArray(), "route project alias 'unknown-project' is authoritative without a resolved projectId");
     }
 
     [TestMethod]

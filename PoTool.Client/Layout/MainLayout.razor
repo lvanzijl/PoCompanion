@@ -176,6 +176,13 @@
     private async Task ObserveCurrentRouteAsync(string uri)
     {
         var activeProfileId = ProfileService.GetActiveProfileId();
+        if (!activeProfileId.HasValue)
+        {
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            activeProfileId = activeProfile?.Id;
+            ProfileService.SetCachedActiveProfileId(activeProfileId);
+        }
+
         await GlobalFilterStore.TrackNavigationAsync(uri, activeProfileId);
         var defaultedUri = await GlobalFilterDefaultsService.BuildDefaultedUriAsync(uri, activeProfileId);
         if (!string.IsNullOrWhiteSpace(defaultedUri) && GlobalFilterStore.TryPrepareNavigation(uri, defaultedUri))

@@ -141,7 +141,7 @@ public sealed class FilterStateResolver
             var projectId = await ResolveProjectIdAsync(routeAlias, cancellationToken);
             if (string.IsNullOrWhiteSpace(projectId))
             {
-                issues.Add($"route project alias '{routeAlias}' could not be resolved");
+                decisions.Add($"route project alias '{routeAlias}' is authoritative without a resolved projectId");
             }
             return (string.IsNullOrWhiteSpace(projectId) ? Array.Empty<string>() : new[] { projectId }, FilterUpdateSource.Route);
         }

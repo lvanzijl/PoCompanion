@@ -2,6 +2,14 @@
   {
     "date": "2026-04-04",
     "type": "Changed",
+    "title": "Planning and delivery pages now keep route context and open with meaningful defaults",
+    "impact": "Project- and product-scoped planning routes now keep their path authority, delivery and planning pages now initialize team/sprint/product defaults from the battleship mock portfolio on first load, and shared filter controls moved below the primary page signal so analytical content stays above the fold.",
+    "area": "Home / Planning / Delivery",
+    "link": "/home/delivery/execution"
+  },
+  {
+    "date": "2026-04-04",
+    "type": "Changed",
     "title": "Battleship mock mode now fills roadmap, build quality, and bug-triage pages with realistic data",
     "impact": "Mock startup now begins in a ready-to-sync state, battleship work items now use TFS-style tags with roadmap and triage coverage, and bug triage plus roadmap pages load richer seeded content instead of empty catalogs.",
     "area": "Home / Planning / Bugs",
