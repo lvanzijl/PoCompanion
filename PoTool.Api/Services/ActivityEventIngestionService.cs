@@ -92,7 +92,7 @@ public sealed class ActivityEventIngestionService
 
             var orderedUpdates = updates
                 .OrderBy(u => u.UpdateId)
-                .ThenBy(u => u.RevisedDate)
+                .ThenBy(u => u.RevisedDate.UtcDateTime)
                 .Where(u => !filterStart.HasValue || u.RevisedDate > filterStart.Value)
                 .ToList();
 

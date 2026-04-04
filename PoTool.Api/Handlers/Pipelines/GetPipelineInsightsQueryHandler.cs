@@ -388,7 +388,7 @@ public sealed class GetPipelineInsightsQueryHandler
         //   null = run has no start or finish UTC → rendered at Y=0 in scatter (no duration data).
         return runs
             .Where(r => r.CreatedDateOffset.HasValue)
-            .OrderBy(r => r.CreatedDateOffset)
+            .OrderBy(r => r.CreatedDateOffset!.Value.UtcDateTime)
             .Select(r =>
             {
                 defByDbId.TryGetValue(r.DefId, out var def);

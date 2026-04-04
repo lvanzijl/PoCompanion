@@ -293,7 +293,7 @@ public class CacheManagementService
                     Events = eventsInSprint
                 };
             })
-            .OrderBy(g => g.SprintStart ?? DateTimeOffset.MaxValue)
+            .OrderBy(g => g.SprintStart.HasValue ? g.SprintStart.Value.UtcDateTime : DateTime.MaxValue)
             .ThenBy(g => g.SprintName)
             .ToList();
 

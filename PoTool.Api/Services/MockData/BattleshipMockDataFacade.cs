@@ -365,7 +365,7 @@ public class BattleshipMockDataFacade : ITfsClient
             _cachedPipelineRuns = _pipelineGenerator
                 .GenerateRuns(pipelines)
                 .Concat(CreateBuildQualityScenarioRuns(pipelines))
-                .OrderByDescending(run => run.StartTime)
+                .OrderByDescending(run => run.StartTime.HasValue ? run.StartTime.Value.UtcDateTime : DateTime.MinValue)
                 .ToList();
 
             var elapsed = (DateTimeOffset.UtcNow - startTime).TotalSeconds;
@@ -1328,7 +1328,9 @@ public class BattleshipMockDataFacade : ITfsClient
         // Take top N per pipeline
         var result = filtered
             .GroupBy(r => r.PipelineId)
-            .SelectMany(g => g.OrderByDescending(r => r.StartTime).Take(top))
+            .SelectMany(g => g
+                .OrderByDescending(r => r.StartTime.HasValue ? r.StartTime.Value.UtcDateTime : DateTime.MinValue)
+                .Take(top))
             .ToList();
         
         _logger.LogInformation("Mock TFS client: Returning {Count} pipeline runs", result.Count);
@@ -1494,7 +1496,7 @@ public class BattleshipMockDataFacade : ITfsClient
         var requestedBuildIdSet = requestedBuildIds.ToHashSet();
         var result = GetMockTestRuns()
             .Where(testRun => requestedBuildIdSet.Contains(testRun.BuildId))
-            .OrderBy(testRun => testRun.Timestamp)
+            .OrderBy(testRun => testRun.Timestamp.HasValue ? testRun.Timestamp.Value.UtcDateTime : DateTime.MinValue)
             .ToList();
 
         return Task.FromResult<IEnumerable<TestRunDto>>(result);
@@ -1513,7 +1515,7 @@ public class BattleshipMockDataFacade : ITfsClient
         var requestedBuildIdSet = requestedBuildIds.ToHashSet();
         var result = GetMockCoverages()
             .Where(coverage => requestedBuildIdSet.Contains(coverage.BuildId))
-            .OrderBy(coverage => coverage.Timestamp)
+            .OrderBy(coverage => coverage.Timestamp.HasValue ? coverage.Timestamp.Value.UtcDateTime : DateTime.MinValue)
             .ToList();
 
         return Task.FromResult<IEnumerable<CoverageDto>>(result);

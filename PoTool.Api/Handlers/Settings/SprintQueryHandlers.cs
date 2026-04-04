@@ -21,7 +21,7 @@ public sealed class GetSprintsForTeamQueryHandler : IQueryHandler<GetSprintsForT
     {
         var sprints = await _sprintRepository.GetSprintsForTeamAsync(query.TeamId);
         // Return sprints ordered by start date descending (most recent first)
-        return sprints.OrderByDescending(s => s.StartUtc ?? DateTimeOffset.MinValue);
+        return sprints.OrderByDescending(s => s.StartUtc.HasValue ? s.StartUtc.Value.UtcDateTime : DateTime.MinValue);
     }
 }
 

@@ -221,8 +221,8 @@ public sealed class CachedPipelineReadProvider : IPipelineReadProvider
         }
 
         runs = runs
-            .OrderByDescending(run => run.FinishTime)
-            .ThenByDescending(run => run.StartTime)
+            .OrderByDescending(run => run.FinishTime.HasValue ? run.FinishTime.Value.UtcDateTime : DateTime.MinValue)
+            .ThenByDescending(run => run.StartTime.HasValue ? run.StartTime.Value.UtcDateTime : DateTime.MinValue)
             .ThenByDescending(run => run.RunId)
             .ToList();
 

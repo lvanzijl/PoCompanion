@@ -135,7 +135,7 @@ public sealed class SyncChangesSummaryService
         // Keep only the latest state change per work item
         var latestByWorkItem = stateChanges
             .GroupBy(e => e.WorkItemId)
-            .Select(g => g.OrderByDescending(e => e.EventTimestamp).First())
+            .Select(g => g.OrderByDescending(e => e.EventTimestamp.UtcDateTime).First())
             .ToList();
 
         // Fetch titles for the affected work items
@@ -241,7 +241,7 @@ public sealed class SyncChangesSummaryService
                 IterationPath = s.Path,
                 EndDate = s.EndUtc
             })
-            .OrderByDescending(s => s.EndDate)
+            .OrderByDescending(s => s.EndDate.HasValue ? s.EndDate.Value.UtcDateTime : DateTime.MinValue)
             .ToList();
     }
 
