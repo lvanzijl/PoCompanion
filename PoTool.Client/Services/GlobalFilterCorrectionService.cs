@@ -28,7 +28,7 @@ public sealed class GlobalFilterCorrectionService
             return null;
         }
 
-        if (usage.StateIssues.Any(issue => issue.Contains("route project alias", StringComparison.OrdinalIgnoreCase)))
+        if (usage.HasRouteProjectAuthority || usage.HasRouteProductAuthority)
         {
             return null;
         }

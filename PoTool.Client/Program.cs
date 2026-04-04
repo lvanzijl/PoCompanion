@@ -216,6 +216,7 @@ builder.Services.AddScoped<GlobalFilterUiState>();
 builder.Services.AddScoped<PageFilterExecutionGate>();
 builder.Services.AddScoped<GlobalFilterRouteService>();
 builder.Services.AddScoped<GlobalFilterCorrectionService>();
+builder.Services.AddScoped<GlobalFilterDefaultsService>();
 builder.Services.AddScoped<ErrorMessageService>();
 builder.Services.AddScoped<StateClassificationService>();
 builder.Services.AddScoped<WorkItemVisibilityService>();

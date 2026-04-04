@@ -60,7 +60,7 @@
                                    Disabled="@(!CanEditProducts)"
                                    Clearable="true"
                                    Variant="Variant.Outlined"
-                                   HelperText="@GetHelperText(CanEditProducts, "Product filter is not applied on this page.")">
+                                   HelperText="@GetProductHelperText()">
                             <MudSelectItem T="int?" Value="@((int?)null)">All products</MudSelectItem>
                             @foreach (var product in _products)
                             {
@@ -76,7 +76,7 @@
                                    Disabled="@(!CanEditProjects)"
                                    Clearable="true"
                                    Variant="Variant.Outlined"
-                                   HelperText="@GetHelperText(CanEditProjects, "Project filter is not applied on this page.")">
+                                   HelperText="@GetProjectHelperText()">
                             <MudSelectItem T="string" Value="@string.Empty">All projects</MudSelectItem>
                             @foreach (var project in _projects)
                             {
@@ -187,8 +187,8 @@
                 </MudGrid>
 
                 <MudStack Row="true" Spacing="1">
-                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetProductsAsync" Disabled="@(SelectedProductId is null)">Reset product</MudButton>
-                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetProjectsAsync" Disabled="@string.IsNullOrWhiteSpace(SelectedProjectId)">Reset project</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetProductsAsync" Disabled="@(!CanEditProducts || SelectedProductId is null)">Reset product</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetProjectsAsync" Disabled="@(!CanEditProjects || string.IsNullOrWhiteSpace(SelectedProjectId))">Reset project</MudButton>
                     <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetTeamAsync" Disabled="@(SelectedTeamId is null)">Reset team</MudButton>
                     <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetTimeAsync" Disabled="@IsTimeResetDisabled">Reset time</MudButton>
                     <MudSpacer />
@@ -209,8 +209,8 @@
     private FilterState State => GlobalFilterStore.GetState();
     private FilterStateResolution? Usage => GlobalFilterStore.CurrentUsage;
     private IReadOnlyList<FilterTimeMode> AllowedTimeModes => ResolveAllowedTimeModes(Usage);
-    private bool CanEditProducts => Usage?.UsesProduct == true;
-    private bool CanEditProjects => Usage?.UsesProject == true;
+    private bool CanEditProducts => Usage?.UsesProduct == true && Usage.HasRouteProductAuthority is false;
+    private bool CanEditProjects => Usage?.UsesProject == true && Usage.HasRouteProjectAuthority is false;
     private bool CanEditTeam => Usage?.UsesTeam == true;
     private bool CanEditTime => Usage?.UsesTime == true;
     private int? SelectedProductId => State.PrimaryProductId;
@@ -403,6 +403,16 @@
 
     private static string? GetHelperText(bool canEdit, string message)
         => canEdit ? null : message;
+
+    private string? GetProductHelperText()
+        => Usage?.HasRouteProductAuthority == true
+            ? "Product context is fixed by this route."
+            : GetHelperText(CanEditProducts, "Product filter is not applied on this page.");
+
+    private string? GetProjectHelperText()
+        => Usage?.HasRouteProjectAuthority == true
+            ? "Project context is fixed by this route."
+            : GetHelperText(CanEditProjects, "Project filter is not applied on this page.");
 
     private static IReadOnlyList<FilterTimeMode> ResolveAllowedTimeModes(FilterStateResolution? usage)
         => usage is not null && GlobalFilterPageCatalog.TryResolvePage($"/{usage.Route}", out _, out var definition, out _)

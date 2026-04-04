@@ -31,6 +31,8 @@ public sealed class FilterStateResolver
         var issues = new List<string>();
         var lastUpdateSource = FilterUpdateSource.Default;
         var routeSignature = WorkspaceQueryContextHelper.CreateRouteSignature(uri);
+        var routeProductAuthority = GlobalFilterPageCatalog.ResolveRouteProductId(route).HasValue;
+        var routeProjectAuthority = !string.IsNullOrWhiteSpace(GlobalFilterPageCatalog.ResolveRouteProjectAlias(route));
 
         var productIds = ResolveProducts(route, context, localState, decisions, ref lastUpdateSource, localSource);
         var projectResolution = await ResolveProjectsAsync(route, context, localState, decisions, issues, localSource, cancellationToken);
@@ -56,6 +58,8 @@ public sealed class FilterStateResolver
             definition.PageName,
             route,
             routeSignature,
+            routeProductAuthority,
+            routeProjectAuthority,
             definition.UsesProduct,
             definition.UsesProject,
             definition.UsesTeam,
