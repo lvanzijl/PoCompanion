@@ -22,10 +22,7 @@ public class PipelineService
     public async Task<IEnumerable<PipelineDto>> GetAllAsync()
     {
         var response = await _pipelinesClient.GetAllAsync();
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-            response,
-            static data => data.ToReadOnlyList(),
-            Array.Empty<PipelineDto>());
+        return response.GetReadOnlyListOrDefault(Array.Empty<PipelineDto>());
     }
 
     /// <summary>
@@ -38,9 +35,7 @@ public class PipelineService
         DateTimeOffset? toDate = null)
     {
         var response = await _pipelinesClient.GetMetricsAsync(productIds, fromDate, toDate, CancellationToken.None);
-        var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-            response,
-            static data => data.ToShared());
+        var payload = response.GetDataOrDefault();
         return payload is null
             ? new CanonicalClientResponse<IReadOnlyList<PipelineMetricsDto>>(Array.Empty<PipelineMetricsDto>())
             : CanonicalClientResponseFactory.Create(payload);
@@ -52,10 +47,7 @@ public class PipelineService
     public async Task<IEnumerable<PipelineRunDto>> GetRunsAsync(int pipelineId, int top = 100)
     {
         var response = await _pipelinesClient.GetRunsAsync(pipelineId, top);
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-            response,
-            static data => data.ToReadOnlyList(),
-            Array.Empty<PipelineRunDto>());
+        return response.GetReadOnlyListOrDefault(Array.Empty<PipelineRunDto>());
     }
 
     /// <summary>
@@ -83,9 +75,7 @@ public class PipelineService
         }
 
         var response = await _pipelinesClient.GetRunsForProductsAsync(productIds, fromDate, toDate, CancellationToken.None);
-        var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-            response,
-            static data => data.ToShared());
+        var payload = response.GetDataOrDefault();
         return payload is null
             ? new CanonicalClientResponse<IReadOnlyList<PipelineRunDto>>(Array.Empty<PipelineRunDto>())
             : CanonicalClientResponseFactory.Create(payload);

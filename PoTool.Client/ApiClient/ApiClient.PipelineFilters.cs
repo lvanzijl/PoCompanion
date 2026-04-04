@@ -33,11 +33,7 @@ public partial class PipelinesClient
         CancellationToken cancellationToken)
     {
         var response = await GetMetricsAsync(productIds, fromDate, toDate, cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData(
-            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
-                response,
-                static data => data.ToShared()),
-            nameof(GetMetricsEnvelopeAsync));
+        return response.ToCacheBackedResult().RequireData(nameof(GetMetricsEnvelopeAsync));
     }
 
     public async Task<PoTool.Shared.Pipelines.PipelineQueryResponseDto<IReadOnlyList<PipelineRunDto>>> GetRunsForProductsEnvelopeAsync(
@@ -47,11 +43,7 @@ public partial class PipelinesClient
         CancellationToken cancellationToken)
     {
         var response = await GetRunsForProductsAsync(productIds, fromDate, toDate, cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData(
-            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
-                response,
-                static data => data.ToShared()),
-            nameof(GetRunsForProductsEnvelopeAsync));
+        return response.ToCacheBackedResult().RequireData(nameof(GetRunsForProductsEnvelopeAsync));
     }
 
     public async Task<PoTool.Shared.Pipelines.PipelineQueryResponseDto<PipelineInsightsDto>> GetInsightsEnvelopeAsync(
@@ -62,10 +54,6 @@ public partial class PipelinesClient
         CancellationToken cancellationToken)
     {
         var response = await GetInsightsAsync(productOwnerId, sprintId, includePartiallySucceeded, includeCanceled, cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData(
-            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
-                response,
-                static data => data.ToShared()),
-            nameof(GetInsightsEnvelopeAsync));
+        return response.ToCacheBackedResult().RequireData(nameof(GetInsightsEnvelopeAsync));
     }
 }

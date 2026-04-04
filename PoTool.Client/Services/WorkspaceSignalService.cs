@@ -463,19 +463,15 @@ public sealed class WorkspaceSignalService
 
                 await Task.WhenAll(sprintExecutionEnvelopeTask, backlogHealthEnvelopeTask);
 
-                var sprintExecutionEnvelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-                    await sprintExecutionEnvelopeTask,
-                    static data => data.ToShared());
-                var backlogHealthEnvelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-                    await backlogHealthEnvelopeTask,
-                    static data => data.ToShared());
+                var sprintExecutionEnvelope = (await sprintExecutionEnvelopeTask).GetDataOrDefault();
+                var backlogHealthEnvelope = (await backlogHealthEnvelopeTask).GetDataOrDefault();
                 if (sprintExecutionEnvelope is null || backlogHealthEnvelope is null)
                 {
                     return null;
                 }
 
-                var sprintExecutionResponse = CanonicalClientResponseFactory.Create(sprintExecutionEnvelope);
-                var backlogHealthResponse = CanonicalClientResponseFactory.Create(backlogHealthEnvelope);
+                var sprintExecutionResponse = CanonicalClientResponseFactory.Create<SprintExecutionDto>(sprintExecutionEnvelope);
+                var backlogHealthResponse = CanonicalClientResponseFactory.Create<BacklogHealthDto>(backlogHealthEnvelope);
 
                 return new DeliverySignalContext(
                     sprint,
@@ -519,9 +515,7 @@ public sealed class WorkspaceSignalService
             false,
             true,
             cancellationToken);
-        var envelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-            response,
-            static data => data.ToShared());
+        var envelope = response.GetDataOrDefault();
         return envelope is null ? null : CanonicalClientResponseFactory.Create(envelope);
     }
 
@@ -536,9 +530,7 @@ public sealed class WorkspaceSignalService
         }
 
         var response = await _pullRequestsClient.GetSprintTrendsAsync(sprintIds, productIdsCsv, null, cancellationToken);
-        var envelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-            response,
-            static data => data.ToShared());
+        var envelope = response.GetDataOrDefault();
         return envelope is null ? null : CanonicalClientResponseFactory.Create(envelope);
     }
 
@@ -554,9 +546,7 @@ public sealed class WorkspaceSignalService
         }
 
         var response = await _metricsClient.GetCapacityCalibrationAsync(productOwnerId, sprintIds, productIds, cancellationToken);
-        var envelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-            response,
-            static data => data.ToShared());
+        var envelope = response.GetDataOrDefault();
         return envelope is null ? null : CanonicalClientResponseFactory.Create(envelope);
     }
 

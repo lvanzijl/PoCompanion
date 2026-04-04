@@ -42,11 +42,7 @@ public partial class MetricsClient
             sprintIds,
             productIds,
             cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData(
-            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
-                response,
-                static data => data.ToShared()),
-            nameof(GetPortfolioProgressTrendEnvelopeAsync));
+        return response.ToCacheBackedResult().RequireData(nameof(GetPortfolioProgressTrendEnvelopeAsync));
     }
 
     public async Task<PoTool.Shared.Metrics.DeliveryQueryResponseDto<PortfolioDeliveryDto>> GetPortfolioDeliveryEnvelopeAsync(
@@ -60,11 +56,7 @@ public partial class MetricsClient
             sprintIds,
             productIds,
             cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData(
-            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
-                response,
-                static data => data.ToShared()),
-            nameof(GetPortfolioDeliveryEnvelopeAsync));
+        return response.ToCacheBackedResult().RequireData(nameof(GetPortfolioDeliveryEnvelopeAsync));
     }
 
     public async Task<PoTool.Shared.Metrics.DeliveryQueryResponseDto<CapacityCalibrationDto>> GetCapacityCalibrationEnvelopeAsync(
@@ -78,11 +70,7 @@ public partial class MetricsClient
             sprintIds,
             productIds,
             cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData(
-            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
-                response,
-                static data => data.ToShared()),
-            nameof(GetCapacityCalibrationEnvelopeAsync));
+        return response.ToCacheBackedResult().RequireData(nameof(GetCapacityCalibrationEnvelopeAsync));
     }
 
     public async Task<PoTool.Shared.Metrics.DeliveryQueryResponseDto<HomeProductBarMetricsDto>> GetHomeProductBarMetricsEnvelopeAsync(
@@ -91,11 +79,7 @@ public partial class MetricsClient
         CancellationToken cancellationToken)
     {
         var response = await GetHomeProductBarMetricsAsync(productOwnerId, productId, cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData(
-            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
-                response,
-                static data => data.ToShared()),
-            nameof(GetHomeProductBarMetricsEnvelopeAsync));
+        return response.ToCacheBackedResult().RequireData(nameof(GetHomeProductBarMetricsEnvelopeAsync));
     }
 
     private async Task<PoTool.Shared.Metrics.DeliveryQueryResponseDto<T>> GetDeliveryEnvelopeAsync<T>(

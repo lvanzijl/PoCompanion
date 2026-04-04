@@ -26,9 +26,8 @@ public sealed class BuildQualityService : IBuildQualityService
     {
         try
         {
-            var response = GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
-                await _buildQualityClient.GetRollingAsync(productOwnerId, windowStartUtc, windowEndUtc, cancellationToken),
-                static data => data.ToShared());
+            var response = (await _buildQualityClient.GetRollingAsync(productOwnerId, windowStartUtc, windowEndUtc, cancellationToken))
+                .ToCacheBackedResult();
             return response.Map(CanonicalClientResponseFactory.Create);
         }
         catch (ApiException ex)
@@ -45,9 +44,8 @@ public sealed class BuildQualityService : IBuildQualityService
     {
         try
         {
-            var response = GeneratedCacheEnvelopeHelper.ToCacheBackedResult(
-                await _buildQualityClient.GetSprintAsync(productOwnerId, sprintId, cancellationToken),
-                static data => data.ToShared());
+            var response = (await _buildQualityClient.GetSprintAsync(productOwnerId, sprintId, cancellationToken))
+                .ToCacheBackedResult();
             return response.Map(CanonicalClientResponseFactory.Create);
         }
         catch (ApiException ex)

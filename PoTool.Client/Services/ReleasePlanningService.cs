@@ -44,10 +44,8 @@ public class ReleasePlanningService
     {
         try
         {
-            return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-                await _releasePlanningClient.GetUnplannedEpicsAsync(cancellationToken),
-                static data => data.ToReadOnlyList(),
-                Array.Empty<UnplannedEpicDto>());
+            return (await _releasePlanningClient.GetUnplannedEpicsAsync(cancellationToken))
+                .GetReadOnlyListOrDefault(Array.Empty<UnplannedEpicDto>());
         }
         catch (ApiException ex)
         {
@@ -65,10 +63,8 @@ public class ReleasePlanningService
     {
         try
         {
-            return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-                await _releasePlanningClient.GetObjectiveEpicsAsync(objectiveId, cancellationToken),
-                static data => data.ToReadOnlyList(),
-                Array.Empty<ObjectiveEpicDto>());
+            return (await _releasePlanningClient.GetObjectiveEpicsAsync(objectiveId, cancellationToken))
+                .GetReadOnlyListOrDefault(Array.Empty<ObjectiveEpicDto>());
         }
         catch (ApiException ex)
         {
@@ -433,10 +429,8 @@ public class ReleasePlanningService
     {
         try
         {
-            return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-                await _releasePlanningClient.GetEpicFeaturesAsync(epicId, cancellationToken),
-                static data => data.ToReadOnlyList(),
-                Array.Empty<EpicFeatureDto>());
+            return (await _releasePlanningClient.GetEpicFeaturesAsync(epicId, cancellationToken))
+                .GetReadOnlyListOrDefault(Array.Empty<EpicFeatureDto>());
         }
         catch (ApiException ex)
         {

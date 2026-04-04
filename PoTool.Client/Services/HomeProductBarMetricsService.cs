@@ -25,9 +25,7 @@ public class HomeProductBarMetricsService
         try
         {
             var response = await _metricsClient.GetHomeProductBarMetricsAsync(productOwnerId, productId, cancellationToken);
-            var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-                response,
-                static data => data.ToShared());
+            var payload = response.GetDataOrDefault();
             return payload is null
                 ? null
                 : CanonicalClientResponseFactory.Create(payload);

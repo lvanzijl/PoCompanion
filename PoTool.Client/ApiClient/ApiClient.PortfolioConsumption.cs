@@ -104,9 +104,7 @@ public partial class MetricsClient
             (PortfolioReadSortDirection?)sortDirection,
             (PortfolioReadGroupBy?)groupBy,
             cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData(
-            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(response),
-            nameof(GetPortfolioProgressAsync));
+        return response.ToCacheBackedResult().RequireData(nameof(GetPortfolioProgressAsync));
     }
 
     public async Task<PortfolioSnapshotDto> GetPortfolioSnapshotsAsync(
@@ -130,9 +128,7 @@ public partial class MetricsClient
             (PortfolioReadSortDirection?)sortDirection,
             (PortfolioReadGroupBy?)groupBy,
             cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData(
-            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(response),
-            nameof(GetPortfolioSnapshotsAsync));
+        return response.ToCacheBackedResult().RequireData(nameof(GetPortfolioSnapshotsAsync));
     }
 
     public async Task<PortfolioComparisonDto> GetPortfolioComparisonAsync(
@@ -164,9 +160,7 @@ public partial class MetricsClient
             includeArchivedSnapshots,
             compareToSnapshotId,
             cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData(
-            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(response),
-            nameof(GetPortfolioComparisonAsync));
+        return response.ToCacheBackedResult().RequireData(nameof(GetPortfolioComparisonAsync));
     }
 
     public async Task<PortfolioTrendDto> GetPortfolioTrendsAsync(
@@ -198,9 +192,7 @@ public partial class MetricsClient
             rangeEndUtc,
             includeArchivedSnapshots,
             cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData(
-            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(response),
-            nameof(GetPortfolioTrendsAsync));
+        return response.ToCacheBackedResult().RequireData(nameof(GetPortfolioTrendsAsync));
     }
 
     public async Task<PortfolioSignalsDto> GetPortfolioSignalsAsync(
@@ -234,8 +226,6 @@ public partial class MetricsClient
             includeArchivedSnapshots,
             compareToSnapshotId,
             cancellationToken);
-        return CacheBackedGeneratedClientHelper.RequireData(
-            GeneratedCacheEnvelopeHelper.ToCacheBackedResult(response),
-            nameof(GetPortfolioSignalsAsync));
+        return response.ToCacheBackedResult().RequireData(nameof(GetPortfolioSignalsAsync));
     }
 }

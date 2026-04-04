@@ -24,10 +24,7 @@ public class PullRequestService
     public async Task<IEnumerable<PullRequestDto>> GetAllAsync()
     {
         var response = await _pullRequestsClient.GetAllAsync();
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-            response,
-            static data => data.ToReadOnlyList(),
-            Array.Empty<PullRequestDto>());
+        return response.GetReadOnlyListOrDefault(Array.Empty<PullRequestDto>());
     }
 
     /// <summary>
@@ -54,9 +51,7 @@ public class PullRequestService
     public async Task<CanonicalClientResponse<IReadOnlyList<SharedPullRequestMetricsDto>>> GetMetricsAsync(string? productIds = null, DateTimeOffset? fromDate = null)
     {
         var response = await _pullRequestsClient.GetMetricsAsync(productIds, fromDate, CancellationToken.None);
-        var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-            response,
-            static data => data.ToShared());
+        var payload = response.GetDataOrDefault();
         return payload is null
             ? new CanonicalClientResponse<IReadOnlyList<SharedPullRequestMetricsDto>>(Array.Empty<SharedPullRequestMetricsDto>())
             : CanonicalClientResponseFactory.Create(payload);
@@ -82,9 +77,7 @@ public class PullRequestService
             toDate,
             status,
             CancellationToken.None);
-        var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-            response,
-            static data => data.ToShared());
+        var payload = response.GetDataOrDefault();
         return payload is null
             ? new CanonicalClientResponse<IReadOnlyList<SharedPullRequestDto>>(Array.Empty<SharedPullRequestDto>())
             : CanonicalClientResponseFactory.Create(payload);
@@ -98,10 +91,7 @@ public class PullRequestService
         try
         {
             var response = await _pullRequestsClient.GetCommentsAsync(pullRequestId);
-            return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-                response,
-                static data => data.ToReadOnlyList(),
-                Array.Empty<PullRequestCommentDto>());
+            return response.GetReadOnlyListOrDefault(Array.Empty<PullRequestCommentDto>());
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
         {
@@ -117,10 +107,7 @@ public class PullRequestService
         try
         {
             var response = await _pullRequestsClient.GetIterationsAsync(pullRequestId);
-            return GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-                response,
-                static data => data.ToReadOnlyList(),
-                Array.Empty<PullRequestIterationDto>());
+            return response.GetReadOnlyListOrDefault(Array.Empty<PullRequestIterationDto>());
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
         {

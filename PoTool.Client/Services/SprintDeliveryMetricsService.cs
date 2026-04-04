@@ -48,9 +48,7 @@ public class SprintDeliveryMetricsService
                 includeDetails,
                 cancellationToken);
 
-            var envelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-                response,
-                static data => data.ToShared());
+            var envelope = response.GetDataOrDefault();
             if (envelope is null)
             {
                 return new CanonicalClientResponse<GetSprintTrendMetricsResponse>(

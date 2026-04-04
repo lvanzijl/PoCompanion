@@ -20,9 +20,7 @@ public sealed class MetricsStateService
         string? areaPath,
         int maxIterations,
         CancellationToken cancellationToken = default)
-        => GetAsync<DataStateResponseDtoOfSprintQueryResponseDtoOfMultiIterationBacklogHealthDto, SprintQueryResponseDtoOfMultiIterationBacklogHealthDto, SprintQueryResponseDto<MultiIterationBacklogHealthDto>>(
-            _metricsClient.GetMultiIterationBacklogHealthAsync(productOwnerId, productIds, areaPath, maxIterations, cancellationToken),
-            static data => data.ToShared());
+        => GetMultiIterationBacklogHealthStateCoreAsync(productOwnerId, productIds, areaPath, maxIterations, cancellationToken);
 
     public Task<DataStateResponseDto<EffortDistributionDto>?> GetEffortDistributionStateAsync(
         string? areaPathFilter,
@@ -44,18 +42,14 @@ public sealed class MetricsStateService
         IEnumerable<int> sprintIds,
         IEnumerable<int>? productIds,
         CancellationToken cancellationToken = default)
-        => GetAsync<DataStateResponseDtoOfDeliveryQueryResponseDtoOfCapacityCalibrationDto, DeliveryQueryResponseDtoOfCapacityCalibrationDto, DeliveryQueryResponseDto<CapacityCalibrationDto>>(
-            _metricsClient.GetCapacityCalibrationAsync(productOwnerId, sprintIds, productIds, cancellationToken),
-            static data => data.ToShared());
+        => GetCapacityCalibrationStateCoreAsync(productOwnerId, sprintIds, productIds, cancellationToken);
 
     public Task<DataStateResponseDto<DeliveryQueryResponseDto<PortfolioDeliveryDto>>?> GetPortfolioDeliveryStateAsync(
         int productOwnerId,
         IEnumerable<int> sprintIds,
         IEnumerable<int>? productIds,
         CancellationToken cancellationToken = default)
-        => GetAsync<DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioDeliveryDto, DeliveryQueryResponseDtoOfPortfolioDeliveryDto, DeliveryQueryResponseDto<PortfolioDeliveryDto>>(
-            _metricsClient.GetPortfolioDeliveryAsync(productOwnerId, sprintIds, productIds, cancellationToken),
-            static data => data.ToShared());
+        => GetPortfolioDeliveryStateCoreAsync(productOwnerId, sprintIds, productIds, cancellationToken);
 
     public Task<DataStateResponseDto<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>?> GetSprintTrendMetricsStateAsync(
         int productOwnerId,
@@ -63,24 +57,21 @@ public sealed class MetricsStateService
         int? productId,
         int? teamId,
         CancellationToken cancellationToken = default)
-        => GetAsync<DataStateResponseDtoOfSprintQueryResponseDtoOfGetSprintTrendMetricsResponse, SprintQueryResponseDtoOfGetSprintTrendMetricsResponse, SprintQueryResponseDto<GetSprintTrendMetricsResponse>>(
+        => GetSprintTrendMetricsStateCoreAsync(
             _metricsClient.GetSprintTrendMetricsAsync(
                 productOwnerId,
                 sprintIds,
                 productId.HasValue ? [productId.Value] : null,
                 recompute: null,
                 includeDetails: null,
-                cancellationToken),
-            static data => data.ToShared());
+                cancellationToken));
 
     public Task<DataStateResponseDto<SprintQueryResponseDto<SprintExecutionDto>>?> GetSprintExecutionStateAsync(
         int productOwnerId,
         int sprintId,
         int? productId,
         CancellationToken cancellationToken = default)
-        => GetAsync<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintExecutionDto, SprintQueryResponseDtoOfSprintExecutionDto, SprintQueryResponseDto<SprintExecutionDto>>(
-            _metricsClient.GetSprintExecutionAsync(productOwnerId, sprintId, productId, cancellationToken),
-            static data => data.ToShared());
+        => GetSprintExecutionStateCoreAsync(productOwnerId, sprintId, productId, cancellationToken);
 
     public Task<DataStateResponseDto<PortfolioProgressDto>?> GetPortfolioProgressStateAsync(
         int productOwnerId,
@@ -226,15 +217,14 @@ public sealed class MetricsStateService
         DateTimeOffset? periodEndUtc,
         CancellationToken cancellationToken = default)
     {
-        return await GetAsync<DataStateResponseDtoOfSprintQueryResponseDtoOfWorkItemActivityDetailsDto, SprintQueryResponseDtoOfWorkItemActivityDetailsDto, SprintQueryResponseDto<WorkItemActivityDetailsDto>>(
-            _metricsClient.GetWorkItemActivityDetailsAsync(
-                workItemId,
-                productOwnerId,
-                sprintId,
-                periodStartUtc,
-                periodEndUtc,
-                cancellationToken),
-            static data => data.ToShared());
+        var response = await _metricsClient.GetWorkItemActivityDetailsAsync(
+            workItemId,
+            productOwnerId,
+            sprintId,
+            periodStartUtc,
+            periodEndUtc,
+            cancellationToken);
+        return response.ToDataStateResponse();
     }
 
     public async Task<DataStateResponseDto<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>?> GetPortfolioProgressTrendStateAsync(
@@ -243,24 +233,51 @@ public sealed class MetricsStateService
         IEnumerable<int>? productIds,
         CancellationToken cancellationToken = default)
     {
-        return await GetAsync<DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioProgressTrendDto, DeliveryQueryResponseDtoOfPortfolioProgressTrendDto, DeliveryQueryResponseDto<PortfolioProgressTrendDto>>(
-            _metricsClient.GetPortfolioProgressTrendAsync(productOwnerId, sprintIds, productIds, cancellationToken),
-            static data => data.ToShared());
+        var response = await _metricsClient.GetPortfolioProgressTrendAsync(productOwnerId, sprintIds, productIds, cancellationToken);
+        return response.ToDataStateResponse();
     }
+
+    private async Task<DataStateResponseDto<SprintQueryResponseDto<MultiIterationBacklogHealthDto>>?> GetMultiIterationBacklogHealthStateCoreAsync(
+        int? productOwnerId,
+        IEnumerable<int>? productIds,
+        string? areaPath,
+        int maxIterations,
+        CancellationToken cancellationToken)
+        => (await _metricsClient.GetMultiIterationBacklogHealthAsync(productOwnerId, productIds, areaPath, maxIterations, cancellationToken))
+            .ToDataStateResponse();
+
+    private async Task<DataStateResponseDto<DeliveryQueryResponseDto<CapacityCalibrationDto>>?> GetCapacityCalibrationStateCoreAsync(
+        int productOwnerId,
+        IEnumerable<int> sprintIds,
+        IEnumerable<int>? productIds,
+        CancellationToken cancellationToken)
+        => (await _metricsClient.GetCapacityCalibrationAsync(productOwnerId, sprintIds, productIds, cancellationToken))
+            .ToDataStateResponse();
+
+    private async Task<DataStateResponseDto<DeliveryQueryResponseDto<PortfolioDeliveryDto>>?> GetPortfolioDeliveryStateCoreAsync(
+        int productOwnerId,
+        IEnumerable<int> sprintIds,
+        IEnumerable<int>? productIds,
+        CancellationToken cancellationToken)
+        => (await _metricsClient.GetPortfolioDeliveryAsync(productOwnerId, sprintIds, productIds, cancellationToken))
+            .ToDataStateResponse();
+
+    private async Task<DataStateResponseDto<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>?> GetSprintTrendMetricsStateCoreAsync(
+        Task<DataStateResponseDtoOfSprintQueryResponseDtoOfGetSprintTrendMetricsResponse> requestTask)
+        => (await requestTask.ConfigureAwait(false)).ToDataStateResponse();
+
+    private async Task<DataStateResponseDto<SprintQueryResponseDto<SprintExecutionDto>>?> GetSprintExecutionStateCoreAsync(
+        int productOwnerId,
+        int sprintId,
+        int? productId,
+        CancellationToken cancellationToken)
+        => (await _metricsClient.GetSprintExecutionAsync(productOwnerId, sprintId, productId, cancellationToken))
+            .ToDataStateResponse();
 
     private static async Task<DataStateResponseDto<TData>?> GetAsync<TEnvelope, TData>(Task<TEnvelope> requestTask)
         where TEnvelope : class, IGeneratedDataStateEnvelope<TData>
     {
-        return GeneratedCacheEnvelopeHelper.ToDataStateResponse(await requestTask.ConfigureAwait(false));
+        return (await requestTask.ConfigureAwait(false)).ToDataStateResponse();
     }
 
-    private static async Task<DataStateResponseDto<TMapped>?> GetAsync<TEnvelope, TSource, TMapped>(
-        Task<TEnvelope> requestTask,
-        Func<TSource, TMapped?> mapper)
-        where TEnvelope : class, IGeneratedDataStateEnvelope<TSource>
-    {
-        return GeneratedCacheEnvelopeHelper.ToDataStateResponse(
-            await requestTask.ConfigureAwait(false),
-            mapper);
-    }
 }

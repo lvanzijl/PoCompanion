@@ -23,7 +23,7 @@ internal static class ApiClientJsonSettings
 internal static class CacheBackedGeneratedClientHelper
 {
     internal static TData RequireData<TData>(
-        CacheBackedClientResult<TData> result,
+        this CacheBackedClientResult<TData> result,
         string operationName)
     {
         return result.State switch
