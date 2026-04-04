@@ -47,6 +47,9 @@ public sealed class MockConfigurationSeedHostedServiceTests
             .ThenBy(snapshot => snapshot.TimestampUtc)
             .ThenBy(snapshot => snapshot.SnapshotId)
             .ToListAsync();
+        var triageTags = await context.TriageTags
+            .OrderBy(tag => tag.DisplayOrder)
+            .ToListAsync();
         var settings = await context.Settings.OrderByDescending(item => item.Id).FirstOrDefaultAsync();
         var tfsConfig = await context.TfsConfigs.OrderByDescending(item => item.UpdatedAtUtc).FirstOrDefaultAsync();
 
@@ -79,6 +82,10 @@ public sealed class MockConfigurationSeedHostedServiceTests
         Assert.AreEqual("https://dev.azure.com/mock", tfsConfig.Url);
         Assert.AreEqual("Battleship Systems", tfsConfig.Project);
         Assert.AreEqual("Battleship Systems", tfsConfig.DefaultAreaPath);
+        Assert.IsTrue(tfsConfig.HasTestedConnectionSuccessfully, "Mock mode should seed a ready-to-use tested connection.");
+        Assert.IsTrue(tfsConfig.HasVerifiedTfsApiSuccessfully, "Mock mode should seed a ready-to-use verified TFS API state.");
+        Assert.HasCount(6, triageTags, "Mock mode should seed the triage tag catalog for bug triage.");
+        Assert.IsTrue(triageTags.All(tag => tag.IsEnabled), "Seeded mock triage tags should be enabled.");
     }
 
     [TestMethod]
@@ -98,6 +105,7 @@ public sealed class MockConfigurationSeedHostedServiceTests
         var teams = await context.Teams.ToListAsync();
         var portfolioSnapshots = await context.PortfolioSnapshots.ToListAsync();
         var tfsConfigs = await context.TfsConfigs.ToListAsync();
+        var triageTags = await context.TriageTags.ToListAsync();
 
         Assert.HasCount(3, profiles, "Seeding should remain idempotent for profiles.");
         Assert.HasCount(6, products, "Seeding should remain idempotent for products.");
@@ -105,6 +113,7 @@ public sealed class MockConfigurationSeedHostedServiceTests
         Assert.IsGreaterThanOrEqualTo(8, teams.Count, "Seeding should remain idempotent for teams.");
         Assert.HasCount(16, portfolioSnapshots, "Seeding should remain idempotent for the battleship CDC history.");
         Assert.HasCount(1, tfsConfigs, "Seeding should remain idempotent for mock TFS configuration.");
+        Assert.HasCount(6, triageTags, "Seeding should remain idempotent for the mock triage tag catalog.");
     }
 
     [TestMethod]

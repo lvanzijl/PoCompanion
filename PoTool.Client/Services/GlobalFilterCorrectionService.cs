@@ -28,6 +28,11 @@ public sealed class GlobalFilterCorrectionService
             return null;
         }
 
+        if (usage.StateIssues.Any(issue => issue.Contains("route project alias", StringComparison.OrdinalIgnoreCase)))
+        {
+            return null;
+        }
+
         var correctedState = usage.State;
         string? correctionMessage = null;
 

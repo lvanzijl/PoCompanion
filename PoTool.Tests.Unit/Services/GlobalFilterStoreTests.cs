@@ -109,6 +109,25 @@ public sealed class GlobalFilterStoreTests
     }
 
     [TestMethod]
+    public async Task BuildCorrectedUriAsync_ProjectScopedRouteAliasIssue_DoesNotRedirectAway()
+    {
+        var projectService = new ProjectService(new StubProjectsClient());
+        var projectIdentityMapper = new ProjectIdentityMapper(projectService);
+        var resolver = new FilterStateResolver(projectIdentityMapper);
+        var store = new GlobalFilterStore(NullLogger<GlobalFilterStore>.Instance, resolver);
+        var correctionService = new GlobalFilterCorrectionService(
+            store,
+            new GlobalFilterRouteService(projectIdentityMapper),
+            new GlobalFilterUiState());
+
+        await store.TrackNavigationAsync("http://localhost/planning/unknown-project/overview");
+
+        var correctedUri = await correctionService.BuildCorrectedUriAsync("http://localhost/planning/unknown-project/overview");
+
+        Assert.IsNull(correctedUri, "Project-scoped route aliases should stay on-page so the route itself can handle unknown projects.");
+    }
+
+    [TestMethod]
     public async Task TryPrepareNavigation_IgnoresEquivalentRoutesAndPendingDuplicates()
     {
         var store = CreateStore();

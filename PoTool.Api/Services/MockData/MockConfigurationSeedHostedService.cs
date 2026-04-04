@@ -78,6 +78,16 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
             MockPortfolioSnapshotStage.NearCompletion)
     ];
 
+    private static readonly (string Name, int DisplayOrder)[] MockTriageTags =
+    [
+        ("Needs Investigation", 0),
+        ("Regression", 1),
+        ("Customer Reported", 2),
+        ("Operational Risk", 3),
+        ("Hotfix Candidate", 4),
+        ("Needs Repro", 5)
+    ];
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<MockConfigurationSeedHostedService> _logger;
 
@@ -109,6 +119,7 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
             "persisting mock core configuration");
 
         await EnsureMockTfsConfigurationAsync(context, now, cancellationToken);
+        await EnsureMockTriageTagsAsync(context, now, cancellationToken);
         await EnsureActiveProfileAsync(context, seedPlan.ActiveProfileName, cancellationToken);
         await EnsureMockPortfolioSnapshotsAsync(context, seedPlan.ActiveProfileName, hierarchy, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -304,6 +315,8 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
                 Url = MockOrganizationUrl,
                 Project = MockProjectName,
                 DefaultAreaPath = MockProjectName,
+                HasTestedConnectionSuccessfully = true,
+                HasVerifiedTfsApiSuccessfully = true,
                 UseDefaultCredentials = true,
                 TimeoutSeconds = 30,
                 ApiVersion = "7.0",
@@ -318,6 +331,8 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
             existingConfig.Url = MockOrganizationUrl;
             existingConfig.Project = MockProjectName;
             existingConfig.DefaultAreaPath = MockProjectName;
+            existingConfig.HasTestedConnectionSuccessfully = true;
+            existingConfig.HasVerifiedTfsApiSuccessfully = true;
             existingConfig.UseDefaultCredentials = true;
             existingConfig.TimeoutSeconds = 30;
             existingConfig.ApiVersion = "7.0";
@@ -330,6 +345,46 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
             context,
             cancellationToken,
             "persisting mock TFS configuration");
+    }
+
+    private async Task EnsureMockTriageTagsAsync(
+        PoToolDbContext context,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var tagNames = MockTriageTags
+            .Select(static tag => tag.Name)
+            .ToArray();
+
+        var existingTags = await context.TriageTags
+            .Where(tag => tagNames.Contains(tag.Name))
+            .ToListAsync(cancellationToken);
+
+        foreach (var (name, displayOrder) in MockTriageTags)
+        {
+            var tag = existingTags.FirstOrDefault(
+                existing => string.Equals(existing.Name, name, StringComparison.OrdinalIgnoreCase));
+
+            if (tag is null)
+            {
+                context.TriageTags.Add(new TriageTagEntity
+                {
+                    Name = name,
+                    IsEnabled = true,
+                    DisplayOrder = displayOrder,
+                    CreatedAt = now
+                });
+                continue;
+            }
+
+            tag.IsEnabled = true;
+            tag.DisplayOrder = displayOrder;
+        }
+
+        await SaveChangesWithDiagnosticsAsync(
+            context,
+            cancellationToken,
+            "persisting mock triage tags");
     }
 
     private async Task<Dictionary<string, TeamEntity>> EnsureMockTeamsAsync(
