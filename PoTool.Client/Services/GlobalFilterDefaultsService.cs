@@ -90,12 +90,11 @@ public sealed class GlobalFilterDefaultsService
             .ToList();
 
         var state = usage.State;
-        var defaultProductId = ResolveDefaultProductId(usage, state, ownedProducts);
-        var defaultTeamSelection = await ResolveDefaultTeamSelectionAsync(usage, state, defaultProductId, ownedProducts, cancellationToken);
+        var defaultTeamSelection = await ResolveDefaultTeamSelectionAsync(usage, state, ownedProducts, cancellationToken);
 
         var nextState = state with
         {
-            ProductIds = ResolveProductIds(usage, state, defaultProductId),
+            ProductIds = ResolveProductIds(usage, state),
             TeamId = defaultTeamSelection?.TeamId ?? state.TeamId,
             Time = ResolveDefaultTime(usage, state.Time, defaultTeamSelection)
         };
@@ -105,38 +104,19 @@ public sealed class GlobalFilterDefaultsService
 
     private static IReadOnlyList<int> ResolveProductIds(
         FilterStateResolution usage,
-        FilterState state,
-        int? defaultProductId)
+        FilterState state)
     {
         if (!state.AllProducts || !usage.UsesProduct || usage.HasRouteProductAuthority)
         {
             return state.ProductIds;
         }
 
-        return usage.PageName == "PlanBoard" && defaultProductId.HasValue
-            ? [defaultProductId.Value]
-            : Array.Empty<int>();
-    }
-
-    private static int? ResolveDefaultProductId(
-        FilterStateResolution usage,
-        FilterState state,
-        IReadOnlyList<ProductDto> ownedProducts)
-    {
-        if (state.PrimaryProductId.HasValue || usage.HasRouteProductAuthority || ownedProducts.Count == 0)
-        {
-            return state.PrimaryProductId;
-        }
-
-        return usage.PageName == "PlanBoard"
-            ? ownedProducts[0].Id
-            : state.PrimaryProductId;
+        return Array.Empty<int>();
     }
 
     private async Task<DefaultTeamSelection?> ResolveDefaultTeamSelectionAsync(
         FilterStateResolution usage,
         FilterState state,
-        int? defaultProductId,
         IReadOnlyList<ProductDto> ownedProducts,
         CancellationToken cancellationToken)
     {
@@ -146,7 +126,7 @@ public sealed class GlobalFilterDefaultsService
             return null;
         }
 
-        var candidateTeamIds = BuildCandidateTeamIds(state, defaultProductId, ownedProducts);
+        var candidateTeamIds = BuildCandidateTeamIds(state, ownedProducts);
         if (candidateTeamIds.Count == 0)
         {
             candidateTeamIds = (await _teamService.GetAllTeamsAsync(includeArchived: false, cancellationToken))
@@ -178,7 +158,6 @@ public sealed class GlobalFilterDefaultsService
 
     private static List<int> BuildCandidateTeamIds(
         FilterState state,
-        int? defaultProductId,
         IReadOnlyList<ProductDto> ownedProducts)
     {
         if (state.TeamId.HasValue)
@@ -187,8 +166,7 @@ public sealed class GlobalFilterDefaultsService
         }
 
         var relevantProducts = ownedProducts.Where(product =>
-            (state.PrimaryProductId.HasValue && product.Id == state.PrimaryProductId.Value)
-            || (defaultProductId.HasValue && product.Id == defaultProductId.Value));
+            state.PrimaryProductId.HasValue && product.Id == state.PrimaryProductId.Value);
 
         var candidateTeamIds = relevantProducts
             .SelectMany(product => product.TeamIds)

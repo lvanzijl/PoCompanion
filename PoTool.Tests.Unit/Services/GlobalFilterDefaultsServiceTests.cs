@@ -27,7 +27,7 @@ public sealed class GlobalFilterDefaultsServiceTests
     }
 
     [TestMethod]
-    public async Task BuildDefaultedUriAsync_PlanBoard_SelectsFirstOwnedProduct()
+    public async Task BuildDefaultedUriAsync_PlanBoard_KeepsAllProductsSelected()
     {
         var store = CreateStore();
         await store.TrackNavigationAsync("http://localhost/planning/plan-board", 42);
@@ -36,7 +36,7 @@ public sealed class GlobalFilterDefaultsServiceTests
 
         var uri = await defaultsService.BuildDefaultedUriAsync("http://localhost/planning/plan-board", 42);
 
-        Assert.AreEqual("/planning/plan-board?productId=11&timeMode=Snapshot", uri);
+        Assert.IsNull(uri);
     }
 
     [TestMethod]

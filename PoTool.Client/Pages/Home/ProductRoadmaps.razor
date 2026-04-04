@@ -9,9 +9,11 @@
 @using PoTool.Shared.Planning
 @using PoTool.Shared.Settings
 @using PoTool.Shared.WorkItems
+@implements IDisposable
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject ProjectService ProjectService
+@inject GlobalFilterStore GlobalFilterStore
 @inject GlobalFilterRouteService GlobalFilterRouteService
 @inject WorkItemService WorkItemService
 @inject SprintService SprintService
@@ -783,9 +785,11 @@
     private string? _snapshotDescription;
     private List<RoadmapSnapshotDto> _snapshots = new();
     private DriftReport? _driftReport;
+    private IDisposable? _filterSubscription;
 
     protected override async Task OnInitializedAsync()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         try
         {
             var activeProfile = await ProfileService.GetActiveProfileAsync();
@@ -801,6 +805,7 @@
             _tfsConfig = await TfsConfigService.GetConfigAsync();
 
             _allProducts = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId);
             _projects = await LoadAvailableProjectsAsync(_allProducts);
             ResolveInitialProjectSelection();
             ApplyProjectFilter();
@@ -1158,9 +1163,10 @@
     private void ApplyProjectFilter()
     {
         var selectedProject = ResolveProject(_selectedProjectRouteKey);
-        _products = selectedProject == null
+        var availableProducts = selectedProject == null
             ? _allProducts
             : _allProducts.Where(product => selectedProject.ProductIds.Contains(product.Id)).ToList();
+        _products = GlobalProductSelectionHelper.ResolveScopedProducts(GlobalFilterStore.GetState(), availableProducts).ToList();
     }
 
     private async Task LoadProjectPlanningSummaryAsync()
@@ -1209,6 +1215,27 @@
         => string.Equals(project.Name, project.Alias, StringComparison.OrdinalIgnoreCase)
             ? project.Name
             : $"{project.Name} ({project.Alias})";
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(HandleGlobalFilterChangedAsync);
+
+    private async Task HandleGlobalFilterChangedAsync()
+    {
+        if (_profileId is null || _allProducts.Count == 0)
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        ResolveInitialProjectSelection();
+        ApplyProjectFilter();
+        await LoadProjectPlanningSummaryAsync();
+        await BuildProductLanesAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+        => _filterSubscription?.Dispose();
 
     private bool HasRoadmapDominance()
     {

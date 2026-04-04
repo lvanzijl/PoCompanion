@@ -31,7 +31,7 @@ public sealed class FilterStateResolver
         var issues = new List<string>();
         var lastUpdateSource = FilterUpdateSource.Default;
         var routeSignature = WorkspaceQueryContextHelper.CreateRouteSignature(uri);
-        var routeProductAuthority = GlobalFilterPageCatalog.ResolveRouteProductId(route).HasValue;
+        var routeProductAuthority = false;
         var routeProjectAuthority = !string.IsNullOrWhiteSpace(GlobalFilterPageCatalog.ResolveRouteProjectAlias(route));
 
         var productIds = ResolveProducts(route, context, localState, decisions, ref lastUpdateSource, localSource);
@@ -86,13 +86,7 @@ public sealed class FilterStateResolver
         var routeProductId = GlobalFilterPageCatalog.ResolveRouteProductId(route);
         if (routeProductId.HasValue)
         {
-            if (context.ProductId.HasValue && context.ProductId.Value != routeProductId.Value)
-            {
-                decisions.Add($"route productId {routeProductId.Value} overrode query productId {context.ProductId.Value}");
-            }
-
-            lastUpdateSource = FilterUpdateSource.Route;
-            return new[] { routeProductId.Value };
+            decisions.Add($"route productId {routeProductId.Value} is treated as a lookup hint only");
         }
 
         if (context.ProductId.HasValue)

@@ -117,15 +117,11 @@ public sealed class GlobalFilterRouteService
             || (pageName is "ProductRoadmaps" or "PlanBoard" or "ProjectPlanningOverview"
                 && path.StartsWith("/planning/", StringComparison.OrdinalIgnoreCase)
                 && path.Count(static c => c == '/') >= 3);
-        var hasRouteProductAuthority = GlobalFilterPageCatalog.ResolveRouteProductId(normalizedRoute).HasValue
-            || (pageName == "ProductRoadmapEditor"
-                && path.StartsWith("/planning/product-roadmaps/", StringComparison.OrdinalIgnoreCase));
-
         return context with
         {
             ProjectAlias = hasRouteProjectAuthority ? null : context.ProjectAlias,
             ProjectId = hasRouteProjectAuthority ? null : context.ProjectId,
-            ProductId = hasRouteProductAuthority ? null : context.ProductId
+            ProductId = context.ProductId
         };
     }
 
@@ -153,10 +149,10 @@ public sealed class GlobalFilterRouteService
             "PlanBoard" => string.IsNullOrWhiteSpace(projectAlias)
                 ? (!string.IsNullOrWhiteSpace(routeProjectAlias) ? defaultPath : WorkspaceRoutes.PlanBoard)
                 : WorkspaceRoutes.GetProjectPlanBoard(projectAlias),
-            "ProductRoadmapEditor" when routeProductId.HasValue
-                => defaultPath,
             "ProductRoadmapEditor" when state.PrimaryProductId.HasValue
                 => WorkspaceRoutes.GetProductRoadmapEditor(state.PrimaryProductId.Value),
+            "ProductRoadmapEditor" when routeProductId.HasValue
+                => defaultPath,
             _ => defaultPath
         };
     }

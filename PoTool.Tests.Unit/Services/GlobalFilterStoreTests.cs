@@ -84,6 +84,20 @@ public sealed class GlobalFilterStoreTests
     }
 
     [TestMethod]
+    public async Task TrackNavigation_ProductScopedEditorRoute_TreatsRouteProductAsHintOnly()
+    {
+        var store = CreateStore();
+
+        await store.TrackNavigationAsync("http://localhost/planning/product-roadmaps/11");
+
+        Assert.IsNotNull(store.CurrentUsage);
+        Assert.AreEqual("ProductRoadmapEditor", store.CurrentUsage.PageName);
+        Assert.IsFalse(store.CurrentUsage.HasRouteProductAuthority);
+        Assert.IsTrue(store.CurrentState.AllProducts);
+        CollectionAssert.Contains(store.CurrentUsage.NormalizationDecisions.ToArray(), "route productId 11 is treated as a lookup hint only");
+    }
+
+    [TestMethod]
     public async Task TrackNavigation_RollingQuery_TracksExplicitWindowAndUnit()
     {
         var store = CreateStore();

@@ -7,9 +7,11 @@
 @using PoTool.Shared.DataState
 @using PoTool.Shared.Planning
 @using PoTool.Shared.Metrics
+@implements IDisposable
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject ProjectService ProjectService
+@inject GlobalFilterStore GlobalFilterStore
 @inject GlobalFilterRouteService GlobalFilterRouteService
 @inject WorkItemService WorkItemService
 @inject SprintService SprintService
@@ -505,7 +507,6 @@
     private ProjectPlanningSummaryDto? _projectPlanningSummary;
     private CacheBackedClientResult<ProjectPlanningSummaryDto>? _projectPlanningSummaryState;
     private string? _selectedProjectRouteKey;
-    private int? _selectedProductId;
     private bool _isLoadingBoard;
     private bool _isBusy;
 
@@ -533,9 +534,12 @@
     private int[] _selectedProductRootIds = [];
     private bool _isRefreshingFromTfs;
     private string? _sprintResolutionMessage;
+    private IDisposable? _filterSubscription;
+    private int? _selectedProductId => GlobalProductSelectionHelper.ResolveSingleProductId(GlobalFilterStore.GetState(), _products);
 
     protected override async Task OnInitializedAsync()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         _breadcrumbs = new List<BreadcrumbItem>
         {
             new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
@@ -557,21 +561,20 @@
 
             _allProducts = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
             _projects = await LoadAvailableProjectsAsync(_allProducts);
+            await SyncStoreFromCurrentRouteAsync();
 
             var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
             ResolveInitialProjectSelection(context);
             ApplyProjectFilter();
             await LoadProjectPlanningSummaryAsync();
 
-            if (context.ProductId.HasValue && _products.Any(product => product.Id == context.ProductId.Value))
+            if (_selectedProductId.HasValue)
             {
-                _selectedProductId = context.ProductId.Value;
-                await LoadBoardAsync(context.ProductId.Value);
+                await LoadBoardAsync(_selectedProductId.Value);
             }
-            else if (_products.Count == 1)
+            else
             {
-                _selectedProductId = _products[0].Id;
-                await LoadBoardAsync(_products[0].Id);
+                ClearBoard();
             }
         }
         catch (Exception ex)
@@ -589,23 +592,24 @@
         _selectedProjectRouteKey = string.IsNullOrWhiteSpace(projectRouteKey) ? null : projectRouteKey;
         ApplyProjectFilter();
         await LoadProjectPlanningSummaryAsync();
-
-        if (_selectedProductId.HasValue && !_products.Any(product => product.Id == _selectedProductId.Value))
-        {
-            _selectedProductId = null;
-        }
-
-        if (!_selectedProductId.HasValue && _products.Count == 1)
-        {
-            _selectedProductId = _products[0].Id;
-        }
-
         await NavigateToCurrentScopeAsync(_selectedProductId, loadBoard: _selectedProductId.HasValue);
     }
 
     private async Task OnProductChanged(int? productId)
     {
-        _selectedProductId = productId;
+        await GlobalFilterStore.SetStateAsync(
+            NavigationManager.Uri,
+            _activeProfileId,
+            FilterLocalBridgeState.FromState(GlobalFilterStore.GetState()) with { ProductId = productId },
+            FilterUpdateSource.Ui);
+
+        var targetUri = await GlobalFilterRouteService.BuildCurrentPageUriAsync(NavigationManager.Uri, GlobalFilterStore.GetState());
+        if (GlobalFilterStore.TryPrepareNavigation(NavigationManager.Uri, targetUri))
+        {
+            NavigationManager.NavigateTo(targetUri, forceLoad: false);
+            return;
+        }
+
         await NavigateToCurrentScopeAsync(productId, loadBoard: productId.HasValue);
     }
 
@@ -1182,6 +1186,36 @@
             ? LoadBoardAsync(_selectedProductId.Value)
             : Task.CompletedTask;
 
+    private async Task SyncStoreFromCurrentRouteAsync()
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _activeProfileId);
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(HandleGlobalFilterChangedAsync);
+
+    private async Task HandleGlobalFilterChangedAsync()
+    {
+        if (_activeProfileId is null || _allProducts.Count == 0)
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
+        ResolveInitialProjectSelection(context);
+        ApplyProjectFilter();
+        await LoadProjectPlanningSummaryAsync();
+
+        if (_selectedProductId.HasValue)
+        {
+            await LoadBoardAsync(_selectedProductId.Value);
+        }
+        else
+        {
+            ClearBoard();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
     private ProjectDto? ResolveProject(string? projectRouteKey)
     {
         if (string.IsNullOrWhiteSpace(projectRouteKey))
@@ -1202,6 +1236,9 @@
     private bool HasPlanningGap()
         => _projectPlanningSummary is { TotalPBIs: > 0 } &&
            _projectPlanningSummary.UnplannedPBIs / (double)_projectPlanningSummary.TotalPBIs > 0.5d;
+
+    public void Dispose()
+        => _filterSubscription?.Dispose();
 
     private string GetPlanningGapLabel()
     {

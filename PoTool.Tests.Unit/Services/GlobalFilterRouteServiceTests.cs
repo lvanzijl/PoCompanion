@@ -35,15 +35,15 @@ public sealed class GlobalFilterRouteServiceTests
     }
 
     [TestMethod]
-    public async Task BuildCurrentPageUriAsync_ProductScopedEditor_PreservesRouteProductWithoutQueryEcho()
+    public async Task BuildCurrentPageUriAsync_ProductScopedEditor_UsesSelectedProductPathAndQuery()
     {
         var routeService = CreateRouteService();
 
         var uri = await routeService.BuildCurrentPageUriAsync(
             "http://localhost/planning/product-roadmaps/11?teamId=7",
-            new FilterState([11], Array.Empty<string>(), 7, FilterTimeSelection.Snapshot));
+            new FilterState([12], Array.Empty<string>(), 7, FilterTimeSelection.Snapshot));
 
-        Assert.AreEqual("/planning/product-roadmaps/11?teamId=7&timeMode=Snapshot", uri);
+        Assert.AreEqual("/planning/product-roadmaps/12?productId=12&teamId=7&timeMode=Snapshot", uri);
     }
 
     [TestMethod]

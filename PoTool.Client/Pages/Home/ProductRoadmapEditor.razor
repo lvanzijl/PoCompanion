@@ -3,9 +3,11 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Helpers
 @using PoTool.Shared.WorkItems
+@implements IDisposable
 @using ApiWorkItemDto = PoTool.Shared.WorkItems.WorkItemDto
 @inject IProfileService ProfileService
 @inject ProductService ProductService
+@inject GlobalFilterStore GlobalFilterStore
 @inject GlobalFilterRouteService GlobalFilterRouteService
 @inject WorkItemService WorkItemService
 @inject TfsConfigService TfsConfigService
@@ -63,8 +65,8 @@
     }
     else if (_product == null)
     {
-        <MudAlert Severity="Severity.Error" Class="mt-4">
-            Product not found.
+        <MudAlert Severity="Severity.Info" Class="mt-4">
+            Select a single product in the global filter to edit a roadmap.
         </MudAlert>
     }
     else
@@ -518,6 +520,7 @@
     private bool _isBusy;
     private bool _isSaving;
     private ProductDto? _product;
+    private List<ProductDto> _products = new();
     private TfsConfigDto? _tfsConfig;
     private string? _projectRouteKey;
     private List<BreadcrumbItem> _breadcrumbs = new();
@@ -543,6 +546,8 @@
     // Drag-and-drop state
     private MudDropContainer<RoadmapDragItem>? _dropContainer;
     private List<RoadmapDragItem> _allDragItems = new();
+    private IDisposable? _filterSubscription;
+    private int? _selectedProductId => GlobalProductSelectionHelper.ResolveSingleProductId(GlobalFilterStore.GetState(), _products);
 
     private List<ApiWorkItemDto> FilteredAvailableEpics =>
         string.IsNullOrWhiteSpace(_searchText)
@@ -554,6 +559,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
+
         try
         {
             var activeProfile = await ProfileService.GetActiveProfileAsync();
@@ -564,10 +571,19 @@
             }
 
             ProfileService.SetCachedActiveProfileId(activeProfile.Id);
+            _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, activeProfile.Id);
             _tfsConfig = await TfsConfigService.GetConfigAsync();
             _projectRouteKey = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri).ProjectAlias;
 
-            _product = await ProductService.GetProductByIdAsync(ProductId);
+            if (!_selectedProductId.HasValue)
+            {
+                _product = null;
+                UpdateBreadcrumbs();
+                return;
+            }
+
+            _product = await ProductService.GetProductByIdAsync(_selectedProductId.Value);
             if (_product == null)
             {
                 Snackbar.Add("Product not found.", Severity.Error);
@@ -1035,7 +1051,7 @@
 
             Logger.LogDebug(
                 "Roadmap button reorder requested for product {ProductId}: epic {EpicATfsId} at index {IndexA} with priority {PriorityA}, neighbor epic {EpicBTfsId} at index {IndexB} with priority {PriorityB}.",
-                ProductId,
+                _selectedProductId.GetValueOrDefault(),
                 epicA.TfsId,
                 indexA,
                 epicA.BacklogPriority,
@@ -1151,7 +1167,7 @@
         {
             Logger.LogWarning(
                 "Roadmap reorder requires priority recovery for product {ProductId}. CurrentIndex {CurrentIndex}, TargetIndex {TargetIndex}, reason {FailureReason}.",
-                ProductId,
+                _selectedProductId.GetValueOrDefault(),
                 currentIndex,
                 targetIndex,
                 failureReason);
@@ -1162,7 +1178,7 @@
             {
                 Logger.LogWarning(
                     "Roadmap reorder still unavailable after normalization for product {ProductId}. CurrentIndex {CurrentIndex}, TargetIndex {TargetIndex}, reason {FailureReason}.",
-                    ProductId,
+                    _selectedProductId.GetValueOrDefault(),
                     currentIndex,
                     targetIndex,
                     retryFailureReason);
@@ -1175,7 +1191,7 @@
 
         Logger.LogDebug(
             "Applying roadmap reorder for product {ProductId}. CurrentIndex {CurrentIndex}, TargetIndex {TargetIndex}, writes [{PriorityWrites}]",
-            ProductId,
+            _selectedProductId.GetValueOrDefault(),
             currentIndex,
             targetIndex,
             string.Join(", ", writes!.Select(write => $"{write.TfsId}:{write.OriginalPriority}->{write.NewPriority}")));
@@ -1241,7 +1257,7 @@
         NavigationManager.NavigateTo(await GlobalFilterRouteService.BuildUriAsync(
             WorkspaceRoutes.Home,
             new FilterState(
-                [ProductId],
+                _selectedProductId.HasValue ? [_selectedProductId.Value] : Array.Empty<int>(),
                 Array.Empty<string>(),
                 null,
                 FilterTimeSelection.Snapshot),
@@ -1253,9 +1269,66 @@
         NavigationManager.NavigateTo(await GlobalFilterRouteService.BuildPlanningPageUriAsync(
             "ProductRoadmaps",
             _projectRouteKey,
-            ProductId,
+            _selectedProductId,
             WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)));
     }
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(ReloadFromGlobalStateAsync);
+
+    private async Task ReloadFromGlobalStateAsync()
+    {
+        if (_products.Count == 0)
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (!_selectedProductId.HasValue)
+        {
+            _product = null;
+            _roadmapEpics.Clear();
+            _availableEpics.Clear();
+            _allDragItems.Clear();
+            UpdateBreadcrumbs();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (_product?.Id == _selectedProductId.Value)
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        _isLoading = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            _product = await ProductService.GetProductByIdAsync(_selectedProductId.Value);
+            if (_product != null)
+            {
+                await LoadEpicsAsync();
+            }
+            else
+            {
+                _roadmapEpics.Clear();
+                _availableEpics.Clear();
+                _allDragItems.Clear();
+            }
+
+            UpdateBreadcrumbs();
+        }
+        finally
+        {
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+        => _filterSubscription?.Dispose();
 
     // --- Drag item model ---
 
