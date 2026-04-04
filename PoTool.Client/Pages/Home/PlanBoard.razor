@@ -109,6 +109,19 @@
             </MudStack>
         </MudPaper>
     }
+    else if (_projectPlanningSummaryState?.State == CacheBackedClientState.NotReady)
+    {
+        <DataStatePanel State="DataStateDto.NotReady"
+                        Title="Project planning summary is syncing"
+                        Message="@(_projectPlanningSummaryState.Reason ?? "Project planning summary data is not ready yet because the cache has not been built.")"
+                        ProductOwnerId="@_activeProfileId" />
+    }
+    else if (_projectPlanningSummaryState?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
+    {
+        <DataStatePanel State="DataStateDto.Failed"
+                        Title="Project planning summary failed to load"
+                        Message="@(_projectPlanningSummaryState.Reason ?? "Project planning summary data could not be loaded right now.")" />
+    }
 
     @* Board Content *@
     @if (_selectedProductId == null)
@@ -486,6 +499,7 @@
     private List<ProductDto> _allProducts = new();
     private List<ProductDto> _products = new();
     private ProjectPlanningSummaryDto? _projectPlanningSummary;
+    private CacheBackedClientResult<ProjectPlanningSummaryDto>? _projectPlanningSummaryState;
     private string? _selectedProjectRouteKey;
     private int? _selectedProductId;
     private bool _isLoadingBoard;
@@ -1115,9 +1129,17 @@
 
     private async Task LoadProjectPlanningSummaryAsync()
     {
-        _projectPlanningSummary = string.IsNullOrWhiteSpace(_selectedProjectRouteKey)
-            ? null
-            : await ProjectService.GetPlanningSummaryAsync(_selectedProjectRouteKey);
+        if (string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
+        {
+            _projectPlanningSummaryState = CacheBackedClientResult<ProjectPlanningSummaryDto>.Empty();
+            _projectPlanningSummary = null;
+            return;
+        }
+
+        _projectPlanningSummaryState = await ProjectService.GetPlanningSummaryAsync(_selectedProjectRouteKey);
+        _projectPlanningSummary = _projectPlanningSummaryState.State == CacheBackedClientState.Success
+            ? _projectPlanningSummaryState.Data
+            : null;
     }
 
     private async Task NavigateToCurrentScopeAsync(int? productId, bool loadBoard)

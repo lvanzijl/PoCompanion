@@ -632,9 +632,16 @@
                 _fromDate,
                 _toDate,
                 cancellationToken);
-            _pipelineSignalFilterMetadata = buildQualityResponse.FilterMetadata;
+            if (buildQualityResponse.State == CacheBackedClientState.Success && buildQualityResponse.Data is not null)
+            {
+                _pipelineSignalFilterMetadata = buildQualityResponse.Data.FilterMetadata;
+                _pipelineSignal = TrendsWorkspaceTileSignalService.GetPipelineSignal(buildQualityResponse.Data.Data, ProductId);
+                return;
+            }
 
-            _pipelineSignal = TrendsWorkspaceTileSignalService.GetPipelineSignal(buildQualityResponse.Data, ProductId);
+            _pipelineSignalFilterMetadata = null;
+            _pipelineSignal = StatusTileSignal.NoData(
+                buildQualityResponse.Reason ?? "Pipeline signal data is not ready yet because the cache has not been built.");
         }
         catch (OperationCanceledException)
         {

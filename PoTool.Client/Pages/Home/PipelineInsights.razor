@@ -858,9 +858,19 @@
             });
 
             var pipelineDetails = await Task.WhenAll(loadTasks);
-            _pipelineBuildQualityByDefinition = pipelineDetails.ToDictionary(
-                detail => detail.PipelineId,
-                detail => detail.Detail);
+            _pipelineBuildQualityByDefinition = pipelineDetails
+                .Where(detail => detail.Detail.State == CacheBackedClientState.Success && detail.Detail.Data is not null)
+                .ToDictionary(
+                    detail => detail.PipelineId,
+                    detail => detail.Detail.Data!);
+
+            var nonSuccessDetail = pipelineDetails
+                .Select(detail => detail.Detail)
+                .FirstOrDefault(detail => detail.State is CacheBackedClientState.NotReady or CacheBackedClientState.Failed or CacheBackedClientState.Unavailable);
+            if (nonSuccessDetail is not null)
+            {
+                _pipelineQualityErrorMessage = nonSuccessDetail.Reason ?? "Build Quality detail is not ready for one or more pipelines yet.";
+            }
 
             if (_insightsData is not null)
             {
@@ -901,13 +911,21 @@
                 return;
             }
 
-            _drawerBuildQuality = await BuildQualityService.GetPipelineAsync(
+            var buildQualityResult = await BuildQualityService.GetPipelineAsync(
                 _activeProfileId.Value,
                 _selectedSprintId.Value,
                 pipelineDefinitionId: pipelineDefinitionId,
                 cancellationToken: CancellationToken.None);
 
-            _pipelineBuildQualityByDefinition[pipelineDefinitionId] = _drawerBuildQuality;
+            if (buildQualityResult.State == CacheBackedClientState.Success && buildQualityResult.Data is not null)
+            {
+                _drawerBuildQuality = buildQualityResult.Data;
+                _pipelineBuildQualityByDefinition[pipelineDefinitionId] = buildQualityResult.Data;
+                return;
+            }
+
+            _drawerBuildQuality = null;
+            _drawerBuildQualityErrorMessage = buildQualityResult.Reason ?? "Build Quality detail is not ready for the selected pipeline.";
         }
         catch (Exception ex)
         {

@@ -2,6 +2,7 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Helpers
 @using PoTool.Client.Models
+@using PoTool.Shared.DataState
 @using PoTool.Shared.Planning
 @inherits WorkspaceBase
 @inject ProjectService ProjectService
@@ -46,9 +47,22 @@
         {
             <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
         }
+        else if (_summaryState?.State == CacheBackedClientState.NotReady)
+        {
+            <DataStatePanel State="DataStateDto.NotReady"
+                            Title="Project planning summary is syncing"
+                            Message="@(_summaryState.Reason ?? "Project planning summary data is not ready yet because the cache has not been built.")"
+                            ProductOwnerId="@_activeProfileId" />
+        }
+        else if (_summaryState?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
+        {
+            <DataStatePanel State="DataStateDto.Failed"
+                            Title="Project planning summary failed to load"
+                            Message="@(_summaryState.Reason ?? "Project planning summary data could not be loaded right now.")" />
+        }
         else if (_summary is null)
         {
-            <MudAlert Severity="Severity.Info">Project planning summary is unavailable.</MudAlert>
+            <MudAlert Severity="Severity.Info">@(_summaryState?.Reason ?? "Project planning summary is unavailable.")</MudAlert>
         }
         else
         {
@@ -139,6 +153,8 @@
 
     private bool _isLoading = true;
     private string? _errorMessage;
+    private CacheBackedClientResult<ProjectPlanningSummaryDto>? _summaryState;
+    private int? _activeProfileId;
     private ProjectPlanningSummaryDto? _summary;
     private List<BreadcrumbItem> _breadcrumbs = new();
 
@@ -151,6 +167,8 @@
             return;
         }
 
+        _activeProfileId = ProfileService.GetActiveProfileId();
+
         ProjectAlias = ProjectAliasRoute;
         _breadcrumbs =
         [
@@ -161,10 +179,14 @@
 
         try
         {
-            _summary = await ProjectService.GetPlanningSummaryAsync(ProjectAliasRoute);
-            if (_summary == null)
+            _summaryState = await ProjectService.GetPlanningSummaryAsync(ProjectAliasRoute);
+            if (_summaryState.State == CacheBackedClientState.Success)
             {
-                _errorMessage = "Project planning summary not found.";
+                _summary = _summaryState.Data;
+            }
+            else if (_summaryState.State == CacheBackedClientState.Empty)
+            {
+                _summary = null;
             }
         }
         catch (Exception ex)

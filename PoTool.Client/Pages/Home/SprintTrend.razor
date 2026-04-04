@@ -5,6 +5,7 @@
 @using PoTool.Client.Models
 @using PoTool.Client.Services
 @using PoTool.Client.Pages.Home.Components
+@using PoTool.Shared.DataState
 @using SharedDeliveryBuildQualityDto = PoTool.Shared.BuildQuality.DeliveryBuildQualityDto
 @using PoTool.Shared.Metrics
 @using PoTool.Shared.WorkItems
@@ -157,6 +158,19 @@
                         </MudButton>
                     </MudStack>
                 </MudAlert>
+            }
+            else if (_buildQualityResponse?.State == CacheBackedClientState.NotReady)
+            {
+                <DataStatePanel State="DataStateDto.NotReady"
+                                Title="Build Quality is syncing"
+                                Message="@(_buildQualityResponse.Reason ?? "Build Quality data is not ready yet because the cache has not been built for this sprint scope.")"
+                                ProductOwnerId="@_profileId" />
+            }
+            else if (_buildQualityResponse?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
+            {
+                <DataStatePanel State="DataStateDto.Failed"
+                                Title="Build Quality failed to load"
+                                Message="@(_buildQualityResponse.Reason ?? "Build Quality data could not be loaded right now.")" />
             }
             else if (_sprintBuildQuality is null)
             {
@@ -959,6 +973,7 @@
     private CanonicalFilterMetadata? _summaryFilterMetadata;
     private bool _isBuildQualityLoading = true;
     private string? _buildQualityErrorMessage;
+    private CacheBackedClientResult<CanonicalClientResponse<SharedDeliveryBuildQualityDto>>? _buildQualityResponse;
     private CanonicalFilterMetadata? _buildQualityFilterMetadata;
     private bool _isDetailsLoading;
     private string? _detailsErrorMessage;
@@ -1301,16 +1316,25 @@
         _buildQualityLoadCts = cancellationTokenSource;
         _isBuildQualityLoading = true;
         _buildQualityErrorMessage = null;
+        _buildQualityResponse = null;
         await InvokeAsync(StateHasChanged);
 
         try
         {
-            var buildQualityResponse = await BuildQualityService.GetSprintAsync(
+            _buildQualityResponse = await BuildQualityService.GetSprintAsync(
                 _profileId.Value,
                 _currentSprint.Id,
                 cancellationTokenSource.Token);
-            _buildQualityFilterMetadata = buildQualityResponse.FilterMetadata;
-            _sprintBuildQuality = buildQualityResponse.Data;
+
+            if (_buildQualityResponse.State != CacheBackedClientState.Success || _buildQualityResponse.Data is null)
+            {
+                _buildQualityFilterMetadata = null;
+                _sprintBuildQuality = null;
+                return;
+            }
+
+            _buildQualityFilterMetadata = _buildQualityResponse.Data.FilterMetadata;
+            _sprintBuildQuality = _buildQualityResponse.Data.Data;
         }
         catch (OperationCanceledException)
         {
