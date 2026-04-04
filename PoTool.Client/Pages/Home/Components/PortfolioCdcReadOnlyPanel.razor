@@ -32,15 +32,15 @@
     else if (_dataState.State == DataStateDto.NotReady)
     {
         <DataStatePanel State="@_dataState.State"
-                        Title="Portfolio history is syncing"
-                        Message="@(_dataState.Reason ?? "Portfolio history will load after cached portfolio snapshots are ready.")"
+                        Subject="Portfolio history"
+                        Reason="@_dataState.Reason"
                         ProductOwnerId="@_profileId" />
     }
     else if (_dataState.State == DataStateDto.Failed)
     {
         <DataStatePanel State="@_dataState.State"
-                        Title="Portfolio history failed to load"
-                        Message="@(_dataState.Reason ?? "Portfolio history could not be loaded right now.")" />
+                        Subject="Portfolio history"
+                        Reason="@_dataState.Reason" />
     }
     else if (!string.IsNullOrWhiteSpace(_errorMessage))
     {

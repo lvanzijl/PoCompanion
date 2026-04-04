@@ -66,15 +66,15 @@
     else if (_dataState.State == DataStateDto.NotReady)
     {
         <DataStatePanel State="@_dataState.State"
-                        Title="Validation fix session is syncing"
-                        Message="@(_dataState.Reason ?? "Validation fix data will load automatically after cache warming completes.")"
+                        Subject="Validation fix session"
+                        Reason="@_dataState.Reason"
                         ProductOwnerId="@_profileId" />
     }
     else if (_dataState.State == DataStateDto.Failed)
     {
         <DataStatePanel State="@_dataState.State"
-                        Title="Validation fix session failed to load"
-                        Message="@(_dataState.Reason ?? "Validation fix data could not be loaded right now.")" />
+                        Subject="Validation fix session"
+                        Reason="@_dataState.Reason" />
     }
     else if (_loadError != null)
     {

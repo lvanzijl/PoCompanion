@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-04-04",
+    "type": "Changed",
+    "title": "Cold-cache pages now use one consistent not-ready and failure UX",
+    "impact": "Health, planning, trend, delivery, and workspace pages now treat cold-cache states as first-class UI states with consistent 'Data not ready' and 'Data unavailable' handling, retry actions, and tile badges, so pages stop falling through to misleading no-data or cleared-state behavior while cache-backed data is still warming.",
+    "area": "Home",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-04",
     "type": "Fixed",
     "title": "Cache-backed build quality and planning pages now show readiness states instead of crashing",
     "impact": "Health Overview, Sprint Delivery build quality, Pipeline Insights overlays, Trends pipeline signals, and project planning summary pages now understand the backend cache envelope contract, so cache-not-ready responses show explicit recovery states instead of JSON errors, empty fallback metrics, or missing summary cards.",
